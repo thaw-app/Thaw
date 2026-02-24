@@ -103,14 +103,14 @@ final class SourcePIDCache {
             return bar
         }
 
-        /// Resets the negative cache so the app will be re-checked on the
-        /// next scan. Called during cleanup to discover apps that register
-        /// status items after launch.
-        func resetNegativeCache() {
+        /// Resets cached accessibility state so the app will be
+        /// re-queried on the next scan. Called during cleanup to:
+        /// - Release stale AXUIElement Mach port references
+        /// - Discover apps that register status items after launch
+        func resetCachedState() {
             lock.withLock {
-                if _extrasMenuBar == nil {
-                    _checkedWithNoResult = false
-                }
+                _extrasMenuBar = nil
+                _checkedWithNoResult = false
             }
         }
     }
@@ -236,7 +236,7 @@ final class SourcePIDCache {
         // Reset negative caches outside the state lock so we don't
         // hold the unfair lock while acquiring per-app locks.
         for app in reusedApps {
-            app.resetNegativeCache()
+            app.resetCachedState()
         }
     }
 
