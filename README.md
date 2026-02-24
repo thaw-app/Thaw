@@ -45,14 +45,14 @@ Thaw is currently available in the following languages:
 
 | Language                   | Status   | Flag  | Completion                             |
 | :------------------------- | :------- | :---: | :------------------------------------- |
-| **English**                | Base     |  🇺🇸   | ![100%](https://geps.dev/progress/100) |
+| **English**                | Base     |  🇬🇧/🇺🇸   | ![100%](https://geps.dev/progress/100) |
 | **Bahasa Indonesia**       | Complete |  🇮🇩   | ![100%](https://geps.dev/progress/100) |
-| **Deutsch**                | Complete |  🇩🇪   | ![100%](https://geps.dev/progress/100) |
+| **Deutsch**                | Complete |  🇩🇪/🇦🇹   | ![100%](https://geps.dev/progress/100) |
 | **Español**                | Complete | 🇪🇸/🇲🇽 | ![100%](https://geps.dev/progress/100) |
 | **Français**               | Complete |  🇫🇷   | ![100%](https://geps.dev/progress/100) |
 | **Italiano**               | Complete |  🇮🇹   | ![100%](https://geps.dev/progress/100) |
 | **Magyar**                 | Complete |  🇭🇺   | ![100%](https://geps.dev/progress/100) |
-| **Nederlands**             | Complete |  🇳🇱   | ![100%](https://geps.dev/progress/100) |
+| **Nederlands**             | Complete |  🇳🇱/🇧🇪   | ![100%](https://geps.dev/progress/100) |
 | **Português (Brasil)(\*)** | Complete |  🇧🇷   | ![100%](https://geps.dev/progress/100) |
 | **Русский(\*)**            | Complete |  🇷🇺   | ![100%](https://geps.dev/progress/100) |
 | **简体中文**               | Complete |  🇨🇳   | ![100%](https://geps.dev/progress/100) |
