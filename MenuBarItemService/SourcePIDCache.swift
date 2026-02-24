@@ -92,7 +92,11 @@ final class SourcePIDCache {
                 let bar = AXHelpers.extrasMenuBar(for: app)
             else {
                 // App is reachable but has no extras menu bar.
-                lock.withLock { _checkedWithNoResult = true }
+                lock.withLock {
+                    if _extrasMenuBar == nil {
+                        _checkedWithNoResult = true
+                    }
+                }
                 return nil
             }
             lock.withLock { _extrasMenuBar = bar }
@@ -116,33 +120,6 @@ final class SourcePIDCache {
         var apps = [CachedApplication]()
         var pids = [CGWindowID: pid_t]()
 
-        /// Returns the latest bounds of the given window after ensuring
-        /// that the bounds are stable (a.k.a. not currently changing).
-        ///
-        /// This method blocks until stable bounds can be determined, or
-        /// until retrieving the bounds for the window fails.
-        private func stableBounds(for window: WindowInfo) -> CGRect? {
-            var cachedBounds = window.bounds
-
-            for n in 1 ... 5 {
-                guard let currentBounds = window.currentBounds() else {
-                    // Failure here means the window probably doesn't
-                    // exist anymore.
-                    SourcePIDCache.diagLog.debug("stableBounds: currentBounds() returned nil for windowID \(window.windowID) on attempt \(n) — window may no longer exist")
-                    return nil
-                }
-                if currentBounds == cachedBounds {
-                    return currentBounds
-                }
-                cachedBounds = currentBounds
-                // Compute the sleep interval from the current attempt.
-                Thread.sleep(forTimeInterval: TimeInterval(n) / 100)
-            }
-
-            SourcePIDCache.diagLog.warning("stableBounds: bounds did not stabilize after 5 attempts for windowID \(window.windowID), last bounds=\(NSStringFromRect(cachedBounds))")
-            return nil
-        }
-
         /// Reorders the cached apps so that those that are confirmed
         /// to have an extras menu bar are first in the array.
         mutating func partitionApps() {
@@ -158,11 +135,6 @@ final class SourcePIDCache {
             }
 
             apps = lhs + rhs
-        }
-
-        /// Updates the cached process identifier for the given window.
-        mutating func updatePID(for _: WindowInfo) {
-            // This method is now empty as the logic has moved to the thread-safe `pid(for:)`.
         }
     }
 
@@ -203,7 +175,7 @@ final class SourcePIDCache {
         let windowIDs = Bridging.getMenuBarWindowList(option: .itemsOnly)
         let currentAppPids = Set(runningApps.map(\.processIdentifier))
 
-        state.withLock { state in
+        let reusedApps = state.withLock { state -> [CachedApplication] in
             // Clean up entries for terminated apps to prevent memory leaks
             let oldAppPids = Set(state.apps.map(\.processIdentifier))
             let terminatedPids = oldAppPids.subtracting(currentAppPids)
@@ -224,6 +196,10 @@ final class SourcePIDCache {
                 }
             }
 
+            // Collect reused apps to reset their negative caches after
+            // releasing the lock.
+            var reused = [CachedApplication]()
+
             // Create a new state that matches the current running apps.
             state = runningApps.reduce(into: State()) { result, app in
                 let pid = app.processIdentifier
@@ -231,7 +207,7 @@ final class SourcePIDCache {
                 if let app = appMappings[pid] {
                     // Prefer the cached app, as it may have already done
                     // the work to initialize its extras menu bar.
-                    app.resetNegativeCache()
+                    reused.append(app)
                     result.apps.append(app)
                 } else {
                     // App wasn't in the cache, so it must be new.
@@ -247,6 +223,14 @@ final class SourcePIDCache {
             if !terminatedPids.isEmpty {
                 SourcePIDCache.diagLog.info("Cleaned up PID cache entries for terminated processes: \(terminatedPids)")
             }
+
+            return reused
+        }
+
+        // Reset negative caches outside the state lock so we don't
+        // hold the unfair lock while acquiring per-app locks.
+        for app in reusedApps {
+            app.resetNegativeCache()
         }
     }
 
