@@ -1,11 +1,14 @@
-name: Build
+name: SonarQube Analysis
 on:
     pull_request:
         types: [opened, synchronize, reopened]
     workflow_dispatch:
+
+env:
+    SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 jobs:
     sonarqube:
-        name: SonarQube
+        if: github.repository == 'stonerl/Thaw' # Only run on the main repository, not on forks
         runs-on: macos-latest
         steps:
             - uses: actions/checkout@v5
@@ -13,5 +16,3 @@ jobs:
                   fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
             - name: SonarQube Scan
               uses: SonarSource/sonarqube-scan-action@v6
-              env:
-                  SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
