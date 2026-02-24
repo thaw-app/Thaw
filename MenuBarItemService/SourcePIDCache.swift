@@ -169,6 +169,12 @@ final class SourcePIDCache {
 
     /// Performs cleanup of the cache state.
     private func performCleanup() {
+        autoreleasepool {
+            performCleanupBody()
+        }
+    }
+
+    private func performCleanupBody() {
         let runningApps = NSWorkspace.shared.runningApplications
         SourcePIDCache.diagLog.debug("Performing PID cache cleanup")
 
