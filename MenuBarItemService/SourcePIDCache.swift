@@ -31,7 +31,9 @@ final class SourcePIDCache {
     /// identifier and extras menu bar.
     private final class CachedApplication {
         private let runningApp: NSRunningApplication
-        private var extrasMenuBar: UIElement?
+        private let lock = NSLock()
+        private var _extrasMenuBar: UIElement?
+        private var _checkedWithNoResult = false
 
         /// The app's process identifier.
         var processIdentifier: pid_t {
@@ -41,12 +43,12 @@ final class SourcePIDCache {
         /// A Boolean value indicating whether the app's extras menu
         /// bar has been successfully created and stored.
         var hasExtrasMenuBar: Bool {
-            extrasMenuBar != nil
+            lock.withLock { _extrasMenuBar != nil }
         }
 
         /// A Boolean value indicating whether the app is in a valid
         /// state for making accessibility calls.
-        var isValidForAccessibility: Bool {
+        private var isValidForAccessibility: Bool {
             // These checks help prevent blocking that can occur when
             // calling AX APIs while the app is an invalid state.
             runningApp.isFinishedLaunching &&
@@ -66,18 +68,46 @@ final class SourcePIDCache {
         /// When the element is first created, it gets stored for efficient
         /// access on subsequent calls.
         func getOrCreateExtrasMenuBar() -> UIElement? {
-            if let extrasMenuBar {
-                return extrasMenuBar
+            // Fast path: check cached state under the lock first.
+            let (hasCached, isNegative) = lock.withLock {
+                (_extrasMenuBar, _checkedWithNoResult)
             }
+            if let bar = hasCached {
+                return bar
+            }
+            if isNegative {
+                return nil
+            }
+
+            guard isValidForAccessibility else {
+                // Transient condition (still launching, unresponsive, or
+                // terminated). Do NOT set negative cache — retry next scan.
+                return nil
+            }
+
+            // Slow path: AX API calls performed outside the lock to
+            // avoid holding it during blocking IPC.
             guard
-                isValidForAccessibility,
                 let app = AXHelpers.application(for: runningApp),
                 let bar = AXHelpers.extrasMenuBar(for: app)
             else {
+                // App is reachable but has no extras menu bar.
+                lock.withLock { _checkedWithNoResult = true }
                 return nil
             }
-            extrasMenuBar = bar
+            lock.withLock { _extrasMenuBar = bar }
             return bar
+        }
+
+        /// Resets the negative cache so the app will be re-checked on the
+        /// next scan. Called during cleanup to discover apps that register
+        /// status items after launch.
+        func resetNegativeCache() {
+            lock.withLock {
+                if _extrasMenuBar == nil {
+                    _checkedWithNoResult = false
+                }
+            }
         }
     }
 
@@ -201,6 +231,7 @@ final class SourcePIDCache {
                 if let app = appMappings[pid] {
                     // Prefer the cached app, as it may have already done
                     // the work to initialize its extras menu bar.
+                    app.resetNegativeCache()
                     result.apps.append(app)
                 } else {
                     // App wasn't in the cache, so it must be new.
@@ -270,31 +301,38 @@ final class SourcePIDCache {
         var appsWithBar = 0
         var totalChildrenChecked = 0
         var totalMatchesFound = 0
+        var unresolvedWindows = Set(allWindows.map(\.windowID))
 
         for app in apps {
-            appsChecked += 1
-            guard let bar = app.getOrCreateExtrasMenuBar() else {
-                continue
+            if unresolvedWindows.isEmpty {
+                break
             }
-            appsWithBar += 1
-            let children = AXHelpers.children(for: bar)
-            for child in children {
-                totalChildrenChecked += 1
-                guard AXHelpers.isEnabled(child),
-                      let childFrame = AXHelpers.frame(for: child)
-                else {
-                    continue
+            appsChecked += 1
+            autoreleasepool {
+                guard let bar = app.getOrCreateExtrasMenuBar() else {
+                    return
                 }
+                appsWithBar += 1
+                let children = AXHelpers.children(for: bar)
+                for child in children {
+                    totalChildrenChecked += 1
+                    guard AXHelpers.isEnabled(child),
+                          let childFrame = AXHelpers.frame(for: child)
+                    else {
+                        continue
+                    }
 
-                let childCenter = childFrame.center
+                    let childCenter = childFrame.center
 
-                // Match this child to ANY window in our list.
-                if let matchedWindow = allWindows.first(where: {
-                    $0.bounds.center.distance(to: childCenter) <= 1
-                }) {
-                    totalMatchesFound += 1
-                    let pid = app.processIdentifier
-                    state.withLock { $0.pids[matchedWindow.windowID] = pid }
+                    // Match this child to ANY window in our list.
+                    if let matchedWindow = allWindows.first(where: {
+                        $0.bounds.center.distance(to: childCenter) <= 1
+                    }) {
+                        totalMatchesFound += 1
+                        unresolvedWindows.remove(matchedWindow.windowID)
+                        let pid = app.processIdentifier
+                        state.withLock { $0.pids[matchedWindow.windowID] = pid }
+                    }
                 }
             }
         }
