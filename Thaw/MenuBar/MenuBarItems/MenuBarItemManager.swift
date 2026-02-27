@@ -126,7 +126,7 @@ final class MenuBarItemManager: ObservableObject {
 
     /// Cached timeouts for move operations.
     private var moveOperationTimeouts = [MenuBarItemTag: Duration]()
-    
+
     /// Cached timeouts for click operations (adaptive per app).
     private var clickOperationTimeouts = [MenuBarItemTag: Duration]()
     /// Storage for internal observers.
@@ -1553,7 +1553,7 @@ extension MenuBarItemManager {
     private func pruneMoveOperationTimeouts(keeping validTags: Set<MenuBarItemTag>) {
         moveOperationTimeouts = moveOperationTimeouts.filter { validTags.contains($0.key) }
     }
-    
+
     /// Returns the default timeout for click operations based on the item's namespace.
     private func getDefaultClickOperationTimeout(for item: MenuBarItem) -> Duration {
         // Known slow apps with dynamic content
@@ -1564,15 +1564,15 @@ extension MenuBarItemManager {
             "com.hegenberg.BetterTouchTool",
             "net.matthewpalmer.Vanilla",
         ]
-        
+
         let namespaceString = item.tag.namespace.description
         if slowAppBundleIDs.contains(where: { namespaceString.contains($0) }) {
             return .milliseconds(500) // Extra time for slow apps
         }
-        
+
         return .milliseconds(350) // Default
     }
-    
+
     /// Returns the cached timeout for click operations associated with the given item.
     private func getClickOperationTimeout(for item: MenuBarItem) -> Duration {
         if let timeout = clickOperationTimeouts[item.tag] {
@@ -1580,7 +1580,7 @@ extension MenuBarItemManager {
         }
         return getDefaultClickOperationTimeout(for: item)
     }
-    
+
     /// Updates the cached timeout for click operations associated with the given item.
     private func updateClickOperationTimeout(_ duration: Duration, for item: MenuBarItem) {
         let current = getClickOperationTimeout(for: item)
@@ -1589,7 +1589,7 @@ extension MenuBarItemManager {
         clickOperationTimeouts[item.tag] = clamped
         MenuBarItemManager.diagLog.debug("Updated click timeout for \(item.logString): \(Int(clamped.milliseconds))ms (measured: \(Int(duration.milliseconds))ms)")
     }
-    
+
     /// Prunes the click operation timeouts cache, keeping only the entries
     /// for the given valid tags.
     private func pruneClickOperationTimeouts(keeping validTags: Set<MenuBarItemTag>) {
@@ -1920,7 +1920,7 @@ extension MenuBarItemManager {
         let clickTypes = getClickSubtypes(for: mouseButton)
         // Use adaptive timeout based on app performance history
         let timeout = getClickOperationTimeout(for: item)
-        
+
         MenuBarItemManager.diagLog.debug("postClickEvents: using timeout \(Int(timeout.milliseconds))ms for \(item.logString)")
 
         guard
@@ -1959,7 +1959,7 @@ extension MenuBarItemManager {
                 timeout: timeout,
                 repeating: 2 // Double mouse up prevents invalid item state.
             )
-            
+
             // Update timeout cache with successful duration
             let successDuration = Duration.milliseconds(Date.now.timeIntervalSince(eventStartTime) * 1000)
             updateClickOperationTimeout(successDuration, for: item)
@@ -3668,7 +3668,6 @@ private extension Duration {
         let (seconds, attoseconds) = self.components
         return Double(seconds) * 1000 + Double(attoseconds) / 1_000_000_000_000_000
     }
-    
 }
 
 // MARK: - CGEvent Helpers

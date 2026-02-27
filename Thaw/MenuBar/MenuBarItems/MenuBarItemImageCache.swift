@@ -715,9 +715,9 @@ final class MenuBarItemImageCache: ObservableObject {
             boundsUnion = boundsUnion.union(bounds)
         }
 
-        guard !windowIDs.isEmpty else { 
+        guard !windowIDs.isEmpty else {
             MenuBarItemImageCache.diagLog.debug("refreshImages: no items with bounds, skipping")
-            return 
+            return
         }
 
         guard let compositeImage = ScreenCapture.captureWindows(
@@ -834,7 +834,7 @@ final class MenuBarItemImageCache: ObservableObject {
                 failureCount: newCount,
                 lastFailureTime: now
             )
-            
+
             // Log when an item reaches blacklist threshold
             if newCount == Self.maxFailuresBeforeBlacklist {
                 MenuBarItemImageCache.diagLog.info(
