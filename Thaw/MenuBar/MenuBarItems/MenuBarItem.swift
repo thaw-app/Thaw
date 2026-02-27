@@ -376,8 +376,14 @@ extension MenuBarItem {
             }
         }
 
-        let nilPIDCount = items.filter { $0.sourcePID == nil }.count
-        diagLog.debug("getMenuBarItemsExperimental: created \(items.count) items (\(nilPIDCount) with nil sourcePID)")
+        let nilPIDItems = items.filter { $0.sourcePID == nil }
+        if !nilPIDItems.isEmpty {
+            let itemsDesc = nilPIDItems.prefix(3).map(\.logString).joined(separator: ", ")
+            let moreDesc = nilPIDItems.count > 3 ? " and \(nilPIDItems.count - 3) more" : ""
+            diagLog.debug("getMenuBarItemsExperimental: created \(items.count) items, \(nilPIDItems.count) with nil sourcePID: \(itemsDesc)\(moreDesc)")
+        } else {
+            diagLog.debug("getMenuBarItemsExperimental: created \(items.count) items, all with resolved sourcePID")
+        }
         return items
     }
 

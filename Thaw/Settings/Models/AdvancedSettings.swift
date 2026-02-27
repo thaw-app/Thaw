@@ -44,7 +44,7 @@ final class AdvancedSettings: ObservableObject {
     @Published var showMenuBarTooltips = false
 
     /// The interval between icon image refreshes in panels (Ice Bar, search, layout).
-    @Published var iconRefreshInterval: TimeInterval = 0.2
+    @Published var iconRefreshInterval: TimeInterval = 0.5
 
     /// A Boolean value that indicates whether diagnostic logging to file is enabled.
     @Published var enableDiagnosticLogging = false

@@ -126,7 +126,9 @@ final class MenuBarItemManager: ObservableObject {
 
     /// Cached timeouts for move operations.
     private var moveOperationTimeouts = [MenuBarItemTag: Duration]()
-
+    
+    /// Cached timeouts for click operations (adaptive per app).
+    private var clickOperationTimeouts = [MenuBarItemTag: Duration]()
     /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
 
@@ -822,6 +824,7 @@ extension MenuBarItemManager {
             await MainActor.run {
                 MenuBarItemTag.Namespace.pruneUUIDCache(keeping: Set(itemWindowIDs))
                 self.pruneMoveOperationTimeouts(keeping: Set(items.map(\.tag)))
+                self.pruneClickOperationTimeouts(keeping: Set(items.map(\.tag)))
             }
 
             for item in items {
@@ -1197,9 +1200,21 @@ extension MenuBarItemManager {
             }
         }
 
+        // Outer-scope locks so the onCancel handler can unblock the stuck
+        // continuation directly. innerTask completes almost immediately after
+        // enabling the EventTaps; by the time the timeout fires, cancelling
+        // innerTask is a no-op. The outer onCancel must therefore resume the
+        // continuation itself to prevent withThrowingTaskGroup from waiting
+        // forever and holding eventSemaphore for 5 seconds.
+        let didResume = OSAllocatedUnfairLock(initialState: false)
+        let continuationHolder = OSAllocatedUnfairLock<CheckedContinuation<Void, any Error>?>(initialState: nil)
+        let innerTaskHolder = OSAllocatedUnfairLock<Task<Void, Never>?>(initialState: nil)
+
         let timeoutTask = Task(timeout: timeout * count) {
+            try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
-                let didResume = OSAllocatedUnfairLock(initialState: false)
+                // Store continuation so the outer onCancel handler can resume it directly.
+                continuationHolder.withLock { $0 = continuation }
 
                 // Listen for the following events at the first location
                 // and perform the following actions:
@@ -1259,7 +1274,7 @@ extension MenuBarItemManager {
                 eventTaps.append(eventTap1)
                 eventTaps.append(eventTap2)
 
-                Task {
+                let innerTask = Task {
                     await withTaskCancellationHandler {
                         eventTap1.enable()
                         eventTap2.enable()
@@ -1271,6 +1286,18 @@ extension MenuBarItemManager {
                             continuation.resume(throwing: CancellationError())
                         }
                     }
+                }
+                innerTaskHolder.withLock { $0 = innerTask }
+                // Handle race: outer task may have been cancelled before innerTask was stored.
+                if Task.isCancelled { innerTask.cancel() }
+            }
+            } onCancel: {
+                innerTaskHolder.withLock { $0 }?.cancel()
+                // Directly resume the continuation — handles the common case where
+                // innerTask already finished before cancellation was delivered.
+                let cont = continuationHolder.withLock { $0 }
+                if let cont, didResume.tryClaimOnce() {
+                    cont.resume(throwing: CancellationError())
                 }
             }
         }
@@ -1328,9 +1355,21 @@ extension MenuBarItemManager {
             }
         }
 
+        // Outer-scope locks so the onCancel handler can unblock the stuck
+        // continuation directly. innerTask completes almost immediately after
+        // enabling the EventTaps; by the time the timeout fires, cancelling
+        // innerTask is a no-op. The outer onCancel must therefore resume the
+        // continuation itself to prevent withThrowingTaskGroup from waiting
+        // forever and holding eventSemaphore for 5 seconds.
+        let didResume = OSAllocatedUnfairLock(initialState: false)
+        let continuationHolder = OSAllocatedUnfairLock<CheckedContinuation<Void, any Error>?>(initialState: nil)
+        let innerTaskHolder = OSAllocatedUnfairLock<Task<Void, Never>?>(initialState: nil)
+
         let timeoutTask = Task(timeout: timeout * count) {
+            try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
-                let didResume = OSAllocatedUnfairLock(initialState: false)
+                // Store continuation so the outer onCancel handler can resume it directly.
+                continuationHolder.withLock { $0 = continuation }
 
                 // Listen for the following events at the first location
                 // and perform the following actions:
@@ -1412,7 +1451,7 @@ extension MenuBarItemManager {
                 eventTaps.append(eventTap2)
                 eventTaps.append(eventTap3)
 
-                Task {
+                let innerTask = Task {
                     await withTaskCancellationHandler {
                         eventTap1.enable()
                         eventTap2.enable()
@@ -1426,6 +1465,18 @@ extension MenuBarItemManager {
                             continuation.resume(throwing: CancellationError())
                         }
                     }
+                }
+                innerTaskHolder.withLock { $0 = innerTask }
+                // Handle race: outer task may have been cancelled before innerTask was stored.
+                if Task.isCancelled { innerTask.cancel() }
+            }
+            } onCancel: {
+                innerTaskHolder.withLock { $0 }?.cancel()
+                // Directly resume the continuation — handles the common case where
+                // innerTask already finished before cancellation was delivered.
+                let cont = continuationHolder.withLock { $0 }
+                if let cont, didResume.tryClaimOnce() {
+                    cont.resume(throwing: CancellationError())
                 }
             }
         }
@@ -1490,7 +1541,10 @@ extension MenuBarItemManager {
     private func updateMoveOperationTimeout(_ timeout: Duration, for item: MenuBarItem) {
         let current = getMoveOperationTimeout(for: item)
         let average = (timeout + current) / 2
-        let clamped = average.clamped(min: .milliseconds(25), max: .milliseconds(500))
+        // Minimum of 75ms: waitForMoveEventResponse polls every 10ms, so a
+        // timeout below ~75ms leaves too little margin for system event latency
+        // and causes itemResponseTimeout → retry cascades.
+        let clamped = average.clamped(min: .milliseconds(75), max: .milliseconds(500))
         moveOperationTimeouts[item.tag] = clamped
     }
 
@@ -1498,6 +1552,48 @@ extension MenuBarItemManager {
     /// for the given valid tags.
     private func pruneMoveOperationTimeouts(keeping validTags: Set<MenuBarItemTag>) {
         moveOperationTimeouts = moveOperationTimeouts.filter { validTags.contains($0.key) }
+    }
+    
+    /// Returns the default timeout for click operations based on the item's namespace.
+    private func getDefaultClickOperationTimeout(for item: MenuBarItem) -> Duration {
+        // Known slow apps with dynamic content
+        let slowAppBundleIDs = [
+            "com.bitsplash.PasteNow",
+            "com.charliemonroe.Downie-setapp",
+            "com.if.Amphetamine",
+            "com.hegenberg.BetterTouchTool",
+            "net.matthewpalmer.Vanilla",
+        ]
+        
+        let namespaceString = item.tag.namespace.description
+        if slowAppBundleIDs.contains(where: { namespaceString.contains($0) }) {
+            return .milliseconds(500) // Extra time for slow apps
+        }
+        
+        return .milliseconds(350) // Default
+    }
+    
+    /// Returns the cached timeout for click operations associated with the given item.
+    private func getClickOperationTimeout(for item: MenuBarItem) -> Duration {
+        if let timeout = clickOperationTimeouts[item.tag] {
+            return timeout
+        }
+        return getDefaultClickOperationTimeout(for: item)
+    }
+    
+    /// Updates the cached timeout for click operations associated with the given item.
+    private func updateClickOperationTimeout(_ duration: Duration, for item: MenuBarItem) {
+        let current = getClickOperationTimeout(for: item)
+        let average = (duration + current) / 2
+        let clamped = average.clamped(min: .milliseconds(200), max: .milliseconds(1000))
+        clickOperationTimeouts[item.tag] = clamped
+        MenuBarItemManager.diagLog.debug("Updated click timeout for \(item.logString): \(Int(clamped.milliseconds))ms (measured: \(Int(duration.milliseconds))ms)")
+    }
+    
+    /// Prunes the click operation timeouts cache, keeping only the entries
+    /// for the given valid tags.
+    private func pruneClickOperationTimeouts(keeping validTags: Set<MenuBarItemTag>) {
+        clickOperationTimeouts = clickOperationTimeouts.filter { validTags.contains($0.key) }
     }
 
     /// Returns the target points for creating the events needed to
@@ -1805,10 +1901,11 @@ extension MenuBarItemManager {
     ///   - item: The menu bar item to click.
     ///   - mouseButton: The mouse button to click the item with.
     private func postClickEvents(item: MenuBarItem, mouseButton: CGMouseButton) async throws {
+        // Try to acquire semaphore with timeout
         do {
             try await eventSemaphore.wait(timeout: .seconds(5))
         } catch is SimpleSemaphore.TimeoutError {
-            MenuBarItemManager.diagLog.error("eventSemaphore timed out in postClickEvents, forcing signal and retrying")
+            MenuBarItemManager.diagLog.error("eventSemaphore timed out in postClickEvents for \(item.logString), forcing signal and retrying")
             await eventSemaphore.signal()
             throw EventError.cannotComplete
         }
@@ -1821,7 +1918,10 @@ extension MenuBarItemManager {
         try permitLocalEvents()
 
         let clickTypes = getClickSubtypes(for: mouseButton)
-        let timeout = Duration.milliseconds(250)
+        // Use adaptive timeout based on app performance history
+        let timeout = getClickOperationTimeout(for: item)
+        
+        MenuBarItemManager.diagLog.debug("postClickEvents: using timeout \(Int(timeout.milliseconds))ms for \(item.logString)")
 
         guard
             let mouseDown = CGEvent.menuBarItemEvent(
@@ -1846,6 +1946,7 @@ extension MenuBarItemManager {
             MouseHelpers.showCursor()
         }
 
+        let eventStartTime = Date.now
         do {
             try await postEventWithBarrier(
                 mouseDown,
@@ -1858,6 +1959,10 @@ extension MenuBarItemManager {
                 timeout: timeout,
                 repeating: 2 // Double mouse up prevents invalid item state.
             )
+            
+            // Update timeout cache with successful duration
+            let successDuration = Duration.milliseconds(Date.now.timeIntervalSince(eventStartTime) * 1000)
+            updateClickOperationTimeout(successDuration, for: item)
         } catch {
             do {
                 MenuBarItemManager.diagLog.warning("Click events failed, posting fallback")
@@ -1902,17 +2007,21 @@ extension MenuBarItemManager {
             appState.hidEventManager.startAll()
         }
 
-        let maxAttempts = 4
+        let maxAttempts = 3  // Reduced from 4 to minimize accumulated delay
+        let attemptStartTime = Date.now
         for n in 1 ... maxAttempts {
             guard !Task.isCancelled else {
                 throw EventError.cannotComplete
             }
             do {
+                let clickStartTime = Date.now
                 try await postClickEvents(item: item, mouseButton: mouseButton)
-                MenuBarItemManager.diagLog.debug("Attempt \(n) succeeded, finished with click")
+                let clickDuration = Date.now.timeIntervalSince(clickStartTime)
+                MenuBarItemManager.diagLog.debug("Attempt \(n) succeeded in \(Int(clickDuration * 1000))ms, finished with click")
                 return
             } catch {
-                MenuBarItemManager.diagLog.debug("Attempt \(n) failed: \(error)")
+                let attemptDuration = Date.now.timeIntervalSince(attemptStartTime)
+                MenuBarItemManager.diagLog.debug("Attempt \(n) failed after \(Int(attemptDuration * 1000))ms: \(error)")
                 if n < maxAttempts {
                     await eventSleep()
                     continue
@@ -2421,7 +2530,10 @@ extension MenuBarItemManager {
             appState.hidEventManager.startAll()
         }
 
-        await eventSleep(for: .milliseconds(250))
+        // Use a shorter settle time when called from temporarilyShow — the user
+        // is actively waiting for the next click. The eventSemaphore and
+        // waitForMoveOperationBuffer in move() provide adequate race protection.
+        await eventSleep(for: isCalledFromTemporarilyShow ? .milliseconds(50) : .milliseconds(250))
 
         MenuBarItemManager.diagLog.debug("Rehiding temporarily shown items")
 
@@ -3546,6 +3658,17 @@ private extension CGMouseButton {
         @unknown default: "unknown mouse button"
         }
     }
+}
+
+// MARK: - Duration Helpers
+
+private extension Duration {
+    /// Returns the duration in milliseconds as a Double.
+    var milliseconds: Double {
+        let (seconds, attoseconds) = self.components
+        return Double(seconds) * 1000 + Double(attoseconds) / 1_000_000_000_000_000
+    }
+    
 }
 
 // MARK: - CGEvent Helpers

@@ -425,8 +425,14 @@ final class MenuBarItemImageCache: ObservableObject {
 
     /// Captures a composite image of the given items, then crops out an image
     /// for each item and returns the result.
+    ///
+    /// Accepts pre-fetched window bounds alongside each item to avoid a
+    /// redundant `getWindowBounds` system call and eliminate the TOCTOU race
+    /// where a window could move between bounds lookup and composite capture.
+    /// All items passed to this function are expected to be on-screen;
+    /// off-screen items should be pre-filtered by the caller.
     private nonisolated func compositeCapture(
-        _ items: [MenuBarItem],
+        _ itemsWithBounds: [(item: MenuBarItem, bounds: CGRect)],
         scale: CGFloat
     ) -> CaptureResult {
         var result = CaptureResult()
@@ -434,25 +440,17 @@ final class MenuBarItemImageCache: ObservableObject {
         var windowIDs = [CGWindowID]()
         var storage = [CGWindowID: (MenuBarItem, CGRect)]()
         var boundsUnion = CGRect.null
-        var boundsFailCount = 0
 
-        for item in items {
-            let windowID = item.windowID
-
-            // Don't use `item.bounds`, it could be out of date.
-            guard let bounds = Bridging.getWindowBounds(for: windowID) else {
-                boundsFailCount += 1
-                result.excluded.append(item)
-                continue
-            }
-
-            windowIDs.append(windowID)
-            storage[windowID] = (item, bounds)
+        for (item, bounds) in itemsWithBounds {
+            windowIDs.append(item.windowID)
+            storage[item.windowID] = (item, bounds)
             boundsUnion = boundsUnion.union(bounds)
         }
 
-        if boundsFailCount > 0 {
-            MenuBarItemImageCache.diagLog.warning("compositeCapture: \(boundsFailCount)/\(items.count) items had no bounds (getWindowBounds returned nil)")
+        // Defensive guard: callers pre-filter empty arrays, but this protects
+        // against future misuse.
+        guard !windowIDs.isEmpty else {
+            return result
         }
 
         let compositeImage = ScreenCapture.captureWindows(
@@ -462,7 +460,7 @@ final class MenuBarItemImageCache: ObservableObject {
 
         guard let compositeImage else {
             MenuBarItemImageCache.diagLog.warning("compositeCapture: ScreenCapture.captureWindows returned nil for \(windowIDs.count) windows")
-            result.excluded = items
+            result.excluded = itemsWithBounds.map(\.item)
             return result
         }
 
@@ -470,17 +468,24 @@ final class MenuBarItemImageCache: ObservableObject {
         let actualWidth = CGFloat(compositeImage.width)
         guard actualWidth == expectedWidth else {
             MenuBarItemImageCache.diagLog.warning("compositeCapture: width mismatch — expected \(expectedWidth) (boundsUnion.width=\(boundsUnion.width) * scale=\(scale)) but got \(actualWidth). Image dimensions: \(compositeImage.width)x\(compositeImage.height)")
-            result.excluded = items
+            result.excluded = itemsWithBounds.map(\.item)
             return result
         }
 
         guard !compositeImage.isTransparent() else {
             MenuBarItemImageCache.diagLog.warning("compositeCapture: composite image is fully transparent (\(compositeImage.width)x\(compositeImage.height)) — screen recording permission may not be effective")
-            result.excluded = items
+            result.excluded = itemsWithBounds.map(\.item)
             return result
         }
 
+        MenuBarItemImageCache.diagLog.debug(
+            "compositeCapture: composite image OK (\(compositeImage.width)x\(compositeImage.height)), cropping \(windowIDs.count) items"
+        )
+
         // Crop out each item from the composite.
+        var cropSuccessCount = 0
+        var cropNilCount = 0
+        var cropTransparentCount = 0
         for windowID in windowIDs {
             guard let (item, bounds) = storage[windowID] else {
                 continue
@@ -502,23 +507,32 @@ final class MenuBarItemImageCache: ObservableObject {
                 height: bounds.height * scale
             )
 
-            guard
-                let image = compositeImage.cropping(to: cropRect),
-                !image.isTransparent()
-            else {
-                // Record failure
+            let croppedImage = compositeImage.cropping(to: cropRect)
+            guard let croppedImage else {
+                cropNilCount += 1
+                recordCaptureFailure(for: item)
+                result.excluded.append(item)
+                continue
+            }
+            guard !croppedImage.isTransparent() else {
+                cropTransparentCount += 1
                 recordCaptureFailure(for: item)
                 result.excluded.append(item)
                 continue
             }
 
             // Record success
+            cropSuccessCount += 1
             recordCaptureSuccess(for: item)
             result.images[item.tag] = CapturedImage(
-                cgImage: image,
+                cgImage: croppedImage,
                 scale: scale
             )
         }
+
+        MenuBarItemImageCache.diagLog.debug(
+            "compositeCapture: crops done — \(cropSuccessCount) ok, \(cropNilCount) nil, \(cropTransparentCount) transparent"
+        )
 
         return result
     }
@@ -600,17 +614,68 @@ final class MenuBarItemImageCache: ObservableObject {
             return individualCapture(capturable, scale: scale)
         }
 
-        let compositeResult = compositeCapture(capturable, scale: scale)
+        // Pre-filter off-screen items: hidden section items are positioned past
+        // the right edge of the screen. Including them in compositeCapture
+        // inflates boundsUnion → CGWindowListCreateImageFromArray returns an
+        // image narrower than expected → width mismatch → the whole composite
+        // fails for ALL items. Off-screen items are captured by the live refresh
+        // loop (refreshImages) instead, so we can safely skip them here.
+        //
+        // Note: isWindowOnScreen() cannot be used for this — macOS incorrectly
+        // reports hidden menu bar items as on-screen (known macOS behaviour).
+        let displayID = Bridging.getActiveMenuBarDisplayID() ?? CGMainDisplayID()
+        let screenFrame = await MainActor.run {
+            NSScreen.screens.first { $0.displayID == displayID }?.frame
+        }
+
+        // Fetch window bounds once for all items. This single pass is reused for
+        // both the off-screen filter and the subsequent compositeCapture, avoiding
+        // a redundant system call and eliminating the TOCTOU race where a window
+        // could move between the two lookups.
+        var onScreenItemsWithBounds: [(item: MenuBarItem, bounds: CGRect)] = []
+        var offScreenCount = 0
+        var nilBoundsCount = 0
+
+        for item in capturable {
+            guard let bounds = Bridging.getWindowBounds(for: item.windowID) else {
+                // Window bounds unavailable — skip; neither composite nor
+                // individual capture can succeed without position info.
+                nilBoundsCount += 1
+                continue
+            }
+            if let screenFrame, !screenFrame.intersects(bounds) {
+                offScreenCount += 1
+            } else {
+                onScreenItemsWithBounds.append((item: item, bounds: bounds))
+            }
+        }
+
+        if nilBoundsCount > 0 {
+            MenuBarItemImageCache.diagLog.debug(
+                "captureImages: \(nilBoundsCount)/\(capturable.count) items had no bounds, skipped"
+            )
+        }
+        if offScreenCount > 0 {
+            MenuBarItemImageCache.diagLog.debug(
+                "captureImages: \(offScreenCount)/\(capturable.count) off-screen items skipped (live refresh handles them)"
+            )
+        }
+
+        guard !onScreenItemsWithBounds.isEmpty else {
+            MenuBarItemImageCache.diagLog.debug(
+                "captureImages: no on-screen items to capture for this section"
+            )
+            return CaptureResult()
+        }
+
+        let compositeResult = compositeCapture(onScreenItemsWithBounds, scale: scale)
 
         if compositeResult.excluded.isEmpty {
             return compositeResult // All items captured successfully.
         }
 
-        MenuBarItemImageCache.diagLog.notice(
-            """
-            Some items were excluded from composite capture. Attempting to capture \
-            excluded items individually: \(compositeResult.excluded)
-            """
+        MenuBarItemImageCache.diagLog.debug(
+            "\(compositeResult.excluded.count)/\(onScreenItemsWithBounds.count) items excluded from composite, retrying individually"
         )
 
         var individualResult = individualCapture(
@@ -627,8 +692,11 @@ final class MenuBarItemImageCache: ObservableObject {
 
     /// Lightweight image refresh for the IceBar.
     ///
-    /// Performs a single composite capture and crops individual items,
-    /// skipping full cache management (LRU, failure tracking, cleanup).
+    /// Performs a single composite capture and crops individual items.
+    /// Updates LRU access timestamps for refreshed images to keep them
+    /// consistent with the `images` dict (preventing LRU inconsistencies),
+    /// but skips full cache management (LRU eviction, failure tracking,
+    /// size enforcement, cleanup).
     /// Skips `@Published` updates when images haven't changed visually.
     nonisolated func refreshImages(
         of items: [MenuBarItem],
@@ -647,17 +715,29 @@ final class MenuBarItemImageCache: ObservableObject {
             boundsUnion = boundsUnion.union(bounds)
         }
 
-        guard !windowIDs.isEmpty else { return }
+        guard !windowIDs.isEmpty else { 
+            MenuBarItemImageCache.diagLog.debug("refreshImages: no items with bounds, skipping")
+            return 
+        }
 
         guard let compositeImage = ScreenCapture.captureWindows(
             with: windowIDs,
             option: captureOption
-        ) else { return }
+        ) else {
+            MenuBarItemImageCache.diagLog.debug("refreshImages: capture failed, skipping")
+            return
+        }
 
         let expectedWidth = boundsUnion.width * scale
-        guard CGFloat(compositeImage.width) == expectedWidth else { return }
+        guard CGFloat(compositeImage.width) == expectedWidth else {
+            MenuBarItemImageCache.diagLog.debug("refreshImages: width mismatch (expected \(expectedWidth), got \(compositeImage.width)), skipping")
+            return
+        }
 
-        guard !compositeImage.isTransparent() else { return }
+        guard !compositeImage.isTransparent() else {
+            MenuBarItemImageCache.diagLog.debug("refreshImages: composite is transparent, skipping")
+            return
+        }
 
         var newImages = [MenuBarItemTag: CapturedImage]()
         for windowID in windowIDs {
@@ -681,8 +761,15 @@ final class MenuBarItemImageCache: ObservableObject {
         guard !newImages.isEmpty, !Task.isCancelled else { return }
 
         await MainActor.run { [newImages] in
+            var updatedCount = 0
             for (tag, newImage) in newImages where !CapturedImage.isVisuallyEqual(self.images[tag], newImage) {
                 self.images[tag] = newImage
+                accessCounter += 1
+                accessTimestamps[tag] = accessCounter
+                updatedCount += 1
+            }
+            if updatedCount > 0 {
+                MenuBarItemImageCache.diagLog.debug("refreshImages: ✓ updated \(updatedCount)/\(newImages.count) items (visually changed)")
             }
         }
     }
@@ -703,8 +790,8 @@ final class MenuBarItemImageCache: ObservableObject {
             appState: appState
         )
         if !captureResult.excluded.isEmpty {
-            MenuBarItemImageCache.diagLog.error(
-                "Some items failed capture: \(captureResult.excluded)"
+            MenuBarItemImageCache.diagLog.debug(
+                "captureImages: \(captureResult.excluded.count) items failed capture"
             )
         }
         return captureResult.images
@@ -741,11 +828,19 @@ final class MenuBarItemImageCache: ObservableObject {
         let existing = failedCaptures[item.tag]
 
         if let existing = existing {
+            let newCount = existing.failureCount + 1
             failedCaptures[item.tag] = FailedCapture(
                 tag: item.tag,
-                failureCount: existing.failureCount + 1,
+                failureCount: newCount,
                 lastFailureTime: now
             )
+            
+            // Log when an item reaches blacklist threshold
+            if newCount == Self.maxFailuresBeforeBlacklist {
+                MenuBarItemImageCache.diagLog.info(
+                    "Item blacklisted after \(newCount) failures: \(item.logString) (will retry after \(Self.blacklistCooldownSeconds)s cooldown)"
+                )
+            }
         } else {
             failedCaptures[item.tag] = FailedCapture(
                 tag: item.tag,
@@ -760,7 +855,11 @@ final class MenuBarItemImageCache: ObservableObject {
 
     /// Records a successful capture for an item (resets failure count).
     private func recordCaptureSuccess(for item: MenuBarItem) {
-        failedCaptures.removeValue(forKey: item.tag)
+        if let existing = failedCaptures.removeValue(forKey: item.tag), existing.failureCount >= 2 {
+            MenuBarItemImageCache.diagLog.info(
+                "Item recovered after \(existing.failureCount) previous failures: \(item.logString)"
+            )
+        }
     }
 
     /// Cleans up old failed capture entries that have expired.
@@ -984,8 +1083,11 @@ final class MenuBarItemImageCache: ObservableObject {
             )
 
             guard !sectionImages.isEmpty else {
-                MenuBarItemImageCache.diagLog.warning(
-                    "Failed item image cache for \(section.logString)"
+                // Expected for off-screen sections (e.g. hidden): live refresh
+                // (refreshImages) handles those items. Only a real concern for
+                // the visible section — check compositeCapture logs for details.
+                MenuBarItemImageCache.diagLog.debug(
+                    "captureImages: no images captured for \(section.logString) (off-screen or transient failure)"
                 )
                 continue
             }
