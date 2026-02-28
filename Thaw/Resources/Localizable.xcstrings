@@ -5218,6 +5218,12 @@
             "state" : "translated",
             "value" : "Konkurrierender Menüleisten-Manager wurde erkannt"
           }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pengelola Bar Menu Lain Terdeteksi"
+          }
         }
       }
     },
@@ -5319,6 +5325,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Trotzdem fortfahren"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lanjutkan"
           }
         }
       }
@@ -6051,6 +6063,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Verwerfen"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buang"
           }
         },
         "pt-BR" : {
