@@ -5,7 +5,8 @@
 
 Thaw is a powerful menu bar management tool. While its primary function is hiding and showing menu bar items, it aims to cover a wide variety of additional features to make it one of the most versatile menu bar tools available.
 
-<img width="1760" height="956" alt="thaw-banner-fs8" src="https://github.com/user-attachments/assets/6ab08d49-8abd-46c2-bf23-c16e210da41f" />
+![thaw-banner](https://github.com/user-attachments/assets/9584065d-f840-4545-9a42-cfc5534b5ac3)
+
 
 [![Download](https://img.shields.io/badge/download-latest-brightgreen?style=flat-square)](https://github.com/stonerl/Thaw/releases/latest)
 [![CI](https://img.shields.io/github/actions/workflow/status/stonerl/Thaw/ci.yml?style=flat-square)](https://github.com/stonerl/Thaw/actions/workflows/ci.yml)
@@ -43,23 +44,108 @@ brew install thaw@beta
 
 Thaw is currently available in the following languages:
 
-| Language                   | Status   | Flag  | Completion                             |
-| :------------------------- | :------- | :---: | :------------------------------------- |
-| **English**                | Base     | 🇬🇧/🇺🇸 | ![100%](https://geps.dev/progress/100) |
-| **Bahasa Indonesia**       | Complete |  🇮🇩   | ![100%](https://geps.dev/progress/100) |
-| **Deutsch**                | Complete | 🇩🇪/🇦🇹 | ![100%](https://geps.dev/progress/100) |
-| **Español**                | Complete | 🇪🇸/🇲🇽 | ![100%](https://geps.dev/progress/100) |
-| **Français**               | Complete |  🇫🇷   | ![100%](https://geps.dev/progress/100) |
-| **Italiano**               | Complete |  🇮🇹   | ![100%](https://geps.dev/progress/100) |
-| **Magyar**                 | Complete |  🇭🇺   | ![100%](https://geps.dev/progress/100) |
-| **Nederlands**             | Complete | 🇳🇱/🇧🇪 | ![100%](https://geps.dev/progress/100) |
-| **Português (Brasil)(\*)** | Complete |  🇧🇷   | ![100%](https://geps.dev/progress/100) |
-| **Русский(\*)**            | Complete |  🇷🇺   | ![100%](https://geps.dev/progress/100) |
-| **简体中文**               | Complete |  🇨🇳   | ![100%](https://geps.dev/progress/100) |
-| **正體中文**               | Complete |  🇹🇼   | ![100%](https://geps.dev/progress/100) |
-| **한국어**                 | Complete |  🇰🇷   | ![100%](https://geps.dev/progress/100) |
-| **ภาษาไทย**                | Complete |  🇹🇭   | ![100%](https://geps.dev/progress/100) |
-| **Türkçe(\*)**             | Complete |  🇹🇷   | ![100%](https://geps.dev/progress/100) |
+<table frame="void" rules="none">
+    <tr>
+        <th align="left">Language</th>
+        <th align="left">Status</th>
+        <th align="center">Flag</th>
+        <th align="left">Completion</th>
+        <th width="30"></th>
+        <th align="left">Language</th>
+        <th align="left">Status</th>
+        <th align="center">Flag</th>
+        <th align="left">Completion</th>
+    </tr>
+    <tr>
+        <td><b>English</b></td>
+        <td>Base</td>
+        <td align="center">🇬🇧/🇺🇸</td>
+        <td><img src="https://geps.dev/progress/100" /></td>
+        <td></td>
+        <td><b>Português (Brasil)(*)</b></td>
+        <td>Complete</td>
+        <td align="center">🇧🇷</td>
+        <td><img src="https://geps.dev/progress/100" /></td>
+    </tr>
+    <tr>
+        <td><b>Bahasa Indonesia</b></td>
+        <td>Complete</td>
+        <td align="center">🇮🇩</td>
+        <td><img src="https://geps.dev/progress/100" /></td>
+        <td></td>
+        <td><b>Русский(*)</b></td>
+        <td>Complete</td>
+        <td align="center">🇷🇺</td>
+        <td><img src="https://geps.dev/progress/100" /></td>
+    </tr>
+    <tr>
+        <td><b>Deutsch</b></td>
+        <td>Complete</td>
+        <td align="center">🇩🇪/🇦🇹</td>
+        <td><img src="https://geps.dev/progress/100" /></td>
+        <td></td>
+        <td><b>简体中文</b></td>
+        <td>Complete</td>
+        <td align="center">🇨🇳</td>
+        <td><img src="https://geps.dev/progress/100" /></td>
+    </tr>
+    <tr>
+        <td><b>Español</b></td>
+        <td>Complete</td>
+        <td align="center">🇪🇸/🇲🇽</td>
+        <td><img src="https://geps.dev/progress/100" /></td>
+        <td></td>
+        <td><b>正體中文</b></td>
+        <td>Complete</td>
+        <td align="center">🇹🇼</td>
+        <td><img src="https://geps.dev/progress/100" /></td>
+    </tr>
+    <tr>
+        <td><b>Français</b></td>
+        <td>Complete</td>
+        <td align="center">🇫🇷</td>
+        <td><img src="https://geps.dev/progress/100" /></td>
+        <td></td>
+        <td><b>한국어</b></td>
+        <td>Complete</td>
+        <td align="center">🇰🇷</td>
+        <td><img src="https://geps.dev/progress/100" /></td>
+    </tr>
+    <tr>
+        <td><b>Italiano</b></td>
+        <td>Complete</td>
+        <td align="center">🇮🇹</td>
+        <td><img src="https://geps.dev/progress/100" /></td>
+        <td></td>
+        <td><b>ภาษาไทย</b></td>
+        <td>Complete</td>
+        <td align="center">🇹🇭</td>
+        <td><img src="https://geps.dev/progress/100" /></td>
+    </tr>
+    <tr>
+        <td><b>Magyar</b></td>
+        <td>Complete</td>
+        <td align="center">🇭🇺</td>
+        <td><img src="https://geps.dev/progress/100" /></td>
+        <td></td>
+        <td><b>Türkçe(*)</b></td>
+        <td>Complete</td>
+        <td align="center">🇹🇷</td>
+        <td><img src="https://geps.dev/progress/100" /></td>
+    </tr>
+    <tr>
+        <td><b>Nederlands</b></td>
+        <td>Complete</td>
+        <td align="center">🇳🇱/🇧🇪</td>
+        <td><img src="https://geps.dev/progress/100" /></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>
+</table>
+
 
 _Note: languages marked with (\*) are currently only available in the development branch._
 
