@@ -2289,7 +2289,7 @@ extension MenuBarItemManager {
         // and use it as a fallback if the neighbor-based return destination
         // becomes stale by the time we rehide.
         let originalSection = itemCache.address(for: item.tag)?.section ?? .hidden
-        let tagIdentifier = "\(item.tag.namespace):\(item.tag.title)"
+        let tagIdentifier = item.tag.tagIdentifier
 
         // Rehide any previously temporarily shown items before showing a new one.
         // This prevents stale contexts from accumulating when the user opens multiple
@@ -2348,7 +2348,7 @@ extension MenuBarItemManager {
         case .rightOfItem: position = "right"
         }
         pendingReturnDestinations[tagIdentifier] = [
-            "neighbor": "\(neighborTag.namespace):\(neighborTag.title)",
+            "neighbor": neighborTag.tagIdentifier,
             "position": position,
         ]
         persistPendingRelocations()
@@ -2602,7 +2602,7 @@ extension MenuBarItemManager {
             do {
                 try await move(item: item, to: destination, on: context.displayID, skipInputPause: true)
                 // Successfully rehidden — remove the pending relocation entry.
-                let tagIdentifier = "\(context.tag.namespace):\(context.tag.title)"
+                let tagIdentifier = context.tag.tagIdentifier
                 pendingRelocations.removeValue(forKey: tagIdentifier)
                 pendingReturnDestinations.removeValue(forKey: tagIdentifier)
             } catch {
@@ -2659,7 +2659,7 @@ extension MenuBarItemManager {
         }
         // Also clear any pending relocation since the user explicitly
         // placed the item in a new position.
-        let tagIdentifier = "\(tag.namespace):\(tag.title)"
+        let tagIdentifier = tag.tagIdentifier
         if pendingRelocations.removeValue(forKey: tagIdentifier) != nil {
             pendingReturnDestinations.removeValue(forKey: tagIdentifier)
             persistPendingRelocations()
@@ -2844,7 +2844,7 @@ extension MenuBarItemManager {
         // Don't interfere with items that are currently temporarily shown —
         // those are handled by the normal rehide flow.
         let activelyShownTags = Set(temporarilyShownItemContexts.map {
-            "\($0.tag.namespace):\($0.tag.title)"
+            $0.tag.tagIdentifier
         })
 
         let hiddenBounds = bestBounds(for: controlItems.hidden)
@@ -2865,7 +2865,7 @@ extension MenuBarItemManager {
 
             // Find the item in the current menu bar items.
             guard let item = items.first(where: {
-                tagIdentifier == "\($0.tag.namespace):\($0.tag.title)"
+                tagIdentifier == $0.tag.tagIdentifier
             }) else {
                 // Item not present yet (app hasn't relaunched). Keep the entry.
                 continue
@@ -2886,14 +2886,14 @@ extension MenuBarItemManager {
             let destination: MoveDestination
             if let destInfo = pendingReturnDestinations[tagIdentifier],
                let neighborTagString = destInfo["neighbor"],
-               let neighborItem = items.first(where: { neighborTagString == "\($0.tag.namespace):\($0.tag.title)" })
+               let neighborItem = items.first(where: { neighborTagString == $0.tag.tagIdentifier })
             {
                 if destInfo["position"] == "left" {
                     destination = .leftOfItem(neighborItem)
                 } else {
                     destination = .rightOfItem(neighborItem)
                 }
-            } else if let fallbackTagString = temporarilyShownItemContexts.first(where: { tagIdentifier == "\($0.tag.namespace):\($0.tag.title)" })?.fallbackNeighborTag,
+            } else if let fallbackTagString = temporarilyShownItemContexts.first(where: { tagIdentifier == $0.tag.tagIdentifier })?.fallbackNeighborTag,
                       let fallbackItem = items.first(matching: fallbackTagString)
             {
                 destination = .rightOfItem(fallbackItem)
@@ -3022,7 +3022,7 @@ extension MenuBarItemManager {
 
         // Don't interfere with temporarily shown items.
         let activelyShownTags = Set(temporarilyShownItemContexts.map {
-            "\($0.tag.namespace):\($0.tag.title)"
+            $0.tag.tagIdentifier
         })
 
         // Count items per namespace to detect multi-icon apps
@@ -3033,7 +3033,7 @@ extension MenuBarItemManager {
         }
 
         for item in items where !item.isControlItem && item.isMovable && item.canBeHidden {
-            let tagString = "\(item.tag.namespace):\(item.tag.title)"
+            let tagString = item.tag.tagIdentifier
             guard !activelyShownTags.contains(tagString) else { continue }
 
             // Skip indexed items (instanceIndex > 0). These naturally position
@@ -3177,7 +3177,7 @@ extension MenuBarItemManager {
 
         // Don't interfere with items that are currently temporarily shown.
         let activelyShownTags = Set(temporarilyShownItemContexts.map {
-            "\($0.tag.namespace):\($0.tag.title)"
+            $0.tag.tagIdentifier
         })
 
         // Count items per namespace to detect indexed and multi-icon apps
@@ -3261,7 +3261,7 @@ extension MenuBarItemManager {
                     anchorIndex += 1
                     continue
                 }
-                let tagString = "\(candidate.tag.namespace):\(candidate.tag.title)"
+                let tagString = candidate.tag.tagIdentifier
                 if activelyShownTags.contains(tagString) {
                     anchorIndex += 1
                     continue
@@ -3278,7 +3278,7 @@ extension MenuBarItemManager {
                 guard let item = itemsByID[filteredSaved[i]] else { continue }
 
                 // Skip items that are currently temporarily shown.
-                let tagString = "\(item.tag.namespace):\(item.tag.title)"
+                let tagString = item.tag.tagIdentifier
                 guard !activelyShownTags.contains(tagString) else { continue }
 
                 do {
