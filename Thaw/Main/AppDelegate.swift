@@ -87,7 +87,43 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return true
     }
 
+    func application(_: NSApplication, open urls: [URL]) {
+        for url in urls {
+            guard url.scheme?.lowercased() == "thaw" else { continue }
+            handleURL(url)
+        }
+    }
+
     // MARK: Other Methods
+
+    /// Dispatches an incoming `thaw://` URL to the appropriate action.
+    ///
+    /// Supported URLs:
+    /// - `thaw://toggle-hidden` — toggle the hidden menu bar section
+    /// - `thaw://toggle-always-hidden` — toggle the always-hidden menu bar section
+    /// - `thaw://search` — open the menu bar item search panel
+    /// - `thaw://toggle-icebar` — toggle the IceBar on the active display
+    /// - `thaw://toggle-application-menus` — toggle application menus
+    /// - `thaw://open-settings` — open the Thaw settings window
+    private func handleURL(_ url: URL) {
+        let host = url.host?.lowercased() ?? ""
+        switch host {
+        case "toggle-hidden":
+            HotkeyAction.toggleHiddenSection.perform(appState: appState)
+        case "toggle-always-hidden":
+            HotkeyAction.toggleAlwaysHiddenSection.perform(appState: appState)
+        case "search":
+            HotkeyAction.searchMenuBarItems.perform(appState: appState)
+        case "toggle-icebar":
+            HotkeyAction.enableIceBar.perform(appState: appState)
+        case "toggle-application-menus":
+            HotkeyAction.toggleApplicationMenus.perform(appState: appState)
+        case "open-settings":
+            openSettingsWindow()
+        default:
+            appState.diagLog.warning("Received unrecognized thaw:// URL: \(url.absoluteString)")
+        }
+    }
 
     /// Opens the settings window and activates the app.
     @objc func openSettingsWindow() {
