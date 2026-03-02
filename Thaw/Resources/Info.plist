@@ -6,5 +6,16 @@
 	<string>https://stonerl.github.io/Thaw/appcast.xml</string>
 	<key>SUPublicEDKey</key>
 	<string>fQ2kWqCLfAPAxQX1rp8gVNoG9hlAV/Gmm7kMBbxFe+A=</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.stonerl.Thaw</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>thaw</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>
