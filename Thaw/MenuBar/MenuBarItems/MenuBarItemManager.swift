@@ -3668,6 +3668,13 @@ extension MenuBarItemManager {
             appState.objectWillChange.send()
         }
 
+        // Clear any stale -1 sentinel that may have been written into
+        // menuBarHeightCache while the Menubar window was transiently
+        // unavailable during the reset. The item cache is fully rebuilt
+        // at this point, so the next mouse event will perform a fresh
+        // live lookup and cache the correct height.
+        NSScreen.invalidateMenuBarHeightCache()
+
         return failedMoves
     }
 
