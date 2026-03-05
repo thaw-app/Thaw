@@ -73,20 +73,19 @@ final class ControlItem {
             self.statusItem.autosaveName = controlItem.identifier.rawValue
 
             if let button = statusItem.button {
-                // This could break in a new macOS release, but we need this constraint in order to
-                // be able to hide the status item when the `ShowSectionDividers` setting is disabled.
-                // A previous implementation used `statusItem.isVisible`, which was more robust, but
-                // would completely remove the status item. With the current set of features, we use
-                // the control item positions to determine the items in each section, so we need the
-                // status item to be present if its section is enabled. The new solution is to remove
-                // a constraint from the item's content view prevents it from having a length of zero.
-                // Then, we set the length. FIXME: Find a replacement for this.
-                if
-                    let constraints = button.window?.contentView?.constraintsAffectingLayout(for: .horizontal),
-                    let constraint = constraints.first(where: Predicates.controlItemConstraint(button: button))
-                {
-                    assert(constraints.filter(Predicates.controlItemConstraint(button: button)).count == 1)
-                    self.constraint = constraint
+                if let contentView = button.window?.contentView {
+                    let constraints = contentView.constraintsAffectingLayout(for: .horizontal)
+                    if let constraint = constraints.first(where: Predicates.controlItemConstraint(button: button)) {
+                        assert(constraints.filter(Predicates.controlItemConstraint(button: button)).count == 1)
+                        self.constraint = constraint
+                    } else {
+                        self.constraint = nil
+                    }
+
+                    NSLayoutConstraint.activate([
+                        button.topAnchor.constraint(equalTo: contentView.topAnchor),
+                        button.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+                    ])
                 } else {
                     self.constraint = nil
                 }

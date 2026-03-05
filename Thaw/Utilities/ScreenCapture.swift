@@ -20,7 +20,7 @@ enum ScreenCapture {
     /// capture permissions.
     static func checkPermissions() -> Bool {
         let windowIDs = Bridging.getMenuBarWindowList(option: [.itemsOnly, .activeSpace])
-        diagLog.debug("checkPermissions: checking \(windowIDs.count) menu bar windows for title access")
+        diagLog.debug("checkPermissions: checking \(windowIDs.count) menu bar window(s) for title access")
 
         for windowID in windowIDs {
             guard
@@ -30,13 +30,13 @@ enum ScreenCapture {
                 continue
             }
             let hasTitle = window.title != nil
-            diagLog.debug("checkPermissions: windowID=\(windowID) ownerPID=\(window.ownerPID) ownerName=\(window.ownerName ?? "nil") title=\(window.title ?? "nil") -> hasTitle=\(hasTitle)")
+            diagLog.debug("checkPermissions: windowID=\(windowID) pid=\(window.ownerPID) owner=\"\(window.ownerName ?? "nil")\" title=\"\(window.title ?? "nil")\" → hasTitle=\(hasTitle)")
             return hasTitle
         }
         // CGPreflightScreenCaptureAccess() only returns an initial value,
         // but we can use it as a fallback.
         let preflightResult = CGPreflightScreenCaptureAccess()
-        diagLog.debug("checkPermissions: no suitable non-owned windows found, falling back to CGPreflightScreenCaptureAccess() = \(preflightResult)")
+        diagLog.debug("checkPermissions: no suitable non-owned windows found, fallback CGPreflightScreenCaptureAccess() → \(preflightResult)")
         return preflightResult
     }
 
@@ -91,11 +91,13 @@ enum ScreenCapture {
             return nil
         }
         let bounds = screenBounds ?? .null
+        let boundsDesc = bounds.isNull ? "null (auto)" : String(format: "(%.0f,%.0f %.0fx%.0f)", bounds.origin.x, bounds.origin.y, bounds.width, bounds.height)
+        diagLog.debug("captureWindows: bounds=\(boundsDesc), windowCount=\(windowIDs.count), options=\(option.rawValue)")
         // ScreenCaptureKit doesn't support capturing images of offscreen menu bar
         // items, so we unfortunately have to use the deprecated CGWindowList API.
         let image = CGImage(windowListFromArrayScreenBounds: bounds, windowArray: array as CFArray, imageOption: option)
         if let image {
-            diagLog.debug("captureWindows: captured \(windowIDs.count) windows -> \(image.width)x\(image.height) image")
+            diagLog.debug("captureWindows: ✓ captured \(windowIDs.count) windows → \(image.width)×\(image.height)px")
         } else {
             diagLog.warning("captureWindows: CGImage(windowListFromArrayScreenBounds:) returned nil for \(windowIDs.count) windows (IDs: \(windowIDs.prefix(5)))")
         }
@@ -122,9 +124,9 @@ enum ScreenCapture {
     static func captureScreenBelowWindow(with windowID: CGWindowID, screenBounds: CGRect, option: CGWindowImageOption = []) -> CGImage? {
         let image = CGWindowListCreateImage(screenBounds, .optionOnScreenBelowWindow, windowID, option)
         if let image {
-            diagLog.debug("captureScreenBelowWindow: captured windows below \(windowID) -> \(image.width)x\(image.height) image")
+            diagLog.debug("captureScreenBelowWindow: ✓ captured below windowID=\(windowID) → \(image.width)×\(image.height)px")
         } else {
-            diagLog.warning("captureScreenBelowWindow: CGWindowListCreateImage returned nil for window \(windowID)")
+            diagLog.warning("captureScreenBelowWindow: CGWindowListCreateImage returned nil for windowID=\(windowID)")
         }
         return image
     }

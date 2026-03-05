@@ -250,6 +250,16 @@ final class SourcePIDCache {
     /// Returns the cached process identifier for the given window,
     /// updating the cache if needed.
     func pid(for window: WindowInfo) -> pid_t? {
+        // Wrap the entire request in an autoreleasepool. This XPC service
+        // has no NSApplication, so autoreleased ObjC/CF objects from
+        // WindowInfo creation, AX API calls, and CGS bridging would
+        // otherwise accumulate on the GCD thread until process exit.
+        autoreleasepool {
+            pidBody(for: window)
+        }
+    }
+
+    private func pidBody(for window: WindowInfo) -> pid_t? {
         if let pid = state.withLock({ $0.pids[window.windowID] }) {
             SourcePIDCache.diagLog.debug("SourcePIDCache.pid: cache hit for windowID \(window.windowID) -> PID \(pid)")
             return pid

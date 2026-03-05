@@ -16,38 +16,38 @@ import SwiftUI
 final class AdvancedSettings: ObservableObject {
     /// A Boolean value that indicates whether the always-hidden section
     /// is enabled.
-    @Published var enableAlwaysHiddenSection = false
+    @Published var enableAlwaysHiddenSection = Defaults.DefaultValue.enableAlwaysHiddenSection
 
     /// A Boolean value that indicates whether to show all sections when
     /// the user is dragging items in the menu bar.
-    @Published var showAllSectionsOnUserDrag = true
+    @Published var showAllSectionsOnUserDrag = Defaults.DefaultValue.showAllSectionsOnUserDrag
 
     /// The display style for section divider control items.
-    @Published var sectionDividerStyle: SectionDividerStyle = .noDivider
+    @Published var sectionDividerStyle = Defaults.DefaultValue.sectionDividerStyle
 
     /// A Boolean value that indicates whether the application menus
     /// should be hidden if needed to show all menu bar items.
-    @Published var hideApplicationMenus = true
+    @Published var hideApplicationMenus = Defaults.DefaultValue.hideApplicationMenus
 
     /// A Boolean value that indicates whether to show a context menu
     /// when the user right-clicks the menu bar.
-    @Published var enableSecondaryContextMenu = true
+    @Published var enableSecondaryContextMenu = Defaults.DefaultValue.enableSecondaryContextMenu
 
     /// The delay before showing on hover.
-    @Published var showOnHoverDelay: TimeInterval = 0.2
+    @Published var showOnHoverDelay = Defaults.DefaultValue.showOnHoverDelay
 
     /// The delay before showing a tooltip when hovering over a menu bar item.
-    @Published var tooltipDelay: TimeInterval = 0.5
+    @Published var tooltipDelay = Defaults.DefaultValue.tooltipDelay
 
     /// A Boolean value that indicates whether tooltips are shown when hovering
     /// over menu bar items in the actual menu bar (not just in the IceBar or settings).
-    @Published var showMenuBarTooltips = false
+    @Published var showMenuBarTooltips = Defaults.DefaultValue.showMenuBarTooltips
 
     /// The interval between icon image refreshes in panels (Ice Bar, search, layout).
-    @Published var iconRefreshInterval: TimeInterval = 0.2
+    @Published var iconRefreshInterval = Defaults.DefaultValue.iconRefreshInterval
 
     /// A Boolean value that indicates whether diagnostic logging to file is enabled.
-    @Published var enableDiagnosticLogging = false
+    @Published var enableDiagnosticLogging = Defaults.DefaultValue.enableDiagnosticLogging
 
     /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
@@ -157,24 +157,5 @@ final class AdvancedSettings: ObservableObject {
             .store(in: &c)
 
         cancellables = c
-    }
-}
-
-// MARK: - SectionDividerStyle
-
-enum SectionDividerStyle: Int, CaseIterable, Identifiable {
-    case noDivider = 0
-    case chevron = 1
-
-    var id: Int {
-        rawValue
-    }
-
-    /// Localized string key representation.
-    var localized: LocalizedStringKey {
-        switch self {
-        case .noDivider: "None"
-        case .chevron: "Chevron"
-        }
     }
 }

@@ -7,6 +7,7 @@
 //  Licensed under the GNU GPLv3
 
 import Foundation
+import SwiftUI
 
 enum Defaults {
     /// Returns a dictionary containing the keys and values for
@@ -135,6 +136,53 @@ enum Defaults {
         if let found = object(forKey: key) as? Value {
             try body(found)
         }
+    }
+}
+
+extension Defaults {
+    enum DefaultValue {
+        // MARK: General Settings
+
+        static let showIceIcon = true
+        static let iceIcon = ControlItemImageSet.defaultIceIcon
+        static let customIceIconIsTemplate = false
+        static let useIceBar = false
+        static let useIceBarOnlyOnNotchedDisplay = false
+        static let iceBarLocation: IceBarLocation = .dynamic
+        static let iceBarLocationOnHotkey = false
+        static let showOnClick = true
+        static let showOnDoubleClick = true
+        static let showOnHover = false
+        static let showOnScroll = true
+        static let itemSpacingOffset: Double = 0
+        static let autoRehide = true
+        static let rehideStrategy: RehideStrategy = .smart
+        static let rehideInterval: TimeInterval = 15
+
+        // MARK: Advanced Settings
+
+        static let enableAlwaysHiddenSection = false
+        static let showAllSectionsOnUserDrag = true
+        static let sectionDividerStyle: SectionDividerStyle = .noDivider
+        static let hideApplicationMenus = true
+        static let enableSecondaryContextMenu = true
+        static let showOnHoverDelay: TimeInterval = 0.2
+        static let tooltipDelay: TimeInterval = 0.5
+        static let showMenuBarTooltips = false
+        static let iconRefreshInterval: TimeInterval = 0.5
+        static let enableDiagnosticLogging = false
+
+        // MARK: Hotkeys Settings
+
+        static let hotkeys: [Any]? = nil
+
+        // MARK: Appearance Settings
+
+        static let menuBarAppearanceConfigurationV2 = MenuBarAppearanceConfigurationV2.defaultConfiguration
+
+        // MARK: Display Settings
+
+        static let displayIceBarConfigurations: [String: DisplayIceBarConfiguration] = [:]
     }
 }
 

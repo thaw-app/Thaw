@@ -29,7 +29,7 @@ struct MenuBarItemTag: Hashable, CustomStringConvertible {
     /// by this tag is a system item.
     var isSystemItem: Bool {
         switch namespace {
-        case .controlCenter, .systemUIServer, .textInputMenuAgent, .weather, .passwords, .screenCaptureUI, .thaw:
+        case .controlCenter, .systemUIServer, .textInputMenuAgent, .weather, .passwords, .screenCaptureUI, .ssMenuAgent, .thaw:
             return true
         case .string, .uuid, .null:
             return false
@@ -104,9 +104,20 @@ struct MenuBarItemTag: Hashable, CustomStringConvertible {
     }
 
     /// Returns a Boolean value that indicates whether the given tag
-    /// matches this tag, ignoring their window identifiers and instance indices.
+    /// matches this tag, ignoring their window identifiers.
     func matchesIgnoringWindowID(_ other: MenuBarItemTag) -> Bool {
-        namespace == other.namespace && title == other.title
+        namespace == other.namespace && title == other.title && instanceIndex == other.instanceIndex
+    }
+
+    /// A stable string identifier that uniquely identifies this tag
+    /// across window ID changes (e.g. app restarts). Includes the
+    /// instance index when it is nonzero so that multiple items from
+    /// the same app with the same title are distinguishable.
+    var tagIdentifier: String {
+        if instanceIndex > 0 {
+            return "\(namespace):\(title):\(instanceIndex)"
+        }
+        return "\(namespace):\(title)"
     }
 
     /// Creates a tag with the given namespace, title, window identifier,
@@ -137,7 +148,7 @@ extension MenuBarItemTag {
     /// In macOS 26, this list contains the "Clock" and "Control Center" items.
     /// In earlier releases, it also contained the "Siri" item.
     static let immovableItems: [MenuBarItemTag] = {
-        var items = [clock, controlCenter]
+        var items = [clock, controlCenter, ssMenuAgent]
         if #unavailable(macOS 26.0) {
             items.append(siri)
         }
@@ -203,6 +214,13 @@ extension MenuBarItemTag {
 
     /// The tag for the system "Siri" item.
     static let siri = MenuBarItemTag(namespace: .systemUIServer, title: "Siri")
+
+    /// The tag for the system "SSMenuAgent" item (Screen Sharing menu extra).
+    ///
+    /// macOS prevents this item from being repositioned via Command+drag.
+    /// The item visually follows the cursor during the drag, but springs
+    /// back to its original position on mouse-up.
+    static let ssMenuAgent = MenuBarItemTag(namespace: .ssMenuAgent, title: "Item-0")
 
     /// The tag for the system "Time Machine" item.
     static let timeMachine = if #available(macOS 26.0, *) {
@@ -294,6 +312,9 @@ extension MenuBarItemTag.Namespace {
 
     /// The namespace for the "TextInputMenuAgent" process.
     static let textInputMenuAgent = string("com.apple.TextInputMenuAgent")
+
+    /// The namespace for the "SSMenuAgent" process (Screen Sharing menu extra).
+    static let ssMenuAgent = string("com.apple.SSMenuAgent")
 
     /// The namespace for the "WeatherMenu" process.
     static let weather = string("com.apple.weather.menu")

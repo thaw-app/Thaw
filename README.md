@@ -1,11 +1,12 @@
 <div align="center">
-    <img src="Resources/Icon.png" width=200 height=200>
+    <img src="Resources/Icon.svg" width=200 height=200>
     <h1>Thaw</h1>
 </div>
 
 Thaw is a powerful menu bar management tool. While its primary function is hiding and showing menu bar items, it aims to cover a wide variety of additional features to make it one of the most versatile menu bar tools available.
 
-![Banner](https://github.com/user-attachments/assets/4423085c-4e4b-4f3d-ad0f-90a217c03470)
+![thaw-banner](https://github.com/user-attachments/assets/9584065d-f840-4545-9a42-cfc5534b5ac3)
+
 
 [![Download](https://img.shields.io/badge/download-latest-brightgreen?style=flat-square)](https://github.com/stonerl/Thaw/releases/latest)
 [![CI](https://img.shields.io/github/actions/workflow/status/stonerl/Thaw/ci.yml?style=flat-square)](https://github.com/stonerl/Thaw/actions/workflows/ci.yml)
@@ -43,22 +44,108 @@ brew install thaw@beta
 
 Thaw is currently available in the following languages:
 
-| Language                   | Status   | Flag  | Completion                             |
-| :------------------------- | :------- | :---: | :------------------------------------- |
-| **English**                | Base     | 🇬🇧/🇺🇸 | ![100%](https://geps.dev/progress/100) |
-| **Bahasa Indonesia**       | Complete |  🇮🇩   | ![100%](https://geps.dev/progress/100) |
-| **Deutsch**                | Complete | 🇩🇪/🇦🇹 | ![100%](https://geps.dev/progress/100) |
-| **Español**                | Complete | 🇪🇸/🇲🇽 | ![100%](https://geps.dev/progress/100) |
-| **Français**               | Complete |  🇫🇷   | ![100%](https://geps.dev/progress/100) |
-| **Italiano**               | Complete |  🇮🇹   | ![100%](https://geps.dev/progress/100) |
-| **Magyar**                 | Complete |  🇭🇺   | ![100%](https://geps.dev/progress/100) |
-| **Nederlands**             | Complete | 🇳🇱/🇧🇪 | ![100%](https://geps.dev/progress/100) |
-| **Português (Brasil)(\*)** | Complete |  🇧🇷   | ![100%](https://geps.dev/progress/100) |
-| **Русский(\*)**            | Complete |  🇷🇺   | ![100%](https://geps.dev/progress/100) |
-| **简体中文**               | Complete |  🇨🇳   | ![100%](https://geps.dev/progress/100) |
-| **正體中文**               | Complete |  🇹🇼   | ![100%](https://geps.dev/progress/100) |
-| **한국어**                 | Complete |  🇰🇷   | ![100%](https://geps.dev/progress/100) |
-| **ภาษาไทย**                | Complete |  🇹🇭   | ![100%](https://geps.dev/progress/100) |
+<table frame="void" rules="none">
+    <tr>
+        <th align="left">Language</th>
+        <th align="left">Status</th>
+        <th align="center">Flag</th>
+        <th align="left">Completion</th>
+        <th width="30"></th>
+        <th align="left">Language</th>
+        <th align="left">Status</th>
+        <th align="center">Flag</th>
+        <th align="left">Completion</th>
+    </tr>
+    <tr>
+        <td><b>English</b></td>
+        <td>Base</td>
+        <td align="center">🇬🇧/🇺🇸</td>
+        <td><img src="https://geps.dev/progress/100" /></td>
+        <td></td>
+        <td><b>Português (Brasil)(*)</b></td>
+        <td>Complete</td>
+        <td align="center">🇧🇷</td>
+        <td><img src="https://geps.dev/progress/100" /></td>
+    </tr>
+    <tr>
+        <td><b>Bahasa Indonesia</b></td>
+        <td>Complete</td>
+        <td align="center">🇮🇩</td>
+        <td><img src="https://geps.dev/progress/100" /></td>
+        <td></td>
+        <td><b>Русский(*)</b></td>
+        <td>Complete</td>
+        <td align="center">🇷🇺</td>
+        <td><img src="https://geps.dev/progress/100" /></td>
+    </tr>
+    <tr>
+        <td><b>Deutsch</b></td>
+        <td>Complete</td>
+        <td align="center">🇩🇪/🇦🇹</td>
+        <td><img src="https://geps.dev/progress/100" /></td>
+        <td></td>
+        <td><b>简体中文</b></td>
+        <td>Complete</td>
+        <td align="center">🇨🇳</td>
+        <td><img src="https://geps.dev/progress/100" /></td>
+    </tr>
+    <tr>
+        <td><b>Español</b></td>
+        <td>Complete</td>
+        <td align="center">🇪🇸/🇲🇽</td>
+        <td><img src="https://geps.dev/progress/100" /></td>
+        <td></td>
+        <td><b>正體中文</b></td>
+        <td>Complete</td>
+        <td align="center">🇹🇼</td>
+        <td><img src="https://geps.dev/progress/100" /></td>
+    </tr>
+    <tr>
+        <td><b>Français</b></td>
+        <td>Complete</td>
+        <td align="center">🇫🇷</td>
+        <td><img src="https://geps.dev/progress/100" /></td>
+        <td></td>
+        <td><b>한국어</b></td>
+        <td>Complete</td>
+        <td align="center">🇰🇷</td>
+        <td><img src="https://geps.dev/progress/100" /></td>
+    </tr>
+    <tr>
+        <td><b>Italiano</b></td>
+        <td>Complete</td>
+        <td align="center">🇮🇹</td>
+        <td><img src="https://geps.dev/progress/100" /></td>
+        <td></td>
+        <td><b>ภาษาไทย</b></td>
+        <td>Complete</td>
+        <td align="center">🇹🇭</td>
+        <td><img src="https://geps.dev/progress/100" /></td>
+    </tr>
+    <tr>
+        <td><b>Magyar</b></td>
+        <td>Complete</td>
+        <td align="center">🇭🇺</td>
+        <td><img src="https://geps.dev/progress/100" /></td>
+        <td></td>
+        <td><b>Türkçe(*)</b></td>
+        <td>Complete</td>
+        <td align="center">🇹🇷</td>
+        <td><img src="https://geps.dev/progress/100" /></td>
+    </tr>
+    <tr>
+        <td><b>Nederlands</b></td>
+        <td>Complete</td>
+        <td align="center">🇳🇱/🇧🇪</td>
+        <td><img src="https://geps.dev/progress/100" /></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>
+</table>
+
 
 _Note: languages marked with (\*) are currently only available in the development branch._
 
@@ -130,25 +217,25 @@ Thaw uses a number of system APIs that are available starting in macOS 14. As su
 
 ## Gallery
 
-#### Show hidden menu bar items below the menu bar
+### Item layout
 
-![Thaw Bar](https://github.com/user-attachments/assets/f1429589-6186-4e1b-8aef-592219d49b9b)
+<img width="1760" height="956" alt="thaw-items-fs8" src="https://github.com/user-attachments/assets/f2f6b9a6-55c5-40b3-910f-b27b114577dd" />
 
-#### Drag-and-drop interface to arrange menu bar items
+### Show hidden menu bar items below the menu bar
 
-![Menu Bar Layout](https://github.com/user-attachments/assets/095442ba-f2d0-4bb4-9632-91e26ef8d45b)
+<img width="1760" height="400" alt="thaw-hidden-fs8" src="https://github.com/user-attachments/assets/c6ac6364-30f8-4c92-8f6f-9efe15f99573" />
 
-#### Customize the menu bar's appearance
+### Drag-and-drop interface to arrange menu bar items
 
-![Menu Bar Appearance](https://github.com/user-attachments/assets/8c22c185-c3d2-49bb-971e-e1fc17df04b3)
+<img width="1760" height="800" alt="thaw-layout-fs8" src="https://github.com/user-attachments/assets/54273d41-fcf3-4c9a-834b-e62a162a6b0c" />
 
-#### Menu bar item search
+### Customize the menu bar's appearance
 
-![Menu Bar Item Search](https://github.com/user-attachments/assets/d1a7df3a-4989-4077-a0b1-8e7d5a1ba5b8)
+<img width="1760" height="956" alt="thaw-appearance-fs8" src="https://github.com/user-attachments/assets/d95302df-26b0-4608-896e-4966c822fb5e" />
 
-#### Custom menu bar item spacing
+### Menu bar item search
 
-![Menu Bar Item Spacing](https://github.com/user-attachments/assets/b196aa7e-184a-4d4c-b040-502f4aae40a6)
+<img width="1760" height="956" alt="thaw-search-fs8" src="https://github.com/user-attachments/assets/ebafc745-7220-46c9-9297-f7a00ef6c15d" />
 
 ## License
 

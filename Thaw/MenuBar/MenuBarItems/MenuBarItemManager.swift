@@ -127,6 +127,8 @@ final class MenuBarItemManager: ObservableObject {
     /// Cached timeouts for move operations.
     private var moveOperationTimeouts = [MenuBarItemTag: Duration]()
 
+    /// Cached timeouts for click operations (adaptive per app).
+    private var clickOperationTimeouts = [MenuBarItemTag: Duration]()
     /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
 
@@ -143,6 +145,8 @@ final class MenuBarItemManager: ObservableObject {
     var isResettingLayout = false
     /// Suppresses saving section order during an active order-restore pass.
     private var isRestoringItemOrder = false
+    /// Timestamp when isRestoringItemOrder was set (for timeout detection).
+    private var isRestoringItemOrderTimestamp: Date?
     /// Persisted bundle identifiers explicitly placed in hidden section.
     private var pinnedHiddenBundleIDs = Set<String>()
     /// Persisted bundle identifiers explicitly placed in always-hidden section.
@@ -233,15 +237,56 @@ final class MenuBarItemManager: ObservableObject {
 
     /// Extracts the current per-section item order from the given cache and
     /// persists it. Skips the write when the order has not changed.
+    /// For items currently in the cache, uses their current section.
+    /// For items from apps that are closed (not in cache), preserves their saved section.
+    /// Only tracks primary items (instanceIndex == 0); indexed items are skipped
+    /// as they naturally position themselves next to their primary item.
     private func saveSectionOrder(from cache: ItemCache) {
         var newOrder = [String: [String]]()
+
+        // Build a set of all identifiers currently in the cache (only primary items)
+        var allCurrentIdentifiers = Set<String>()
+        var allCurrentBaseIdentifiers = Set<String>()
         for section in MenuBarSection.Name.allCases {
-            let identifiers = cache[section]
-                .filter { !$0.isControlItem }
-                .map(\.uniqueIdentifier)
-            guard !identifiers.isEmpty else { continue }
-            newOrder[sectionKey(for: section)] = identifiers
+            for item in cache[section] where !item.isControlItem && item.tag.instanceIndex == 0 {
+                let uniqueID = item.uniqueIdentifier
+                allCurrentIdentifiers.insert(uniqueID)
+                // Also track base identifier (without instanceIndex) to handle
+                // apps that change instanceIndex after restart
+                let baseID = "\(item.tag.namespace):\(item.tag.title)"
+                allCurrentBaseIdentifiers.insert(baseID)
+            }
         }
+
+        for section in MenuBarSection.Name.allCases {
+            // Start with current identifiers for this section (only primary items)
+            var identifiers = cache[section]
+                .filter { !$0.isControlItem && $0.tag.instanceIndex == 0 }
+                .map(\.uniqueIdentifier)
+
+            // Add identifiers from saved sections that are NOT currently in the cache
+            // (i.e., apps that are closed - preserve their saved section).
+            // Skip identifiers whose base (namespace:title) matches a current item,
+            // since that means the app restarted with a different instanceIndex.
+            for (sectionKeyString, savedIdentifiers) in savedSectionOrder {
+                guard sectionName(for: sectionKeyString) == section else { continue }
+                for identifier in savedIdentifiers where !allCurrentIdentifiers.contains(identifier) {
+                    // Check if this identifier's base matches any current item
+                    let baseID = identifier.split(separator: ":", maxSplits: 2).prefix(2).joined(separator: ":")
+                    let isStaleInstanceIndex = allCurrentBaseIdentifiers.contains(baseID)
+                    guard !isStaleInstanceIndex else { continue }
+
+                    if !identifiers.contains(identifier) {
+                        identifiers.append(identifier)
+                    }
+                }
+            }
+
+            if !identifiers.isEmpty {
+                newOrder[sectionKey(for: section)] = identifiers
+            }
+        }
+
         guard newOrder != savedSectionOrder else { return }
         savedSectionOrder = newOrder
         persistSavedSectionOrder()
@@ -291,6 +336,36 @@ final class MenuBarItemManager: ObservableObject {
     /// Configures the internal observers for the manager.
     private func configureCancellables(with appState: AppState) {
         var c = Set<AnyCancellable>()
+
+        // When any app launches, refresh the cache to detect new menu bar items
+        // (e.g., apps with "unremembered" icons that need restoration) and restore
+        // any items that moved to incorrect sections after their app restarted.
+        NSWorkspace.shared.notificationCenter.publisher(
+            for: NSWorkspace.didLaunchApplicationNotification
+        )
+        .debounce(for: 1, scheduler: DispatchQueue.main)
+        .sink { [weak self] _ in
+            guard let self else { return }
+            MenuBarItemManager.diagLog.debug("App launched, refreshing cache for potential new items")
+            Task {
+                await self.cacheItemsRegardless()
+            }
+        }
+        .store(in: &c)
+
+        // When any app terminates, refresh the cache (items may have disappeared).
+        NSWorkspace.shared.notificationCenter.publisher(
+            for: NSWorkspace.didTerminateApplicationNotification
+        )
+        .debounce(for: 1, scheduler: DispatchQueue.main)
+        .sink { [weak self] _ in
+            guard let self else { return }
+            MenuBarItemManager.diagLog.debug("App terminated, refreshing cache")
+            Task {
+                await self.cacheItemsIfNeeded()
+            }
+        }
+        .store(in: &c)
 
         NSWorkspace.shared.notificationCenter.publisher(
             for: NSWorkspace.didActivateApplicationNotification
@@ -690,6 +765,15 @@ extension MenuBarItemManager {
         }
 
         itemCache = context.cache
+
+        // Reset isRestoringItemOrder if it's been stuck for too long (10 seconds).
+        // This prevents stale flags from blocking saves after user manual moves.
+        if isRestoringItemOrder, let timestamp = isRestoringItemOrderTimestamp, Date().timeIntervalSince(timestamp) > 10 {
+            MenuBarItemManager.diagLog.debug("Resetting stale isRestoringItemOrder flag (timeout)")
+            isRestoringItemOrder = false
+            isRestoringItemOrderTimestamp = nil
+        }
+
         if !isRestoringItemOrder, !isResettingLayout {
             saveSectionOrder(from: context.cache)
         }
@@ -754,6 +838,7 @@ extension MenuBarItemManager {
             await MainActor.run {
                 MenuBarItemTag.Namespace.pruneUUIDCache(keeping: Set(itemWindowIDs))
                 self.pruneMoveOperationTimeouts(keeping: Set(items.map(\.tag)))
+                self.pruneClickOperationTimeouts(keeping: Set(items.map(\.tag)))
             }
 
             for item in items {
@@ -825,6 +910,7 @@ extension MenuBarItemManager {
             // Set the flag before calling so that any intermediate cache
             // updates during move() don't overwrite the saved section order.
             isRestoringItemOrder = true
+            isRestoringItemOrderTimestamp = Date()
             let didRestoreSections = await restoreItemsToSavedSections(
                 items,
                 controlItems: controlItems,
@@ -857,6 +943,7 @@ extension MenuBarItemManager {
                 // Keep isRestoringItemOrder true through the recache to prevent
                 // saving intermediate item positions while macOS settles the moves.
                 isRestoringItemOrder = true
+                isRestoringItemOrderTimestamp = Date()
                 MenuBarItemManager.diagLog.debug("Restored saved item order; scheduling recache")
                 let continuation = self.backgroundCacheContinuation
                 self.backgroundCacheContinuation = nil
@@ -1127,80 +1214,104 @@ extension MenuBarItemManager {
             }
         }
 
+        // Outer-scope locks so the onCancel handler can unblock the stuck
+        // continuation directly. innerTask completes almost immediately after
+        // enabling the EventTaps; by the time the timeout fires, cancelling
+        // innerTask is a no-op. The outer onCancel must therefore resume the
+        // continuation itself to prevent withThrowingTaskGroup from waiting
+        // forever and holding eventSemaphore for 5 seconds.
+        let didResume = OSAllocatedUnfairLock(initialState: false)
+        let continuationHolder = OSAllocatedUnfairLock<CheckedContinuation<Void, any Error>?>(initialState: nil)
+        let innerTaskHolder = OSAllocatedUnfairLock<Task<Void, Never>?>(initialState: nil)
+
         let timeoutTask = Task(timeout: timeout * count) {
-            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
-                let didResume = OSAllocatedUnfairLock(initialState: false)
+            try await withTaskCancellationHandler {
+                try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
+                    // Store continuation so the outer onCancel handler can resume it directly.
+                    continuationHolder.withLock { $0 = continuation }
 
-                // Listen for the following events at the first location
-                // and perform the following actions:
-                //
-                // - Entry event: Decrement the count and post the real
-                //   event to the second location (handled in EventTap 2).
-                // - Exit event: Resume the continuation.
-                //
-                // These events serve as start (or continue) and stop
-                // signals, and are discarded.
-                let eventTap1 = EventTap(
-                    label: "EventTap 1",
-                    type: .null,
-                    location: firstLocation,
-                    placement: .headInsertEventTap,
-                    option: .defaultTap
-                ) { tap, rEvent in
-                    if rEvent.matches(entryEvent, byIntegerFields: [.eventSourceUserData]) {
-                        count -= 1
-                        event.post(to: secondLocation)
-                        return nil
-                    }
-                    if rEvent.matches(exitEvent, byIntegerFields: [.eventSourceUserData]) {
-                        tap.disable()
-                        if didResume.tryClaimOnce() {
-                            continuation.resume()
+                    // Listen for the following events at the first location
+                    // and perform the following actions:
+                    //
+                    // - Entry event: Decrement the count and post the real
+                    //   event to the second location (handled in EventTap 2).
+                    // - Exit event: Resume the continuation.
+                    //
+                    // These events serve as start (or continue) and stop
+                    // signals, and are discarded.
+                    let eventTap1 = EventTap(
+                        label: "EventTap 1",
+                        type: .null,
+                        location: firstLocation,
+                        placement: .headInsertEventTap,
+                        option: .defaultTap
+                    ) { tap, rEvent in
+                        if rEvent.matches(entryEvent, byIntegerFields: [.eventSourceUserData]) {
+                            count -= 1
+                            event.post(to: secondLocation)
+                            return nil
                         }
-                        return nil
-                    }
-                    return rEvent
-                }
-
-                // Listen for the real event at the second location and,
-                // depending on the count, post either the entry or exit
-                // event to the first location (handled in EventTap 1).
-                let eventTap2 = EventTap(
-                    label: "EventTap 2",
-                    type: event.type,
-                    location: secondLocation,
-                    placement: .tailAppendEventTap,
-                    option: .listenOnly
-                ) { tap, rEvent in
-                    guard rEvent.matches(event, byIntegerFields: CGEventField.menuBarItemEventFields) else {
+                        if rEvent.matches(exitEvent, byIntegerFields: [.eventSourceUserData]) {
+                            tap.disable()
+                            if didResume.tryClaimOnce() {
+                                continuation.resume()
+                            }
+                            return nil
+                        }
                         return rEvent
                     }
-                    if count <= 0 {
-                        tap.disable()
-                        exitEvent.post(to: firstLocation)
-                    } else {
-                        entryEvent.post(to: firstLocation)
+
+                    // Listen for the real event at the second location and,
+                    // depending on the count, post either the entry or exit
+                    // event to the first location (handled in EventTap 1).
+                    let eventTap2 = EventTap(
+                        label: "EventTap 2",
+                        type: event.type,
+                        location: secondLocation,
+                        placement: .tailAppendEventTap,
+                        option: .listenOnly
+                    ) { tap, rEvent in
+                        guard rEvent.matches(event, byIntegerFields: CGEventField.menuBarItemEventFields) else {
+                            return rEvent
+                        }
+                        if count <= 0 {
+                            tap.disable()
+                            exitEvent.post(to: firstLocation)
+                        } else {
+                            entryEvent.post(to: firstLocation)
+                        }
+                        rEvent.setTargetPID(pid)
+                        return rEvent
                     }
-                    rEvent.setTargetPID(pid)
-                    return rEvent
-                }
 
-                // Keep the taps alive.
-                eventTaps.append(eventTap1)
-                eventTaps.append(eventTap2)
+                    // Keep the taps alive.
+                    eventTaps.append(eventTap1)
+                    eventTaps.append(eventTap2)
 
-                Task {
-                    await withTaskCancellationHandler {
-                        eventTap1.enable()
-                        eventTap2.enable()
-                        entryEvent.post(to: firstLocation)
-                    } onCancel: {
-                        eventTap1.disable()
-                        eventTap2.disable()
-                        if didResume.tryClaimOnce() {
-                            continuation.resume(throwing: CancellationError())
+                    let innerTask = Task {
+                        await withTaskCancellationHandler {
+                            eventTap1.enable()
+                            eventTap2.enable()
+                            entryEvent.post(to: firstLocation)
+                        } onCancel: {
+                            eventTap1.disable()
+                            eventTap2.disable()
+                            if didResume.tryClaimOnce() {
+                                continuation.resume(throwing: CancellationError())
+                            }
                         }
                     }
+                    innerTaskHolder.withLock { $0 = innerTask }
+                    // Handle race: outer task may have been cancelled before innerTask was stored.
+                    if Task.isCancelled { innerTask.cancel() }
+                }
+            } onCancel: {
+                innerTaskHolder.withLock { $0 }?.cancel()
+                // Directly resume the continuation — handles the common case where
+                // innerTask already finished before cancellation was delivered.
+                let cont = continuationHolder.withLock { $0 }
+                if let cont, didResume.tryClaimOnce() {
+                    cont.resume(throwing: CancellationError())
                 }
             }
         }
@@ -1258,104 +1369,128 @@ extension MenuBarItemManager {
             }
         }
 
+        // Outer-scope locks so the onCancel handler can unblock the stuck
+        // continuation directly. innerTask completes almost immediately after
+        // enabling the EventTaps; by the time the timeout fires, cancelling
+        // innerTask is a no-op. The outer onCancel must therefore resume the
+        // continuation itself to prevent withThrowingTaskGroup from waiting
+        // forever and holding eventSemaphore for 5 seconds.
+        let didResume = OSAllocatedUnfairLock(initialState: false)
+        let continuationHolder = OSAllocatedUnfairLock<CheckedContinuation<Void, any Error>?>(initialState: nil)
+        let innerTaskHolder = OSAllocatedUnfairLock<Task<Void, Never>?>(initialState: nil)
+
         let timeoutTask = Task(timeout: timeout * count) {
-            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
-                let didResume = OSAllocatedUnfairLock(initialState: false)
+            try await withTaskCancellationHandler {
+                try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
+                    // Store continuation so the outer onCancel handler can resume it directly.
+                    continuationHolder.withLock { $0 = continuation }
 
-                // Listen for the following events at the first location
-                // and perform the following actions:
-                //
-                // - Entry event: Decrement the count and post the real
-                //   event to the second location (handled in EventTap 2).
-                // - Exit event: Resume the continuation.
-                //
-                // These events serve as start (or continue) and stop
-                // signals, and are discarded.
-                let eventTap1 = EventTap(
-                    label: "EventTap 1",
-                    type: .null,
-                    location: firstLocation,
-                    placement: .headInsertEventTap,
-                    option: .defaultTap
-                ) { tap, rEvent in
-                    if rEvent.matches(entryEvent, byIntegerFields: [.eventSourceUserData]) {
-                        count -= 1
-                        event.post(to: secondLocation)
-                        return nil
-                    }
-                    if rEvent.matches(exitEvent, byIntegerFields: [.eventSourceUserData]) {
-                        tap.disable()
-                        if didResume.tryClaimOnce() {
-                            continuation.resume()
+                    // Listen for the following events at the first location
+                    // and perform the following actions:
+                    //
+                    // - Entry event: Decrement the count and post the real
+                    //   event to the second location (handled in EventTap 2).
+                    // - Exit event: Resume the continuation.
+                    //
+                    // These events serve as start (or continue) and stop
+                    // signals, and are discarded.
+                    let eventTap1 = EventTap(
+                        label: "EventTap 1",
+                        type: .null,
+                        location: firstLocation,
+                        placement: .headInsertEventTap,
+                        option: .defaultTap
+                    ) { tap, rEvent in
+                        if rEvent.matches(entryEvent, byIntegerFields: [.eventSourceUserData]) {
+                            count -= 1
+                            event.post(to: secondLocation)
+                            return nil
                         }
-                        return nil
-                    }
-                    return rEvent
-                }
-
-                // Listen for the real event at the second location and
-                // post the real event to the first location (handled in
-                // EventTap 3).
-                let eventTap2 = EventTap(
-                    label: "EventTap 2",
-                    type: event.type,
-                    location: secondLocation,
-                    placement: .tailAppendEventTap,
-                    option: .listenOnly
-                ) { tap, rEvent in
-                    guard rEvent.matches(event, byIntegerFields: CGEventField.menuBarItemEventFields) else {
+                        if rEvent.matches(exitEvent, byIntegerFields: [.eventSourceUserData]) {
+                            tap.disable()
+                            if didResume.tryClaimOnce() {
+                                continuation.resume()
+                            }
+                            return nil
+                        }
                         return rEvent
                     }
-                    if count <= 0 {
-                        tap.disable()
-                    }
-                    event.post(to: firstLocation)
-                    rEvent.setTargetPID(pid)
-                    return rEvent
-                }
 
-                // Listen for the real event at the first location and,
-                // depending on the count, post either the entry or exit
-                // event to the first location (handled in EventTap 1).
-                let eventTap3 = EventTap(
-                    label: "EventTap 3",
-                    type: event.type,
-                    location: firstLocation,
-                    placement: .headInsertEventTap,
-                    option: .listenOnly
-                ) { tap, rEvent in
-                    guard rEvent.matches(event, byIntegerFields: CGEventField.menuBarItemEventFields) else {
+                    // Listen for the real event at the second location and
+                    // post the real event to the first location (handled in
+                    // EventTap 3).
+                    let eventTap2 = EventTap(
+                        label: "EventTap 2",
+                        type: event.type,
+                        location: secondLocation,
+                        placement: .tailAppendEventTap,
+                        option: .listenOnly
+                    ) { tap, rEvent in
+                        guard rEvent.matches(event, byIntegerFields: CGEventField.menuBarItemEventFields) else {
+                            return rEvent
+                        }
+                        if count <= 0 {
+                            tap.disable()
+                        }
+                        event.post(to: firstLocation)
+                        rEvent.setTargetPID(pid)
                         return rEvent
                     }
-                    if count <= 0 {
-                        tap.disable()
-                        exitEvent.post(to: firstLocation)
-                    } else {
-                        entryEvent.post(to: firstLocation)
+
+                    // Listen for the real event at the first location and,
+                    // depending on the count, post either the entry or exit
+                    // event to the first location (handled in EventTap 1).
+                    let eventTap3 = EventTap(
+                        label: "EventTap 3",
+                        type: event.type,
+                        location: firstLocation,
+                        placement: .headInsertEventTap,
+                        option: .listenOnly
+                    ) { tap, rEvent in
+                        guard rEvent.matches(event, byIntegerFields: CGEventField.menuBarItemEventFields) else {
+                            return rEvent
+                        }
+                        if count <= 0 {
+                            tap.disable()
+                            exitEvent.post(to: firstLocation)
+                        } else {
+                            entryEvent.post(to: firstLocation)
+                        }
+                        rEvent.setTargetPID(pid)
+                        return rEvent
                     }
-                    rEvent.setTargetPID(pid)
-                    return rEvent
-                }
 
-                // Keep the taps alive.
-                eventTaps.append(eventTap1)
-                eventTaps.append(eventTap2)
-                eventTaps.append(eventTap3)
+                    // Keep the taps alive.
+                    eventTaps.append(eventTap1)
+                    eventTaps.append(eventTap2)
+                    eventTaps.append(eventTap3)
 
-                Task {
-                    await withTaskCancellationHandler {
-                        eventTap1.enable()
-                        eventTap2.enable()
-                        eventTap3.enable()
-                        entryEvent.post(to: firstLocation)
-                    } onCancel: {
-                        eventTap1.disable()
-                        eventTap2.disable()
-                        eventTap3.disable()
-                        if didResume.tryClaimOnce() {
-                            continuation.resume(throwing: CancellationError())
+                    let innerTask = Task {
+                        await withTaskCancellationHandler {
+                            eventTap1.enable()
+                            eventTap2.enable()
+                            eventTap3.enable()
+                            entryEvent.post(to: firstLocation)
+                        } onCancel: {
+                            eventTap1.disable()
+                            eventTap2.disable()
+                            eventTap3.disable()
+                            if didResume.tryClaimOnce() {
+                                continuation.resume(throwing: CancellationError())
+                            }
                         }
                     }
+                    innerTaskHolder.withLock { $0 = innerTask }
+                    // Handle race: outer task may have been cancelled before innerTask was stored.
+                    if Task.isCancelled { innerTask.cancel() }
+                }
+            } onCancel: {
+                innerTaskHolder.withLock { $0 }?.cancel()
+                // Directly resume the continuation — handles the common case where
+                // innerTask already finished before cancellation was delivered.
+                let cont = continuationHolder.withLock { $0 }
+                if let cont, didResume.tryClaimOnce() {
+                    cont.resume(throwing: CancellationError())
                 }
             }
         }
@@ -1420,7 +1555,10 @@ extension MenuBarItemManager {
     private func updateMoveOperationTimeout(_ timeout: Duration, for item: MenuBarItem) {
         let current = getMoveOperationTimeout(for: item)
         let average = (timeout + current) / 2
-        let clamped = average.clamped(min: .milliseconds(50), max: .milliseconds(500))
+        // Minimum of 75ms: waitForMoveEventResponse polls every 10ms, so a
+        // timeout below ~75ms leaves too little margin for system event latency
+        // and causes itemResponseTimeout → retry cascades.
+        let clamped = average.clamped(min: .milliseconds(75), max: .milliseconds(500))
         moveOperationTimeouts[item.tag] = clamped
     }
 
@@ -1428,6 +1566,48 @@ extension MenuBarItemManager {
     /// for the given valid tags.
     private func pruneMoveOperationTimeouts(keeping validTags: Set<MenuBarItemTag>) {
         moveOperationTimeouts = moveOperationTimeouts.filter { validTags.contains($0.key) }
+    }
+
+    /// Returns the default timeout for click operations based on the item's namespace.
+    private func getDefaultClickOperationTimeout(for item: MenuBarItem) -> Duration {
+        // Known slow apps with dynamic content
+        let slowAppBundleIDs = [
+            "com.bitsplash.PasteNow",
+            "com.charliemonroe.Downie-setapp",
+            "com.if.Amphetamine",
+            "com.hegenberg.BetterTouchTool",
+            "net.matthewpalmer.Vanilla",
+        ]
+
+        let namespaceString = item.tag.namespace.description
+        if slowAppBundleIDs.contains(where: { namespaceString.contains($0) }) {
+            return .milliseconds(500) // Extra time for slow apps
+        }
+
+        return .milliseconds(350) // Default
+    }
+
+    /// Returns the cached timeout for click operations associated with the given item.
+    private func getClickOperationTimeout(for item: MenuBarItem) -> Duration {
+        if let timeout = clickOperationTimeouts[item.tag] {
+            return timeout
+        }
+        return getDefaultClickOperationTimeout(for: item)
+    }
+
+    /// Updates the cached timeout for click operations associated with the given item.
+    private func updateClickOperationTimeout(_ duration: Duration, for item: MenuBarItem) {
+        let current = getClickOperationTimeout(for: item)
+        let average = (duration + current) / 2
+        let clamped = average.clamped(min: .milliseconds(200), max: .milliseconds(1000))
+        clickOperationTimeouts[item.tag] = clamped
+        MenuBarItemManager.diagLog.debug("Updated click timeout for \(item.logString): \(Int(clamped.milliseconds))ms (measured: \(Int(duration.milliseconds))ms)")
+    }
+
+    /// Prunes the click operation timeouts cache, keeping only the entries
+    /// for the given valid tags.
+    private func pruneClickOperationTimeouts(keeping validTags: Set<MenuBarItemTag>) {
+        clickOperationTimeouts = clickOperationTimeouts.filter { validTags.contains($0.key) }
     }
 
     /// Returns the target points for creating the events needed to
@@ -1752,10 +1932,11 @@ extension MenuBarItemManager {
     ///   - item: The menu bar item to click.
     ///   - mouseButton: The mouse button to click the item with.
     private func postClickEvents(item: MenuBarItem, mouseButton: CGMouseButton) async throws {
+        // Try to acquire semaphore with timeout
         do {
             try await eventSemaphore.wait(timeout: .seconds(5))
         } catch is SimpleSemaphore.TimeoutError {
-            MenuBarItemManager.diagLog.error("eventSemaphore timed out in postClickEvents, forcing signal and retrying")
+            MenuBarItemManager.diagLog.error("eventSemaphore timed out in postClickEvents for \(item.logString), forcing signal and retrying")
             await eventSemaphore.signal()
             throw EventError.cannotComplete
         }
@@ -1768,7 +1949,10 @@ extension MenuBarItemManager {
         try permitLocalEvents()
 
         let clickTypes = getClickSubtypes(for: mouseButton)
-        let timeout = Duration.milliseconds(250)
+        // Use adaptive timeout based on app performance history
+        let timeout = getClickOperationTimeout(for: item)
+
+        MenuBarItemManager.diagLog.debug("postClickEvents: using timeout \(Int(timeout.milliseconds))ms for \(item.logString)")
 
         guard
             let mouseDown = CGEvent.menuBarItemEvent(
@@ -1793,6 +1977,7 @@ extension MenuBarItemManager {
             MouseHelpers.showCursor()
         }
 
+        let eventStartTime = Date.now
         do {
             try await postEventWithBarrier(
                 mouseDown,
@@ -1805,6 +1990,10 @@ extension MenuBarItemManager {
                 timeout: timeout,
                 repeating: 2 // Double mouse up prevents invalid item state.
             )
+
+            // Update timeout cache with successful duration
+            let successDuration = Duration.milliseconds(Date.now.timeIntervalSince(eventStartTime) * 1000)
+            updateClickOperationTimeout(successDuration, for: item)
         } catch {
             do {
                 MenuBarItemManager.diagLog.warning("Click events failed, posting fallback")
@@ -1849,17 +2038,21 @@ extension MenuBarItemManager {
             appState.hidEventManager.startAll()
         }
 
-        let maxAttempts = 4
+        let maxAttempts = 3 // Reduced from 4 to minimize accumulated delay
+        let attemptStartTime = Date.now
         for n in 1 ... maxAttempts {
             guard !Task.isCancelled else {
                 throw EventError.cannotComplete
             }
             do {
+                let clickStartTime = Date.now
                 try await postClickEvents(item: item, mouseButton: mouseButton)
-                MenuBarItemManager.diagLog.debug("Attempt \(n) succeeded, finished with click")
+                let clickDuration = Date.now.timeIntervalSince(clickStartTime)
+                MenuBarItemManager.diagLog.debug("Attempt \(n) succeeded in \(Int(clickDuration * 1000))ms, finished with click")
                 return
             } catch {
-                MenuBarItemManager.diagLog.debug("Attempt \(n) failed: \(error)")
+                let attemptDuration = Date.now.timeIntervalSince(attemptStartTime)
+                MenuBarItemManager.diagLog.debug("Attempt \(n) failed after \(Int(attemptDuration * 1000))ms: \(error)")
                 if n < maxAttempts {
                     await eventSleep()
                     continue
@@ -2113,7 +2306,7 @@ extension MenuBarItemManager {
         // and use it as a fallback if the neighbor-based return destination
         // becomes stale by the time we rehide.
         let originalSection = itemCache.address(for: item.tag)?.section ?? .hidden
-        let tagIdentifier = "\(item.tag.namespace):\(item.tag.title)"
+        let tagIdentifier = item.tag.tagIdentifier
 
         // Rehide any previously temporarily shown items before showing a new one.
         // This prevents stale contexts from accumulating when the user opens multiple
@@ -2172,7 +2365,7 @@ extension MenuBarItemManager {
         case .rightOfItem: position = "right"
         }
         pendingReturnDestinations[tagIdentifier] = [
-            "neighbor": "\(neighborTag.namespace):\(neighborTag.title)",
+            "neighbor": neighborTag.tagIdentifier,
             "position": position,
         ]
         persistPendingRelocations()
@@ -2368,7 +2561,10 @@ extension MenuBarItemManager {
             appState.hidEventManager.startAll()
         }
 
-        await eventSleep(for: .milliseconds(250))
+        // Use a shorter settle time when called from temporarilyShow — the user
+        // is actively waiting for the next click. The eventSemaphore and
+        // waitForMoveOperationBuffer in move() provide adequate race protection.
+        await eventSleep(for: isCalledFromTemporarilyShow ? .milliseconds(50) : .milliseconds(250))
 
         MenuBarItemManager.diagLog.debug("Rehiding temporarily shown items")
 
@@ -2423,7 +2619,7 @@ extension MenuBarItemManager {
             do {
                 try await move(item: item, to: destination, on: context.displayID, skipInputPause: true)
                 // Successfully rehidden — remove the pending relocation entry.
-                let tagIdentifier = "\(context.tag.namespace):\(context.tag.title)"
+                let tagIdentifier = context.tag.tagIdentifier
                 pendingRelocations.removeValue(forKey: tagIdentifier)
                 pendingReturnDestinations.removeValue(forKey: tagIdentifier)
             } catch {
@@ -2480,7 +2676,7 @@ extension MenuBarItemManager {
         }
         // Also clear any pending relocation since the user explicitly
         // placed the item in a new position.
-        let tagIdentifier = "\(tag.namespace):\(tag.title)"
+        let tagIdentifier = tag.tagIdentifier
         if pendingRelocations.removeValue(forKey: tagIdentifier) != nil {
             pendingReturnDestinations.removeValue(forKey: tagIdentifier)
             persistPendingRelocations()
@@ -2591,8 +2787,26 @@ extension MenuBarItemManager {
         // tag/namespace) and not already placed/pinned in hidden areas.
         let hideableLeftmost = leftmostItems.filter { $0.canBeHidden }
         let previousIDs = Set(previousWindowIDs)
+
+        // Build lookup for saved sections (same logic as restoreItemsToSavedSections).
+        var savedSectionForIdentifier = [String: MenuBarSection.Name]()
+        for (sectionKeyString, identifiers) in savedSectionOrder {
+            guard let section = sectionName(for: sectionKeyString) else { continue }
+            for identifier in identifiers {
+                savedSectionForIdentifier[identifier] = section
+            }
+        }
+
         let candidate = hideableLeftmost.first { item in
             let identifier = "\(item.tag.namespace):\(item.tag.title)"
+
+            // Only treat as "new" if we don't have a saved section for this item.
+            // Items with saved sections should be handled by restoreItemsToSavedSections,
+            // not by the "new item" relocation logic.
+            let hasSavedSection = savedSectionForIdentifier[identifier] != nil ||
+                savedSectionForIdentifier[item.uniqueIdentifier] != nil
+            guard !hasSavedSection else { return false }
+
             let isNewIdentity = !knownItemIdentifiers.contains(identifier)
             let isNewID = previousIDs.isEmpty ? isNewIdentity : !previousIDs.contains(item.windowID)
             let notPlacedHidden = !hiddenTags.contains(item.tag) && !alwaysHiddenTags.contains(item.tag)
@@ -2600,7 +2814,12 @@ extension MenuBarItemManager {
             let notPinnedHidden = bundle.map { !pinnedHiddenBundleIDs.contains($0) && !pinnedAlwaysHiddenBundleIDs.contains($0) } ?? true
             return notPlacedHidden && notPinnedHidden && (isNewID || isNewIdentity)
         }
-        guard let candidate else { return false }
+        guard let candidate else {
+            if !leftmostItems.isEmpty && savedSectionForIdentifier.isEmpty == false {
+                MenuBarItemManager.diagLog.debug("relocateNewLeftmostItems: skipping, items have saved sections (letting restore handle it)")
+            }
+            return false
+        }
 
         // Track this item so we don't move it again unless it truly appears new.
         let identifier = "\(candidate.tag.namespace):\(candidate.tag.title)"
@@ -2642,7 +2861,7 @@ extension MenuBarItemManager {
         // Don't interfere with items that are currently temporarily shown —
         // those are handled by the normal rehide flow.
         let activelyShownTags = Set(temporarilyShownItemContexts.map {
-            "\($0.tag.namespace):\($0.tag.title)"
+            $0.tag.tagIdentifier
         })
 
         let hiddenBounds = bestBounds(for: controlItems.hidden)
@@ -2663,7 +2882,7 @@ extension MenuBarItemManager {
 
             // Find the item in the current menu bar items.
             guard let item = items.first(where: {
-                tagIdentifier == "\($0.tag.namespace):\($0.tag.title)"
+                tagIdentifier == $0.tag.tagIdentifier
             }) else {
                 // Item not present yet (app hasn't relaunched). Keep the entry.
                 continue
@@ -2684,14 +2903,14 @@ extension MenuBarItemManager {
             let destination: MoveDestination
             if let destInfo = pendingReturnDestinations[tagIdentifier],
                let neighborTagString = destInfo["neighbor"],
-               let neighborItem = items.first(where: { neighborTagString == "\($0.tag.namespace):\($0.tag.title)" })
+               let neighborItem = items.first(where: { neighborTagString == $0.tag.tagIdentifier })
             {
                 if destInfo["position"] == "left" {
                     destination = .leftOfItem(neighborItem)
                 } else {
                     destination = .rightOfItem(neighborItem)
                 }
-            } else if let fallbackTagString = temporarilyShownItemContexts.first(where: { tagIdentifier == "\($0.tag.namespace):\($0.tag.title)" })?.fallbackNeighborTag,
+            } else if let fallbackTagString = temporarilyShownItemContexts.first(where: { tagIdentifier == $0.tag.tagIdentifier })?.fallbackNeighborTag,
                       let fallbackItem = items.first(matching: fallbackTagString)
             {
                 destination = .rightOfItem(fallbackItem)
@@ -2755,22 +2974,60 @@ extension MenuBarItemManager {
         guard !suppressNextNewLeftmostItemRelocation else { return false }
         guard !lastMoveOperationOccurred(within: .seconds(2)) else { return false }
 
-        // Only act when previous window IDs have disappeared (app restarted).
-        let currentWindowIDSet = Set(items.lazy.map(\.windowID))
+        // Only restore when previous window IDs have disappeared (app restarted).
+        // This prevents undoing the user's manual section moves on regular cache refreshes.
+        let currentWindowIDSet = Set(items.map(\.windowID))
         let previousWindowIDSet = Set(previousWindowIDs)
-        guard !previousWindowIDSet.isSubset(of: currentWindowIDSet) else { return false }
+        guard !previousWindowIDSet.isEmpty && !previousWindowIDSet.isSubset(of: currentWindowIDSet) else {
+            MenuBarItemManager.diagLog.debug("restoreItemsToSavedSections: no app restart detected (window IDs unchanged), skipping")
+            return false
+        }
 
-        // Don't interfere with temporarily shown items.
-        let activelyShownTags = Set(temporarilyShownItemContexts.map {
-            "\($0.tag.namespace):\($0.tag.title)"
-        })
+        // Get current item tags.
+        let currentTags = Set(items.map { "\($0.tag.namespace):\($0.tag.title)" })
+        let savedTags = Set(savedSectionOrder.values.flatMap { $0 })
+        let savedTagsInCurrent = savedTags.intersection(currentTags)
 
-        // Build a lookup: uniqueIdentifier → saved section name.
-        var savedSectionForItem = [String: MenuBarSection.Name]()
+        // Only restore if saved items that were hidden/alwaysHidden are now visible,
+        // or if items moved sections incorrectly after app restart.
+        // Skip if no saved items are currently present (app closed).
+        guard !savedTagsInCurrent.isEmpty else {
+            MenuBarItemManager.diagLog.debug("restoreItemsToSavedSections: no saved items currently present, skipping")
+            return false
+        }
+
+        // Give macOS time to settle after app restart before attempting moves.
+        MenuBarItemManager.diagLog.debug("restoreItemsToSavedSections: waiting for menu bar to settle...")
+        try? await Task.sleep(for: .milliseconds(500))
+
+        // Build lookups from savedSectionOrder:
+        // 1. baseIdentifier (namespace:title) → saved section (handles instanceIndex changes)
+        // 2. namespace string → saved section (fallback for dynamic-title apps only)
+        //
+        // We use baseIdentifier instead of uniqueIdentifier to handle apps that change
+        // instanceIndex after restart. For apps with multiple items, each has a different
+        // baseIdentifier so there's no collision.
+        var savedSectionForBaseID = [String: MenuBarSection.Name]()
+        var savedSectionByNamespace = [String: MenuBarSection.Name]()
+        var ambiguousNamespaces = Set<String>()
         for (sectionKeyString, identifiers) in savedSectionOrder {
             guard let section = sectionName(for: sectionKeyString) else { continue }
             for identifier in identifiers {
-                savedSectionForItem[identifier] = section
+                // Extract base identifier (namespace:title, without instanceIndex)
+                let baseID = identifier.split(separator: ":", maxSplits: 2).prefix(2).joined(separator: ":")
+                savedSectionForBaseID[baseID] = section
+
+                // Also track namespace for dynamic apps
+                let ns = identifier.split(separator: ":", maxSplits: 1).first.map(String.init) ?? identifier
+                if ambiguousNamespaces.contains(ns) {
+                    continue
+                }
+                if let existing = savedSectionByNamespace[ns], existing != section {
+                    savedSectionByNamespace.removeValue(forKey: ns)
+                    ambiguousNamespaces.insert(ns)
+                } else {
+                    savedSectionByNamespace[ns] = section
+                }
             }
         }
 
@@ -2780,12 +3037,50 @@ extension MenuBarItemManager {
             displayID: Bridging.getActiveMenuBarDisplayID()
         )
 
+        // Don't interfere with temporarily shown items.
+        let activelyShownTags = Set(temporarilyShownItemContexts.map {
+            $0.tag.tagIdentifier
+        })
+
+        // Count items per namespace to detect multi-icon apps
+        var itemsPerNamespace = [String: Int]()
         for item in items where !item.isControlItem && item.isMovable && item.canBeHidden {
-            let tagString = "\(item.tag.namespace):\(item.tag.title)"
+            let ns = item.tag.namespace.description
+            itemsPerNamespace[ns, default: 0] += 1
+        }
+
+        for item in items where !item.isControlItem && item.isMovable && item.canBeHidden {
+            let tagString = item.tag.tagIdentifier
             guard !activelyShownTags.contains(tagString) else { continue }
 
+            // Skip indexed items (instanceIndex > 0). These naturally position
+            // themselves next to each other, and restoring them causes shuffling.
+            // Only restore the primary item (instanceIndex == 0).
+            guard item.tag.instanceIndex == 0 else { continue }
+
+            // Skip apps with multiple icons (different names). Restoring causes errors.
+            let ns = item.tag.namespace.description
+            if let count = itemsPerNamespace[ns], count > 1 {
+                continue
+            }
+
             guard let currentSection = context.findSection(for: item) else { continue }
-            guard let savedSection = savedSectionForItem[item.uniqueIdentifier] else { continue }
+
+            // Look up saved section: prefer base identifier match (handles instanceIndex changes),
+            // then fall back to namespace-only for dynamic apps.
+            let namespaceString = item.tag.namespace.description
+            let baseIdentifier = "\(item.tag.namespace):\(item.tag.title)"
+            let savedSection: MenuBarSection.Name
+            if let baseMatch = savedSectionForBaseID[baseIdentifier] {
+                savedSection = baseMatch
+            } else if DynamicItemOverrides.isDynamic(namespaceString),
+                      let fallback = savedSectionByNamespace[namespaceString]
+            {
+                savedSection = fallback
+            } else {
+                continue
+            }
+
             guard currentSection != savedSection else { continue }
 
             // Item is in the wrong section — move it.
@@ -2812,13 +3107,36 @@ extension MenuBarItemManager {
             )
 
             do {
+                MenuBarItemManager.diagLog.debug("Starting move for restore: item=\(item.logString), destination=\(destination.logString)")
                 try await move(item: item, to: destination, skipInputPause: true)
+                MenuBarItemManager.diagLog.debug("Move completed successfully for restore")
+            } catch let error as EventError {
+                MenuBarItemManager.diagLog.error(
+                    "Failed to restore \(item.logString) to \(savedSection.logString): \(error.errorDescription ?? error.description)"
+                )
+                continue
             } catch {
                 MenuBarItemManager.diagLog.error(
                     "Failed to restore \(item.logString) to \(savedSection.logString): \(error)"
                 )
-                // Skip this item and try the next misplaced one.
                 continue
+            }
+
+            // Update savedSectionOrder with new uniqueIdentifier (in case instanceIndex changed)
+            // so subsequent restores find the correct item.
+            let sectionKeyString = sectionKey(for: savedSection)
+            if var identifiers = savedSectionOrder[sectionKeyString] {
+                // Find and replace old identifier (if any) with new one
+                let baseID = "\(item.tag.namespace):\(item.tag.title)"
+                if let index = identifiers.firstIndex(where: { id in
+                    let idBase = id.split(separator: ":", maxSplits: 2).prefix(2).joined(separator: ":")
+                    return idBase == baseID
+                }) {
+                    identifiers[index] = item.uniqueIdentifier
+                    savedSectionOrder[sectionKeyString] = identifiers
+                    persistSavedSectionOrder()
+                    MenuBarItemManager.diagLog.debug("Updated savedSectionOrder: replaced with new identifier \(item.uniqueIdentifier)")
+                }
             }
 
             // Return after first successful move and recache, like
@@ -2827,12 +3145,18 @@ extension MenuBarItemManager {
             return true
         }
 
+        MenuBarItemManager.diagLog.debug("restoreItemsToSavedSections: no items needed restoring (checked \(items.count) items)")
         return false
     }
 
     /// Only triggers when the set of window IDs has changed (items were
     /// recreated by an app restart), not when items were merely repositioned
     /// (user drag). This prevents undoing the user's manual reordering.
+    ///
+    /// - Note: For apps with dynamic item titles (see `DynamicItemOverrides`),
+    ///   this function restores the **section** but not the intra-section order,
+    ///   because the saved position key includes the old title which no longer
+    ///   matches the new item.
     ///
     /// Returns `true` if any items were moved.
     private func restoreSavedItemOrder(
@@ -2867,8 +3191,27 @@ extension MenuBarItemManager {
 
         // Don't interfere with items that are currently temporarily shown.
         let activelyShownTags = Set(temporarilyShownItemContexts.map {
-            "\($0.tag.namespace):\($0.tag.title)"
+            $0.tag.tagIdentifier
         })
+
+        // Count items per namespace to detect indexed and multi-icon apps
+        var itemsPerNamespace = [String: Int]()
+        var hasIndexedItems = false
+        for item in items where !item.isControlItem && item.isMovable && item.canBeHidden {
+            let ns = item.tag.namespace.description
+            itemsPerNamespace[ns, default: 0] += 1
+            if item.tag.instanceIndex > 0 {
+                hasIndexedItems = true
+            }
+        }
+
+        // Skip if indexed or multi-icon apps are present. These naturally position
+        // themselves, and restoring order causes shuffling.
+        let hasMultiIconApps = itemsPerNamespace.values.contains { $0 > 1 }
+        guard !hasIndexedItems && !hasMultiIconApps else {
+            MenuBarItemManager.diagLog.debug("restoreSavedItemOrder: skipping due to indexed/multi-icon items present")
+            return false
+        }
 
         // Build a lookup from uniqueIdentifier → MenuBarItem for all current non-control items.
         var itemsByID = [String: MenuBarItem]()
@@ -2929,7 +3272,7 @@ extension MenuBarItemManager {
                     anchorIndex += 1
                     continue
                 }
-                let tagString = "\(candidate.tag.namespace):\(candidate.tag.title)"
+                let tagString = candidate.tag.tagIdentifier
                 if activelyShownTags.contains(tagString) {
                     anchorIndex += 1
                     continue
@@ -2946,7 +3289,7 @@ extension MenuBarItemManager {
                 guard let item = itemsByID[filteredSaved[i]] else { continue }
 
                 // Skip items that are currently temporarily shown.
-                let tagString = "\(item.tag.namespace):\(item.tag.title)"
+                let tagString = item.tag.tagIdentifier
                 guard !activelyShownTags.contains(tagString) else { continue }
 
                 do {
@@ -3402,6 +3745,16 @@ private extension CGMouseButton {
         case .center: "center mouse button"
         @unknown default: "unknown mouse button"
         }
+    }
+}
+
+// MARK: - Duration Helpers
+
+private extension Duration {
+    /// Returns the duration in milliseconds as a Double.
+    var milliseconds: Double {
+        let (seconds, attoseconds) = self.components
+        return Double(seconds) * 1000 + Double(attoseconds) / 1_000_000_000_000_000
     }
 }
 

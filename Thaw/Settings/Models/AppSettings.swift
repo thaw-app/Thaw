@@ -26,8 +26,12 @@ final class AppSettings: ObservableObject {
     /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
 
+    /// The shared app state.
+    private(set) weak var appState: AppState?
+
     /// Performs the initial setup of the settings model.
     func performSetup(with appState: AppState) {
+        self.appState = appState
         advanced.performSetup(with: appState)
         general.performSetup(with: appState)
         hotkeys.performSetup(with: appState)

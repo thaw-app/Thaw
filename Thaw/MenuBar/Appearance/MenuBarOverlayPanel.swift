@@ -158,7 +158,9 @@ final class MenuBarOverlayPanel: NSPanel {
             backing: .buffered,
             defer: false
         )
-        self.level = .statusBar
+        self.level = appState.appearanceManager.configuration.showsMenuBarBackground
+            ? NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.statusWindow)) - 1)
+            : .statusBar
         self.title = String(localized: "Menu Bar Overlay")
         self.backgroundColor = .clear
         self.hasShadow = false
@@ -505,7 +507,7 @@ final class MenuBarOverlayPanel: NSPanel {
         )
 
         alphaValue = 0
-        setFrame(newFrame, display: false)
+        setFrame(newFrame, display: true)
         orderFrontRegardless()
 
         updateFlags = [.applicationMenuFrame, .desktopWallpaper]
@@ -513,6 +515,14 @@ final class MenuBarOverlayPanel: NSPanel {
         if !appState.menuBarManager.isMenuBarHiddenBySystem {
             animator().alphaValue = 1
         }
+    }
+
+    override func close() {
+        missionControlProbeWindow.close()
+        super.close()
+        #if DEBUG
+            diagLog.debug("Overlay panel closed. Active windows: \(NSApplication.shared.windows.count)")
+        #endif
     }
 
     override func isAccessibilityElement() -> Bool {

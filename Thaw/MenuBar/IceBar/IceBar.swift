@@ -524,13 +524,19 @@ private struct IceBarItemView: View {
             guard let itemManager, let menuBarManager else {
                 return
             }
+            let clickStartTime = Date.now
+            IceBarItemView.diagLog.debug("leftClick: user clicked \(item.logString)")
             menuBarManager.section(withName: section)?.hide()
             Task {
                 try await Task.sleep(for: .milliseconds(25))
                 if Bridging.isWindowOnScreen(item.windowID) {
                     try await itemManager.click(item: item, with: .left)
+                    let duration = Date.now.timeIntervalSince(clickStartTime)
+                    IceBarItemView.diagLog.debug("leftClick: ✓ completed in \(Int(duration * 1000))ms (on-screen path)")
                 } else {
                     await itemManager.temporarilyShow(item: item, clickingWith: .left, on: displayID)
+                    let duration = Date.now.timeIntervalSince(clickStartTime)
+                    IceBarItemView.diagLog.debug("leftClick: ✓ completed in \(Int(duration * 1000))ms (temp-show path)")
                 }
             }
         }

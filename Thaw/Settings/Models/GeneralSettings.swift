@@ -17,18 +17,18 @@ final class GeneralSettings: ObservableObject {
     private let diagLog = DiagLog(category: "GeneralSettings")
     /// A Boolean value that indicates whether the Ice icon
     /// should be shown.
-    @Published var showIceIcon = true
+    @Published var showIceIcon = Defaults.DefaultValue.showIceIcon
 
     /// An icon to show in the menu bar, with a different image
     /// for when items are visible or hidden.
-    @Published var iceIcon: ControlItemImageSet = .defaultIceIcon
+    @Published var iceIcon = Defaults.DefaultValue.iceIcon
 
     /// The last user-selected custom Ice icon.
     @Published var lastCustomIceIcon: ControlItemImageSet?
 
     /// A Boolean value that indicates whether custom Ice icons
     /// should be rendered as template images.
-    @Published var customIceIconIsTemplate = false
+    @Published var customIceIconIsTemplate = Defaults.DefaultValue.customIceIconIsTemplate
 
     // MARK: - Deprecated (Per-Display Migration)
 
@@ -37,52 +37,52 @@ final class GeneralSettings: ObservableObject {
 
     /// A Boolean value that indicates whether to show hidden items
     /// in a separate bar below the menu bar.
-    @Published var useIceBar = false
+    @Published var useIceBar = Defaults.DefaultValue.useIceBar
 
     /// A Boolean value that indicates whether to use the Ice Bar
     /// only on displays with a notch.
-    @Published var useIceBarOnlyOnNotchedDisplay = false
+    @Published var useIceBarOnlyOnNotchedDisplay = Defaults.DefaultValue.useIceBarOnlyOnNotchedDisplay
 
     /// The location where the Ice Bar appears.
-    @Published var iceBarLocation: IceBarLocation = .dynamic
+    @Published var iceBarLocation = Defaults.DefaultValue.iceBarLocation
 
     /// A Boolean value that indicates whether the Ice Bar should
     /// appear at the mouse pointer's location when shown by a hotkey.
-    @Published var iceBarLocationOnHotkey = false
+    @Published var iceBarLocationOnHotkey = Defaults.DefaultValue.iceBarLocationOnHotkey
 
     /// A Boolean value that indicates whether the hidden section
     /// should be shown when the mouse pointer clicks in an empty
     /// area of the menu bar.
-    @Published var showOnClick = true
+    @Published var showOnClick = Defaults.DefaultValue.showOnClick
 
     /// A Boolean value that indicates whether the always-hidden section
     /// should be shown when the mouse pointer double-clicks in an
     /// empty area of the menu bar.
-    @Published var showOnDoubleClick = true
+    @Published var showOnDoubleClick = Defaults.DefaultValue.showOnDoubleClick
 
     /// A Boolean value that indicates whether the hidden section
     /// should be shown when the mouse pointer hovers over an
     /// empty area of the menu bar.
-    @Published var showOnHover = false
+    @Published var showOnHover = Defaults.DefaultValue.showOnHover
 
     /// A Boolean value that indicates whether the hidden section
     /// should be shown or hidden when the user scrolls in the
     /// menu bar.
-    @Published var showOnScroll = true
+    @Published var showOnScroll = Defaults.DefaultValue.showOnScroll
 
     /// The offset to apply to the menu bar item spacing and padding.
-    @Published var itemSpacingOffset: Double = 0
+    @Published var itemSpacingOffset = Defaults.DefaultValue.itemSpacingOffset
 
     /// A Boolean value that indicates whether the hidden section
     /// should automatically rehide.
-    @Published var autoRehide = true
+    @Published var autoRehide = Defaults.DefaultValue.autoRehide
 
     /// A strategy that determines how the auto-rehide feature works.
-    @Published var rehideStrategy: RehideStrategy = .smart
+    @Published var rehideStrategy = Defaults.DefaultValue.rehideStrategy
 
     /// A time interval for the auto-rehide feature when its rule
     /// is ``RehideStrategy/timed``.
-    @Published var rehideInterval: TimeInterval = 15
+    @Published var rehideInterval = Defaults.DefaultValue.rehideInterval
 
     /// Encoder for properties.
     private let encoder = JSONEncoder()
@@ -263,30 +263,5 @@ final class GeneralSettings: ObservableObject {
             .store(in: &c)
 
         cancellables = c
-    }
-}
-
-// MARK: - RehideStrategy
-
-/// A type that determines how the auto-rehide feature works.
-enum RehideStrategy: Int, CaseIterable, Identifiable {
-    /// Menu bar items are rehidden using a smart algorithm.
-    case smart = 0
-    /// Menu bar items are rehidden after a given time interval.
-    case timed = 1
-    /// Menu bar items are rehidden when the focused app changes.
-    case focusedApp = 2
-
-    var id: Int {
-        rawValue
-    }
-
-    /// Localized string key representation.
-    var localized: LocalizedStringKey {
-        switch self {
-        case .smart: "Smart"
-        case .timed: "Timed"
-        case .focusedApp: "Focus"
-        }
     }
 }

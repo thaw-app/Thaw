@@ -39,6 +39,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         #endif
 
+        // Warn if another menu bar manager is running.
+        ConflictingAppDetector.showWarningIfNeeded()
+
         // Check if this is the first launch
         let isFirstLaunch = !Defaults.bool(forKey: .hasCompletedFirstLaunch)
 

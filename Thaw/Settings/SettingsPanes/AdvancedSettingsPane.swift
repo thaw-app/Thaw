@@ -29,6 +29,7 @@ struct AdvancedSettingsPane: View {
     @ObservedObject var settings: AdvancedSettings
     @State private var maxSliderLabelWidth: CGFloat = 0
     @State private var currentLogFileName: String?
+    @State private var isConfirmingReset = false
 
     private var menuBarManager: MenuBarManager {
         appState.menuBarManager
@@ -58,6 +59,38 @@ struct AdvancedSettingsPane: View {
             IceSection("Diagnostics") {
                 diagnosticLogging
             }
+            IceSection("Reset") {
+                resetSettings
+            }
+        }
+    }
+
+    private var resetSettings: some View {
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(String(localized: "Reset all settings"))
+                Text(String(localized: "Reset all settings to their default values. This action cannot be undone."))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            Button(String(localized: "Reset \(Constants.displayName)", comment: "A button that resets all settings to defaults")) {
+                isConfirmingReset = true
+            }
+            .buttonStyle(.bordered)
+            .tint(.red)
+        }
+        .alert(String(localized: "Reset all settings?"), isPresented: $isConfirmingReset) {
+            Button(String(localized: "Reset"), role: .destructive) {
+                appState.settings.resetAllSettingsToDefaults()
+            }
+            Button(String(localized: "Cancel"), role: .cancel) {
+                isConfirmingReset = false
+            }
+        } message: {
+            Text(String(localized: "This will reset all settings to their default values. This action cannot be undone."))
         }
     }
 
