@@ -147,6 +147,21 @@ final class MenuBarItemManager: ObservableObject {
     private var isRestoringItemOrder = false
     /// Timestamp when isRestoringItemOrder was set (for timeout detection).
     private var isRestoringItemOrderTimestamp: Date?
+    /// True during the startup settling period, during which restore operations
+    /// and section-order saves are suppressed. This prevents cascading icon moves
+    /// when many apps launch at login (login item boot) or restart in quick succession
+    /// (e.g. app update checks). Cleared after a fixed delay, then one final
+    /// restore runs to enforce the user's saved layout.
+    private var isInStartupSettling = false
+    /// Handle to the in-flight startup settling Task. Retained so that a
+    /// subsequent performSetup() call can cancel the previous settling period
+    /// before starting a new one, preventing multiple concurrent settling tasks.
+    private var startupSettlingTask: Task<Void, Never>?
+    /// Absolute deadline for the current startup settling period. Stored so
+    /// that a re-entry of performSetup() (e.g. permission re-grant) can
+    /// preserve any remaining time from the original period rather than
+    /// resetting to a shorter delay based on current systemUptime.
+    private var settlingDeadline: ContinuousClock.Instant?
     /// Persisted bundle identifiers explicitly placed in hidden section.
     private var pinnedHiddenBundleIDs = Set<String>()
     /// Persisted bundle identifiers explicitly placed in always-hidden section.
@@ -330,6 +345,48 @@ final class MenuBarItemManager: ObservableObject {
         await cacheItemsRegardless()
         MenuBarItemManager.diagLog.debug("performSetup: initial cache complete, items in cache: visible=\(itemCache[.visible].count), hidden=\(itemCache[.hidden].count), alwaysHidden=\(itemCache[.alwaysHidden].count), managedItems=\(itemCache.managedItems.count)")
         configureCancellables(with: appState)
+        // Suppress restore and section-order saves for a settling period after launch.
+        // During login (system uptime < 60 s) many apps load over ~30 s, each triggering
+        // a cache cycle; without this guard every launch notification causes a restore
+        // that conflicts with the next, producing the "icon parade" effect.
+        // After the settling period ends, one final cacheItemsRegardless() enforces the
+        // user's saved layout against whatever macOS placed items.
+        //
+        // On re-entry (e.g. a permission re-grant during the login window): take the
+        // MAX of the previous deadline and the newly computed one. This prevents a
+        // second performSetup() call from resetting systemUptime to a higher value
+        // (> 60 s) and silently truncating the 30-second login settling window.
+        let preferredDelay: Duration = ProcessInfo.processInfo.systemUptime < 60 ? .seconds(30) : .seconds(5)
+        let newDeadline = ContinuousClock.now.advanced(by: preferredDelay)
+        let deadline = max(settlingDeadline ?? newDeadline, newDeadline)
+        settlingDeadline = deadline
+        // Cancel any in-flight settling task before starting a new one.
+        // Prevents multiple concurrent settling tasks if performSetup() is called
+        // again. The cancelled task exits without touching shared state; this call
+        // manages isInStartupSettling for the new period.
+        startupSettlingTask?.cancel()
+        isInStartupSettling = true
+        MenuBarItemManager.diagLog.debug("performSetup: startup settling period started (delay: \(preferredDelay))")
+        // @MainActor ensures the flag flip and final cache call are never
+        // interleaved with notification-triggered cache cycles between them.
+        startupSettlingTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            do {
+                try await Task.sleep(until: deadline, clock: .continuous)
+            } catch {
+                // Cancelled by a subsequent performSetup() call; exit without
+                // touching shared state — the new call manages isInStartupSettling.
+                MenuBarItemManager.diagLog.debug("performSetup: startup settling task cancelled")
+                return
+            }
+            isInStartupSettling = false
+            settlingDeadline = nil
+            MenuBarItemManager.diagLog.debug("performSetup: startup settling period ended, running restore")
+            // skipRecentMoveCheck: true — relocateNewLeftmostItems/relocatePendingItems
+            // may have stamped lastMoveOperationTimestamp during settling; without this
+            // flag the final restore would be silently skipped by the 5 s cooldown.
+            await cacheItemsRegardless(skipRecentMoveCheck: true)
+        }
         MenuBarItemManager.diagLog.debug("performSetup: MenuBarItemManager setup complete")
     }
 
@@ -774,7 +831,7 @@ extension MenuBarItemManager {
             isRestoringItemOrderTimestamp = nil
         }
 
-        if !isRestoringItemOrder, !isResettingLayout {
+        if !isRestoringItemOrder, !isResettingLayout, !isInStartupSettling {
             saveSectionOrder(from: context.cache)
         }
         MenuBarItemManager.diagLog.debug("Updated menu bar item cache: visible=\(context.cache[.visible].count), hidden=\(context.cache[.hidden].count), alwaysHidden=\(context.cache[.alwaysHidden].count)")
@@ -902,6 +959,16 @@ extension MenuBarItemManager {
                     await self?.cacheItemsRegardless(skipRecentMoveCheck: true)
                     continuation?.resume()
                 }
+                return
+            }
+
+            // Skip all restore logic during the startup settling period.
+            // The settling period prevents cascading icon moves when many apps
+            // load at login or restart in quick succession (app update checks).
+            // A final cacheItemsRegardless() after the period ends handles restore.
+            guard !isInStartupSettling else {
+                await uncheckedCacheItems(items: items, controlItems: controlItems, displayID: displayID)
+                MenuBarItemManager.diagLog.debug("cacheItemsRegardless: startup settling active, skipping restore")
                 return
             }
 
@@ -2972,7 +3039,10 @@ extension MenuBarItemManager {
     ) async -> Bool {
         guard !savedSectionOrder.isEmpty else { return false }
         guard !suppressNextNewLeftmostItemRelocation else { return false }
-        guard !lastMoveOperationOccurred(within: .seconds(2)) else { return false }
+        // 5 s cooldown (up from 2 s) gives more time for the system to settle after a
+        // restore before another one can start, preventing cascading icon moves when
+        // multiple apps restart in quick succession (e.g. app update checks).
+        guard !lastMoveOperationOccurred(within: .seconds(5)) else { return false }
 
         // Only restore when previous window IDs have disappeared (app restarted).
         // This prevents undoing the user's manual section moves on regular cache refreshes.
@@ -3176,7 +3246,9 @@ extension MenuBarItemManager {
         // (user drag in the Layout Bar, internal relocations, etc.). External
         // app restarts never go through our move() path, so their cache cycles
         // will have no recent move timestamp.
-        guard !lastMoveOperationOccurred(within: .seconds(2)) else { return false }
+        // 5 s cooldown (up from 2 s) matches restoreItemsToSavedSections and
+        // prevents back-to-back restores when apps restart in quick succession.
+        guard !lastMoveOperationOccurred(within: .seconds(5)) else { return false }
 
         // Only restore when previous window IDs have disappeared, indicating
         // an app restarted (old windows destroyed, new ones created). During
@@ -3481,6 +3553,12 @@ extension MenuBarItemManager {
     /// - Returns: The number of items that failed to move.
     func resetLayoutToFreshState() async throws -> Int {
         MenuBarItemManager.diagLog.info("Resetting menu bar layout to fresh state")
+        // A user-initiated reset is authoritative: end the startup settling period
+        // immediately so that the post-reset cache is not blocked from running restore
+        // and saveSectionOrder by an in-flight settling task.
+        startupSettlingTask?.cancel()
+        isInStartupSettling = false
+        settlingDeadline = nil
         isResettingLayout = true
         defer { isResettingLayout = false }
 
