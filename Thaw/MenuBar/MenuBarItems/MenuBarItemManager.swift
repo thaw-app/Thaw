@@ -147,6 +147,21 @@ final class MenuBarItemManager: ObservableObject {
     private var isRestoringItemOrder = false
     /// Timestamp when isRestoringItemOrder was set (for timeout detection).
     private var isRestoringItemOrderTimestamp: Date?
+    /// True during the startup settling period, during which restore operations
+    /// and section-order saves are suppressed. This prevents cascading icon moves
+    /// when many apps launch at login (login item boot) or restart in quick succession
+    /// (e.g. app update checks). Cleared after a fixed delay, then one final
+    /// restore runs to enforce the user's saved layout.
+    private var isInStartupSettling = false
+    /// Handle to the in-flight startup settling Task. Retained so that a
+    /// subsequent performSetup() call can cancel the previous settling period
+    /// before starting a new one, preventing multiple concurrent settling tasks.
+    private var startupSettlingTask: Task<Void, Never>?
+    /// Absolute deadline for the current startup settling period. Stored so
+    /// that a re-entry of performSetup() (e.g. permission re-grant) can
+    /// preserve any remaining time from the original period rather than
+    /// resetting to a shorter delay based on current systemUptime.
+    private var settlingDeadline: ContinuousClock.Instant?
     /// Persisted bundle identifiers explicitly placed in hidden section.
     private var pinnedHiddenBundleIDs = Set<String>()
     /// Persisted bundle identifiers explicitly placed in always-hidden section.
@@ -330,6 +345,48 @@ final class MenuBarItemManager: ObservableObject {
         await cacheItemsRegardless()
         MenuBarItemManager.diagLog.debug("performSetup: initial cache complete, items in cache: visible=\(itemCache[.visible].count), hidden=\(itemCache[.hidden].count), alwaysHidden=\(itemCache[.alwaysHidden].count), managedItems=\(itemCache.managedItems.count)")
         configureCancellables(with: appState)
+        // Suppress restore and section-order saves for a settling period after launch.
+        // During login (system uptime < 60 s) many apps load over ~30 s, each triggering
+        // a cache cycle; without this guard every launch notification causes a restore
+        // that conflicts with the next, producing the "icon parade" effect.
+        // After the settling period ends, one final cacheItemsRegardless() enforces the
+        // user's saved layout against whatever macOS placed items.
+        //
+        // On re-entry (e.g. a permission re-grant during the login window): take the
+        // MAX of the previous deadline and the newly computed one. This prevents a
+        // second performSetup() call from resetting systemUptime to a higher value
+        // (> 60 s) and silently truncating the 30-second login settling window.
+        let preferredDelay: Duration = ProcessInfo.processInfo.systemUptime < 60 ? .seconds(30) : .seconds(5)
+        let newDeadline = ContinuousClock.now.advanced(by: preferredDelay)
+        let deadline = max(settlingDeadline ?? newDeadline, newDeadline)
+        settlingDeadline = deadline
+        // Cancel any in-flight settling task before starting a new one.
+        // Prevents multiple concurrent settling tasks if performSetup() is called
+        // again. The cancelled task exits without touching shared state; this call
+        // manages isInStartupSettling for the new period.
+        startupSettlingTask?.cancel()
+        isInStartupSettling = true
+        MenuBarItemManager.diagLog.debug("performSetup: startup settling period started (delay: \(preferredDelay))")
+        // @MainActor ensures the flag flip and final cache call are never
+        // interleaved with notification-triggered cache cycles between them.
+        startupSettlingTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            do {
+                try await Task.sleep(until: deadline, clock: .continuous)
+            } catch {
+                // Cancelled by a subsequent performSetup() call; exit without
+                // touching shared state — the new call manages isInStartupSettling.
+                MenuBarItemManager.diagLog.debug("performSetup: startup settling task cancelled")
+                return
+            }
+            isInStartupSettling = false
+            settlingDeadline = nil
+            MenuBarItemManager.diagLog.debug("performSetup: startup settling period ended, running restore")
+            // skipRecentMoveCheck: true — relocateNewLeftmostItems/relocatePendingItems
+            // may have stamped lastMoveOperationTimestamp during settling; without this
+            // flag the final restore would be silently skipped by the 5 s cooldown.
+            await cacheItemsRegardless(skipRecentMoveCheck: true)
+        }
         MenuBarItemManager.diagLog.debug("performSetup: MenuBarItemManager setup complete")
     }
 
@@ -774,7 +831,7 @@ extension MenuBarItemManager {
             isRestoringItemOrderTimestamp = nil
         }
 
-        if !isRestoringItemOrder, !isResettingLayout {
+        if !isRestoringItemOrder, !isResettingLayout, !isInStartupSettling {
             saveSectionOrder(from: context.cache)
         }
         MenuBarItemManager.diagLog.debug("Updated menu bar item cache: visible=\(context.cache[.visible].count), hidden=\(context.cache[.hidden].count), alwaysHidden=\(context.cache[.alwaysHidden].count)")
@@ -902,6 +959,16 @@ extension MenuBarItemManager {
                     await self?.cacheItemsRegardless(skipRecentMoveCheck: true)
                     continuation?.resume()
                 }
+                return
+            }
+
+            // Skip all restore logic during the startup settling period.
+            // The settling period prevents cascading icon moves when many apps
+            // load at login or restart in quick succession (app update checks).
+            // A final cacheItemsRegardless() after the period ends handles restore.
+            guard !isInStartupSettling else {
+                await uncheckedCacheItems(items: items, controlItems: controlItems, displayID: displayID)
+                MenuBarItemManager.diagLog.debug("cacheItemsRegardless: startup settling active, skipping restore")
                 return
             }
 
@@ -1713,7 +1780,8 @@ extension MenuBarItemManager {
     private func postMoveEvents(
         item: MenuBarItem,
         destination: MoveDestination,
-        on displayID: CGDirectDisplayID
+        on displayID: CGDirectDisplayID,
+        warpCursorAfter: Bool = true
     ) async throws {
         do {
             try await eventSemaphore.wait(timeout: .seconds(5))
@@ -1726,7 +1794,10 @@ extension MenuBarItemManager {
 
         var itemOrigin = try await getCurrentBounds(for: item).origin
         let targetPoints = try await getTargetPoints(forMoving: item, to: destination, on: displayID)
-        let mouseLocation = try getMouseLocation()
+        // Capture mouse location only when this call owns the cursor warp.
+        // When called from move(), the outer move() handles the single warp
+        // at the end of all attempts so the cursor doesn't oscillate per attempt.
+        let mouseLocation: CGPoint? = warpCursorAfter ? try getMouseLocation() : nil
         let source = try getEventSource()
 
         try permitLocalEvents()
@@ -1754,7 +1825,9 @@ extension MenuBarItemManager {
         lastMoveOperationTimestamp = .now
         MouseHelpers.hideCursor()
         defer {
-            MouseHelpers.warpCursor(to: mouseLocation)
+            if let mouseLocation {
+                MouseHelpers.warpCursor(to: mouseLocation)
+            }
             MouseHelpers.showCursor()
             lastMoveOperationTimestamp = .now
             updateMoveOperationTimeout(timeout, for: item)
@@ -1853,8 +1926,14 @@ extension MenuBarItemManager {
             return
         }
 
+        // Capture the original cursor position once so the cursor is warped
+        // back to it a single time after all attempts, rather than after each
+        // individual attempt (which caused the cursor to oscillate many times
+        // during a layout reset when items required multiple attempts).
+        let mouseLocation = try getMouseLocation()
         MouseHelpers.hideCursor(watchdogTimeout: watchdogTimeout)
         defer {
+            MouseHelpers.warpCursor(to: mouseLocation)
             MouseHelpers.showCursor()
         }
 
@@ -1868,7 +1947,12 @@ extension MenuBarItemManager {
                     MenuBarItemManager.diagLog.debug("Item has correct position, finished with move")
                     return
                 }
-                try await postMoveEvents(item: item, destination: destination, on: resolvedDisplayID)
+                try await postMoveEvents(
+                    item: item,
+                    destination: destination,
+                    on: resolvedDisplayID,
+                    warpCursorAfter: false // move() owns the single warp in its defer
+                )
                 // Verify the item actually reached the correct position.
                 if try await itemHasCorrectPosition(item: item, for: destination, on: resolvedDisplayID) {
                     MenuBarItemManager.diagLog.debug("Attempt \(n) succeeded and verified, finished with move")
@@ -2289,7 +2373,7 @@ extension MenuBarItemManager {
         // and use it as a fallback if the neighbor-based return destination
         // becomes stale by the time we rehide.
         let originalSection = itemCache.address(for: item.tag)?.section ?? .hidden
-        let tagIdentifier = "\(item.tag.namespace):\(item.tag.title)"
+        let tagIdentifier = item.tag.tagIdentifier
 
         // Rehide any previously temporarily shown items before showing a new one.
         // This prevents stale contexts from accumulating when the user opens multiple
@@ -2348,7 +2432,7 @@ extension MenuBarItemManager {
         case .rightOfItem: position = "right"
         }
         pendingReturnDestinations[tagIdentifier] = [
-            "neighbor": "\(neighborTag.namespace):\(neighborTag.title)",
+            "neighbor": neighborTag.tagIdentifier,
             "position": position,
         ]
         persistPendingRelocations()
@@ -2602,7 +2686,7 @@ extension MenuBarItemManager {
             do {
                 try await move(item: item, to: destination, on: context.displayID, skipInputPause: true)
                 // Successfully rehidden — remove the pending relocation entry.
-                let tagIdentifier = "\(context.tag.namespace):\(context.tag.title)"
+                let tagIdentifier = context.tag.tagIdentifier
                 pendingRelocations.removeValue(forKey: tagIdentifier)
                 pendingReturnDestinations.removeValue(forKey: tagIdentifier)
             } catch {
@@ -2659,7 +2743,7 @@ extension MenuBarItemManager {
         }
         // Also clear any pending relocation since the user explicitly
         // placed the item in a new position.
-        let tagIdentifier = "\(tag.namespace):\(tag.title)"
+        let tagIdentifier = tag.tagIdentifier
         if pendingRelocations.removeValue(forKey: tagIdentifier) != nil {
             pendingReturnDestinations.removeValue(forKey: tagIdentifier)
             persistPendingRelocations()
@@ -2844,7 +2928,7 @@ extension MenuBarItemManager {
         // Don't interfere with items that are currently temporarily shown —
         // those are handled by the normal rehide flow.
         let activelyShownTags = Set(temporarilyShownItemContexts.map {
-            "\($0.tag.namespace):\($0.tag.title)"
+            $0.tag.tagIdentifier
         })
 
         let hiddenBounds = bestBounds(for: controlItems.hidden)
@@ -2865,7 +2949,7 @@ extension MenuBarItemManager {
 
             // Find the item in the current menu bar items.
             guard let item = items.first(where: {
-                tagIdentifier == "\($0.tag.namespace):\($0.tag.title)"
+                tagIdentifier == $0.tag.tagIdentifier
             }) else {
                 // Item not present yet (app hasn't relaunched). Keep the entry.
                 continue
@@ -2886,14 +2970,14 @@ extension MenuBarItemManager {
             let destination: MoveDestination
             if let destInfo = pendingReturnDestinations[tagIdentifier],
                let neighborTagString = destInfo["neighbor"],
-               let neighborItem = items.first(where: { neighborTagString == "\($0.tag.namespace):\($0.tag.title)" })
+               let neighborItem = items.first(where: { neighborTagString == $0.tag.tagIdentifier })
             {
                 if destInfo["position"] == "left" {
                     destination = .leftOfItem(neighborItem)
                 } else {
                     destination = .rightOfItem(neighborItem)
                 }
-            } else if let fallbackTagString = temporarilyShownItemContexts.first(where: { tagIdentifier == "\($0.tag.namespace):\($0.tag.title)" })?.fallbackNeighborTag,
+            } else if let fallbackTagString = temporarilyShownItemContexts.first(where: { tagIdentifier == $0.tag.tagIdentifier })?.fallbackNeighborTag,
                       let fallbackItem = items.first(matching: fallbackTagString)
             {
                 destination = .rightOfItem(fallbackItem)
@@ -2955,7 +3039,10 @@ extension MenuBarItemManager {
     ) async -> Bool {
         guard !savedSectionOrder.isEmpty else { return false }
         guard !suppressNextNewLeftmostItemRelocation else { return false }
-        guard !lastMoveOperationOccurred(within: .seconds(2)) else { return false }
+        // 5 s cooldown (up from 2 s) gives more time for the system to settle after a
+        // restore before another one can start, preventing cascading icon moves when
+        // multiple apps restart in quick succession (e.g. app update checks).
+        guard !lastMoveOperationOccurred(within: .seconds(5)) else { return false }
 
         // Only restore when previous window IDs have disappeared (app restarted).
         // This prevents undoing the user's manual section moves on regular cache refreshes.
@@ -3022,7 +3109,7 @@ extension MenuBarItemManager {
 
         // Don't interfere with temporarily shown items.
         let activelyShownTags = Set(temporarilyShownItemContexts.map {
-            "\($0.tag.namespace):\($0.tag.title)"
+            $0.tag.tagIdentifier
         })
 
         // Count items per namespace to detect multi-icon apps
@@ -3033,7 +3120,7 @@ extension MenuBarItemManager {
         }
 
         for item in items where !item.isControlItem && item.isMovable && item.canBeHidden {
-            let tagString = "\(item.tag.namespace):\(item.tag.title)"
+            let tagString = item.tag.tagIdentifier
             guard !activelyShownTags.contains(tagString) else { continue }
 
             // Skip indexed items (instanceIndex > 0). These naturally position
@@ -3159,7 +3246,9 @@ extension MenuBarItemManager {
         // (user drag in the Layout Bar, internal relocations, etc.). External
         // app restarts never go through our move() path, so their cache cycles
         // will have no recent move timestamp.
-        guard !lastMoveOperationOccurred(within: .seconds(2)) else { return false }
+        // 5 s cooldown (up from 2 s) matches restoreItemsToSavedSections and
+        // prevents back-to-back restores when apps restart in quick succession.
+        guard !lastMoveOperationOccurred(within: .seconds(5)) else { return false }
 
         // Only restore when previous window IDs have disappeared, indicating
         // an app restarted (old windows destroyed, new ones created). During
@@ -3174,7 +3263,7 @@ extension MenuBarItemManager {
 
         // Don't interfere with items that are currently temporarily shown.
         let activelyShownTags = Set(temporarilyShownItemContexts.map {
-            "\($0.tag.namespace):\($0.tag.title)"
+            $0.tag.tagIdentifier
         })
 
         // Count items per namespace to detect indexed and multi-icon apps
@@ -3255,7 +3344,7 @@ extension MenuBarItemManager {
                     anchorIndex += 1
                     continue
                 }
-                let tagString = "\(candidate.tag.namespace):\(candidate.tag.title)"
+                let tagString = candidate.tag.tagIdentifier
                 if activelyShownTags.contains(tagString) {
                     anchorIndex += 1
                     continue
@@ -3272,7 +3361,7 @@ extension MenuBarItemManager {
                 guard let item = itemsByID[filteredSaved[i]] else { continue }
 
                 // Skip items that are currently temporarily shown.
-                let tagString = "\(item.tag.namespace):\(item.tag.title)"
+                let tagString = item.tag.tagIdentifier
                 guard !activelyShownTags.contains(tagString) else { continue }
 
                 do {
@@ -3464,6 +3553,12 @@ extension MenuBarItemManager {
     /// - Returns: The number of items that failed to move.
     func resetLayoutToFreshState() async throws -> Int {
         MenuBarItemManager.diagLog.info("Resetting menu bar layout to fresh state")
+        // A user-initiated reset is authoritative: end the startup settling period
+        // immediately so that the post-reset cache is not blocked from running restore
+        // and saveSectionOrder by an in-flight settling task.
+        startupSettlingTask?.cancel()
+        isInStartupSettling = false
+        settlingDeadline = nil
         isResettingLayout = true
         defer { isResettingLayout = false }
 
@@ -3650,6 +3745,13 @@ extension MenuBarItemManager {
         await MainActor.run {
             appState.objectWillChange.send()
         }
+
+        // Clear any stale -1 sentinel that may have been written into
+        // menuBarHeightCache while the Menubar window was transiently
+        // unavailable during the reset. The item cache is fully rebuilt
+        // at this point, so the next mouse event will perform a fresh
+        // live lookup and cache the correct height.
+        NSScreen.invalidateMenuBarHeightCache()
 
         return failedMoves
     }

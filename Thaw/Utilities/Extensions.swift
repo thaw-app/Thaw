@@ -662,12 +662,22 @@ extension NSScreen {
     }
 
     /// Returns the height of the menu bar on this screen.
+    ///
+    /// Results are cached per-display. A sentinel value of `-1` is stored when
+    /// the Menubar window cannot be found, preventing repeated Window Server
+    /// IPC calls on every mouse-moved event when the window is temporarily
+    /// unavailable (e.g. during startup). The cache is cleared on display
+    /// configuration changes via `invalidateMenuBarHeightCache()`.
     func getMenuBarHeight() -> CGFloat? {
         if let cached = NSScreen.menuBarHeightCache[displayID] {
-            return cached
+            // Negative sentinel means a previous lookup failed; don't retry
+            // until the cache is invalidated.
+            return cached > 0 ? cached : nil
         }
         let menuBarWindow = WindowInfo.menuBarWindow(for: displayID)
-        guard let height = menuBarWindow?.bounds.height else {
+        guard let height = menuBarWindow?.bounds.height, height > 0 else {
+            // Cache the failure so the next call skips the IPC round-trip.
+            NSScreen.menuBarHeightCache[displayID] = -1
             return nil
         }
         NSScreen.menuBarHeightCache[displayID] = height
@@ -684,7 +694,8 @@ extension NSScreen {
         if let live = getMenuBarHeight() {
             return live
         }
-        if let cached = NSScreen.menuBarHeightCache[displayID] {
+        // Skip the sentinel (-1) stored for a failed lookup.
+        if let cached = NSScreen.menuBarHeightCache[displayID], cached > 0 {
             return cached
         }
         // Notched MacBooks have a ~37-38 pt menu bar; non-notch Macs use the

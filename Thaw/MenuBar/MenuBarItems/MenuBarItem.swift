@@ -322,12 +322,24 @@ extension MenuBarItem {
         // may fail for one of the windows due to timing skew between
         // CG and AX coordinate updates.
         //
-        // If an unresolved item shares the same window title with a
-        // resolved item, it almost certainly belongs to the same app.
-        // Re-create the item with the sibling's sourcePID so it gets
-        // the correct namespace, display name, and app icon.
+        // Only propagate a resolved PID to unresolved items sharing
+        // the same title when it is safe to do so. We require that
+        // the resolved PID already accounts for at least 2 items
+        // (across any title), proving the app is a multi-item app.
+        // Without this guard, a single-item app's PID could be
+        // incorrectly assigned to an unresolved item from a
+        // *different* app that happens to share the same title
+        // (e.g. two apps both using "Item-0").
         let unresolvedIndices = items.indices.filter { items[$0].sourcePID == nil && !items[$0].isControlItem }
         if !unresolvedIndices.isEmpty {
+            // Count how many items each PID has been resolved to.
+            var resolvedCountByPID = [pid_t: Int]()
+            for item in items where item.sourcePID != nil {
+                if let pid = item.sourcePID {
+                    resolvedCountByPID[pid, default: 0] += 1
+                }
+            }
+
             // Build a lookup from window title to resolved sourcePID.
             // Use nil as a sentinel for conflicting PIDs (different
             // apps sharing the same title, e.g. multiple apps using
@@ -349,6 +361,14 @@ extension MenuBarItem {
             for idx in unresolvedIndices {
                 let item = items[idx]
                 if let title = item.title, let siblingPID = titleToPID[title] ?? nil {
+                    // Only propagate if the resolved PID is already known
+                    // to own multiple items, confirming it is a multi-item
+                    // app where one window simply failed spatial matching.
+                    let resolvedCount = resolvedCountByPID[siblingPID, default: 0]
+                    guard resolvedCount >= 2 else {
+                        diagLog.debug("getMenuBarItemsExperimental: skipping propagation of sourcePID \(siblingPID) to windowID \(item.windowID) (title=\(title)) — PID has only \(resolvedCount) resolved item(s)")
+                        continue
+                    }
                     diagLog.debug("getMenuBarItemsExperimental: propagating sourcePID \(siblingPID) to unresolved windowID \(item.windowID) (title=\(title))")
                     items[idx] = MenuBarItem(uncheckedItemWindow: windows[idx], sourcePID: siblingPID)
                 }

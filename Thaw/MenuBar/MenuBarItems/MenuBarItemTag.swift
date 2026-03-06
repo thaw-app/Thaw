@@ -104,9 +104,20 @@ struct MenuBarItemTag: Hashable, CustomStringConvertible {
     }
 
     /// Returns a Boolean value that indicates whether the given tag
-    /// matches this tag, ignoring their window identifiers and instance indices.
+    /// matches this tag, ignoring their window identifiers.
     func matchesIgnoringWindowID(_ other: MenuBarItemTag) -> Bool {
-        namespace == other.namespace && title == other.title
+        namespace == other.namespace && title == other.title && instanceIndex == other.instanceIndex
+    }
+
+    /// A stable string identifier that uniquely identifies this tag
+    /// across window ID changes (e.g. app restarts). Includes the
+    /// instance index when it is nonzero so that multiple items from
+    /// the same app with the same title are distinguishable.
+    var tagIdentifier: String {
+        if instanceIndex > 0 {
+            return "\(namespace):\(title):\(instanceIndex)"
+        }
+        return "\(namespace):\(title)"
     }
 
     /// Creates a tag with the given namespace, title, window identifier,

@@ -81,7 +81,7 @@ struct IceWindow<Content: View>: Scene {
 // MARK: - IceWindowIdentifier
 
 /// Custom identifier constants uses to create Ice's windows.
-enum IceWindowIdentifier: String, Sendable, CustomStringConvertible {
+enum IceWindowIdentifier: String, CustomStringConvertible {
     /// The identifier for Ice's main settings window.
     case settings = "SettingsWindow"
 

@@ -250,7 +250,7 @@ final class DiagnosticLogger: @unchecked Sendable {
 /// private let log = DiagLog(category: "MenuBarItemManager")
 /// log.debug("something happened")
 /// ```
-struct DiagLog: Sendable {
+struct DiagLog {
     private let osLogger: Logger
     private let category: String
 

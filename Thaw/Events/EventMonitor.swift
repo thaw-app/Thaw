@@ -10,7 +10,7 @@ import Cocoa
 import Combine
 import os.lock
 
-struct EventMonitor: Sendable {
+struct EventMonitor {
     private static let diagLog = DiagLog(category: "EventMonitor")
     private final class LocalMonitorState: @unchecked Sendable {
         private let mask: NSEvent.EventTypeMask
