@@ -19,6 +19,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Initial chore work.
         NSSplitViewItem.swizzle()
         MigrationManager(appState: appState).migrateAll()
+
+        // Register thaw:// URL events early so external tools (e.g. Raycast)
+        // can trigger actions without bringing Thaw to the foreground.
+        NSAppleEventManager.shared().setEventHandler(
+            self,
+            andSelector: #selector(handleURLAppleEvent(_:withReplyEvent:)),
+            forEventClass: AEEventClass(kInternetEventClass),
+            andEventID: AEEventID(kAEGetURL)
+        )
     }
 
     func applicationDidFinishLaunching(_: Notification) {
@@ -72,11 +81,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-        if
-            sender.isActive,
-            sender.activationPolicy() != .accessory,
-            appState.navigationState.isAppFrontmost
-        {
+        if sender.isActive, sender.activationPolicy() != .accessory, appState.navigationState.isAppFrontmost {
             appState.diagLog.debug("All windows closed - deactivating with accessory activation policy")
             appState.deactivate(withPolicy: .accessory)
         }
@@ -87,14 +92,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return true
     }
 
-    func application(_: NSApplication, open urls: [URL]) {
-        for url in urls {
-            guard url.scheme?.lowercased() == "thaw" else { continue }
-            handleURL(url)
-        }
-    }
-
     // MARK: Other Methods
+
+    /// Handles `kAEGetURL` Apple Events and forwards `thaw://` URLs to `handleURL(_:)`.
+    @objc private func handleURLAppleEvent(
+        _ event: NSAppleEventDescriptor,
+        withReplyEvent _: NSAppleEventDescriptor
+    ) {
+        guard
+            let urlString = event.paramDescriptor(forKeyword: AEKeyword(keyDirectObject))?.stringValue,
+            let url = URL(string: urlString),
+            url.scheme?.lowercased() == "thaw"
+        else { return }
+        handleURL(url)
+    }
 
     /// Dispatches an incoming `thaw://` URL to the appropriate action.
     ///
@@ -114,7 +125,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             HotkeyAction.toggleAlwaysHiddenSection.perform(appState: appState)
         case "search":
             HotkeyAction.searchMenuBarItems.perform(appState: appState)
-        case "toggle-icebar":
+        case "toggle-thawbar":
             HotkeyAction.enableIceBar.perform(appState: appState)
         case "toggle-application-menus":
             HotkeyAction.toggleApplicationMenus.perform(appState: appState)
