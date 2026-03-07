@@ -457,7 +457,6 @@ final class MenuBarManager: ObservableObject {
     /// Toggles the visibility of the application menus.
     func toggleApplicationMenus() {
         if isHidingApplicationMenus {
-            isManuallyHidingApplicationMenus = false
             showApplicationMenus()
         } else {
             isManuallyHidingApplicationMenus = true
