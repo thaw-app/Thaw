@@ -48,6 +48,10 @@ final class MenuBarManager: ObservableObject {
     /// A Boolean value that indicates whether the application menus are hidden.
     private var isHidingApplicationMenus = false
 
+    /// A Boolean value that indicates whether the application menus were hidden
+    /// by a manual toggle (URL/hotkey), rather than automatically by section state.
+    private var isManuallyHidingApplicationMenus = false
+
     /// The panel that contains the Ice Bar interface.
     let iceBarPanel = IceBarPanel()
 
@@ -310,7 +314,7 @@ final class MenuBarManager: ObservableObject {
                             self.hideApplicationMenus()
                         }
                     }
-                } else if isHidingApplicationMenus {
+                } else if isHidingApplicationMenus && !isManuallyHidingApplicationMenus {
                     showApplicationMenus()
                 }
             }
@@ -409,6 +413,8 @@ final class MenuBarManager: ObservableObject {
     }
 
     /// Hides the application menus.
+    ///
+    /// - Important: Uses `.regular` activation policy to hide menus, which briefly shows the app in the Dock.
     func hideApplicationMenus() {
         guard let appState else {
             diagLog.error("Error hiding application menus: Missing app state")
@@ -445,13 +451,16 @@ final class MenuBarManager: ObservableObject {
         diagLog.info("Showing application menus")
         appState.deactivate(withPolicy: .accessory)
         isHidingApplicationMenus = false
+        isManuallyHidingApplicationMenus = false
     }
 
     /// Toggles the visibility of the application menus.
     func toggleApplicationMenus() {
         if isHidingApplicationMenus {
+            isManuallyHidingApplicationMenus = false
             showApplicationMenus()
         } else {
+            isManuallyHidingApplicationMenus = true
             hideApplicationMenus()
         }
     }
