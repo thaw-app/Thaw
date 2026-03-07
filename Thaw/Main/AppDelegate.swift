@@ -113,7 +113,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// - `thaw://toggle-hidden` — toggle the hidden menu bar section
     /// - `thaw://toggle-always-hidden` — toggle the always-hidden menu bar section
     /// - `thaw://search` — open the menu bar item search panel
-    /// - `thaw://toggle-icebar` — toggle the IceBar on the active display
+    /// - `thaw://toggle-thawbar` — toggle the IceBar on the active display
     /// - `thaw://toggle-application-menus` — toggle application menus
     /// - `thaw://open-settings` — open the Thaw settings window
     private func handleURL(_ url: URL) {
