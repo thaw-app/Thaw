@@ -216,6 +216,7 @@
 				nl,
 				ru,
 				"pt-BR",
+				ja,
 				Base,
 			);
 			mainGroup = 716683212A767E6A006ABF84;

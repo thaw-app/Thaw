@@ -41,6 +41,12 @@
             "value" : "%@"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -129,6 +135,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ %@ Sezione"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ %@ セクション"
           }
         },
         "ko" : {
@@ -221,6 +233,12 @@
             "value" : "%@ Barra"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ バー"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -309,6 +327,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ può funzionare in modalità limitata senza questa autorizzazione."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ はこの権限なしでも制限モードで動作できます。"
           }
         },
         "ko" : {
@@ -401,6 +425,12 @@
             "value" : "%@ non può disporre le voci della barra dei menu nelle barre dei menu nascoste automaticamente."
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ は自動的に非表示になるメニューバーではメニューバー項目を整理できません。"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -489,6 +519,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ non può modificare l'aspetto delle barre dei menu nascoste automaticamente."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ は自動的に非表示になるメニューバーの外観を編集できません。"
           }
         },
         "ko" : {
@@ -581,6 +617,12 @@
             "value" : "Icona %@"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ アイコン"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -652,6 +694,12 @@
             "state" : "new",
             "value" : "%1$@ sedang berjalan. Menjalankan beberapa pengelola bar menu secara bersamaan dapat menyebabkan masalah tampilan dan perilaku yang tidak terduga. Sebaiknya keluar dari %2$@ sebelum menggunakan Thaw."
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ は現在実行中です。複数のメニューバーマネージャーを同時に実行すると、表示の問題や予期しない動作が発生する可能性があります。Thaw を使用する前に %2$@ を終了することをお勧めします。"
+          }
         }
       }
     },
@@ -693,6 +741,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ non risponde. Finché non viene riavviato, non può essere spostato. Anche il movimento di altre voci della barra dei menu potrebbe essere influenzato finché il problema non verrà risolto."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ は応答していません。再起動するまで移動できません。この問題が解決するまで、他のメニューバー項目の移動にも影響が出る場合があります。"
           }
         },
         "ko" : {
@@ -785,6 +839,12 @@
             "value" : "%@ obbligatorio per:"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ がこれを必要とする理由："
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -875,6 +935,12 @@
             "value" : "%@ necessita della tua autorizzazione per gestire la barra dei menu."
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ がメニューバーを管理するには、許可が必要です。"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -963,6 +1029,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Impostazioni %@…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 設定…"
           }
         },
         "ko" : {
@@ -1139,6 +1211,18 @@
             }
           }
         },
+        "ja" : {
+          "variations" : {
+            "plural" : {
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lf 秒"
+                }
+              }
+            }
+          }
+        },
         "ko" : {
           "variations" : {
             "plural" : {
@@ -1283,6 +1367,12 @@
             "value" : "%lld FPS"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld fps"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1416,6 +1506,18 @@
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld secondi"
+                }
+              }
+            }
+          }
+        },
+        "ja" : {
+          "variations" : {
+            "plural" : {
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld 秒"
                 }
               }
             }
@@ -1595,6 +1697,12 @@
             "value" : "•"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "•"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1661,6 +1769,12 @@
             "value" : "+"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "+"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1691,6 +1805,12 @@
             "value" : "⌘"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⌘"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1716,6 +1836,12 @@
           }
         },
         "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⎋"
+          }
+        },
+        "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "⎋"
@@ -1770,6 +1896,12 @@
           }
         },
         "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1"
+          }
+        },
+        "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "1"
@@ -1865,6 +1997,12 @@
             "value" : "2"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "2"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1950,6 +2088,12 @@
           }
         },
         "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "3"
+          }
+        },
+        "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "3"
@@ -2043,6 +2187,12 @@
             "value" : "È disponibile un nuovo aggiornamento"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新しいアップデートがあります"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2131,6 +2281,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Informazioni"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このアプリについて"
           }
         },
         "ko" : {
@@ -2223,6 +2379,12 @@
             "value" : "Non viene raccolta né conservata alcuna informazione personale."
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "個人情報は一切収集・保存されません。"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2311,6 +2473,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Accessibilità"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アクセシビリティ"
           }
         },
         "ko" : {
@@ -2403,6 +2571,12 @@
             "value" : "Ringraziamenti"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "謝辞"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2493,6 +2667,12 @@
             "value" : "Avanzate"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "詳細"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2559,6 +2739,12 @@
             "value" : "Selalu tampilkan item tersembunyi"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "非表示項目を常に表示"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2589,6 +2775,12 @@
             "value" : "Selalu tampilkan item bar menu tersembunyi pada bar menu di layar ini."
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このディスプレイのメニューバーに非表示のメニューバー項目を常に表示します。"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2617,6 +2809,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Selalu tampilkan Bar %@ di posisi penunjuk saat ditampilkan dengan pintasan."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ホットキーで表示する際は、%@ バーを常にマウスポインターの位置に表示します。"
           }
         },
         "pt-BR" : {
@@ -2671,6 +2869,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sempre nascosto"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "常に非表示"
           }
         },
         "ko" : {
@@ -2763,6 +2967,12 @@
             "value" : "Applica"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "適用"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2851,6 +3061,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Applica impostazioni diverse in base all'aspetto attuale del sistema."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "現在のシステム外観に基づいて異なる設定を適用します。"
           }
         },
         "ko" : {
@@ -2943,6 +3159,12 @@
             "value" : "Applica la spaziatura corrente"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "現在の間隔を適用"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3031,6 +3253,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Applicando questa impostazione verranno riavviate tutte le app con voci nella barra dei menu. Potrebbe essere necessario riavviare manualmente alcune app."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この設定を適用すると、メニューバー項目を持つすべてのアプリが再起動されます。一部のアプリは手動で再起動が必要な場合があります。"
           }
         },
         "ko" : {
@@ -3123,6 +3351,12 @@
             "value" : "Disporre le voci della barra dei menu."
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メニューバー項目を整理します。"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3211,6 +3445,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Freccia"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "矢印"
           }
         },
         "ko" : {
@@ -3303,6 +3543,12 @@
             "value" : "Controlla automaticamente gli aggiornamenti"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自動的にアップデートを確認"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3391,6 +3637,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Scarica e installa automaticamente gli aggiornamenti"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自動的にアップデートをダウンロードしてインストール"
           }
         },
         "ko" : {
@@ -3483,6 +3735,12 @@
             "value" : "Scarica automaticamente gli aggiornamenti"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自動的にアップデートをダウンロード"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3571,6 +3829,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nascondi automaticamente"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自動的に再表示を非表示にする"
           }
         },
         "ko" : {
@@ -3663,6 +3927,12 @@
             "value" : "BETA"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ベータ"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3751,6 +4021,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Bordo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ボーダー"
           }
         },
         "ko" : {
@@ -3843,6 +4119,12 @@
             "value" : "Colore Bordo"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ボーダーカラー"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3931,6 +4213,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Larghezza bordo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ボーダー幅"
           }
         },
         "ko" : {
@@ -4022,6 +4310,12 @@
             "value" : "Cancella"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "キャンセル"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -4088,6 +4382,12 @@
             "value" : "Tidak dapat memindahkan ikon %@."
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ アイコンを移動できません。"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -4140,6 +4440,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Modifica l'aspetto della barra dei menu."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メニューバーの外観を変更します。"
           }
         },
         "ko" : {
@@ -4232,6 +4538,12 @@
             "value" : "Controlla automaticamente"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自動的に確認"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -4320,6 +4632,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Controlla gli aggiornamenti"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アップデートを確認"
           }
         },
         "ko" : {
@@ -4412,6 +4730,12 @@
             "value" : "Controllare automaticamente gli aggiornamenti?"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自動的にアップデートを確認しますか？"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -4502,6 +4826,12 @@
             "value" : "Controlla gli aggiornamenti…"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アップデートを確認…"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -4568,6 +4898,12 @@
             "value" : "Periksa Izin"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "権限を確認"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -4625,6 +4961,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Controlla Impostazioni di sistema > Barra dei menu e abilita %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "システム設定 > メニューバー を確認して %@ を有効にしてください"
           }
         },
         "ko" : {
@@ -4717,6 +5059,12 @@
             "value" : "La verifica degli aggiornamenti non è supportata in modalità debug."
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "デバッグモードではアップデートの確認はサポートされていません。"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -4806,6 +5154,12 @@
             "value" : "Chevron"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "シェブロン"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -4871,6 +5225,12 @@
             "value" : "Chevron (Bawah)"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "シェブロン（下向き）"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -4923,6 +5283,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Scegli un'icona personalizzata da visualizzare nella barra dei menu."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メニューバーに表示するカスタムアイコンを選択します。"
           }
         },
         "ko" : {
@@ -5015,6 +5381,12 @@
             "value" : "Scegli l'immagine…"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "画像を選択…"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5081,6 +5453,12 @@
             "value" : "Klik area kosong bar menu untuk menampilkan item bar menu tersembunyi."
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メニューバーの空いている領域をクリックすると、非表示のメニューバー項目が表示されます。"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5133,6 +5511,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Fare clic sull'elemento"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "項目をクリック"
           }
         },
         "ko" : {
@@ -5201,6 +5585,12 @@
             "value" : "Konfirmasi"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "確認"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5229,6 +5619,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pengelola Bar Menu Lain Terdeteksi"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "競合するメニューバーマネージャーが検出されました"
           }
         }
       }
@@ -5271,6 +5667,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Continua"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "続ける"
           }
         },
         "ko" : {
@@ -5338,6 +5740,12 @@
             "state" : "translated",
             "value" : "Lanjutkan"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このまま続ける"
+          }
         }
       }
     },
@@ -5379,6 +5787,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Continua in modalità limitata"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "制限モードで続ける"
           }
         },
         "ko" : {
@@ -5471,6 +5885,12 @@
             "value" : "Contribuire"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "貢献する"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5559,6 +5979,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Personalizzato"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "カスタム"
           }
         },
         "ko" : {
@@ -5651,6 +6077,12 @@
             "value" : "L'icona personalizzata utilizza un aspetto dinamico"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "カスタムアイコンにダイナミック外観を使用"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5739,6 +6171,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Modalità scura"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ダーク外観"
           }
         },
         "ko" : {
@@ -5831,6 +6269,12 @@
             "value" : "default"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "デフォルト"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5919,6 +6363,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sviluppo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "開発版"
           }
         },
         "ko" : {
@@ -6011,6 +6461,12 @@
             "value" : "Diagnostica"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "診断"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -6077,6 +6533,12 @@
             "value" : "Buang"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "破棄"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -6129,6 +6591,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Visualizza le immagini delle singole voci della barra dei menu."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "個々のメニューバー項目の画像を表示します。"
           }
         },
         "ko" : {
@@ -6221,6 +6689,12 @@
             "value" : "Visualizza l'icona come un'immagine monocromatica che si adatta dinamicamente all'aspetto della barra dei menu. Questa impostazione rimuove tutti i colori dall'icona, ma garantisce un rendering uniforme sia con sfondi chiari che scuri."
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アイコンをメニューバーの外観に合わせてダイナミックに調整されるモノクロ画像として表示します。この設定はアイコンからすべての色を除去しますが、ライト・ダーク両方の背景で一貫した表示を保証します。"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -6287,6 +6761,12 @@
             "value" : "Layar"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ディスプレイ"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -6345,6 +6825,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Non controllare"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "確認しない"
           }
         },
         "ko" : {
@@ -6437,6 +6923,12 @@
             "value" : "Fatto"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "完了"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -6525,6 +7017,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Porta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ドア"
           }
         },
         "ko" : {
@@ -6617,6 +7115,12 @@
             "value" : "Punto"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ドット"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -6683,6 +7187,12 @@
             "value" : "Klik area kosong bar menu untuk menampilkan item bar menu selalu-tersembunyi."
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メニューバーの空いている領域をダブルクリックすると、常に非表示のメニューバー項目が表示されます。"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -6711,6 +7221,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Klik dua kali untuk selalu-tersembunyi"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "常に非表示の項目はダブルクリックで表示"
           }
         },
         "pt-BR" : {
@@ -6765,6 +7281,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Trascina per disporre gli elementi della barra dei menu in sezioni diverse."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ドラッグしてメニューバー項目を異なるセクションに整理します。"
           }
         },
         "ko" : {
@@ -6857,6 +7379,12 @@
             "value" : "A causa di un bug in una versione precedente dell'app, i dati per le sezioni della barra dei menu di %@ erano corrotti e hanno dovuto essere reimpostati."
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "以前のバージョンのアプリのバグにより、%@ のメニューバーセクションのデータが破損し、リセットされました。"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -6947,6 +7475,12 @@
             "value" : "Dinamica"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ダイナミック"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -7013,6 +7547,12 @@
             "value" : "E"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "E"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -7065,6 +7605,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Modifica aspetto barra menu…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メニューバーの外観を編集…"
           }
         },
         "ko" : {
@@ -7133,6 +7679,12 @@
             "value" : "Edit Nama"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "名前を編集"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -7185,6 +7737,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ellipsis"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "省略記号"
           }
         },
         "ko" : {
@@ -7277,6 +7835,12 @@
             "value" : "Abilita i log di diagnostica"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "診断ログを有効にする"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -7365,6 +7929,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Abilita il menu contestuale secondario"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "セカンダリコンテキストメニューを有効にする"
           }
         },
         "ko" : {
@@ -7457,6 +8027,12 @@
             "value" : "Abilita la barra %@"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ バーを有効にする"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -7545,6 +8121,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Abilita la sezione sempre nascosta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "常に非表示セクションを有効にする"
           }
         },
         "ko" : {
@@ -7637,6 +8219,12 @@
             "value" : "ERRORE"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "エラー"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -7725,6 +8313,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Focus"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "フォーカス"
           }
         },
         "ko" : {
@@ -7817,6 +8411,12 @@
             "value" : "Tutto"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "フル"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -7905,6 +8505,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Generale"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一般"
           }
         },
         "ko" : {
@@ -7997,6 +8603,12 @@
             "value" : "Ottieni informazioni in tempo reale sulla barra dei menu."
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メニューバーに関するリアルタイム情報を取得します。"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -8085,6 +8697,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Vai a impostazioni avanzate"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "詳細設定へ移動"
           }
         },
         "ko" : {
@@ -8177,6 +8795,12 @@
             "value" : "Gradiante"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "グラデーション"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -8265,6 +8889,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Concedere il permesso"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "権限を許可"
           }
         },
         "ko" : {
@@ -8357,6 +8987,12 @@
             "value" : "Nascosto"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "非表示"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -8445,6 +9081,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nascondi la sezione sempre nascosta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "常に非表示セクションを隠す"
           }
         },
         "ko" : {
@@ -8537,6 +9179,12 @@
             "value" : "Nascondi i menu delle app quando vengono mostrati gli elementi della barra dei menu"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メニューバー項目を表示するときはアプリメニューを隠す"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -8625,6 +9273,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nascondi la sezione nascosta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "非表示セクションを隠す"
           }
         },
         "ko" : {
@@ -8717,6 +9371,12 @@
             "value" : "Tieni premuto per visualizzare l'anteprima"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "長押しでプレビュー"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -8805,6 +9465,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Il tasto di scelta rapida è riservato a macOS"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このホットキーは macOS が予約しています"
           }
         },
         "ko" : {
@@ -8897,6 +9563,12 @@
             "value" : "Hotkeys"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ホットキー"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -8987,6 +9659,12 @@
             "value" : "Passa il mouse su un'area vuota della barra dei menu per visualizzare gli elementi nascosti della barra dei menu."
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メニューバーの空いている領域にカーソルを合わせると、非表示のメニューバー項目が表示されます。"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -9053,6 +9731,12 @@
             "value" : "Seberapa sering ikon bar menu beranimasi diperbaharui di panel. Nilai lebih tinggi lebih mulus, tetapi menggunakan lebih banyak CPU."
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "パネル内でアニメーションするメニューバーアイコンの更新頻度です。値が大きいほど滑らかになりますが、CPUの使用量が増えます。"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -9102,6 +9786,12 @@
           }
         },
         "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ice Cube"
+          }
+        },
+        "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ice Cube"
@@ -9197,6 +9887,12 @@
             "value" : "Le posizioni delle icone non possono essere ripristinate."
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アイコンの位置は復元できません。"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -9263,6 +9959,12 @@
             "value" : "Laju penyegaran ikon"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アイコン更新レート"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -9315,6 +10017,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Importazione non riuscita. Puoi configurare le impostazioni manualmente."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "インポートに失敗しました。設定は手動で行うことができます。"
           }
         },
         "ko" : {
@@ -9407,6 +10115,12 @@
             "value" : "Impostazioni di importazione"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定をインポート"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -9495,6 +10209,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Importato"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "インポート済み"
           }
         },
         "ko" : {
@@ -9587,6 +10307,12 @@
             "value" : "È anche possibile organizzare gli elementi tenendo premuto ⌘ Comando e trascinandoli nella barra dei menu."
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メニューバーで ⌘ Command + ドラッグすることでも項目を整理できます。"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -9675,6 +10401,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ultimo controllo: %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最終確認: %@"
           }
         },
         "ko" : {
@@ -9767,6 +10499,12 @@
             "value" : "Avvia al login"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ログイン時に起動"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -9853,6 +10591,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Layout ripristinato. Gli elementi sono stati spostati nella sezione Nascosti."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "レイアウトをリセットしました。項目は非表示セクションに移動されました。"
           }
         },
         "ko" : {
@@ -9945,6 +10689,12 @@
             "value" : "Risoluzione iniziale"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "先頭エンドキャップ"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -10035,6 +10785,12 @@
             "value" : "clic sinistro"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "左クリック"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -10100,6 +10856,12 @@
             "value" : "Margin kiri"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "左マージン"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -10152,6 +10914,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Aspetto leggero"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ライト外観"
           }
         },
         "ko" : {
@@ -10244,6 +11012,12 @@
             "value" : "Caricamento degli elementi della barra dei menu in corso…"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メニューバー項目を読み込んでいます…"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -10332,6 +11106,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Posizione"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "場所"
           }
         },
         "ko" : {
@@ -10424,6 +11204,12 @@
             "value" : "macOS impedisce lo spostamento di \"%@\"."
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS により \"%@\" は移動できません。"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -10514,6 +11300,12 @@
             "value" : "Se necessario, puoi liberare spazio nella barra dei menu nascondendo i menu delle app correnti. macOS richiede che %@ si renda visibile nel Dock mentre questa impostazione è attiva."
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "必要に応じて現在のアプリメニューを隠すことで、メニューバーのスペースを確保します。この設定が有効な間、macOS は %@ を Dock に表示する必要があります。"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -10600,6 +11392,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "max"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最大"
           }
         },
         "ko" : {
@@ -10692,6 +11490,12 @@
             "value" : "Aspetto della barra dei menu"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メニューバーの外観"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -10780,6 +11584,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "La voce della barra dei menu non è spostabile."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このメニューバー項目は移動できません。"
           }
         },
         "ko" : {
@@ -10872,6 +11682,12 @@
             "value" : "Spaziatura delle voci della barra dei menu"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メニューバー項目の間隔"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -10960,6 +11776,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Elementi della barra dei menu"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メニューバー項目"
           }
         },
         "ko" : {
@@ -11052,6 +11874,12 @@
             "value" : "Gli elementi della barra dei menu vengono nascosti di nuovo dopo un periodo di tempo prestabilito."
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メニューバー項目は一定時間後に再び非表示になります。"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -11140,6 +11968,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gli elementi della barra dei menu vengono nascosti di nuovo utilizzando un algoritmo intelligente."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メニューバー項目はスマートアルゴリズムを使って再び非表示になります。"
           }
         },
         "ko" : {
@@ -11232,6 +12066,12 @@
             "value" : "Gli elementi della barra dei menu vengono nascosti di nuovo quando cambia l'app selezionata."
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "フォーカスされているアプリが変わると、メニューバー項目は再び非表示になります。"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -11320,6 +12160,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Layout della barra dei menu"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メニューバーのレイアウト"
           }
         },
         "ko" : {
@@ -11412,6 +12258,12 @@
             "value" : "Per il layout della barra dei menu è necessario disporre delle autorizzazioni di registrazione dello schermo."
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メニューバーのレイアウトには画面収録の権限が必要です。"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -11500,6 +12352,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sovrapposizione della barra dei menu"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メニューバーオーバーレイ"
           }
         },
         "ko" : {
@@ -11592,6 +12450,12 @@
             "value" : "Sezioni della barra dei menu"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メニューバーセクション"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -11680,6 +12544,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Forma della barra dei menu"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メニューバーの形状"
           }
         },
         "ko" : {
@@ -11772,6 +12642,12 @@
             "value" : "puntatore del mouse"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "マウスポインター"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -11860,6 +12736,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mai"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "なし"
           }
         },
         "ko" : {
@@ -11952,6 +12834,12 @@
             "value" : "Nessun elemento in questa sezione"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このセクションに項目はありません"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -12040,6 +12928,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nessun tipo di forma selezionato"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "形状が選択されていません"
           }
         },
         "ko" : {
@@ -12132,6 +13026,12 @@
             "value" : "nessuno"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "なし"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -12222,6 +13122,12 @@
             "value" : "Nessuno"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "なし"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -12288,6 +13194,12 @@
             "value" : "Tidak tersedia karena Bar %@ diaktifkan untuk layar ini."
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このディスプレイで %@ バーが有効なため、使用できません。"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -12340,6 +13252,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Non c'è abbastanza spazio per mostrare \"%@\""
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "\"%@\" を表示するスペースが不足しています"
           }
         },
         "ko" : {
@@ -12408,6 +13326,12 @@
             "value" : "Notch"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ノッチ"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -12466,6 +13390,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nota: potrebbe essere necessario disconnettersi e riconnettersi affinché questa impostazione venga applicata correttamente."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "注意: この設定を正しく適用するには、一度ログアウトして再度ログインする必要がある場合があります。"
           }
         },
         "ko" : {
@@ -12553,6 +13483,12 @@
           }
         },
         "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OK"
+          }
+        },
+        "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "OK"
@@ -12648,6 +13584,12 @@
             "value" : "Uno o più divisori di sezione sono nascosti da macOS"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1つ以上のセクション区切りが macOS によって非表示にされています"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -12736,6 +13678,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Apri %@ Impostazioni"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 設定を開く"
           }
         },
         "ko" : {
@@ -12828,6 +13776,12 @@
             "value" : "Altro"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "その他"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -12916,6 +13870,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Permesso concesso"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "権限が許可されました"
           }
         },
         "ko" : {
@@ -13008,6 +13968,12 @@
             "value" : "Permessi"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "権限"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -13096,6 +14062,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Chiudi"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "終了"
           }
         },
         "ko" : {
@@ -13188,6 +14160,12 @@
             "value" : "Chiudi %@"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ を終了"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -13253,6 +14231,12 @@
             "state" : "translated",
             "value" : "Keluar Thaw"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thaw を終了"
+          }
         }
       }
     },
@@ -13294,6 +14278,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Registra Hotkey"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ホットキーを記録"
           }
         },
         "ko" : {
@@ -13386,6 +14376,12 @@
             "value" : "Segnala un Bug"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "バグを報告"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -13475,6 +14471,12 @@
             "value" : "Resetta"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "リセット"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -13539,6 +14541,12 @@
             "state" : "translated",
             "value" : "Atur ulang %@"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ をリセット"
+          }
         }
       }
     },
@@ -13557,6 +14565,12 @@
             "state" : "translated",
             "value" : "Atur ulang semua pengaturan"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "すべての設定をリセット"
+          }
         }
       }
     },
@@ -13574,6 +14588,12 @@
             "state" : "translated",
             "value" : "Atur ulang semua pengaturan ke pengaturan bawaan. Tindakan ini tidak dapat dibatalkan."
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "すべての設定をデフォルト値にリセットします。この操作は元に戻せません。"
+          }
         }
       }
     },
@@ -13590,6 +14610,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Atur ulang semua pengaturan?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "すべての設定をリセットしますか？"
           }
         }
       }
@@ -13632,6 +14658,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Reimpostazione completata con %lld elementi che non è stato possibile spostare. Controlla la barra dei menu e riprova se necessario."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "リセットが完了しましたが、%lld 個の項目を移動できませんでした。必要に応じてメニューバーを確認し、再試行してください。"
           }
         },
         "ko" : {
@@ -13724,6 +14756,12 @@
             "value" : "Reimpostazione non riuscita: %@"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "リセットに失敗しました: %@"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -13812,6 +14850,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Resetta Layout"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "レイアウトをリセット"
           }
         },
         "ko" : {
@@ -13904,6 +14948,12 @@
             "value" : "Ripristina l'aspetto della barra dei menu"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メニューバーの外観をリセット"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -13992,6 +15042,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ripristina il layout della barra dei menu"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メニューバーのレイアウトをリセット"
           }
         },
         "ko" : {
@@ -14084,6 +15140,12 @@
             "value" : "Ripristinare il layout della barra dei menu?"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メニューバーのレイアウトをリセットしますか？"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -14172,6 +15234,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ripristina la spaziatura predefinita"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "デフォルトの間隔にリセット"
           }
         },
         "ko" : {
@@ -14264,6 +15332,12 @@
             "value" : "Reimposta i divisori e sposta tutti gli elementi mobili, eccetto l'icona %@, su nascosto, proprio come una nuova installazione."
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "区切りをリセットし、%@ アイコンを除くすべての移動可能な項目を非表示に移動します — 新規インストール直後の状態になります。"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -14352,6 +15426,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ripristina le impostazioni predefinite del divisore e sposta tutti gli elementi spostabili, tranne l'icona %@, su Nascosto. Utilizza questa opzione se il layout appare danneggiato o se gli elementi non vengono caricati."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仕切り線を初期状態に戻し、%@ 以外のすべての項目を非表示にします。レイアウトの崩れや読み込みの不具合が発生した際に実行してください。"
           }
         },
         "ko" : {
@@ -14444,6 +15524,12 @@
             "value" : "clic destro"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "右クリック"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -14509,6 +15595,12 @@
             "value" : "Margin kanan"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "右マージン"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -14561,6 +15653,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Fai clic con il pulsante destro del mouse in un'area vuota della barra dei menu per visualizzare una versione ridotta del menu di %@. Disattiva questa impostazione se riscontri conflitti con altre app."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メニューバーの空いている領域を右クリックすると、%@ のシンプルなメニューが表示されます。他のアプリと競合する場合はこの設定を無効にしてください。"
           }
         },
         "ko" : {
@@ -14653,6 +15751,12 @@
             "value" : "Estremità arrotondata"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ラウンドキャップ"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -14741,6 +15845,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Registrazione dello schermo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "画面収録"
           }
         },
         "ko" : {
@@ -14833,6 +15943,12 @@
             "value" : "Scorrere o scorrere la barra dei menu per visualizzare gli elementi nascosti della barra dei menu."
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メニューバーでスクロールまたはスワイプすると、非表示のメニューバー項目が表示されます。"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -14921,6 +16037,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Cerca elementi della barra dei menu"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メニューバー項目を検索"
           }
         },
         "ko" : {
@@ -15013,6 +16135,12 @@
             "value" : "Cerca elementi della barra dei menu"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メニューバー項目を検索"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -15101,6 +16229,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Cerca elementi nella barra dei menu…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メニューバー項目を検索…"
           }
         },
         "ko" : {
@@ -15193,6 +16327,12 @@
             "value" : "Stile del divisore di sezione"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "セクション区切りのスタイル"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -15281,6 +16421,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ombra"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "シャドウ"
           }
         },
         "ko" : {
@@ -15373,6 +16519,12 @@
             "value" : "Tipo di forma"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "形状の種類"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -15461,6 +16613,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ dovrebbe controllare automaticamente la presenza di aggiornamenti? Puoi sempre controllare manualmente dall'icona della barra dei menu di Thaw o da Impostazioni → Informazioni."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ は自動的にアップデートを確認しますか？ Thaw のメニューバーアイコンまたは設定 → このアプリについて から手動で確認することもできます。"
           }
         },
         "ko" : {
@@ -15553,6 +16711,12 @@
             "value" : "Mostra l'icona %@"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ アイコンを表示"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -15619,6 +16783,12 @@
             "value" : "Tampilkan tip alat saat kursor diarahkan ke item bar menu di bar menu sistem."
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メニューバーのアイテムにカーソルを合わせたときにツールチップを表示します。"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -15671,6 +16841,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mostra tutte le sezioni quando ⌘ Comando + trascinamento degli elementi della barra dei menu"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⌘ Command + ドラッグ時にすべてのセクションを表示"
           }
         },
         "ko" : {
@@ -15763,6 +16939,12 @@
             "value" : "Mostra la sezione sempre nascosta"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "常に非表示セクションを表示"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -15829,6 +17011,12 @@
             "value" : "Tampilkan di posisi penunjuk saat menggunakan pintasan"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ホットキー使用時にマウスポインターの位置に表示"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -15857,6 +17045,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tampilkan item bar menu tersembunyi di bar terpisah di bawah bar menu pada layar ini."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このディスプレイのメニューバーの下に、非表示のメニューバー項目を別のバーで表示します。"
           }
         },
         "pt-BR" : {
@@ -15917,6 +17111,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mostra sezione nascosta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "非表示セクションを表示"
           }
         },
         "ko" : {
@@ -16009,6 +17209,12 @@
             "value" : "Mostra elemento"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "項目を表示"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -16099,6 +17305,12 @@
             "value" : "Mostra i file di registro nel Finder"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Finder でログファイルを表示"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -16165,6 +17377,12 @@
             "value" : "Tampilkan latar belakang bar menu"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メニューバーの背景を表示"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -16217,6 +17435,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mostra al clic"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "クリックで表示"
           }
         },
         "ko" : {
@@ -16309,6 +17533,12 @@
             "value" : "Mostra al passaggio del mouse"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ホバーで表示"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -16397,6 +17627,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mostra ritardo al passaggio del mouse"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ホバー表示の遅延"
           }
         },
         "ko" : {
@@ -16489,6 +17725,12 @@
             "value" : "Mostra con scorrimento"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スクロールで表示"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -16555,6 +17797,12 @@
             "value" : "Tampilkan ikon %@ di bar menu. Klik untuk menampilkan item tersembunyi, klik dua kali untuk item selalu-tersembunyi, dan klik kanan untuk membuka pengaturan."
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メニューバーに %@ アイコンを表示します。クリックで非表示項目を表示、ダブルクリックで常に非表示の項目を表示、右クリックで設定を開きます。"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -16585,6 +17833,12 @@
             "value" : "Tampilkan tip alat di bar menu"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メニューバーにツールチップを表示"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -16613,6 +17867,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Menampilkan latar belakang bar menu sistem. Aktifkan jika menggunakan wallpaper otomatis atau jika opsi 'Tampilkan latar belakang bar menu' dinonaktifkan di Pengaturan Sistem."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "システムのメニューバー背景を表示します。ダイナミック壁紙を使用している場合や、システム設定で「メニューバーの背景を表示」が無効になっている場合は有効にしてください。"
           }
         },
         "pt-BR" : {
@@ -16667,6 +17927,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Smart"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スマート"
           }
         },
         "ko" : {
@@ -16759,6 +18025,12 @@
             "value" : "Solido"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ソリッド"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -16845,6 +18117,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Diviso"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "分割"
           }
         },
         "ko" : {
@@ -16937,6 +18215,12 @@
             "value" : "Estremità quadrata"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スクエアキャップ"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -17025,6 +18309,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Stabile"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "安定版"
           }
         },
         "ko" : {
@@ -17117,6 +18407,12 @@
             "value" : "Strategia"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ストラテジー"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -17205,6 +18501,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Impostazioni %lld importate con successo!"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 件の設定をインポートしました！"
           }
         },
         "ko" : {
@@ -17297,6 +18599,12 @@
             "value" : "Occhiali da sole"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "サングラス"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -17385,6 +18693,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Supporto %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ をサポート"
           }
         },
         "ko" : {
@@ -17477,6 +18791,12 @@
             "value" : "La barra %@ è centrata sotto l'icona %@."
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ バーは %@ アイコンの真下に中央揃えで表示されます。"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -17565,6 +18885,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "La barra %@ è centrata sotto il puntatore del mouse."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ バーはマウスポインターの真下に中央揃えで表示されます。"
           }
         },
         "ko" : {
@@ -17657,6 +18983,12 @@
             "value" : "La barra %@ richiede l'autorizzazione alla registrazione dello schermo."
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ バーには画面収録の権限が必要です。"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -17747,6 +19079,12 @@
             "value" : "La posizione del %@ Bar cambia in base al contesto."
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ バーの位置はコンテキストに応じて変化します。"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -17813,6 +19151,12 @@
             "value" : "Ikon %@ harus selalu berada di bagian terlihat."
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ アイコンは常に表示セクション内に置く必要があります。"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -17841,6 +19185,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Durasi tunggu sebelum tip alat ditampilkan saat kursor diarahkan ke item bar menu."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メニューバー項目のツールチップを表示するまでの待機時間。"
           }
         },
         "pt-BR" : {
@@ -17895,6 +19245,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tempo di attesa prima che venga visualizzato al passaggio del mouse."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ホバー表示するまでの待機時間。"
           }
         },
         "ko" : {
@@ -17987,6 +19343,12 @@
             "value" : "Questa azione non può essere annullata."
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この操作は元に戻せません。"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -18051,6 +19413,12 @@
             "state" : "translated",
             "value" : "Opsi ini akan mengatur ulang semua pengaturan ke pengaturan bawaan. Tindakan ini tidak dapat dibatalkan."
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "すべての設定をデフォルト値にリセットします。この操作は元に戻せません。"
+          }
         }
       }
     },
@@ -18092,6 +19460,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Temporizzato"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "時間指定"
           }
         },
         "ko" : {
@@ -18184,6 +19558,12 @@
             "value" : "Tinta"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "色調"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -18272,6 +19652,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Suggerimento: puoi anche modificare queste impostazioni facendo clic con il pulsante destro del mouse in un'area vuota della barra dei menu."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ヒント: メニューバーの空いている領域を右クリックしても、これらの設定を編集できます。"
           }
         },
         "ko" : {
@@ -18364,6 +19750,12 @@
             "value" : "Attiva/disattiva i menu delle applicazioni"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アプリケーションメニューの切り替え"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -18452,6 +19844,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Attiva/disattiva la sezione sempre nascosta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "常に非表示セクションを切り替え"
           }
         },
         "ko" : {
@@ -18544,6 +19942,12 @@
             "value" : "Attiva/disattiva la sezione nascosta"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "非表示セクションを切り替え"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -18610,6 +20014,12 @@
             "value" : "Jeda tip alat"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ツールチップの遅延"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -18638,6 +20048,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tip alat"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ツールチップ"
           }
         },
         "pt-BR" : {
@@ -18692,6 +20108,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Risoluzione definitiva"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "末尾エンドキャップ"
           }
         },
         "ko" : {
@@ -18784,6 +20206,12 @@
             "value" : "Digitare il tasto di scelta rapida"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ホットキーを入力"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -18872,6 +20300,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Impossibile visualizzare le voci della barra dei menu"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メニューバー項目を表示できません"
           }
         },
         "ko" : {
@@ -18964,6 +20398,12 @@
             "value" : "Impossibile caricare le voci della barra dei menu"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メニューバー項目を読み込めません"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -19052,6 +20492,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Canale di aggiornamento"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アップデートチャンネル"
           }
         },
         "ko" : {
@@ -19144,6 +20590,12 @@
             "value" : "Usa %@ Bar"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ バーを使用"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -19232,6 +20684,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Usa l'aspetto dinamico"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ダイナミック外観を使用"
           }
         },
         "ko" : {
@@ -19324,6 +20782,12 @@
             "value" : "Utilizzare la forma inserita sugli schermi con notch"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ノッチ付きスクリーンではインセット形状を使用"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -19412,6 +20876,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Versione %@ (%@)"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "バージョン %@ (%@)"
           }
         },
         "ko" : {
@@ -19504,6 +20974,12 @@
             "value" : "Version2 %@ (%@) non disponibile"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "バージョン %@ (%@) が利用可能になりました"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -19592,6 +21068,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Visibile"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "表示"
           }
         },
         "ko" : {
@@ -19684,6 +21166,12 @@
             "value" : "Abbiamo trovato le impostazioni di Ice (l'app originale)."
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ice（元のアプリ）の設定が見つかりました。"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -19774,6 +21262,12 @@
             "value" : "Desideri importare la tua configurazione esistente?"
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "既存の設定をインポートしますか？"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
@@ -19862,6 +21356,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Scrive log di debug dettagliati in un file per la risoluzione dei problemi. I file di log vengono salvati in ~/Library/Logs/Thaw/. Disattivare quando non necessario per evitare scritture su disco non necessarie."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "トラブルシューティング用に詳細なデバッグログをファイルに書き込みます。ログファイルは ~/Library/Logs/Thaw/ に保存されます。不要な場合は無効にして、余計なディスク書き込みを避けてください。"
           }
         },
         "ko" : {
