@@ -415,7 +415,7 @@ final class MenuBarManager: ObservableObject {
     /// Hides the application menus.
     ///
     /// - Important: Uses `.regular` activation policy to hide menus, which briefly shows the app in the Dock.
-    func hideApplicationMenus() {
+    func hideApplicationMenus(manual: Bool = false) {
         guard let appState else {
             diagLog.error("Error hiding application menus: Missing app state")
             return
@@ -427,6 +427,9 @@ final class MenuBarManager: ObservableObject {
 
         diagLog.info("Hiding application menus")
         isHidingApplicationMenus = true
+        if manual {
+            isManuallyHidingApplicationMenus = true
+        }
 
         // Ensure this happens on the main thread
         Task { @MainActor in
@@ -459,8 +462,7 @@ final class MenuBarManager: ObservableObject {
         if isHidingApplicationMenus {
             showApplicationMenus()
         } else {
-            isManuallyHidingApplicationMenus = true
-            hideApplicationMenus()
+            hideApplicationMenus(manual: true)
         }
     }
 
