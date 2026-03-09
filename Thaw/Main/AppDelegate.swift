@@ -21,7 +21,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         MigrationManager(appState: appState).migrateAll()
 
         // Register thaw:// URL events early so external tools (e.g. Raycast)
-        // can trigger actions without bringing Thaw to the foreground.
+        // can trigger actions even when Thaw is not currently in the foreground;
+        // depending on the action, the app may still be activated as needed.
         NSAppleEventManager.shared().setEventHandler(
             self,
             andSelector: #selector(handleURLAppleEvent(_:withReplyEvent:)),
