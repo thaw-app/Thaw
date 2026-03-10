@@ -83,8 +83,7 @@ final class ControlItem {
                     }
 
                     NSLayoutConstraint.activate([
-                        button.topAnchor.constraint(equalTo: contentView.topAnchor),
-                        button.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+                        button.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
                     ])
                 } else {
                     self.constraint = nil
