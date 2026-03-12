@@ -480,6 +480,7 @@ private struct IceBarContentView: View {
         } else {
             ScrollView(.horizontal) {
                 HStack(spacing: 0) {
+                    let isLightBackground = (colorManager.colorInfo?.color.brightness ?? 0) > 0.67
                     ForEach(items, id: \.windowID) { item in
                         IceBarItemView(
                             imageCache: imageCache,
@@ -489,7 +490,8 @@ private struct IceBarContentView: View {
                             section: section,
                             displayID: screen.displayID,
                             maxHeight: itemMaxHeight,
-                            tooltipDelay: appState.settings.advanced.tooltipDelay
+                            tooltipDelay: appState.settings.advanced.tooltipDelay,
+                            isLightBackground: isLightBackground
                         )
                     }
                 }
@@ -513,11 +515,14 @@ private struct IceBarItemView: View {
     @ObservedObject var itemManager: MenuBarItemManager
     @ObservedObject var menuBarManager: MenuBarManager
 
+    @State private var isHovered = false
+
     let item: MenuBarItem
     let section: MenuBarSection.Name
     let displayID: CGDirectDisplayID
     let maxHeight: CGFloat?
     let tooltipDelay: TimeInterval
+    let isLightBackground: Bool
 
     private var leftClickAction: () -> Void {
         return { [weak itemManager, weak menuBarManager] in
@@ -593,15 +598,24 @@ private struct IceBarItemView: View {
                 .antialiased(true)
                 .resizable()
                 .frame(width: size.width, height: size.height)
+                .padding(.horizontal, 3)
+                .background {
+                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                        .fill((isLightBackground ? Color.black : Color.white).opacity(isHovered ? 0.1 : 0))
+                }
                 .contentShape(Rectangle())
                 .overlay {
                     IceBarItemClickView(
                         item: item,
                         tooltipDelay: tooltipDelay,
                         leftClickAction: leftClickAction,
-                        rightClickAction: rightClickAction
+                        rightClickAction: rightClickAction,
+                        onHover: { hovering in
+                            isHovered = hovering
+                        }
                     )
                 }
+                .animation(.easeInOut(duration: 0.15), value: isHovered)
                 .accessibilityLabel(item.displayName)
                 .accessibilityAction(named: "left click", leftClickAction)
                 .accessibilityAction(named: "right click", rightClickAction)
@@ -618,6 +632,7 @@ private struct IceBarItemClickView: NSViewRepresentable {
 
         let leftClickAction: () -> Void
         let rightClickAction: () -> Void
+        let onHover: (Bool) -> Void
 
         private var lastLeftMouseDownDate = Date.now
         private var lastRightMouseDownDate = Date.now
@@ -632,12 +647,14 @@ private struct IceBarItemClickView: NSViewRepresentable {
             item: MenuBarItem,
             tooltipDelay: TimeInterval,
             leftClickAction: @escaping () -> Void,
-            rightClickAction: @escaping () -> Void
+            rightClickAction: @escaping () -> Void,
+            onHover: @escaping (Bool) -> Void
         ) {
             self.item = item
             self.tooltipDelay = tooltipDelay
             self.leftClickAction = leftClickAction
             self.rightClickAction = rightClickAction
+            self.onHover = onHover
             super.init(frame: .zero)
         }
 
@@ -664,11 +681,13 @@ private struct IceBarItemClickView: NSViewRepresentable {
         override func mouseEntered(with event: NSEvent) {
             super.mouseEntered(with: event)
             tooltipController.scheduleShow(delay: tooltipDelay)
+            onHover(true)
         }
 
         override func mouseExited(with event: NSEvent) {
             super.mouseExited(with: event)
             tooltipController.cancel()
+            onHover(false)
         }
 
         override func mouseDown(with event: NSEvent) {
@@ -713,13 +732,15 @@ private struct IceBarItemClickView: NSViewRepresentable {
 
     let leftClickAction: () -> Void
     let rightClickAction: () -> Void
+    let onHover: (Bool) -> Void
 
     func makeNSView(context _: Context) -> NSView {
         Represented(
             item: item,
             tooltipDelay: tooltipDelay,
             leftClickAction: leftClickAction,
-            rightClickAction: rightClickAction
+            rightClickAction: rightClickAction,
+            onHover: onHover
         )
     }
 
