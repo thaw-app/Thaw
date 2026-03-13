@@ -716,7 +716,7 @@
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$@ está em execução. Executar vários gerenciadores de barra de menus ao mesmo tempo pode causar problemas de exibição e comportamentos inesperados. Considere encerrar o %2$@ antes de usar o Thaw."
+            "value" : "%1$@ está em execução. Executar vários gerenciadores de barra de menus ao mesmo tempo pode causar problemas de exibição e comportamentos inesperados. Considere encerrar %2$@ antes de usar o Thaw."
           }
         },
         "ru" : {
@@ -5900,7 +5900,7 @@
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gerenciador de Barra de Menus Conflitante Detectado"
+            "value" : "Gerenciador de barra de menus em conflito detectado"
           }
         },
         "ru" : {
