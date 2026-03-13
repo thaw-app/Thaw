@@ -2850,7 +2850,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Toujours afficher les éléments masqués dans la barre des menus de cet écran. "
+            "value" : "Toujours afficher les éléments masqués dans la barre des menus de cet écran."
           }
         },
         "id" : {
@@ -4493,7 +4493,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "L’icône « %@ » ne peut pas être déplacé. "
+            "value" : "L’icône « %@ » ne peut pas être déplacée."
           }
         },
         "id" : {
@@ -6728,7 +6728,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Annuler"
+            "value" : "Ignorer"
           }
         },
         "id" : {
@@ -10010,7 +10010,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Fréquence de rafraîchissement des icônes animées de la barre des menus. Des valeurs plus élevées offrent un affichage plus fluides mais utilisent davantage de CPU."
+            "value" : "Fréquence de rafraîchissement des icônes animées de la barre des menus. Des valeurs plus élevées offrent un affichage plus fluide mais utilisent davantage de CPU."
           }
         },
         "id" : {
@@ -13521,7 +13521,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Non disponible, car la «  %@ Bar » est activée pour cet écran."
+            "value" : "Non disponible, car la « %@ Bar » est activée pour cet écran."
           }
         },
         "id" : {
