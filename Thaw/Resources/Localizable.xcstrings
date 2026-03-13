@@ -2792,6 +2792,12 @@
             "state" : "translated",
             "value" : "Gizli öğeleri her zaman göster"
           }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "始终显示隐藏项目"
+          }
         }
       }
     },
@@ -2834,6 +2840,12 @@
             "state" : "translated",
             "value" : "Bu ekranda menü çubuğundaki gizli menü çubuğu öğelerini her zaman göster."
           }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "始终在显示器的菜单栏中显示隐藏的项目。"
+          }
         }
       }
     },
@@ -2875,6 +2887,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kısayol tuşuyla gösterildiğinde %@ Çubuğunu her zaman fare imlecinin konumunda göster."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用热键时，始终将 %@ 栏显示在鼠标指针的位置。"
           }
         }
       }
@@ -6881,6 +6899,12 @@
             "value" : "Ekranlar"
           }
         },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示器"
+          }
+        },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
@@ -7353,6 +7377,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Her zaman gizli için çift tıkla"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "双击显示始终隐藏的项目"
           }
         }
       }
@@ -9880,6 +9910,12 @@
             "state" : "translated",
             "value" : "Panellerde animasyonlu menü çubuğu simgelerinin ne sıklıkla yenilendiği. Daha yüksek değerler daha akıcıdır ancak daha fazla CPU kullanır."
           }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "面板中动画菜单栏图标的刷新频率。数值越大越流畅，但会增加CPU占用。"
+          }
         }
       }
     },
@@ -10113,6 +10149,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Simge yenileme hızı"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "图标刷新率"
           }
         }
       }
@@ -14745,6 +14787,12 @@
             "state" : "translated",
             "value" : "すべての設定をリセット"
           }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重置所有设置"
+          }
         }
       }
     },
@@ -14774,6 +14822,12 @@
             "state" : "translated",
             "value" : "すべての設定をデフォルト値にリセットします。この操作は元に戻せません。"
           }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将所有设置重置为默认值，此操作无法撤销。"
+          }
         }
       }
     },
@@ -14802,6 +14856,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "すべての設定をリセットしますか？"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "确定重置所有设置？"
           }
         }
       }
@@ -17022,6 +17082,12 @@
             "state" : "translated",
             "value" : "Gerçek menü çubuğunda menü çubuğu öğelerinin üzerine gelindiğinde bir ipucu göster."
           }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将鼠标悬停在实际菜单栏的项目上时显示提示框。"
+          }
         }
       }
     },
@@ -17255,6 +17321,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kısayolda fare imlecinde göster"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用快捷键时显示在鼠标指针位置"
           }
         }
       }
@@ -18060,6 +18132,12 @@
             "state" : "translated",
             "value" : "Menü çubuğunda %@ simgesini göster. Gizli öğeleri göstermek için tıklayın, her zaman gizli için çift tıklayın, ayarlar için sağ tıklayın."
           }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在菜单栏显示 %@ 图标。单击显示隐藏项目，双击显示永久隐藏的项目，右键单击打开设置。"
+          }
         }
       }
     },
@@ -18102,6 +18180,12 @@
             "state" : "translated",
             "value" : "Menü çubuğunda ipuçlarını göster"
           }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在菜单栏中显示提示框"
+          }
         }
       }
     },
@@ -18143,6 +18227,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sistemin menü çubuğu arka planını gösterir. Dinamik bir duvar kağıdı kullanıyorsanız veya Sistem Ayarları'nda 'Menü çubuğu arka planını göster' kapalıysa bunu etkinleştirin."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示系统菜单栏背景。若使用动态壁纸或系统设置中未启用“显示菜单栏背景”，请开启此功能。"
           }
         }
       }
@@ -19474,6 +19564,12 @@
             "state" : "translated",
             "value" : "Menü çubuğu öğesinin üzerinde ipucu göstermeden önce beklenmesi gereken süre."
           }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示菜单栏项目提示框前的等待时长。"
+          }
         }
       }
     },
@@ -20313,6 +20409,12 @@
             "state" : "translated",
             "value" : "İpucu gecikmesi"
           }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "提示框延迟"
+          }
         }
       }
     },
@@ -20354,6 +20456,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "İpuçları"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "提示框"
           }
         }
       }
