@@ -706,6 +706,12 @@
             "state" : "translated",
             "value" : "%1$@ は現在実行中です。複数のメニューバーマネージャーを同時に実行すると、表示の問題や予期しない動作が発生する可能性があります。Thaw を使用する前に %2$@ を終了することをお勧めします。"
           }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ в данный момент запущен. Одновременная работа нескольких менеджеров строки меню может вызвать проблемы с отображением и непредвиденное поведение. Рекомендуется закрыть %@ перед использованием Thaw."
+          }
         }
       }
     },
@@ -1391,6 +1397,12 @@
             "value" : "%lld fps"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld кадр/с"
+          }
+        },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1799,6 +1811,12 @@
             "value" : "+"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "+"
+          }
+        },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1841,6 +1859,12 @@
             "value" : "⌘"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⌘"
+          }
+        },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1878,6 +1902,12 @@
           }
         },
         "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⎋"
+          }
+        },
+        "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "⎋"
@@ -2787,6 +2817,12 @@
             "value" : "Sempre mostrar itens ocultos"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Всегда показывать скрытые элементы"
+          }
+        },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2835,6 +2871,12 @@
             "value" : "Sempre mostrar os itens ocultos da barra de menus na barra de menus desta tela."
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Всегда показывать скрытые элементы строки меню на этом дисплее."
+          }
+        },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2881,6 +2923,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sempre mostrar a Barra %@ na posição do ponteiro do mouse quando ela for exibida usando um atalho."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Всегда показывать панель %@ у указателя мыши при вызове горячей клавишей."
           }
         },
         "tr" : {
@@ -4466,6 +4514,12 @@
             "value" : "Não é possível mover o ícone %@."
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Невозможно переместить значок %@."
+          }
+        },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -4988,6 +5042,12 @@
             "value" : "Verificar permissões"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Проверить разрешения"
+          }
+        },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5321,6 +5381,12 @@
             "value" : "Chevron (Baixo)"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Шеврон (вниз)"
+          }
+        },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5555,6 +5621,12 @@
             "value" : "Clique em uma área vazia da barra de menus para mostrar os itens ocultos da barra de menus."
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Нажмите на пустую область строки меню, чтобы показать скрытые элементы."
+          }
+        },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5693,6 +5765,12 @@
             "value" : "Confirmar"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Подтвердить"
+          }
+        },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5727,6 +5805,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "競合するメニューバーマネージャーが検出されました"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Обнаружен конфликтующий менеджер строки меню"
           }
         }
       }
@@ -5853,6 +5937,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "このまま続ける"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Продолжить всё равно"
           }
         }
       }
@@ -6659,6 +6749,12 @@
             "value" : "Descartar"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Отклонить"
+          }
+        },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -6891,6 +6987,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Telas"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Дисплеи"
           }
         },
         "tr" : {
@@ -7331,6 +7433,12 @@
             "value" : "Clique duas vezes em uma área vazia da barra de menus para exibir os itens sempre ocultos da barra de menus."
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Дважды нажмите на пустую область строки меню, чтобы показать всегда скрытые элементы."
+          }
+        },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -7371,6 +7479,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Duplo clique para Sempre Ocultos"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Двойной клик для всегда скрытых"
           }
         },
         "tr" : {
@@ -7709,6 +7823,12 @@
             "value" : "E"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "E"
+          }
+        },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -7845,6 +7965,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Editar Nome"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Изменить имя"
           }
         },
         "tr" : {
@@ -9905,6 +10031,12 @@
             "value" : "Com que frequência os ícones animados da barra de menus são atualizados nos painéis. Valores mais altos proporcionam maior fluidez, mas consomem mais CPU."
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Частота обновления анимированных значков строки меню в панелях. Более высокие значения обеспечивают плавность, но потребляют больше ресурсов процессора."
+          }
+        },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -10143,6 +10275,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Taxa de atualização dos ícones"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Частота обновления значков"
           }
         },
         "tr" : {
@@ -11052,6 +11190,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Margem esquerda"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Левый отступ"
           }
         },
         "tr" : {
@@ -13398,6 +13542,12 @@
             "value" : "Não disponível porque a Barra %@ está ativada para esta tela."
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Недоступно, потому что панель %@ включена для этого дисплея."
+          }
+        },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -13534,6 +13684,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Notch"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Вырез"
           }
         },
         "tr" : {
@@ -14441,6 +14597,12 @@
             "state" : "translated",
             "value" : "Thaw を終了"
           }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Завершить Thaw"
+          }
         }
       }
     },
@@ -14757,6 +14919,12 @@
             "state" : "translated",
             "value" : "%@ をリセット"
           }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сбросить %@"
+          }
         }
       }
     },
@@ -14786,6 +14954,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "すべての設定をリセット"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сбросить все настройки"
           }
         },
         "zh-Hans" : {
@@ -14823,6 +14997,12 @@
             "value" : "すべての設定をデフォルト値にリセットします。この操作は元に戻せません。"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сбросить все настройки до значений по умолчанию. Это действие нельзя отменить."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -14856,6 +15036,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "すべての設定をリセットしますか？"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сбросить все настройки?"
           }
         },
         "zh-Hans" : {
@@ -15859,6 +16045,12 @@
             "value" : "Margem direita"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Правый отступ"
+          }
+        },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -16164,6 +16356,12 @@
             "state" : "translated",
             "value" : "Berechtigung für Aufnahme von Bildschirm & Systemaudio wird benötigt um Tooltips anzuzeigen."
           }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Для отображения подсказок требуется разрешение на запись экрана."
+          }
         }
       }
     },
@@ -16175,6 +16373,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Berechtigung für Aufnahme von Bildschirm & Systemaudio wird benötigt um Menüleisten-Einträge zu durchsuchen."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Для поиска элементов строки меню требуется разрешение на запись экрана."
           }
         }
       }
@@ -17077,6 +17281,12 @@
             "value" : "Mostrar uma dica ao passar o mouse sobre os itens da barra de menus na barra de menus verdadeira."
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Показывать подсказку при наведении на элементы строки меню."
+          }
+        },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -17317,6 +17527,12 @@
             "value" : "Mostrar no ponteiro do mouse na tecla de atalho"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Показывать у указателя мыши по горячей клавише"
+          }
+        },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -17363,6 +17579,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mostrar itens ocultos da barra de menus em uma barra separada abaixo da barra de menus nesta tela."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Показывать скрытые элементы строки меню в отдельной панели под строкой меню на этом дисплее."
           }
         },
         "tr" : {
@@ -17699,6 +17921,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mostrar fundo da barra de menus"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Показывать фон строки меню"
           }
         },
         "tr" : {
@@ -18127,6 +18355,12 @@
             "value" : "Mostrar o ícone %@ na barra de menus. Clique para mostrar itens ocultos, clique duas vezes para Sempre Ocultos e clique com o botão direito para acessar as configurações."
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Показывать значок %@ в строке меню. Нажмите, чтобы показать скрытые элементы, дважды нажмите для всегда скрытых, правый клик для настроек."
+          }
+        },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -18175,6 +18409,12 @@
             "value" : "Mostrar dicas na barra de menus"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Показывать подсказки в строке меню"
+          }
+        },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -18221,6 +18461,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mostra o fundo da barra de menus do sistema. Ative esta opção se você usar um papel de parede dinâmico ou tiver a opção “Mostrar fundo da barra de menus” desativada nas Configurações do Sistema."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Показывает системный фон строки меню. Включите, если вы используете динамические обои или отключили «Показывать фон строки меню» в Системных настройках."
           }
         },
         "tr" : {
@@ -19517,6 +19763,12 @@
             "value" : "O ícone %@ deve permanecer sempre na seção visível."
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Значок %@ должен всегда оставаться в видимой секции."
+          }
+        },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -19557,6 +19809,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "O tempo de espera antes de exibir uma dica sobre um item da barra de menus."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Время ожидания перед показом подсказки над элементом строки меню."
           }
         },
         "tr" : {
@@ -19790,6 +20048,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "すべての設定をデフォルト値にリセットします。この操作は元に戻せません。"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Все настройки будут сброшены до значений по умолчанию. Это действие нельзя отменить."
           }
         }
       }
@@ -20404,6 +20668,12 @@
             "value" : "Atraso da dica"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Задержка подсказки"
+          }
+        },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -20450,6 +20720,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dicas"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Подсказки"
           }
         },
         "tr" : {
