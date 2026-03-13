@@ -713,6 +713,12 @@
             "value" : "%1$@ は現在実行中です。複数のメニューバーマネージャーを同時に実行すると、表示の問題や予期しない動作が発生する可能性があります。Thaw を使用する前に %2$@ を終了することをお勧めします。"
           }
         },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ está em execução. Executar vários gerenciadores de barra de menus ao mesmo tempo pode causar problemas de exibição e comportamentos inesperados. Considere encerrar o %2$@ antes de usar o Thaw."
+          }
+        },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5891,6 +5897,12 @@
             "value" : "競合するメニューバーマネージャーが検出されました"
           }
         },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gerenciador de Barra de Menus Conflitante Detectado"
+          }
+        },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
@@ -6027,6 +6039,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "このまま続ける"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continuar Mesmo Assim"
           }
         },
         "ru" : {
@@ -14760,6 +14778,12 @@
             "value" : "Thaw を終了"
           }
         },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sair do Thaw"
+          }
+        },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
@@ -15088,6 +15112,12 @@
             "value" : "%@ をリセット"
           }
         },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Redefinir %@"
+          }
+        },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
@@ -15128,6 +15158,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "すべての設定をリセット"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Redefinir todas as configurações"
           }
         },
         "ru" : {
@@ -15177,6 +15213,12 @@
             "value" : "すべての設定をデフォルト値にリセットします。この操作は元に戻せません。"
           }
         },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Redefine todas as configurações para os valores padrão. Esta ação não pode ser desfeita."
+          }
+        },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
@@ -15222,6 +15264,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "すべての設定をリセットしますか？"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Redefinir todas as configurações?"
           }
         },
         "ru" : {
@@ -16555,6 +16603,12 @@
             "value" : "L’autorisation d'enregistrement de l'écran est nécessaire pour afficher les infobulles."
           }
         },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permissões de gravação de tela são necessárias para exibir dicas."
+          }
+        },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
@@ -16583,6 +16637,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "L'autorisation d'enregistrement de l'écran est nécessaire pour rechercher des éléments de la barre des menus."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permissões de gravação de tela são necessárias para exibir dicas."
           }
         },
         "ru" : {
@@ -20324,6 +20384,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "すべての設定をデフォルト値にリセットします。この操作は元に戻せません。"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Isso redefinirá todas as configurações para os valores padrão. Esta ação não pode ser desfeita."
           }
         },
         "ru" : {
