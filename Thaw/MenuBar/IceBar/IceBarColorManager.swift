@@ -77,8 +77,12 @@ final class IceBarColorManager: ObservableObject {
             )
             .receive(on: DispatchQueue.main)
             .sink { [weak self, weak iceBarPanel] in
+                guard let self else {
+                    return
+                }
+                // Clear window image on display changes to prevent memory growth
+                self.windowImage = nil
                 guard
-                    let self,
                     let iceBarPanel,
                     iceBarPanel.isVisible,
                     let screen = iceBarPanel.screen,
@@ -143,6 +147,8 @@ final class IceBarColorManager: ObservableObject {
     private func stopPeriodicRefresh() {
         periodicRefreshCancellable?.cancel()
         periodicRefreshCancellable = nil
+        // Clear the window image to free memory when IceBar is hidden
+        windowImage = nil
     }
 
     private func updateWindowImage(for screen: NSScreen) {

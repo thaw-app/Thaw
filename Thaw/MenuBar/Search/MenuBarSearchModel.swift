@@ -49,6 +49,22 @@ final class MenuBarSearchModel: ObservableObject {
         }
         .store(in: &c)
 
+        // Clear average color when search panel closes to free memory
+        panel.publisher(for: \.isVisible)
+            .filter { !$0 }
+            .sink { [weak self] _ in
+                self?.averageColorInfo = nil
+            }
+            .store(in: &c)
+
+        // Clear on display changes to prevent stale color info
+        NotificationCenter.default
+            .publisher(for: NSApplication.didChangeScreenParametersNotification)
+            .sink { [weak self] _ in
+                self?.averageColorInfo = nil
+            }
+            .store(in: &c)
+
         cancellables = c
     }
 

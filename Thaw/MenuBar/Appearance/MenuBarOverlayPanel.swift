@@ -108,7 +108,7 @@ final class MenuBarOverlayPanel: NSPanel {
     /// The current desktop wallpaper, clipped to the bounds of the menu bar.
     ///
     /// The wallpaper is captured at nominal resolution (1x) to save memory.
-    @Published private(set) var desktopWallpaper: CGImage?
+    @Published var desktopWallpaper: CGImage?
 
     /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
@@ -322,10 +322,16 @@ final class MenuBarOverlayPanel: NSPanel {
 
         // Continually update the desktop wallpaper. Ideally, we would set up an observer
         // for a wallpaper change notification, but macOS doesn't post one anymore.
+        // Only capture wallpaper when the menu bar uses it as background.
         Timer.publish(every: 120, tolerance: 15, on: .main, in: .default)
             .autoconnect()
             .sink { [weak self] _ in
-                guard let self, self.isOnActiveSpace else {
+                guard
+                    let self,
+                    self.isOnActiveSpace,
+                    let appState = self.appState,
+                    !appState.appearanceManager.configuration.showsMenuBarBackground
+                else {
                     return
                 }
                 self.insertUpdateFlag(.desktopWallpaper)
@@ -595,7 +601,14 @@ private final class MenuBarOverlayPanelContentView: NSView {
             if let appState = overlayPanel.appState {
                 appState.appearanceManager.$configuration
                     .removeDuplicates()
-                    .assign(to: &$fullConfiguration)
+                    .sink { [weak self, weak overlayPanel] config in
+                        self?.fullConfiguration = config
+                        // Clear wallpaper when menu bar background is shown (no longer needed)
+                        if config.showsMenuBarBackground {
+                            overlayPanel?.desktopWallpaper = nil
+                        }
+                    }
+                    .store(in: &c)
 
                 appState.appearanceManager.$previewConfiguration
                     .removeDuplicates()
