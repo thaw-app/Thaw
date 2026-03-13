@@ -725,6 +725,12 @@
             "value" : "%1$@ в данный момент запущен. Одновременная работа нескольких менеджеров строки меню может вызвать проблемы с отображением и непредвиденное поведение. Рекомендуется закрыть %2$@ перед использованием Thaw."
           }
         },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ 当前正在运行。同时运行多个菜单栏管理器可能会导致显示问题和异常行为。建议在使用 Thaw 之前关闭 %@。"
+          }
+        },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1433,6 +1439,12 @@
             "value" : "%lld fps"
           }
         },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld fps"
+          }
+        },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1859,6 +1871,12 @@
             "value" : "+"
           }
         },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "+"
+          }
+        },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1919,6 +1937,12 @@
             "value" : "⌘"
           }
         },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⌘"
+          }
+        },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1974,6 +1998,12 @@
           }
         },
         "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⎋"
+          }
+        },
+        "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "⎋"
@@ -4634,6 +4664,12 @@
             "value" : "%@ simgesi taşınamıyor."
           }
         },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法移动 %@ 图标。"
+          }
+        },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5771,6 +5807,12 @@
             "value" : "Gizli menü çubuğu öğelerini göstermek için menü çubuğunda boş bir alana tıklayın."
           }
         },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "点击菜单栏的空白区域，即可显示被隐藏的菜单栏项目。"
+          }
+        },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5927,6 +5969,12 @@
             "value" : "Onayla"
           }
         },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "确认"
+          }
+        },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5979,6 +6027,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Обнаружен конфликтующий менеджер строки меню"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "检测到有冲突的菜单栏管理器"
           }
         },
         "zh-Hant" : {
@@ -6129,6 +6183,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Продолжить всё равно"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仍然继续"
           }
         },
         "zh-Hant" : {
@@ -6959,6 +7019,12 @@
             "value" : "Vazgeç"
           }
         },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取消"
+          }
+        },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
@@ -7661,6 +7727,12 @@
             "value" : "Her zaman gizli menü çubuğu öğelerini göstermek için menü çubuğunda boş bir alana çift tıklayın."
           }
         },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "双击菜单栏的空白区域，即可显示永久隐藏的菜单栏项目。"
+          }
+        },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
@@ -8075,6 +8147,12 @@
             "value" : "E"
           }
         },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "E"
+          }
+        },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
@@ -8229,6 +8307,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Adı Düzenle"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "编辑名称"
           }
         },
         "zh-Hant" : {
@@ -11492,6 +11576,12 @@
             "value" : "Sol kenar boşluğu"
           }
         },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "左边距"
+          }
+        },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
@@ -13854,6 +13944,12 @@
             "value" : "Bu ekran için %@ Çubuğu etkin olduğundan kullanılamıyor."
           }
         },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "由于此显示器已启用 %@ 栏，因此该功能不可用。 "
+          }
+        },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
@@ -14295,7 +14391,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "macOS系统隐藏了一个或者多个区域分割图标"
+            "value" : "macOS已隐藏了一个或多个区域分隔符"
           }
         },
         "zh-Hant" : {
@@ -14928,6 +15024,12 @@
             "value" : "Завершить Thaw"
           }
         },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "退出 Thaw"
+          }
+        },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
@@ -15266,6 +15368,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Сбросить %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重置 %@"
           }
         },
         "zh-Hant" : {
@@ -16465,6 +16573,12 @@
             "value" : "Sağ kenar boşluğu"
           }
         },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "右边距"
+          }
+        },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
@@ -16795,6 +16909,12 @@
             "value" : "Для отображения подсказок требуется разрешение на запись экрана."
           }
         },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "需要屏幕录制权限才能显示提示。"
+          }
+        },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
@@ -16835,6 +16955,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Для поиска элементов строки меню требуется разрешение на запись экрана."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "需要屏幕录制权限才能显示提示。"
           }
         },
         "zh-Hant" : {
@@ -18022,7 +18148,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "使用快捷键时显示在鼠标指针位置"
+            "value" : "使用热键时显示在鼠标指针位置"
           }
         },
         "zh-Hant" : {
@@ -18431,6 +18557,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Menü çubuğu arka planını göster"
+          }
+        },
+        "zh-Hants" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示菜单栏背景"
           }
         },
         "zh-Hant" : {
@@ -19012,7 +19144,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "显示系统菜单栏背景。若使用动态壁纸或系统设置中未启用“显示菜单栏背景”，请开启此功能。"
+            "value" : "显示系统菜单栏背景。若使用动态壁纸或系统设置中未启用「显示菜单栏背景」，请开启此功能。"
           }
         },
         "zh-Hant" : {
@@ -19874,7 +20006,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "支持 %@"
+            "value" : "赞助 %@"
           }
         },
         "zh-Hant" : {
@@ -20321,6 +20453,12 @@
             "value" : "%@ simgesi her zaman görünür bölümde kalmalıdır."
           }
         },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 图标必须始终放置在显示区域内。"
+          }
+        },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
@@ -20630,6 +20768,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Все настройки будут сброшены до значений по умолчанию. Это действие нельзя отменить."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将所有设置重置为默认值。此操作无法撤销。"
           }
         },
         "zh-Hant" : {
