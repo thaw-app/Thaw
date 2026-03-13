@@ -2844,7 +2844,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "始终在显示器的菜单栏中显示隐藏的项目."
+            "value" : "始终在显示器的菜单栏中显示隐藏的项目。"
           }
         }
       }
@@ -7382,7 +7382,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "双击以始终隐藏"
+            "value" : "双击显示始终隐藏的项目"
           }
         }
       }
@@ -17323,7 +17323,7 @@
             "value" : "Kısayolda fare imlecinde göster"
           }
         },
-        "zh-Hant" : {
+        "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "使用快捷键时显示在鼠标指针位置"
