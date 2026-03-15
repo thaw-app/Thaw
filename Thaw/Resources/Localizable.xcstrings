@@ -1220,6 +1220,12 @@
         "id" : {
           "variations" : {
             "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lf detik"
+                }
+              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -1409,6 +1415,12 @@
             "value" : "%lld fps"
           }
         },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld FPS"
+          }
+        },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1550,6 +1562,12 @@
         "id" : {
           "variations" : {
             "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld detik"
+                }
+              },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
@@ -16891,6 +16909,12 @@
             "value" : "L’autorisation d'enregistrement de l'écran est nécessaire pour afficher les infobulles."
           }
         },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Izin Perekaman Layar diperlukan untuk menampilkan tip alat."
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -16937,6 +16961,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "L'autorisation d'enregistrement de l'écran est nécessaire pour rechercher des éléments de la barre des menus."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Izin Perekaman Layar diperlukan untuk mencari item bar menu."
           }
         },
         "ja" : {
