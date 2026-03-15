@@ -713,6 +713,12 @@
             "value" : "%1$@ は現在実行中です。複数のメニューバーマネージャーを同時に実行すると、表示の問題や予期しない動作が発生する可能性があります。Thaw を使用する前に %2$@ を終了することをお勧めします。"
           }
         },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@이(가) 현재 실행 중입니다. 여러 메뉴 막대 관리 앱을 동시에 실행하면 화면 표시 문제나 예상치 못한 동작이 발생할 수 있습니다. Thaw를 사용하기 전에 %@을(를) 종료해 주세요."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1433,6 +1439,12 @@
             "value" : "%lld fps"
           }
         },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld fps"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1871,6 +1883,12 @@
             "value" : "+"
           }
         },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "+"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1937,6 +1955,12 @@
             "value" : "⌘"
           }
         },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⌘"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1998,6 +2022,12 @@
           }
         },
         "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⎋"
+          }
+        },
+        "ko" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "⎋"
@@ -2931,6 +2961,12 @@
             "value" : "非表示項目を常に表示"
           }
         },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "숨겨진 항목 항상 표시"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2997,6 +3033,12 @@
             "value" : "このディスプレイのメニューバーに非表示のメニューバー項目を常に表示します。"
           }
         },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 디스플레이의 메뉴 막대에서 숨겨진 항목을 항상 표시합니다."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3061,6 +3103,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ホットキーで表示する際は、%@ バーを常にマウスポインターの位置に表示します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "단축키로 표시할 때 %@ 막대를 항상 마우스 포인터 위치에 표시합니다."
           }
         },
         "pt-BR" : {
@@ -4664,6 +4712,12 @@
             "value" : "%@ アイコンを移動できません。"
           }
         },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 아이콘을 이동할 수 없습니다."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5210,6 +5264,12 @@
             "value" : "権限を確認"
           }
         },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "권한 확인"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5475,7 +5535,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "V자 화살표"
+            "value" : "펼침 화살표"
           }
         },
         "nl" : {
@@ -5553,6 +5613,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "シェブロン（下向き）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "펼침 화살표(아래)"
           }
         },
         "pt-BR" : {
@@ -5807,6 +5873,12 @@
             "value" : "メニューバーの空いている領域をクリックすると、非表示のメニューバー項目が表示されます。"
           }
         },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "메뉴 막대의 빈 공간을 클릭하면 숨겨진 메뉴 막대 항목이 표시됩니다."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5969,6 +6041,12 @@
             "value" : "確認"
           }
         },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "확인"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -6033,6 +6111,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "競合するメニューバーマネージャーが検出されました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다른 메뉴 막대 관리 앱이 실행 중입니다"
           }
         },
         "pt-BR" : {
@@ -6189,6 +6273,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "このまま続ける"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "계속 진행"
           }
         },
         "pt-BR" : {
@@ -7019,6 +7109,12 @@
             "value" : "破棄"
           }
         },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "버리기"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -7275,6 +7371,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ディスプレイ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "디스플레이"
           }
         },
         "pt-BR" : {
@@ -7727,6 +7829,12 @@
             "value" : "メニューバーの空いている領域をダブルクリックすると、常に非表示のメニューバー項目が表示されます。"
           }
         },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "메뉴 막대의 빈 공간을 더블 클릭하면 항상 숨겨진 메뉴 막대 항목이 표시됩니다."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -7791,6 +7899,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "常に非表示の項目はダブルクリックで表示"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "더블 클릭하여 항상 숨김 표시"
           }
         },
         "pt-BR" : {
@@ -8147,6 +8261,12 @@
             "value" : "E"
           }
         },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "E"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -8307,6 +8427,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "名前を編集"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이름 편집"
           }
         },
         "pt-BR" : {
@@ -10391,6 +10517,12 @@
             "value" : "パネル内でアニメーションするメニューバーアイコンの更新頻度です。値が大きいほど滑らかになりますが、CPUの使用量が増えます。"
           }
         },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "패널에서 움직이는 메뉴 막대 아이콘을 얼마나 자주 새로 고칠지 설정합니다. 값이 높을수록 더 부드럽지만 CPU 사용량이 늘어납니다."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -10647,6 +10779,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "アイコン更新レート"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아이콘 새로 고침 빈도"
           }
         },
         "pt-BR" : {
@@ -11574,6 +11712,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "左マージン"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "왼쪽 여백"
           }
         },
         "pt-BR" : {
@@ -13944,6 +14088,12 @@
             "value" : "このディスプレイで %@ バーが有効なため、使用できません。"
           }
         },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 디스플레이에서 %@ 막대가 활성화되어 있어 사용할 수 없습니다."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -14104,6 +14254,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ノッチ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "노치"
           }
         },
         "pt-BR" : {
@@ -15030,6 +15186,12 @@
             "value" : "Thaw を終了"
           }
         },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thaw 종료"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -15376,6 +15538,12 @@
             "value" : "%@ をリセット"
           }
         },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 재설정"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -15434,6 +15602,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "すべての設定をリセット"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "모든 설정 재설정"
           }
         },
         "pt-BR" : {
@@ -15495,6 +15669,12 @@
             "value" : "すべての設定をデフォルト値にリセットします。この操作は元に戻せません。"
           }
         },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "모든 설정을 기본값으로 재설정합니다. 이 작업은 되돌릴 수 없습니다."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -15552,6 +15732,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "すべての設定をリセットしますか？"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "모든 설정을 재설정할까요?"
           }
         },
         "pt-BR" : {
@@ -16573,6 +16759,12 @@
             "value" : "右マージン"
           }
         },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오른쪽 여백"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -16921,6 +17113,12 @@
             "value" : "ツールチップを表示するには、画面収録の権限が必要です。"
           }
         },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "툴팁을 표시하려면 화면 기록 권한이 필요합니다."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -16973,6 +17171,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "メニューバーの項目を検索するには、画面収録の権限が必要です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "메뉴 막대 항목을 검색하려면 화면 기록 권한이 필요합니다."
           }
         },
         "pt-BR" : {
@@ -17899,6 +18103,12 @@
             "value" : "メニューバーの項目にカーソルを合わせたときにツールチップを表示します。"
           }
         },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "실제 메뉴 막대의 항목 위에 마우스를 올리면 툴팁을 표시합니다."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -18157,6 +18367,12 @@
             "value" : "ホットキー使用時にマウスポインターの位置に表示"
           }
         },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "단축키 사용 시 마우스 포인터 위치에 표시"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -18221,6 +18437,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "このディスプレイのメニューバーの下に、非表示のメニューバー項目を別のバーで表示します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 디스플레이에서 숨겨진 메뉴 막대 항목을 메뉴 막대 아래의 별도 막대에 표시합니다."
           }
         },
         "pt-BR" : {
@@ -18569,6 +18791,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "メニューバーの背景を表示"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "메뉴 막대 배경 표시"
           }
         },
         "pt-BR" : {
@@ -19021,6 +19249,12 @@
             "value" : "メニューバーに %@ アイコンを表示します。クリックで非表示項目を表示、ダブルクリックで常に非表示の項目を表示、右クリックで設定を開きます。"
           }
         },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "메뉴 막대에 %@ 아이콘을 표시합니다. 클릭하면 숨겨진 항목이 표시되고, 더블 클릭하면 항상 숨겨진 항목이 표시되며, 오른쪽 클릭하면 설정이 열립니다."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -19087,6 +19321,12 @@
             "value" : "メニューバーにツールチップを表示"
           }
         },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "메뉴 막대에서 툴팁 표시"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -19151,6 +19391,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "システムのメニューバー背景を表示します。ダイナミック壁紙を使用している場合や、システム設定で「メニューバーの背景を表示」が無効になっている場合は有効にしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "시스템 메뉴 막대 배경을 표시합니다. 동적 배경화면을 사용 중이거나 시스템 설정에서 ‘메뉴 막대 배경 표시’가 꺼져 있는 경우 이 옵션을 활성화하세요."
           }
         },
         "pt-BR" : {
@@ -20465,6 +20711,12 @@
             "value" : "%@ アイコンは常に表示セクション内に置く必要があります。"
           }
         },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 아이콘은 항상 표시되는 영역에 있어야 합니다."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -20529,6 +20781,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "メニューバー項目のツールチップを表示するまでの待機時間。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "메뉴 막대 항목 위에 툴팁이 표시되기까지의 지연 시간입니다."
           }
         },
         "pt-BR" : {
@@ -20612,7 +20870,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "마우스 오버 시 표시하기 전에 대기할 시간입니다."
+            "value" : "마우스 오버 시 표시하기 전까지의 지연 시간입니다."
           }
         },
         "nl" : {
@@ -20786,6 +21044,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "すべての設定をデフォルト値にリセットします。この操作は元に戻せません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "모든 설정을 기본값으로 재설정합니다. 이 작업은 되돌릴 수 없습니다."
           }
         },
         "pt-BR" : {
@@ -21424,6 +21688,12 @@
             "value" : "ツールチップの遅延"
           }
         },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "툴팁 표시 지연 시간"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -21488,6 +21758,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ツールチップ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "툴팁"
           }
         },
         "pt-BR" : {
