@@ -6387,8 +6387,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "다른 메뉴 막대 관리 앱이 실행 중입니다"
-
+            "value" : "충돌하는 메뉴 막대 관리 앱이 감지되었습니다"
           }
         },
         "pt-BR" : {
