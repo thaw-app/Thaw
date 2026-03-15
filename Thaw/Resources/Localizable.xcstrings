@@ -692,7 +692,7 @@
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$@ está ejecutándose actualmente. Tener varios administradores de barra de menús activos al mismo tiempo puede causar problemas de visualización y comportamientos inesperados. Considera cerrar %2$@  antes de usar Thaw."
+            "value" : "%1$@ está ejecutándose actualmente. Tener varios administradores de barra de menús activos al mismo tiempo puede causar problemas de visualización y comportamientos inesperados. Considera cerrar %2$@ antes de usar Thaw."
           }
         },
         "fr" : {
@@ -7088,7 +7088,7 @@
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Descar"
+            "value" : "Descartar"
           }
         },
         "fr" : {
@@ -15875,7 +15875,7 @@
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Fallo al restablecer:  %@"
+            "value" : "Fallo al restablecer: %@"
           }
         },
         "fr" : {
