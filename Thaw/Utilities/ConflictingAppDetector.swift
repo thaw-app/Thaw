@@ -16,7 +16,6 @@ enum ConflictingAppDetector {
         "com.surteesstudios.Bartender": "Bartender",
         "com.dwarvesv.minimalbar": "Hidden Bar",
         "com.macpaw.CleanMyMac-setapp": "CleanMyMac Menu",
-        "pl.maketheweb.TopNotch": "TopNotch",
         "com.gaosun.BarTender": "iBar",
     ]
 

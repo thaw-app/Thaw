@@ -689,6 +689,12 @@
             "value" : "%1$@ is currently running. Running multiple menu bar managers at the same time can cause display issues and unexpected behavior. Consider quitting %2$@ before using Thaw."
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ está ejecutándose actualmente. Tener varios administradores de barra de menús activos al mismo tiempo puede causar problemas de visualización y comportamientos inesperados. Considera cerrar %2$@ antes de usar Thaw."
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -717,6 +723,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%1$@이(가) 현재 실행 중입니다. 여러 메뉴 막대 관리 앱을 동시에 실행하면 화면 표시 문제나 예상치 못한 동작이 발생할 수 있습니다. Thaw를 사용하기 전에 %2$@을(를) 종료해 주세요."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ is momenteel actief. Als je meerdere menubalkbeheerders tegelijkertijd gebruikt, kan dit leiden tot weergaveproblemen en ongewenst gedrag. Overweeg om %@ af te sluiten voordat je Thaw gebruikt."
           }
         },
         "pt-BR" : {
@@ -1415,6 +1427,12 @@
             "value" : "%lld FPS"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld fps"
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1440,6 +1458,12 @@
           }
         },
         "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld fps"
+          }
+        },
+        "nl" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld fps"
@@ -1859,6 +1883,12 @@
             "value" : "+"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "+"
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1884,6 +1914,12 @@
           }
         },
         "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "+"
+          }
+        },
+        "nl" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "+"
@@ -1931,6 +1967,12 @@
             "value" : "⌘"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⌘"
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1956,6 +1998,12 @@
           }
         },
         "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⌘"
+          }
+        },
+        "nl" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "⌘"
@@ -2003,6 +2051,12 @@
             "value" : "⎋"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⎋"
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2028,6 +2082,12 @@
           }
         },
         "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⎋"
+          }
+        },
+        "nl" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "⎋"
@@ -2937,6 +2997,12 @@
             "value" : "Versteckte Einträge immer anzeigen"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mostrar siempre los elementos ocultos"
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2965,6 +3031,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "숨겨진 항목 항상 표시"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Altijd verborgen items weergeven"
           }
         },
         "pt-BR" : {
@@ -3009,6 +3081,12 @@
             "value" : "Versteckte Einträge auf diesem Bildschirm immer in der Menüleiste anzeigen."
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mostrar siempre los elementos ocultos de la barra de menús en esta pantalla."
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3037,6 +3115,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "이 디스플레이의 메뉴 막대에서 숨겨진 항목을 항상 표시합니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toon verborgen menu-items altijd in de menubalk op dit scherm."
           }
         },
         "pt-BR" : {
@@ -3081,6 +3165,12 @@
             "value" : "Die %@-Leiste immer an der Position des Mauszeigers anzeigen, wenn ein Hotkey benutzt wird."
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mostrar siempre la barra de %@ en la posición del cursor cuando se activa con un atajo."
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3109,6 +3199,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "단축키로 표시할 때 %@ 막대를 항상 마우스 포인터 위치에 표시합니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Geef de %@-balk altijd weer op de plek van de muisaanwijzer wanneer deze met een sneltoets wordt weergegeven."
           }
         },
         "pt-BR" : {
@@ -4688,6 +4784,12 @@
             "value" : "Das %@-Symbol kann nicht bewegt werden."
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se puede mover el ícono de %@."
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -4716,6 +4818,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ 아이콘을 이동할 수 없습니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Het %@-pictogram kan niet worden verplaatst."
           }
         },
         "pt-BR" : {
@@ -5240,6 +5348,12 @@
             "value" : "Berechtigungen überprüfen"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verificar permisos"
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5268,6 +5382,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "권한 확인"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Controleer de machtigingen"
           }
         },
         "pt-BR" : {
@@ -5591,6 +5711,12 @@
             "value" : "Pfeil (nach unten)"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chevron (abajo)"
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5619,6 +5745,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "펼침 화살표(아래)"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chevron (Omlaag)"
           }
         },
         "pt-BR" : {
@@ -5849,6 +5981,12 @@
             "value" : "Einen leeren Bereich der Menüleiste anklicken, um versteckte Menüleisten-Einträge anzuzeigen."
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Haz clic en un área vacía de la barra de menús para mostrar los elementos ocultos."
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5877,6 +6015,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "메뉴 막대의 빈 공간을 클릭하면 숨겨진 메뉴 막대 항목이 표시됩니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Klik op een leeg gedeelte van de menubalk om verborgen menu-items weer te geven."
           }
         },
         "pt-BR" : {
@@ -6017,6 +6161,12 @@
             "value" : "Bestätigen"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confirmar"
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -6045,6 +6195,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "확인"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bevestig"
           }
         },
         "pt-BR" : {
@@ -6089,6 +6245,12 @@
             "value" : "Konkurrierender Menüleisten-Manager wurde erkannt"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se detectó un administrador de barra de menús en conflicto"
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -6117,6 +6279,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "충돌하는 메뉴 막대 관리 앱이 감지되었습니다"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Er is een conflicterende menubalkbeheerder gedetecteerd"
           }
         },
         "pt-BR" : {
@@ -6251,6 +6419,12 @@
             "value" : "Trotzdem fortfahren"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continuar de todas formas"
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -6279,6 +6453,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "계속 진행"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toch doorgaan"
           }
         },
         "pt-BR" : {
@@ -7085,6 +7265,12 @@
             "value" : "Verwerfen"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Descartar"
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -7113,6 +7299,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "버리기"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verwijderen"
           }
         },
         "pt-BR" : {
@@ -7349,6 +7541,12 @@
             "value" : "Bildschirme"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pantallas"
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -7377,6 +7575,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "디스플레이"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schermen"
           }
         },
         "pt-BR" : {
@@ -7805,6 +8009,12 @@
             "value" : "Einen leeren Bereich der Menüleiste doppelt anklicken, um immer versteckte Menüleisten-Einträge anzuzeigen."
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Haz doble clic en un área vacía de la barra de menús para mostrar los elementos siempre ocultos."
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -7833,6 +8043,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "메뉴 막대의 빈 공간을 더블 클릭하면 항상 숨겨진 메뉴 막대 항목이 표시됩니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dubbelklik op een leeg gedeelte van de menubalk om de standaard verborgen menu-items weer te geven."
           }
         },
         "pt-BR" : {
@@ -7877,6 +8093,12 @@
             "value" : "Doppelklick für Immer-Versteckt"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Doble clic para siempre oculto"
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -7905,6 +8127,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "더블 클릭하여 항상 숨김 표시"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dubbelklikken om altijd verborgen te houden"
           }
         },
         "pt-BR" : {
@@ -8237,6 +8465,12 @@
             "value" : "E"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "E"
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -8262,6 +8496,12 @@
           }
         },
         "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "E"
+          }
+        },
+        "nl" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "E"
@@ -8405,6 +8645,12 @@
             "value" : "Name bearbeiten"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Editar nombre"
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -8433,6 +8679,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "이름 편집"
+           }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Naam bewerken"
           }
         },
         "pt-BR" : {
@@ -10493,6 +10745,12 @@
             "value" : "Wie oft animierte Symbole aufgefrischt werden. Höhere Werte bedeuten eine flüssigere Darstellung, benötigen aber mehr Prozessorleistung."
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Con qué frecuencia se actualizan los íconos animados de la barra de menús en los paneles. Valores más altos son más fluidos pero usan más CPU."
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -10521,6 +10779,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "패널에서 움직이는 메뉴 막대 아이콘을 얼마나 자주 새로 고칠지 설정합니다. 값이 높을수록 더 부드럽지만 CPU 사용량이 늘어납니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hoe vaak de geanimeerde pictogrammen in de menubalk in de panelen worden vernieuwd. Hogere waarden zorgen voor een vloeiender beeld, maar belasten de CPU meer."
           }
         },
         "pt-BR" : {
@@ -10757,6 +11021,12 @@
             "value" : "Symbol Auffrischrate"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Frecuencia de actualización de íconos"
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -10785,6 +11055,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "아이콘 새로 고침 빈도"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vernieuwingsfrequentie van pictogrammen"
           }
         },
         "pt-BR" : {
@@ -11690,6 +11966,12 @@
             "value" : "Linker Rand"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margen izquierdo"
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -11718,6 +12000,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "왼쪽 여백"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Linkermarge"
           }
         },
         "pt-BR" : {
@@ -14064,6 +14352,12 @@
             "value" : "Nicht verfügbar, weil die %@-Leiste für diesen Bildschirm aktiviert ist."
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No disponible porque la barra de %@ está activada en esta pantalla."
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -14092,6 +14386,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "이 디스플레이에서 %@ 막대가 활성화되어 있어 사용할 수 없습니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Niet beschikbaar omdat de %@-balk voor dit scherm is ingeschakeld."
           }
         },
         "pt-BR" : {
@@ -14232,6 +14532,12 @@
             "value" : "Notch"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notch"
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -14260,6 +14566,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "노치"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notch"
           }
         },
         "pt-BR" : {
@@ -15162,6 +15474,12 @@
             "value" : "Thaw beenden"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Salir de Thaw"
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -15190,6 +15508,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Thaw 종료"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stop Thaw"
           }
         },
         "pt-BR" : {
@@ -15514,6 +15838,12 @@
             "value" : "%@ zurücksetzen"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reiniciar %@"
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -15542,6 +15872,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ 재설정"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reset %@"
           }
         },
         "pt-BR" : {
@@ -15580,6 +15916,12 @@
             "value" : "Alle Einstellungen zurücksetzen"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reiniciar todos los ajustes"
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -15608,6 +15950,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "모든 설정 재설정"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reset alle instellingen"
           }
         },
         "pt-BR" : {
@@ -15645,6 +15993,12 @@
             "value" : "Alle Einstellungen auf ihre Standardwerte zurücksetzen. Dies kann nicht rückgängig gemacht werden."
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reiniciar todos los ajustes a sus valores por defecto. Esta acción no se puede deshacer."
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -15673,6 +16027,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "모든 설정을 기본값으로 재설정합니다. 이 작업은 되돌릴 수 없습니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle instellingen terugzetten naar de standaardwaarden. Deze handeling kan niet ongedaan worden gemaakt."
           }
         },
         "pt-BR" : {
@@ -15710,6 +16070,12 @@
             "value" : "Alle Einstellungen zurücksetzen?"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Reiniciar todos los ajustes?"
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -15738,6 +16104,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "모든 설정을 재설정할까요?"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reset alle instellingen?"
           }
         },
         "pt-BR" : {
@@ -15875,7 +16247,7 @@
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Fallo al restablecer:  %@"
+            "value" : "Fallo al restablecer: %@"
           }
         },
         "fr" : {
@@ -16735,6 +17107,12 @@
             "value" : "Rechter Rand"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margen derecho"
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -16763,6 +17141,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "오른쪽 여백"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rechtermarge"
           }
         },
         "pt-BR" : {
@@ -17095,6 +17479,12 @@
             "value" : "Berechtigung für Aufnahme von Bildschirm & Systemaudio wird benötigt um Tooltips anzuzeigen."
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se requieren permisos de grabación de pantalla para mostrar los tooltips."
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -17117,6 +17507,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "툴팁을 표시하려면 화면 기록 권한이 필요합니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Er zijn machtigingen voor schermopnames nodig om tooltips weer te geven."
           }
         },
         "pt-BR" : {
@@ -17155,6 +17551,12 @@
             "value" : "Berechtigung für Aufnahme von Bildschirm & Systemaudio wird benötigt um Menüleisten-Einträge zu durchsuchen."
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se requieren permisos de grabación de pantalla para buscar elementos en la barra de menús."
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -17177,6 +17579,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "메뉴 막대 항목을 검색하려면 화면 기록 권한이 필요합니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Er zijn machtigingen voor schermopnames nodig om in de menubalk te kunnen zoeken."
           }
         },
         "pt-BR" : {
@@ -17482,7 +17890,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "搜索菜单栏项目中"
+            "value" : "搜索菜单栏项目"
           }
         },
         "zh-Hant" : {
@@ -17578,7 +17986,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "搜索菜单栏项目中…"
+            "value" : "搜索菜单栏项目…"
           }
         },
         "zh-Hant" : {
@@ -18079,6 +18487,12 @@
             "value" : "Beim Schweben über einem Menüleisten-Eintrag einen Tooltip in der tatsächlichen Menüleiste anzeigen."
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mostrar un tooltip al pasar el cursor sobre los elementos de la barra de menús."
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -18107,6 +18521,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "실제 메뉴 막대의 항목 위에 마우스를 올리면 툴팁을 표시합니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toon een tooltip wanneer de muisaanwijzer boven menu-items in de menubalk wordt geplaatst."
           }
         },
         "pt-BR" : {
@@ -18343,6 +18763,12 @@
             "value" : "Bei Hotkey-Nutzung beim Mauszeiger anzeigen"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mostrar en la posición del cursor al usar el atajo"
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -18371,6 +18797,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "단축키 사용 시 마우스 포인터 위치에 표시"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Weergeven bij muisaanwijzer op sneltoets"
           }
         },
         "pt-BR" : {
@@ -18415,6 +18847,12 @@
             "value" : "Versteckte Menüleisten-Einträge auf diesem Bildschirm in einer separaten Leiste unterhalb der Menüleiste anzeigen."
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mostrar los elementos ocultos de la barra de menús en una barra separada debajo de la barra de menús en esta pantalla."
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -18445,6 +18883,12 @@
             "value" : "이 디스플레이에서 숨겨진 메뉴 막대 항목을 메뉴 막대 아래의 별도 막대에 표시합니다."
           }
         },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toon verborgen menu-items in een aparte balk onder de menubalk op dit scherm."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -18461,6 +18905,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Bu ekranda gizli menü çubuğu öğelerini menü çubuğunun altındaki ayrı bir çubukta göster."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在该显示器的菜单栏下方，以独立菜单栏显示隐藏的项目。"
           }
         },
         "zh-Hant" : {
@@ -18769,6 +19219,12 @@
             "value" : "Menüleisten-Hintergrund anzeigen"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mostrar el fondo de la barra de menús"
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -18797,6 +19253,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "메뉴 막대 배경 표시"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Achtergrond van de menubalk weergeven"
           }
         },
         "pt-BR" : {
@@ -19225,6 +19687,12 @@
             "value" : "Zeige das %@-Symbol in der Menüleiste. Klicken um versteckte Einträge anzuzeigen, doppelklicken um immer versteckte Einträge und rechtsklicken um die Einstellungen anzuzeigen."
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mostrar el ícono de %@ en la barra de menús. Haz clic para mostrar los elementos ocultos, doble clic para los siempre ocultos, y clic derecho para los ajustes."
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -19253,6 +19721,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "메뉴 막대에 %@ 아이콘을 표시합니다. 클릭하면 숨겨진 항목이 표시되고, 더블 클릭하면 항상 숨겨진 항목이 표시되며, 오른쪽 클릭하면 설정이 열립니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Geef het %@-pictogram weer in de menubalk. Klik erop om verborgen items weer te geven, dubbelklik om ze permanent te verbergen en klik met de rechtermuisknop voor instellingen."
           }
         },
         "pt-BR" : {
@@ -19297,6 +19771,12 @@
             "value" : "Tooltips in der Menüleiste anzeigen"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mostrar tooltips en la barra de menús"
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -19325,6 +19805,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "메뉴 막대에서 툴팁 표시"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tooltips weergeven in de menubalk"
           }
         },
         "pt-BR" : {
@@ -19369,6 +19855,12 @@
             "value" : "Zeige den Hintergrund der System-Menüleiste. Aktivieren, wenn ein dynamisches Hintergrundbild verwendet wird oder ‚Menüleiste > Menüleistenhintergrund anzeigen‘ in den Systemeinstellungen deaktivieren."
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Muestra el fondo de la barra de menús del sistema. Actívalo si usas un fondo de pantalla dinámico o si tienes desactivada la opción \"Mostrar fondo de la barra de menús\" en Configuración del sistema."
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -19397,6 +19889,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "시스템 메뉴 막대 배경을 표시합니다. 동적 배경화면을 사용 중이거나 시스템 설정에서 ‘메뉴 막대 배경 표시’가 꺼져 있는 경우 이 옵션을 활성화하세요."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Geeft de achtergrond van de menubalk van het systeem weer. Schakel deze optie in als je een dynamische achtergrond gebruikt of als ‘Achtergrond van menubalk weergeven’ is uitgeschakeld in Systeeminstellingen."
           }
         },
         "pt-BR" : {
@@ -20687,6 +21185,12 @@
             "value" : "Das %@-Symbol muss immer im sichtbaren Bereich bleiben."
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El ícono de %@ debe permanecer siempre en la sección visible."
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -20715,6 +21219,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ 아이콘은 항상 표시되는 영역에 있어야 합니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Het %@-pictogram moet altijd in het zichtbare gedeelte blijven staan."
           }
         },
         "pt-BR" : {
@@ -20759,6 +21269,12 @@
             "value" : "Der Zeitversatz bevor ein Tooltip über einem Menüleisteneintrag angezeigt wird."
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El tiempo de espera antes de mostrar un tooltip sobre un elemento de la barra de menús."
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -20787,6 +21303,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "메뉴 막대 항목 위에 툴팁이 표시되기까지의 지연 시간입니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De tijd die moet verstrijken voordat er een tooltip boven een menu-item wordt weergegeven."
           }
         },
         "pt-BR" : {
@@ -21022,6 +21544,12 @@
             "value" : "Dies wird alle Einstellungen auf ihre Standardwerte zurücksetzen. Dies kann nicht rückgängig gemacht werden."
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esto restablecerá todos los ajustes a sus valores predeterminados. Esta acción no se puede deshacer."
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -21050,6 +21578,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "모든 설정을 기본값으로 재설정합니다. 이 작업은 되돌릴 수 없습니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hierdoor worden alle instellingen teruggezet naar hun standaardwaarden. Deze handeling kan niet ongedaan worden gemaakt."
           }
         },
         "pt-BR" : {
@@ -21664,6 +22198,12 @@
             "value" : "Tooltip Zeitversatz"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Retraso del tooltip"
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -21692,6 +22232,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "툴팁 표시 지연 시간"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vertraging bij tooltips"
           }
         },
         "pt-BR" : {
@@ -21736,6 +22282,12 @@
             "value" : "Tooltips"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tooltips"
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
@@ -21764,6 +22316,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "툴팁"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tooltips"
           }
         },
         "pt-BR" : {
