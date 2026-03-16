@@ -5780,6 +5780,12 @@
             "value" : "İzinleri kontrol et"
           }
         },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "检查权限"
+          }
+        },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
@@ -6081,7 +6087,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "V 型箭头"
+            "value" : "箭头"
           }
         },
         "zh-Hant" : {
@@ -6165,6 +6171,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Chevron (Aşağı)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下箭头"
           }
         },
         "zh-Hant" : {
@@ -15550,6 +15562,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Çentik"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "刘海"
           }
         },
         "zh-Hant" : {
