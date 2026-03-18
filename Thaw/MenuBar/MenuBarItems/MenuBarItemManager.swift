@@ -835,7 +835,6 @@ extension MenuBarItemManager {
             MenuBarItemManager.diagLog.debug("Resetting stale isRestoringItemOrder flag (timeout)")
             isRestoringItemOrder = false
             isRestoringItemOrderTimestamp = nil
-            restoreWasPartiallySkipped = false
         }
 
         if !isRestoringItemOrder, !isResettingLayout, !isInStartupSettling,
