@@ -147,6 +147,11 @@ final class MenuBarItemManager: ObservableObject {
     private var isRestoringItemOrder = false
     /// Timestamp when isRestoringItemOrder was set (for timeout detection).
     private var isRestoringItemOrderTimestamp: Date?
+    /// Indicates the most recent order restore was partial (multi-icon/indexed
+    /// items were present). While true, `saveSectionOrder` is suppressed to
+    /// prevent overwriting good saved state with potentially randomised
+    /// positions. Cleared on explicit user drag or a full (non-partial) restore.
+    private var restoreWasPartiallySkipped = false
     /// True during the startup settling period, during which restore operations
     /// and section-order saves are suppressed. This prevents cascading icon moves
     /// when many apps launch at login (login item boot) or restart in quick succession
@@ -484,6 +489,7 @@ final class MenuBarItemManager: ObservableObject {
     /// (e.g. the user cmd+dragged an item directly on the menu bar).
     func recordExternalMoveOperation() {
         lastMoveOperationTimestamp = .now
+        restoreWasPartiallySkipped = false
     }
 }
 
@@ -829,9 +835,12 @@ extension MenuBarItemManager {
             MenuBarItemManager.diagLog.debug("Resetting stale isRestoringItemOrder flag (timeout)")
             isRestoringItemOrder = false
             isRestoringItemOrderTimestamp = nil
+            restoreWasPartiallySkipped = false
         }
 
-        if !isRestoringItemOrder, !isResettingLayout, !isInStartupSettling {
+        if !isRestoringItemOrder, !isResettingLayout, !isInStartupSettling,
+           !restoreWasPartiallySkipped
+        {
             saveSectionOrder(from: context.cache)
         }
         MenuBarItemManager.diagLog.debug("Updated menu bar item cache: visible=\(context.cache[.visible].count), hidden=\(context.cache[.hidden].count), alwaysHidden=\(context.cache[.alwaysHidden].count)")
@@ -3342,23 +3351,33 @@ extension MenuBarItemManager {
             $0.tag.tagIdentifier
         })
 
-        // Count items per namespace to detect indexed and multi-icon apps
+        // Count items per namespace and collect namespaces with indexed items
+        // so we can exclude them from ordering without bailing out entirely.
         var itemsPerNamespace = [String: Int]()
-        var hasIndexedItems = false
+        var namespacesWithIndexedItems = Set<String>()
         for item in items where !item.isControlItem && item.isMovable && item.canBeHidden {
             let ns = item.tag.namespace.description
             itemsPerNamespace[ns, default: 0] += 1
             if item.tag.instanceIndex > 0 {
-                hasIndexedItems = true
+                namespacesWithIndexedItems.insert(ns)
             }
         }
 
-        // Skip if indexed or multi-icon apps are present. These naturally position
-        // themselves, and restoring order causes shuffling.
-        let hasMultiIconApps = itemsPerNamespace.values.contains { $0 > 1 }
-        guard !hasIndexedItems && !hasMultiIconApps else {
-            MenuBarItemManager.diagLog.debug("restoreSavedItemOrder: skipping due to indexed/multi-icon items present")
-            return false
+        // Build exclusion set: multi-icon namespaces and namespaces with indexed
+        // items. These naturally self-position and restoring them causes shuffling.
+        // Control Center items only appear one at a time and can be safely restored.
+        let excludedNamespaces = Set(
+            itemsPerNamespace.filter { $0.key != "com.apple.controlcenter" && $0.value > 1 }.keys
+        ).union(namespacesWithIndexedItems)
+        let hasExcludedNamespaces = !excludedNamespaces.isEmpty
+
+        if hasExcludedNamespaces {
+            MenuBarItemManager.diagLog.debug(
+                "restoreSavedItemOrder: multi-icon/indexed items present — restoring single-icon items only (excluded: \(excludedNamespaces))"
+            )
+            restoreWasPartiallySkipped = true
+        } else {
+            restoreWasPartiallySkipped = false
         }
 
         // Build a lookup from uniqueIdentifier → MenuBarItem for all current non-control items.
@@ -3391,9 +3410,17 @@ extension MenuBarItemManager {
                 continue
             }
 
-            // Filter saved identifiers to only those present in this section right now.
+            // Filter saved identifiers to only those present in this section right now,
+            // excluding items from multi-icon/indexed namespaces.
             let currentIDSet = Set(currentItems.map(\.uniqueIdentifier))
-            let filteredSaved = savedIdentifiers.filter { currentIDSet.contains($0) }
+            let filteredSaved = savedIdentifiers.filter { id in
+                guard currentIDSet.contains(id) else { return false }
+                if hasExcludedNamespaces {
+                    let ns = String(id.split(separator: ":").first ?? "")
+                    return !excludedNamespaces.contains(ns)
+                }
+                return true
+            }
 
             guard !filteredSaved.isEmpty else { continue }
 

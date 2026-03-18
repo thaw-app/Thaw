@@ -24,7 +24,7 @@ the always-hidden section, then Command + drag the item into a different section
 
 ## Thaw does not remember the order of items
 
-This is not a bug, but a missing feature. It is being tracked in [#26](https://github.com/jordanbaird/Thaw/issues/26).
+Order restoration works for single-icon apps. Apps that register multiple menu bar icons from the same process (e.g. iStat Menus, Stats, MenuMeters) are treated as opaque blocks — their internal ordering is left to macOS, but they no longer prevent other items from being restored to their saved positions.
 
 ## How do I solve the `Thaw cannot arrange menu bar items in automatically hidden menu bars` error?
 
