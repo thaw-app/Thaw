@@ -152,6 +152,10 @@ final class MenuBarItemManager: ObservableObject {
     /// prevent overwriting good saved state with potentially randomised
     /// positions. Cleared on explicit user drag or a full (non-partial) restore.
     private var restoreWasPartiallySkipped = false
+    /// Re-entrancy guard for `restoreSavedItemOrder`. Separate from
+    /// `isRestoringItemOrder` which the caller uses to suppress saves during
+    /// the entire restore phase (cross-section + within-section).
+    private var isInWithinSectionRestore = false
     /// True during the startup settling period, during which restore operations
     /// and section-order saves are suppressed. This prevents cascading icon moves
     /// when many apps launch at login (login item boot) or restart in quick succession
@@ -3320,8 +3324,10 @@ extension MenuBarItemManager {
     ) async -> Bool {
         guard !savedSectionOrder.isEmpty else { return false }
 
-        // Don't attempt another restore while a previous restore's recache is in flight.
-        guard !isRestoringItemOrder else { return false }
+        // Don't attempt another restore while a previous within-section restore is in flight.
+        guard !isInWithinSectionRestore else { return false }
+        isInWithinSectionRestore = true
+        defer { isInWithinSectionRestore = false }
 
         // Don't restore while suppressing relocations (first launch / reset).
         guard !suppressNextNewLeftmostItemRelocation else { return false }
