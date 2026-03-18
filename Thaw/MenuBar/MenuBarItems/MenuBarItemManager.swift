@@ -3413,7 +3413,8 @@ extension MenuBarItemManager {
             // excluding items from multi-icon/indexed namespaces.
             let currentIDSet = Set(currentItems.map(\.uniqueIdentifier))
             let namespaceByID = Dictionary(
-                uniqueKeysWithValues: currentItems.map { ($0.uniqueIdentifier, $0.tag.namespace.description) }
+                currentItems.map { ($0.uniqueIdentifier, $0.tag.namespace.description) },
+                uniquingKeysWith: { first, _ in first }
             )
             let filteredSaved = savedIdentifiers.filter { id in
                 guard currentIDSet.contains(id) else { return false }
