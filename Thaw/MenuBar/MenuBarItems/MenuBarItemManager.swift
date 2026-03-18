@@ -3412,10 +3412,13 @@ extension MenuBarItemManager {
             // Filter saved identifiers to only those present in this section right now,
             // excluding items from multi-icon/indexed namespaces.
             let currentIDSet = Set(currentItems.map(\.uniqueIdentifier))
+            let namespaceByID = Dictionary(
+                uniqueKeysWithValues: currentItems.map { ($0.uniqueIdentifier, $0.tag.namespace.description) }
+            )
             let filteredSaved = savedIdentifiers.filter { id in
                 guard currentIDSet.contains(id) else { return false }
                 if hasExcludedNamespaces {
-                    let ns = String(id.split(separator: ":").first ?? "")
+                    guard let ns = namespaceByID[id] else { return false }
                     return !excludedNamespaces.contains(ns)
                 }
                 return true
