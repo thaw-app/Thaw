@@ -550,11 +550,12 @@ final class ControlItem {
     /// Performs the control item's action.
     @objc private func performAction() {
         guard
-            let menuBarManager = appState?.menuBarManager,
+            let appState,
             let event = NSApp.currentEvent
         else {
             return
         }
+        let menuBarManager = appState.menuBarManager
 
         switch event.type {
         case .leftMouseDown:
@@ -564,14 +565,24 @@ final class ControlItem {
 
             // Running this from a Task seems to improve the visual
             // responsiveness of the status item's button.
-            Task {
+        Task { [appState] in
+                if
+                    !appState.settings.advanced.useOptionClickToShowAlwaysHiddenSection,
+                    event.clickCount > 1,
+                    identifier == .visible,
+                    let alwaysHidden = menuBarManager.section(withName: .alwaysHidden),
+                    alwaysHidden.isEnabled
+                {
+                    alwaysHidden.show()
+                    return
+                }
+
                 if modifierFlags == .control {
                     showMenu()
                     return
                 }
 
                 if
-                    ((appState?.settings.advanced.enableOptionClickToShowAlwaysHidden) != nil),
                     modifierFlags == .option,
                     let section = menuBarManager.section(withName: .alwaysHidden),
                     section.isEnabled

@@ -17,7 +17,7 @@ final class AdvancedSettings: ObservableObject {
     /// A Boolean value that indicates whether the always-hidden section
     /// is enabled.
     @Published var enableAlwaysHiddenSection = Defaults.DefaultValue.enableAlwaysHiddenSection
-    @Published var enableOptionClickToShowAlwaysHidden = Defaults.DefaultValue.enableOptionClickToShowAlwaysHidden
+    @Published var useOptionClickToShowAlwaysHiddenSection = Defaults.DefaultValue.useOptionClickToShowAlwaysHiddenSection
 
     /// A Boolean value that indicates whether to show all sections when
     /// the user is dragging items in the menu bar.
@@ -70,7 +70,7 @@ final class AdvancedSettings: ObservableObject {
     /// Loads the model's initial state.
     private func loadInitialState() {
         Defaults.ifPresent(key: .enableAlwaysHiddenSection, assign: &enableAlwaysHiddenSection)
-        Defaults.ifPresent(key: .enableOptionClickToShowAlwaysHidden, assign: &enableOptionClickToShowAlwaysHidden)
+        Defaults.ifPresent(key: .useOptionClickToShowAlwaysHiddenSection, assign: &useOptionClickToShowAlwaysHiddenSection)
         Defaults.ifPresent(key: .showAllSectionsOnUserDrag, assign: &showAllSectionsOnUserDrag)
         Defaults.ifPresent(key: .hideApplicationMenus, assign: &hideApplicationMenus)
         Defaults.ifPresent(key: .enableSecondaryContextMenu, assign: &enableSecondaryContextMenu)
@@ -99,10 +99,10 @@ final class AdvancedSettings: ObservableObject {
             }
             .store(in: &c)
 
-        $enableOptionClickToShowAlwaysHidden
+        $useOptionClickToShowAlwaysHiddenSection
             .receive(on: DispatchQueue.main)
             .sink { enable in
-                Defaults.set(enable, forKey: .enableOptionClickToShowAlwaysHidden)
+                Defaults.set(enable, forKey: .useOptionClickToShowAlwaysHiddenSection)
             }
             .store(in: &c)
 
