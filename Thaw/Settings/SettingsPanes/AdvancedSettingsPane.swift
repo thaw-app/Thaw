@@ -39,6 +39,7 @@ struct AdvancedSettingsPane: View {
         IceForm {
             IceSection("Menu Bar Sections") {
                 enableAlwaysHiddenSection
+                enableOptionClickToShowAlwaysHidden
                 showAllSectionsOnUserDrag
                 sectionDividerStyle
             }
@@ -107,6 +108,13 @@ struct AdvancedSettingsPane: View {
         Toggle(
             "Enable the always-hidden section",
             isOn: $settings.enableAlwaysHiddenSection
+        )
+    }
+
+    private var enableOptionClickToShowAlwaysHidden: some View {
+        Toggle(
+            "Show the always-hidden section when Option-clicking",
+            isOn: $settings.enableOptionClickToShowAlwaysHidden
         )
     }
 

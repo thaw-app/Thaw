@@ -571,6 +571,7 @@ final class ControlItem {
                 }
 
                 if
+                    ((appState?.settings.advanced.enableOptionClickToShowAlwaysHidden) != nil),
                     modifierFlags == .option,
                     let section = menuBarManager.section(withName: .alwaysHidden),
                     section.isEnabled
