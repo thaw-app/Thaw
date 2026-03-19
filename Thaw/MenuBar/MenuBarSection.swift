@@ -349,15 +349,9 @@ final class MenuBarSection {
         menuBarManager.iceBarPanel.close() // Make sure Ice Bar is always closed.
         menuBarManager.showOnHoverAllowed = true
 
-        switch name {
-        case _ where useIceBar, .visible, .hidden:
-            for section in menuBarManager.sections {
-                section.desiredState = .hideSection
-                section.updateControlItemState(for: nil)
-            }
-        case .alwaysHidden:
-            desiredState = .hideSection
-            updateControlItemState(for: nil)
+        for section in menuBarManager.sections {
+            section.desiredState = .hideSection
+            section.updateControlItemState(for: nil)
         }
 
         stopRehideChecks()
