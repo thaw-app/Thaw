@@ -81,7 +81,7 @@ swiftlint lint
 Pull requests are automatically reviewed by SonarCloud for code quality and CodeRabbit for AI-assisted review. You may receive automated comments from these tools, so please address any findings before requesting a human review.
 
 ### Pull Requests
-Open a pull request [here][pr] and select the [appropriate template][prt] — it will guide you through the required information and checklist. Make sure the CI passes and wait for code review. You may be asked to make changes; when finished, request a re-review using the GitHub feature or mention the reviewers.
+Open a pull request via the [Thaw pull requests page][pr] and select the [appropriate template][prt] — it will guide you through the required information and checklist.
 
 ## Resources
 - [How to Contribute to Open Source](https://opensource.guide/how-to-contribute/)
