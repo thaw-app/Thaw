@@ -158,17 +158,6 @@ Thaw is currently available in the following languages:
 
 _Note: languages marked with (\*) are currently only available in the development branch._
 
-### Help Translate Thaw
-
-If you want to help translate Thaw into your language or improve existing ones, you'll need the latest version of Xcode.
-
-1. Open `Thaw.xcodeproj` in Xcode 16.4 or later.
-2. Navigate to `Thaw -> Resources -> Localizable.xcstrings`.
-3. Add a new language using the **+** button at the bottom or update existing strings.
-4. Submit a Pull Request with your changes!
-
-_Note: You can see the exact completion percentage for each language directly in the Xcode String Catalog editor._
-
 ## Features/Roadmap
 
 <details>
