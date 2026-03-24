@@ -82,7 +82,22 @@ extension Hotkey {
                 guard let hotkey, let appState else {
                     return
                 }
-                hotkey.action.perform(appState: appState)
+                if hotkey.action == .profileApply {
+                    guard appState.profileManager.layoutTask == nil else { return }
+                    let key = ObjectIdentifier(hotkey)
+                    if let profileID = appState.profileManager.hotkeyProfileMap[key],
+                       profileID != appState.profileManager.activeProfileID
+                    {
+                        let profileManager = appState.profileManager
+                        Task {
+                            guard let profile = try? profileManager.loadProfile(id: profileID) else { return }
+                            profileManager.activeProfileID = profileID
+                            profileManager.applyProfile(profile, to: appState)
+                        }
+                    }
+                } else {
+                    hotkey.action.perform(appState: appState)
+                }
             }
             guard let id else {
                 return nil

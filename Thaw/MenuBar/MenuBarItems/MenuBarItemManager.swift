@@ -3880,6 +3880,324 @@ extension MenuBarItemManager {
         try await resetLayoutToFreshState()
     }
 
+    /// Applies a profile's layout by moving items to match the profile's
+    /// saved section assignments and within-section ordering.
+    ///
+    /// Uses per-item identifiers (not just bundle IDs) to correctly handle
+    /// apps like Control Center that share a single bundle ID across many
+    /// items (WiFi, Battery, etc.).
+    ///
+    /// The approach processes each section's saved item order and moves items
+    /// into position one at a time, achieving both correct section placement
+    /// and correct ordering in a single pass.
+    func applyProfileLayout(
+        pinnedHidden: Set<String>,
+        pinnedAlwaysHidden: Set<String>,
+        sectionOrder: [String: [String]],
+        itemSectionMap: [String: String],
+        itemOrder: [String: [String]]
+    ) async {
+        // Directly set in-memory state (avoids cache cycle race).
+        pinnedHiddenBundleIDs = pinnedHidden
+        pinnedAlwaysHiddenBundleIDs = pinnedAlwaysHidden
+        savedSectionOrder = sectionOrder
+        persistPinnedBundleIDs()
+        persistSavedSectionOrder()
+
+        // Prevent the cache cycle from saving intermediate positions.
+        isRestoringItemOrder = true
+        isRestoringItemOrderTimestamp = Date()
+        defer {
+            isRestoringItemOrder = false
+            isRestoringItemOrderTimestamp = nil
+        }
+
+        guard let appState else {
+            MenuBarItemManager.diagLog.error("applyProfileLayout: missing appState")
+            return
+        }
+        guard !itemOrder.isEmpty else {
+            MenuBarItemManager.diagLog.debug("applyProfileLayout: no item order, skipping")
+            return
+        }
+
+        // Show all sections so items are accessible for moving.
+        for section in appState.menuBarManager.sections where section.name != .visible {
+            section.show()
+        }
+
+        let hiddenWID: CGWindowID? = appState.menuBarManager
+            .controlItem(withName: .hidden)?.window
+            .flatMap { CGWindowID(exactly: $0.windowNumber) }
+        let alwaysHiddenWID: CGWindowID? = appState.menuBarManager
+            .controlItem(withName: .alwaysHidden)?.window
+            .flatMap { CGWindowID(exactly: $0.windowNumber) }
+
+        // Build desired flat sequence (right-to-left): visible, hidden, alwaysHidden.
+        // This is the target linear order of all items across all sections.
+        var desiredFlat = [String]()
+        for key in ["visible", "hidden", "alwaysHidden"] {
+            if let order = itemOrder[key] {
+                desiredFlat.append(contentsOf: order)
+            }
+        }
+
+        // Discover current items and build current flat sequence (right-to-left).
+        var items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+        guard var itemsCopy = Optional(items),
+              let controlItems = ControlItemPair(
+                  items: &itemsCopy,
+                  hiddenControlItemWindowID: hiddenWID,
+                  alwaysHiddenControlItemWindowID: alwaysHiddenWID
+              )
+        else {
+            MenuBarItemManager.diagLog.error("applyProfileLayout: missing control items")
+            return
+        }
+
+        // Build current flat sequence grouped by section (same structure as desired).
+        // Raw X-position order interleaves sections and gives bad LCS results.
+        var context = CacheContext(
+            controlItems: controlItems,
+            displayID: Bridging.getActiveMenuBarDisplayID()
+        )
+
+        // Control Center items that appear/disappear based on system state.
+        // These must be excluded from profile ordering to avoid spurious moves.
+        let transientControlCenterItems: Set<String> = [
+            "com.apple.controlcenter:FocusModes",
+            "com.apple.controlcenter:ScreenMirroring",
+            "com.apple.controlcenter:Display",
+            "com.apple.controlcenter:Sound",
+            "com.apple.controlcenter:NowPlaying",
+        ]
+
+        func isProfileItem(_ item: MenuBarItem) -> Bool {
+            (item.canBeHidden || item.tag == .visibleControlItem) && item.isMovable
+                && item.tag != .screenCaptureUI
+                && item.tag != .audioVideoModule
+                && item.tag != .faceTime
+                && item.tag != .hiddenControlItem
+                && item.tag != .alwaysHiddenControlItem
+                && !transientControlCenterItems.contains(item.uniqueIdentifier)
+        }
+
+        var currentFlat = [String]()
+        for sectionName in [MenuBarSection.Name.visible, .hidden, .alwaysHidden] {
+            let sectionItems = items.filter { item in
+                guard isProfileItem(item) else { return false }
+                return context.findSection(for: item) == sectionName
+            }
+            currentFlat.append(contentsOf: sectionItems.map(\.uniqueIdentifier))
+        }
+
+        // Filter both sequences to only items present in both.
+        let currentSet = Set(currentFlat)
+        let desiredSet = Set(desiredFlat)
+        let currentFiltered = currentFlat.filter { desiredSet.contains($0) }
+        let desiredFiltered = desiredFlat.filter { currentSet.contains($0) }
+
+        // Compute LCS to find items that don't need to move.
+        let lcsItems = longestCommonSubsequence(currentFiltered, desiredFiltered)
+
+        // Items to move = items in desired order that are NOT in the LCS.
+        let itemsToMove = desiredFiltered.filter { !lcsItems.contains($0) }
+
+        guard !itemsToMove.isEmpty else {
+            MenuBarItemManager.diagLog.info("Profile layout: all items already in correct positions")
+            // Still collapse sections.
+            appState.menuBarManager.iceBarPanel.close()
+            for section in appState.menuBarManager.sections {
+                section.desiredState = .hideSection
+                section.controlItem.state = .hideSection
+            }
+            await cacheItemsRegardless(skipRecentMoveCheck: true)
+            return
+        }
+
+        MenuBarItemManager.diagLog.info(
+            "Profile layout: \(itemsToMove.count) move(s) needed " +
+            "(LCS kept \(lcsItems.count) items in place)"
+        )
+
+        // Hide cursor for the entire profile apply to avoid visual jitter.
+        // Use a long watchdog timeout to prevent the safety timer from
+        // force-showing the cursor between individual moves.
+        let savedCursorPosition = NSEvent.mouseLocation
+        MouseHelpers.hideCursor(watchdogTimeout: .seconds(30))
+        defer { MouseHelpers.showCursor() }
+
+        // Execute moves in the order they appear in the desired sequence.
+        // For each item, find the closest stable neighbor (LCS or already
+        // moved) and anchor relative to it:
+        //   • Forward scan  → .leftOfItem  (place item before the anchor)
+        //   • Backward scan → .rightOfItem (place item after  the anchor)
+        var movedCount = 0
+        var movedItems = Set<String>()
+
+        func isStableAnchor(_ candidateUID: String) -> Bool {
+            lcsItems.contains(candidateUID) || movedItems.contains(candidateUID)
+        }
+
+        for uid in itemsToMove {
+            guard !Task.isCancelled else { break }
+            guard let desiredIdx = desiredFiltered.firstIndex(of: uid) else {
+                continue
+            }
+
+            // Re-discover items for fresh positions after each move.
+            var freshItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+            guard let freshControl = ControlItemPair(
+                items: &freshItems,
+                hiddenControlItemWindowID: hiddenWID,
+                alwaysHiddenControlItemWindowID: alwaysHiddenWID
+            ) else {
+                break
+            }
+
+            guard let item = freshItems.first(where: {
+                $0.uniqueIdentifier == uid && isProfileItem($0)
+            }) else {
+                continue
+            }
+
+            // Determine target section for this item.
+            let targetKey = itemSectionMap[uid] ?? "visible"
+            let targetSection: MenuBarSection.Name
+            switch targetKey {
+            case "hidden": targetSection = .hidden
+            case "alwaysHidden": targetSection = .alwaysHidden
+            default: targetSection = .visible
+            }
+
+            // Find a stable neighbor in the same section.
+            // 1. Scan forward for the next stable item → .leftOfItem (place before it)
+            // 2. Scan backward for the previous stable item → .rightOfItem (place after it)
+            var dest: MoveDestination?
+
+            // Forward scan: find next stable item in same section.
+            for scanIdx in (desiredIdx + 1)..<desiredFiltered.count {
+                let candidateUID = desiredFiltered[scanIdx]
+                let candidateKey = itemSectionMap[candidateUID] ?? "visible"
+                guard candidateKey == targetKey else { break }
+                if isStableAnchor(candidateUID),
+                   let neighbor = freshItems.first(where: {
+                       $0.uniqueIdentifier == candidateUID && $0.isMovable
+                   })
+                {
+                    dest = .leftOfItem(neighbor)
+                    break
+                }
+            }
+
+            // Backward scan: find previous stable item in same section.
+            if dest == nil && desiredIdx > 0 {
+                for scanIdx in stride(from: desiredIdx - 1, through: 0, by: -1) {
+                    let candidateUID = desiredFiltered[scanIdx]
+                    let candidateKey = itemSectionMap[candidateUID] ?? "visible"
+                    guard candidateKey == targetKey else { break }
+                    if isStableAnchor(candidateUID),
+                       let neighbor = freshItems.first(where: {
+                           $0.uniqueIdentifier == candidateUID && $0.isMovable
+                       })
+                    {
+                        dest = .rightOfItem(neighbor)
+                        break
+                    }
+                }
+            }
+
+            if dest == nil {
+                dest = sectionBoundaryDestination(for: targetSection, controlItems: freshControl)
+            }
+
+            do {
+                try await move(item: item, to: dest!, skipInputPause: true)
+                movedCount += 1
+                movedItems.insert(uid)
+                try? await Task.sleep(for: .milliseconds(200))
+            } catch {
+                MenuBarItemManager.diagLog.error(
+                    "Profile layout: failed to move \(uid): \(error)"
+                )
+            }
+        }
+
+        MenuBarItemManager.diagLog.info("Profile layout: completed with \(movedCount) move(s)")
+
+        // Restore cursor to its original position.
+        let screenHeight = NSScreen.main?.frame.height ?? 0
+        let flippedY = screenHeight - savedCursorPosition.y
+        MouseHelpers.warpCursor(to: CGPoint(x: savedCursorPosition.x, y: flippedY))
+
+        // Collapse sections back.
+        appState.menuBarManager.iceBarPanel.close()
+        for section in appState.menuBarManager.sections {
+            section.desiredState = .hideSection
+            section.controlItem.state = .hideSection
+        }
+
+        await cacheItemsRegardless(skipRecentMoveCheck: true)
+    }
+
+    /// Computes the Longest Common Subsequence of two string arrays.
+    /// Returns the set of items that appear in both arrays in the same
+    /// relative order — these items don't need to be moved.
+    private func longestCommonSubsequence(_ a: [String], _ b: [String]) -> Set<String> {
+        let m = a.count, n = b.count
+        guard m > 0, n > 0 else { return [] }
+
+        // DP table.
+        var dp = Array(repeating: Array(repeating: 0, count: n + 1), count: m + 1)
+        for i in 1...m {
+            for j in 1...n {
+                if a[i - 1] == b[j - 1] {
+                    dp[i][j] = dp[i - 1][j - 1] + 1
+                } else {
+                    dp[i][j] = max(dp[i - 1][j], dp[i][j - 1])
+                }
+            }
+        }
+
+        // Backtrack to find the LCS items.
+        var result = Set<String>()
+        var i = m, j = n
+        while i > 0 && j > 0 {
+            if a[i - 1] == b[j - 1] {
+                result.insert(a[i - 1])
+                i -= 1; j -= 1
+            } else if dp[i - 1][j] > dp[i][j - 1] {
+                i -= 1
+            } else {
+                j -= 1
+            }
+        }
+        return result
+    }
+
+    /// Returns the move destination at the boundary of the given section.
+    private func sectionBoundaryDestination(
+        for section: MenuBarSection.Name,
+        controlItems: ControlItemPair
+    ) -> MoveDestination {
+        switch section {
+        case .visible:
+            .rightOfItem(controlItems.hidden)
+        case .hidden:
+            if let ah = controlItems.alwaysHidden {
+                .rightOfItem(ah)
+            } else {
+                .leftOfItem(controlItems.hidden)
+            }
+        case .alwaysHidden:
+            if let ah = controlItems.alwaysHidden {
+                .leftOfItem(ah)
+            } else {
+                .leftOfItem(controlItems.hidden)
+            }
+        }
+    }
+
     /// Restores items that are stuck in a "blocked" state (positioned at x=-1)
     /// back to the visible section. This is called when the app is terminating
     /// to prevent items from being permanently stuck in macOS's Control Center preferences.

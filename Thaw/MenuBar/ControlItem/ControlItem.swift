@@ -679,6 +679,38 @@ final class ControlItem {
             menu.addItem(item)
         }
 
+        // Profiles submenu.
+        let profileManager = appState.profileManager
+        if !profileManager.profiles.isEmpty {
+            menu.addItem(.separator())
+
+            let profilesItem = NSMenuItem(
+                title: String(localized: "Profiles"),
+                action: nil,
+                keyEquivalent: ""
+            )
+            profilesItem.image = NSImage(
+                systemSymbolName: "person.crop.rectangle.stack",
+                accessibilityDescription: "Profiles"
+            )
+            let profilesMenu = NSMenu()
+            for meta in profileManager.profiles {
+                let item = NSMenuItem(
+                    title: meta.name,
+                    action: #selector(applyProfileFromMenu(_:)),
+                    keyEquivalent: ""
+                )
+                item.target = self
+                item.representedObject = meta.id
+                if meta.id == profileManager.activeProfileID {
+                    item.state = .on
+                }
+                profilesMenu.addItem(item)
+            }
+            profilesItem.submenu = profilesMenu
+            menu.addItem(profilesItem)
+        }
+
         menu.addItem(.separator())
 
         let checkForUpdatesItem = NSMenuItem(
@@ -724,6 +756,24 @@ final class ControlItem {
     /// Opens the menu bar search panel.
     @objc private func showSearchPanel() {
         appState?.menuBarManager.searchPanel.show()
+    }
+
+    /// Applies the profile selected from the context menu.
+    @objc private func applyProfileFromMenu(_ menuItem: NSMenuItem) {
+        guard
+            let profileID = menuItem.representedObject as? UUID,
+            let appState,
+            appState.profileManager.layoutTask == nil,
+            profileID != appState.profileManager.activeProfileID
+        else { return }
+        let profileManager = appState.profileManager
+        Task {
+            do {
+                let profile = try profileManager.loadProfile(id: profileID)
+                profileManager.activeProfileID = profileID
+                profileManager.applyProfile(profile, to: appState)
+            } catch {}
+        }
     }
 
     /// Opens the settings window and checks for app updates.

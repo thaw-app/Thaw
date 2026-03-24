@@ -210,6 +210,7 @@ extension Defaults {
         // MARK: Hotkeys Settings
 
         case hotkeys = "Hotkeys"
+        case profileHotkeys = "ProfileHotkeys"
 
         // MARK: Advanced Settings
 

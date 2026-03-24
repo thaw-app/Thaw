@@ -15,6 +15,7 @@ enum SettingsNavigationIdentifier: String, NavigationIdentifier {
     case menuBarLayout = "Menu Bar Layout"
     case menuBarAppearance = "Menu Bar Appearance"
     case hotkeys = "Hotkeys"
+    case profiles = "Profiles"
     case advanced = "Advanced"
     case about = "About"
 
@@ -25,6 +26,7 @@ enum SettingsNavigationIdentifier: String, NavigationIdentifier {
         case .menuBarLayout: "Menu Bar Layout"
         case .menuBarAppearance: "Menu Bar Appearance"
         case .hotkeys: "Hotkeys"
+        case .profiles: "Profiles"
         case .advanced: "Advanced"
         case .about: "About"
         }
@@ -37,6 +39,7 @@ enum SettingsNavigationIdentifier: String, NavigationIdentifier {
         case .menuBarLayout: .systemSymbol("rectangle.topthird.inset.filled")
         case .menuBarAppearance: .systemSymbol("swatchpalette")
         case .hotkeys: .systemSymbol("keyboard")
+        case .profiles: .systemSymbol("person.crop.rectangle.stack")
         case .advanced: .systemSymbol("gearshape.2")
         case .about: .assetCatalog(.iceCubeStroke)
         }

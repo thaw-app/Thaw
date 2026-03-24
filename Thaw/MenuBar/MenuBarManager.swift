@@ -399,6 +399,37 @@ final class MenuBarManager: ObservableObject {
         editAppearanceItem.target = self
         menu.addItem(editAppearanceItem)
 
+        // Profiles submenu.
+        if let appState, !appState.profileManager.profiles.isEmpty {
+            menu.addItem(.separator())
+
+            let profilesItem = NSMenuItem(
+                title: String(localized: "Profiles"),
+                action: nil,
+                keyEquivalent: ""
+            )
+            profilesItem.image = NSImage(
+                systemSymbolName: "person.crop.rectangle.stack",
+                accessibilityDescription: "Profiles"
+            )
+            let profilesMenu = NSMenu()
+            for meta in appState.profileManager.profiles {
+                let item = NSMenuItem(
+                    title: meta.name,
+                    action: #selector(applyProfileFromMenu(_:)),
+                    keyEquivalent: ""
+                )
+                item.target = self
+                item.representedObject = meta.id
+                if meta.id == appState.profileManager.activeProfileID {
+                    item.state = .on
+                }
+                profilesMenu.addItem(item)
+            }
+            profilesItem.submenu = profilesMenu
+            menu.addItem(profilesItem)
+        }
+
         menu.addItem(.separator())
 
         let settingsItem = NSMenuItem(
@@ -410,6 +441,22 @@ final class MenuBarManager: ObservableObject {
         menu.addItem(settingsItem)
 
         menu.popUp(positioning: nil, at: point, in: nil)
+    }
+
+    @objc private func applyProfileFromMenu(_ menuItem: NSMenuItem) {
+        guard
+            let profileID = menuItem.representedObject as? UUID,
+            let appState,
+            appState.profileManager.layoutTask == nil,
+            profileID != appState.profileManager.activeProfileID
+        else { return }
+        Task {
+            do {
+                let profile = try appState.profileManager.loadProfile(id: profileID)
+                appState.profileManager.activeProfileID = profileID
+                appState.profileManager.applyProfile(profile, to: appState)
+            } catch {}
+        }
     }
 
     /// Hides the application menus.

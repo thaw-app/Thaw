@@ -50,6 +50,9 @@ final class AppState: ObservableObject {
     /// Manager for input events received by the app.
     let hidEventManager = HIDEventManager()
 
+    /// Manager for settings profiles.
+    let profileManager = ProfileManager()
+
     /// Manager for app updates.
     let updatesManager = UpdatesManager()
 
@@ -108,6 +111,7 @@ final class AppState: ObservableObject {
         diagLog.debug("setupTask: imageCache setup complete")
         updatesManager.performSetup(with: self)
         userNotificationManager.performSetup(with: self)
+        profileManager.performSetup(with: self)
 
         configureCancellables()
 

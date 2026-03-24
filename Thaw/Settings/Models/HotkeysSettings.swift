@@ -17,7 +17,7 @@ final class HotkeysSettings: ObservableObject {
     let registry = HotkeyRegistry()
 
     /// The app's hotkeys.
-    let hotkeys = HotkeyAction.allCases.map { action in
+    let hotkeys = HotkeyAction.settingsActions.map { action in
         Hotkey(action: action)
     }
 
