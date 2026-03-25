@@ -208,7 +208,7 @@ struct ProfileSettingsPane: View {
     }
 
     private var focusFilterFooter: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 4) {
+        HStack(alignment: .center, spacing: 4) {
             Image(systemName: "info.circle")
                 .foregroundStyle(.secondary)
                 .font(.callout)
@@ -220,6 +220,13 @@ struct ProfileSettingsPane: View {
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
+            Spacer()
+            Button("Open Focus Settings") {
+                if let url = URL(string: "x-apple.systempreferences:com.apple.Focus") {
+                    NSWorkspace.shared.open(url)
+                }
+            }
+            .buttonStyle(.bordered)
         }
     }
 
