@@ -244,12 +244,14 @@ final class ProfileManager: ObservableObject {
 
         let profile = Profile(
             name: name,
-            generalSettings: generalSnapshot,
-            advancedSettings: advancedSnapshot,
-            hotkeys: hotkeys,
-            displayConfigurations: displayConfigurations,
-            appearanceConfiguration: appearanceConfiguration,
-            menuBarLayout: layout
+            content: ProfileContent(
+                generalSettings: generalSnapshot,
+                advancedSettings: advancedSnapshot,
+                hotkeys: hotkeys,
+                displayConfigurations: displayConfigurations,
+                appearanceConfiguration: appearanceConfiguration,
+                menuBarLayout: layout
+            )
         )
 
         let data = try encoder.encode(profile)
@@ -346,12 +348,7 @@ final class ProfileManager: ObservableObject {
             name: newName,
             createdAt: profile.createdAt,
             modifiedAt: Date(),
-            generalSettings: profile.generalSettings,
-            advancedSettings: profile.advancedSettings,
-            hotkeys: profile.hotkeys,
-            displayConfigurations: profile.displayConfigurations,
-            appearanceConfiguration: profile.appearanceConfiguration,
-            menuBarLayout: profile.menuBarLayout
+            content: profile.content
         )
 
         let data = try encoder.encode(profile)
@@ -373,12 +370,7 @@ final class ProfileManager: ObservableObject {
         let original = try loadProfile(id: id)
         let duplicate = Profile(
             name: newName,
-            generalSettings: original.generalSettings,
-            advancedSettings: original.advancedSettings,
-            hotkeys: original.hotkeys,
-            displayConfigurations: original.displayConfigurations,
-            appearanceConfiguration: original.appearanceConfiguration,
-            menuBarLayout: original.menuBarLayout
+            content: original.content
         )
 
         let data = try encoder.encode(duplicate)
@@ -426,12 +418,7 @@ final class ProfileManager: ObservableObject {
             name: old!.name,
             createdAt: old!.createdAt,
             modifiedAt: Date(),
-            generalSettings: updated.generalSettings,
-            advancedSettings: updated.advancedSettings,
-            hotkeys: updated.hotkeys,
-            displayConfigurations: updated.displayConfigurations,
-            appearanceConfiguration: updated.appearanceConfiguration,
-            menuBarLayout: updated.menuBarLayout
+            content: updated.content
         )
 
         let data = try encoder.encode(updated)
@@ -642,12 +629,7 @@ final class ProfileManager: ObservableObject {
         for entry in bundle.entries {
             let imported = Profile(
                 name: entry.profile.name,
-                generalSettings: entry.profile.generalSettings,
-                advancedSettings: entry.profile.advancedSettings,
-                hotkeys: entry.profile.hotkeys,
-                displayConfigurations: entry.profile.displayConfigurations,
-                appearanceConfiguration: entry.profile.appearanceConfiguration,
-                menuBarLayout: entry.profile.menuBarLayout
+                content: entry.profile.content
             )
 
             let importedData = try encoder.encode(imported)

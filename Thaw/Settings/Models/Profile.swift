@@ -155,6 +155,18 @@ struct MenuBarLayoutSnapshot: Codable {
     var itemOrder: [String: [String]]?
 }
 
+// MARK: - ProfileContent
+
+/// Groups all settings data for a profile, used to reduce init parameter count.
+struct ProfileContent {
+    var generalSettings: GeneralSettingsSnapshot
+    var advancedSettings: AdvancedSettingsSnapshot
+    var hotkeys: [String: Data]
+    var displayConfigurations: [String: DisplayIceBarConfiguration]
+    var appearanceConfiguration: MenuBarAppearanceConfigurationV2
+    var menuBarLayout: MenuBarLayoutSnapshot
+}
+
 // MARK: - Profile
 
 /// A complete settings profile that can be saved to and restored from disk.
@@ -180,6 +192,18 @@ struct Profile: Codable, Identifiable {
         )
     }
 
+    /// Returns the settings content of this profile.
+    var content: ProfileContent {
+        ProfileContent(
+            generalSettings: generalSettings,
+            advancedSettings: advancedSettings,
+            hotkeys: hotkeys,
+            displayConfigurations: displayConfigurations,
+            appearanceConfiguration: appearanceConfiguration,
+            menuBarLayout: menuBarLayout
+        )
+    }
+
     // MARK: - Forward-Compatible Decoding
 
     enum CodingKeys: String, CodingKey {
@@ -200,23 +224,18 @@ struct Profile: Codable, Identifiable {
         name: String,
         createdAt: Date = Date(),
         modifiedAt: Date = Date(),
-        generalSettings: GeneralSettingsSnapshot,
-        advancedSettings: AdvancedSettingsSnapshot,
-        hotkeys: [String: Data],
-        displayConfigurations: [String: DisplayIceBarConfiguration],
-        appearanceConfiguration: MenuBarAppearanceConfigurationV2,
-        menuBarLayout: MenuBarLayoutSnapshot
+        content: ProfileContent
     ) {
         self.id = id
         self.name = name
         self.createdAt = createdAt
         self.modifiedAt = modifiedAt
-        self.generalSettings = generalSettings
-        self.advancedSettings = advancedSettings
-        self.hotkeys = hotkeys
-        self.displayConfigurations = displayConfigurations
-        self.appearanceConfiguration = appearanceConfiguration
-        self.menuBarLayout = menuBarLayout
+        self.generalSettings = content.generalSettings
+        self.advancedSettings = content.advancedSettings
+        self.hotkeys = content.hotkeys
+        self.displayConfigurations = content.displayConfigurations
+        self.appearanceConfiguration = content.appearanceConfiguration
+        self.menuBarLayout = content.menuBarLayout
     }
 
     init(from decoder: Decoder) throws {
