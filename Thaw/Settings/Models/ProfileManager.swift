@@ -27,10 +27,12 @@ final class ProfileManager: ObservableObject {
     private var lastActiveDisplayUUID: String?
     /// Whether a Focus Filter profile is currently applied.
     private var focusFilterActive = false
-    /// The in-flight layout apply task, if any. Cancelled before starting a new one.
     /// The in-flight layout apply task. Exposed for callers that need to
     /// wait for the layout to finish (e.g. the Apply button).
     private(set) var layoutTask: Task<Void, Never>?
+
+    /// Generation counter to prevent older layout tasks from clearing newer ones.
+    private var layoutGeneration: UInt = 0
 
     /// Hotkeys for switching to each profile, keyed by profile ID.
     @Published private(set) var profileHotkeys: [UUID: Hotkey] = [:]
@@ -320,6 +322,8 @@ final class ProfileManager: ObservableObject {
         let sectionOrder = profile.menuBarLayout.savedSectionOrder
         let itemSectionMap = profile.menuBarLayout.itemSectionMap ?? [:]
         let itemOrder = profile.menuBarLayout.itemOrder ?? [:]
+        layoutGeneration &+= 1
+        let generation = layoutGeneration
         layoutTask = Task { [weak self] in
             await appState.itemManager.applyProfileLayout(
                 pinnedHidden: pinnedHidden,
@@ -328,7 +332,9 @@ final class ProfileManager: ObservableObject {
                 itemSectionMap: itemSectionMap,
                 itemOrder: itemOrder
             )
-            self?.layoutTask = nil
+            if self?.layoutGeneration == generation {
+                self?.layoutTask = nil
+            }
         }
     }
 
@@ -355,12 +361,10 @@ final class ProfileManager: ObservableObject {
         try data.write(to: profileURL(for: id), options: .atomic)
 
         if let index = profiles.firstIndex(where: { $0.id == id }) {
-            profiles[index] = ProfileMetadata(
-                id: id,
-                name: newName,
-                createdAt: profiles[index].createdAt,
-                modifiedAt: profile.modifiedAt
-            )
+            var updated = profiles[index]
+            updated.name = newName
+            updated.modifiedAt = profile.modifiedAt
+            profiles[index] = updated
         }
         saveManifest()
     }
@@ -638,15 +642,23 @@ final class ProfileManager: ObservableObject {
                 options: .atomic
             )
 
-            var metadata = ProfileMetadata(
+            let metadata = ProfileMetadata(
                 id: imported.id,
                 name: imported.name,
                 createdAt: imported.createdAt,
                 modifiedAt: imported.modifiedAt
             )
-            metadata.associatedDisplayUUID = entry.associatedDisplayUUID
-            metadata.associatedDisplayName = entry.associatedDisplayName
             profiles.append(metadata)
+
+            // Reconcile display ownership through the setter so any existing
+            // profile that owns this display has its association cleared first.
+            if let displayUUID = entry.associatedDisplayUUID {
+                setAssociatedDisplay(
+                    uuid: displayUUID,
+                    displayName: entry.associatedDisplayName,
+                    forProfileID: imported.id
+                )
+            }
         }
         saveManifest()
     }

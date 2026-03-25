@@ -67,9 +67,9 @@ struct GeneralSettingsSnapshot: Codable {
     @MainActor
     func apply(to settings: GeneralSettings) {
         settings.showIceIcon = showIceIcon
-        settings.iceIcon = iceIcon
         settings.lastCustomIceIcon = lastCustomIceIcon
         settings.customIceIconIsTemplate = customIceIconIsTemplate
+        settings.iceIcon = iceIcon
         settings.useIceBar = useIceBar
         settings.useIceBarOnlyOnNotchedDisplay = useIceBarOnlyOnNotchedDisplay
         settings.iceBarLocation = iceBarLocation
