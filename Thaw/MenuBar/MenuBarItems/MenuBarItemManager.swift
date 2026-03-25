@@ -3925,6 +3925,13 @@ extension MenuBarItemManager {
         for section in appState.menuBarManager.sections where section.name != .visible {
             section.show()
         }
+        defer {
+            appState.menuBarManager.iceBarPanel.close()
+            for section in appState.menuBarManager.sections {
+                section.desiredState = .hideSection
+                section.controlItem.state = .hideSection
+            }
+        }
 
         let hiddenWID: CGWindowID? = appState.menuBarManager
             .controlItem(withName: .hidden)?.window
@@ -4005,12 +4012,6 @@ extension MenuBarItemManager {
 
         guard !itemsToMove.isEmpty else {
             MenuBarItemManager.diagLog.info("Profile layout: all items already in correct positions")
-            // Still collapse sections.
-            appState.menuBarManager.iceBarPanel.close()
-            for section in appState.menuBarManager.sections {
-                section.desiredState = .hideSection
-                section.controlItem.state = .hideSection
-            }
             await cacheItemsRegardless(skipRecentMoveCheck: true)
             return
         }
@@ -4126,15 +4127,11 @@ extension MenuBarItemManager {
         MenuBarItemManager.diagLog.info("Profile layout: completed with \(movedCount) move(s)")
 
         // Restore cursor to its original position.
-        let screenHeight = NSScreen.main?.frame.height ?? 0
-        let flippedY = screenHeight - savedCursorPosition.y
-        MouseHelpers.warpCursor(to: CGPoint(x: savedCursorPosition.x, y: flippedY))
-
-        // Collapse sections back.
-        appState.menuBarManager.iceBarPanel.close()
-        for section in appState.menuBarManager.sections {
-            section.desiredState = .hideSection
-            section.controlItem.state = .hideSection
+        let screen = NSScreen.screens.first(where: { $0.frame.contains(savedCursorPosition) })
+            ?? NSScreen.main
+        if let screen {
+            let cgY = screen.frame.origin.y + screen.frame.height - savedCursorPosition.y
+            MouseHelpers.warpCursor(to: CGPoint(x: savedCursorPosition.x, y: cgY))
         }
 
         await cacheItemsRegardless(skipRecentMoveCheck: true)

@@ -27,6 +27,7 @@ struct ProfileMetadata: Codable, Identifiable, Hashable {
 struct GeneralSettingsSnapshot: Codable {
     var showIceIcon: Bool
     var iceIcon: ControlItemImageSet
+    var lastCustomIceIcon: ControlItemImageSet?
     var customIceIconIsTemplate: Bool
     var useIceBar: Bool
     var useIceBarOnlyOnNotchedDisplay: Bool
@@ -46,6 +47,7 @@ struct GeneralSettingsSnapshot: Codable {
         GeneralSettingsSnapshot(
             showIceIcon: settings.showIceIcon,
             iceIcon: settings.iceIcon,
+            lastCustomIceIcon: settings.lastCustomIceIcon,
             customIceIconIsTemplate: settings.customIceIconIsTemplate,
             useIceBar: settings.useIceBar,
             useIceBarOnlyOnNotchedDisplay: settings.useIceBarOnlyOnNotchedDisplay,
@@ -66,6 +68,7 @@ struct GeneralSettingsSnapshot: Codable {
     func apply(to settings: GeneralSettings) {
         settings.showIceIcon = showIceIcon
         settings.iceIcon = iceIcon
+        settings.lastCustomIceIcon = lastCustomIceIcon
         settings.customIceIconIsTemplate = customIceIconIsTemplate
         settings.useIceBar = useIceBar
         settings.useIceBarOnlyOnNotchedDisplay = useIceBarOnlyOnNotchedDisplay
@@ -230,6 +233,7 @@ struct Profile: Codable, Identifiable {
         ) ?? GeneralSettingsSnapshot(
             showIceIcon: Defaults.DefaultValue.showIceIcon,
             iceIcon: Defaults.DefaultValue.iceIcon,
+            lastCustomIceIcon: nil,
             customIceIconIsTemplate: Defaults.DefaultValue.customIceIconIsTemplate,
             useIceBar: Defaults.DefaultValue.useIceBar,
             useIceBarOnlyOnNotchedDisplay: Defaults.DefaultValue.useIceBarOnlyOnNotchedDisplay,
@@ -286,4 +290,20 @@ struct Profile: Codable, Identifiable {
             customNames: [:]
         )
     }
+}
+
+// MARK: - ProfileExportEntry
+
+/// A single profile bundled with its metadata for export/import.
+/// Preserves display associations that live on the manifest.
+struct ProfileExportEntry: Codable {
+    var profile: Profile
+    var associatedDisplayUUID: String?
+    var associatedDisplayName: String?
+}
+
+/// Wrapper for exporting multiple profiles as a single file.
+struct ProfileExportBundle: Codable {
+    var version: Int = 1
+    var entries: [ProfileExportEntry]
 }

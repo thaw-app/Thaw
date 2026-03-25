@@ -169,7 +169,7 @@ struct ProfileSettingsPane: View {
                 Image(systemName: "square.and.arrow.down")
             }
             .buttonStyle(.bordered)
-            .help("Import a profile from file")
+            .help("Import a profile from a file")
         }
 
         if !profileManager.profiles.isEmpty {
@@ -334,14 +334,23 @@ struct ProfileSettingsPane: View {
     }
 
     private func exportAllProfiles() {
-        guard let json = profileManager.exportAllProfiles() else { return }
+        guard let json = profileManager.exportAllProfiles() else {
+            errorMessage = "Failed to encode profiles for export."
+            showingError = true
+            return
+        }
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.json]
         panel.nameFieldStringValue = "Thaw Profiles.json"
         panel.canCreateDirectories = true
 
         guard panel.runModal() == .OK, let url = panel.url else { return }
-        try? json.write(to: url, atomically: true, encoding: .utf8)
+        do {
+            try json.write(to: url, atomically: true, encoding: .utf8)
+        } catch {
+            errorMessage = error.localizedDescription
+            showingError = true
+        }
     }
 
     private func importProfile() {

@@ -403,10 +403,18 @@ final class ProfileManager: ObservableObject {
         saveManifest()
     }
 
-    /// Exports a profile to an external URL.
+    /// Exports a profile to a file, including display associations.
     func exportProfile(id: UUID, to url: URL) throws {
-        let source = profileURL(for: id)
-        try FileManager.default.copyItem(at: source, to: url)
+        let profile = try loadProfile(id: id)
+        let meta = profiles.first { $0.id == id }
+        let entry = ProfileExportEntry(
+            profile: profile,
+            associatedDisplayUUID: meta?.associatedDisplayUUID,
+            associatedDisplayName: meta?.associatedDisplayName
+        )
+        let bundle = ProfileExportBundle(entries: [entry])
+        let data = try encoder.encode(bundle)
+        try data.write(to: url, options: .atomic)
     }
 
     /// Overwrites an existing profile with the current app state,
@@ -449,15 +457,19 @@ final class ProfileManager: ObservableObject {
         saveManifest()
     }
 
-    /// Exports all profiles as a single JSON array.
+    /// Exports all profiles as a single JSON file including metadata.
     func exportAllProfiles() -> String? {
-        var allProfiles = [Profile]()
+        var entries = [ProfileExportEntry]()
         for meta in profiles {
-            if let profile = try? loadProfile(id: meta.id) {
-                allProfiles.append(profile)
-            }
+            guard let profile = try? loadProfile(id: meta.id) else { continue }
+            entries.append(ProfileExportEntry(
+                profile: profile,
+                associatedDisplayUUID: meta.associatedDisplayUUID,
+                associatedDisplayName: meta.associatedDisplayName
+            ))
         }
-        guard let data = try? encoder.encode(allProfiles) else { return nil }
+        let bundle = ProfileExportBundle(entries: entries)
+        guard let data = try? encoder.encode(bundle) else { return nil }
         return String(data: data, encoding: .utf8)
     }
 
@@ -484,6 +496,7 @@ final class ProfileManager: ObservableObject {
     func setAssociatedDisplay(uuid: String?, forDisplayUUID displayUUID: String) {
         for index in profiles.indices where profiles[index].associatedDisplayUUID == displayUUID {
             profiles[index].associatedDisplayUUID = nil
+            profiles[index].associatedDisplayName = nil
         }
         saveManifest()
     }
@@ -630,38 +643,42 @@ final class ProfileManager: ObservableObject {
         }
     }
 
-    /// Imports a profile from an external URL.
+    /// Imports profiles from a file.
     func importProfile(from url: URL) throws {
         let data = try Data(contentsOf: url)
-        let original = try decoder.decode(Profile.self, from: data)
-        let now = Date()
+        let bundle = try decoder.decode(ProfileExportBundle.self, from: data)
 
-        let imported = Profile(
-            id: UUID(),
-            name: original.name,
-            createdAt: now,
-            modifiedAt: now,
-            generalSettings: original.generalSettings,
-            advancedSettings: original.advancedSettings,
-            hotkeys: original.hotkeys,
-            displayConfigurations: original.displayConfigurations,
-            appearanceConfiguration: original.appearanceConfiguration,
-            menuBarLayout: original.menuBarLayout
-        )
+        for entry in bundle.entries {
+            let now = Date()
+            let imported = Profile(
+                id: UUID(),
+                name: entry.profile.name,
+                createdAt: now,
+                modifiedAt: now,
+                generalSettings: entry.profile.generalSettings,
+                advancedSettings: entry.profile.advancedSettings,
+                hotkeys: entry.profile.hotkeys,
+                displayConfigurations: entry.profile.displayConfigurations,
+                appearanceConfiguration: entry.profile.appearanceConfiguration,
+                menuBarLayout: entry.profile.menuBarLayout
+            )
 
-        let importedData = try encoder.encode(imported)
-        try importedData.write(
-            to: profileURL(for: imported.id),
-            options: .atomic
-        )
+            let importedData = try encoder.encode(imported)
+            try importedData.write(
+                to: profileURL(for: imported.id),
+                options: .atomic
+            )
 
-        let metadata = ProfileMetadata(
-            id: imported.id,
-            name: imported.name,
-            createdAt: imported.createdAt,
-            modifiedAt: imported.modifiedAt
-        )
-        profiles.append(metadata)
+            var metadata = ProfileMetadata(
+                id: imported.id,
+                name: imported.name,
+                createdAt: imported.createdAt,
+                modifiedAt: imported.modifiedAt
+            )
+            metadata.associatedDisplayUUID = entry.associatedDisplayUUID
+            metadata.associatedDisplayName = entry.associatedDisplayName
+            profiles.append(metadata)
+        }
         saveManifest()
     }
 }
