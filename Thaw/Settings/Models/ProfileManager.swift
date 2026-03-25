@@ -242,12 +242,8 @@ final class ProfileManager: ObservableObject {
             itemOrder: itemOrder
         )
 
-        let now = Date()
         let profile = Profile(
-            id: UUID(),
             name: name,
-            createdAt: now,
-            modifiedAt: now,
             generalSettings: generalSnapshot,
             advancedSettings: advancedSnapshot,
             hotkeys: hotkeys,
@@ -375,13 +371,8 @@ final class ProfileManager: ObservableObject {
     /// Duplicates an existing profile with a new name.
     func duplicateProfile(id: UUID, newName: String) throws {
         let original = try loadProfile(id: id)
-        let now = Date()
-
         let duplicate = Profile(
-            id: UUID(),
             name: newName,
-            createdAt: now,
-            modifiedAt: now,
             generalSettings: original.generalSettings,
             advancedSettings: original.advancedSettings,
             hotkeys: original.hotkeys,
@@ -493,7 +484,7 @@ final class ProfileManager: ObservableObject {
     }
 
     /// Clears the display association from whichever profile currently holds it.
-    func setAssociatedDisplay(uuid: String?, forDisplayUUID displayUUID: String) {
+    func setAssociatedDisplay(uuid _: String?, forDisplayUUID displayUUID: String) {
         for index in profiles.indices where profiles[index].associatedDisplayUUID == displayUUID {
             profiles[index].associatedDisplayUUID = nil
             profiles[index].associatedDisplayName = nil
@@ -649,12 +640,8 @@ final class ProfileManager: ObservableObject {
         let bundle = try decoder.decode(ProfileExportBundle.self, from: data)
 
         for entry in bundle.entries {
-            let now = Date()
             let imported = Profile(
-                id: UUID(),
                 name: entry.profile.name,
-                createdAt: now,
-                modifiedAt: now,
                 generalSettings: entry.profile.generalSettings,
                 advancedSettings: entry.profile.advancedSettings,
                 hotkeys: entry.profile.hotkeys,

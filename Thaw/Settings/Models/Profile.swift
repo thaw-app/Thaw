@@ -196,10 +196,10 @@ struct Profile: Codable, Identifiable {
     }
 
     init(
-        id: UUID,
+        id: UUID = UUID(),
         name: String,
-        createdAt: Date,
-        modifiedAt: Date,
+        createdAt: Date = Date(),
+        modifiedAt: Date = Date(),
         generalSettings: GeneralSettingsSnapshot,
         advancedSettings: AdvancedSettingsSnapshot,
         hotkeys: [String: Data],
