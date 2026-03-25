@@ -168,21 +168,30 @@ struct ProfileSettingsPane: View {
             }
             .buttonStyle(.bordered)
             .disabled(newProfileName.trimmingCharacters(in: .whitespaces).isEmpty)
+        }
 
+        HStack {
+            Spacer()
             Button {
                 importProfile()
             } label: {
-                Image(systemName: "square.and.arrow.down")
+                HStack(spacing: 4) {
+                    Image(systemName: "square.and.arrow.down")
+                        .frame(width: 14, height: 14)
+                    Text("Import Profile(s)")
+                }
             }
             .buttonStyle(.bordered)
-            .help("Import a profile from a file")
-        }
 
-        if !profileManager.profiles.isEmpty {
-            HStack {
-                Spacer()
-                Button("Export All Profiles") {
+            if !profileManager.profiles.isEmpty {
+                Button {
                     exportAllProfiles()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "square.and.arrow.up")
+                            .frame(width: 14, height: 14)
+                        Text("Export Profile(s)")
+                    }
                 }
                 .buttonStyle(.bordered)
             }
