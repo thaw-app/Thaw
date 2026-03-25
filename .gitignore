@@ -7,3 +7,4 @@ DerivedData/
 *.dSYM
 .idea/
 .vscode/
+.lefthook.yml
