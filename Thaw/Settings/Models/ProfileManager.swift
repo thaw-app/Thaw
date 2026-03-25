@@ -2,6 +2,7 @@
 //  ProfileManager.swift
 //  Project: Thaw
 //
+//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -51,10 +52,12 @@ final class ProfileManager: ObservableObject {
         dec.dateDecodingStrategy = .iso8601
         decoder = dec
 
-        let appSupport = FileManager.default.urls(
+        guard let appSupport = FileManager.default.urls(
             for: .applicationSupportDirectory,
             in: .userDomainMask
-        ).first!
+        ).first else {
+            fatalError("Application Support directory not found")
+        }
         profilesDirectory = appSupport
             .appendingPathComponent("Thaw/Profiles", isDirectory: true)
         manifestURL = profilesDirectory
@@ -110,8 +113,6 @@ final class ProfileManager: ObservableObject {
                 Task { await self.handleFocusFilterDeactivated() }
             }
             .store(in: &cancellables)
-
-
 
         // Check if a Focus Filter is currently active. If so, apply it;
         // otherwise fall back to display-based profile.
@@ -407,8 +408,7 @@ final class ProfileManager: ObservableObject {
     /// Overwrites an existing profile with the current app state,
     /// keeping its id, name, display association, and creation date.
     func updateProfileWithCurrentState(id: UUID, appState: AppState) throws {
-        let old = profiles.first { $0.id == id }
-        guard old != nil else { return }
+        guard let old = profiles.first(where: { $0.id == id }) else { return }
 
         // Save as new profile first (captures all current state).
         let tempName = "__temp_update__"
@@ -419,8 +419,8 @@ final class ProfileManager: ObservableObject {
         var updated = try loadProfile(id: tempMeta.id)
         updated = Profile(
             id: id,
-            name: old!.name,
-            createdAt: old!.createdAt,
+            name: old.name,
+            createdAt: old.createdAt,
             modifiedAt: Date(),
             content: updated.content
         )

@@ -4113,7 +4113,8 @@ extension MenuBarItemManager {
             }
 
             do {
-                try await move(item: item, to: dest!, skipInputPause: true)
+                guard let dest else { continue }
+                try await move(item: item, to: dest, skipInputPause: true)
                 movedCount += 1
                 movedItems.insert(uid)
                 try? await Task.sleep(for: .milliseconds(200))

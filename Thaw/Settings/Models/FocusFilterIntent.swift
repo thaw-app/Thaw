@@ -2,6 +2,7 @@
 //  FocusFilterIntent.swift
 //  Project: Thaw
 //
+//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -36,10 +37,12 @@ struct ProfileEntityQuery: EntityQuery {
     }
 
     private func allProfiles() -> [ProfileEntity] {
-        let appSupport = FileManager.default.urls(
+        guard let appSupport = FileManager.default.urls(
             for: .applicationSupportDirectory,
             in: .userDomainMask
-        ).first!
+        ).first else {
+            return []
+        }
         let manifestURL = appSupport
             .appendingPathComponent("Thaw/Profiles/profiles.json")
 
