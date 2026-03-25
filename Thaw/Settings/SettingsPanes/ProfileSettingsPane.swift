@@ -76,14 +76,20 @@ struct ProfileSettingsPane: View {
                 }
                 .buttonStyle(.bordered)
             } else {
-                HStack(spacing: 6) {
-                    if profile.id == profileManager.activeProfileID {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
-                            .font(.body)
-                    }
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+                    .font(.title2)
+                    .opacity(profile.id == profileManager.activeProfileID ? 1 : 0)
+
+                VStack(alignment: .leading, spacing: 2) {
                     Text(profile.name)
                         .font(.headline)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Created: \(profile.createdAt.formatted(date: .abbreviated, time: .shortened))")
+                        Text("Modified: \(profile.modifiedAt.formatted(date: .abbreviated, time: .shortened))")
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 }
 
                 Spacer()
