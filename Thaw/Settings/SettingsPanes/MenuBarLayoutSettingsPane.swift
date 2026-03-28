@@ -28,9 +28,7 @@ struct MenuBarLayoutSettingsPane: View {
     }
 
     var body: some View {
-        if !ScreenCapture.cachedCheckPermissions() {
-            missingScreenRecordingPermissions
-        } else if appState.menuBarManager.isMenuBarHiddenBySystemUserDefaults {
+        if appState.menuBarManager.isMenuBarHiddenBySystemUserDefaults {
             cannotArrange
         } else {
             IceForm(spacing: 20) {
@@ -91,11 +89,11 @@ struct MenuBarLayoutSettingsPane: View {
         .task(id: hasItems) {
             loadDeadlineReached = false
 
-            guard !hasItems, ScreenCapture.cachedCheckPermissions() else {
+            guard !hasItems else {
                 return
             }
 
-            diagLog.debug("Preloading menu bar layout caches (hasItems=\(self.hasItems), screenRecording=\(ScreenCapture.cachedCheckPermissions()))")
+            diagLog.debug("Preloading menu bar layout caches (hasItems=\(self.hasItems))")
 
             // Run cache updates in the background to avoid blocking the UI
             Task {
