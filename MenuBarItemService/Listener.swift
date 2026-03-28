@@ -37,9 +37,9 @@ final class Listener {
                 return .start
             case let .sourcePID(window):
                 diagLog.debug("Listener: sourcePID request for windowID=\(window.windowID) title=\(window.title ?? "nil")")
-                let pid = SourcePIDCache.shared.pid(for: window)
-                diagLog.debug("Listener: sourcePID response for windowID=\(window.windowID) -> pid=\(pid.map { "\($0)" } ?? "nil")")
-                return .sourcePID(pid)
+                let (pid, axTitle) = SourcePIDCache.shared.pidAndTitle(for: window)
+                diagLog.debug("Listener: sourcePID response for windowID=\(window.windowID) -> pid=\(pid.map { "\($0)" } ?? "nil"), axTitle=\(axTitle ?? "nil")")
+                return .sourcePID(pid, axTitle)
             }
         } catch {
             diagLog.error("Listener failed to handle message with error \(error)")
