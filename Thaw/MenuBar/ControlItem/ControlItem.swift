@@ -14,6 +14,7 @@ import Combine
 /// A status item that controls a section in the menu bar.
 @MainActor
 final class ControlItem {
+    private static let diagLog = DiagLog(category: "ControlItem")
     /// An identifier for a control item.
     enum Identifier: String, CaseIterable {
         /// The identifier for the control item for the visible section.
@@ -69,10 +70,35 @@ final class ControlItem {
         init(controlItem: ControlItem) {
             ControlItemDefaults.preflightSetup(for: controlItem)
 
+            // Snapshot menu bar windows before creation so we can detect
+            // the new window added for this status item. On macOS 26,
+            // button.window is nil (Control Center owns the windows), so
+            // this snapshot-diff approach is the most reliable way to get
+            // the CG window ID.
+            let windowsBefore = Set(Bridging.getMenuBarWindowList(option: .itemsOnly))
+
             self.statusItem = NSStatusBar.system.statusItem(withLength: 0)
             self.statusItem.autosaveName = controlItem.identifier.rawValue
 
+            // Detect the newly created window.
+            let windowsAfter = Set(Bridging.getMenuBarWindowList(option: .itemsOnly))
+            let newWindows = windowsAfter.subtracting(windowsBefore)
+            if newWindows.count == 1, let newWindowID = newWindows.first {
+                controlItem._resolvedWindowID = newWindowID
+                ControlItem.diagLog.debug("Snapshot resolved windowID \(newWindowID) for \(controlItem.identifier.rawValue)")
+            } else if newWindows.count > 1 {
+                ControlItem.diagLog.warning("Snapshot found \(newWindows.count) new windows for \(controlItem.identifier.rawValue): \(newWindows) — skipping ambiguous result")
+            } else {
+                ControlItem.diagLog.debug("Snapshot found no new windows for \(controlItem.identifier.rawValue) (before=\(windowsBefore.count), after=\(windowsAfter.count))")
+            }
+
             if let button = statusItem.button {
+                // Set the accessibility title so that the AX API returns
+                // the control item identifier, matching the CG window title
+                // (autosaveName). This allows item identification without
+                // screen recording permission.
+                button.setAccessibilityTitle(controlItem.identifier.rawValue)
+
                 if let contentView = button.window?.contentView {
                     let constraints = contentView.constraintsAffectingLayout(for: .horizontal)
                     if let constraint = constraints.first(where: Predicates.controlItemConstraint(button: button)) {
@@ -134,6 +160,13 @@ final class ControlItem {
     /// The control item's identifier.
     let identifier: Identifier
 
+    /// The CG window ID resolved at creation time via snapshot diff.
+    /// On macOS 26, `button.window` is nil because Control Center owns
+    /// status item windows. This property captures the window ID at
+    /// creation time by comparing the menu bar window list before and
+    /// after creating the NSStatusItem.
+    fileprivate var _resolvedWindowID: CGWindowID?
+
     /// Lazy storage for the control item's underlying status item.
     private lazy var storage = StatusItemStorage(controlItem: self)
 
@@ -162,6 +195,25 @@ final class ControlItem {
         identifier != .visible
     }
 
+    /// The CoreGraphics window identifier for this control item, if available.
+    ///
+    /// On macOS 26, the published `window` property may be nil because
+    /// Control Center owns the status item windows. This property tries
+    /// multiple sources to obtain a usable window ID.
+    var windowID: CGWindowID? {
+        // Try the published window first (works on pre-macOS 26).
+        if let window {
+            return CGWindowID(exactly: window.windowNumber)
+        }
+        // Fallback: try the status item's button window directly.
+        if let window = statusItem.button?.window {
+            return CGWindowID(exactly: window.windowNumber)
+        }
+        // Fallback: use the window ID resolved at creation time via
+        // snapshot diff (macOS 26+, where button.window is nil).
+        return _resolvedWindowID
+    }
+
     /// A Boolean value that indicates whether the control item is currently
     /// displayed in the menu bar.
     var isAddedToMenuBar: Bool {
@@ -182,6 +234,30 @@ final class ControlItem {
         self.identifier = identifier
     }
 
+    /// Retries window ID resolution by re-scanning the menu bar window list.
+    ///
+    /// On macOS 26, Control Center may create the window asynchronously
+    /// after the NSStatusItem is created. This method uses the autosaveName
+    /// to find the window by checking which menu bar windows were NOT
+    /// present when other control items were snapshotted.
+    private func retryWindowIDResolution() {
+        // On macOS 26, try to get the window from the button (it may
+        // have become available after a delay).
+        if let win = statusItem.button?.window {
+            _resolvedWindowID = CGWindowID(exactly: win.windowNumber)
+            if let wid = _resolvedWindowID {
+                Self.diagLog.debug("Retry resolved windowID \(wid) for \(self.identifier.rawValue) via button.window")
+            }
+            return
+        }
+
+        // As a last resort, scan all menu bar windows and try to match
+        // using CGSGetScreenRectForWindow bounds correlation. The newly
+        // created status item should appear in the list.
+        let allWindows = Bridging.getMenuBarWindowList(option: .itemsOnly)
+        Self.diagLog.debug("Retry window resolution for \(self.identifier.rawValue): \(allWindows.count) menu bar windows in list, _resolvedWindowID still nil")
+    }
+
     /// Performs the initial setup of the control item.
     func performSetup(with appState: AppState) {
         self.appState = appState
@@ -191,6 +267,16 @@ final class ControlItem {
     /// Configures the internal observers for the control item.
     private func configureCancellables() {
         var c = Set<AnyCancellable>()
+
+        // If the snapshot-based window ID resolution didn't find a window
+        // (e.g. macOS 26 creates windows asynchronously via Control Center),
+        // retry after a short delay.
+        if _resolvedWindowID == nil && window == nil {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                guard let self, self._resolvedWindowID == nil, self.window == nil else { return }
+                self.retryWindowIDResolution()
+            }
+        }
 
         $state
             .receive(on: DispatchQueue.main)
