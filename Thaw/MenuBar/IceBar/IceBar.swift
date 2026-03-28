@@ -384,23 +384,7 @@ private struct IceBarContentView: View {
 
     @ViewBuilder
     private var content: some View {
-        if !ScreenCapture.cachedCheckPermissions() {
-            HStack {
-                Text("The \(Constants.displayName) Bar requires screen recording permissions.")
-
-                Button {
-                    openPermissionsSettings()
-                } label: {
-                    Text("Open \(Constants.displayName) Settings")
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(.link)
-            }
-            .padding(.horizontal, 10)
-            .onAppear {
-                Self.diagLog.warning("IceBar content: showing 'requires screen recording permissions' — cachedCheckPermissions() returned false")
-            }
-        } else if (section == .alwaysHidden || section == .hidden) && items.isEmpty {
+        if (section == .alwaysHidden || section == .hidden) && items.isEmpty {
             HStack {
                 if cacheGracePeriodActive {
                     Text("Loading menu bar items…")
@@ -598,6 +582,36 @@ private struct IceBarItemView: View {
                 .antialiased(true)
                 .resizable()
                 .frame(width: size.width, height: size.height)
+                .padding(.horizontal, 3)
+                .background {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill((isLightBackground ? Color.black : Color.white).opacity(isHovered ? 0.15 : 0))
+                        .padding(.vertical, 3)
+                }
+                .contentShape(Rectangle())
+                .overlay {
+                    IceBarItemClickView(
+                        item: item,
+                        tooltipDelay: tooltipDelay,
+                        leftClickAction: leftClickAction,
+                        rightClickAction: rightClickAction,
+                        onHover: { hovering in
+                            isHovered = hovering
+                        }
+                    )
+                }
+                .animation(.easeInOut(duration: 0.15), value: isHovered)
+                .accessibilityLabel(item.displayName)
+                .accessibilityAction(named: "left click", leftClickAction)
+                .accessibilityAction(named: "right click", rightClickAction)
+        } else if let appIcon = item.sourceApplication?.icon ?? item.owningApplication?.icon {
+            let iconSize: CGFloat = maxHeight ?? 22
+            Image(nsImage: appIcon)
+                .interpolation(.high)
+                .antialiased(true)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: iconSize, height: iconSize)
                 .padding(.horizontal, 3)
                 .background {
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
