@@ -43,16 +43,8 @@ struct AdvancedSettingsPane: View {
                 sectionDividerStyle
             }
             IceSection("Tooltips") {
-                if ScreenCapture.cachedCheckPermissions() {
-                    showMenuBarTooltips
-                    tooltipDelay
-                } else {
-                    Text("Screen recording permissions are required to display tooltips.")
-                        .foregroundStyle(.secondary)
-                        .font(.callout)
-                        .multilineTextAlignment(.leading)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
+                showMenuBarTooltips
+                tooltipDelay
             }
             IceSection("Other") {
                 hideApplicationMenus
