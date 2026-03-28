@@ -74,7 +74,7 @@ final class MenuBarSection {
     }
 
     /// The gap that macOS leaves to the left and right of the notch (in points).
-    private static let notchGap: CGFloat = 24
+    static let notchGap: CGFloat = 24
 
     /// Checks whether there is enough space to show the hidden items inline
     /// on the given screen, accounting for the notch and its required gaps.

@@ -49,6 +49,10 @@ final class AdvancedSettings: ObservableObject {
     /// A Boolean value that indicates whether diagnostic logging to file is enabled.
     @Published var enableDiagnosticLogging = Defaults.DefaultValue.enableDiagnosticLogging
 
+    /// A Boolean value that indicates whether to use LCS sorting instead of
+    /// full sorting on notched displays.
+    @Published var useLCSSortingOnNotchedDisplays = Defaults.DefaultValue.useLCSSortingOnNotchedDisplays
+
     /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
 
@@ -73,6 +77,7 @@ final class AdvancedSettings: ObservableObject {
         Defaults.ifPresent(key: .showMenuBarTooltips, assign: &showMenuBarTooltips)
         Defaults.ifPresent(key: .iconRefreshInterval, assign: &iconRefreshInterval)
         Defaults.ifPresent(key: .enableDiagnosticLogging, assign: &enableDiagnosticLogging)
+        Defaults.ifPresent(key: .useLCSSortingOnNotchedDisplays, assign: &useLCSSortingOnNotchedDisplays)
 
         Defaults.ifPresent(key: .sectionDividerStyle) { rawValue in
             if let style = SectionDividerStyle(rawValue: rawValue) {
@@ -153,6 +158,13 @@ final class AdvancedSettings: ObservableObject {
             .sink { enable in
                 Defaults.set(enable, forKey: .enableDiagnosticLogging)
                 DiagnosticLogger.shared.isEnabled = enable
+            }
+            .store(in: &c)
+
+        $useLCSSortingOnNotchedDisplays
+            .receive(on: DispatchQueue.main)
+            .sink { enable in
+                Defaults.set(enable, forKey: .useLCSSortingOnNotchedDisplays)
             }
             .store(in: &c)
 

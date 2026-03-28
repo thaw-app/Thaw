@@ -171,6 +171,7 @@ extension Defaults {
         static let showMenuBarTooltips = false
         static let iconRefreshInterval: TimeInterval = 0.5
         static let enableDiagnosticLogging = false
+        static let useLCSSortingOnNotchedDisplays = false
 
         // MARK: Hotkeys Settings
 
@@ -224,6 +225,7 @@ extension Defaults {
         case iconRefreshInterval = "IconRefreshInterval"
         case showMenuBarTooltips = "ShowMenuBarTooltips"
         case enableDiagnosticLogging = "EnableDiagnosticLogging"
+        case useLCSSortingOnNotchedDisplays = "UseLCSSortingOnNotchedDisplays"
 
         // MARK: Internal
 
