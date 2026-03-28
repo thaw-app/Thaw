@@ -101,11 +101,27 @@ struct ProfileSettingsPane: View {
                 .buttonStyle(.bordered)
                 .disabled(isApplying || profile.id == profileManager.activeProfileID)
 
-                Button("Update") {
-                    updateProfile(id: profile.id)
+                Menu {
+                    Button("Update All") {
+                        updateProfile(id: profile.id, scope: .all)
+                    }
+                    Button("Update Layout Only") {
+                        updateProfile(id: profile.id, scope: .layoutOnly)
+                    }
+                    Button("Update Configuration Only") {
+                        updateProfile(id: profile.id, scope: .configurationOnly)
+                    }
+                    Divider()
+                    Button("Update Configuration on All Profiles") {
+                        updateConfigurationOnAllProfiles()
+                    }
+                } label: {
+                    Text("Update")
+                } primaryAction: {
+                    updateProfile(id: profile.id, scope: .all)
                 }
-                .buttonStyle(.bordered)
-                .help("Overwrite this profile with the current configuration")
+                .menuStyle(.borderlessButton)
+                .help("Update this profile with the current state")
 
                 Menu {
                     Button("Rename") {
@@ -293,11 +309,26 @@ struct ProfileSettingsPane: View {
         }
     }
 
-    private func updateProfile(id: UUID) {
+    private func updateProfile(id: UUID, scope: ProfileManager.ProfileUpdateScope = .all) {
         do {
-            try profileManager.updateProfileWithCurrentState(id: id, appState: appState)
+            try profileManager.updateProfile(id: id, scope: scope, appState: appState)
         } catch {
             errorMessage = error.localizedDescription
+            showingError = true
+        }
+    }
+
+    private func updateConfigurationOnAllProfiles() {
+        var failed = 0
+        for profile in profileManager.profiles {
+            do {
+                try profileManager.updateProfile(id: profile.id, scope: .configurationOnly, appState: appState)
+            } catch {
+                failed += 1
+            }
+        }
+        if failed > 0 {
+            errorMessage = "Failed to update configuration on \(failed) profile(s)."
             showingError = true
         }
     }

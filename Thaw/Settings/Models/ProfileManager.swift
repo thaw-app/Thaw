@@ -439,6 +439,108 @@ final class ProfileManager: ObservableObject {
         saveManifest()
     }
 
+    /// What parts of a profile to update.
+    enum ProfileUpdateScope {
+        case all
+        case layoutOnly
+        case configurationOnly
+    }
+
+    /// Updates a profile with only the specified scope of current state.
+    func updateProfile(id: UUID, scope: ProfileUpdateScope, appState: AppState) throws {
+        switch scope {
+        case .all:
+            try updateProfileWithCurrentState(id: id, appState: appState)
+        case .layoutOnly:
+            try updateProfileLayout(id: id, appState: appState)
+        case .configurationOnly:
+            try updateProfileConfiguration(id: id, appState: appState)
+        }
+    }
+
+    /// Updates only the menu bar layout of an existing profile.
+    private func updateProfileLayout(id: UUID, appState: AppState) throws {
+        var profile = try loadProfile(id: id)
+
+        let savedSectionOrder = UserDefaults.standard.dictionary(
+            forKey: "MenuBarItemManager.savedSectionOrder"
+        ) as? [String: [String]] ?? [:]
+        let pinnedHiddenBundleIDs = UserDefaults.standard.array(
+            forKey: "MenuBarItemManager.pinnedHiddenBundleIDs"
+        ) as? [String] ?? []
+        let pinnedAlwaysHiddenBundleIDs = UserDefaults.standard.array(
+            forKey: "MenuBarItemManager.pinnedAlwaysHiddenBundleIDs"
+        ) as? [String] ?? []
+        let customNames = Defaults.dictionary(
+            forKey: .menuBarItemCustomNames
+        ) as? [String: String] ?? [:]
+
+        var itemSectionMap = [String: String]()
+        var itemOrder = [String: [String]]()
+        let cache = appState.itemManager.itemCache
+        for section in MenuBarSection.Name.allCases {
+            let sectionKey: String
+            switch section {
+            case .visible: sectionKey = "visible"
+            case .hidden: sectionKey = "hidden"
+            case .alwaysHidden: sectionKey = "alwaysHidden"
+            }
+            var orderedIDs = [String]()
+            for item in cache.managedItems(for: section)
+                where item.canBeHidden || item.isControlItem
+            {
+                let uid = item.uniqueIdentifier
+                itemSectionMap[uid] = sectionKey
+                orderedIDs.append(uid)
+            }
+            if !orderedIDs.isEmpty {
+                itemOrder[sectionKey] = orderedIDs
+            }
+        }
+
+        profile.menuBarLayout = MenuBarLayoutSnapshot(
+            savedSectionOrder: savedSectionOrder,
+            pinnedHiddenBundleIDs: pinnedHiddenBundleIDs,
+            pinnedAlwaysHiddenBundleIDs: pinnedAlwaysHiddenBundleIDs,
+            customNames: customNames,
+            itemSectionMap: itemSectionMap,
+            itemOrder: itemOrder
+        )
+        profile.modifiedAt = Date()
+
+        let data = try encoder.encode(profile)
+        try data.write(to: profileURL(for: id), options: .atomic)
+
+        if let index = profiles.firstIndex(where: { $0.id == id }) {
+            profiles[index].modifiedAt = profile.modifiedAt
+        }
+        saveManifest()
+    }
+
+    /// Updates only the configuration (settings, hotkeys, appearance) of an existing profile.
+    private func updateProfileConfiguration(id: UUID, appState: AppState) throws {
+        var profile = try loadProfile(id: id)
+
+        profile.generalSettings = GeneralSettingsSnapshot.capture(
+            from: appState.settings.general
+        )
+        profile.advancedSettings = AdvancedSettingsSnapshot.capture(
+            from: appState.settings.advanced
+        )
+        profile.hotkeys = Defaults.dictionary(forKey: .hotkeys) as? [String: Data] ?? [:]
+        profile.displayConfigurations = appState.settings.displaySettings.configurations
+        profile.appearanceConfiguration = appState.appearanceManager.configuration
+        profile.modifiedAt = Date()
+
+        let data = try encoder.encode(profile)
+        try data.write(to: profileURL(for: id), options: .atomic)
+
+        if let index = profiles.firstIndex(where: { $0.id == id }) {
+            profiles[index].modifiedAt = profile.modifiedAt
+        }
+        saveManifest()
+    }
+
     /// Exports all profiles as a single JSON file including metadata.
     func exportAllProfiles() -> String? {
         var entries = [ProfileExportEntry]()
