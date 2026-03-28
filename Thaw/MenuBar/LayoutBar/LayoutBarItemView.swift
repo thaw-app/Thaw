@@ -42,9 +42,8 @@ final class LayoutBarItemView: NSView {
         didSet {
             if let image = cachedImage {
                 setFrameSize(image.scaledSize)
-            } else {
-                setFrameSize(.zero)
             }
+            // When nil, keep the current frame size (from item.bounds in init)
             needsDisplay = true
         }
     }
@@ -152,12 +151,16 @@ final class LayoutBarItemView: NSView {
 
     override func draw(_: NSRect) {
         if !isDraggingPlaceholder {
-            cachedImage?.nsImage.draw(
-                in: bounds,
-                from: .zero,
-                operation: .sourceOver,
-                fraction: isEnabled ? 1.0 : 0.67
-            )
+            if let image = cachedImage?.nsImage {
+                image.draw(
+                    in: bounds,
+                    from: .zero,
+                    operation: .sourceOver,
+                    fraction: isEnabled ? 1.0 : 0.67
+                )
+            } else {
+                drawPlaceholder()
+            }
             if Bridging.isProcessUnresponsive(item.ownerPID) {
                 let warningImage = NSImage.warning
                 let width: CGFloat = 15
@@ -176,6 +179,29 @@ final class LayoutBarItemView: NSView {
                 )
             }
         }
+    }
+
+    private func drawPlaceholder() {
+        let fraction: CGFloat = isEnabled ? 0.6 : 0.4
+        NSColor.secondaryLabelColor.withAlphaComponent(fraction).setFill()
+        let bgRect = bounds.insetBy(dx: 1, dy: bounds.height * 0.2)
+        let path = NSBezierPath(roundedRect: bgRect, xRadius: 3, yRadius: 3)
+        path.fill()
+
+        let name = item.displayName
+        let attrs: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: 9, weight: .medium),
+            .foregroundColor: NSColor.white.withAlphaComponent(fraction),
+        ]
+        let size = (name as NSString).size(withAttributes: attrs)
+        let maxWidth = bgRect.width - 4
+        let drawRect = CGRect(
+            x: bgRect.midX - min(size.width, maxWidth) / 2,
+            y: bgRect.midY - size.height / 2,
+            width: min(size.width, maxWidth),
+            height: size.height
+        )
+        (name as NSString).draw(with: drawRect, options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine], attributes: attrs)
     }
 
     override func mouseDragged(with event: NSEvent) {
