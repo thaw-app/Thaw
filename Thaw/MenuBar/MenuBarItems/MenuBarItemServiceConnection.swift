@@ -59,19 +59,19 @@ extension MenuBarItemService {
             }
         }
 
-        /// Returns the source process identifier for the given window.
-        func sourcePID(for window: WindowInfo) async -> pid_t? {
+        /// Returns the source process identifier and AX title for the given window.
+        func sourcePIDAndTitle(for window: WindowInfo) async -> (pid_t?, String?) {
             await withCheckedContinuation { continuation in
                 guard let response = session.send(request: .sourcePID(window)) else {
                     diagLog.error("Source PID request returned nil")
-                    continuation.resume(returning: nil)
+                    continuation.resume(returning: (nil, nil))
                     return
                 }
-                if case let .sourcePID(pid) = response {
-                    continuation.resume(returning: pid)
+                if case let .sourcePID(pid, axTitle) = response {
+                    continuation.resume(returning: (pid, axTitle))
                 } else {
                     diagLog.error("Source PID request returned invalid response \(String(describing: response))")
-                    continuation.resume(returning: nil)
+                    continuation.resume(returning: (nil, nil))
                 }
             }
         }
