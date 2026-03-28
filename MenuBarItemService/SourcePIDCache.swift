@@ -120,6 +120,7 @@ final class SourcePIDCache {
     private struct State {
         var apps = [CachedApplication]()
         var pids = [CGWindowID: pid_t]()
+        var titles = [CGWindowID: String]()
 
         /// Reorders the cached apps so that those that are confirmed
         /// to have an extras menu bar are first in the array.
@@ -187,9 +188,13 @@ final class SourcePIDCache {
             let oldAppPids = Set(state.apps.map(\.processIdentifier))
             let terminatedPids = oldAppPids.subtracting(currentAppPids)
 
-            // Remove PID mappings for terminated apps
+            // Remove PID and title mappings for terminated apps
             for terminatedPid in terminatedPids {
+                let terminatedWindowIDs = state.pids.filter { $0.value == terminatedPid }.map(\.key)
                 state.pids = state.pids.filter { $0.value != terminatedPid }
+                for wid in terminatedWindowIDs {
+                    state.titles.removeValue(forKey: wid)
+                }
             }
 
             // Convert the cached state to dictionaries keyed by pid to
@@ -202,6 +207,7 @@ final class SourcePIDCache {
                     result[pid, default: [:]][windowID] = pid
                 }
             }
+            let titleMappings = state.titles
 
             // Collect reused apps to reset their negative caches after
             // releasing the lock.
@@ -223,6 +229,11 @@ final class SourcePIDCache {
 
                 if let pids = pidMappings[pid] {
                     result.pids.merge(pids) { _, new in new }
+                    for windowID in pids.keys {
+                        if let title = titleMappings[windowID] {
+                            result.titles[windowID] = title
+                        }
+                    }
                 }
             }
 
@@ -332,15 +343,32 @@ final class SourcePIDCache {
                         totalMatchesFound += 1
                         unresolvedWindows.remove(matchedWindow.windowID)
                         let pid = app.processIdentifier
-                        state.withLock { $0.pids[matchedWindow.windowID] = pid }
+                        let axTitle = AXHelpers.title(for: child) ?? AXHelpers.axDescription(for: child)
+                        state.withLock {
+                            $0.pids[matchedWindow.windowID] = pid
+                            if let axTitle {
+                                $0.titles[matchedWindow.windowID] = axTitle
+                            }
+                        }
                     }
                 }
             }
         }
 
-        let finalPID = state.withLock { $0.pids[window.windowID] }
-        SourcePIDCache.diagLog.debug("SourcePIDCache.pid: batch resolution finished. Found \(totalMatchesFound) matches. Requested windowID \(window.windowID) -> PID \(finalPID.map { "\($0)" } ?? "nil") (checked \(appsChecked) apps, \(appsWithBar) with extras bar, \(totalChildrenChecked) children)")
+        let (finalPID, finalTitle) = state.withLock { ($0.pids[window.windowID], $0.titles[window.windowID]) }
+        SourcePIDCache.diagLog.debug("SourcePIDCache.pid: batch resolution finished. Found \(totalMatchesFound) matches. Requested windowID \(window.windowID) -> PID \(finalPID.map { "\($0)" } ?? "nil"), title \(finalTitle ?? "nil") (checked \(appsChecked) apps, \(appsWithBar) with extras bar, \(totalChildrenChecked) children)")
 
         return finalPID
+    }
+
+    /// Returns the cached process identifier and AX title for the given
+    /// window, updating the cache if needed.
+    func pidAndTitle(for window: WindowInfo) -> (pid_t?, String?) {
+        autoreleasepool {
+            // Trigger batch resolution (populates both pids and titles).
+            let pid = pidBody(for: window)
+            let title = state.withLock { $0.titles[window.windowID] }
+            return (pid, title)
+        }
     }
 }
