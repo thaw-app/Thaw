@@ -1045,12 +1045,6 @@ final class MenuBarItemImageCache: ObservableObject {
             return
         }
 
-        let hasScreenRecording = await appState.hasPermission(.screenRecording)
-        guard hasScreenRecording else {
-            MenuBarItemImageCache.diagLog.debug("updateCacheWithoutChecks: no screen recording permission, aborting")
-            return
-        }
-
         guard let displayID = await appState.itemManager.itemCache.displayID else {
             MenuBarItemImageCache.diagLog.warning("updateCacheWithoutChecks: itemCache.displayID is nil, aborting")
             return
@@ -1288,13 +1282,13 @@ final class MenuBarItemImageCache: ObservableObject {
     /// failed for the given section.
     @MainActor
     func cacheFailed(for section: MenuBarSection.Name) -> Bool {
-        let hasPermission = ScreenCapture.cachedCheckPermissions()
-        guard hasPermission else {
-            MenuBarItemImageCache.diagLog.debug("cacheFailed(\(section.logString)): no screen recording permission (cachedCheckPermissions=false)")
-            return true
-        }
         let items = appState?.itemManager.itemCache[section] ?? []
         guard !items.isEmpty else {
+            return false
+        }
+        // Without screen recording, images aren't expected — not a failure.
+        let hasPermission = ScreenCapture.cachedCheckPermissions()
+        guard hasPermission else {
             return false
         }
         let keys = Set(images.keys)
