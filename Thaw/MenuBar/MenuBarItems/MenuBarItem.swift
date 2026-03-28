@@ -194,14 +194,21 @@ struct MenuBarItem: CustomStringConvertible {
     ///
     /// This initializer does not perform validity checks on its parameters.
     /// Only call it if you are certain the window is a valid menu bar item.
+    ///
+    /// - Parameters:
+    ///   - itemWindow: The window info for the menu bar item.
+    ///   - axTitle: An optional title obtained from the Accessibility API,
+    ///     used as a fallback when the CG window title is unavailable
+    ///     (e.g. when screen recording permission is not granted).
+    ///   - instanceIndex: The index of this item within its (namespace, title) group.
     @MainActor
-    private init(uncheckedItemWindow itemWindow: WindowInfo, instanceIndex: Int = 0) {
-        self.tag = MenuBarItemTag(uncheckedItemWindow: itemWindow, instanceIndex: instanceIndex)
+    private init(uncheckedItemWindow itemWindow: WindowInfo, axTitle: String? = nil, instanceIndex: Int = 0) {
+        self.tag = MenuBarItemTag(uncheckedItemWindow: itemWindow, axTitle: axTitle, instanceIndex: instanceIndex)
         self.windowID = itemWindow.windowID
         self.ownerPID = itemWindow.ownerPID
         self.sourcePID = itemWindow.ownerPID
         self.bounds = itemWindow.bounds
-        self.title = itemWindow.title
+        self.title = itemWindow.title ?? axTitle
         self.isOnScreen = itemWindow.isOnScreen
     }
 
@@ -210,15 +217,22 @@ struct MenuBarItem: CustomStringConvertible {
     /// This initializer does not perform validity checks on its parameters.
     /// Only call it if you are certain the window is a valid menu bar item
     /// and the source pid belongs to the application that created it.
+    ///
+    /// - Parameters:
+    ///   - itemWindow: The window info for the menu bar item.
+    ///   - sourcePID: The process identifier of the app that created the item.
+    ///   - axTitle: An optional title obtained from the Accessibility API,
+    ///     used as a fallback when the CG window title is unavailable.
+    ///   - instanceIndex: The index of this item within its (namespace, title) group.
     @available(macOS 26.0, *)
     @MainActor
-    private init(uncheckedItemWindow itemWindow: WindowInfo, sourcePID: pid_t?, instanceIndex: Int = 0) {
-        self.tag = MenuBarItemTag(uncheckedItemWindow: itemWindow, sourcePID: sourcePID, instanceIndex: instanceIndex)
+    private init(uncheckedItemWindow itemWindow: WindowInfo, sourcePID: pid_t?, axTitle: String? = nil, instanceIndex: Int = 0) {
+        self.tag = MenuBarItemTag(uncheckedItemWindow: itemWindow, sourcePID: sourcePID, axTitle: axTitle, instanceIndex: instanceIndex)
         self.windowID = itemWindow.windowID
         self.ownerPID = itemWindow.ownerPID
         self.sourcePID = sourcePID
         self.bounds = itemWindow.bounds
-        self.title = itemWindow.title
+        self.title = itemWindow.title ?? axTitle
         self.isOnScreen = itemWindow.isOnScreen
     }
 }
@@ -289,9 +303,10 @@ extension MenuBarItem {
         var items = await withTaskGroup(of: (Int, MenuBarItem).self) { group in
             for (index, window) in windows.enumerated() {
                 group.addTask {
-                    // Check for our own control items by title and owner.
+                    // Check for our own control items by title or AX title and owner.
                     // On macOS 26, these are owned by Control Center.
-                    if let title = window.title, title.hasPrefix("Thaw.ControlItem.") {
+                    let resolvedTitle = window.title
+                    if let title = resolvedTitle, title.hasPrefix("Thaw.ControlItem.") {
                         let ccBundleID = "com.apple.controlcenter"
                         if window.owningApplication?.bundleIdentifier == ccBundleID ||
                             window.ownerPID == ProcessInfo.processInfo.processIdentifier
@@ -300,8 +315,20 @@ extension MenuBarItem {
                         }
                     }
 
-                    let sourcePID = await MenuBarItemService.Connection.shared.sourcePID(for: window)
-                    return (index, await MenuBarItem(uncheckedItemWindow: window, sourcePID: sourcePID))
+                    let (sourcePID, axTitle) = await MenuBarItemService.Connection.shared.sourcePIDAndTitle(for: window)
+
+                    // Re-check for control items using the AX title when
+                    // the CG title was unavailable (no screen recording).
+                    if resolvedTitle == nil, let axTitle, axTitle.hasPrefix("Thaw.ControlItem.") {
+                        let ccBundleID = "com.apple.controlcenter"
+                        if window.owningApplication?.bundleIdentifier == ccBundleID ||
+                            window.ownerPID == ProcessInfo.processInfo.processIdentifier
+                        {
+                            return (index, await MenuBarItem(uncheckedItemWindow: window, sourcePID: ProcessInfo.processInfo.processIdentifier, axTitle: axTitle))
+                        }
+                    }
+
+                    return (index, await MenuBarItem(uncheckedItemWindow: window, sourcePID: sourcePID, axTitle: axTitle))
                 }
             }
 
@@ -370,7 +397,10 @@ extension MenuBarItem {
                         continue
                     }
                     diagLog.debug("getMenuBarItemsExperimental: propagating sourcePID \(siblingPID) to unresolved windowID \(item.windowID) (title=\(title))")
-                    items[idx] = MenuBarItem(uncheckedItemWindow: windows[idx], sourcePID: siblingPID)
+                    // Preserve the AX title (already merged into item.title) when
+                    // the CG title is unavailable.
+                    let axTitle = windows[idx].title == nil ? item.title : nil
+                    items[idx] = MenuBarItem(uncheckedItemWindow: windows[idx], sourcePID: siblingPID, axTitle: axTitle)
                 }
             }
         }
@@ -388,10 +418,11 @@ extension MenuBarItem {
         for (_, indices) in groups where indices.count > 1 {
             let sorted = indices.sorted { items[$0].windowID < items[$1].windowID }
             for (instanceIndex, itemIndex) in sorted.enumerated() where instanceIndex > 0 {
+                let axTitle = windows[itemIndex].title == nil ? items[itemIndex].title : nil
                 if let sourcePID = items[itemIndex].sourcePID {
-                    items[itemIndex] = MenuBarItem(uncheckedItemWindow: windows[itemIndex], sourcePID: sourcePID, instanceIndex: instanceIndex)
+                    items[itemIndex] = MenuBarItem(uncheckedItemWindow: windows[itemIndex], sourcePID: sourcePID, axTitle: axTitle, instanceIndex: instanceIndex)
                 } else {
-                    items[itemIndex] = MenuBarItem(uncheckedItemWindow: windows[itemIndex], instanceIndex: instanceIndex)
+                    items[itemIndex] = MenuBarItem(uncheckedItemWindow: windows[itemIndex], axTitle: axTitle, instanceIndex: instanceIndex)
                 }
             }
         }
@@ -410,9 +441,21 @@ extension MenuBarItem {
     /// Creates and returns a list of menu bar items, defaulting to the
     /// legacy source pid behavior, prior to macOS 26.
     @MainActor
-    private static func getMenuBarItemsLegacyMethod(on display: CGDirectDisplayID?, option: ListOption) -> [MenuBarItem] {
+    private static func getMenuBarItemsLegacyMethod(on display: CGDirectDisplayID?, option: ListOption) async -> [MenuBarItem] {
         let windows = getMenuBarItemWindows(on: display, option: option)
-        var items = windows.map { MenuBarItem(uncheckedItemWindow: $0) }
+
+        // Resolve titles via the Accessibility API so items can be
+        // identified even without screen recording permission.
+        let axTitles: [CGWindowID: String] = await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .userInteractive).async {
+                let titles = AXHelpers.resolveTitles(for: windows)
+                continuation.resume(returning: titles)
+            }
+        }
+
+        var items = windows.map { window in
+            MenuBarItem(uncheckedItemWindow: window, axTitle: axTitles[window.windowID])
+        }
 
         // Assign instance indices sorted by windowID for stability across
         // position changes (same approach as the experimental path).
@@ -424,7 +467,8 @@ extension MenuBarItem {
         for (_, indices) in groups where indices.count > 1 {
             let sorted = indices.sorted { items[$0].windowID < items[$1].windowID }
             for (instanceIndex, itemIndex) in sorted.enumerated() where instanceIndex > 0 {
-                items[itemIndex] = MenuBarItem(uncheckedItemWindow: windows[itemIndex], instanceIndex: instanceIndex)
+                let axTitle = axTitles[windows[itemIndex].windowID]
+                items[itemIndex] = MenuBarItem(uncheckedItemWindow: windows[itemIndex], axTitle: axTitle, instanceIndex: instanceIndex)
             }
         }
 
@@ -450,7 +494,7 @@ extension MenuBarItem {
             diagLog.debug("getMenuBarItems: experimental path returned \(items.count) items")
             return items
         } else {
-            let items = getMenuBarItemsLegacyMethod(on: display, option: option)
+            let items = await getMenuBarItemsLegacyMethod(on: display, option: option)
             diagLog.debug("getMenuBarItems: legacy path returned \(items.count) items")
             return items
         }
@@ -496,9 +540,9 @@ private extension MenuBarItemTag {
     /// This initializer does not perform validity checks on its parameters.
     /// Only call it if you are certain the window is a valid menu bar item.
     @MainActor
-    init(uncheckedItemWindow itemWindow: WindowInfo, instanceIndex: Int = 0) {
+    init(uncheckedItemWindow itemWindow: WindowInfo, axTitle: String? = nil, instanceIndex: Int = 0) {
         self.namespace = Namespace(uncheckedItemWindow: itemWindow)
-        self.title = itemWindow.title ?? ""
+        self.title = itemWindow.title ?? axTitle ?? ""
         self.windowID = itemWindow.windowID
         self.instanceIndex = instanceIndex
     }
@@ -510,9 +554,9 @@ private extension MenuBarItemTag {
     /// and the source pid belongs to the application that created it.
     @available(macOS 26.0, *)
     @MainActor
-    init(uncheckedItemWindow itemWindow: WindowInfo, sourcePID: pid_t?, instanceIndex: Int = 0) {
+    init(uncheckedItemWindow itemWindow: WindowInfo, sourcePID: pid_t?, axTitle: String? = nil, instanceIndex: Int = 0) {
         self.namespace = Namespace(uncheckedItemWindow: itemWindow, sourcePID: sourcePID)
-        self.title = itemWindow.title ?? ""
+        self.title = itemWindow.title ?? axTitle ?? ""
         self.windowID = itemWindow.windowID
         self.instanceIndex = instanceIndex
     }
