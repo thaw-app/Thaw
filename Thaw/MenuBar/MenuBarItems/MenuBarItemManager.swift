@@ -1950,7 +1950,8 @@ extension MenuBarItemManager {
         to destination: MoveDestination,
         on displayID: CGDirectDisplayID? = nil,
         skipInputPause: Bool = false,
-        watchdogTimeout: DispatchTimeInterval? = nil
+        watchdogTimeout: DispatchTimeInterval? = nil,
+        maxMoveAttempts: Int = 8
     ) async throws {
         guard item.isMovable else {
             throw EventError.itemNotMovable(item)
@@ -2009,7 +2010,7 @@ extension MenuBarItemManager {
             MouseHelpers.showCursor()
         }
 
-        let maxAttempts = 8
+        let maxAttempts = maxMoveAttempts
         for n in 1 ... maxAttempts {
             guard !Task.isCancelled else {
                 throw EventError.cannotComplete
@@ -2428,7 +2429,7 @@ extension MenuBarItemManager {
     ///   - item: The item to temporarily show.
     ///   - mouseButton: The mouse button to click the item with.
     ///   - displayID: The display identifier to show the item on.
-    func temporarilyShow(item: MenuBarItem, clickingWith mouseButton: CGMouseButton, on displayID: CGDirectDisplayID? = nil) async {
+    func temporarilyShow(item: MenuBarItem, clickingWith mouseButton: CGMouseButton, on displayID: CGDirectDisplayID? = nil, fastPath: Bool = false) async {
         guard let appState else {
             MenuBarItemManager.diagLog.error("Missing AppState, so not showing \(item.logString)")
             return
@@ -2522,7 +2523,14 @@ extension MenuBarItemManager {
         MenuBarItemManager.diagLog.debug("Temporarily showing \(item.logString) on display \(resolvedDisplayID)")
 
         do {
-            try await move(item: item, to: moveDestination, on: resolvedDisplayID, skipInputPause: true)
+            if fastPath {
+                // Single attempt move — the first attempt always repositions the item
+                // close enough. Skipping retries eliminates the visible jitter from
+                // the 8-attempt retry loop with exponentially increasing timeouts.
+                try await move(item: item, to: moveDestination, on: resolvedDisplayID, skipInputPause: true, maxMoveAttempts: 1)
+            } else {
+                try await move(item: item, to: moveDestination, on: resolvedDisplayID, skipInputPause: true)
+            }
         } catch {
             MenuBarItemManager.diagLog.error("Error showing item: \(error)")
             pendingRelocations.removeValue(forKey: tagIdentifier)
@@ -2547,24 +2555,31 @@ extension MenuBarItemManager {
             runRehideTimer()
         }
 
-        // Wait for the item's position to stabilize after the move. Some
-        // apps need time to process the window relocation before they can
-        // correctly position their popup in response to a click.
-        await waitForItemPositionToSettle(item: item)
+        let clickItem: MenuBarItem
+        if fastPath {
+            // Fast path: skip settle wait, re-fetch, and extra sleep to minimize
+            // the time the jittering icon is visible before the menu opens.
+            clickItem = item
+        } else {
+            // Wait for the item's position to stabilize after the move. Some
+            // apps need time to process the window relocation before they can
+            // correctly position their popup in response to a click.
+            await waitForItemPositionToSettle(item: item)
 
-        // Re-fetch the item from the live window list specifically for this display.
-        // Prefer an exact windowID match, then fall back to namespace+title with PID matching.
-        let refreshedItems = await MenuBarItem.getMenuBarItems(on: resolvedDisplayID, option: .onScreen)
-        let clickItem = refreshedItems.first(where: { $0.windowID == item.windowID }) ??
-            refreshedItems.first(where: {
-                $0.tag.matchesIgnoringWindowID(item.tag) &&
-                    ($0.sourcePID ?? $0.ownerPID) == (item.sourcePID ?? item.ownerPID)
-            }) ?? item
+            // Re-fetch the item from the live window list specifically for this display.
+            // Prefer an exact windowID match, then fall back to namespace+title with PID matching.
+            let refreshedItems = await MenuBarItem.getMenuBarItems(on: resolvedDisplayID, option: .onScreen)
+            clickItem = refreshedItems.first(where: { $0.windowID == item.windowID }) ??
+                refreshedItems.first(where: {
+                    $0.tag.matchesIgnoringWindowID(item.tag) &&
+                        ($0.sourcePID ?? $0.ownerPID) == (item.sourcePID ?? item.ownerPID)
+                }) ?? item
 
-        // Give the owning app a little extra time to finish processing the
-        // move internally. Some apps (e.g. OneDrive) need more than just a
-        // stable window position before they can respond to clicks.
-        await eventSleep(for: .milliseconds(25))
+            // Give the owning app a little extra time to finish processing the
+            // move internally. Some apps (e.g. OneDrive) need more than just a
+            // stable window position before they can respond to clicks.
+            await eventSleep(for: .milliseconds(25))
+        }
 
         let idsBeforeClick = Set(Bridging.getWindowList(option: .onScreen))
 

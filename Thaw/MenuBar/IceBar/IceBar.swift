@@ -539,7 +539,7 @@ private struct IceBarItemView: View {
                     let duration = Date.now.timeIntervalSince(clickStartTime)
                     IceBarItemView.diagLog.debug("leftClick: ✓ completed in \(Int(duration * 1000))ms (on-screen path)")
                 } else {
-                    await itemManager.temporarilyShow(item: item, clickingWith: .left, on: displayID)
+                    await itemManager.temporarilyShow(item: item, clickingWith: .left, on: displayID, fastPath: true)
                     let duration = Date.now.timeIntervalSince(clickStartTime)
                     IceBarItemView.diagLog.debug("leftClick: ✓ completed in \(Int(duration * 1000))ms (temp-show path)")
                 }
@@ -558,7 +558,7 @@ private struct IceBarItemView: View {
                 if Bridging.isWindowOnScreen(item.windowID) {
                     try await itemManager.click(item: item, with: .right)
                 } else {
-                    await itemManager.temporarilyShow(item: item, clickingWith: .right, on: displayID)
+                    await itemManager.temporarilyShow(item: item, clickingWith: .right, on: displayID, fastPath: true)
                 }
             }
         }
