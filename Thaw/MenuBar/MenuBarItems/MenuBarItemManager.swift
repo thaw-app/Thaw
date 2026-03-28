@@ -4014,10 +4014,8 @@ extension MenuBarItemManager {
             }
         }
 
-        // Filter both sequences to only items present in both.
+        // Filter desired sequence to only items present in the current bar.
         let currentSet = Set(currentFlat)
-        let desiredSet = Set(desiredFlat)
-        let currentFiltered = currentFlat.filter { desiredSet.contains($0) }
         let desiredFiltered = desiredFlat.filter { currentSet.contains($0) }
 
         // On notched displays, use a full-section rearrange instead of
