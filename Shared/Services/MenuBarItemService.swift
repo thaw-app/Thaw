@@ -20,6 +20,6 @@ extension MenuBarItemService {
 
     enum Response: Codable {
         case start
-        case sourcePID(pid_t?)
+        case sourcePID(pid_t?, String?)
     }
 }
