@@ -510,25 +510,7 @@ private struct MenuBarSearchContentView: View {
 
     @ViewBuilder
     private var mainContent: some View {
-        if !ScreenCapture.cachedCheckPermissions() {
-            VStack(spacing: 16) {
-                Image(systemName: "exclamationmark.triangle")
-                    .font(.system(size: 32))
-                    .foregroundStyle(.secondary)
-                Text("Screen recording permissions are required to search menu bar items.")
-                    .font(.title3)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 40)
-                Button {
-                    openPermissionsSettings()
-                } label: {
-                    Text("Open \(Constants.displayName) Settings")
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(.link)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else if hasItems {
+        if hasItems {
             SectionedList(
                 selection: $model.selection,
                 items: $model.displayedItems,
