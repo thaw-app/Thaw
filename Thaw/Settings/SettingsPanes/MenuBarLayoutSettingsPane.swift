@@ -165,20 +165,6 @@ struct MenuBarLayoutSettingsPane: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
     }
 
-    private var missingScreenRecordingPermissions: some View {
-        VStack {
-            Text("Menu bar layout requires screen recording permissions.")
-                .font(.title2)
-
-            Button {
-                appState.navigationState.settingsNavigationIdentifier = .advanced
-            } label: {
-                Text("Go to Advanced Settings")
-            }
-            .buttonStyle(.link)
-        }
-    }
-
     private var loadingMenuBarItems: some View {
         VStack {
             Text("Loading menu bar items…")

@@ -12,12 +12,6 @@ import Foundation
 /// A type that manages the permissions of the app.
 @MainActor
 final class AppPermissions: ObservableObject {
-    /// Keys to access individual permissions.
-    enum PermissionKey {
-        case accessibility
-        case screenRecording
-    }
-
     /// The state of the app's granted permissions.
     enum PermissionsState {
         case missing
@@ -31,9 +25,6 @@ final class AppPermissions: ObservableObject {
     /// The permission for Accessibility features.
     let accessibility = AccessibilityPermission()
 
-    /// The permission for Screen Recording features.
-    let screenRecording = ScreenRecordingPermission()
-
     /// The state of the app's granted permissions.
     @Published private(set) var permissionsState: PermissionsState = .missing
 
@@ -42,7 +33,7 @@ final class AppPermissions: ObservableObject {
 
     /// The permissions required for full app functionality.
     var allPermissions: [Permission] {
-        [accessibility, screenRecording]
+        [accessibility]
     }
 
     /// The permissions required for basic app functionality.

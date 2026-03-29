@@ -325,54 +325,7 @@ final class MenuBarManager: ObservableObject {
 
     /// Updates the ``averageColorInfo`` property with the current average color
     /// of the menu bar.
-    func updateAverageColorInfo() {
-        guard let appState else { return }
-
-        // Only update if we really need the color info
-        let isSettingsVisible = settingsWindow?.isVisible == true
-        let isIceBarVisible = appState.navigationState.isIceBarPresented
-        let isSearchVisible = appState.navigationState.isSearchPresented
-        let anyIceBarEnabled = appState.settings.displaySettings.isIceBarEnabledOnAnyDisplay
-
-        guard isSettingsVisible || isIceBarVisible || isSearchVisible || anyIceBarEnabled else {
-            return
-        }
-
-        guard
-            let settingsWindow,
-            settingsWindow.isVisible,
-            let screen = settingsWindow.screen
-        else {
-            return
-        }
-
-        let windows = WindowInfo.createWindows(option: .onScreen)
-        let displayID = screen.displayID
-
-        guard
-            let menuBarWindow = WindowInfo.menuBarWindow(from: windows, for: displayID),
-            let wallpaperWindow = WindowInfo.wallpaperWindow(from: windows, for: displayID)
-        else {
-            return
-        }
-
-        guard
-            let image = ScreenCapture.captureWindows(
-                with: [menuBarWindow.windowID, wallpaperWindow.windowID],
-                screenBounds: withMutableCopy(of: wallpaperWindow.bounds) { $0.size.height = 1 },
-                option: .nominalResolution
-            ),
-            let color = image.averageColor(option: .ignoreAlpha)
-        else {
-            return
-        }
-
-        let info = MenuBarAverageColorInfo(color: color, source: .menuBarWindow)
-
-        if averageColorInfo != info {
-            averageColorInfo = info
-        }
-    }
+    func updateAverageColorInfo() {}
 
     /// Returns a Boolean value that indicates whether the given display
     /// has a valid menu bar.

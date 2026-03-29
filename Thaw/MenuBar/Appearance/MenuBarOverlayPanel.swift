@@ -463,29 +463,7 @@ final class MenuBarOverlayPanel: NSPanel {
         for display: CGDirectDisplayID,
         with windows: [WindowInfo]
     ) {
-        guard
-            let appState,
-            appState.appearanceManager.configuration.shapeKind != .noShape
-        else {
-            desktopWallpaper = nil
-            return
-        }
-        guard
-            let menuBarWindow = WindowInfo.menuBarWindow(
-                from: windows,
-                for: display
-            )
-        else {
-            return
-        }
-        let wallpaper = ScreenCapture.captureScreenBelowWindow(
-            with: menuBarWindow.windowID,
-            screenBounds: menuBarWindow.bounds,
-            option: .nominalResolution
-        )
-        if desktopWallpaper?.dataProvider?.data != wallpaper?.dataProvider?.data {
-            desktopWallpaper = wallpaper
-        }
+        desktopWallpaper = nil
     }
 
     /// Updates the panel to prepare for display.

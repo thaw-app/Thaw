@@ -68,32 +68,5 @@ final class MenuBarSearchModel: ObservableObject {
         cancellables = c
     }
 
-    private func updateAverageColorInfo(for screen: NSScreen) {
-        let windows = WindowInfo.createWindows(option: .onScreen)
-        let displayID = screen.displayID
-
-        guard
-            let menuBarWindow = WindowInfo.menuBarWindow(from: windows, for: displayID),
-            let wallpaperWindow = WindowInfo.wallpaperWindow(from: windows, for: displayID)
-        else {
-            return
-        }
-
-        guard
-            let image = ScreenCapture.captureWindows(
-                with: [menuBarWindow.windowID, wallpaperWindow.windowID],
-                screenBounds: withMutableCopy(of: wallpaperWindow.bounds) { $0.size.height = 1 },
-                option: .nominalResolution
-            ),
-            let color = image.averageColor(option: .ignoreAlpha)
-        else {
-            return
-        }
-
-        let info = MenuBarAverageColorInfo(color: color, source: .menuBarWindow)
-
-        if averageColorInfo != info {
-            averageColorInfo = info
-        }
-    }
+    private func updateAverageColorInfo(for screen: NSScreen) {}
 }

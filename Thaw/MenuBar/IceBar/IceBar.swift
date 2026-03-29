@@ -189,14 +189,6 @@ final class IceBarPanel: NSPanel {
 
         updateOrigin(for: screen)
 
-        // Color manager must be updated after updating the panel's origin,
-        // but before it is shown.
-        //
-        // Color manager handles frame changes automatically, but does so on
-        // the main queue, so we need to update manually once before showing
-        // the panel to prevent the color from flashing.
-        colorManager.updateAllProperties(with: frame, screen: screen)
-
         orderFrontRegardless()
 
         // Rehide temporarily shown items and refresh caches in the

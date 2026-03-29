@@ -1,0 +1,26 @@
+{
+  "com.raycast.macos": {
+    "defaultIcon": "raycast-logo-16",
+    "hint": "Raycast"
+  },
+  "ch.protonmail.drive": {
+    "defaultIcon": "status-synced",
+    "hint": "Proton Drive"
+  },
+  "notion.id": {
+    "defaultIcon": "menuBarIconTemplate",
+    "hint": "Notion"
+  },
+  "com.anthropic.claudefordesktop": {
+    "defaultIcon": "TrayIconTemplate",
+    "hint": "Claude"
+  },
+  "cc.ffitch.shottr": {
+    "defaultIcon": "shottr-22",
+    "hint": "Shottr"
+  },
+  "com.chabomakers.Antinote": {
+      "defaultIcon": "MenuIcon",
+      "hint": "Antinote"
+    }
+}

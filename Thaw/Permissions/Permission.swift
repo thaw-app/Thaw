@@ -145,25 +145,3 @@ final class AccessibilityPermission: Permission {
         )
     }
 }
-
-// MARK: - ScreenRecordingPermission
-
-final class ScreenRecordingPermission: Permission {
-    init() {
-        super.init(
-            title: String(localized: "Screen Recording"),
-            details: [
-                String(localized: "Change the menu bar's appearance."),
-                String(localized: "Display images of individual menu bar items."),
-            ],
-            isRequired: false,
-            settingsURL: URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"),
-            check: {
-                ScreenCapture.checkPermissions()
-            },
-            request: {
-                ScreenCapture.requestPermissions()
-            }
-        )
-    }
-}
