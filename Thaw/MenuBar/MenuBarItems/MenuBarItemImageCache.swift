@@ -85,16 +85,11 @@ final class MenuBarItemImageCache: ObservableObject {
     }
 
     private var failedCaptures: [MenuBarItemTag: FailedCapture] = [:]
+    private let failedCapturesLock = NSLock()
 
     /// Configuration for failed capture handling
     private static let maxFailuresBeforeBlacklist = 3
     private static let blacklistCooldownSeconds: TimeInterval = 30 // 30 seconds
-
-    /// Queue to run cache operations.
-    private let queue = DispatchQueue(
-        label: "MenuBarItemImageCache",
-        qos: .background
-    )
 
     /// Image capture options.
     private let captureOption: CGWindowImageOption = [
@@ -153,7 +148,7 @@ final class MenuBarItemImageCache: ObservableObject {
         let snapshot = images
 
         Task.detached(priority: .background) {
-            let cacheData = snapshot.map { tag, image -> (String, Data)? in
+            let cacheData = snapshot.compactMap { tag, image -> (String, Data)? in
                 let nsImage = NSImage(cgImage: image.cgImage, size: image.scaledSize)
                 guard let tiffData = nsImage.tiffRepresentation,
                       let bitmap = NSBitmapImageRep(data: tiffData),
@@ -162,7 +157,7 @@ final class MenuBarItemImageCache: ObservableObject {
 
                 let tagString = "\(tag.namespace):\(tag.title)"
                 return (tagString, pngData)
-            }.compactMap { $0 }
+            }
 
             guard cacheData.count == snapshot.count else { return }
 
@@ -233,6 +228,7 @@ final class MenuBarItemImageCache: ObservableObject {
                     await MainActor.run {
                         for (tag, image) in imagesToLoad {
                             self.images[tag] = image
+                            self.updateAccessOrder(for: tag)
                         }
                         MenuBarItemImageCache.diagLog.debug("Loaded \(loadedCount) images from disk cache (\(Int(cacheAge))s old)")
                     }
@@ -440,6 +436,8 @@ final class MenuBarItemImageCache: ObservableObject {
         var windowIDs = [CGWindowID]()
         var storage = [CGWindowID: (MenuBarItem, CGRect)]()
         var boundsUnion = CGRect.null
+        windowIDs.reserveCapacity(itemsWithBounds.count)
+        storage.reserveCapacity(itemsWithBounds.count)
 
         for (item, bounds) in itemsWithBounds {
             windowIDs.append(item.windowID)
@@ -544,6 +542,8 @@ final class MenuBarItemImageCache: ObservableObject {
         scale: CGFloat
     ) -> CaptureResult {
         var result = CaptureResult()
+        result.images.reserveCapacity(items.count)
+        result.excluded.reserveCapacity(items.count)
         var capturedCount = 0
         var nilImageCount = 0
         var transparentCount = 0
@@ -635,6 +635,7 @@ final class MenuBarItemImageCache: ObservableObject {
         var onScreenItemsWithBounds: [(item: MenuBarItem, bounds: CGRect)] = []
         var offScreenCount = 0
         var nilBoundsCount = 0
+        onScreenItemsWithBounds.reserveCapacity(capturable.count)
 
         for item in capturable {
             guard let bounds = Bridging.getWindowBounds(for: item.windowID) else {
@@ -705,6 +706,8 @@ final class MenuBarItemImageCache: ObservableObject {
         var windowIDs = [CGWindowID]()
         var storage = [CGWindowID: (MenuBarItem, CGRect)]()
         var boundsUnion = CGRect.null
+        windowIDs.reserveCapacity(items.count)
+        storage.reserveCapacity(items.count)
 
         for item in items {
             guard let bounds = Bridging.getWindowBounds(for: item.windowID) else {
@@ -764,8 +767,7 @@ final class MenuBarItemImageCache: ObservableObject {
             var updatedCount = 0
             for (tag, newImage) in newImages where !CapturedImage.isVisuallyEqual(self.images[tag], newImage) {
                 self.images[tag] = newImage
-                accessCounter += 1
-                accessTimestamps[tag] = accessCounter
+                self.updateAccessOrder(for: tag)
                 updatedCount += 1
             }
             if updatedCount > 0 {
@@ -801,51 +803,54 @@ final class MenuBarItemImageCache: ObservableObject {
 
     /// Checks if an item should be skipped due to repeated capture failures.
     private func shouldSkipCapture(for item: MenuBarItem) -> Bool {
-        guard let failed = failedCaptures[item.tag] else {
-            return false
-        }
-
-        // If failed too many times and within cooldown period, skip
-        if failed.failureCount >= Self.maxFailuresBeforeBlacklist {
-            let timeSinceFailure = Date().timeIntervalSince(
-                failed.lastFailureTime
-            )
-            if timeSinceFailure < Self.blacklistCooldownSeconds {
-                return true
-            } else {
-                // Cooldown expired, reset failure count
-                failedCaptures.removeValue(forKey: item.tag)
+        withFailedCapturesLock {
+            guard let failed = failedCaptures[item.tag] else {
                 return false
             }
-        }
 
-        return false
+            // If failed too many times and within cooldown period, skip
+            if failed.failureCount >= Self.maxFailuresBeforeBlacklist {
+                let timeSinceFailure = Date().timeIntervalSince(
+                    failed.lastFailureTime
+                )
+                if timeSinceFailure < Self.blacklistCooldownSeconds {
+                    return true
+                }
+
+                // Cooldown expired, reset failure count
+                failedCaptures.removeValue(forKey: item.tag)
+            }
+
+            return false
+        }
     }
 
     /// Records a capture failure for an item.
     private func recordCaptureFailure(for item: MenuBarItem) {
         let now = Date()
-        let existing = failedCaptures[item.tag]
-
-        if let existing = existing {
-            let newCount = existing.failureCount + 1
-            failedCaptures[item.tag] = FailedCapture(
-                tag: item.tag,
-                failureCount: newCount,
-                lastFailureTime: now
-            )
-
-            // Log when an item reaches blacklist threshold
-            if newCount == Self.maxFailuresBeforeBlacklist {
-                MenuBarItemImageCache.diagLog.info(
-                    "Item blacklisted after \(newCount) failures: \(item.logString) (will retry after \(Self.blacklistCooldownSeconds)s cooldown)"
+        let newCount = withFailedCapturesLock { () -> Int in
+            if let existing = failedCaptures[item.tag] {
+                let count = existing.failureCount + 1
+                failedCaptures[item.tag] = FailedCapture(
+                    tag: item.tag,
+                    failureCount: count,
+                    lastFailureTime: now
                 )
+                return count
             }
-        } else {
+
             failedCaptures[item.tag] = FailedCapture(
                 tag: item.tag,
                 failureCount: 1,
                 lastFailureTime: now
+            )
+            return 1
+        }
+
+        // Log when an item reaches blacklist threshold
+        if newCount == Self.maxFailuresBeforeBlacklist {
+            MenuBarItemImageCache.diagLog.info(
+                "Item blacklisted after \(newCount) failures: \(item.logString) (will retry after \(Self.blacklistCooldownSeconds)s cooldown)"
             )
         }
 
@@ -855,9 +860,10 @@ final class MenuBarItemImageCache: ObservableObject {
 
     /// Records a successful capture for an item (resets failure count).
     private func recordCaptureSuccess(for item: MenuBarItem) {
-        if let existing = failedCaptures.removeValue(forKey: item.tag), existing.failureCount >= 2 {
+        let recoveredCount = withFailedCapturesLock { failedCaptures.removeValue(forKey: item.tag)?.failureCount }
+        if let recoveredCount, recoveredCount >= 2 {
             MenuBarItemImageCache.diagLog.info(
-                "Item recovered after \(existing.failureCount) previous failures: \(item.logString)"
+                "Item recovered after \(recoveredCount) previous failures: \(item.logString)"
             )
         }
     }
@@ -865,8 +871,10 @@ final class MenuBarItemImageCache: ObservableObject {
     /// Cleans up old failed capture entries that have expired.
     private func cleanupOldFailedEntries() {
         let cutoff = Date().addingTimeInterval(-Self.blacklistCooldownSeconds)
-        failedCaptures = failedCaptures.filter { _, failed in
-            failed.lastFailureTime > cutoff
+        withFailedCapturesLock {
+            failedCaptures = failedCaptures.filter { _, failed in
+                failed.lastFailureTime > cutoff
+            }
         }
     }
 
@@ -1000,8 +1008,11 @@ final class MenuBarItemImageCache: ObservableObject {
     @MainActor
     func performCacheCleanup() {
         let removedCount = validateAndCleanupInvalidEntries()
-        let failedCleared = failedCaptures.count
-        failedCaptures.removeAll()
+        let failedCleared = withFailedCapturesLock { () -> Int in
+            let count = failedCaptures.count
+            failedCaptures.removeAll()
+            return count
+        }
         MenuBarItemImageCache.diagLog.info(
             "Manual cache cleanup completed: removed \(removedCount) invalid entries, cleared \(failedCleared) failed captures"
         )
@@ -1014,10 +1025,13 @@ final class MenuBarItemImageCache: ObservableObject {
         let lruSize = accessTimestamps.count
         let maxSize = Self.maxCacheSize
         let usagePercent = (imageSize * 100) / maxSize
-        let failedCount = failedCaptures.count
-        let blacklistedCount = failedCaptures.values.filter {
-            $0.failureCount >= Self.maxFailuresBeforeBlacklist
-        }.count
+        let failedStats = withFailedCapturesLock { () -> (count: Int, blacklisted: Int) in
+            let count = failedCaptures.count
+            let blacklisted = failedCaptures.values.filter {
+                $0.failureCount >= Self.maxFailuresBeforeBlacklist
+            }.count
+            return (count: count, blacklisted: blacklisted)
+        }
 
         let lruSorted = accessTimestamps.sorted { $0.value < $1.value }
         let lruDescription = lruSorted.map { "\($0.key)" }.joined(separator: ", ")
@@ -1027,7 +1041,7 @@ final class MenuBarItemImageCache: ObservableObject {
             === Image Cache Status: \(context) ===
             Cache size: \(imageSize)/\(maxSize) (\(usagePercent)% full)
             LRU order count: \(lruSize)
-            Failed captures: \(failedCount) (blacklisted: \(blacklistedCount))
+            Failed captures: \(failedStats.count) (blacklisted: \(failedStats.blacklisted))
             Memory impact: ~\(imageSize * 100)KB (estimated)
             LRU order: \(lruDescription)
             ======================================
@@ -1070,20 +1084,37 @@ final class MenuBarItemImageCache: ObservableObject {
                 continue
             }
 
+            // Resolve icons from asset catalogs and SF Symbols first.
+            // This works without screen capture permissions.
+            let sectionItems = await appState.itemManager.itemCache.managedItems(for: section)
+            var catalogCount = 0
+            for item in sectionItems where !item.isControlItem {
+                if let catalogIcon = await MenuBarIconProvider.icon(for: item, scale: scale) {
+                    newImages[item.tag] = catalogIcon
+                    catalogCount += 1
+                }
+            }
+            if catalogCount > 0 {
+                MenuBarItemImageCache.diagLog.debug(
+                    "Asset catalog: resolved \(catalogCount) icon(s) for \(section.logString)"
+                )
+            }
+
+            // Screen capture can provide higher-fidelity images that
+            // reflect the item's live state. Merge on top so captures
+            // override catalog icons when available.
             let sectionImages = await captureImages(
                 for: section,
                 scale: scale,
                 appState: appState
             )
 
-            guard !sectionImages.isEmpty else {
+            if sectionImages.isEmpty {
                 // Expected for off-screen sections (e.g. hidden): live refresh
-                // (refreshImages) handles those items. Only a real concern for
-                // the visible section — check compositeCapture logs for details.
+                // (refreshImages) handles those items.
                 MenuBarItemImageCache.diagLog.debug(
                     "captureImages: no images captured for \(section.logString) (off-screen or transient failure)"
                 )
-                continue
             }
 
             newImages.merge(sectionImages) { _, new in new }
@@ -1107,7 +1138,7 @@ final class MenuBarItemImageCache: ObservableObject {
             // menu bar item whose window briefly disappeared). This prevents
             // the IceBar and search from showing empty icons while the item's
             // app is still running.
-            let recentlyFailedTags = Set(failedCaptures.keys)
+            let recentlyFailedTags = withFailedCapturesLock { Set(failedCaptures.keys) }
 
             // Remove images for items that no longer exist in the item cache,
             // but preserve images for items that have recent capture failures
@@ -1128,8 +1159,7 @@ final class MenuBarItemImageCache: ObservableObject {
 
             // Mark all newly captured images as most recently used
             for tag in newImages.keys {
-                accessCounter += 1
-                accessTimestamps[tag] = accessCounter
+                self.updateAccessOrder(for: tag)
             }
 
             // Merge in the new images
@@ -1273,7 +1303,15 @@ final class MenuBarItemImageCache: ObservableObject {
         images.removeAll()
         accessTimestamps.removeAll()
         accessCounter = 0
-        failedCaptures.removeAll()
+        withFailedCapturesLock {
+            failedCaptures.removeAll()
+        }
+    }
+
+    private func withFailedCapturesLock<T>(_ body: () -> T) -> T {
+        failedCapturesLock.lock()
+        defer { failedCapturesLock.unlock() }
+        return body()
     }
 
     // MARK: Cache Failed
