@@ -4034,6 +4034,14 @@ extension MenuBarItemManager {
         defer { MouseHelpers.showCursor() }
 
         if isNotchedDisplay {
+            // Skip full sort if current order already matches the desired order.
+            let desiredSet = Set(desiredFiltered)
+            let currentFiltered = currentFlat.filter { desiredSet.contains($0) }
+            if currentFiltered == desiredFiltered {
+                MenuBarItemManager.diagLog.info("Profile layout (full sort): current order matches desired, skipping")
+                return
+            }
+
             let hiddenCtrlUID = controlItems.hidden.uniqueIdentifier
             let ahCtrlUID = controlItems.alwaysHidden?.uniqueIdentifier
 
