@@ -395,9 +395,18 @@ final class MenuBarManager: ObservableObject {
             action: #selector(showAppearanceEditorPanel),
             keyEquivalent: ""
         )
-        editAppearanceItem.image = NSImage(systemSymbolName: "paintbrush", accessibilityDescription: "Edit Appearance")
+        editAppearanceItem.image = NSImage(systemSymbolName: "swatchpalette", accessibilityDescription: "Edit Appearance")
         editAppearanceItem.target = self
         menu.addItem(editAppearanceItem)
+
+        let editLayoutItem = NSMenuItem(
+            title: String(localized: "Edit Menu Bar Layout…"),
+            action: #selector(showMenuBarLayoutSettings),
+            keyEquivalent: ""
+        )
+        editLayoutItem.image = NSImage(systemSymbolName: "rectangle.topthird.inset.filled", accessibilityDescription: "Edit Layout")
+        editLayoutItem.target = self
+        menu.addItem(editLayoutItem)
 
         // Profiles submenu.
         if let appState, !appState.profileManager.profiles.isEmpty {
@@ -513,6 +522,16 @@ final class MenuBarManager: ObservableObject {
         } else {
             hideApplicationMenus(manual: true)
         }
+    }
+
+    /// Shows the menu bar layout settings pane.
+    @objc private func showMenuBarLayoutSettings() {
+        guard let appState else {
+            return
+        }
+        appState.navigationState.settingsNavigationIdentifier = .menuBarLayout
+        appState.activate(withPolicy: .regular)
+        appState.openWindow(.settings)
     }
 
     /// Shows the appearance editor panel.
