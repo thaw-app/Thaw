@@ -1,26 +1,88 @@
 {
-  "com.raycast.macos": {
-    "defaultIcon": "raycast-logo-16",
-    "hint": "Raycast"
+  "cc.ffitch.shottr": {
+    "defaultIcon": "shottr-22",
+    "hint": "Shottr"
   },
   "ch.protonmail.drive": {
     "defaultIcon": "status-synced",
     "hint": "Proton Drive"
   },
+  "com.anthropic.claudefordesktop": {
+    "defaultIcon": "ClaudeSpark",
+    "hint": "Claude"
+  },
+  "com.chabomakers.Antinote": {
+    "defaultIcon": "MenuIcon",
+    "hint": "Antinote"
+  },
+  "com.displaylink.DisplayLinkUserAgent": {
+    "defaultIcon": "dlMenuIcon",
+    "hint": "DisplayLink"
+  },
+  "com.dmitrynikolaev.numi": {
+    "defaultIcon": "Menubar",
+    "hint": "Numi",
+    "forceTemplate": true
+  },
+  "com.if.Amphetamine": {
+    "defaultIcon": "AmphIcon_v1",
+    "hint": "Amphetamine"
+  },
+  "com.jetbrains.toolbox": {
+    "defaultIcon": "toolbox-tray-dark",
+    "hint": "JetBrains Toolbox"
+  },
+  "com.knollsoft.Hookshot": {
+    "defaultIcon": "StatusTemplate",
+    "hint": "Rectangle Pro"
+  },
+  "com.microsoft.OneDrive": {
+    "defaultIcon": "StatusBarIcon_InSync",
+    "hint": "OneDrive"
+  },
+  "com.microsoft.Outlook": {
+    "defaultIcon": "ic_fluent_outlook_20_color",
+    "hint": "Outlook"
+  },
+  "com.microsoft.teams2": {
+    "defaultIcon": "StatusBarIcon/Default",
+    "hint": "Teams"
+  },
+  "com.microsoft.wdav.tray": {
+    "defaultIcon": "Tray_Icon_Protected",
+    "hint": "Microsoft Defender",
+    "forceTemplate": true
+  },
+  "com.raycast.macos": {
+    "defaultIcon": "raycast-logo-16",
+    "hint": "Raycast"
+  },
+  "com.topoff.TopOff": {
+    "defaultIcon": "MenuBarFull",
+    "hint": "TopOff"
+  },
+  "com.wearedevx.alter": {
+    "defaultIcon": "alter.menu.icon",
+    "hint": "Alter"
+  },
+  "com.wireguard.macos": {
+    "defaultIcon": "StatusBarIcon",
+    "hint": "WireGuard"
+  },
   "notion.id": {
     "defaultIcon": "menuBarIconTemplate",
     "hint": "Notion"
   },
-  "com.anthropic.claudefordesktop": {
-    "defaultIcon": "TrayIconTemplate",
-    "hint": "Claude"
+  "org.flameshot.Flameshot": {
+    "defaultIcon": "flameshot",
+    "hint": "Flameshot"
   },
-  "cc.ffitch.shottr": {
-    "defaultIcon": "shottr-22",
-    "hint": "Shottr"
+  "org.p0deje.Maccy": {
+    "defaultIcon": "StatusBarMenuImage",
+    "hint": "Maccy"
   },
-  "com.chabomakers.Antinote": {
-      "defaultIcon": "MenuIcon",
-      "hint": "Antinote"
-    }
+  "pro.betterdisplay.BetterDisplay": {
+    "defaultIcon": "BetterDisplayStatus",
+    "hint": "BetterDisplay"
+  }
 }

@@ -13,6 +13,10 @@ struct AppMapping: Codable {
     let defaultIcon: String
     let allowPersonalization: Bool?
     let hint: String?
+    /// When true, the icon is treated as a template image and tinted
+    /// white for the dark menu bar, even if macOS doesn't report it
+    /// as a template at runtime (e.g. assets with `template=automatic`).
+    let forceTemplate: Bool?
 }
 
 /// A namespace for reading compiled asset catalog (.car) files and bundle resources.
@@ -29,6 +33,109 @@ enum AssetCatalogReader {
         return decoded
     }()
 
+    // MARK: - User Icon Overrides
+
+    private static let overridesKey = "MenuBarItemIconOverrides"
+
+    /// User-selected icon overrides, keyed by bundle identifier.
+    /// Values are resource names within the app's bundle.
+    static var overrides: [String: String] {
+        get { UserDefaults.standard.dictionary(forKey: overridesKey) as? [String: String] ?? [:] }
+        set { UserDefaults.standard.set(newValue, forKey: overridesKey) }
+    }
+
+    /// Sets (or clears) a user icon override for the given bundle ID.
+    static func setOverride(_ resourceName: String?, for bundleID: String) {
+        var current = overrides
+        current[bundleID] = resourceName
+        overrides = current
+    }
+
+    /// Returns all loadable image resource names from the given bundle,
+    /// suitable for display in an icon picker palette.
+    static func discoverAllIcons(in bundleURL: URL) -> [(name: String, image: NSImage)] {
+        guard let bundle = Bundle(url: bundleURL) else { return [] }
+
+        var results = [(name: String, image: NSImage)]()
+        var seen = Set<String>()
+
+        func tryAdd(_ name: String) {
+            guard !seen.contains(name) else { return }
+            if let img = bundle.image(forResource: name) {
+                seen.insert(name)
+                results.append((name, img))
+            }
+        }
+
+        // Probe manifest name for this bundle.
+        if let bundleID = bundle.bundleIdentifier, let mapping = manifest[bundleID] {
+            tryAdd(mapping.defaultIcon)
+        }
+
+        // Scan the asset catalog for all image assets.
+        let carURL = bundle.resourceURL?.appendingPathComponent("Assets.car")
+        if let carURL, FileManager.default.fileExists(atPath: carURL.path),
+           let allNames = extractAssetNames(from: carURL)
+        {
+            for name in allNames.sorted() {
+                tryAdd(name)
+            }
+        }
+
+        // Also scan loose image resources in the bundle.
+        if let resourceURL = bundle.resourceURL,
+           let contents = try? FileManager.default.contentsOfDirectory(
+               at: resourceURL,
+               includingPropertiesForKeys: nil
+           )
+        {
+            for url in contents {
+                let ext = url.pathExtension.lowercased()
+                guard ["png", "tiff", "pdf", "icns"].contains(ext) else { continue }
+                let name = url.deletingPathExtension().lastPathComponent
+                tryAdd(name)
+            }
+        }
+
+        return results
+    }
+
+    /// Extracts unique asset names from a compiled .car file using assetutil.
+    private static func extractAssetNames(from carURL: URL) -> Set<String>? {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/xcrun")
+        process.arguments = ["--sdk", "macosx", "assetutil", "--info", carURL.path]
+
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = FileHandle.nullDevice
+
+        do {
+            try process.run()
+        } catch {
+            return nil
+        }
+
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        process.waitUntilExit()
+
+        guard process.terminationStatus == 0,
+              let json = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]]
+        else {
+            return nil
+        }
+
+        var names = Set<String>()
+        for entry in json {
+            if let name = entry["Name"] as? String, !name.isEmpty,
+               !name.hasPrefix("ZZZZ"), !name.hasPrefix("AppIcon")
+            {
+                names.insert(name)
+            }
+        }
+        return names
+    }
+
     // MARK: - Public API
 
     static func findBestIcon(in bundleURL: URL, hint _: String?) -> (name: String, image: NSImage)? {
@@ -38,27 +145,52 @@ enum AssetCatalogReader {
             return generateFallbackIcon(for: bundleURL)
         }
 
+        // TIER 0: User-selected override.
+        if let overrideName = overrides[bundleID],
+           let result = resolveIcon(overrideName, bundle: bundle, forceTemplate: false)
+        {
+            return result
+        }
+
         // TIER 1: The Known-App Manifest (Instant & 100% Accurate)
         if let mapping = manifest[bundleID] {
-            // macOS natively extracts it from the Assets.car or Resources folder
-            if let exactImage = bundle.image(forResource: mapping.defaultIcon) {
-                // Ensure it respects Dark Mode if it's a template
-                if mapping.defaultIcon.lowercased().contains("template") || exactImage.isTemplate {
-                    exactImage.isTemplate = true
-                }
-
-                // 🚀 NEW: Scale the native icon up so it doesn't look tiny!
-                let largerSize = NSSize(width: 24, height: 24) // Change to 32x32 if needed
-                let embiggenedImage = resize(image: exactImage, to: largerSize)
-
-                return (mapping.defaultIcon, embiggenedImage)
+            if let result = resolveIcon(mapping.defaultIcon, bundle: bundle, forceTemplate: mapping.forceTemplate == true) {
+                return result
             }
         }
 
         // TIER 2: The App Icon Fallback
-        // If the app isn't in the JSON (like Cursor or cmux), we immediately
-        // generate a clean, scaled-down version of its main app icon.
         return generateFallbackIcon(for: bundleURL)
+    }
+
+    // MARK: - Icon Resolution
+
+    /// Resolves an icon name to an NSImage. Supports two formats:
+    /// - `"sf:symbol.name"` — loads an SF Symbol
+    /// - `"resourceName"` — loads from the app bundle
+    private static func resolveIcon(_ name: String, bundle: Bundle, forceTemplate: Bool) -> (name: String, image: NSImage)? {
+        if name.hasPrefix("sf:") {
+            let symbolName = String(name.dropFirst(3))
+            let config = NSImage.SymbolConfiguration(pointSize: 18, weight: .regular)
+            guard let image = NSImage(systemSymbolName: symbolName, accessibilityDescription: nil)?
+                .withSymbolConfiguration(config)
+            else {
+                return nil
+            }
+            image.isTemplate = true
+            return (name, image)
+        }
+
+        guard let image = bundle.image(forResource: name) else {
+            return nil
+        }
+        if forceTemplate
+            || name.lowercased().contains("template")
+            || image.isTemplate
+        {
+            image.isTemplate = true
+        }
+        return (name, image)
     }
 
     // MARK: - Fallback Generator

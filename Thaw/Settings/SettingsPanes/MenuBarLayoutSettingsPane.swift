@@ -16,6 +16,8 @@ struct MenuBarLayoutSettingsPane: View {
     @State private var isResettingLayout = false
     @State private var resetStatus: ResetStatus?
     @State private var isConfirmingReset = false
+    @State private var isConfirmingIconReset = false
+    @State private var hasOverrides = !AssetCatalogReader.overrides.isEmpty
 
     private let diagLog = DiagLog(category: "MenuBarLayoutPane")
 
@@ -34,6 +36,7 @@ struct MenuBarLayoutSettingsPane: View {
             IceForm(spacing: 20) {
                 header
                 layoutBars
+                iconOverrideControls
                 resetControls
             }
         }
@@ -45,6 +48,9 @@ struct MenuBarLayoutSettingsPane: View {
                 Text("Drag to arrange your menu bar items into different sections.")
                     .font(.title3.bold())
                 Text("Items can also be arranged by ⌘ Command + dragging them in the menu bar.")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.secondary)
+                Text("Right-click any icon to choose an alternative.")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(.secondary)
             }
@@ -112,9 +118,56 @@ struct MenuBarLayoutSettingsPane: View {
         }
     }
 
+    private var iconOverrideControls: some View {
+        IceSection {
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Icon overrides")
+                        .font(.headline)
+                    Text("Export your overrides to share or reset back to application defaults.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 12)
+
+                HStack(spacing: 8) {
+                    Button("Export to Clipboard") {
+                        exportOverridesToClipboard()
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(!hasOverrides)
+
+                    Button("Reset All") {
+                        isConfirmingIconReset = true
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(!hasOverrides)
+                }
+            }
+        }
+        .onAppear {
+            hasOverrides = !AssetCatalogReader.overrides.isEmpty
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
+            hasOverrides = !AssetCatalogReader.overrides.isEmpty
+        }
+        .alert("Reset all icon overrides?", isPresented: $isConfirmingIconReset) {
+            Button("Reset", role: .destructive) {
+                resetAllIconOverrides()
+            }
+            Button("Cancel", role: .cancel) {
+                isConfirmingIconReset = false
+            }
+        } message: {
+            Text("This will remove all custom icon selections and revert every icon to its default.")
+        }
+    }
+
     private var resetControls: some View {
         IceSection {
-            HStack(alignment: .firstTextBaseline, spacing: 12) {
+            HStack(alignment: .center, spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Reset menu bar layout")
                         .font(.headline)
@@ -186,6 +239,25 @@ struct MenuBarLayoutSettingsPane: View {
 
                 LayoutBar(imageCache: appState.imageCache, section: name)
             }
+        }
+    }
+
+    private func exportOverridesToClipboard() {
+        let overrides = AssetCatalogReader.overrides
+        guard !overrides.isEmpty else { return }
+        if let data = try? JSONSerialization.data(withJSONObject: overrides, options: [.prettyPrinted, .sortedKeys]),
+           let json = String(data: data, encoding: .utf8)
+        {
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(json, forType: .string)
+        }
+    }
+
+    private func resetAllIconOverrides() {
+        AssetCatalogReader.overrides = [:]
+        hasOverrides = false
+        Task {
+            await appState.imageCache.updateCacheWithoutChecks(sections: MenuBarSection.Name.allCases)
         }
     }
 

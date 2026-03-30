@@ -90,6 +90,7 @@ final class MenuBarItemImageCache: ObservableObject {
     @MainActor
     func performSetup(with appState: AppState) {
         self.appState = appState
+        MenuBarIconProvider.appState = appState
         configureCancellables()
 
         // Try to load cached images from disk
@@ -264,7 +265,6 @@ final class MenuBarItemImageCache: ObservableObject {
                 }
             }
             .store(in: &c)
-
         }
 
         cancellables = c
@@ -467,7 +467,7 @@ final class MenuBarItemImageCache: ObservableObject {
             // This works without screen capture permissions.
             let sectionItems = await appState.itemManager.itemCache.managedItems(for: section)
             var catalogCount = 0
-            for item in sectionItems where !item.isControlItem {
+            for item in sectionItems {
                 if let catalogIcon = await MenuBarIconProvider.icon(for: item, scale: scale) {
                     newImages[item.tag] = catalogIcon
                     catalogCount += 1
@@ -478,7 +478,6 @@ final class MenuBarItemImageCache: ObservableObject {
                     "Asset catalog: resolved \(catalogCount) icon(s) for \(section.logString)"
                 )
             }
-
         }
 
         guard !Task.isCancelled else {

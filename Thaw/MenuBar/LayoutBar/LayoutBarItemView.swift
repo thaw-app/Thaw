@@ -8,6 +8,7 @@
 
 import Cocoa
 import Combine
+import SwiftUI
 
 // MARK: - LayoutBarItemView
 
@@ -204,6 +205,40 @@ final class LayoutBarItemView: NSView {
         (name as NSString).draw(with: drawRect, options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine], attributes: attrs)
     }
 
+    private var iconPickerPopover: NSPopover?
+
+    override func rightMouseDown(with event: NSEvent) {
+        guard let bundleURL = item.sourceApplication?.bundleURL ?? item.owningApplication?.bundleURL,
+              let bundleID = Bundle(url: bundleURL)?.bundleIdentifier
+        else {
+            super.rightMouseDown(with: event)
+            return
+        }
+
+        iconPickerPopover?.close()
+
+        let popover = NSPopover()
+        popover.behavior = .transient
+        popover.contentSize = NSSize(width: 280, height: 240)
+
+        let pickerView = IconPickerView(
+            bundleID: bundleID,
+            bundleURL: bundleURL,
+            currentOverride: AssetCatalogReader.overrides[bundleID]
+        ) { [weak self] selectedName in
+            AssetCatalogReader.setOverride(selectedName, for: bundleID)
+            popover.close()
+            guard let appState = self?.appState else { return }
+            Task {
+                await appState.imageCache.updateCacheWithoutChecks(sections: MenuBarSection.Name.allCases)
+            }
+        }
+
+        popover.contentViewController = NSHostingController(rootView: pickerView)
+        iconPickerPopover = popover
+        popover.show(relativeTo: bounds, of: self, preferredEdge: .maxY)
+    }
+
     override func mouseDragged(with event: NSEvent) {
         super.mouseDragged(with: event)
         tooltipController.cancel()
@@ -285,4 +320,144 @@ extension LayoutBarItemView: NSAccessibilityLayoutItem {}
 
 extension NSPasteboard.PasteboardType {
     static let layoutBarItem = Self("\(Constants.bundleIdentifier).layout-bar-item")
+}
+
+// MARK: - Icon Picker Popover
+
+/// A SwiftUI view that displays a grid of all discoverable icons from an
+/// app bundle, allowing the user to pick an override icon.
+private struct IconPickerView: View {
+    let bundleID: String
+    let bundleURL: URL
+    let currentOverride: String?
+    let onSelect: (String?) -> Void
+
+    @State private var icons: [(name: String, image: NSImage)] = []
+    @State private var isLoading = true
+    @State private var sfSymbolSearch = ""
+
+    private let columns = Array(repeating: GridItem(.fixed(32), spacing: 6), count: 7)
+
+    private var sfSymbolImage: NSImage? {
+        guard !sfSymbolSearch.isEmpty else { return nil }
+        let config = NSImage.SymbolConfiguration(pointSize: 18, weight: .regular)
+        return NSImage(systemSymbolName: sfSymbolSearch, accessibilityDescription: nil)?
+            .withSymbolConfiguration(config)
+    }
+
+    var body: some View {
+        VStack(spacing: 8) {
+            if isLoading {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if icons.isEmpty && sfSymbolSearch.isEmpty {
+                Text("No icons found")
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                ScrollView {
+                    LazyVGrid(columns: columns, spacing: 6) {
+                        ForEach(icons, id: \.name) { icon in
+                            IconCell(
+                                name: icon.name,
+                                image: icon.image,
+                                isSelected: icon.name == currentOverride
+                            ) {
+                                onSelect(icon.name)
+                            }
+                        }
+                    }
+                    .padding(8)
+                }
+            }
+
+            Divider()
+
+            // SF Symbol search
+            HStack(spacing: 8) {
+                TextField("SF Symbol name", text: $sfSymbolSearch)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.system(size: 11))
+
+                if let image = sfSymbolImage {
+                    Image(nsImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 20, height: 20)
+
+                    Button("Use") {
+                        onSelect("sf:\(sfSymbolSearch)")
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                } else if !sfSymbolSearch.isEmpty {
+                    Image(systemName: "xmark.circle")
+                        .foregroundStyle(.secondary)
+                        .frame(width: 20, height: 20)
+                }
+            }
+            .padding(.horizontal, 8)
+
+            Divider()
+
+            Button("Reset to Default") {
+                onSelect(nil)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(currentOverride == nil ? .secondary : .primary)
+            .disabled(currentOverride == nil)
+            .padding(.bottom, 8)
+        }
+        .frame(width: 280, height: 300)
+        .task {
+            let url = bundleURL
+            let result = await Task.detached(priority: .userInitiated) {
+                AssetCatalogReader.discoverAllIcons(in: url)
+            }.value
+            // Put the currently selected override first if present.
+            if let current = currentOverride, !current.hasPrefix("sf:"),
+               let idx = result.firstIndex(where: { $0.name == current }), idx > 0
+            {
+                var sorted = result
+                let selected = sorted.remove(at: idx)
+                sorted.insert(selected, at: 0)
+                icons = sorted
+            } else {
+                icons = result
+            }
+            // Pre-fill SF Symbol field if current override is an SF Symbol.
+            if let current = currentOverride, current.hasPrefix("sf:") {
+                sfSymbolSearch = String(current.dropFirst(3))
+            }
+            isLoading = false
+        }
+    }
+}
+
+/// A single icon cell in the picker grid.
+private struct IconCell: View {
+    let name: String
+    let image: NSImage
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(nsImage: image)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 24, height: 24)
+                .padding(4)
+                .background(
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(isSelected ? Color.accentColor.opacity(0.3) : Color.clear)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 4)
+                        .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 1.5)
+                )
+        }
+        .buttonStyle(.plain)
+        .help(name)
+    }
 }
