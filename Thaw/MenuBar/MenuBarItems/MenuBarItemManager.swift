@@ -167,6 +167,28 @@ final class MenuBarItemManager: ObservableObject {
     /// Persisted bundle identifiers explicitly placed in always-hidden section.
     private var pinnedAlwaysHiddenBundleIDs = Set<String>()
 
+    /// Cached layout parameters from the last profile apply, used to re-sort
+    /// when profile-listed items appear after the initial apply.
+    private var activeProfileLayout: (
+        pinnedHidden: Set<String>,
+        pinnedAlwaysHidden: Set<String>,
+        sectionOrder: [String: [String]],
+        itemSectionMap: [String: String],
+        itemOrder: [String: [String]]
+    )?
+
+    /// Flattened set of item identifiers from the active profile's itemOrder,
+    /// for O(1) lookup when detecting late-arriving profile items.
+    private var activeProfileItemIdentifiers = Set<String>()
+
+    /// Set of item identifiers that were present when the profile layout was
+    /// last applied (or re-applied). Used to detect genuinely new arrivals.
+    private var profileSortedItemIdentifiers = Set<String>()
+
+    /// Handle for the debounced profile re-sort task. Cancelled and re-created
+    /// each time a new late-arriving profile item is detected.
+    private var profileResortTask: Task<Void, Never>?
+
     /// Persisted mapping of item tag identifiers to their original section name for
     /// temporarily shown items whose apps quit before they could be rehidden. When
     /// the app relaunches, this allows us to move the item back to its original section.
@@ -964,6 +986,13 @@ extension MenuBarItemManager {
             // A final cacheItemsRegardless() after the period ends handles restore.
             guard !isInStartupSettling else {
                 await uncheckedCacheItems(items: items, controlItems: controlItems, displayID: displayID)
+                // Absorb items that appear during settling into the profile
+                // snapshot so they aren't treated as late arrivals afterwards.
+                if activeProfileLayout != nil {
+                    for item in items where !item.isControlItem {
+                        profileSortedItemIdentifiers.insert(item.uniqueIdentifier)
+                    }
+                }
                 MenuBarItemManager.diagLog.debug("cacheItemsRegardless: startup settling active, skipping restore")
                 return
             }
@@ -1031,6 +1060,27 @@ extension MenuBarItemManager {
             // This must be done before the function ends so that saveSectionOrder
             // can run for future caches.
             isRestoringItemOrder = false
+
+            // Detect late-arriving items that belong to the active profile.
+            // If new items appeared since the last profile apply/re-sort,
+            // schedule a debounced re-sort to place them correctly.
+            if activeProfileLayout != nil,
+               !activeProfileItemIdentifiers.isEmpty,
+               profileResortTask == nil
+            {
+                let currentIdentifiers = Set(
+                    items
+                        .filter { !$0.isControlItem }
+                        .map(\.uniqueIdentifier)
+                )
+                let newProfileItems = currentIdentifiers
+                    .intersection(activeProfileItemIdentifiers)
+                    .subtracting(profileSortedItemIdentifiers)
+                if !newProfileItems.isEmpty {
+                    MenuBarItemManager.diagLog.info("Profile re-sort: detected \(newProfileItems.count) late-arriving profile item(s): \(newProfileItems.sorted())")
+                    scheduleProfileResort()
+                }
+            }
 
             MenuBarItemManager.diagLog.debug("cacheItemsRegardless: finished, cache now has \(self.itemCache.managedItems.count) managed items")
         }
@@ -3691,6 +3741,13 @@ extension MenuBarItemManager {
         pendingRelocations.removeAll()
         pendingReturnDestinations.removeAll()
         savedSectionOrder.removeAll()
+
+        // Clear active profile layout cache.
+        activeProfileLayout = nil
+        activeProfileItemIdentifiers.removeAll()
+        profileSortedItemIdentifiers.removeAll()
+        profileResortTask?.cancel()
+        profileResortTask = nil
         persistKnownItemIdentifiers()
         persistPinnedBundleIDs()
         persistPendingRelocations()
@@ -3878,6 +3935,50 @@ extension MenuBarItemManager {
         try await resetLayoutToFreshState()
     }
 
+    /// Schedules a debounced re-application of the active profile's layout
+    /// to place late-arriving items in their correct positions. Multiple
+    /// calls within the debounce window are coalesced into a single re-sort.
+    private func scheduleProfileResort() {
+        profileResortTask?.cancel()
+        profileResortTask = Task { [weak self] in
+            // Short debounce to coalesce multiple items appearing in quick
+            // succession. The app-launch notification already has a 1s debounce,
+            // so this only needs to cover the gap between detection and action.
+            do {
+                try await Task.sleep(for: .milliseconds(500))
+            } catch {
+                return // Cancelled — a newer schedule replaced us.
+            }
+            guard let self, let layout = self.activeProfileLayout else { return }
+            guard !self.isInStartupSettling else { return }
+            guard !self.isRestoringItemOrder else { return }
+
+            MenuBarItemManager.diagLog.info("Profile re-sort: re-applying layout for late-arriving items")
+            // Clear profileResortTask BEFORE calling applyProfileLayout,
+            // because applyProfileLayout cancels profileResortTask to
+            // prevent concurrent re-sorts — which would cancel THIS task
+            // and cause the move loop to exit via Task.isCancelled.
+            self.profileResortTask = nil
+            await self.applyProfileLayout(
+                pinnedHidden: layout.pinnedHidden,
+                pinnedAlwaysHidden: layout.pinnedAlwaysHidden,
+                sectionOrder: layout.sectionOrder,
+                itemSectionMap: layout.itemSectionMap,
+                itemOrder: layout.itemOrder
+            )
+        }
+    }
+
+    /// Clears the cached active profile layout, stopping any pending
+    /// late-arrival re-sort. Called when the active profile is cleared.
+    func clearActiveProfileLayout() {
+        activeProfileLayout = nil
+        activeProfileItemIdentifiers.removeAll()
+        profileSortedItemIdentifiers.removeAll()
+        profileResortTask?.cancel()
+        profileResortTask = nil
+    }
+
     /// Applies a profile's layout by moving items to match the profile's
     /// saved section assignments and within-section ordering.
     ///
@@ -3901,6 +4002,18 @@ extension MenuBarItemManager {
         savedSectionOrder = sectionOrder
         persistPinnedBundleIDs()
         persistSavedSectionOrder()
+
+        // Cache profile layout for late-arriving icon re-sort.
+        profileResortTask?.cancel()
+        profileResortTask = nil
+        activeProfileLayout = (
+            pinnedHidden: pinnedHidden,
+            pinnedAlwaysHidden: pinnedAlwaysHidden,
+            sectionOrder: sectionOrder,
+            itemSectionMap: itemSectionMap,
+            itemOrder: itemOrder
+        )
+        activeProfileItemIdentifiers = Set(itemOrder.values.flatMap { $0 })
 
         // Prevent the cache cycle from saving intermediate positions.
         isRestoringItemOrder = true
@@ -4033,12 +4146,23 @@ extension MenuBarItemManager {
         MouseHelpers.hideCursor(watchdogTimeout: .seconds(30))
         defer { MouseHelpers.showCursor() }
 
+        // Helper: update profileSortedItemIdentifiers so re-sort detection
+        // doesn't keep re-triggering for items already evaluated.
+        func updateProfileSortedSnapshot() {
+            profileSortedItemIdentifiers = Set(
+                items
+                    .filter { !$0.isControlItem }
+                    .map(\.uniqueIdentifier)
+            )
+        }
+
         if isNotchedDisplay {
             // Skip full sort if current order already matches the desired order.
             let desiredSet = Set(desiredFiltered)
             let currentFiltered = currentFlat.filter { desiredSet.contains($0) }
             if currentFiltered == desiredFiltered {
                 MenuBarItemManager.diagLog.info("Profile layout (full sort): current order matches desired, skipping")
+                updateProfileSortedSnapshot()
                 return
             }
 
@@ -4276,6 +4400,7 @@ extension MenuBarItemManager {
                 } else {
                     MenuBarItemManager.diagLog.info("Profile layout: all items already in correct positions")
                 }
+                updateProfileSortedSnapshot()
                 await cacheItemsRegardless(skipRecentMoveCheck: true)
                 return
             }
@@ -4381,6 +4506,11 @@ extension MenuBarItemManager {
             let cgY = screen.frame.origin.y + screen.frame.height - savedCursorPosition.y
             MouseHelpers.warpCursor(to: CGPoint(x: savedCursorPosition.x, y: cgY))
         }
+
+        // Re-fetch items after moves and update the snapshot so the
+        // late-arrival detection doesn't re-trigger for items we just sorted.
+        items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+        updateProfileSortedSnapshot()
 
         await cacheItemsRegardless(skipRecentMoveCheck: true)
 

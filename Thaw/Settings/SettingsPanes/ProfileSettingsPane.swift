@@ -364,6 +364,7 @@ struct ProfileSettingsPane: View {
             try profileManager.deleteProfile(id: id)
             if profileManager.activeProfileID == id {
                 profileManager.activeProfileID = nil
+                appState.itemManager.clearActiveProfileLayout()
             }
         } catch {
             errorMessage = error.localizedDescription
