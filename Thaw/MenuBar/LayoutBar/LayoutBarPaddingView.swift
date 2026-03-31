@@ -138,16 +138,8 @@ final class LayoutBarPaddingView: NSView {
                         self.container.canSetArrangedViews = true
                         return
                     }
-                    // dragging source is the only view in the layout bar, so we
-                    // need to find a target item
-                    let items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
-                    let targetItem: MenuBarItem? = switch container.section {
-                    case .visible: nil // visible section always has more than 1 item
-                    case .hidden: items.first(matching: .hiddenControlItem)
-                    case .alwaysHidden: items.first(matching: .alwaysHiddenControlItem)
-                    }
-                    if let targetItem {
-                        self.move(item: item, to: .leftOfItem(targetItem))
+                    if let destination = await self.liveFallbackDestinationForDraggedItem() {
+                        self.move(item: item, to: destination)
                     } else {
                         Self.diagLog.error("No target item for layout bar drag")
                         self.container.canSetArrangedViews = true
@@ -160,9 +152,16 @@ final class LayoutBarPaddingView: NSView {
                 } else if let targetItem = nearestItem(toLeftOf: index) {
                     willMove = true
                     move(item: item, to: .rightOfItem(targetItem))
-                } else if let destination = fallbackDestinationForDraggedItem() {
+                } else if arrangedViews.count > 0 {
                     willMove = true
-                    move(item: item, to: destination)
+                    Task {
+                        if let destination = await self.liveFallbackDestinationForDraggedItem() {
+                            self.move(item: item, to: destination)
+                        } else {
+                            Self.diagLog.error("No target item for layout bar drag")
+                            self.container.canSetArrangedViews = true
+                        }
+                    }
                 }
             }
         }
@@ -261,19 +260,15 @@ final class LayoutBarPaddingView: NSView {
         return nil
     }
 
-    private func fallbackDestinationForDraggedItem() -> MenuBarItemManager.MoveDestination? {
-        guard let appState = container.appState else {
-            return nil
-        }
+    private func liveFallbackDestinationForDraggedItem() async -> MenuBarItemManager.MoveDestination? {
+        let items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
         return switch container.section {
         case .visible:
             nil
         case .hidden:
-            appState.itemManager.itemCache.managedItems.first(matching: .hiddenControlItem)
-                .map { .leftOfItem($0) }
+            items.first(matching: .hiddenControlItem).map { .leftOfItem($0) }
         case .alwaysHidden:
-            appState.itemManager.itemCache.managedItems.first(matching: .alwaysHiddenControlItem)
-                .map { .leftOfItem($0) }
+            items.first(matching: .alwaysHiddenControlItem).map { .leftOfItem($0) }
         }
     }
 

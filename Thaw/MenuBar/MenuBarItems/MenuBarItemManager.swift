@@ -420,7 +420,10 @@ final class MenuBarItemManager: ObservableObject {
 
         if sectionName(for: newItemsPlacement.sectionKey) == section,
            let anchorIdentifier = newItemsPlacement.anchorIdentifier,
-           let anchorIndex = itemIdentifiers.firstIndex(of: anchorIdentifier)
+           let anchorIndex = resolvedNewItemsAnchorIndex(
+               for: anchorIdentifier,
+               in: itemIdentifiers
+           )
         {
             switch newItemsPlacement.relation {
             case .leftOfAnchor:
@@ -468,13 +471,13 @@ final class MenuBarItemManager: ObservableObject {
             if let rightNeighbor {
                 updatedPlacement = NewItemsPlacement(
                     sectionKey: sectionKey(for: resolvedSection),
-                    anchorIdentifier: rightNeighbor.uniqueIdentifier,
+                    anchorIdentifier: persistedNewItemsAnchorIdentifier(for: rightNeighbor),
                     relation: .leftOfAnchor
                 )
             } else if let leftNeighbor {
                 updatedPlacement = NewItemsPlacement(
                     sectionKey: sectionKey(for: resolvedSection),
-                    anchorIdentifier: leftNeighbor.uniqueIdentifier,
+                    anchorIdentifier: persistedNewItemsAnchorIdentifier(for: leftNeighbor),
                     relation: .rightOfAnchor
                 )
             } else {
@@ -502,12 +505,28 @@ final class MenuBarItemManager: ObservableObject {
     }
 
     /// Returns the move destination that inserts a new item into the preferred section.
-    private func newItemsMoveDestination(for controlItems: ControlItemPair) -> MoveDestination {
+    private func newItemsMoveDestination(
+        for controlItems: ControlItemPair,
+        among items: [MenuBarItem]
+    ) -> MoveDestination {
         let targetSection = effectiveNewItemsSection
+        var context = CacheContext(
+            controlItems: controlItems,
+            displayID: Bridging.getActiveMenuBarDisplayID()
+        )
+        let activelyShownTags = Set(temporarilyShownItemContexts.map(\.tag.tagIdentifier))
+        let liveSectionItems = items.filter { item in
+            guard !item.isControlItem else { return false }
+            guard !activelyShownTags.contains(item.tag.tagIdentifier) else { return false }
+            return context.findSection(for: item) == targetSection
+        }
 
         if sectionName(for: newItemsPlacement.sectionKey) == targetSection,
            let anchorIdentifier = newItemsPlacement.anchorIdentifier,
-           let anchorItem = itemCache[targetSection].first(where: { $0.uniqueIdentifier == anchorIdentifier })
+           let anchorItem = resolvedNewItemsAnchorItem(
+               for: anchorIdentifier,
+               in: liveSectionItems
+           )
         {
             switch newItemsPlacement.relation {
             case .leftOfAnchor:
@@ -539,6 +558,58 @@ final class MenuBarItemManager: ObservableObject {
                 return .leftOfItem(controlItems.hidden)
             }
         }
+    }
+
+    private func persistedNewItemsAnchorIdentifier(for item: MenuBarItem) -> String {
+        let namespace = item.tag.namespace.description
+        if DynamicItemOverrides.isDynamic(namespace) {
+            return namespace
+        }
+        return item.uniqueIdentifier
+    }
+
+    private func resolvedNewItemsAnchorIndex(
+        for anchorIdentifier: String,
+        in itemIdentifiers: [String]
+    ) -> Int? {
+        if let exactMatch = itemIdentifiers.firstIndex(of: anchorIdentifier) {
+            return exactMatch
+        }
+
+        let stableIdentifier = stableNewItemsAnchorIdentifier(from: anchorIdentifier)
+        guard stableIdentifier != anchorIdentifier else {
+            return nil
+        }
+
+        return itemIdentifiers.firstIndex { identifier in
+            stableNewItemsAnchorIdentifier(from: identifier) == stableIdentifier
+        }
+    }
+
+    private func resolvedNewItemsAnchorItem(
+        for anchorIdentifier: String,
+        in items: [MenuBarItem]
+    ) -> MenuBarItem? {
+        if let exactMatch = items.first(where: { $0.uniqueIdentifier == anchorIdentifier }) {
+            return exactMatch
+        }
+
+        let stableIdentifier = stableNewItemsAnchorIdentifier(from: anchorIdentifier)
+        guard stableIdentifier != anchorIdentifier else {
+            return nil
+        }
+
+        return items.first { item in
+            persistedNewItemsAnchorIdentifier(for: item) == stableIdentifier
+        }
+    }
+
+    private func stableNewItemsAnchorIdentifier(from identifier: String) -> String {
+        let namespace = identifier.split(separator: ":", maxSplits: 1).first.map(String.init) ?? identifier
+        if DynamicItemOverrides.isDynamic(namespace) {
+            return namespace
+        }
+        return identifier
     }
 
     private func defaultNewItemsBadgeIndex(in section: MenuBarSection.Name, itemCount: Int) -> Int {
@@ -3282,7 +3353,7 @@ extension MenuBarItemManager {
         knownItemIdentifiers.insert(identifier)
         persistKnownItemIdentifiers()
 
-        let destination = newItemsMoveDestination(for: controlItems)
+        let destination = newItemsMoveDestination(for: controlItems, among: items)
         MenuBarItemManager.diagLog.info(
             "Relocating new item \(candidate.logString) to \(effectiveNewItemsSection.logString)"
         )
