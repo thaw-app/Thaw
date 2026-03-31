@@ -3046,10 +3046,12 @@ extension MenuBarItemManager {
             // notPlacedHidden and knownItemIdentifiers is sufficient for most cases.
             // The hasBundleIDWithSavedHiddenItems check above handles multi-icon apps.
             //
-            // IMPORTANT: Only relocate based on identity, not windowID. When an item gets a
-            // new windowID (e.g., after another app launches), it shouldn't be relocated if
-            // we already know its identity. This prevents existing items from jumping around.
-            return notPlacedHidden && isNewIdentity
+            // Relocate if the identity is brand new OR if the item has a new
+            // window ID (app quit and relaunched). Items with saved sections
+            // are already filtered out above, so this only affects items that
+            // macOS placed in the hidden zone after an app relaunch.
+            let isNewID = previousIDs.isEmpty ? isNewIdentity : !previousIDs.contains(item.windowID)
+            return notPlacedHidden && (isNewIdentity || isNewID)
         }
         guard let candidate else {
             if !leftmostItems.isEmpty && savedSectionForIdentifier.isEmpty == false {
@@ -3063,11 +3065,15 @@ extension MenuBarItemManager {
         knownItemIdentifiers.insert(identifier)
         persistKnownItemIdentifiers()
 
-        // Move only the offending item to the right of the hidden control item (i.e., into visible section).
+        // Move the item next to the Thaw visible control icon,
+        // placing it in the visible section.
+        guard let visibleCtrl = items.first(where: { $0.tag == .visibleControlItem }) else {
+            return false
+        }
         do {
             try await move(
                 item: candidate,
-                to: .rightOfItem(controlItems.hidden),
+                to: .rightOfItem(visibleCtrl),
                 skipInputPause: true
             )
         } catch {
@@ -3318,6 +3324,23 @@ extension MenuBarItemManager {
             {
                 savedSection = fallback
             } else {
+                // No saved section for this item. If it's in a hidden zone,
+                // move it to visible — it was never intentionally placed there
+                // (e.g. macOS placed it past a divider after an app relaunch
+                // or a profile change shifted section boundaries).
+                if currentSection != .visible,
+                   let visibleCtrl = items.first(where: { $0.tag == .visibleControlItem })
+                {
+                    MenuBarItemManager.diagLog.info(
+                        "Relocating unsaved item \(item.logString) from \(currentSection.logString) to visible"
+                    )
+                    do {
+                        try await move(item: item, to: .rightOfItem(visibleCtrl), skipInputPause: true)
+                    } catch {
+                        MenuBarItemManager.diagLog.error("Failed to relocate unsaved item \(item.logString): \(error)")
+                    }
+                    return true
+                }
                 continue
             }
 
@@ -4138,6 +4161,33 @@ extension MenuBarItemManager {
         // Filter desired sequence to only items present in the current bar.
         let currentSet = Set(currentFlat)
         var desiredFiltered = desiredFlat.filter { currentSet.contains($0) }
+
+        // Items present in the menu bar but not in the profile should be
+        // placed in the visible section next to the Thaw visible control
+        // icon rather than left unmanaged in always-hidden.
+        let visibleCtrlUID = items.first(where: { $0.tag == .visibleControlItem })?.uniqueIdentifier
+        let desiredSet = Set(desiredFiltered)
+        let unmanagedUIDs = currentFlat.filter { uid in
+            !desiredSet.contains(uid) && uid != hiddenCtrlUID && uid != ahCtrlUID
+        }
+        if !unmanagedUIDs.isEmpty {
+            // Insert screen-right of the Thaw visible control icon.
+            let insertIdx: Int
+            if let visibleIdx = visibleCtrlUID.flatMap({ desiredFiltered.firstIndex(of: $0) }) {
+                insertIdx = visibleIdx + 1
+            } else if let hiddenIdx = desiredFiltered.firstIndex(of: hiddenCtrlUID) {
+                insertIdx = hiddenIdx
+            } else {
+                insertIdx = desiredFiltered.count
+            }
+            desiredFiltered.insert(contentsOf: unmanagedUIDs, at: insertIdx)
+            for uid in unmanagedUIDs {
+                sectionMap[uid] = "visible"
+            }
+            MenuBarItemManager.diagLog.debug(
+                "Profile layout: \(unmanagedUIDs.count) unmanaged item(s) added to visible section"
+            )
+        }
 
         // On notched displays, calculate available visible space and overflow
         // items that won't fit into the hidden section. The Thaw visible
