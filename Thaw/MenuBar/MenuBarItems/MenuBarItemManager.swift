@@ -207,6 +207,8 @@ final class MenuBarItemManager: ObservableObject {
     /// Persisted per-section item order. Maps section key to an ordered list of
     /// `uniqueIdentifier` strings (right-to-left, matching cache array order).
     private var savedSectionOrder = [String: [String]]()
+    /// The user-selected destination for newly detected menu bar items.
+    @Published private(set) var newItemsSectionPreference = Defaults.DefaultValue.newItemsSection
 
     /// Loads persisted known item identifiers.
     private func loadKnownItemIdentifiers() {
@@ -269,6 +271,18 @@ final class MenuBarItemManager: ObservableObject {
         if let stored = UserDefaults.standard.dictionary(forKey: key) as? [String: [String]] {
             savedSectionOrder = stored
         }
+    }
+
+    /// Loads the persisted preferred destination for newly detected menu bar items.
+    private func loadNewItemsSectionPreference() {
+        let stored = Defaults.string(forKey: .newItemsSection) ?? Defaults.DefaultValue.newItemsSection
+        let resolvedSection = sectionName(for: stored) ?? .hidden
+        newItemsSectionPreference = sectionKey(for: resolvedSection)
+    }
+
+    /// Persists the preferred destination for newly detected menu bar items.
+    private func persistNewItemsSectionPreference() {
+        Defaults.set(newItemsSectionPreference, forKey: .newItemsSection)
     }
 
     /// Persists the current saved section order.
@@ -354,6 +368,57 @@ final class MenuBarItemManager: ObservableObject {
         }
     }
 
+    /// Returns the effective section for newly detected menu bar items, falling back
+    /// to hidden when the always-hidden section is currently disabled.
+    var effectiveNewItemsSection: MenuBarSection.Name {
+        let preferredSection = sectionName(for: newItemsSectionPreference) ?? .hidden
+        if preferredSection == .alwaysHidden, appState?.settings.advanced.enableAlwaysHiddenSection != true {
+            return .hidden
+        }
+        return preferredSection
+    }
+
+    /// Updates the preferred destination for newly detected menu bar items.
+    func setNewItemsSectionPreference(_ section: MenuBarSection.Name) {
+        let resolvedSection: MenuBarSection.Name
+        if section == .alwaysHidden, appState?.settings.advanced.enableAlwaysHiddenSection != true {
+            resolvedSection = .hidden
+        } else {
+            resolvedSection = section
+        }
+        let newValue = sectionKey(for: resolvedSection)
+        guard newItemsSectionPreference != newValue else {
+            return
+        }
+        newItemsSectionPreference = newValue
+        persistNewItemsSectionPreference()
+        MenuBarItemManager.diagLog.debug("Updated new item destination to \(resolvedSection.logString)")
+    }
+
+    /// Returns the move destination that inserts a new item into the preferred section.
+    private func newItemsMoveDestination(for controlItems: ControlItemPair) -> MoveDestination {
+        switch effectiveNewItemsSection {
+        case .visible:
+            .rightOfItem(controlItems.hidden)
+        case .hidden:
+            if appState?.settings.advanced.enableAlwaysHiddenSection == true {
+                if let alwaysHidden = controlItems.alwaysHidden {
+                    .rightOfItem(alwaysHidden)
+                } else {
+                    .leftOfItem(controlItems.hidden)
+                }
+            } else {
+                .leftOfItem(controlItems.hidden)
+            }
+        case .alwaysHidden:
+            if let alwaysHidden = controlItems.alwaysHidden {
+                .leftOfItem(alwaysHidden)
+            } else {
+                .leftOfItem(controlItems.hidden)
+            }
+        }
+    }
+
     private(set) weak var appState: AppState?
 
     /// Sets up the manager.
@@ -364,6 +429,7 @@ final class MenuBarItemManager: ObservableObject {
         loadPinnedBundleIDs()
         loadPendingRelocations()
         loadSavedSectionOrder()
+        loadNewItemsSectionPreference()
         MenuBarItemManager.diagLog.debug("performSetup: loaded \(knownItemIdentifiers.count) known identifiers, \(pinnedHiddenBundleIDs.count) pinned hidden, \(pinnedAlwaysHiddenBundleIDs.count) pinned always-hidden, \(savedSectionOrder.values.map(\.count)) saved order entries")
         // On first launch (no known identifiers), avoid auto-relocating the leftmost item
         // so everything remains in the hidden section until the user interacts.
@@ -3080,15 +3146,15 @@ extension MenuBarItemManager {
         knownItemIdentifiers.insert(identifier)
         persistKnownItemIdentifiers()
 
-        // Move the item next to the Thaw visible control icon,
-        // placing it in the visible section.
-        guard let visibleCtrl = items.first(where: { $0.tag == .visibleControlItem }) else {
-            return false
-        }
+        let destination = newItemsMoveDestination(for: controlItems)
+        MenuBarItemManager.diagLog.info(
+            "Relocating new item \(candidate.logString) to \(effectiveNewItemsSection.logString)"
+        )
+
         do {
             try await move(
                 item: candidate,
-                to: .rightOfItem(visibleCtrl),
+                to: destination,
                 skipInputPause: true
             )
         } catch {

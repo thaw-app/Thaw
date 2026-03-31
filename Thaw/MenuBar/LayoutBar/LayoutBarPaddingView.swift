@@ -28,7 +28,7 @@ final class LayoutBarPaddingView: NSView {
     }
 
     /// The layout view's arranged views.
-    var arrangedViews: [LayoutBarItemView] {
+    var arrangedViews: [LayoutBarArrangedView] {
         get { container.arrangedViews }
         set { container.arrangedViews = newValue }
     }
@@ -83,12 +83,15 @@ final class LayoutBarPaddingView: NSView {
     }
 
     override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
-        guard let draggingSource = sender.draggingSource as? LayoutBarItemView else {
+        guard let draggingSource = sender.draggingSource as? LayoutBarArrangedView else {
             container.canSetArrangedViews = true
             return false
         }
 
-        if draggingSource.item.tag == .visibleControlItem && container.section != .visible {
+        if case let .item(draggingItem) = draggingSource.kind,
+           draggingItem.tag == .visibleControlItem,
+           container.section != .visible
+        {
             let alert = NSAlert()
             alert.alertStyle = .warning
             alert.messageText = String(localized: "Cannot move \(Constants.displayName) icon.")
@@ -107,12 +110,22 @@ final class LayoutBarPaddingView: NSView {
             return false
         }
 
+        if draggingSource.isNewItemsBadge {
+            container.appState?.itemManager.setNewItemsSectionPreference(container.section)
+            container.canSetArrangedViews = true
+            return true
+        }
+
         var willMove = false
 
         if let index = arrangedViews.firstIndex(of: draggingSource) {
             if arrangedViews.count == 1 {
                 willMove = true
                 Task {
+                    guard case let .item(item) = draggingSource.kind else {
+                        self.container.canSetArrangedViews = true
+                        return
+                    }
                     // dragging source is the only view in the layout bar, so we
                     // need to find a target item
                     let items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
@@ -122,22 +135,23 @@ final class LayoutBarPaddingView: NSView {
                     case .alwaysHidden: items.first(matching: .alwaysHiddenControlItem)
                     }
                     if let targetItem {
-                        self.move(item: draggingSource.item, to: .leftOfItem(targetItem))
+                        self.move(item: item, to: .leftOfItem(targetItem))
                     } else {
                         Self.diagLog.error("No target item for layout bar drag")
                         self.container.canSetArrangedViews = true
                     }
                 }
-            } else if arrangedViews.indices.contains(index + 1) {
-                willMove = true
-                // we have a view to the right of the dragging source
-                let targetItem = arrangedViews[index + 1].item
-                move(item: draggingSource.item, to: .leftOfItem(targetItem))
-            } else if arrangedViews.indices.contains(index - 1) {
-                willMove = true
-                // we have a view to the left of the dragging source
-                let targetItem = arrangedViews[index - 1].item
-                move(item: draggingSource.item, to: .rightOfItem(targetItem))
+            } else if case let .item(item) = draggingSource.kind {
+                if let targetItem = nearestItem(toRightOf: index) {
+                    willMove = true
+                    move(item: item, to: .leftOfItem(targetItem))
+                } else if let targetItem = nearestItem(toLeftOf: index) {
+                    willMove = true
+                    move(item: item, to: .rightOfItem(targetItem))
+                } else if let destination = fallbackDestinationForDraggedItem() {
+                    willMove = true
+                    move(item: item, to: destination)
+                }
             }
         }
 
@@ -209,6 +223,46 @@ final class LayoutBarPaddingView: NSView {
 
     private func showOverlay(_ visible: Bool) {
         container.alphaValue = visible ? 0.6 : 1.0
+    }
+
+    private func nearestItem(toRightOf index: Int) -> MenuBarItem? {
+        guard arrangedViews.indices.contains(index + 1) else {
+            return nil
+        }
+        for candidateIndex in (index + 1) ..< arrangedViews.count {
+            if case let .item(item) = arrangedViews[candidateIndex].kind {
+                return item
+            }
+        }
+        return nil
+    }
+
+    private func nearestItem(toLeftOf index: Int) -> MenuBarItem? {
+        guard arrangedViews.indices.contains(index - 1) else {
+            return nil
+        }
+        for candidateIndex in stride(from: index - 1, through: 0, by: -1) {
+            if case let .item(item) = arrangedViews[candidateIndex].kind {
+                return item
+            }
+        }
+        return nil
+    }
+
+    private func fallbackDestinationForDraggedItem() -> MenuBarItemManager.MoveDestination? {
+        guard let appState = container.appState else {
+            return nil
+        }
+        return switch container.section {
+        case .visible:
+            nil
+        case .hidden:
+            appState.itemManager.itemCache.managedItems.first(matching: .hiddenControlItem)
+                .map { .leftOfItem($0) }
+        case .alwaysHidden:
+            appState.itemManager.itemCache.managedItems.first(matching: .alwaysHiddenControlItem)
+                .map { .leftOfItem($0) }
+        }
     }
 
     /// Ensures the dragged item remains in the intended section and its icon appears.

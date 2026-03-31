@@ -5,6 +5,7 @@
 //  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
+//
 
 import Cocoa
 import Combine
@@ -12,7 +13,7 @@ import Combine
 // MARK: - LayoutBarItemView
 
 /// A view that displays an image in a menu bar layout view.
-final class LayoutBarItemView: NSView {
+final class LayoutBarItemView: LayoutBarArrangedView {
     private weak var appState: AppState?
 
     private var cancellables = Set<AnyCancellable>()
@@ -22,20 +23,6 @@ final class LayoutBarItemView: NSView {
 
     private lazy var tooltipController = CustomTooltipController(text: item.displayName, view: self)
     private var tooltipTrackingArea: NSTrackingArea?
-
-    /// Temporary information that the item view retains when it is moved outside
-    /// of a layout view.
-    ///
-    /// When the item view is dragged outside of a layout view, this property is set
-    /// to hold the layout view's container view, as well as the index of the item
-    /// view in relation to the container's other items. Upon being inserted into a
-    /// new layout view, these values are removed. If the item is dropped outside of
-    /// a layout view, these values are used to reinsert the item view in its original
-    /// layout view.
-    var oldContainerInfo: (container: LayoutBarContainer, index: Int)?
-
-    /// A Boolean value that indicates whether the item view is currently inside a container.
-    var hasContainer = false
 
     /// The image displayed inside the view.
     private var cachedImage: MenuBarItemImageCache.CapturedImage? {
@@ -49,20 +36,8 @@ final class LayoutBarItemView: NSView {
         }
     }
 
-    /// A Boolean value that indicates whether the item view is a dragging placeholder.
-    ///
-    /// If this value is `true`, the item view does not draw its image.
-    var isDraggingPlaceholder = false {
-        didSet {
-            needsDisplay = true
-        }
-    }
-
-    /// A Boolean value that indicates whether the view is enabled.
-    var isEnabled = true {
-        didSet {
-            needsDisplay = true
-        }
+    override var kind: Kind {
+        .item(item)
     }
 
     /// Creates a view that displays the given menu bar item.
@@ -70,11 +45,10 @@ final class LayoutBarItemView: NSView {
         self.item = item
         self.appState = appState
 
-        // set the frame to the full item frame size; the image will be centered when displayed
         super.init(frame: CGRect(origin: .zero, size: item.bounds.size))
         unregisterDraggedTypes()
 
-        self.isEnabled = item.isMovable
+        isEnabled = item.isMovable
 
         configureCancellables()
     }
@@ -86,6 +60,10 @@ final class LayoutBarItemView: NSView {
 
     private var tooltipDelay: TimeInterval {
         appState?.settings.advanced.tooltipDelay ?? 0.5
+    }
+
+    override func draggingImage() -> NSImage? {
+        cachedImage?.nsImage
     }
 
     override func updateTrackingAreas() {
@@ -194,66 +172,15 @@ final class LayoutBarItemView: NSView {
             return
         }
 
-        // Data doesn't matter, but we do need to set the type.
         let pasteboardItem = NSPasteboardItem()
         pasteboardItem.setData(Data(), forType: .layoutBarItem)
 
         let draggingItem = NSDraggingItem(pasteboardWriter: pasteboardItem)
-        draggingItem.setDraggingFrame(bounds, contents: cachedImage?.nsImage)
+        draggingItem.setDraggingFrame(bounds, contents: draggingImage())
 
         beginDraggingSession(with: [draggingItem], event: event, source: self)
     }
 }
-
-// MARK: LayoutBarItemView: NSDraggingSource
-
-extension LayoutBarItemView: NSDraggingSource {
-    func draggingSession(_: NSDraggingSession, sourceOperationMaskFor _: NSDraggingContext) -> NSDragOperation {
-        return .move
-    }
-
-    func draggingSession(_ session: NSDraggingSession, willBeginAt _: NSPoint) {
-        // make sure the container doesn't update its arranged views and that items
-        // aren't arranged during a dragging session
-        if let container = superview as? LayoutBarContainer {
-            container.canSetArrangedViews = false
-        }
-
-        // prevent the dragging image from animating back to its original location
-        session.animatesToStartingPositionsOnCancelOrFail = false
-
-        // async to prevent the view from disappearing before the dragging image appears
-        DispatchQueue.main.async {
-            self.isDraggingPlaceholder = true
-        }
-    }
-
-    func draggingSession(_: NSDraggingSession, endedAt _: NSPoint, operation _: NSDragOperation) {
-        defer {
-            // always remove container info at the end of a session
-            oldContainerInfo = nil
-        }
-
-        // since the session's `animatesToStartingPositionsOnCancelOrFail` property was
-        // set to false when the session began (above), there is no delay between the user
-        // releasing the dragging item and this method being called; thus, `isDraggingPlaceholder`
-        // only needs to be updated here; if we ever decide we want animation, it may also
-        // need to be updated inside `performDragOperation(_:)` on `LayoutBarPaddingView`
-        isDraggingPlaceholder = false
-
-        // if the drop occurs outside of a container, reinsert the view into its original
-        // container at its original index
-        if !hasContainer {
-            guard let (container, index) = oldContainerInfo else {
-                return
-            }
-            container.shouldAnimateNextLayoutPass = false
-            container.arrangedViews.insert(self, at: index)
-        }
-    }
-}
-
-extension LayoutBarItemView: NSAccessibilityLayoutItem {}
 
 // MARK: Layout Bar Item Pasteboard Type
 

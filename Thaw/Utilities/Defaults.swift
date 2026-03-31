@@ -163,6 +163,7 @@ extension Defaults {
 
         static let enableAlwaysHiddenSection = false
         static let showAllSectionsOnUserDrag = true
+        static let newItemsSection = "hidden"
         static let sectionDividerStyle: SectionDividerStyle = .noDivider
         static let hideApplicationMenus = true
         static let enableSecondaryContextMenu = true
@@ -218,6 +219,7 @@ extension Defaults {
 
         case enableAlwaysHiddenSection = "EnableAlwaysHiddenSection"
         case showAllSectionsOnUserDrag = "ShowAllSectionsOnUserDrag"
+        case newItemsSection = "NewItemsSection"
         case sectionDividerStyle = "SectionDividerStyle"
         case hideApplicationMenus = "HideApplicationMenus"
         case enableSecondaryContextMenu = "EnableSecondaryContextMenu"

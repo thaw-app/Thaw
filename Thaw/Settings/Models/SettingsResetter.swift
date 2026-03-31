@@ -50,6 +50,7 @@ extension AppSettings {
     func resetAdvanced() {
         advanced.enableAlwaysHiddenSection = Defaults.DefaultValue.enableAlwaysHiddenSection
         advanced.showAllSectionsOnUserDrag = Defaults.DefaultValue.showAllSectionsOnUserDrag
+        appState?.itemManager.setNewItemsSectionPreference(.hidden)
         advanced.sectionDividerStyle = Defaults.DefaultValue.sectionDividerStyle
         advanced.hideApplicationMenus = Defaults.DefaultValue.hideApplicationMenus
         advanced.enableSecondaryContextMenu = Defaults.DefaultValue.enableSecondaryContextMenu
