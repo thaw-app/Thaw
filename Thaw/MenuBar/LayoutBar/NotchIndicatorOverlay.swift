@@ -19,17 +19,17 @@ struct NotchIndicatorOverlay: View {
                let notch = screen.frameOfNotch
             {
                 let notchGap = MenuBarSection.notchGap
-                let screenWidth = screen.frame.width
                 let notchTotalWidth = notch.width + 2 * notchGap
-                let usableRightWidth = screenWidth - notch.maxX - notchGap
+                // Total right-side space: from screen center to right edge,
+                // which includes both the notch area and the usable area.
+                let rightSideTotal = screen.frame.width / 2
+                let notchFraction = notchTotalWidth / max(rightSideTotal, 1)
 
-                // Proportional width relative to the usable space right of the notch.
-                let proportionalWidth = max(
-                    30,
-                    geometry.size.width * notchTotalWidth / max(usableRightWidth, 1)
-                )
-                // Cap at 30% of the bar width to avoid overwhelming the view.
-                let clampedWidth = min(proportionalWidth, geometry.size.width * 0.3)
+                // The layout bar represents the right side of the screen.
+                // Scale the notch proportionally.
+                let proportionalWidth = max(30, geometry.size.width * notchFraction)
+                // Cap at 45% of the bar width.
+                let clampedWidth = min(proportionalWidth, geometry.size.width * 0.45)
 
                 HStack(spacing: 0) {
                     notchIndicator
