@@ -207,8 +207,8 @@ final class MenuBarItemManager: ObservableObject {
     /// Persisted per-section item order. Maps section key to an ordered list of
     /// `uniqueIdentifier` strings (right-to-left, matching cache array order).
     private var savedSectionOrder = [String: [String]]()
-    /// The user-selected destination for newly detected menu bar items.
-    @Published private(set) var newItemsSectionPreference = Defaults.DefaultValue.newItemsSection
+    /// Placement preference for newly detected menu bar items.
+    @Published private(set) var newItemsPlacement = NewItemsPlacement.defaultValue
 
     /// Loads persisted known item identifiers.
     private func loadKnownItemIdentifiers() {
@@ -273,16 +273,50 @@ final class MenuBarItemManager: ObservableObject {
         }
     }
 
-    /// Loads the persisted preferred destination for newly detected menu bar items.
-    private func loadNewItemsSectionPreference() {
-        let stored = Defaults.string(forKey: .newItemsSection) ?? Defaults.DefaultValue.newItemsSection
-        let resolvedSection = sectionName(for: stored) ?? .hidden
-        newItemsSectionPreference = sectionKey(for: resolvedSection)
+    struct NewItemsPlacement: Codable, Equatable {
+        enum Relation: String, Codable {
+            case leftOfAnchor
+            case rightOfAnchor
+            case sectionDefault
+        }
+
+        let sectionKey: String
+        let anchorIdentifier: String?
+        let relation: Relation
+
+        static let defaultValue = NewItemsPlacement(
+            sectionKey: Defaults.DefaultValue.newItemsSection,
+            anchorIdentifier: nil,
+            relation: .sectionDefault
+        )
     }
 
-    /// Persists the preferred destination for newly detected menu bar items.
-    private func persistNewItemsSectionPreference() {
-        Defaults.set(newItemsSectionPreference, forKey: .newItemsSection)
+    /// Loads the persisted placement preference for newly detected menu bar items.
+    private func loadNewItemsPlacementPreference() {
+        if let data = Defaults.data(forKey: .newItemsPlacementData),
+           let stored = try? JSONDecoder().decode(NewItemsPlacement.self, from: data)
+        {
+            newItemsPlacement = stored
+            return
+        }
+
+        let storedSection = Defaults.string(forKey: .newItemsSection) ?? Defaults.DefaultValue.newItemsSection
+        let resolvedSection = sectionName(for: storedSection) ?? .hidden
+        newItemsPlacement = NewItemsPlacement(
+            sectionKey: sectionKey(for: resolvedSection),
+            anchorIdentifier: nil,
+            relation: .sectionDefault
+        )
+    }
+
+    /// Persists the placement preference for newly detected menu bar items.
+    private func persistNewItemsPlacementPreference() {
+        Defaults.set(newItemsPlacement.sectionKey, forKey: .newItemsSection)
+        if let data = try? JSONEncoder().encode(newItemsPlacement) {
+            Defaults.set(data, forKey: .newItemsPlacementData)
+        } else {
+            Defaults.removeObject(forKey: .newItemsPlacementData)
+        }
     }
 
     /// Persists the current saved section order.
@@ -371,51 +405,153 @@ final class MenuBarItemManager: ObservableObject {
     /// Returns the effective section for newly detected menu bar items, falling back
     /// to hidden when the always-hidden section is currently disabled.
     var effectiveNewItemsSection: MenuBarSection.Name {
-        let preferredSection = sectionName(for: newItemsSectionPreference) ?? .hidden
+        let preferredSection = sectionName(for: newItemsPlacement.sectionKey) ?? .hidden
         if preferredSection == .alwaysHidden, appState?.settings.advanced.enableAlwaysHiddenSection != true {
             return .hidden
         }
         return preferredSection
     }
 
-    /// Updates the preferred destination for newly detected menu bar items.
-    func setNewItemsSectionPreference(_ section: MenuBarSection.Name) {
+    /// Returns the insertion index for the New Items badge within the given section.
+    func newItemsBadgeIndex(in section: MenuBarSection.Name, itemIdentifiers: [String]) -> Int? {
+        guard effectiveNewItemsSection == section else {
+            return nil
+        }
+
+        if sectionName(for: newItemsPlacement.sectionKey) == section,
+           let anchorIdentifier = newItemsPlacement.anchorIdentifier,
+           let anchorIndex = itemIdentifiers.firstIndex(of: anchorIdentifier)
+        {
+            switch newItemsPlacement.relation {
+            case .leftOfAnchor:
+                return anchorIndex
+            case .rightOfAnchor:
+                return anchorIndex + 1
+            case .sectionDefault:
+                break
+            }
+        }
+
+        return defaultNewItemsBadgeIndex(in: section, itemCount: itemIdentifiers.count)
+    }
+
+    /// Updates the preferred destination for newly detected menu bar items using the
+    /// badge position from the layout editor.
+    func updateNewItemsPlacement(
+        section: MenuBarSection.Name,
+        arrangedViews: [LayoutBarArrangedView]
+    ) {
         let resolvedSection: MenuBarSection.Name
         if section == .alwaysHidden, appState?.settings.advanced.enableAlwaysHiddenSection != true {
             resolvedSection = .hidden
         } else {
             resolvedSection = section
         }
-        let newValue = sectionKey(for: resolvedSection)
-        guard newItemsSectionPreference != newValue else {
+
+        let updatedPlacement: NewItemsPlacement
+        if let badgeIndex = arrangedViews.firstIndex(where: { $0.isNewItemsBadge }) {
+            let rightNeighbor = arrangedViews[(badgeIndex + 1) ..< arrangedViews.count]
+                .compactMap { view -> MenuBarItem? in
+                    if case let .item(item) = view.kind { return item }
+                    return nil
+                }
+                .first
+
+            let leftNeighbor = arrangedViews[..<badgeIndex]
+                .reversed()
+                .compactMap { view -> MenuBarItem? in
+                    if case let .item(item) = view.kind { return item }
+                    return nil
+                }
+                .first
+
+            if let rightNeighbor {
+                updatedPlacement = NewItemsPlacement(
+                    sectionKey: sectionKey(for: resolvedSection),
+                    anchorIdentifier: rightNeighbor.uniqueIdentifier,
+                    relation: .leftOfAnchor
+                )
+            } else if let leftNeighbor {
+                updatedPlacement = NewItemsPlacement(
+                    sectionKey: sectionKey(for: resolvedSection),
+                    anchorIdentifier: leftNeighbor.uniqueIdentifier,
+                    relation: .rightOfAnchor
+                )
+            } else {
+                updatedPlacement = NewItemsPlacement(
+                    sectionKey: sectionKey(for: resolvedSection),
+                    anchorIdentifier: nil,
+                    relation: .sectionDefault
+                )
+            }
+        } else {
+            updatedPlacement = NewItemsPlacement(
+                sectionKey: sectionKey(for: resolvedSection),
+                anchorIdentifier: nil,
+                relation: .sectionDefault
+            )
+        }
+
+        guard newItemsPlacement != updatedPlacement else {
             return
         }
-        newItemsSectionPreference = newValue
-        persistNewItemsSectionPreference()
-        MenuBarItemManager.diagLog.debug("Updated new item destination to \(resolvedSection.logString)")
+
+        newItemsPlacement = updatedPlacement
+        persistNewItemsPlacementPreference()
+        MenuBarItemManager.diagLog.debug("Updated new item destination to \(resolvedSection.logString) at relation \(updatedPlacement.relation.rawValue)")
     }
 
     /// Returns the move destination that inserts a new item into the preferred section.
     private func newItemsMoveDestination(for controlItems: ControlItemPair) -> MoveDestination {
-        switch effectiveNewItemsSection {
+        let targetSection = effectiveNewItemsSection
+
+        if sectionName(for: newItemsPlacement.sectionKey) == targetSection,
+           let anchorIdentifier = newItemsPlacement.anchorIdentifier,
+           let anchorItem = itemCache[targetSection].first(where: { $0.uniqueIdentifier == anchorIdentifier })
+        {
+            switch newItemsPlacement.relation {
+            case .leftOfAnchor:
+                return .leftOfItem(anchorItem)
+            case .rightOfAnchor:
+                return .rightOfItem(anchorItem)
+            case .sectionDefault:
+                break
+            }
+        }
+
+        switch targetSection {
         case .visible:
-            .rightOfItem(controlItems.hidden)
+            return .rightOfItem(controlItems.hidden)
         case .hidden:
             if appState?.settings.advanced.enableAlwaysHiddenSection == true {
                 if let alwaysHidden = controlItems.alwaysHidden {
-                    .rightOfItem(alwaysHidden)
+                    return .rightOfItem(alwaysHidden)
                 } else {
-                    .leftOfItem(controlItems.hidden)
+                    return .leftOfItem(controlItems.hidden)
                 }
             } else {
-                .leftOfItem(controlItems.hidden)
+                return .leftOfItem(controlItems.hidden)
             }
         case .alwaysHidden:
             if let alwaysHidden = controlItems.alwaysHidden {
-                .leftOfItem(alwaysHidden)
+                return .leftOfItem(alwaysHidden)
             } else {
-                .leftOfItem(controlItems.hidden)
+                return .leftOfItem(controlItems.hidden)
             }
+        }
+    }
+
+    private func defaultNewItemsBadgeIndex(in section: MenuBarSection.Name, itemCount: Int) -> Int {
+        switch section {
+        case .visible:
+            return 0
+        case .hidden:
+            if appState?.settings.advanced.enableAlwaysHiddenSection == true {
+                return 0
+            }
+            return itemCount
+        case .alwaysHidden:
+            return itemCount
         }
     }
 
@@ -429,7 +565,7 @@ final class MenuBarItemManager: ObservableObject {
         loadPinnedBundleIDs()
         loadPendingRelocations()
         loadSavedSectionOrder()
-        loadNewItemsSectionPreference()
+        loadNewItemsPlacementPreference()
         MenuBarItemManager.diagLog.debug("performSetup: loaded \(knownItemIdentifiers.count) known identifiers, \(pinnedHiddenBundleIDs.count) pinned hidden, \(pinnedAlwaysHiddenBundleIDs.count) pinned always-hidden, \(savedSectionOrder.values.map(\.count)) saved order entries")
         // On first launch (no known identifiers), avoid auto-relocating the leftmost item
         // so everything remains in the hidden section until the user interacts.

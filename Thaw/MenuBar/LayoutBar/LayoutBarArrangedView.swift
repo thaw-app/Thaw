@@ -72,11 +72,19 @@ extension LayoutBarArrangedView: NSDraggingSource {
     }
 
     func draggingSession(_: NSDraggingSession, endedAt _: NSPoint, operation _: NSDragOperation) {
+        let sourceContainer = oldContainerInfo?.container
         defer {
             oldContainerInfo = nil
         }
 
         isDraggingPlaceholder = false
+
+        if isNewItemsBadge {
+            sourceContainer?.canSetArrangedViews = true
+            if let appState = sourceContainer?.appState {
+                sourceContainer?.setArrangedViews(items: appState.itemManager.itemCache.managedItems(for: sourceContainer?.section ?? .hidden))
+            }
+        }
 
         if !hasContainer {
             guard let (container, index) = oldContainerInfo else {

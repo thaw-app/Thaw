@@ -84,7 +84,7 @@ final class LayoutBarContainer: NSView {
         if let appState {
             Publishers.CombineLatest3(
                 appState.itemManager.$itemCache,
-                appState.itemManager.$newItemsSectionPreference,
+                appState.itemManager.$newItemsPlacement,
                 appState.settings.advanced.$enableAlwaysHiddenSection
             )
                 .sink { [weak self] cache, _, _ in
@@ -191,6 +191,8 @@ final class LayoutBarContainer: NSView {
             return
         }
         var newViews = [LayoutBarArrangedView]()
+        let itemIdentifiers = items.map(\.uniqueIdentifier)
+        let badgeIndex = appState.itemManager.newItemsBadgeIndex(in: section, itemIdentifiers: itemIdentifiers)
         for item in items {
             if let existingView = arrangedViews.first(where: {
                 if case let .item(existingItem) = $0.kind {
@@ -204,12 +206,10 @@ final class LayoutBarContainer: NSView {
                 newViews.append(view)
             }
         }
-        if appState.itemManager.effectiveNewItemsSection == section {
-            if let existingBadge = arrangedViews.first(where: { $0.isNewItemsBadge }) {
-                newViews.append(existingBadge)
-            } else {
-                newViews.append(LayoutBarNewItemsBadgeView())
-            }
+        if let badgeIndex {
+            let badgeView = arrangedViews.first(where: { $0.isNewItemsBadge }) ?? LayoutBarNewItemsBadgeView()
+            let insertionIndex = badgeIndex.clamped(to: newViews.startIndex ... newViews.endIndex)
+            newViews.insert(badgeView, at: insertionIndex)
         }
         arrangedViews = newViews
     }

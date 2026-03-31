@@ -111,8 +111,20 @@ final class LayoutBarPaddingView: NSView {
         }
 
         if draggingSource.isNewItemsBadge {
-            container.appState?.itemManager.setNewItemsSectionPreference(container.section)
+            let sourceContainer = draggingSource.oldContainerInfo?.container
+            container.appState?.itemManager.updateNewItemsPlacement(
+                section: container.section,
+                arrangedViews: arrangedViews
+            )
+            draggingSource.oldContainerInfo = nil
             container.canSetArrangedViews = true
+            sourceContainer?.canSetArrangedViews = true
+            if let appState = container.appState {
+                sourceContainer?.setArrangedViews(items: appState.itemManager.itemCache.managedItems(for: sourceContainer?.section ?? container.section))
+                if sourceContainer !== container {
+                    container.setArrangedViews(items: appState.itemManager.itemCache.managedItems(for: container.section))
+                }
+            }
             return true
         }
 
