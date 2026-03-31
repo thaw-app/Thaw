@@ -4137,7 +4137,91 @@ extension MenuBarItemManager {
 
         // Filter desired sequence to only items present in the current bar.
         let currentSet = Set(currentFlat)
-        let desiredFiltered = desiredFlat.filter { currentSet.contains($0) }
+        var desiredFiltered = desiredFlat.filter { currentSet.contains($0) }
+
+        // On notched displays, calculate available visible space and overflow
+        // items that won't fit into the hidden section. The Thaw visible
+        // control icon stays as the last visible item (nearest the hidden divider).
+        let activeScreen = NSScreen.screenWithActiveMenuBar ?? NSScreen.main
+        if let screen = activeScreen, screen.hasNotch, let notch = screen.frameOfNotch {
+            let notchGap = MenuBarSection.notchGap
+            // Available space: from notch gap to Control Center's left edge.
+            let ccItem = items.first(where: { $0.tag == .controlCenter })
+            let rightBoundary = ccItem.map { $0.bounds.minX } ?? screen.frame.maxX
+            let availableWidth = rightBoundary - (notch.maxX + notchGap)
+
+            // Measure visible item widths from current bounds.
+            let visibleUIDs = Array(desiredFiltered.prefix(while: { $0 != hiddenCtrlUID }))
+            var uidWidths = [String: CGFloat]()
+            for uid in visibleUIDs {
+                if let item = items.first(where: { $0.uniqueIdentifier == uid && isProfileItem($0) }) {
+                    uidWidths[uid] = item.bounds.width
+                }
+            }
+
+            // Find the Thaw visible control icon — it must always stay visible.
+            let visibleCtrlUID = items.first(where: { $0.tag == .visibleControlItem })?.uniqueIdentifier
+            let chevronWidth = visibleCtrlUID.flatMap { uidWidths[$0] } ?? 0
+
+            // Fill from the Thaw visible control icon side (end of array =
+            // leftmost on screen, nearest hidden divider) towards CC.
+            // Items at the CC end that don't fit overflow to hidden.
+            var usedWidth = chevronWidth
+            var fittingUIDs = [String]()
+            let nonChevronUIDs = visibleUIDs.filter { $0 != visibleCtrlUID }
+            for uid in nonChevronUIDs.reversed() {
+                let width = uidWidths[uid] ?? 0
+                if usedWidth + width <= availableWidth {
+                    usedWidth += width
+                    fittingUIDs.insert(uid, at: 0)
+                } else {
+                    break
+                }
+            }
+
+            let overflowUIDs = Array(nonChevronUIDs.prefix(nonChevronUIDs.count - fittingUIDs.count))
+
+            if !overflowUIDs.isEmpty {
+                // Extract existing hidden/always-hidden items.
+                var controlSet: Set<String> = [hiddenCtrlUID]
+                if let ahUID = ahCtrlUID { controlSet.insert(ahUID) }
+
+                let hiddenStart = desiredFiltered.firstIndex(of: hiddenCtrlUID)
+                    .map { $0 + 1 } ?? desiredFiltered.endIndex
+                let hiddenEnd = ahCtrlUID.flatMap { desiredFiltered.firstIndex(of: $0) }
+                    ?? desiredFiltered.endIndex
+                let existingHidden = desiredFiltered[hiddenStart..<hiddenEnd]
+                    .filter { !controlSet.contains($0) }
+
+                let ahStart = ahCtrlUID.flatMap { desiredFiltered.firstIndex(of: $0) }
+                    .map { $0 + 1 } ?? desiredFiltered.endIndex
+                let existingAH = desiredFiltered[ahStart...]
+                    .filter { !controlSet.contains($0) }
+
+                // Rebuild: visible (Thaw visible control icon first) + hidden (existing then overflow) + AH.
+                var rebuilt = [String]()
+                if let chevron = visibleCtrlUID {
+                    rebuilt.append(chevron)
+                }
+                rebuilt.append(contentsOf: fittingUIDs)
+                rebuilt.append(hiddenCtrlUID)
+                rebuilt.append(contentsOf: existingHidden)
+                rebuilt.append(contentsOf: overflowUIDs.reversed())
+                if let ahUID = ahCtrlUID {
+                    rebuilt.append(ahUID)
+                    rebuilt.append(contentsOf: existingAH)
+                }
+
+                for uid in overflowUIDs {
+                    sectionMap[uid] = "hidden"
+                }
+
+                MenuBarItemManager.diagLog.info(
+                    "Profile layout: notch overflow — \(overflowUIDs.count) item(s) moved from visible to hidden"
+                )
+                desiredFiltered = rebuilt
+            }
+        }
 
         // On notched displays, use a full-section rearrange instead of
         // LCS-based partial moves. LCS leaves "stable" anchors in place,
@@ -4145,7 +4229,6 @@ extension MenuBarItemManager {
         // notch dead zone, causing subsequent relative moves to fail.
         // A full rearrange places every item explicitly, section by
         // section, using the control items as the starting anchor.
-        let activeScreen = NSScreen.screenWithActiveMenuBar ?? NSScreen.main
         let useLCSOnNotched = appState.settings.advanced.useLCSSortingOnNotchedDisplays
         let isNotchedDisplay = activeScreen?.hasNotch == true && !useLCSOnNotched
 
@@ -4180,9 +4263,11 @@ extension MenuBarItemManager {
             // desiredFiltered stores items right-to-left within each section.
             // Reverse each to get left-to-right, then build the full sequence:
             //   [AH items (L→R)] [AH ctrl] [H items (L→R)] [H ctrl] [V items (L→R)]
-            let ahUIDs = desiredFiltered.filter { (sectionMap[$0] ?? "visible") == "alwaysHidden" }
-            let hiddenUIDs = desiredFiltered.filter { (sectionMap[$0] ?? "visible") == "hidden" }
-            let visibleUIDs = desiredFiltered.filter { (sectionMap[$0] ?? "visible") == "visible" }
+            var controlSet: Set<String> = [hiddenCtrlUID]
+            if let ahUID = ahCtrlUID { controlSet.insert(ahUID) }
+            let ahUIDs = desiredFiltered.filter { !controlSet.contains($0) && (sectionMap[$0] ?? "visible") == "alwaysHidden" }
+            let hiddenUIDs = desiredFiltered.filter { !controlSet.contains($0) && (sectionMap[$0] ?? "visible") == "hidden" }
+            let visibleUIDs = desiredFiltered.filter { !controlSet.contains($0) && (sectionMap[$0] ?? "visible") == "visible" }
 
             // Each item is placed `.leftOfItem(CC)`. The first item
             // placed gets pushed furthest LEFT by subsequent insertions.
