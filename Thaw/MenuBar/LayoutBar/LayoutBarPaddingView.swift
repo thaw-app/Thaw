@@ -152,7 +152,7 @@ final class LayoutBarPaddingView: NSView {
                 } else if let targetItem = nearestItem(toLeftOf: index) {
                     willMove = true
                     move(item: item, to: .rightOfItem(targetItem))
-                } else if arrangedViews.count > 0 {
+                } else if !arrangedViews.isEmpty {
                     willMove = true
                     Task {
                         if let destination = await self.liveFallbackDestinationForDraggedItem() {
