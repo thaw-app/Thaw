@@ -6,6 +6,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import AXSwift
 import Cocoa
 import Combine
 import os
@@ -26,6 +27,10 @@ final class HIDEventManager: ObservableObject {
 
     /// Thread-safe counter for mouse-moved event throttling.
     private nonisolated let mouseMovedThrottleCounter = OSAllocatedUnfairLock(initialState: 0)
+
+    /// Timestamp of the last forwarded app menu click, used to debounce
+    /// duplicate events from a single physical interaction.
+    private var lastAppMenuClickTime: CFAbsoluteTime = 0
 
     /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
@@ -104,6 +109,7 @@ final class HIDEventManager: ObservableObject {
         case .leftMouseDown:
             handleShowOnClick(appState: appState, screen: screen, isDoubleClick: event.clickCount > 1)
             handleSmartRehide(with: event, appState: appState, screen: screen)
+            handleApplicationMenuClickThrough(appState: appState, screen: screen)
         case .rightMouseDown:
             handleSecondaryContextMenu(appState: appState, screen: screen)
         default:
@@ -220,6 +226,11 @@ final class HIDEventManager: ObservableObject {
             appState.settings.displaySettings.isAlwaysShowEnabledOnAnyDisplay
     }
 
+    /// Maximum width a normal menu bar item can have. Windows wider than
+    /// this are expanded section-divider control items used to push hidden
+    /// items off-screen and must be excluded from the bounds lookup.
+    private static let maxReasonableItemWidth: CGFloat = 500
+
     /// Rebuilds the window bounds lookup table from the current item cache.
     ///
     /// Includes ALL menu bar item windows (both managed and unmanaged) so that
@@ -236,6 +247,9 @@ final class HIDEventManager: ObservableObject {
         ])
         for windowID in allWindowIDs {
             if let bounds = Bridging.getWindowBounds(for: windowID) {
+                guard bounds.width <= Self.maxReasonableItemWidth else {
+                    continue
+                }
                 buffer.append((windowID: windowID, bounds: bounds))
                 knownWindowIDs.insert(windowID)
             }
@@ -245,6 +259,9 @@ final class HIDEventManager: ObservableObject {
         // This is a fallback for items that might not be reported by the Window Server.
         let items = cache.managedItems
         for item in items where item.isOnScreen && !knownWindowIDs.contains(item.windowID) {
+            guard item.bounds.width <= Self.maxReasonableItemWidth else {
+                continue
+            }
             buffer.append((windowID: item.windowID, bounds: item.bounds))
             knownWindowIDs.insert(item.windowID)
         }
@@ -556,6 +573,86 @@ extension HIDEventManager {
             // Delay prevents the menu from immediately closing.
             try await Task.sleep(for: .milliseconds(100))
             appState.menuBarManager.showSecondaryContextMenu(at: mouseLocation)
+        }
+    }
+
+    // MARK: Handle Application Menu Click-Through
+
+    /// Forwards clicks to application menus when expanded section-divider
+    /// windows block them.
+    ///
+    /// After a profile change with ThawBar active, the Window Server tracks
+    /// the expanded control item windows and routes clicks to them instead
+    /// of the application menus underneath. This method uses AX to locate
+    /// the correct menu bar item, then posts a synthetic click directly to
+    /// the owning application's PID.
+    private func handleApplicationMenuClickThrough(
+        appState: AppState,
+        screen: NSScreen
+    ) {
+        guard
+            isMouseInsideMenuBar(appState: appState, screen: screen),
+            isMouseInsideApplicationMenu(appState: appState, screen: screen),
+            let mouseLocation = MouseHelpers.locationCoreGraphics
+        else {
+            return
+        }
+
+        let hasExpandedDivider = appState.menuBarManager.sections.contains { section in
+            section.controlItem.isSectionDivider && section.controlItem.state == .hideSection
+        }
+        guard hasExpandedDivider else { return }
+
+        let expandedWindowCoversClick = Bridging.getMenuBarWindowList(option: [
+            .onScreen, .activeSpace, .itemsOnly,
+        ]).contains { windowID in
+            guard let bounds = Bridging.getWindowBounds(for: windowID) else {
+                return false
+            }
+            return bounds.width > Self.maxReasonableItemWidth && bounds.contains(mouseLocation)
+        }
+        guard expandedWindowCoversClick else { return }
+
+        appState.menuBarManager.iceBarPanel.close()
+        for section in appState.menuBarManager.sections {
+            section.hide()
+        }
+
+        guard
+            let frontApp = NSWorkspace.shared.menuBarOwningApplication,
+            let axApp = AXHelpers.application(for: frontApp),
+            let menuBar: UIElement = try? axApp.attribute(.menuBar)
+        else {
+            return
+        }
+
+        for child in AXHelpers.children(for: menuBar) {
+            guard let frame = AXHelpers.frame(for: child) else { continue }
+            if frame.contains(mouseLocation) {
+                let now = CFAbsoluteTimeGetCurrent()
+                guard now - lastAppMenuClickTime >= 0.3 else { return }
+                lastAppMenuClickTime = now
+
+                let clickPoint = CGPoint(x: frame.midX, y: frame.midY)
+                let pid = frontApp.processIdentifier
+
+                guard let source = CGEventSource(stateID: .hidSystemState) else { return }
+                let mouseDown = CGEvent(
+                    mouseEventSource: source,
+                    mouseType: .leftMouseDown,
+                    mouseCursorPosition: clickPoint,
+                    mouseButton: .left
+                )
+                let mouseUp = CGEvent(
+                    mouseEventSource: source,
+                    mouseType: .leftMouseUp,
+                    mouseCursorPosition: clickPoint,
+                    mouseButton: .left
+                )
+                mouseDown?.postToPid(pid)
+                mouseUp?.postToPid(pid)
+                return
+            }
         }
     }
 
@@ -920,6 +1017,9 @@ extension HIDEventManager {
             guard let bounds = Bridging.getWindowBounds(for: windowID) else {
                 return false
             }
+            guard bounds.width <= Self.maxReasonableItemWidth else {
+                return false
+            }
             return bounds.contains(mouseLocation)
         }
     }
@@ -953,7 +1053,17 @@ extension HIDEventManager {
         }
 
         // Then perform expensive Window Server checks.
-        return !isMouseInsideApplicationMenu(appState: appState, screen: screen)
+        //
+        // When expanded section-divider windows are tracked by the Window
+        // Server, the AX-based application menu frame detection can return
+        // the extras menu bar instead of the application menu bar. Skip
+        // the check in that state — handleApplicationMenuClickThrough
+        // forwards left-clicks to the correct app menu separately.
+        let hasExpandedDivider = appState.menuBarManager.sections.contains { section in
+            section.controlItem.isSectionDivider && section.controlItem.state == .hideSection
+        }
+        let inAppMenu = hasExpandedDivider ? false : isMouseInsideApplicationMenu(appState: appState, screen: screen)
+        return !inAppMenu
             && !isMouseInsideMenuBarItem(appState: appState, screen: screen)
             && !isMouseInsideIceIcon(appState: appState)
     }

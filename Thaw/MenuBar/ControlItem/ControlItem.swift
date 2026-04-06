@@ -377,6 +377,8 @@ final class ControlItem {
         case .hidden, .alwaysHidden:
             switch state {
             case .showSection:
+                button.isEnabled = true
+                button.alphaValue = 1
                 switch appState.settings.advanced.sectionDividerStyle {
                 case .noDivider:
                     updateStatusItemVisibility(false)
@@ -399,6 +401,10 @@ final class ControlItem {
                 updateStatusItemVisibility(true)
                 button.appearsDisabled = true
                 button.isHighlighted = false
+                // Match the spacer item pattern: invisible and non-interactive.
+                // The constraint stays active so items are pushed off-screen.
+                button.isEnabled = false
+                button.alphaValue = 0
             }
         }
     }
