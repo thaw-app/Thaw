@@ -598,7 +598,7 @@ final class ControlItem {
                 {
                     section.toggle()
                 }
-            }
+        }
         case .rightMouseUp:
             showMenu()
         default:

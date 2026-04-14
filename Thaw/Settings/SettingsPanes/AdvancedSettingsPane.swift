@@ -113,7 +113,7 @@ struct AdvancedSettingsPane: View {
 
     private var useOptionClickToShowAlwaysHiddenSection: some View {
         Toggle(
-            "Use Option-click to open always hidden section",
+            "Use Option-click to open always-hidden section",
             isOn: $settings.useOptionClickToShowAlwaysHiddenSection
         )
     }
