@@ -370,7 +370,7 @@ final class MenuBarSection {
     /// IceBar panel, meaning the section should not be rehidden yet.
     private func isMouseInsideActiveArea() -> Bool {
         guard let appState else { return false }
-        if let screen = appState.hidEventManager.bestScreen(appState: appState),
+        if let screen = NSScreen.screenWithMouse ?? NSScreen.main,
            appState.hidEventManager.isMouseInsideMenuBar(appState: appState, screen: screen)
         {
             return true

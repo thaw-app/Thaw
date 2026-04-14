@@ -101,7 +101,7 @@ final class HIDEventManager: ObservableObject {
     private(set) lazy var mouseDownMonitor = EventMonitor.universal(
         for: [.leftMouseDown, .rightMouseDown]
     ) { [weak self] event in
-        guard let self, isEnabled, let appState, let screen = bestScreen(appState: appState)
+        guard let self, isEnabled, let appState, let screen = NSScreen.screenWithMouse ?? NSScreen.main
         else {
             return event
         }
@@ -139,7 +139,7 @@ final class HIDEventManager: ObservableObject {
     private(set) lazy var mouseDraggedMonitor = EventMonitor.universal(
         for: .leftMouseDragged
     ) { [weak self] event in
-        if let self, isEnabled, let appState, let screen = bestScreen(appState: appState) {
+        if let self, isEnabled, let appState, let screen = NSScreen.screenWithMouse ?? NSScreen.main {
             handleMenuBarItemDragStart(
                 with: event,
                 appState: appState,
@@ -194,7 +194,7 @@ final class HIDEventManager: ObservableObject {
     private(set) lazy var scrollWheelMonitor = EventMonitor.universal(
         for: .scrollWheel
     ) { [weak self] event in
-        if let self, isEnabled, let appState, let screen = bestScreen(appState: appState) {
+        if let self, isEnabled, let appState, let screen = NSScreen.screenWithMouse ?? NSScreen.main {
             handleShowOnScroll(with: event, appState: appState, screen: screen)
         }
         return event
@@ -956,12 +956,13 @@ extension HIDEventManager {
     /// A Boolean value that indicates whether the mouse pointer is within
     /// the bounds of the menu bar.
     func isMouseInsideMenuBar(appState _: AppState, screen: NSScreen) -> Bool {
-        guard
-            let mouseLocation = MouseHelpers.locationAppKit,
-            let menuBarHeight = screen.getMenuBarHeight()
-        else {
+        guard let mouseLocation = MouseHelpers.locationAppKit else {
             return false
         }
+
+        // Use the height estimate so that external displays where the Window
+        // Server menu bar window cannot be found still work correctly.
+        let menuBarHeight = screen.getMenuBarHeightEstimate()
 
         // Infer the menu bar frame from the screen frame and menu bar height.
         return mouseLocation.x >= screen.frame.minX

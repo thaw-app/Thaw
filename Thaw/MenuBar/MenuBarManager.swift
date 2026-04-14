@@ -132,7 +132,7 @@ final class MenuBarManager: ObservableObject {
                     let self,
                     let appState,
                     let hiddenSection = section(withName: .hidden),
-                    let screen = appState.hidEventManager.bestScreen(appState: appState),
+                    let screen = NSScreen.screenWithMouse ?? NSScreen.main,
                     !appState.hidEventManager.isMouseInsideMenuBar(appState: appState, screen: screen),
                     !appState.hidEventManager.isMouseInsideIceBar(appState: appState),
                     appState.settings.general.autoRehide
