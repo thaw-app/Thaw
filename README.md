@@ -106,9 +106,9 @@ Thaw is currently available in the following languages:
         <td><img src="https://geps.dev/progress/100" /></td>
         <td></td>
         <td><b>Magyar</b></td>
-        <td>Complete</td>
+        <td>Partial</td>
         <td align="center">🇭🇺</td>
-        <td><img src="https://geps.dev/progress/100" /></td>
+        <td><img src="https://geps.dev/progress/81" /></td>
     </tr>
     <tr>
         <td><b>Nederlands</b></td>
@@ -144,15 +144,15 @@ Thaw is currently available in the following languages:
         <td><img src="https://geps.dev/progress/100" /></td>
     </tr>
     <tr>
+        <td><b>Polski</b></td>
+        <td>Complete</td>
+        <td align="center">🇵🇱</td>
+        <td><img src="https://geps.dev/progress/100" /></td>
+        <td></td>
         <td><b>Türkçe(*)</b></td>
         <td>Complete</td>
         <td align="center">🇹🇷</td>
         <td><img src="https://geps.dev/progress/100" /></td>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td align="center"></td>
-        <td></td>
     </tr>
 </table>
 
