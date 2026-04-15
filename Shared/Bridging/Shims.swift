@@ -119,7 +119,7 @@ func cgsGetOnScreenWindowCount(
 ) -> CGError
 
 @_silgen_name("CGSGetWindowList")
-func CGSGetWindowList(
+func cgsGetWindowList(
     _ cid: CGSConnectionID,
     _ targetCID: CGSConnectionID,
     _ count: Int32,

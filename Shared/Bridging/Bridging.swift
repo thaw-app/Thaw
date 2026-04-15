@@ -358,9 +358,9 @@ extension Bridging {
             return []
         }
         var list = [CGWindowID](repeating: 0, count: Int(count))
-        let result = CGSGetWindowList(getMainConnection(), nullConnection, count, &list, &count)
+        let result = cgsGetWindowList(getMainConnection(), nullConnection, count, &list, &count)
         guard result == .success else {
-            diagLog.error("CGSGetWindowList failed with error \(result.logString)")
+            diagLog.error("cgsGetWindowList failed with error \(result.logString)")
             return []
         }
         return [CGWindowID](list[..<Int(count)])

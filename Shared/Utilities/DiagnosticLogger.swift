@@ -20,12 +20,12 @@ final class DiagnosticLogger: @unchecked Sendable {
 
     /// Whether diagnostic logging to file is currently enabled.
     /// Thread-safe via OSAllocatedUnfairLock.
-    private let _isEnabled = OSAllocatedUnfairLock(initialState: false)
+    private let isEnabledLock = OSAllocatedUnfairLock(initialState: false)
 
     var isEnabled: Bool {
-        get { _isEnabled.withLock { $0 } }
+        get { isEnabledLock.withLock { $0 } }
         set {
-            let oldValue = _isEnabled.withLock { current -> Bool in
+            let oldValue = isEnabledLock.withLock { current -> Bool in
                 let old = current
                 current = newValue
                 return old
@@ -72,14 +72,14 @@ final class DiagnosticLogger: @unchecked Sendable {
     }
 
     /// The current log file URL, if logging is active.
-    private let _currentLogFile = OSAllocatedUnfairLock<URL?>(initialState: nil)
+    private let currentLogFileLock = OSAllocatedUnfairLock<URL?>(initialState: nil)
 
     var currentLogFile: URL? {
-        _currentLogFile.withLock { $0 }
+        currentLogFileLock.withLock { $0 }
     }
 
     /// The file handle for writing.
-    private let _fileHandle = OSAllocatedUnfairLock<FileHandle?>(initialState: nil)
+    private let fileHandleLock = OSAllocatedUnfairLock<FileHandle?>(initialState: nil)
 
     /// Internal logger for DiagnosticLogger's own messages.
     private let osLog = Logger(
@@ -131,8 +131,8 @@ final class DiagnosticLogger: @unchecked Sendable {
         do {
             let handle = try FileHandle(forWritingTo: fileURL)
             handle.seekToEndOfFile()
-            _fileHandle.withLock { $0 = handle }
-            _currentLogFile.withLock { $0 = fileURL }
+            fileHandleLock.withLock { $0 = handle }
+            currentLogFileLock.withLock { $0 = fileURL }
 
             // Write header
             let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
@@ -160,7 +160,7 @@ final class DiagnosticLogger: @unchecked Sendable {
 
     /// Closes the current log file.
     private func closeLogFile() {
-        _fileHandle.withLock { handle in
+        fileHandleLock.withLock { handle in
             if let handle {
                 let ts = timestampFormatter.string(from: Date())
                 let footer = "\n\(ts) [DiagnosticLogger] Diagnostic logging stopped\n"
@@ -171,7 +171,7 @@ final class DiagnosticLogger: @unchecked Sendable {
             }
             handle = nil
         }
-        _currentLogFile.withLock { $0 = nil }
+        currentLogFileLock.withLock { $0 = nil }
         osLog.info("Diagnostic logging stopped")
     }
 
@@ -233,7 +233,7 @@ final class DiagnosticLogger: @unchecked Sendable {
         guard let data = line.data(using: .utf8) else { return }
 
         writeQueue.async { [weak self] in
-            self?._fileHandle.withLock { handle in
+            self?.fileHandleLock.withLock { handle in
                 handle?.write(data)
             }
         }
