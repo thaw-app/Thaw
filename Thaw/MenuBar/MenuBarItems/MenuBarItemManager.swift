@@ -4065,6 +4065,11 @@ extension MenuBarItemManager {
         persistSavedSectionOrder()
         temporarilyShownItemContexts.removeAll()
 
+        // Reset new items placement to default.
+        newItemsPlacement = NewItemsPlacement.defaultValue
+        Defaults.removeObject(forKey: .newItemsSection)
+        Defaults.removeObject(forKey: .newItemsPlacementData)
+
         // Prevent the first post-reset cache pass from treating the freshly reset items as "new".
         suppressNextNewLeftmostItemRelocation = true
 
