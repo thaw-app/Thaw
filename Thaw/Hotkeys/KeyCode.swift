@@ -93,7 +93,7 @@ struct KeyCode: Codable, Hashable, RawRepresentable {
 
     static let space = KeyCode(rawValue: kVK_Space)
     static let tab = KeyCode(rawValue: kVK_Tab)
-    static let `return` = KeyCode(rawValue: kVK_Return)
+    static let returnKey = KeyCode(rawValue: kVK_Return)
     static let delete = KeyCode(rawValue: kVK_Delete)
     static let forwardDelete = KeyCode(rawValue: kVK_ForwardDelete)
 
@@ -201,7 +201,7 @@ private let customStringMappings = [
     // standard keys
     KeyCode.space: "Space",
     KeyCode.tab: "⇥",
-    KeyCode.return: "⏎",
+    KeyCode.returnKey: "⏎",
     KeyCode.delete: "⌫",
     KeyCode.forwardDelete: "⌦",
     KeyCode.f1: "F1",

@@ -106,8 +106,8 @@ extension MenuBarAppearanceConfigurationV1 {
         borderColor: .black,
         borderWidth: 1,
         shapeKind: .noShape,
-        fullShapeInfo: .default,
-        splitShapeInfo: .default,
+        fullShapeInfo: .defaultValue,
+        splitShapeInfo: .defaultValue,
         tintKind: .noTint,
         tintColor: .black,
         tintGradient: .defaultMenuBarTint

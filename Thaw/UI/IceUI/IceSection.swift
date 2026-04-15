@@ -15,7 +15,7 @@ struct IceSectionOptions: OptionSet {
     static let hasDividers = IceSectionOptions(rawValue: 1 << 1)
 
     static let plain: IceSectionOptions = []
-    static let `default`: IceSectionOptions = [.isBordered, .hasDividers]
+    static let defaultValue: IceSectionOptions = [.isBordered, .hasDividers]
 }
 
 struct IceSection<Header: View, Content: View, Footer: View>: View {
@@ -35,7 +35,7 @@ struct IceSection<Header: View, Content: View, Footer: View>: View {
 
     init(
         spacing: CGFloat = .iceSectionDefaultSpacing,
-        options: IceSectionOptions = .default,
+        options: IceSectionOptions = .defaultValue,
         @ViewBuilder header: () -> Header,
         @ViewBuilder content: () -> Content,
         @ViewBuilder footer: () -> Footer
@@ -49,7 +49,7 @@ struct IceSection<Header: View, Content: View, Footer: View>: View {
 
     init(
         spacing: CGFloat = .iceSectionDefaultSpacing,
-        options: IceSectionOptions = .default,
+        options: IceSectionOptions = .defaultValue,
         @ViewBuilder content: () -> Content,
         @ViewBuilder footer: () -> Footer
     ) where Header == EmptyView {
@@ -64,7 +64,7 @@ struct IceSection<Header: View, Content: View, Footer: View>: View {
 
     init(
         spacing: CGFloat = .iceSectionDefaultSpacing,
-        options: IceSectionOptions = .default,
+        options: IceSectionOptions = .defaultValue,
         @ViewBuilder header: () -> Header,
         @ViewBuilder content: () -> Content
     ) where Footer == EmptyView {
@@ -79,7 +79,7 @@ struct IceSection<Header: View, Content: View, Footer: View>: View {
 
     init(
         spacing: CGFloat = .iceSectionDefaultSpacing,
-        options: IceSectionOptions = .default,
+        options: IceSectionOptions = .defaultValue,
         @ViewBuilder content: () -> Content
     ) where Header == EmptyView, Footer == EmptyView {
         self.init(spacing: spacing, options: options) {
@@ -94,7 +94,7 @@ struct IceSection<Header: View, Content: View, Footer: View>: View {
     init(
         _ title: LocalizedStringKey,
         spacing: CGFloat = .iceSectionDefaultSpacing,
-        options: IceSectionOptions = .default,
+        options: IceSectionOptions = .defaultValue,
         @ViewBuilder content: () -> Content
     ) where Header == Text, Footer == EmptyView {
         self.init(spacing: spacing, options: options) {

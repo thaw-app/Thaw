@@ -91,7 +91,7 @@ struct SectionedList<ItemID: Hashable>: View {
             }
             return .handled
         }
-        .onKeyDown(key: .return, isEnabled: selection != nil && !isEditing) {
+        .onKeyDown(key: .returnKey, isEnabled: selection != nil && !isEditing) {
             DispatchQueue.main.async {
                 items.first { $0.id == selection }?.action?()
             }

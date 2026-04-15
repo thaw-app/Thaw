@@ -55,7 +55,7 @@ extension MenuBarFullShapeInfo {
 }
 
 extension MenuBarFullShapeInfo {
-    static let `default` = MenuBarFullShapeInfo(leadingEndCap: .round, trailingEndCap: .round)
+    static let defaultValue = MenuBarFullShapeInfo(leadingEndCap: .round, trailingEndCap: .round)
 }
 
 /// Information for the ``MenuBarShapeKind/split`` menu bar shape kind.
@@ -73,5 +73,5 @@ extension MenuBarSplitShapeInfo {
 }
 
 extension MenuBarSplitShapeInfo {
-    static let `default` = MenuBarSplitShapeInfo(leading: .default, trailing: .default)
+    static let defaultValue = MenuBarSplitShapeInfo(leading: .defaultValue, trailing: .defaultValue)
 }
