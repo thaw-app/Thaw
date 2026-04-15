@@ -348,7 +348,10 @@ final class SourcePIDCache {
                             $0.pids[matchedWindow.windowID] = pid
                             if let axTitle {
                                 $0.titles[matchedWindow.windowID] = axTitle
+                            } else {
+                                $0.titles.removeValue(forKey: matchedWindow.windowID)
                             }
+                        }
                         }
                     }
                 }
