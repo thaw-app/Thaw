@@ -87,13 +87,13 @@ final class LayoutBarContainer: NSView {
                 appState.itemManager.$newItemsPlacement,
                 appState.settings.advanced.$enableAlwaysHiddenSection
             )
-                .sink { [weak self] cache, _, _ in
-                    guard let self else {
-                        return
-                    }
-                    setArrangedViews(items: cache.managedItems(for: section))
+            .sink { [weak self] cache, _, _ in
+                guard let self else {
+                    return
                 }
-                .store(in: &c)
+                setArrangedViews(items: cache.managedItems(for: section))
+            }
+            .store(in: &c)
 
             appState.imageCache.$images
                 .debounce(for: .milliseconds(50), scheduler: DispatchQueue.main)
