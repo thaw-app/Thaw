@@ -17,5 +17,11 @@
 			</array>
 		</dict>
 	</array>
+	<key>ThawRepositoryURL</key>
+	<string>https://github.com/stonerl/Thaw</string>
+	<key>ThawDonateURL</key>
+	<string>https://github.com/sponsors/stonerl</string>
+	<key>ThawMenuBarItemSpacingExecutableURI</key>
+	<string>file:///usr/bin/env</string>
 </dict>
 </plist>

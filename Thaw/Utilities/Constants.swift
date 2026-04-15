@@ -26,14 +26,45 @@ enum Constants {
     /// The app's display name.
     static let displayName = Bundle.main.displayName
 
+    /// Info.plist key used to configure the repository URL.
+    static let repositoryURLInfoPlistKey = "ThawRepositoryURL"
+
+    /// Info.plist key used to configure the donation URL.
+    static let donateURLInfoPlistKey = "ThawDonateURL"
+
     /// The project's GitHub repository URL.
-    static let repositoryURL = URL(string: "https://github.com/stonerl/Thaw")!
+    static let repositoryURL = requiredInfoPlistURL(repositoryURLInfoPlistKey)
 
     /// The URL for filing issues.
     static let issuesURL = repositoryURL.appendingPathComponent("issues")
 
     /// The URL for sponsoring/donating.
-    static let donateURL = URL(string: "https://github.com/sponsors/stonerl")!
+    static let donateURL = requiredInfoPlistURL(donateURLInfoPlistKey)
+
+    /// Info.plist key used to configure the executable URI for
+    /// `MenuBarItemSpacingManager` shell commands.
+    static let menuBarItemSpacingExecutableURIInfoPlistKey =
+        "ThawMenuBarItemSpacingExecutableURI"
+
+    /// The executable URL used by `MenuBarItemSpacingManager`.
+    static let menuBarItemSpacingExecutableURL = requiredInfoPlistURL(
+        menuBarItemSpacingExecutableURIInfoPlistKey
+    )
+
+    /// Returns a required URL from Info.plist.
+    private static func requiredInfoPlistURL(
+        _ key: String,
+    ) -> URL {
+        guard
+            let value = Bundle.main.object(forInfoDictionaryKey: key) as? String,
+            let url = URL(string: value),
+            url.scheme != nil
+        else {
+            fatalError("Missing or invalid Info.plist URL for key: \(key)")
+        }
+
+        return url
+    }
 
     // swiftlint:enable force_unwrapping
 }
