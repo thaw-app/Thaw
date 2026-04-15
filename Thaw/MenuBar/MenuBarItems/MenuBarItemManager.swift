@@ -577,9 +577,6 @@ final class MenuBarItemManager: ObservableObject {
         }
 
         let stableIdentifier = stableNewItemsAnchorIdentifier(from: anchorIdentifier)
-        guard stableIdentifier != anchorIdentifier else {
-            return nil
-        }
 
         return itemIdentifiers.firstIndex { identifier in
             stableNewItemsAnchorIdentifier(from: identifier) == stableIdentifier
@@ -595,9 +592,6 @@ final class MenuBarItemManager: ObservableObject {
         }
 
         let stableIdentifier = stableNewItemsAnchorIdentifier(from: anchorIdentifier)
-        guard stableIdentifier != anchorIdentifier else {
-            return nil
-        }
 
         return items.first { item in
             persistedNewItemsAnchorIdentifier(for: item) == stableIdentifier
