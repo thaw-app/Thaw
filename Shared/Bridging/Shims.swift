@@ -38,13 +38,13 @@ struct CGSSpaceMask: OptionSet {
 // MARK: - CGSConnection
 
 @_silgen_name("CGSMainConnectionID")
-func CGSMainConnectionID() -> CGSConnectionID
+func cgsMainConnectionID() -> CGSConnectionID
 
 @_silgen_name("CGSDefaultConnectionForThread")
-func CGSDefaultConnectionForThread() -> CGSConnectionID
+func cgsDefaultConnectionForThread() -> CGSConnectionID
 
 @_silgen_name("CGSCopyConnectionProperty")
-func CGSCopyConnectionProperty(
+func cgsCopyConnectionProperty(
     _ cid: CGSConnectionID,
     _ targetCID: CGSConnectionID,
     _ key: CFString,
@@ -52,7 +52,7 @@ func CGSCopyConnectionProperty(
 ) -> CGError
 
 @_silgen_name("CGSSetConnectionProperty")
-func CGSSetConnectionProperty(
+func cgsSetConnectionProperty(
     _ cid: CGSConnectionID,
     _ targetCID: CGSConnectionID,
     _ key: CFString,
@@ -62,18 +62,18 @@ func CGSSetConnectionProperty(
 // MARK: - CGSDisplay
 
 @_silgen_name("CGSCopyActiveMenuBarDisplayIdentifier")
-func CGSCopyActiveMenuBarDisplayIdentifier(_ cid: CGSConnectionID) -> Unmanaged<CFString>?
+func cgsCopyActiveMenuBarDisplayIdentifier(_ cid: CGSConnectionID) -> Unmanaged<CFString>?
 
 // MARK: - CGSEvent
 
 @_silgen_name("CGSEventIsAppUnresponsive")
-func CGSEventIsAppUnresponsive(
+func cgsEventIsAppUnresponsive(
     _ cid: CGSConnectionID,
     _ psn: inout ProcessSerialNumber
 ) -> Bool
 
 @_silgen_name("CGSEventSetAppIsUnresponsiveNotificationTimeout")
-func CGSEventSetAppIsUnresponsiveNotificationTimeout(
+func cgsEventSetAppIsUnresponsiveNotificationTimeout(
     _ cid: CGSConnectionID,
     _ timeout: Double
 ) -> CGError
@@ -81,23 +81,23 @@ func CGSEventSetAppIsUnresponsiveNotificationTimeout(
 // MARK: - CGSSpace
 
 @_silgen_name("CGSGetActiveSpace")
-func CGSGetActiveSpace(_ cid: CGSConnectionID) -> CGSSpaceID
+func cgsGetActiveSpace(_ cid: CGSConnectionID) -> CGSSpaceID
 
 @_silgen_name("CGSCopySpacesForWindows")
-func CGSCopySpacesForWindows(
+func cgsCopySpacesForWindows(
     _ cid: CGSConnectionID,
     _ mask: CGSSpaceMask,
     _ windowIDs: CFArray
 ) -> Unmanaged<CFArray>?
 
 @_silgen_name("CGSManagedDisplayGetCurrentSpace")
-func CGSManagedDisplayGetCurrentSpace(
+func cgsManagedDisplayGetCurrentSpace(
     _ cid: CGSConnectionID,
     _ displayUUID: CFString
 ) -> CGSSpaceID
 
 @_silgen_name("CGSSpaceGetType")
-func CGSSpaceGetType(
+func cgsSpaceGetType(
     _ cid: CGSConnectionID,
     _ sid: CGSSpaceID
 ) -> CGSSpaceType
@@ -105,14 +105,14 @@ func CGSSpaceGetType(
 // MARK: - CGSWindow
 
 @_silgen_name("CGSGetWindowCount")
-func CGSGetWindowCount(
+func cgsGetWindowCount(
     _ cid: CGSConnectionID,
     _ targetCID: CGSConnectionID,
     _ outCount: inout Int32
 ) -> CGError
 
 @_silgen_name("CGSGetOnScreenWindowCount")
-func CGSGetOnScreenWindowCount(
+func cgsGetOnScreenWindowCount(
     _ cid: CGSConnectionID,
     _ targetCID: CGSConnectionID,
     _ outCount: inout Int32
@@ -128,7 +128,7 @@ func CGSGetWindowList(
 ) -> CGError
 
 @_silgen_name("CGSGetOnScreenWindowList")
-func CGSGetOnScreenWindowList(
+func cgsGetOnScreenWindowList(
     _ cid: CGSConnectionID,
     _ targetCID: CGSConnectionID,
     _ count: Int32,
@@ -137,7 +137,7 @@ func CGSGetOnScreenWindowList(
 ) -> CGError
 
 @_silgen_name("CGSGetProcessMenuBarWindowList")
-func CGSGetProcessMenuBarWindowList(
+func cgsGetProcessMenuBarWindowList(
     _ cid: CGSConnectionID,
     _ targetCID: CGSConnectionID,
     _ count: Int32,
@@ -146,14 +146,14 @@ func CGSGetProcessMenuBarWindowList(
 ) -> CGError
 
 @_silgen_name("CGSGetScreenRectForWindow")
-func CGSGetScreenRectForWindow(
+func cgsGetScreenRectForWindow(
     _ cid: CGSConnectionID,
     _ wid: CGWindowID,
     _ outRect: inout CGRect
 ) -> CGError
 
 @_silgen_name("CGSGetWindowLevel")
-func CGSGetWindowLevel(
+func cgsGetWindowLevel(
     _ cid: CGSConnectionID,
     _ wid: CGWindowID,
     _ outLevel: inout CGWindowLevel
@@ -162,7 +162,7 @@ func CGSGetWindowLevel(
 // MARK: - ProcessSerialNumber
 
 @_silgen_name("GetProcessForPID")
-func GetProcessForPID(
+func getProcessForPID(
     _ pid: pid_t,
     _ psn: inout ProcessSerialNumber
 ) -> OSStatus

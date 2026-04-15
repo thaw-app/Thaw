@@ -18,19 +18,11 @@ struct AboutSettingsPane: View {
         Bundle.main.url(forResource: "Acknowledgements", withExtension: "pdf")!
     }
 
-    private var contributeURL: URL {
-        // swiftlint:disable:next force_unwrapping
-        URL(string: "https://github.com/stonerl/Thaw")!
-    }
+    private var contributeURL: URL { Constants.repositoryURL }
 
-    private var issuesURL: URL {
-        contributeURL.appendingPathComponent("issues")
-    }
+    private var issuesURL: URL { Constants.issuesURL }
 
-    private var donateURL: URL {
-        // swiftlint:disable:next force_unwrapping
-        URL(string: "https://github.com/sponsors/stonerl")!
-    }
+    private var donateURL: URL { Constants.donateURL }
 
     private var lastUpdateCheckString: String {
         if let date = updatesManager.lastUpdateCheckDate {

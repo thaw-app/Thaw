@@ -32,13 +32,13 @@ Your job is to triage issue #${{ github.event.issue.number }} that was just open
 
 **Issue title**: ${{ github.event.issue.title }}
 
-Start by fetching the full issue details (body, author, existing labels) using the GitHub tools before taking any action.
+Start by fetching the full issue details (body, author, existing labels) using the GitHub tools. If the GitHub tools are unavailable or fail, use the issue title and number already provided in this prompt to make a best-effort triage decision: you can still classify the issue type from the title pattern and apply labels and an assignment, but skip duplicate detection and detailed priority assessment (which require the full issue body).
 
 ## Your Triage Tasks
 
 ### 1. Identify the Issue Type
 
-Based on the title and body, classify the issue and apply **exactly one** type label using `add-labels`:
+Based on the title and body, classify the issue and apply **exactly one** type label using `add_labels`:
 
 | Label | When to use |
 |-------|-------------|
@@ -54,7 +54,7 @@ Based on the title and body, classify the issue and apply **exactly one** type l
 
 ### 2. Assign a Priority Label
 
-For **bug** and **regression** issues, assess severity and impact, then apply **exactly one** priority label using `add-labels`:
+For **bug** and **regression** issues, assess severity and impact, then apply **exactly one** priority label using `add_labels`:
 
 | Label | Criteria |
 |-------|----------|
@@ -86,14 +86,14 @@ Search for existing open **and** closed issues that are similar to this one. Use
 - Issues describing the same error, symptom, or feature
 
 If you find a duplicate:
-1. Apply the **`duplicate`** label using `add-labels`
-2. Post a comment with `add-comment` pointing to the original issue, e.g.:
+1. Apply the **`duplicate`** label using `add_labels`
+2. Post a comment with `add_comment` pointing to the original issue, e.g.:
 
 > 👋 Hi @{author}! This looks like it might be a duplicate of #{number}. If that issue doesn't address your situation, please let us know what's different and we'll reopen the investigation. Thanks!
 
 ### 5. Ask Clarifying Questions (if needed)
 
-If the issue description is unclear or missing important information, apply the **`needs-info`** label using `add-labels` and post a single friendly comment using `add-comment`.
+If the issue description is unclear or missing important information, apply the **`needs-info`** label using `add_labels` and post a single friendly comment using `add_comment`.
 
 For **bug reports**, the following information is required:
 - Clear description of the problem
@@ -116,7 +116,7 @@ If the issue is already clear and complete, **do not** post an unnecessary comme
 
 ### 6. Assign to the Maintainer
 
-Use `update-issue` to assign the issue to the repository maintainer `stonerl`, unless the issue is a confirmed duplicate (in which case no assignment is needed).
+Use `update_issue` to assign the issue to the repository maintainer `stonerl`, unless the issue is a confirmed duplicate (in which case no assignment is needed).
 
 ## Important Guidelines
 
@@ -125,3 +125,4 @@ Use `update-issue` to assign the issue to the repository maintainer `stonerl`, u
 - **Respect existing labels** already applied by issue templates — do not remove or duplicate them.
 - **Only use labels from the allowed list**: `bug`, `docs`, `duplicate`, `enhancement`, `feature`, `invalid`, `needs-info`, `question`, `regression`, `upstream`, `wontfix`, `macos-14`, `macos-15`, `macos-26`, `P0`, `P1`, `P2`, `P3`, `P4`, `P5`.
 - **One comment at a time** — combine any clarifying questions and duplicate notice into a single comment if both apply.
+- **Always complete with a safe-output call**: You must always call at least one safe-output tool (`add_labels`, `add_comment`, `update_issue`, `noop`, `missing_tool`, or `missing_data`) to indicate the outcome of the triage. If no actions are needed after a complete review, call `noop` with a brief status message. If required GitHub tools are unavailable and you cannot read the issue details, call `missing_tool` with `reason` set to a brief description of the unavailable capability (e.g., "GitHub MCP tools unavailable – could not fetch issue body") and `alternatives` set to "Please triage this issue manually."

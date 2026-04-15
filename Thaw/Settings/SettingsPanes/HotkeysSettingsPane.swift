@@ -21,6 +21,13 @@ struct HotkeysSettingsPane: View {
             IceSection("Menu Bar Items") {
                 hotkeyRecorder(forAction: .searchMenuBarItems)
             }
+            if !appState.profileManager.profiles.isEmpty {
+                IceSection("Profiles") {
+                    ForEach(appState.profileManager.profiles) { meta in
+                        profileHotkeyRecorder(for: meta)
+                    }
+                }
+            }
             IceSection("Other") {
                 hotkeyRecorder(forAction: .enableIceBar)
                 hotkeyRecorder(forAction: .toggleApplicationMenus)
@@ -43,7 +50,18 @@ struct HotkeysSettingsPane: View {
                     Text("Enable the \(Constants.displayName) Bar")
                 case .toggleApplicationMenus:
                     Text("Toggle application menus")
+                case .profileApply:
+                    EmptyView()
                 }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func profileHotkeyRecorder(for meta: ProfileMetadata) -> some View {
+        if let hotkey = appState.profileManager.profileHotkeys[meta.id] {
+            HotkeyRecorder(hotkey: hotkey) {
+                Text(meta.name)
             }
         }
     }

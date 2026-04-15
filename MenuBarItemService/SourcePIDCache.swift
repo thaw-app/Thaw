@@ -32,8 +32,8 @@ final class SourcePIDCache {
     private final class CachedApplication {
         private let runningApp: NSRunningApplication
         private let lock = NSLock()
-        private var _extrasMenuBar: UIElement?
-        private var _checkedWithNoResult = false
+        private var extrasMenuBar: UIElement?
+        private var checkedWithNoResult = false
 
         /// The app's process identifier.
         var processIdentifier: pid_t {
@@ -43,7 +43,7 @@ final class SourcePIDCache {
         /// A Boolean value indicating whether the app's extras menu
         /// bar has been successfully created and stored.
         var hasExtrasMenuBar: Bool {
-            lock.withLock { _extrasMenuBar != nil }
+            lock.withLock { extrasMenuBar != nil }
         }
 
         /// A Boolean value indicating whether the app is in a valid
@@ -70,7 +70,7 @@ final class SourcePIDCache {
         func getOrCreateExtrasMenuBar() -> UIElement? {
             // Fast path: check cached state under the lock first.
             let (hasCached, isNegative) = lock.withLock {
-                (_extrasMenuBar, _checkedWithNoResult)
+                (extrasMenuBar, checkedWithNoResult)
             }
             if let bar = hasCached {
                 return bar
@@ -93,24 +93,24 @@ final class SourcePIDCache {
             else {
                 // App is reachable but has no extras menu bar.
                 lock.withLock {
-                    if _extrasMenuBar == nil {
-                        _checkedWithNoResult = true
+                    if extrasMenuBar == nil {
+                        checkedWithNoResult = true
                     }
                 }
                 return nil
             }
-            lock.withLock { _extrasMenuBar = bar }
+            lock.withLock { extrasMenuBar = bar }
             return bar
         }
 
         /// Resets the negative cache so the app will be re-checked
         /// on the next scan. Called during cleanup to discover apps
         /// that register status items after launch. Preserves a
-        /// valid `_extrasMenuBar` to avoid unnecessary AX re-queries.
+        /// valid `extrasMenuBar` to avoid unnecessary AX re-queries.
         func resetNegativeCache() {
             lock.withLock {
-                if _extrasMenuBar == nil {
-                    _checkedWithNoResult = false
+                if extrasMenuBar == nil {
+                    checkedWithNoResult = false
                 }
             }
         }

@@ -268,7 +268,7 @@ final class MenuBarManager: ObservableObject {
                         let hiddenControlItem = screenItems.first { $0.tag == .hiddenControlItem }
                         let alwaysHiddenControlItem = screenItems.first { $0.tag == .alwaysHiddenControlItem }
 
-                        // TODO: This section needs to be improved but is okay for now.
+                        // Approximate hidden items width from control item positions.
 
                         // Get control item bounds and hidden items width
                         var controlBounds: CGRect = .zero
@@ -352,6 +352,37 @@ final class MenuBarManager: ObservableObject {
         editAppearanceItem.target = self
         menu.addItem(editAppearanceItem)
 
+        // Profiles submenu.
+        if let appState, !appState.profileManager.profiles.isEmpty {
+            menu.addItem(.separator())
+
+            let profilesItem = NSMenuItem(
+                title: String(localized: "Profiles"),
+                action: nil,
+                keyEquivalent: ""
+            )
+            profilesItem.image = NSImage(
+                systemSymbolName: "person.crop.rectangle.stack",
+                accessibilityDescription: "Profiles"
+            )
+            let profilesMenu = NSMenu()
+            for meta in appState.profileManager.profiles {
+                let item = NSMenuItem(
+                    title: meta.name,
+                    action: #selector(applyProfileFromMenu(_:)),
+                    keyEquivalent: ""
+                )
+                item.target = self
+                item.representedObject = meta.id
+                if meta.id == appState.profileManager.activeProfileID {
+                    item.state = .on
+                }
+                profilesMenu.addItem(item)
+            }
+            profilesItem.submenu = profilesMenu
+            menu.addItem(profilesItem)
+        }
+
         menu.addItem(.separator())
 
         let settingsItem = NSMenuItem(
@@ -363,6 +394,24 @@ final class MenuBarManager: ObservableObject {
         menu.addItem(settingsItem)
 
         menu.popUp(positioning: nil, at: point, in: nil)
+    }
+
+    @objc private func applyProfileFromMenu(_ menuItem: NSMenuItem) {
+        guard
+            let profileID = menuItem.representedObject as? UUID,
+            let appState,
+            appState.profileManager.layoutTask == nil,
+            profileID != appState.profileManager.activeProfileID
+        else { return }
+        Task { [weak self] in
+            do {
+                let profile = try appState.profileManager.loadProfile(id: profileID)
+                appState.profileManager.activeProfileID = profileID
+                appState.profileManager.applyProfile(profile, to: appState)
+            } catch {
+                self?.diagLog.error("Failed to apply profile \(profileID): \(error)")
+            }
+        }
     }
 
     /// Hides the application menus.

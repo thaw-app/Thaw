@@ -18,6 +18,14 @@ enum HotkeyAction: String, Codable, CaseIterable {
     case enableIceBar = "EnableIceBar"
     case toggleApplicationMenus = "ToggleApplicationMenus"
 
+    /// Used by profile hotkeys — action is handled externally.
+    case profileApply = "ProfileApply"
+
+    /// Actions that should appear in the Hotkeys settings pane.
+    static var settingsActions: [HotkeyAction] {
+        allCases.filter { $0 != .profileApply }
+    }
+
     @MainActor
     func perform(appState: AppState) {
         switch self {
@@ -45,6 +53,9 @@ enum HotkeyAction: String, Codable, CaseIterable {
             appState.settings.displaySettings.toggleIceBarForActiveDisplay()
         case .toggleApplicationMenus:
             appState.menuBarManager.toggleApplicationMenus()
+        case .profileApply:
+            // Handled externally by ProfileManager's custom registration.
+            break
         }
     }
 }

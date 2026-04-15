@@ -171,6 +171,8 @@ extension Defaults {
         static let showMenuBarTooltips = false
         static let iconRefreshInterval: TimeInterval = 0.5
         static let enableDiagnosticLogging = false
+        static let useLCSSortingOnNotchedDisplays = false
+        static let useOptionClickToShowAlwaysHiddenSection = false
 
         // MARK: Hotkeys Settings
 
@@ -210,6 +212,7 @@ extension Defaults {
         // MARK: Hotkeys Settings
 
         case hotkeys = "Hotkeys"
+        case profileHotkeys = "ProfileHotkeys"
 
         // MARK: Advanced Settings
 
@@ -223,6 +226,8 @@ extension Defaults {
         case iconRefreshInterval = "IconRefreshInterval"
         case showMenuBarTooltips = "ShowMenuBarTooltips"
         case enableDiagnosticLogging = "EnableDiagnosticLogging"
+        case useLCSSortingOnNotchedDisplays = "UseLCSSortingOnNotchedDisplays"
+        case useOptionClickToShowAlwaysHiddenSection = "UseOptionClickToShowAlwaysHiddenSection"
 
         // MARK: Internal
 

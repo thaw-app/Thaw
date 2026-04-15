@@ -45,6 +45,12 @@ struct LayoutBar: View {
                 backgroundShape
                     .strokeBorder(.quaternary)
             }
+            .overlay {
+                if section == .visible, NSScreen.main?.hasNotch == true {
+                    NotchIndicatorOverlay()
+                        .allowsHitTesting(false)
+                }
+            }
     }
 
     @ViewBuilder

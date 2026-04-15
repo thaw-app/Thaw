@@ -65,6 +65,12 @@
             "value" : "%@"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -165,6 +171,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ %@ Sectie"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sekcja %@ %@"
           }
         },
         "pt-BR" : {
@@ -269,6 +281,12 @@
             "value" : "%@ Balk"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pasek %@"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -369,6 +387,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ kan zonder deze toestemming in een beperkte modus werken."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ może działać w ograniczonym zakresie bez tego uprawnienia."
           }
         },
         "pt-BR" : {
@@ -473,6 +497,12 @@
             "value" : "%@ kan geen menubalkitems rangschikken in automatisch verborgen menubalken."
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ nie może zmienić układu elementów na pasku menu, gdy jest on automatycznie ukrywany."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -573,6 +603,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ kan het uiterlijk van automatisch verborgen menubalken niet bewerken"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ nie może edytować wyglądu automatycznie ukrywanych pasków menu."
           }
         },
         "pt-BR" : {
@@ -677,6 +713,12 @@
             "value" : "%@ icoon"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ikona %@"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -777,6 +819,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ is momenteel actief. Als je meerdere menubalkbeheerders tegelijkertijd gebruikt, kan dit leiden tot weergaveproblemen en ongewenst gedrag. Overweeg om %@ af te sluiten voordat je Thaw gebruikt."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ jest obecnie uruchomiony. Korzystanie z wielu menedżerów paska menu jednocześnie może powodować problemy z wyświetlaniem i nieoczekiwane zachowanie. Rozważ zamknięcie %2$@ przed użyciem aplikacji Thaw."
           }
         },
         "pt-BR" : {
@@ -881,6 +929,12 @@
             "value" : "%@ reageert niet. Totdat het opnieuw is opgestart, kan het niet worden verplaatst. Het verplaatsen van andere menu-items kan ook worden beïnvloed totdat dit is opgelost."
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aplikacja %@ nie odpowiada. Dopóki nie zostanie uruchomiona ponownie, nie można jej przenieść jej ikony. Do czasu rozwiązania tego problemu może to również wpływać na przesuwanie innych elementów paska menu."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -981,6 +1035,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ heeft dit nodig om:"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ potrzebuje tego, aby:"
           }
         },
         "pt-BR" : {
@@ -1085,6 +1145,12 @@
             "value" : "%@ heeft uw toestemming nodig om de menubalk te beheren."
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ potrzebuje Twojej zgody na zarządzanie paskiem menu."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1185,6 +1251,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ Instellingen…"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ustawienia %@…"
           }
         },
         "pt-BR" : {
@@ -1427,6 +1499,36 @@
             }
           }
         },
+        "pl" : {
+          "variations" : {
+            "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lf sekundy"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lf sekund"
+                }
+              },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lf sekunda"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lf sekund"
+                }
+              }
+            }
+          }
+        },
         "pt-BR" : {
           "variations" : {
             "plural" : {
@@ -1587,6 +1689,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld fps"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld klatek na sekundę"
           }
         },
         "pt-BR" : {
@@ -1829,6 +1937,36 @@
             }
           }
         },
+        "pl" : {
+          "variations" : {
+            "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld sekundy"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld sekund"
+                }
+              },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld sekunda"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld sekund"
+                }
+              }
+            }
+          }
+        },
         "pt-BR" : {
           "variations" : {
             "plural" : {
@@ -1997,6 +2135,12 @@
             "value" : "•"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "•"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2088,6 +2232,12 @@
           }
         },
         "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "+"
+          }
+        },
+        "pl" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "+"
@@ -2189,6 +2339,12 @@
             "value" : "⌘"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⌘"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2280,6 +2436,12 @@
           }
         },
         "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⎋"
+          }
+        },
+        "pl" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "⎋"
@@ -2387,6 +2549,12 @@
             "value" : "1"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2484,6 +2652,12 @@
           }
         },
         "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "2"
+          }
+        },
+        "pl" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "2"
@@ -2591,6 +2765,12 @@
             "value" : "3"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "3"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2689,6 +2869,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Een nieuwe update is beschikbaar"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nowa aktualizacja jest dostępna"
           }
         },
         "pt-BR" : {
@@ -2793,6 +2979,12 @@
             "value" : "Over"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2893,6 +3085,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Er wordt absoluut geen persoonlijke informatie verzameld of opgeslagen."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Absolutnie żadne dane osobowe nie są gromadzone ani przechowywane."
           }
         },
         "pt-BR" : {
@@ -2997,6 +3195,12 @@
             "value" : "Toegankelijkheid"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dostępność"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3097,6 +3301,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dankwoord"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Podziękowania"
           }
         },
         "pt-BR" : {
@@ -3201,6 +3411,12 @@
             "value" : "Geavanceerd"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zaawansowane"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3295,6 +3511,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Altijd verborgen items weergeven"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zawsze pokazuj ukryte elementy"
           }
         },
         "pt-BR" : {
@@ -3393,6 +3615,12 @@
             "value" : "Toon verborgen menu-items altijd in de menubalk op dit scherm."
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zawsze pokazuj ukryte elementy paska menu na pasku menu na tym ekranie."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3487,6 +3715,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Geef de %@-balk altijd weer op de plek van de muisaanwijzer wanneer deze met een sneltoets wordt weergegeven."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zawsze pokazuj pasek %@ w miejscu kursora myszy, gdy jest on wywoływany skrótem klawiszowym."
           }
         },
         "pt-BR" : {
@@ -3591,6 +3825,12 @@
             "value" : "Altijd verborgen"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zawsze ukryte"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3693,6 +3933,12 @@
             "value" : "Toepassen"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zastosuj"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3730,6 +3976,10 @@
           }
         }
       }
+    },
+    "Apply a Thaw menu bar profile when this Focus activates." : {
+      "comment" : "Description of the \"Set Menu Bar Profile\" focus filter intent, including the category name.",
+      "isCommentAutoGenerated" : true
     },
     "Apply different settings based on the current system appearance." : {
       "comment" : "Label for a toggle that allows the user to choose whether to use different appearance settings based on the current system appearance.",
@@ -3793,6 +4043,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pas verschillende instellingen toe op basis van het huidige uiterlijk van het systeem."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zastosuj różne ustawienia w zależności od aktualnego wyglądu systemu."
           }
         },
         "pt-BR" : {
@@ -3897,6 +4153,12 @@
             "value" : "Pas de huidige afstand toe"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zastosuj bieżące odstępy"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3999,6 +4261,12 @@
             "value" : "Als je deze instelling toepast, worden alle apps met menubalkitems opnieuw gestart. Sommige apps moeten mogelijk handmatig opnieuw worden gestart."
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zastosowanie tego ustawienia spowoduje ponowne uruchomienie wszystkich aplikacji wyświetlających ikony na pasku menu. Niektóre aplikacje mogą wymagać ręcznego uruchomienia."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -4036,6 +4304,10 @@
           }
         }
       }
+    },
+    "Are you sure you want to delete the profile \"%@\"? This cannot be undone." : {
+      "comment" : "A message displayed when a user attempts to delete a profile. The argument is the name of the profile that is about to be deleted.",
+      "isCommentAutoGenerated" : true
     },
     "Arrange menu bar items." : {
       "comment" : "A detail about the \"Accessibility\" permission, describing the app's ability to rearrange menu bar items.",
@@ -4099,6 +4371,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Menu-items ordenen."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Porządkować elementy paska menu."
           }
         },
         "pt-BR" : {
@@ -4203,6 +4481,12 @@
             "value" : "Pijl"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Strzałka"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -4240,6 +4524,14 @@
           }
         }
       }
+    },
+    "Assign a profile to each display." : {
+      "comment" : "Description text in the auto-switch section of the profile settings pane.",
+      "isCommentAutoGenerated" : true
+    },
+    "Auto-Switch" : {
+      "comment" : "Section header for the \"Auto-Switch\" settings in the profile settings pane.",
+      "isCommentAutoGenerated" : true
     },
     "Automatically check for updates" : {
       "comment" : "A toggle that lets the user enable or disable automatic checking for updates.",
@@ -4303,6 +4595,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Automatisch naar updates controleren"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatycznie sprawdzaj aktualizacje"
           }
         },
         "pt-BR" : {
@@ -4407,6 +4705,12 @@
             "value" : "Automatisch downloaden en installeren van updates"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatycznie pobieraj i instaluj aktualizacje"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -4507,6 +4811,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Automatisch downloaden van updates"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatycznie pobieraj aktualizacje"
           }
         },
         "pt-BR" : {
@@ -4611,6 +4921,12 @@
             "value" : "Automatisch opnieuw verbergen"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatycznie ukryj ponownie"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -4708,6 +5024,12 @@
           }
         },
         "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BETA"
+          }
+        },
+        "pl" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "BETA"
@@ -4815,6 +5137,12 @@
             "value" : "Rand"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ramka"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -4915,6 +5243,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Rand kleur"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kolor ramki"
           }
         },
         "pt-BR" : {
@@ -5019,6 +5353,12 @@
             "value" : "Randbreedte"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Szerokość ramki"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5120,6 +5460,12 @@
             "value" : "Annuleren"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anuluj"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5214,6 +5560,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Het %@-pictogram kan niet worden verplaatst."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nie można przenieść ikony %@."
           }
         },
         "pt-BR" : {
@@ -5319,6 +5671,12 @@
             "value" : "Wijzig het uiterlijk van de menubalk."
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zmienić wygląd paska menu."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5419,6 +5777,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Controleer automatisch"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sprawdź automatycznie"
           }
         },
         "pt-BR" : {
@@ -5523,6 +5887,12 @@
             "value" : "Controleer op updates"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sprawdź"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5623,6 +5993,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Automatisch controleren op updates?"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sprawdzać aktualizacje automatycznie?"
           }
         },
         "pt-BR" : {
@@ -5727,6 +6103,12 @@
             "value" : "Controleer op updates"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sprawdź uaktualnienia…"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5821,6 +6203,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Controleer de machtigingen"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sprawdź uprawnienia"
           }
         },
         "pt-BR" : {
@@ -5922,6 +6310,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Controleer Systeeminstellingen > Menubalk en schakel %@ in."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Przejdź do Ustawień systemowych > Pasek menu i włącz %@"
           }
         },
         "pt-BR" : {
@@ -6026,6 +6420,12 @@
             "value" : "Het controleren op updates wordt niet ondersteund in de debugmodus."
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sprawdzanie aktualizacji nie jest obsługiwane w trybie debugowania."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -6127,6 +6527,12 @@
             "value" : "Chevron"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Grot"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -6220,6 +6626,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Chevron (Omlaag)"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Grot (w dół)"
           }
         },
         "pt-BR" : {
@@ -6324,6 +6736,12 @@
             "value" : "Kies een aangepast pictogram dat in de menubalk moet worden weergegeven."
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wybierz własną ikonę, która będzie wyświetlana na pasku menu."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -6426,6 +6844,12 @@
             "value" : "Kies afbeelding…"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wybierz obraz…"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -6520,6 +6944,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Klik op een leeg gedeelte van de menubalk om verborgen menu-items weer te geven."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kliknij pusty obszar paska menu, aby wyświetlić ukryte elementy paska menu."
           }
         },
         "pt-BR" : {
@@ -6624,6 +7054,12 @@
             "value" : "Klik op item"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kliknij element"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -6720,6 +7156,12 @@
             "value" : "Bevestig"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Potwierdź"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -6814,6 +7256,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Er is een conflicterende menubalkbeheerder gedetecteerd"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wykryto konflikt menedżerów paska menu"
           }
         },
         "pt-BR" : {
@@ -6918,6 +7366,12 @@
             "value" : "Doorgaan"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kontynuuj"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -7012,6 +7466,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Toch doorgaan"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kontynuuj mimo to"
           }
         },
         "pt-BR" : {
@@ -7116,6 +7576,12 @@
             "value" : "Doorgaan in beperkte modus"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kontynuuj w trybie ograniczonym"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -7218,6 +7684,12 @@
             "value" : "Bijdragen"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Współtwórz"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -7255,6 +7727,10 @@
           }
         }
       }
+    },
+    "Created: %@" : {
+      "comment" : "A sublabel within the profile list showing when a profile was created.",
+      "isCommentAutoGenerated" : true
     },
     "Custom" : {
       "comment" : "Placeholder name for a custom control item image set.",
@@ -7318,6 +7794,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Aangepast"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Niestandardowy"
           }
         },
         "pt-BR" : {
@@ -7422,6 +7904,12 @@
             "value" : "Aangepast icoon gebruikt dynamisch uiterlijk"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Niestandardowa ikona używa dynamicznego wyglądu"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -7522,6 +8010,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Donkere modus"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ciemny wygląd"
           }
         },
         "pt-BR" : {
@@ -7626,6 +8120,12 @@
             "value" : "Standaard"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "domyślny"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -7663,6 +8163,14 @@
           }
         }
       }
+    },
+    "Delete" : {
+      "comment" : "A button that triggers a confirmation sheet for deleting a profile.",
+      "isCommentAutoGenerated" : true
+    },
+    "Delete Profile?" : {
+      "comment" : "An alert title that asks the user to confirm deleting a profile.",
+      "isCommentAutoGenerated" : true
     },
     "Development" : {
       "comment" : "A label for the \"Development\" segment in the update channel picker.",
@@ -7726,6 +8234,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ontwikkeling"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Development"
           }
         },
         "pt-BR" : {
@@ -7830,6 +8344,12 @@
             "value" : "Diagnostiek"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diagnostyka"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -7924,6 +8444,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Verwijderen"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odrzuć"
           }
         },
         "pt-BR" : {
@@ -8029,6 +8555,12 @@
             "value" : "Afbeeldingen van afzonderlijke menubalkitems weergeven."
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wyświetlać ikony poszczególnych elementów paska menu."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -8131,6 +8663,12 @@
             "value" : "Geef het pictogram weer als een monochrome afbeelding die zich dynamisch aanpast aan het uiterlijk van de menubalk. Deze instelling verwijdert alle kleur uit het pictogram, maar zorgt voor een consistente weergave op zowel lichte als donkere achtergronden."
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ikona monochromatyczna, dopasowująca się do paska menu. Usuwa kolor, zapewniając czytelność na jasnym i ciemnym tle."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -8225,6 +8763,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Schermen"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wyświetlacze"
           }
         },
         "pt-BR" : {
@@ -8329,6 +8873,12 @@
             "value" : "Niet controleren"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nie sprawdzaj"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -8429,6 +8979,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Uitgevoerd"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gotowe"
           }
         },
         "pt-BR" : {
@@ -8533,6 +9089,12 @@
             "value" : "Deur"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drzwi"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -8635,6 +9197,12 @@
             "value" : "Punt"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kropka"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -8731,6 +9299,12 @@
             "value" : "Dubbelklik op een leeg gedeelte van de menubalk om de standaard verborgen menu-items weer te geven."
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kliknij dwukrotnie pusty obszar paska menu, aby wyświetlić zawsze ukryte elementy paska menu."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -8825,6 +9399,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dubbelklikken om altijd verborgen te houden"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kliknij dwukrotnie, aby wyświetlić zawsze ukryte ikony"
           }
         },
         "pt-BR" : {
@@ -8929,6 +9509,12 @@
             "value" : "Sleep om de items in uw menubalk in verschillende secties te ordenen."
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Przeciągnij, aby pogrupować elementy paska menu w różne sekcje."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -9031,6 +9617,12 @@
             "value" : "Door een bug in een eerdere versie van de app waren de gegevens voor de menubalkonderdelen van %@ beschadigd en moesten ze worden gereset."
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Z powodu błędu w poprzedniej wersji aplikacji dane sekcji paska menu użytkownika %@ zostały uszkodzone i musiały zostać zresetowane."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -9068,6 +9660,10 @@
           }
         }
       }
+    },
+    "Duplicate" : {
+      "comment" : "A button to duplicate a saved profile.",
+      "isCommentAutoGenerated" : true
     },
     "Dynamic" : {
       "comment" : "Localized string key representation of the Ice Bar location option \"Dynamic\".",
@@ -9131,6 +9727,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dynamisch"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dynamicznie"
           }
         },
         "pt-BR" : {
@@ -9224,6 +9826,12 @@
           }
         },
         "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "E"
+          }
+        },
+        "pl" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "E"
@@ -9331,6 +9939,12 @@
             "value" : "Uiterlijk van menubalk bewerken…"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edytuj wygląd paska menu…"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -9425,6 +10039,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Naam bewerken"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edytuj nazwę"
           }
         },
         "pt-BR" : {
@@ -9529,6 +10149,12 @@
             "value" : "Ellips"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elipsa"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -9629,6 +10255,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Diagnostische logboekregistratie inschakelen"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Włącz logowanie diagnostyczne"
           }
         },
         "pt-BR" : {
@@ -9733,6 +10365,12 @@
             "value" : "Secundair contextmenu inschakelen"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Włącz pomocnicze menu kontekstowe"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -9833,6 +10471,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Schakel de %@-balk in"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Włącz pasek %@"
           }
         },
         "pt-BR" : {
@@ -9937,6 +10581,12 @@
             "value" : "Schakel het ‘altijd verborgen’ gedeelte in"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Włącz zawsze ukrytą sekcję"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -9974,6 +10624,10 @@
           }
         }
       }
+    },
+    "Error" : {
+      "comment" : "An alert title.",
+      "isCommentAutoGenerated" : true
     },
     "ERROR" : {
       "comment" : "A label that appears when a hotkey is not set.",
@@ -10039,6 +10693,12 @@
             "value" : "FOUT"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BŁĄD"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -10077,12 +10737,12 @@
         }
       }
     },
-    "Export to Clipboard" : {
-      "comment" : "A button that exports the current icon overrides to the user's clipboard.",
+    "Export" : {
+      "comment" : "A menu item that exports a profile to a file.",
       "isCommentAutoGenerated" : true
     },
-    "Export your overrides to share or reset back to application defaults." : {
-      "comment" : "A description of the functionality of exporting and resetting icon overrides.",
+    "Export Profile(s)" : {
+      "comment" : "A button label that exports one or more profiles.",
       "isCommentAutoGenerated" : true
     },
     "Focus" : {
@@ -10144,6 +10804,12 @@
           }
         },
         "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus"
+          }
+        },
+        "pl" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Focus"
@@ -10251,6 +10917,12 @@
             "value" : "Volledig"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pełny"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -10353,6 +11025,12 @@
             "value" : "Algemeen"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ogólny"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -10453,6 +11131,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Krijg realtime informatie over de menubalk."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uzyskać informacje o pasku menu w czasie rzeczywistym."
           }
         },
         "pt-BR" : {
@@ -10558,6 +11242,12 @@
             "value" : "Ga naar Geavanceerde instellingen"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Przejdź do ustawień zaawansowanych"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -10658,6 +11348,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kleurverloop"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradient"
           }
         },
         "pt-BR" : {
@@ -10762,6 +11458,12 @@
             "value" : "Toestemming verlenen"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Udziel zgody"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -10862,6 +11564,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Verborgen"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ukryte"
           }
         },
         "pt-BR" : {
@@ -10966,6 +11674,12 @@
             "value" : "‘Altijd verborgen’ sectie verbergen"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ukryj zawsze ukrytą sekcję"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -11066,6 +11780,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Verberg app-menu's bij het weergeven van menubalkitems"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ukrywaj menu aplikacji podczas pokazywania elementów paska menu"
           }
         },
         "pt-BR" : {
@@ -11170,6 +11890,12 @@
             "value" : "Verborgen sectie verbergen"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ukryj sekcję ukrytą"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -11270,6 +11996,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ingedrukt houden om te bekijken"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Przytrzymaj, by zobaczyć podgląd"
           }
         },
         "pt-BR" : {
@@ -11374,6 +12106,12 @@
             "value" : "Sneltoets is gereserveerd door macOS"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ten skrót jest zarezerwowany przez macOS"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -11474,6 +12212,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sneltoets"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skróty klawiszowe"
           }
         },
         "pt-BR" : {
@@ -11578,6 +12322,12 @@
             "value" : "Beweeg de muis over een leeg gedeelte van de menubalk om verborgen menu-items weer te geven."
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Umieść kursor nad pustym miejscem na pasku menu, by zobaczyć ukryte opcje."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -11672,6 +12422,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Hoe vaak de geanimeerde pictogrammen in de menubalk in de panelen worden vernieuwd. Hogere waarden zorgen voor een vloeiender beeld, maar belasten de CPU meer."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Częstotliwość odświeżania animacji ikon na pasku menu. Większa wartość to lepsza płynność kosztem większego zużycia procesora."
           }
         },
         "pt-BR" : {
@@ -11774,6 +12530,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ijsklontje"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kostka lodu"
           }
         },
         "pt-BR" : {
@@ -11882,6 +12644,12 @@
             "value" : "De posities van pictogrammen kunnen niet worden hersteld."
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nie można przywrócić położenia ikon."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -11976,6 +12744,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Vernieuwingsfrequentie van pictogrammen"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Częstotliwość odświeżania ikon"
           }
         },
         "pt-BR" : {
@@ -12080,6 +12854,12 @@
             "value" : "Importeren is mislukt. U kunt de instellingen handmatig configureren."
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Import nie powiódł się. Możesz skonfigurować ustawienia ręcznie."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -12117,6 +12897,10 @@
           }
         }
       }
+    },
+    "Import Profile(s)" : {
+      "comment" : "A button label that imports one or more profiles.",
+      "isCommentAutoGenerated" : true
     },
     "Import Settings" : {
       "comment" : "A heading displayed above the import settings section.",
@@ -12180,6 +12964,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Importeer instellingen"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Importuj ustawienia"
           }
         },
         "pt-BR" : {
@@ -12284,6 +13074,12 @@
             "value" : "Geïmporteerd"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zaimportowano"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -12384,6 +13180,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Items kunnen ook worden gerangschikt door ⌘ Command + ze in de menubalk te slepen."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elementy można również przemieścić, przeciągając je na pasku menu z wciśniętym klawiszem ⌘ (Command)."
           }
         },
         "pt-BR" : {
@@ -12488,6 +13290,12 @@
             "value" : "Laatst gecontroleerd: %@"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ostatnio sprawdzono: %@"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -12590,6 +13398,12 @@
             "value" : "Starten bij aanmelden"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uruchom podczas logowania"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -12688,6 +13502,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Lay-out opnieuw ingesteld. Items zijn verplaatst naar de verborgen sectie."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Przywrócono domyślny układ. Obiekty przeniesiono do ukrytej sekcji."
           }
         },
         "pt-BR" : {
@@ -12792,6 +13612,12 @@
             "value" : "Voorste eindstuk"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zaślepka przednia"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -12894,6 +13720,12 @@
             "value" : "linkermuisknop"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "lewy klik"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -12987,6 +13819,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Linkermarge"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prawy margines"
           }
         },
         "pt-BR" : {
@@ -13091,6 +13929,12 @@
             "value" : "Lichte modus"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jasny motyw"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -13191,6 +14035,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Menu-items worden geladen..."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wczytywanie elementów paska menu…"
           }
         },
         "pt-BR" : {
@@ -13295,6 +14145,12 @@
             "value" : "Locatie"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Położenie"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -13395,6 +14251,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "macOS verbiedt het verplaatsen van “%@”."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "System macOS uniemożliwia przeniesienie \"%@\"."
           }
         },
         "pt-BR" : {
@@ -13499,6 +14361,12 @@
             "value" : "Maak meer ruimte in de menubalk door de huidige app-menu's indien nodig te verbergen. macOS vereist %@ om zichzelf zichtbaar te maken in het Dock terwijl deze instelling van kracht is."
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zyskaj więcej miejsca na pasku menu, ukrywając w razie potrzeby menu aktualnej aplikacji. System macOS wymaga, aby aplikacja %@ była widoczna w Docku, gdy to ustawienie jest włączone."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -13594,6 +14462,12 @@
           }
         },
         "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "max"
+          }
+        },
+        "pl" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "max"
@@ -13701,6 +14575,12 @@
             "value" : "Uiterlijk van de menubalk"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wygląd paska menu"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -13801,6 +14681,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Het menu-item kan niet worden verplaatst."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Element paska menu jest nieprzesuwalny."
           }
         },
         "pt-BR" : {
@@ -13905,6 +14791,12 @@
             "value" : "Afstand tussen menu-items"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odstępy między elementami paska menu"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -14005,6 +14897,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Menubalkitems"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elementy paska menu"
           }
         },
         "pt-BR" : {
@@ -14109,6 +15007,12 @@
             "value" : "De items in de menubalk worden na een bepaalde tijd weer verborgen."
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elementy paska menu są ponownie ukrywane po określonym czasie."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -14209,6 +15113,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "De items in de menubalk worden opnieuw verborgen met behulp van een slim algoritme."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elementy paska menu są ponownie ukrywane przy użyciu inteligentnego algorytmu."
           }
         },
         "pt-BR" : {
@@ -14313,6 +15223,12 @@
             "value" : "De items in de menubalk worden weer verborgen wanneer de app waarop de focus ligt verandert."
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elementy paska menu są ponownie ukrywane, gdy zmienia się aktywna aplikacja."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -14413,6 +15329,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Menu balk lay-out"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Układ paska menu"
           }
         },
         "pt-BR" : {
@@ -14518,6 +15440,12 @@
             "value" : "Voor de indeling van de menubalk zijn machtigingen voor schermopnames vereist."
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Układ paska menu wymaga uprawnień do nagrywania ekranu."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -14620,6 +15548,12 @@
             "value" : "Menubalk-overlay"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nakładka paska menu"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -14657,6 +15591,10 @@
           }
         }
       }
+    },
+    "Menu Bar Profile" : {
+      "comment" : "Display name for the entity type representing a Thaw profile.",
+      "isCommentAutoGenerated" : true
     },
     "Menu Bar Sections" : {
       "comment" : "Section header for advanced settings related to menu bar sections.",
@@ -14720,6 +15658,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Menu balk secties"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sekcje paska menu"
           }
         },
         "pt-BR" : {
@@ -14824,6 +15768,12 @@
             "value" : "Vorm van de menubalk"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kształt paska menu"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -14861,6 +15811,10 @@
           }
         }
       }
+    },
+    "Modified: %@" : {
+      "comment" : "A sublabel within the profile list showing when a profile was last modified.",
+      "isCommentAutoGenerated" : true
     },
     "Mouse pointer" : {
       "comment" : "Localized string key for the \"Mouse pointer\" option in the Ice Bar location picker.",
@@ -14924,6 +15878,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Muis cursor"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kursor myszy"
           }
         },
         "pt-BR" : {
@@ -15028,6 +15988,12 @@
             "value" : "Nooit"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nigdy"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -15066,8 +16032,9 @@
         }
       }
     },
-    "No icons found" : {
-
+    "New profile name" : {
+      "comment" : "A text field for entering a new profile name.",
+      "isCommentAutoGenerated" : true
     },
     "No items in this section" : {
       "comment" : "A message displayed when a section of the Ice Bar has no items.",
@@ -15133,6 +16100,12 @@
             "value" : "Geen items in deze sectie"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta sekcja jest pusta"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -15170,6 +16143,14 @@
           }
         }
       }
+    },
+    "No profile selected" : {
+      "comment" : "Subtitle of the display representation of the ThawFocusFilter intent when no profile is selected.",
+      "isCommentAutoGenerated" : true
+    },
+    "No profiles saved. Save your current configuration to create one." : {
+      "comment" : "A message displayed when there are no profiles saved.",
+      "isCommentAutoGenerated" : true
     },
     "No shape kind selected" : {
       "comment" : "A message displayed when the user hasn't selected a shape kind for the menu bar.",
@@ -15233,6 +16214,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Geen vorm geselecteerd"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nie wybrano rodzaju kształtu"
           }
         },
         "pt-BR" : {
@@ -15337,6 +16324,12 @@
             "value" : "geen"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "brak"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -15439,6 +16432,12 @@
             "value" : "Geen"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Brak"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -15533,6 +16532,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Niet beschikbaar omdat de %@-balk voor dit scherm is ingeschakeld."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Funkcja wyłączona, gdyż pasek %@ jest aktywny na tym ekranie."
           }
         },
         "pt-BR" : {
@@ -15637,6 +16642,12 @@
             "value" : "Onvoldoende ruimte om “%@” weer te geven"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Za mało miejsca, aby wyświetlić \"%@\""
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -15728,6 +16739,12 @@
           }
         },
         "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notch"
+          }
+        },
+        "pl" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Notch"
@@ -15835,6 +16852,12 @@
             "value" : "Opmerking: Mogelijk moet u zich afmelden en opnieuw aanmelden om deze instelling correct toe te passen."
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Informacja: To ustawienie zacznie działać po ponownym zalogowaniu."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -15932,6 +16955,12 @@
           }
         },
         "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OK"
+          }
+        },
+        "pl" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "OK"
@@ -16039,6 +17068,12 @@
             "value" : "Een of meer sectiescheiders worden verborgen door macOS"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "System macOS ukrywa co najmniej jeden separator sekcji"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -16142,6 +17177,12 @@
             "value" : "Open %@ Instellingen"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Otwórz ustawienia %@"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -16179,6 +17220,10 @@
           }
         }
       }
+    },
+    "Open Focus Settings" : {
+      "comment" : "A button that opens the Focus settings app.",
+      "isCommentAutoGenerated" : true
     },
     "Other" : {
       "comment" : "Section title for advanced settings related to other functionality.",
@@ -16242,6 +17287,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ander"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inne"
           }
         },
         "pt-BR" : {
@@ -16346,6 +17397,12 @@
             "value" : "Verleende toestemmingen"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Przyznano dostęp"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -16448,6 +17505,12 @@
             "value" : "Toestemmingen"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uprawnienia"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -16485,6 +17548,22 @@
           }
         }
       }
+    },
+    "Profile" : {
+      "comment" : "Title of the parameter in the \"Set Menu Bar Profile\" focus filter.",
+      "isCommentAutoGenerated" : true
+    },
+    "Profile name" : {
+      "comment" : "A text field label for entering a profile name.",
+      "isCommentAutoGenerated" : true
+    },
+    "Profile: %@" : {
+      "comment" : "A subtitle for the \"Set Menu Bar Profile\" focus filter.",
+      "isCommentAutoGenerated" : true
+    },
+    "Profiles" : {
+      "comment" : "The title of the \"Profiles\" section in the \"Settings\" interface.",
+      "isCommentAutoGenerated" : true
     },
     "Quit" : {
       "comment" : "A button label that quits the application.",
@@ -16548,6 +17627,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Afsluiten"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wyjdź"
           }
         },
         "pt-BR" : {
@@ -16652,6 +17737,12 @@
             "value" : "Afsluiten %@"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zakończ %@"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -16746,6 +17837,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Stop Thaw"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zakończ Thaw"
           }
         },
         "pt-BR" : {
@@ -16850,6 +17947,12 @@
             "value" : "Sneltoets opnemen"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zarejestruj skrót"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -16887,6 +17990,10 @@
           }
         }
       }
+    },
+    "Rename" : {
+      "comment" : "A menu item that lets the user rename a profile.",
+      "isCommentAutoGenerated" : true
     },
     "Report a Bug" : {
       "comment" : "A button that opens a web page where users can report bugs.",
@@ -16950,6 +18057,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Een bug melden"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zgłoś błąd"
           }
         },
         "pt-BR" : {
@@ -17053,6 +18166,12 @@
             "value" : "Reset"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Resetuj"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -17146,6 +18265,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Reset %@"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zresetuj %@"
           }
         },
         "pt-BR" : {
@@ -17252,6 +18377,12 @@
             "value" : "Reset alle instellingen"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zresetuj wszystkie ustawienia"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -17347,6 +18478,12 @@
             "value" : "Alle instellingen terugzetten naar de standaardwaarden. Deze handeling kan niet ongedaan worden gemaakt."
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Przywróć wszystkie ustawienia do wartości domyślnych. Tej operacji nie można cofnąć."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -17440,6 +18577,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Reset alle instellingen?"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reset all settings?"
           }
         },
         "pt-BR" : {
@@ -17544,6 +18687,12 @@
             "value" : "Reset voltooid met %lld item(s) dat/die niet kon/konden worden verplaatst. Controleer de menubalk en probeer het indien nodig opnieuw."
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Resetowanie zakończone. Liczba elementów, których nie udało się przenieść: %lld. Sprawdź pasek menu i spróbuj ponownie w razie potrzeby."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -17644,6 +18793,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Reset gefaald: %@"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Resetowanie nie powiodło się: %@"
           }
         },
         "pt-BR" : {
@@ -17748,6 +18903,12 @@
             "value" : "Reset indeling"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Przywróć układ domyślny"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -17848,6 +19009,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Menu-balkindeling resetten"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Przywróć domyślny wygląd paska menu"
           }
         },
         "pt-BR" : {
@@ -17952,6 +19119,12 @@
             "value" : "Menu-balkindeling resetten"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Przywróć domyślny układ paska menu"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -18052,6 +19225,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Menu-balkindeling resetten?"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zresetować układ paska menu?"
           }
         },
         "pt-BR" : {
@@ -18160,6 +19339,12 @@
             "value" : "Terugzetten naar de standaardafstand"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Przywróć domyślne odstępy"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -18260,6 +19445,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Reset de scheidingslijnen en verplaats alle verplaatsbare items behalve het %@-pictogram naar verborgen — net als bij een nieuwe installatie."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Resetuje separatory i przenosi do ukrytych wszystkie elementy (oprócz ikony %@), przywracając stan jak tuż po instalacji."
           }
         },
         "pt-BR" : {
@@ -18364,6 +19555,12 @@
             "value" : "Herstelt de standaardinstellingen van de scheidingslijn en verplaatst alle verplaatsbare items, behalve het %@-pictogram, naar Verborgen. Gebruik deze optie als de lay-out er verkeerd uitziet of als items niet worden geladen."
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Przywraca standardowy układ separatorów, przenosząc ruchome elementy do ukrytych (z wyłączeniem ikony %@). Wybierz tę opcję, jeśli układ ikon nie wyświetla się poprawnie."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -18466,6 +19663,12 @@
             "value" : "Rechter muisklik"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "prawy klik"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -18559,6 +19762,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Rechtermarge"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prawy margines"
           }
         },
         "pt-BR" : {
@@ -18666,6 +19875,12 @@
             "value" : "Klik met de rechtermuisknop op een leeg gedeelte van de menubalk om een minimale versie van het menu van %@ weer te geven. Schakel deze instelling uit als u conflicten met andere apps ondervindt."
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kliknij prawym przyciskiem myszy w pustym obszarze paska menu, aby wyświetlić uproszczoną wersję menu aplikacji %@. Wyłącz to ustawienie, jeśli wystąpią konflikty z innymi aplikacjami."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -18768,6 +19983,12 @@
             "value" : "Rond afsluitstuk"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Okrągła czapeczka"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -18805,6 +20026,10 @@
           }
         }
       }
+    },
+    "Save Current" : {
+      "comment" : "A button that saves the current profile when pressed.",
+      "isCommentAutoGenerated" : true
     },
     "Screen Recording" : {
       "comment" : "Title of the screen recording permission.",
@@ -18869,6 +20094,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Schermopname"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nagrywanie ekranu"
           }
         },
         "pt-BR" : {
@@ -18968,6 +20199,12 @@
             "value" : "Er zijn machtigingen voor schermopnames nodig om tooltips weer te geven."
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wyświetlanie podpowiedzi wymaga uprawnień do nagrywania ekranu."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -19063,6 +20300,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Er zijn machtigingen voor schermopnames nodig om in de menubalk te kunnen zoeken."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wyszukiwanie elementów paska menu wymaga uprawnień do nagrywania ekranu."
           }
         },
         "pt-BR" : {
@@ -19167,6 +20410,12 @@
             "value" : "Scroll of veeg in de menubalk om verborgen menu-items weer te geven."
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Użyj gestu przewijania lub przesunięcia na pasku menu, aby odsłonić ukryte opcje."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -19267,6 +20516,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Zoekmenu-items"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wyszukaj elementy paska menu"
           }
         },
         "pt-BR" : {
@@ -19371,6 +20626,12 @@
             "value" : "Zoekmenu-items"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wyszukaj elementy paska menu"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -19471,6 +20732,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Zoekmenu-items..."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wyszukaj elementy paska menu…"
           }
         },
         "pt-BR" : {
@@ -19575,6 +20842,12 @@
             "value" : "Stijl van sectie-indeling"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Styl separatora sekcji"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -19613,8 +20886,8 @@
         }
       }
     },
-    "SF Symbol name" : {
-      "comment" : "A text field label for searching for SF Symbols.",
+    "Set Menu Bar Profile" : {
+      "comment" : "Title and description of the Focus Filter.",
       "isCommentAutoGenerated" : true
     },
     "Shadow" : {
@@ -19679,6 +20952,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Schaduw"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cień"
           }
         },
         "pt-BR" : {
@@ -19783,6 +21062,12 @@
             "value" : "Soort vorm"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rodzaj kształtu"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -19883,6 +21168,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Moet %@ automatisch controleren op updates? U kunt dit altijd handmatig controleren via het pictogram in de menubalk van Thaw of via Instellingen → Over."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatycznie sprawdzać uaktualnienia dla %@? Ręczne sprawdzanie jest możliwe w dowolnym momencie przez ikonę Thaw na pasku menu lub w menu Ustawienia → Informacje."
           }
         },
         "pt-BR" : {
@@ -19987,6 +21278,12 @@
             "value" : "Toon %@ icoon"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pokaż ikonę %@"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -20081,6 +21378,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Toon een tooltip wanneer de muisaanwijzer boven menu-items in de menubalk wordt geplaatst."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wyświetlaj podpowiedzi po wskazaniu elementów na pasku menu."
           }
         },
         "pt-BR" : {
@@ -20185,6 +21488,12 @@
             "value" : "Toon alle secties wanneer ⌘ Command + menu-items versleept worden"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pokazuj wszystkie sekcje, gdy przeciągasz elementy paska menu z klawiszem Command (⌘)"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -20287,6 +21596,12 @@
             "value" : "‘Altijd verborgen’ gedeelte weergeven"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pokaż zawsze ukrytą sekcję"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -20383,6 +21698,12 @@
             "value" : "Weergeven bij muisaanwijzer op sneltoets"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wywołaj skrótem w miejscu kursora myszy"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -20477,6 +21798,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Toon verborgen menu-items in een aparte balk onder de menubalk op dit scherm."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pokaż ukryte elementy paska menu na osobnym pasku poniżej paska menu na tym ekranie."
           }
         },
         "pt-BR" : {
@@ -20581,6 +21908,12 @@
             "value" : "Toon verborgen gedeelte"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pokaż ukrytą sekcję"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -20681,6 +22014,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Toon item"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pokaż element"
           }
         },
         "pt-BR" : {
@@ -20785,6 +22124,12 @@
             "value" : "Toon log bestanden in Finder"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pokaż pliki dziennika w Finderze"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -20879,6 +22224,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Achtergrond van de menubalk weergeven"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pokaż tło paska menu"
           }
         },
         "pt-BR" : {
@@ -20983,6 +22334,12 @@
             "value" : "Toon bij klikken"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wyświetl po kliknięciu"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -21083,6 +22440,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Toon bij muis aanwijzen"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wyświetl po wskazaniu kursorem myszy"
           }
         },
         "pt-BR" : {
@@ -21187,6 +22550,12 @@
             "value" : "Toon bij muis aanwijzen vertraging"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opóźnienie wyświetlania po wskazaniu kursorem myszy"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -21289,6 +22658,12 @@
             "value" : "Toon bij scrollen"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pokaż przy przewijaniu"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -21383,6 +22758,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Geef het %@-pictogram weer in de menubalk. Klik erop om verborgen items weer te geven, dubbelklik om ze permanent te verbergen en klik met de rechtermuisknop voor instellingen."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pokaż ikonę %@ na pasku menu. Kliknij, by wyświetlić ukryte ikony; kliknij dwukrotnie dla stale ukrytych; kliknij prawym przyciskiem, by otworzyć ustawienia."
           }
         },
         "pt-BR" : {
@@ -21481,6 +22862,12 @@
             "value" : "Tooltips weergeven in de menubalk"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pokaż podpowiedzi na pasku menu"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -21575,6 +22962,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Geeft de achtergrond van de menubalk van het systeem weer. Schakel deze optie in als je een dynamische achtergrond gebruikt of als ‘Achtergrond van menubalk weergeven’ is uitgeschakeld in Systeeminstellingen."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pokazuje tło paska menu systemu. Włącz tę opcję, jeśli używasz dynamicznej tapety lub masz wyłączoną funkcję \"Pokaż tło paska menu\" w Ustawieniach systemowych."
           }
         },
         "pt-BR" : {
@@ -21679,6 +23072,12 @@
             "value" : "Slim"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inteligentne"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -21781,6 +23180,12 @@
             "value" : "Vast"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pełny"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -21879,6 +23284,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Splits"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Podział"
           }
         },
         "pt-BR" : {
@@ -21983,6 +23394,12 @@
             "value" : "Vierkant afsluitstuk"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Biret"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -22083,6 +23500,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Stabiel"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wersja stabilna"
           }
         },
         "pt-BR" : {
@@ -22187,6 +23610,12 @@
             "value" : "Strategie"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Strategia"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -22287,6 +23716,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld-instellingen succesvol geïmporteerd!"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pomyślnie zaimportowano %lld ustawień!"
           }
         },
         "pt-BR" : {
@@ -22391,6 +23826,12 @@
             "value" : "Zonnebrillen"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Okulary"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -22491,6 +23932,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ondersteuning %@"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wesprzyj %@"
           }
         },
         "pt-BR" : {
@@ -22595,6 +24042,12 @@
             "value" : "De %@-balk staat onder het %@-pictogram gecentreerd."
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pasek %@ jest wyśrodkowany pod ikoną %@."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -22695,6 +24148,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "De %@-balk wordt onder de muisaanwijzer gecentreerd."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pasek %@ jest wyśrodkowany pod wskaźnikiem myszy."
           }
         },
         "pt-BR" : {
@@ -22800,6 +24259,12 @@
             "value" : "De %@ Balk vereist toestemming voor schermopnames."
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pasek %@ wymaga uprawnień do nagrywania ekranu."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -22902,6 +24367,12 @@
             "value" : "De locatie van de %@-balk verandert afhankelijk van de context."
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lokalizacja paska %@ zmienia się w zależności od kontekstu."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -22998,6 +24469,12 @@
             "value" : "Het %@-pictogram moet altijd in het zichtbare gedeelte blijven staan."
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ikona %@ musi być zawsze widoczna."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -23092,6 +24569,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "De tijd die moet verstrijken voordat er een tooltip boven een menu-item wordt weergegeven."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Czas oczekiwania na wyświetlenie podpowiedzi nad elementem paska menu."
           }
         },
         "pt-BR" : {
@@ -23196,6 +24679,12 @@
             "value" : "De tijd die moet worden gewacht voordat het wordt weergegeven bij het aanwijzen met de muis."
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Czas oczekiwania na wyświetlenie elementu po wskazaniu go kursorem myszy."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -23298,6 +24787,12 @@
             "value" : "Deze actie kan niet ongedaan worden gemaakt."
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tej operacji nie można cofnąć."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -23395,6 +24890,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Hierdoor worden alle instellingen teruggezet naar hun standaardwaarden. Deze handeling kan niet ongedaan worden gemaakt."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spowoduje to przywrócenie wszystkich ustawień do ich wartości domyślnych. Tej operacji nie można cofnąć."
           }
         },
         "pt-BR" : {
@@ -23499,6 +25000,12 @@
             "value" : "Getimed"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Z opóźnieniem"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -23599,6 +25106,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tint"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odcień"
           }
         },
         "pt-BR" : {
@@ -23703,6 +25216,12 @@
             "value" : "Tip: Je kunt deze instellingen ook bewerken door met de rechtermuisknop op een leeg gedeelte van de menubalk te klikken"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wskazówka: Możesz również edytować te ustawienia, klikając prawym przyciskiem myszy w pustym obszarze paska menu."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -23740,6 +25259,10 @@
           }
         }
       }
+    },
+    "To switch profiles with Focus modes, add Thaw as a Focus Filter in System Settings → Focus → [Mode] → Focus Filters." : {
+      "comment" : "A description of how to add Thaw as a Focus Filter in System Settings.",
+      "isCommentAutoGenerated" : true
     },
     "Toggle application menus" : {
       "comment" : "A label for an action that toggles the visibility of application menus.",
@@ -23803,6 +25326,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Schakel de applicatie menu’s in of uit"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Przełącz menu aplikacji"
           }
         },
         "pt-BR" : {
@@ -23907,6 +25436,12 @@
             "value" : "Schakel het ‘altijd verborgen’ gedeelte in of uit"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rozwiń zawsze ukrytą sekcję"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -24009,6 +25544,12 @@
             "value" : "Schakel het verborgen gedeelte in of uit"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Przełącz ukrytą sekcję"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -24105,6 +25646,12 @@
             "value" : "Vertraging bij tooltips"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opóźnienie podpowiedzi"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -24199,6 +25746,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tooltips"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Podpowiedzi"
           }
         },
         "pt-BR" : {
@@ -24303,6 +25856,12 @@
             "value" : "Achterste eindstuk"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zaślepka końcowa"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -24403,6 +25962,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Type sneltoets"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zdefiniuj skrót"
           }
         },
         "pt-BR" : {
@@ -24507,6 +26072,12 @@
             "value" : "Kan menubalkitems niet tonen"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nie można wyświetlić elementów paska menu"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -24609,6 +26180,12 @@
             "value" : "Kan menubalkitems niet laden"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nie można załadować elementów paska menu"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -24646,6 +26223,14 @@
           }
         }
       }
+    },
+    "Update" : {
+      "comment" : "A button that updates a saved profile with the current configuration.",
+      "isCommentAutoGenerated" : true
+    },
+    "Update All" : {
+      "comment" : "A menu option to update a profile with the current state of both its layout and configuration.",
+      "isCommentAutoGenerated" : true
     },
     "Update channel" : {
       "comment" : "A label displayed above a picker for selecting the update channel.",
@@ -24711,6 +26296,12 @@
             "value" : "Update kanaal"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kanał aktualizacji"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -24749,8 +26340,20 @@
         }
       }
     },
-    "Use" : {
-      "comment" : "A button that selects the currently-typed SF Symbol as the new override.",
+    "Update Configuration on All Profiles" : {
+      "comment" : "A menu item that allows updating the configuration of all profiles to match the current state of the app.",
+      "isCommentAutoGenerated" : true
+    },
+    "Update Configuration Only" : {
+      "comment" : "A menu item that updates only the configuration part of a profile.",
+      "isCommentAutoGenerated" : true
+    },
+    "Update Layout Only" : {
+      "comment" : "A menu item that updates only the layout of a profile.",
+      "isCommentAutoGenerated" : true
+    },
+    "Update this profile with the current state" : {
+      "comment" : "A menu item that updates a profile with the current state of the app.",
       "isCommentAutoGenerated" : true
     },
     "Use %@ Bar" : {
@@ -24815,6 +26418,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gebruik %@ Balk"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Użyj paska %@"
           }
         },
         "pt-BR" : {
@@ -24919,6 +26528,12 @@
             "value" : "Gebruik dynamische weergave"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Użyj wyglądu dynamicznego"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -25021,6 +26636,12 @@
             "value" : "Gebruik inset-vorm op schermen met notch."
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dopasuj kształt do ekranów z wycięciem"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -25058,6 +26679,18 @@
           }
         }
       }
+    },
+    "Use LCS sorting on notched displays" : {
+      "comment" : "A toggle that lets the user choose whether to use the LCS sorting algorithm for profile sorting on notched displays.",
+      "isCommentAutoGenerated" : true
+    },
+    "Use Option-click to open always-hidden section" : {
+      "comment" : "A toggle that lets the user choose whether to use option-click to open the always-hidden section.",
+      "isCommentAutoGenerated" : true
+    },
+    "Use the faster LCS (Longest Common Subsequence) algorithm for profile sorting on notched displays instead of the full sort. LCS minimises the number of moves but may be less reliable on notched displays with smaller resolutions." : {
+      "comment" : "A tooltip that explains the purpose of a setting.",
+      "isCommentAutoGenerated" : true
     },
     "Version %@ (%@)" : {
       "comment" : "A label displaying the current version and build number of the app. The first argument is the version string. The second argument is the build string.",
@@ -25121,6 +26754,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Versie %@ (%@)"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wersja %@ (%@)"
           }
         },
         "pt-BR" : {
@@ -25225,6 +26864,12 @@
             "value" : "Versie %@ (%@) is nu beschikbaar"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dostępna jest nowa wersja: %@ (%@)"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -25325,6 +26970,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Zichtbaar"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Widoczne"
           }
         },
         "pt-BR" : {
@@ -25429,6 +27080,12 @@
             "value" : "We hebben instellingen gevonden van Ice (de originele app)."
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wykryliśmy ustawienia z aplikacji Ice (pierwowzoru)."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -25466,6 +27123,10 @@
           }
         }
       }
+    },
+    "When a Focus mode deactivates, the display profile is automatically restored." : {
+      "comment" : "A description of how a display profile is restored when a Focus mode deactivates.",
+      "isCommentAutoGenerated" : true
     },
     "Would you like to import your existing configuration?" : {
       "comment" : "A question displayed to the user when they first open the app, asking if they would like to import their existing configuration.",
@@ -25529,6 +27190,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Wilt u uw bestaande configuratie importeren?"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Czy chcesz zaimportować istniejącą konfigurację?"
           }
         },
         "pt-BR" : {
@@ -25631,6 +27298,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Schrijft gedetailleerde foutopsporingslogboeken naar een bestand voor probleemoplossing. Logbestanden worden opgeslagen in ~/Library/Logs/Thaw/. Schakel deze functie uit wanneer deze niet nodig is om onnodige schrijfbewerkingen op de schijf te voorkomen."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tworzy szczegółowe dzienniki zdarzeń ułatwiające diagnostykę błędów. Pliki te znajdziesz w katalogu ~/Library/Logs/Thaw/. Wyłącz tę funkcję, jeśli z niej nie korzystasz, by ograniczyć zużycie dysku."
           }
         },
         "pt-BR" : {

@@ -155,11 +155,8 @@ extension MenuBarItemTag {
         return items
     }()
 
-    // TODO: MusicRecognition became hideable in what macOS version?
-    //
-    // At some point, it became possible to hide the "MusicRecognition" item.
-    // We need to determine which version of macOS first had this change, and
-    // and conditionally exclude the item from this list.
+    // NOTE: MusicRecognition became hideable at some point. If the minimum
+    // deployment target is raised, this item may need conditional exclusion.
     //
     // We're using macOS 15.3.2 for now, but it could be earlier.
     //

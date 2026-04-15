@@ -17,6 +17,7 @@ final class AdvancedSettings: ObservableObject {
     /// A Boolean value that indicates whether the always-hidden section
     /// is enabled.
     @Published var enableAlwaysHiddenSection = Defaults.DefaultValue.enableAlwaysHiddenSection
+    @Published var useOptionClickToShowAlwaysHiddenSection = Defaults.DefaultValue.useOptionClickToShowAlwaysHiddenSection
 
     /// A Boolean value that indicates whether to show all sections when
     /// the user is dragging items in the menu bar.
@@ -49,6 +50,10 @@ final class AdvancedSettings: ObservableObject {
     /// A Boolean value that indicates whether diagnostic logging to file is enabled.
     @Published var enableDiagnosticLogging = Defaults.DefaultValue.enableDiagnosticLogging
 
+    /// A Boolean value that indicates whether to use LCS sorting instead of
+    /// full sorting on notched displays.
+    @Published var useLCSSortingOnNotchedDisplays = Defaults.DefaultValue.useLCSSortingOnNotchedDisplays
+
     /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
 
@@ -65,6 +70,7 @@ final class AdvancedSettings: ObservableObject {
     /// Loads the model's initial state.
     private func loadInitialState() {
         Defaults.ifPresent(key: .enableAlwaysHiddenSection, assign: &enableAlwaysHiddenSection)
+        Defaults.ifPresent(key: .useOptionClickToShowAlwaysHiddenSection, assign: &useOptionClickToShowAlwaysHiddenSection)
         Defaults.ifPresent(key: .showAllSectionsOnUserDrag, assign: &showAllSectionsOnUserDrag)
         Defaults.ifPresent(key: .hideApplicationMenus, assign: &hideApplicationMenus)
         Defaults.ifPresent(key: .enableSecondaryContextMenu, assign: &enableSecondaryContextMenu)
@@ -73,6 +79,7 @@ final class AdvancedSettings: ObservableObject {
         Defaults.ifPresent(key: .showMenuBarTooltips, assign: &showMenuBarTooltips)
         Defaults.ifPresent(key: .iconRefreshInterval, assign: &iconRefreshInterval)
         Defaults.ifPresent(key: .enableDiagnosticLogging, assign: &enableDiagnosticLogging)
+        Defaults.ifPresent(key: .useLCSSortingOnNotchedDisplays, assign: &useLCSSortingOnNotchedDisplays)
 
         Defaults.ifPresent(key: .sectionDividerStyle) { rawValue in
             if let style = SectionDividerStyle(rawValue: rawValue) {
@@ -89,6 +96,13 @@ final class AdvancedSettings: ObservableObject {
             .receive(on: DispatchQueue.main)
             .sink { enable in
                 Defaults.set(enable, forKey: .enableAlwaysHiddenSection)
+            }
+            .store(in: &c)
+
+        $useOptionClickToShowAlwaysHiddenSection
+            .receive(on: DispatchQueue.main)
+            .sink { enable in
+                Defaults.set(enable, forKey: .useOptionClickToShowAlwaysHiddenSection)
             }
             .store(in: &c)
 
@@ -153,6 +167,13 @@ final class AdvancedSettings: ObservableObject {
             .sink { enable in
                 Defaults.set(enable, forKey: .enableDiagnosticLogging)
                 DiagnosticLogger.shared.isEnabled = enable
+            }
+            .store(in: &c)
+
+        $useLCSSortingOnNotchedDisplays
+            .receive(on: DispatchQueue.main)
+            .sink { enable in
+                Defaults.set(enable, forKey: .useLCSSortingOnNotchedDisplays)
             }
             .store(in: &c)
 
