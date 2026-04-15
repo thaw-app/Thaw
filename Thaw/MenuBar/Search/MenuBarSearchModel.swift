@@ -68,5 +68,5 @@ final class MenuBarSearchModel: ObservableObject {
         cancellables = c
     }
 
-    private func updateAverageColorInfo(for screen: NSScreen) {}
+    private func updateAverageColorInfo(for _: NSScreen) {}
 }

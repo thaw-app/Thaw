@@ -352,7 +352,6 @@ final class SourcePIDCache {
                                 $0.titles.removeValue(forKey: matchedWindow.windowID)
                             }
                         }
-                        }
                     }
                 }
             }

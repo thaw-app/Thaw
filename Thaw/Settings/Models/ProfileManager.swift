@@ -626,7 +626,7 @@ final class ProfileManager: ObservableObject {
         guard let idString = UserDefaults.standard.string(
             forKey: "FocusFilterRequestedProfileID"
         ),
-              let profileID = UUID(uuidString: idString)
+            let profileID = UUID(uuidString: idString)
         else { return }
 
         guard profileID != activeProfileID else {

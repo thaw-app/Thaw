@@ -139,7 +139,7 @@ enum MenuBarIconProvider {
     /// Renders Thaw's own control item icon using the user's configured icon.
     @MainActor
     private static func renderThawControlItem(
-        _ item: MenuBarItem,
+        _: MenuBarItem,
         appState: AppState,
         canvasSize: CGSize,
         scale: CGFloat

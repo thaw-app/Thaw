@@ -155,11 +155,11 @@ extension MenuBarItemTag {
         return items
     }()
 
-    // NOTE: MusicRecognition became hideable at some point. If the minimum
-    // deployment target is raised, this item may need conditional exclusion.
-    //
-    // We're using macOS 15.3.2 for now, but it could be earlier.
-    //
+    /// NOTE: MusicRecognition became hideable at some point. If the minimum
+    /// deployment target is raised, this item may need conditional exclusion.
+    ///
+    /// We're using macOS 15.3.2 for now, but it could be earlier.
+    ///
     /// An array of tags for items that can be moved, but cannot be hidden.
     static let nonHideableItems: [MenuBarItemTag] = {
         var items = [visibleControlItem, audioVideoModule, faceTime, screenCaptureUI]

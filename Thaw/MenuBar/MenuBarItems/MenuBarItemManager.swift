@@ -4250,7 +4250,7 @@ extension MenuBarItemManager {
                     .map { $0 + 1 } ?? desiredFiltered.endIndex
                 let hiddenEnd = ahCtrlUID.flatMap { desiredFiltered.firstIndex(of: $0) }
                     ?? desiredFiltered.endIndex
-                let existingHidden = desiredFiltered[hiddenStart..<hiddenEnd]
+                let existingHidden = desiredFiltered[hiddenStart ..< hiddenEnd]
                     .filter { !controlSet.contains($0) }
 
                 let ahStart = ahCtrlUID.flatMap { desiredFiltered.firstIndex(of: $0) }
@@ -4440,8 +4440,8 @@ extension MenuBarItemManager {
                 }
             }
 
-            let desiredHiddenSet = Set((itemOrder["hidden"] ?? []))
-            let desiredAHSet = Set((itemOrder["alwaysHidden"] ?? []))
+            let desiredHiddenSet = Set(itemOrder["hidden"] ?? [])
+            let desiredAHSet = Set(itemOrder["alwaysHidden"] ?? [])
             let currentHiddenSet = Set(currentSectionForUID.filter { $0.value == "hidden" }.map(\.key))
             let currentAHSet = Set(currentSectionForUID.filter { $0.value == "alwaysHidden" }.map(\.key))
 
@@ -4560,7 +4560,7 @@ extension MenuBarItemManager {
 
             MenuBarItemManager.diagLog.info(
                 "Profile layout: \(itemsToMove.count) item move(s) needed " +
-                "(LCS kept \(lcsItems.count) items in place, \(movedCount) control move(s))"
+                    "(LCS kept \(lcsItems.count) items in place, \(movedCount) control move(s))"
             )
 
             var movedItems = Set<String>()
@@ -4602,7 +4602,7 @@ extension MenuBarItemManager {
                 var dest: MoveDestination?
 
                 // Scan within the same section for stable anchors.
-                for scanIdx in (desiredIdx + 1)..<lcsDesired.count {
+                for scanIdx in (desiredIdx + 1) ..< lcsDesired.count {
                     let candidateUID = lcsDesired[scanIdx]
                     let candidateKey = sectionMap[candidateUID] ?? "visible"
                     guard candidateKey == targetKey else { break }
@@ -4616,7 +4616,7 @@ extension MenuBarItemManager {
                     }
                 }
 
-                if dest == nil && desiredIdx > 0 {
+                if dest == nil, desiredIdx > 0 {
                     for scanIdx in stride(from: desiredIdx - 1, through: 0, by: -1) {
                         let candidateUID = lcsDesired[scanIdx]
                         let candidateKey = sectionMap[candidateUID] ?? "visible"
@@ -4684,8 +4684,8 @@ extension MenuBarItemManager {
 
         // DP table.
         var dp = Array(repeating: Array(repeating: 0, count: n + 1), count: m + 1)
-        for i in 1...m {
-            for j in 1...n {
+        for i in 1 ... m {
+            for j in 1 ... n {
                 if a[i - 1] == b[j - 1] {
                     dp[i][j] = dp[i - 1][j - 1] + 1
                 } else {

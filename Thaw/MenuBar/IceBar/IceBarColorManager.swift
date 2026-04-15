@@ -11,5 +11,5 @@ import Combine
 final class IceBarColorManager: ObservableObject {
     @Published private(set) var colorInfo: MenuBarAverageColorInfo?
 
-    func performSetup(with iceBarPanel: IceBarPanel) {}
+    func performSetup(with _: IceBarPanel) {}
 }

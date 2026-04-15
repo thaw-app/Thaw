@@ -18,11 +18,17 @@ struct AboutSettingsPane: View {
         Bundle.main.url(forResource: "Acknowledgements", withExtension: "pdf")!
     }
 
-    private var contributeURL: URL { Constants.repositoryURL }
+    private var contributeURL: URL {
+        Constants.repositoryURL
+    }
 
-    private var issuesURL: URL { Constants.issuesURL }
+    private var issuesURL: URL {
+        Constants.issuesURL
+    }
 
-    private var donateURL: URL { Constants.donateURL }
+    private var donateURL: URL {
+        Constants.donateURL
+    }
 
     private var lastUpdateCheckString: String {
         if let date = updatesManager.lastUpdateCheckDate {

@@ -162,7 +162,8 @@ struct ProfileSettingsPane: View {
             }
         } message: {
             if let id = profileToDelete,
-               let profile = profileManager.profiles.first(where: { $0.id == id }) {
+               let profile = profileManager.profiles.first(where: { $0.id == id })
+            {
                 Text("Are you sure you want to delete the profile \"\(profile.name)\"? This cannot be undone.")
             }
         }

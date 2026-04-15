@@ -165,7 +165,7 @@ final class ControlItem {
     /// status item windows. This property captures the window ID at
     /// creation time by comparing the menu bar window list before and
     /// after creating the NSStatusItem.
-    fileprivate var _resolvedWindowID: CGWindowID?
+    private var _resolvedWindowID: CGWindowID?
 
     /// Lazy storage for the control item's underlying status item.
     private lazy var storage = StatusItemStorage(controlItem: self)
@@ -271,7 +271,7 @@ final class ControlItem {
         // If the snapshot-based window ID resolution didn't find a window
         // (e.g. macOS 26 creates windows asynchronously via Control Center),
         // retry after a short delay.
-        if _resolvedWindowID == nil && window == nil {
+        if _resolvedWindowID == nil, window == nil {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
                 guard let self, self._resolvedWindowID == nil, self.window == nil else { return }
                 self.retryWindowIDResolution()
@@ -651,7 +651,7 @@ final class ControlItem {
 
             // Running this from a Task seems to improve the visual
             // responsiveness of the status item's button.
-        Task { [appState] in
+            Task { [appState] in
                 if
                     !appState.settings.advanced.useOptionClickToShowAlwaysHiddenSection,
                     event.clickCount > 1,
@@ -684,7 +684,7 @@ final class ControlItem {
                 {
                     section.toggle()
                 }
-        }
+            }
         case .rightMouseUp:
             showMenu()
         default:

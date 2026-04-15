@@ -460,8 +460,8 @@ final class MenuBarOverlayPanel: NSPanel {
     /// Stores the area of the desktop wallpaper that is under the menu bar
     /// of the given display.
     private func updateDesktopWallpaper(
-        for display: CGDirectDisplayID,
-        with windows: [WindowInfo]
+        for _: CGDirectDisplayID,
+        with _: [WindowInfo]
     ) {
         desktopWallpaper = nil
     }
