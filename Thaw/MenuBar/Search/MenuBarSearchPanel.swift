@@ -457,8 +457,12 @@ private struct MenuBarSearchContentView: View {
         }
         .frame(width: 600, height: 400)
         .fixedSize()
-        .task {
-            searchFieldIsFocused = true
+        .onAppear {
+            // Delay focus slightly to ensure the window is fully key
+            // and the text field is ready to receive focus.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                searchFieldIsFocused = true
+            }
         }
         .onChange(of: model.searchText, initial: true) {
             updateDisplayedItems()
@@ -491,11 +495,11 @@ private struct MenuBarSearchContentView: View {
                 .font(.system(size: 18))
                 .textContentType(.none)
                 .autocorrectionDisabled(true)
+                .focused($searchFieldIsFocused)
 
                 Spacer()
             }
             .padding(15)
-            .focused($searchFieldIsFocused)
 
             Divider()
         }
