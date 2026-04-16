@@ -154,6 +154,17 @@ Thaw is currently available in the following languages:
         <td align="center">🇹🇷</td>
         <td><img src="https://geps.dev/progress/100" /></td>
     </tr>
+    <tr>
+        <td><b>Українська(*)</b></td>
+        <td>Complete</td>
+        <td align="center">🇺🇦</td>
+        <td><img src="https://geps.dev/progress/100" /></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>
 </table>
 
 _Note: languages marked with (\*) are currently only available in the development branch._

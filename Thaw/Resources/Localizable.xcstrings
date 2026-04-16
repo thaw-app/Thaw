@@ -95,6 +95,12 @@
             "value" : "%@"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -201,6 +207,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%1$@ %2$@ Bölüm"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Розділ «%@ %@»"
           }
         },
         "zh-Hans" : {
@@ -311,6 +323,12 @@
             "value" : "%@ Çubuğu"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ Bar"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -417,6 +435,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ bu izin olmadan sınırlı modda çalışabilir."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ може працювати в обмеженому режимі без цього дозволу."
           }
         },
         "zh-Hans" : {
@@ -527,6 +551,12 @@
             "value" : "%@ otomatik gizlenen menü çubuklarında öğeleri düzenleyemez."
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ не може впорядковувати об'єкти в автоматично прихованих рядках меню."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -633,6 +663,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ otomatik gizlenen menü çubuklarının görünümünü düzenleyemez."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ не може редагувати вигляд автоматично прихованих рядків меню."
           }
         },
         "zh-Hans" : {
@@ -743,6 +779,12 @@
             "value" : "%@ simgesi"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Значок %@"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -849,6 +891,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%1$@ şu anda çalışıyor. Birden fazla menü çubuğu yöneticisini aynı anda çalıştırmak, görüntü sorunlarına ve beklenmedik davranışlara neden olabilir. Thaw'ı kullanmadan önce %2$@ uygulamasından çıkmayı düşünün."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ зараз запущено. Одночасне використання кількох менеджерів рядка меню може спричиняти проблеми з відображенням і неочікувану поведінку. Рекомендується завершити %2$@ перед використанням Thaw."
           }
         },
         "zh-Hans" : {
@@ -959,6 +1007,12 @@
             "value" : "%@ yanıt vermiyor. Yeniden başlatılana kadar taşınamaz. Bu çözülene kadar diğer menü çubuğu öğelerinin hareketi de etkilenebilir."
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ не відповідає. До перезапуску його неможливо перемістити. Переміщення інших об'єктів рядка меню також може бути порушене, доки проблему не буде розв'язано."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1065,6 +1119,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ bunun için buna ihtiyaç duyuyor:"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ потребує цього для:"
           }
         },
         "zh-Hans" : {
@@ -1175,6 +1235,12 @@
             "value" : "%@ menü çubuğunu yönetmek için izninize ihtiyaç duyuyor."
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ потребує вашого дозволу для керування рядком меню."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1281,6 +1347,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ Ayarlar…"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Налаштування %@…"
           }
         },
         "zh-Hans" : {
@@ -1607,6 +1679,36 @@
             }
           }
         },
+        "uk" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lf секунда"
+                }
+              },
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lf секунди"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lf секунд"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lf секунди"
+                }
+              }
+            }
+          }
+        },
         "zh-Hans" : {
           "variations" : {
             "plural" : {
@@ -1719,6 +1821,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld fps"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld кадр/с"
           }
         },
         "zh-Hans" : {
@@ -2045,6 +2153,36 @@
             }
           }
         },
+        "uk" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld секунда"
+                }
+              },
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld секунди"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld секунд"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld секунди"
+                }
+              }
+            }
+          }
+        },
         "zh-Hans" : {
           "variations" : {
             "plural" : {
@@ -2165,6 +2303,12 @@
             "value" : "•"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "•"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2262,6 +2406,12 @@
           }
         },
         "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "+"
+          }
+        },
+        "uk" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "+"
@@ -2369,6 +2519,12 @@
             "value" : "⌘"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⌘"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2466,6 +2622,12 @@
           }
         },
         "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⎋"
+          }
+        },
+        "uk" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "⎋"
@@ -2579,6 +2741,12 @@
             "value" : "1"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2682,6 +2850,12 @@
           }
         },
         "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "2"
+          }
+        },
+        "uk" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "2"
@@ -2795,6 +2969,12 @@
             "value" : "3"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "3"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2899,6 +3079,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Yeni bir güncelleme mevcut"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Доступне нове оновлення"
           }
         },
         "zh-Hans" : {
@@ -3009,6 +3195,12 @@
             "value" : "Hakkında"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Про програму"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3115,6 +3307,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kesinlikle hiçbir kişisel bilgi toplanmaz veya saklanmaz."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Жодна особиста інформація не збирається та не зберігається."
           }
         },
         "zh-Hans" : {
@@ -3225,6 +3423,12 @@
             "value" : "Erişilebilirlik"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Доступність"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3331,6 +3535,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Teşekkürler"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Подяки"
           }
         },
         "zh-Hans" : {
@@ -3441,6 +3651,12 @@
             "value" : "Gelişmiş"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Додатково"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3541,6 +3757,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gizli öğeleri her zaman göster"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Завжди показувати приховані об'єкти"
           }
         },
         "zh-Hans" : {
@@ -3645,6 +3867,12 @@
             "value" : "Bu ekranda menü çubuğundaki gizli menü çubuğu öğelerini her zaman göster."
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Завжди показувати приховані об'єкти рядка меню в рядку меню на цьому дисплеї."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3745,6 +3973,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kısayol tuşuyla gösterildiğinde %@ Çubuğunu her zaman fare imlecinin konumunda göster."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Завжди показувати %@ Bar у місці розташування курсора миші, коли його викликано гарячою клавішею."
           }
         },
         "zh-Hans" : {
@@ -3855,6 +4089,12 @@
             "value" : "Her Zaman Gizli"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Завжди приховані"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3961,6 +4201,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Uygula"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Застосувати"
           }
         },
         "zh-Hans" : {
@@ -4071,6 +4317,12 @@
             "value" : "Mevcut sistem görünümüne göre farklı ayarlar uygula."
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Застосовувати різні налаштування залежно від поточного оформлення системи."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -4177,6 +4429,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mevcut boşluğu uygula"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Застосувати поточні інтервали"
           }
         },
         "zh-Hans" : {
@@ -4287,6 +4545,12 @@
             "value" : "Bu ayar, menü çubuğu öğesi olan tüm uygulamaları yeniden başlatacaktır. Bazı uygulamaların manuel olarak yeniden başlatılması gerekebilir."
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Застосування цього налаштування перезапустить усі програми з об'єктами в рядку меню. Деякі програми, можливо, доведеться перезапустити вручну."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -4393,6 +4657,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Menü çubuğu öğelerini düzenle."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Впорядковувати об'єкти рядка меню."
           }
         },
         "zh-Hans" : {
@@ -4503,6 +4773,12 @@
             "value" : "Ok"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Стрілка"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -4609,6 +4885,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Güncellemeleri otomatik kontrol et"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Автоматично перевіряти оновлення"
           }
         },
         "zh-Hans" : {
@@ -4719,6 +5001,12 @@
             "value" : "Güncellemeleri otomatik indir ve yükle"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Автоматично завантажувати й установлювати оновлення"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -4825,6 +5113,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Güncellemeleri otomatik indir"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Автоматично завантажувати оновлення"
           }
         },
         "zh-Hans" : {
@@ -4935,6 +5229,12 @@
             "value" : "Otomatik olarak tekrar gizle"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Автоматично приховувати знову"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5038,6 +5338,12 @@
           }
         },
         "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BETA"
+          }
+        },
+        "uk" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "BETA"
@@ -5151,6 +5457,12 @@
             "value" : "Kenarlık"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Рамка"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5257,6 +5569,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kenarlık Rengi"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Колір рамки"
           }
         },
         "zh-Hans" : {
@@ -5367,6 +5685,12 @@
             "value" : "Kenarlık Kalınlığı"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Товщина рамки"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5474,6 +5798,12 @@
             "value" : "İptal"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Скасувати"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5574,6 +5904,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ simgesi taşınamıyor."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Неможливо перемістити значок %@."
           }
         },
         "zh-Hans" : {
@@ -5684,6 +6020,12 @@
             "value" : "Menü çubuğunun görünümünü değiştir."
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Змінювати вигляд рядка меню."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5790,6 +6132,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Otomatik Kontrol Et"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Перевіряти автоматично"
           }
         },
         "zh-Hans" : {
@@ -5900,6 +6248,12 @@
             "value" : "Güncellemeleri Kontrol Et"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Перевірити оновлення"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -6006,6 +6360,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Güncellemeler otomatik kontrol edilsin mi?"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Перевіряти оновлення автоматично?"
           }
         },
         "zh-Hans" : {
@@ -6116,6 +6476,12 @@
             "value" : "Güncellemeleri Kontrol Et…"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Перевірити оновлення…"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -6216,6 +6582,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "İzinleri kontrol et"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Перевірити дозволи"
           }
         },
         "zh-Hans" : {
@@ -6323,6 +6695,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sistem Ayarları > Menü Çubuğu bölümüne gidin ve %@ öğesini etkinleştirin"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Відкрийте «Системні параметри» → «Рядок меню» і ввімкніть %@"
           }
         },
         "zh-Hans" : {
@@ -6433,6 +6811,12 @@
             "value" : "Hata ayıklama modunda güncelleme kontrolü desteklenmiyor."
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Перевірка оновлень не підтримується в режимі налагодження."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -6540,6 +6924,12 @@
             "value" : "Chevron"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Шеврон"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -6639,6 +7029,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Chevron (Aşağı)"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Шеврон (донизу)"
           }
         },
         "zh-Hans" : {
@@ -6749,6 +7145,12 @@
             "value" : "Menü çubuğunda gösterilecek özel bir simge seçin."
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Вибрати користувацький значок для показу в рядку меню."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -6857,6 +7259,12 @@
             "value" : "Görsel seç…"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Вибрати зображення…"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -6957,6 +7365,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gizli menü çubuğu öğelerini göstermek için menü çubuğunda boş bir alana tıklayın."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Натисніть на порожню ділянку рядка меню, щоб показати приховані об'єкти."
           }
         },
         "zh-Hans" : {
@@ -7067,6 +7481,12 @@
             "value" : "Öğeye Tıkla"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Натиснути об'єкт"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -7169,6 +7589,12 @@
             "value" : "Onayla"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Підтвердити"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -7269,6 +7695,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Çakışan Menü Çubuğu Yöneticisi Algılandı"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Виявлено конфліктний менеджер рядка меню"
           }
         },
         "zh-Hans" : {
@@ -7379,6 +7811,12 @@
             "value" : "Devam Et"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Продовжити"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -7479,6 +7917,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Yine de Devam Et"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Усе одно продовжити"
           }
         },
         "zh-Hans" : {
@@ -7589,6 +8033,12 @@
             "value" : "Sınırlı Modda Devam Et"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Продовжити в обмеженому режимі"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -7695,6 +8145,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Katkıda Bulun"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Зробити внесок"
           }
         },
         "zh-Hans" : {
@@ -7805,6 +8261,12 @@
             "value" : "Özel"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Користувацький"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -7911,6 +8373,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Özel simge dinamik görünüm kullanır"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Користувацький значок із динамічним оформленням"
           }
         },
         "zh-Hans" : {
@@ -8021,6 +8489,12 @@
             "value" : "Koyu Görünüm"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Темне оформлення"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -8127,6 +8601,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "varsayılan"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "типово"
           }
         },
         "zh-Hans" : {
@@ -8237,6 +8717,12 @@
             "value" : "Geliştirme"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Розробка"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -8345,6 +8831,12 @@
             "value" : "Tanılama"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Діагностика"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -8445,6 +8937,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Vazgeç"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Відхилити"
           }
         },
         "zh-Hans" : {
@@ -8555,6 +9053,12 @@
             "value" : "Tekil menü çubuğu öğelerinin görüntülerini göster."
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Відображати зображення окремих об'єктів рядка меню."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -8663,6 +9167,12 @@
             "value" : "Simgeyi, menü çubuğunun görünümüne uyum sağlamak için dinamik olarak ayarlanan tek renkli bir görüntü olarak göster. Bu ayar simgeden tüm renkleri kaldırır ancak hem açık hem koyu arka planlarla tutarlı görüntüleme sağlar."
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Відображати значок як монохромне зображення, що динамічно підлаштовується під вигляд рядка меню. Це налаштування прибирає зі значка весь колір, але забезпечує однакове відображення на світлому й темному тлі."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -8763,6 +9273,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ekranlar"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Дисплеї"
           }
         },
         "zh-Hans" : {
@@ -8873,6 +9389,12 @@
             "value" : "Kontrol Etme"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не перевіряти"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -8979,6 +9501,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tamam"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Готово"
           }
         },
         "zh-Hans" : {
@@ -9089,6 +9617,12 @@
             "value" : "Kapı"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Двері"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -9197,6 +9731,12 @@
             "value" : "Nokta"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Крапка"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -9299,6 +9839,12 @@
             "value" : "Her zaman gizli menü çubuğu öğelerini göstermek için menü çubuğunda boş bir alana çift tıklayın."
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Двічі натисніть на порожню ділянку рядка меню, щоб показати завжди приховані об'єкти."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -9399,6 +9945,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Her zaman gizli için çift tıkla"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Подвійне натискання — завжди приховані"
           }
         },
         "zh-Hans" : {
@@ -9509,6 +10061,12 @@
             "value" : "Menü çubuğu öğelerinizi farklı bölümlere sürükleyerek düzenleyin."
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Перетягуйте об'єкти рядка меню, щоб розподілити їх між розділами."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -9615,6 +10173,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Uygulamanın önceki bir sürümündeki bir hata nedeniyle %@ menü çubuğu bölümlerinin verisi bozuldu ve sıfırlanması gerekti."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Через помилку в попередній версії програми дані про розділи рядка меню %@ було пошкоджено, і їх довелося скинути."
           }
         },
         "zh-Hans" : {
@@ -9725,6 +10289,12 @@
             "value" : "Dinamik"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Динамічне"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -9822,6 +10392,12 @@
           }
         },
         "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "E"
+          }
+        },
+        "uk" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "E"
@@ -9935,6 +10511,12 @@
             "value" : "Menü Çubuğu Görünümünü Düzenle…"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Редагувати вигляд рядка меню…"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -10035,6 +10617,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Adı Düzenle"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Редагувати назву"
           }
         },
         "zh-Hans" : {
@@ -10145,6 +10733,12 @@
             "value" : "Üç Nokta"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Три крапки"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -10251,6 +10845,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tanılama günlüğünü etkinleştir"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Увімкнути діагностичне журналювання"
           }
         },
         "zh-Hans" : {
@@ -10361,6 +10961,12 @@
             "value" : "İkincil bağlam menüsünü etkinleştir"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Увімкнути додаткове контекстне меню"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -10467,6 +11073,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ Çubuğunu etkinleştir"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Увімкнути %@ Bar"
           }
         },
         "zh-Hans" : {
@@ -10577,6 +11189,12 @@
             "value" : "Her zaman gizli bölümü etkinleştir"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Увімкнути розділ «Завжди приховані»"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -10683,6 +11301,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "HATA"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ПОМИЛКА"
           }
         },
         "zh-Hans" : {
@@ -10793,6 +11417,12 @@
             "value" : "Odak"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Фокус"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -10899,6 +11529,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tam"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Повна"
           }
         },
         "zh-Hans" : {
@@ -11009,6 +11645,12 @@
             "value" : "Genel"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Основні"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -11115,6 +11757,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Menü çubuğu hakkında anlık bilgi alın."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Отримувати інформацію про рядок меню в режимі реального часу."
           }
         },
         "zh-Hans" : {
@@ -11225,6 +11873,12 @@
             "value" : "Gelişmiş Ayarlara Git"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Перейти до додаткових налаштувань"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -11331,6 +11985,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gradyan"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Градієнт"
           }
         },
         "zh-Hans" : {
@@ -11441,6 +12101,12 @@
             "value" : "İzin Ver"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Надати дозвіл"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -11547,6 +12213,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gizli"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Приховані"
           }
         },
         "zh-Hans" : {
@@ -11657,6 +12329,12 @@
             "value" : "Her Zaman Gizli Bölümü Gizle"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Приховати розділ «Завжди приховані»"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -11763,6 +12441,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Menü çubuğu öğeleri gösterilirken uygulama menülerini gizle"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Приховувати меню програм під час показу об'єктів рядка меню"
           }
         },
         "zh-Hans" : {
@@ -11873,6 +12557,12 @@
             "value" : "Gizli Bölümü Gizle"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Приховати розділ «Приховані»"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -11979,6 +12669,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Önizlemek İçin Basılı Tut"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Утримуйте для перегляду"
           }
         },
         "zh-Hans" : {
@@ -12089,6 +12785,12 @@
             "value" : "Kısayol macOS tarafından ayrılmış"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Цю гарячу клавішу зарезервовано macOS"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -12195,6 +12897,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kısayollar"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Гарячі клавіші"
           }
         },
         "zh-Hans" : {
@@ -12305,6 +13013,12 @@
             "value" : "Gizli menü çubuğu öğelerini göstermek için menü çubuğunda boş bir alanın üzerine gelin."
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Наведіть курсор на порожню ділянку рядка меню, щоб показати приховані об'єкти."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -12405,6 +13119,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Panellerde animasyonlu menü çubuğu simgelerinin ne sıklıkla yenilendiği. Daha yüksek değerler daha akıcıdır ancak daha fazla CPU kullanır."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Як часто оновлюються анімовані значки рядка меню на панелях. Вищі значення забезпечують плавніше відображення, але споживають більше процесорного часу."
           }
         },
         "zh-Hans" : {
@@ -12515,6 +13235,12 @@
             "value" : "Buz Küpü"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Крижаний куб"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -12623,6 +13349,12 @@
             "value" : "Simge konumları geri yüklenemiyor."
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Позиції значків неможливо відновити."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -12723,6 +13455,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Simge yenileme hızı"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Частота оновлення значків"
           }
         },
         "zh-Hans" : {
@@ -12833,6 +13571,12 @@
             "value" : "İçe aktarma başarısız. Ayarları manuel yapılandırabilirsiniz."
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Імпорт не вдався. Налаштування можна задати вручну."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -12939,6 +13683,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ayarları İçe Aktar"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Імпорт налаштувань"
           }
         },
         "zh-Hans" : {
@@ -13049,6 +13799,12 @@
             "value" : "İçe aktarıldı"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Імпортовано"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -13155,6 +13911,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Öğeler menü çubuğunda ⌘ Command + sürükleyerek de düzenlenebilir."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Об'єкти також можна впорядковувати, перетягуючи їх у рядку меню з утриманою клавішею ⌘ Command."
           }
         },
         "zh-Hans" : {
@@ -13265,6 +14027,12 @@
             "value" : "Son kontrol: %@"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Остання перевірка: %@"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -13373,6 +14141,12 @@
             "value" : "Oturum Açıldığında Başlat"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Запускати під час входу"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -13477,6 +14251,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Düzen sıfırlandı. Öğeler Gizli bölüme taşındı."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Розмітку скинуто. Об'єкти переміщено до розділу «Приховані»."
           }
         },
         "zh-Hans" : {
@@ -13587,6 +14367,12 @@
             "value" : "Ön Uç Kapağı"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Початкова кромка"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -13695,6 +14481,12 @@
             "value" : "sol tık"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ліве натискання"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -13794,6 +14586,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sol kenar boşluğu"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Лівий відступ"
           }
         },
         "zh-Hans" : {
@@ -13904,6 +14702,12 @@
             "value" : "Açık Görünüm"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Світле оформлення"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -14010,6 +14814,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Menü çubuğu öğeleri yükleniyor…"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Завантаження об'єктів рядка меню…"
           }
         },
         "zh-Hans" : {
@@ -14120,6 +14930,12 @@
             "value" : "Konum"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Розташування"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -14226,6 +15042,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "macOS \"%@\" öğesinin taşınmasını engelliyor."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS забороняє переміщення «%@»."
           }
         },
         "zh-Hans" : {
@@ -14336,6 +15158,12 @@
             "value" : "Gerekirse mevcut uygulama menülerini gizleyerek menü çubuğunda daha fazla yer açın. Bu ayar geçerliyken macOS, %@ öğesinin kendini Dock'ta görünür kılmasını gerektirir."
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Звільняти місце в рядку меню, приховуючи меню поточної програми за потреби. Поки це налаштування ввімкнене, macOS вимагає, щоб %@ відображалася в Dock."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -14440,6 +15268,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "maks"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "макс."
           }
         },
         "zh-Hans" : {
@@ -14550,6 +15384,12 @@
             "value" : "Menü Çubuğu Görünümü"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Вигляд рядка меню"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -14656,6 +15496,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Menü çubuğu öğesi taşınamıyor."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Об'єкт рядка меню неможливо перемістити."
           }
         },
         "zh-Hans" : {
@@ -14766,6 +15612,12 @@
             "value" : "Menü çubuğu öğesi boşluğu"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Інтервали між об'єктами рядка меню"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -14872,6 +15724,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Menü Çubuğu Öğeleri"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Об'єкти рядка меню"
           }
         },
         "zh-Hans" : {
@@ -14982,6 +15840,12 @@
             "value" : "Menü çubuğu öğeleri sabit bir süre sonra tekrar gizlenir."
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Об'єкти рядка меню знову приховуються через визначений проміжок часу."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -15088,6 +15952,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Menü çubuğu öğeleri akıllı bir algoritma kullanılarak tekrar gizlenir."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Об'єкти рядка меню знову приховуються за допомогою розумного алгоритму."
           }
         },
         "zh-Hans" : {
@@ -15198,6 +16068,12 @@
             "value" : "Odaklanan uygulama değiştiğinde menü çubuğu öğeleri tekrar gizlenir."
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Об'єкти рядка меню знову приховуються під час зміни активної програми."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -15304,6 +16180,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Menü Çubuğu Düzeni"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Розмітка рядка меню"
           }
         },
         "zh-Hans" : {
@@ -15414,6 +16296,12 @@
             "value" : "Menü çubuğu düzeni ekran kaydı izinleri gerektirir."
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Для керування розміткою рядка меню потрібен дозвіл на запис екрана."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -15520,6 +16408,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Menü Çubuğu Yerleşimi"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Накладання на рядок меню"
           }
         },
         "zh-Hans" : {
@@ -15630,6 +16524,12 @@
             "value" : "Menü Çubuğu Bölümleri"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Розділи рядка меню"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -15736,6 +16636,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Menü Çubuğu Şekli"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Форма рядка меню"
           }
         },
         "zh-Hans" : {
@@ -15846,6 +16752,12 @@
             "value" : "Fare imleci"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Курсор миші"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -15952,6 +16864,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Asla"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ніколи"
           }
         },
         "zh-Hans" : {
@@ -16062,6 +16980,12 @@
             "value" : "Bu bölümde öğe yok"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "У цьому розділі немає об'єктів"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -16168,6 +17092,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Şekil türü seçilmedi"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Тип форми не вибрано"
           }
         },
         "zh-Hans" : {
@@ -16278,6 +17208,12 @@
             "value" : "yok"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "немає"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -16386,6 +17322,12 @@
             "value" : "Yok"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Немає"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -16486,6 +17428,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Bu ekran için %@ Çubuğu etkin olduğundan kullanılamıyor."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Недоступно, оскільки для цього дисплея ввімкнено %@ Bar."
           }
         },
         "zh-Hans" : {
@@ -16596,6 +17544,12 @@
             "value" : "\"%@\" göstermek için yeterli yer yok"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Недостатньо місця, щоб показати «%@»"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -16696,6 +17650,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Çentik"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Виріз"
           }
         },
         "zh-Hans" : {
@@ -16806,6 +17766,12 @@
             "value" : "Not: Bu ayarın düzgün uygulanması için oturumu kapatıp tekrar açmanız gerekebilir."
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Примітка: для належного застосування цього налаштування може знадобитися вийти з облікового запису й увійти знову."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -16912,6 +17878,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tamam"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OK"
           }
         },
         "zh-Hans" : {
@@ -17022,6 +17994,12 @@
             "value" : "Bir veya daha fazla bölüm ayırıcısı macOS tarafından gizleniyor"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Один або кілька роздільників розділів приховано системою macOS"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -17128,6 +18106,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ Ayarlarını Aç"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Відкрити налаштування %@"
           }
         },
         "zh-Hans" : {
@@ -17238,6 +18222,12 @@
             "value" : "Diğer"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Інше"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -17344,6 +18334,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "İzin Verildi"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Дозвіл надано"
           }
         },
         "zh-Hans" : {
@@ -17454,6 +18450,12 @@
             "value" : "İzinler"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Дозволи"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -17560,6 +18562,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Çıkış"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Завершити"
           }
         },
         "zh-Hans" : {
@@ -17670,6 +18678,12 @@
             "value" : "%@ Uygulamasından Çık"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Завершити %@"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -17770,6 +18784,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Thaw'dan Çık"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Завершити Thaw"
           }
         },
         "zh-Hans" : {
@@ -17880,6 +18900,12 @@
             "value" : "Kısayolu Kaydet"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Записати гарячу клавішу"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -17986,6 +19012,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Hata Bildir"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Повідомити про помилку"
           }
         },
         "zh-Hans" : {
@@ -18095,6 +19127,12 @@
             "value" : "Sıfırla"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Скинути"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -18194,6 +19232,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ Sıfırla"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Скинути %@"
           }
         },
         "zh-Hans" : {
@@ -18298,6 +19342,12 @@
             "value" : "Tüm ayarları sıfırla"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Скинути всі налаштування"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -18399,6 +19449,12 @@
             "value" : "Tüm ayarları varsayılan değerlerine sıfırlar. Bu işlem geri alınamaz."
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Скинути всі налаштування до типових значень. Цю дію неможливо скасувати."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -18498,6 +19554,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tüm ayarlar sıfırlansın mı?"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Скинути всі налаштування?"
           }
         },
         "zh-Hans" : {
@@ -18608,6 +19670,12 @@
             "value" : "Sıfırlama tamamlandı; %lld öğe taşınamadı. Gerekirse menü çubuğunu kontrol edip tekrar deneyin."
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Скидання завершено; %lld об'єктів не вдалося перемістити. Перевірте рядок меню та повторіть спробу за потреби."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -18714,6 +19782,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sıfırlama başarısız: %@"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не вдалося скинути: %@"
           }
         },
         "zh-Hans" : {
@@ -18824,6 +19898,12 @@
             "value" : "Düzeni Sıfırla"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Скинути розмітку"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -18930,6 +20010,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Menü Çubuğu Görünümünü Sıfırla"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Скинути вигляд рядка меню"
           }
         },
         "zh-Hans" : {
@@ -19040,6 +20126,12 @@
             "value" : "Menü çubuğu düzenini sıfırla"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Скинути розмітку рядка меню"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -19146,6 +20238,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Menü çubuğu düzeni sıfırlansın mı?"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Скинути розмітку рядка меню?"
           }
         },
         "zh-Hans" : {
@@ -19256,6 +20354,12 @@
             "value" : "Varsayılan boşluğa sıfırla"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Скинути до типових інтервалів"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -19362,6 +20466,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ayırıcıları sıfırlar ve %@ simgesi dışındaki her taşınabilir öğeyi gizliye taşır — tıpkı yeni kurulum gibi."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Скидає роздільники та переміщує всі рухомі об'єкти, окрім значка %@, до прихованих — як після нового встановлення."
           }
         },
         "zh-Hans" : {
@@ -19472,6 +20582,12 @@
             "value" : "Ayırıcı varsayılanlarını geri yükler ve %@ simgesi dışındaki her taşınabilir öğeyi Gizli'ye taşır. Düzen bozuk görünüyorsa veya öğeler yüklenmiyorsa bunu kullanın."
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Відновлює типові роздільники та переміщує всі рухомі об'єкти, окрім значка %@, до розділу «Приховані». Скористайтеся цим, якщо розмітка виглядає пошкодженою або об'єкти не завантажуються."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -19580,6 +20696,12 @@
             "value" : "sağ tık"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "праве натискання"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -19679,6 +20801,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sağ kenar boşluğu"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Правий відступ"
           }
         },
         "zh-Hans" : {
@@ -19789,6 +20917,12 @@
             "value" : "%@ menüsünün minimal sürümünü göstermek için menü çubuğunda boş bir alana sağ tıklayın. Diğer uygulamalarla çakışma yaşarsanız bu ayarı devre dışı bırakın."
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Натисніть правою кнопкою миші на порожню ділянку рядка меню, щоб відкрити скорочену версію меню %@. Вимкніть це налаштування, якщо виникають конфлікти з іншими програмами."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -19895,6 +21029,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Yuvarlak Kapak"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Закруглена кромка"
           }
         },
         "zh-Hans" : {
@@ -20005,6 +21145,12 @@
             "value" : "Ekran Kaydı"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Запис екрана"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -20107,6 +21253,12 @@
             "value" : "Araç ipuçlarını görüntülemek için ekran kaydı izni gereklidir."
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Для відображення підказок потрібен дозвіл на запис екрана."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -20207,6 +21359,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Menü çubuğu öğelerini aramak için ekran kaydı izni gereklidir."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Для пошуку об'єктів рядка меню потрібен дозвіл на запис екрана."
           }
         },
         "zh-Hans" : {
@@ -20317,6 +21475,12 @@
             "value" : "Gizli menü çubuğu öğelerini göstermek için menü çubuğunda kaydırın veya parmağınızı sürükleyin."
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Прокручуйте або проводьте пальцем у рядку меню, щоб показати приховані об'єкти."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -20423,6 +21587,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Menü çubuğu öğelerinde ara"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Шукати об'єкти рядка меню"
           }
         },
         "zh-Hans" : {
@@ -20533,6 +21703,12 @@
             "value" : "Menü Çubuğu Öğelerinde Ara"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Пошук об'єктів рядка меню"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -20639,6 +21815,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Menü çubuğu öğelerinde ara…"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Пошук об'єктів рядка меню…"
           }
         },
         "zh-Hans" : {
@@ -20749,6 +21931,12 @@
             "value" : "Bölüm ayırıcı stili"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Стиль роздільника розділів"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -20855,6 +22043,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gölge"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Тінь"
           }
         },
         "zh-Hans" : {
@@ -20965,6 +22159,12 @@
             "value" : "Şekil Türü"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Тип форми"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -21071,6 +22271,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ güncellemeleri otomatik kontrol etsin mi? Thaw menü çubuğu simgesinden veya Ayarlar → Hakkında bölümünden her zaman manuel kontrol edebilirsiniz."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Чи має %@ автоматично перевіряти оновлення? Перевірити вручну завжди можна через значок Thaw у рядку меню або «Налаштування → Про програму»."
           }
         },
         "zh-Hans" : {
@@ -21181,6 +22387,12 @@
             "value" : "%@ simgesini göster"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Показувати значок %@"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -21281,6 +22493,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gerçek menü çubuğunda menü çubuğu öğelerinin üzerine gelindiğinde bir ipucu göster."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Показувати підказку під час наведення курсора на об'єкти у системному рядку меню."
           }
         },
         "zh-Hans" : {
@@ -21391,6 +22609,12 @@
             "value" : "⌘ Command + menü çubuğu öğelerini sürüklerken tüm bölümleri göster"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Показувати всі розділи під час перетягування об'єктів із утриманою клавішею ⌘ Command"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -21499,6 +22723,12 @@
             "value" : "Her Zaman Gizli Bölümü Göster"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Показати розділ «Завжди приховані»"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -21601,6 +22831,12 @@
             "value" : "Kısayolda fare imlecinde göster"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Показувати біля курсора миші за гарячою клавішею"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -21701,6 +22937,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Bu ekranda gizli menü çubuğu öğelerini menü çubuğunun altındaki ayrı bir çubukta göster."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Показувати приховані об'єкти в окремому рядку під рядком меню на цьому дисплеї."
           }
         },
         "zh-Hans" : {
@@ -21811,6 +23053,12 @@
             "value" : "Gizli Bölümü Göster"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Показати розділ «Приховані»"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -21917,6 +23165,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Öğeyi Göster"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Показати об'єкт"
           }
         },
         "zh-Hans" : {
@@ -22027,6 +23281,12 @@
             "value" : "Günlük Dosyalarını Finder'da Göster"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Показати файли журналів у Finder"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -22127,6 +23387,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Menü çubuğu arka planını göster"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Показувати тло рядка меню"
           }
         },
         "zh-Hans" : {
@@ -22237,6 +23503,12 @@
             "value" : "Tıklamada göster"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Показувати за натисканням"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -22343,6 +23615,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Üzerine gelindiğinde göster"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Показувати при наведенні"
           }
         },
         "zh-Hans" : {
@@ -22453,6 +23731,12 @@
             "value" : "Üzerine gelme gecikmesi"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Затримка показу при наведенні"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -22561,6 +23845,12 @@
             "value" : "Kaydırmada göster"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Показувати при прокручуванні"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -22661,6 +23951,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Menü çubuğunda %@ simgesini göster. Gizli öğeleri göstermek için tıklayın, her zaman gizli için çift tıklayın, ayarlar için sağ tıklayın."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Показувати значок %@ у рядку меню. Натискання показує приховані об'єкти, подвійне натискання — завжди приховані, а праве натискання відкриває налаштування."
           }
         },
         "zh-Hans" : {
@@ -22765,6 +24061,12 @@
             "value" : "Menü çubuğunda ipuçlarını göster"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Показувати підказки в рядку меню"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -22865,6 +24167,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sistemin menü çubuğu arka planını gösterir. Dinamik bir duvar kağıdı kullanıyorsanız veya Sistem Ayarları'nda 'Menü çubuğu arka planını göster' kapalıysa bunu etkinleştirin."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Показує системне тло рядка меню. Увімкніть, якщо використовуєте динамічну шпалеру або вимкнули параметр «Показувати тло рядка меню» в «Системних параметрах»."
           }
         },
         "zh-Hans" : {
@@ -22975,6 +24283,12 @@
             "value" : "Akıllı"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Розумна"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -23083,6 +24397,12 @@
             "value" : "Düz"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Суцільний"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -23187,6 +24507,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Bölünmüş"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Розділений"
           }
         },
         "zh-Hans" : {
@@ -23297,6 +24623,12 @@
             "value" : "Kare Kapak"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Пряма кромка"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -23403,6 +24735,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kararlı"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Стабільний"
           }
         },
         "zh-Hans" : {
@@ -23513,6 +24851,12 @@
             "value" : "Strateji"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Стратегія"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -23619,6 +24963,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld ayar başarıyla içe aktarıldı!"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Успішно імпортовано налаштувань: %lld!"
           }
         },
         "zh-Hans" : {
@@ -23729,6 +25079,12 @@
             "value" : "Güneş Gözlüğü"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сонцезахисні окуляри"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -23835,6 +25191,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ Destekle"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Підтримати %@"
           }
         },
         "zh-Hans" : {
@@ -23945,6 +25307,12 @@
             "value" : "%@ Çubuğu %@ simgesinin altında ortalanmıştır."
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ Bar розташовується по центру під значком %2$@."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -24051,6 +25419,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ Çubuğu fare imlecinin altında ortalanmıştır."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ Bar розташовується по центру під курсором миші."
           }
         },
         "zh-Hans" : {
@@ -24161,6 +25535,12 @@
             "value" : "%@ Çubuğu ekran kaydı izinleri gerektirir."
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Для %@ Bar потрібен дозвіл на запис екрана."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -24269,6 +25649,12 @@
             "value" : "%@ Çubuğunun konumu bağlama göre değişir."
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Розташування %@ Bar змінюється залежно від контексту."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -24371,6 +25757,12 @@
             "value" : "%@ simgesi her zaman görünür bölümde kalmalıdır."
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Значок %@ повинен завжди залишатися у видимому розділі."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -24471,6 +25863,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Menü çubuğu öğesinin üzerinde ipucu göstermeden önce beklenmesi gereken süre."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Час очікування перед показом підказки над об'єктом рядка меню."
           }
         },
         "zh-Hans" : {
@@ -24581,6 +25979,12 @@
             "value" : "Üzerine gelindiğinde göstermeden önce beklenmesi gereken süre."
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Час очікування перед показом при наведенні."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -24689,6 +26093,12 @@
             "value" : "Bu işlem geri alınamaz."
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Цю дію неможливо скасувати."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -24788,6 +26198,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Bu işlem tüm ayarları varsayılan değerlerine sıfırlayacaktır. Bu işlem geri alınamaz."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Усі налаштування буде скинуто до типових значень. Цю дію неможливо скасувати."
           }
         },
         "zh-Hans" : {
@@ -24898,6 +26314,12 @@
             "value" : "Zamanlı"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "За часом"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -25004,6 +26426,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ton"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Відтінок"
           }
         },
         "zh-Hans" : {
@@ -25114,6 +26542,12 @@
             "value" : "İpucu: Bu ayarları menü çubuğunda boş bir alana sağ tıklayarak da düzenleyebilirsiniz."
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Порада: ці налаштування також можна відкрити, натиснувши правою кнопкою миші на порожню ділянку рядка меню."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -25220,6 +26654,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Uygulama menülerini aç/kapat"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Перемкнути меню програм"
           }
         },
         "zh-Hans" : {
@@ -25330,6 +26770,12 @@
             "value" : "Her zaman gizli bölümü aç/kapat"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Перемкнути розділ «Завжди приховані»"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -25438,6 +26884,12 @@
             "value" : "Gizli bölümü aç/kapat"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Перемкнути розділ «Приховані»"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -25540,6 +26992,12 @@
             "value" : "İpucu gecikmesi"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Затримка підказки"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -25640,6 +27098,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "İpuçları"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Підказки"
           }
         },
         "zh-Hans" : {
@@ -25750,6 +27214,12 @@
             "value" : "Arka Uç Kapağı"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Кінцева кромка"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -25856,6 +27326,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kısayol Tuşuna Basın"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Натисніть клавіші"
           }
         },
         "zh-Hans" : {
@@ -25966,6 +27442,12 @@
             "value" : "Menü çubuğu öğeleri gösterilemiyor"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не вдалося показати об'єкти рядка меню"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -26072,6 +27554,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Menü çubuğu öğeleri yüklenemiyor"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не вдалося завантажити об'єкти рядка меню"
           }
         },
         "zh-Hans" : {
@@ -26182,6 +27670,12 @@
             "value" : "Güncelleme kanalı"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Канал оновлень"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -26288,6 +27782,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ Çubuğunu Kullan"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Використовувати %@ Bar"
           }
         },
         "zh-Hans" : {
@@ -26398,6 +27898,12 @@
             "value" : "Dinamik görünüm kullan"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Використовувати динамічне оформлення"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -26504,6 +28010,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Çentikli ekranlarda içe çekik şekil kullan"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Використовувати вдавлену форму на екранах із вирізом"
           }
         },
         "zh-Hans" : {
@@ -26614,6 +28126,12 @@
             "value" : "Sürüm %@ (%@)"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Версія %@ (%@)"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -26720,6 +28238,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ (%@) sürümü artık mevcut"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Доступна версія %1$@ (%2$@)"
           }
         },
         "zh-Hans" : {
@@ -26830,6 +28354,12 @@
             "value" : "Görünür"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Видимі"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -26936,6 +28466,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ice (orijinal uygulama) ayarlarını bulduk."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Знайдено налаштування з Ice (оригінальна програма)."
           }
         },
         "zh-Hans" : {
@@ -27046,6 +28582,12 @@
             "value" : "Mevcut yapılandırmanızı içe aktarmak ister misiniz?"
           }
         },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Імпортувати наявну конфігурацію?"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -27152,6 +28694,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sorun giderme için ayrıntılı hata ayıklama günlüklerini bir dosyaya yazar. Günlük dosyaları ~/Library/Logs/Thaw/ konumuna kaydedilir. Gereksiz disk yazmalarından kaçınmak için kullanılmadığında devre dışı bırakın."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Записує детальні журнали налагодження у файл для розв'язання проблем. Файли журналів зберігаються в ~/Library/Logs/Thaw/. Вимикайте, коли це не потрібно, щоб уникнути зайвого запису на диск."
           }
         },
         "zh-Hans" : {
