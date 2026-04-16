@@ -316,7 +316,9 @@ final class MenuBarSearchPanel: NSPanel {
         }
         cacheTask?.cancel()
         cacheTask = nil
-        model.searchText = ""
+        if !Defaults.bool(forKey: .rememberSearchQuery) {
+            model.searchText = ""
+        }
         model.editingItemTag = nil
         super.close()
         contentView = nil
@@ -328,7 +330,7 @@ final class MenuBarSearchPanel: NSPanel {
     override func cancelOperation(_: Any?) {
         if model.editingItemTag != nil {
             cancelEditing()
-        } else if model.searchText != "" {
+        } else if model.searchText != "", !Defaults.bool(forKey: .rememberSearchQuery) {
             model.searchText = ""
         } else {
             close()
@@ -431,6 +433,7 @@ private struct MenuBarSearchContentView: View {
     @EnvironmentObject var imageCache: MenuBarItemImageCache
     @EnvironmentObject var model: MenuBarSearchModel
     @FocusState private var searchFieldIsFocused: Bool
+    @AppStorage(Defaults.Key.rememberSearchQuery.rawValue) private var rememberSearchQuery = Defaults.DefaultValue.rememberSearchQuery
 
     let displayID: CGDirectDisplayID
     let panel: MenuBarSearchPanel
@@ -558,6 +561,10 @@ private struct MenuBarSearchContentView: View {
                 itemManager.appState?.activate(withPolicy: .regular)
                 itemManager.appState?.openWindow(.settings)
             }
+
+            Toggle("Keep search", isOn: $rememberSearchQuery)
+                .toggleStyle(.switch)
+                .controlSize(.mini)
 
             Spacer()
 

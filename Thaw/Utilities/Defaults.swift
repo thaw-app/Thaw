@@ -176,6 +176,10 @@ extension Defaults {
         static let useLCSSortingOnNotchedDisplays = false
         static let useOptionClickToShowAlwaysHiddenSection = false
 
+        // MARK: Search
+
+        static let rememberSearchQuery = false
+
         // MARK: Hotkeys Settings
 
         static let hotkeys: [Any]? = nil
@@ -232,6 +236,10 @@ extension Defaults {
         case enableDiagnosticLogging = "EnableDiagnosticLogging"
         case useLCSSortingOnNotchedDisplays = "UseLCSSortingOnNotchedDisplays"
         case useOptionClickToShowAlwaysHiddenSection = "UseOptionClickToShowAlwaysHiddenSection"
+
+        // MARK: Search
+
+        case rememberSearchQuery = "RememberSearchQuery"
 
         // MARK: Internal
 
