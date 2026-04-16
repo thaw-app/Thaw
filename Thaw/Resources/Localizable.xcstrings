@@ -18,7 +18,7 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%@"
           }
         },
@@ -78,7 +78,7 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%@"
           }
         },
@@ -232,7 +232,7 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%@ Bar"
           }
         },
@@ -1637,14 +1637,14 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "%lld fps"
+            "state" : "translated",
+            "value" : "%lld FPS"
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "%lld fps"
+            "state" : "translated",
+            "value" : "%lld ips"
           }
         },
         "hu" : {
@@ -2073,13 +2073,13 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "•"
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "•"
           }
         },
@@ -2133,7 +2133,7 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "•"
           }
         },
@@ -2180,7 +2180,7 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "+"
           }
         },
@@ -2240,7 +2240,7 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "+"
           }
         },
@@ -2287,7 +2287,7 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "⌘"
           }
         },
@@ -2347,7 +2347,7 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "⌘"
           }
         },
@@ -2394,7 +2394,7 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "⎋"
           }
         },
@@ -2454,7 +2454,7 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "⎋"
           }
         },
@@ -2501,7 +2501,7 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "1"
           }
         },
@@ -2561,7 +2561,7 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "1"
           }
         },
@@ -2608,7 +2608,7 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "2"
           }
         },
@@ -2668,7 +2668,7 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "2"
           }
         },
@@ -2715,7 +2715,7 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "3"
           }
         },
@@ -2775,7 +2775,7 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "3"
           }
         },
@@ -3999,14 +3999,14 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply a Thaw menu bar profile when this Focus activates."
+            "state" : "translated",
+            "value" : "Aplicar un perfil de barra de menú de Thaw cuando este Enfoque se activa."
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply a Thaw menu bar profile when this Focus activates."
+            "state" : "translated",
+            "value" : "Appliquer un profil de la barre de menu de Thaw lorsque le focus est activé."
           }
         },
         "hu" : {
@@ -4059,8 +4059,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply a Thaw menu bar profile when this Focus activates."
+            "state" : "translated",
+            "value" : "Применять профиль строки меню Thaw, когда включается режим Фокусирования."
           }
         },
         "th" : {
@@ -4427,8 +4427,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Are you sure you want to delete the profile \"%@\"? This cannot be undone."
+            "state" : "translated",
+            "value" : "¿Está seguro de que desea eliminar el perfil \"%@\"? Esto no se puede deshacer."
           }
         },
         "fr" : {
@@ -4487,8 +4487,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Are you sure you want to delete the profile \"%@\"? This cannot be undone."
+            "state" : "translated",
+            "value" : "Вы уверены, что хотите удалить профиль \"%@\"? Это действие необратимо."
           }
         },
         "th" : {
@@ -4742,14 +4742,14 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Assign a profile to each display."
+            "state" : "translated",
+            "value" : "Jedem Display ein Profil zuweisen."
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Assign a profile to each display."
+            "state" : "translated",
+            "value" : "Asignar un perfil a cada pantalla."
           }
         },
         "fr" : {
@@ -4808,8 +4808,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Assign a profile to each display."
+            "state" : "translated",
+            "value" : "Назначить профиль для каждого дисплея."
           }
         },
         "th" : {
@@ -4855,8 +4855,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Auto-Switch"
+            "state" : "translated",
+            "value" : "Cambio Automático"
           }
         },
         "fr" : {
@@ -4915,8 +4915,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Auto-Switch"
+            "state" : "translated",
+            "value" : "Автопереключение"
           }
         },
         "th" : {
@@ -5390,13 +5390,13 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "BETA"
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "BETA"
           }
         },
@@ -6888,8 +6888,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Chevron"
+            "state" : "translated",
+            "value" : "Chevrón"
           }
         },
         "fr" : {
@@ -8172,14 +8172,14 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Created: %@"
+            "state" : "translated",
+            "value" : "Creado %@"
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Created: %@"
+            "state" : "translated",
+            "value" : "Créé le: %@"
           }
         },
         "hu" : {
@@ -8232,8 +8232,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Created: %@"
+            "state" : "translated",
+            "value" : "Создано: %@"
           }
         },
         "th" : {
@@ -8707,14 +8707,14 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete"
+            "state" : "translated",
+            "value" : "Eliminar"
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete"
+            "state" : "translated",
+            "value" : "Supprimer"
           }
         },
         "hu" : {
@@ -8767,8 +8767,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete"
+            "state" : "translated",
+            "value" : "Удалить"
           }
         },
         "th" : {
@@ -8814,14 +8814,14 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete Profile?"
+            "state" : "translated",
+            "value" : "¿Eliminar perfil?"
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete Profile?"
+            "state" : "translated",
+            "value" : "Supprimer le profil ?"
           }
         },
         "hu" : {
@@ -8874,8 +8874,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete Profile?"
+            "state" : "translated",
+            "value" : "Удалить профиль?"
           }
         },
         "th" : {
@@ -10419,8 +10419,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Duplicate"
+            "state" : "translated",
+            "value" : "Duplicado"
           }
         },
         "fr" : {
@@ -10479,8 +10479,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Duplicate"
+            "state" : "translated",
+            "value" : "Дублировать"
           }
         },
         "th" : {
@@ -10633,7 +10633,7 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "E"
           }
         },
@@ -10693,7 +10693,7 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "E"
           }
         },
@@ -11489,7 +11489,7 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "Error"
           }
         },
@@ -11549,8 +11549,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Error"
+            "state" : "translated",
+            "value" : "Ошибка"
           }
         },
         "th" : {
@@ -11596,7 +11596,7 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "ERROR"
           }
         },
@@ -11703,8 +11703,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Export"
+            "state" : "translated",
+            "value" : "Exportar"
           }
         },
         "fr" : {
@@ -11763,8 +11763,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Export"
+            "state" : "translated",
+            "value" : "Экспорт"
           }
         },
         "th" : {
@@ -11810,8 +11810,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Export Profile(s)"
+            "state" : "translated",
+            "value" : "Exportar perfil(es)"
           }
         },
         "fr" : {
@@ -11870,8 +11870,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Export Profile(s)"
+            "state" : "translated",
+            "value" : "Экспортировать профиль(и)"
           }
         },
         "th" : {
@@ -12131,7 +12131,7 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "General"
           }
         },
@@ -14057,8 +14057,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Import Profile(s)"
+            "state" : "translated",
+            "value" : "Importar perfil(es)"
           }
         },
         "fr" : {
@@ -14117,8 +14117,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Import Profile(s)"
+            "state" : "translated",
+            "value" : "Импортировать профиль(и)"
           }
         },
         "th" : {
@@ -14464,6 +14464,113 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "也可以透過 ⌘ Command + 拖移來排列選單列中的項目。"
+          }
+        }
+      }
+    },
+    "Keep search" : {
+      "comment" : "A toggle to keep a search query open.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Keep search"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Keep search"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Keep search"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Keep search"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Keep search"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Keep search"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Keep search"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Keep search"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Keep search"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Keep search"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Keep search"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Keep search"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Keep search"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Keep search"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Keep search"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Keep search"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Keep search"
           }
         }
       }
@@ -16839,8 +16946,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu Bar Profile"
+            "state" : "translated",
+            "value" : "Perfil de barra de menú"
           }
         },
         "fr" : {
@@ -16899,8 +17006,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu Bar Profile"
+            "state" : "translated",
+            "value" : "Профиль строки меню"
           }
         },
         "th" : {
@@ -17160,14 +17267,14 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Modified: %@"
+            "state" : "translated",
+            "value" : "Modificado %@"
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Modified: %@"
+            "state" : "translated",
+            "value" : "Créé le: %@"
           }
         },
         "hu" : {
@@ -17220,8 +17327,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Modified: %@"
+            "state" : "translated",
+            "value" : "Изменено: %@"
           }
         },
         "th" : {
@@ -17374,8 +17481,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move the New Items badge to choose where newly detected items will appear."
+            "state" : "translated",
+            "value" : ""
           }
         },
         "fr" : {
@@ -17434,8 +17541,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move the New Items badge to choose where newly detected items will appear."
+            "state" : "translated",
+            "value" : "Переместите значок новых элементов, чтобы выбрать место их появления."
           }
         },
         "th" : {
@@ -17588,8 +17695,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "New Items"
+            "state" : "translated",
+            "value" : "Nuevos elementos"
           }
         },
         "fr" : {
@@ -17648,8 +17755,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "New Items"
+            "state" : "translated",
+            "value" : "Новые элементы"
           }
         },
         "th" : {
@@ -17695,8 +17802,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "New profile name"
+            "state" : "translated",
+            "value" : "Nuevo nombre de perfil"
           }
         },
         "fr" : {
@@ -17755,8 +17862,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "New profile name"
+            "state" : "translated",
+            "value" : "Новое имя профиля"
           }
         },
         "th" : {
@@ -17909,8 +18016,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No profile selected"
+            "state" : "translated",
+            "value" : "Ningún perfil seleccionado"
           }
         },
         "fr" : {
@@ -17969,8 +18076,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No profile selected"
+            "state" : "translated",
+            "value" : "Профиль не выбран"
           }
         },
         "th" : {
@@ -18016,8 +18123,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No profiles saved. Save your current configuration to create one."
+            "state" : "translated",
+            "value" : "Ningún perfil guardado. Guarda tu configuración actual para crear uno."
           }
         },
         "fr" : {
@@ -18076,8 +18183,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No profiles saved. Save your current configuration to create one."
+            "state" : "translated",
+            "value" : "Нет сохраненных профилей. Сохраните текущую конфигурацию, чтобы создать профиль."
           }
         },
         "th" : {
@@ -18658,7 +18765,7 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "Notch"
           }
         },
@@ -18872,8 +18979,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "OK"
+            "state" : "translated",
+            "value" : "Aceptar"
           }
         },
         "fr" : {
@@ -18932,8 +19039,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "OK"
+            "state" : "translated",
+            "value" : "ОК"
           }
         },
         "th" : {
@@ -19193,8 +19300,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Open Focus Settings"
+            "state" : "translated",
+            "value" : "Abrir Ajustes de Enfoque"
           }
         },
         "fr" : {
@@ -19253,8 +19360,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Open Focus Settings"
+            "state" : "translated",
+            "value" : "Открыть настройки Фокуса"
           }
         },
         "th" : {
@@ -19621,8 +19728,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Profile"
+            "state" : "translated",
+            "value" : "Perfil"
           }
         },
         "fr" : {
@@ -19681,8 +19788,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Profile"
+            "state" : "translated",
+            "value" : "Профиль"
           }
         },
         "th" : {
@@ -19728,8 +19835,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Profile name"
+            "state" : "translated",
+            "value" : "Nombre de perfil"
           }
         },
         "fr" : {
@@ -19788,8 +19895,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Profile name"
+            "state" : "translated",
+            "value" : "Имя профиля"
           }
         },
         "th" : {
@@ -19835,8 +19942,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Profile: %@"
+            "state" : "translated",
+            "value" : "Perfil: %@"
           }
         },
         "fr" : {
@@ -19895,8 +20002,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Profile: %@"
+            "state" : "translated",
+            "value" : "Профиль: %@"
           }
         },
         "th" : {
@@ -19942,8 +20049,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Profiles"
+            "state" : "translated",
+            "value" : "Perfiles"
           }
         },
         "fr" : {
@@ -20002,8 +20109,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Profiles"
+            "state" : "translated",
+            "value" : "Профили"
           }
         },
         "th" : {
@@ -20477,8 +20584,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Rename"
+            "state" : "translated",
+            "value" : "Renombrar"
           }
         },
         "fr" : {
@@ -20537,8 +20644,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Rename"
+            "state" : "translated",
+            "value" : "Переименовать"
           }
         },
         "th" : {
@@ -22617,8 +22724,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Save Current"
+            "state" : "translated",
+            "value" : "Guardar actual"
           }
         },
         "fr" : {
@@ -22677,8 +22784,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Save Current"
+            "state" : "translated",
+            "value" : "Сохранить текущий"
           }
         },
         "th" : {
@@ -23580,8 +23687,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Set Menu Bar Profile"
+            "state" : "translated",
+            "value" : "Establecer perfil de barra de menú"
           }
         },
         "fr" : {
@@ -23640,8 +23747,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Set Menu Bar Profile"
+            "state" : "translated",
+            "value" : "Установить профиль строки меню"
           }
         },
         "th" : {
@@ -28074,8 +28181,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "To switch profiles with Focus modes, add Thaw as a Focus Filter in System Settings → Focus → [Mode] → Focus Filters."
+            "state" : "translated",
+            "value" : "Para cambiar los perfiles con los modos Enfoque, agregue Thaw como un Filtro de Enfoque en Configuración del Sistema → Enfoque → [Mode] → Filtros de Enfoque."
           }
         },
         "fr" : {
@@ -28134,8 +28241,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "To switch profiles with Focus modes, add Thaw as a Focus Filter in System Settings → Focus → [Mode] → Focus Filters."
+            "state" : "translated",
+            "value" : "Чтобы переключать профили с помощью режимов Фокусирования, добавьте Thaw в качестве фильтра фокусировки: Системные настройки → Фокус → [Mode] → Фильтры фокусировки."
           }
         },
         "th" : {
@@ -28609,7 +28716,7 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "Tooltips"
           }
         },
@@ -29144,8 +29251,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update"
+            "state" : "translated",
+            "value" : "Actualizar"
           }
         },
         "fr" : {
@@ -29204,8 +29311,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update"
+            "state" : "translated",
+            "value" : "Обновить"
           }
         },
         "th" : {
@@ -29251,8 +29358,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update All"
+            "state" : "translated",
+            "value" : "Actualizar todo"
           }
         },
         "fr" : {
@@ -29311,8 +29418,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update All"
+            "state" : "translated",
+            "value" : "Обновить всё"
           }
         },
         "th" : {
@@ -29459,14 +29566,14 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update Configuration on All Profiles"
+            "state" : "translated",
+            "value" : ""
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update Configuration on All Profiles"
+            "state" : "translated",
+            "value" : "Actualizar configuración en todos los perfiles"
           }
         },
         "fr" : {
@@ -29525,8 +29632,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update Configuration on All Profiles"
+            "state" : "translated",
+            "value" : "Обновить конфигурацию на всех профилях"
           }
         },
         "th" : {
@@ -29572,8 +29679,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update Configuration Only"
+            "state" : "translated",
+            "value" : "Solamente actualizar configuración"
           }
         },
         "fr" : {
@@ -29632,8 +29739,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update Configuration Only"
+            "state" : "translated",
+            "value" : "Обновить только конфигурацию"
           }
         },
         "th" : {
@@ -29739,8 +29846,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update Layout Only"
+            "state" : "translated",
+            "value" : "Обновить только макет"
           }
         },
         "th" : {
@@ -29786,14 +29893,14 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update this profile with the current state"
+            "state" : "translated",
+            "value" : "Actualizar este perfil con el estado actual"
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update this profile with the current state"
+            "state" : "translated",
+            "value" : "Mettre à jour ce profil avec l'état actuel"
           }
         },
         "hu" : {
@@ -29846,8 +29953,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update this profile with the current state"
+            "state" : "translated",
+            "value" : "Обновить профиль до текущего состояния"
           }
         },
         "th" : {
@@ -30214,8 +30321,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Use LCS sorting on notched displays"
+            "state" : "translated",
+            "value" : "Usar ordenación LCS en pantallas con notch"
           }
         },
         "fr" : {
@@ -30274,8 +30381,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Use LCS sorting on notched displays"
+            "state" : "translated",
+            "value" : "Использовать сортировку LCS на дисплеях с вырезом"
           }
         },
         "th" : {
@@ -30381,8 +30488,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Use Option-click to open always-hidden section"
+            "state" : "translated",
+            "value" : "Используйте Option-клик, чтобы открыть всегда скрытый раздел"
           }
         },
         "th" : {
@@ -30488,8 +30595,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Use the faster LCS (Longest Common Subsequence) algorithm for profile sorting on notched displays instead of the full sort. LCS minimises the number of moves but may be less reliable on notched displays with smaller resolutions."
+            "state" : "translated",
+            "value" : "Используйте более быстрый алгоритм LCS (Наибольшей общей подпоследовательности) для сортировки профилей на дисплеях с вырезом. LCS минимизирует кол-во перемещений, но может быть менее надежным на экранах с вырезом и низким разрешением."
           }
         },
         "th" : {
@@ -30749,7 +30856,7 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "Visible"
           }
         },
@@ -30963,8 +31070,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "When a Focus mode deactivates, the display profile is automatically restored."
+            "state" : "translated",
+            "value" : "Cuando se desactiva el modo Enfoque, el perfil de visualización se restaura automáticamente."
           }
         },
         "fr" : {
@@ -31023,8 +31130,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "When a Focus mode deactivates, the display profile is automatically restored."
+            "state" : "translated",
+            "value" : "Когда режим фокусировки отключается, профиль дисплея восстанавливается автоматически."
           }
         },
         "th" : {
