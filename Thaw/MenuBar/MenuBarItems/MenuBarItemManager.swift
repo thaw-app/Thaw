@@ -504,6 +504,50 @@ final class MenuBarItemManager: ObservableObject {
         MenuBarItemManager.diagLog.debug("Updated new item destination to \(resolvedSection.logString) at relation \(updatedPlacement.relation.rawValue)")
     }
 
+    /// Applies a previously captured ``NewItemsPlacement`` (from a profile),
+    /// clamping to the hidden section when the always-hidden section is
+    /// disabled. Persists the updated preference.
+    ///
+    /// When clamping from `alwaysHidden` to `hidden`, the original anchor
+    /// references an alwaysHidden item that won't resolve in the hidden
+    /// section. Rather than letting the badge fall through to the
+    /// `.hidden`/always-hidden-disabled default (which is the leftmost
+    /// slot, farthest from the clock), we re-anchor to the rightmost
+    /// existing hidden item with `.leftOfAnchor` so the badge lands on
+    /// the clock-side edge of the section — the spot users reach first
+    /// when they expand the hidden section.
+    func applyNewItemsPlacement(_ placement: NewItemsPlacement) {
+        let preferredSection = sectionName(for: placement.sectionKey) ?? .hidden
+        let alwaysHiddenDisabled = appState?.settings.advanced.enableAlwaysHiddenSection != true
+        let clampedToHidden = preferredSection == .alwaysHidden && alwaysHiddenDisabled
+        let resolvedSection: MenuBarSection.Name = clampedToHidden ? .hidden : preferredSection
+
+        let adjusted: NewItemsPlacement
+        if clampedToHidden,
+           let rightmostHiddenItem = itemCache[.hidden].first(
+               where: { !$0.isControlItem && $0.tag.instanceIndex == 0 }
+           )
+        {
+            adjusted = NewItemsPlacement(
+                sectionKey: sectionKey(for: resolvedSection),
+                anchorIdentifier: persistedNewItemsAnchorIdentifier(for: rightmostHiddenItem),
+                relation: .leftOfAnchor
+            )
+        } else {
+            adjusted = NewItemsPlacement(
+                sectionKey: sectionKey(for: resolvedSection),
+                anchorIdentifier: placement.anchorIdentifier,
+                relation: placement.relation
+            )
+        }
+
+        guard newItemsPlacement != adjusted else { return }
+
+        newItemsPlacement = adjusted
+        persistNewItemsPlacementPreference()
+        MenuBarItemManager.diagLog.debug("Applied profile new item destination to \(resolvedSection.logString) at relation \(adjusted.relation.rawValue)")
+    }
+
     /// Returns the move destination that inserts a new item into the preferred section.
     private func newItemsMoveDestination(
         for controlItems: ControlItemPair,

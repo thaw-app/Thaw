@@ -253,6 +253,12 @@ final class ProfileManager: ObservableObject {
             forKey: .menuBarItemCustomNames
         )
 
+        // Apply the New Items badge placement before starting the layout
+        // task, so late-arriving items land in the profile-defined spot.
+        if let placement = profile.menuBarLayout.newItemsPlacement {
+            appState.itemManager.applyNewItemsPlacement(placement)
+        }
+
         // Cancel any in-flight layout task before starting a new one.
         // Prevents two profile applies from fighting over item positions.
         layoutTask?.cancel()
@@ -424,7 +430,8 @@ final class ProfileManager: ObservableObject {
             pinnedAlwaysHiddenBundleIDs: pinnedAlwaysHiddenBundleIDs,
             customNames: customNames,
             itemSectionMap: itemSectionMap,
-            itemOrder: itemOrder
+            itemOrder: itemOrder,
+            newItemsPlacement: appState.itemManager.newItemsPlacement
         )
     }
 

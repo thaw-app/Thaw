@@ -154,6 +154,10 @@ struct MenuBarLayoutSnapshot: Codable {
     /// Ordered list of uniqueIdentifiers per section, capturing the visual
     /// order of items at save time. Used to restore within-section ordering.
     var itemOrder: [String: [String]]?
+
+    /// Placement preference for the New Items badge (section and anchor).
+    /// Absent in profiles saved before this field was introduced.
+    var newItemsPlacement: MenuBarItemManager.NewItemsPlacement?
 }
 
 // MARK: - ProfileContent
