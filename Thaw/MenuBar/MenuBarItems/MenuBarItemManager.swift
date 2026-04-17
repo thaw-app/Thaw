@@ -523,16 +523,25 @@ final class MenuBarItemManager: ObservableObject {
         let resolvedSection: MenuBarSection.Name = clampedToHidden ? .hidden : preferredSection
 
         let adjusted: NewItemsPlacement
-        if clampedToHidden,
-           let rightmostHiddenItem = itemCache[.hidden].first(
-               where: { !$0.isControlItem && $0.tag.instanceIndex == 0 }
-           )
-        {
-            adjusted = NewItemsPlacement(
-                sectionKey: sectionKey(for: resolvedSection),
-                anchorIdentifier: persistedNewItemsAnchorIdentifier(for: rightmostHiddenItem),
-                relation: .leftOfAnchor
-            )
+        if clampedToHidden {
+            if let rightmostHiddenItem = itemCache[.hidden].first(
+                where: { !$0.isControlItem && $0.tag.instanceIndex == 0 }
+            ) {
+                adjusted = NewItemsPlacement(
+                    sectionKey: sectionKey(for: resolvedSection),
+                    anchorIdentifier: persistedNewItemsAnchorIdentifier(for: rightmostHiddenItem),
+                    relation: .leftOfAnchor
+                )
+            } else {
+                // Clamping, but the hidden section is empty. Drop the
+                // stale alwaysHidden anchor and fall back to the section
+                // default so a later re-save doesn't resurface it.
+                adjusted = NewItemsPlacement(
+                    sectionKey: sectionKey(for: resolvedSection),
+                    anchorIdentifier: nil,
+                    relation: .sectionDefault
+                )
+            }
         } else {
             adjusted = NewItemsPlacement(
                 sectionKey: sectionKey(for: resolvedSection),
