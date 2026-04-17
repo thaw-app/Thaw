@@ -89,9 +89,10 @@ final class EventTap {
             guard tap.isEnabled else {
                 return Unmanaged.passUnretained(event)
             }
-            return tap.callback(tap, event).map { eventFromCallback in
-                Unmanaged.passUnretained(eventFromCallback)
+            guard let eventFromCallback = tap.callback(tap, event) else {
+                return nil
             }
+            return Unmanaged.passUnretained(eventFromCallback)
         }
     }
 

@@ -189,13 +189,7 @@ final class LayoutBarPaddingView: NSView {
                 guard let duration = self?.layoutWatchdogDuration() else { return }
                 try? await Task.sleep(for: duration + .seconds(1))
                 guard let self, !Task.isCancelled else { return }
-                await MainActor.run {
-                    if self.isStabilizing {
-                        self.isStabilizing = false
-                        self.showOverlay(false)
-                        self.container.canSetArrangedViews = true
-                    }
-                }
+                await self.resetStabilizingStateIfNeeded()
                 guard let appState else { return }
                 await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
                 await appState.imageCache.updateCacheWithoutChecks(sections: MenuBarSection.Name.allCases)
@@ -226,7 +220,7 @@ final class LayoutBarPaddingView: NSView {
                 // didSet refresh uses the correct anchor position.
                 // Only update if this section actually contains the badge.
                 if let appState = self.container.appState,
-                   self.container.arrangedViews.contains(where: { $0.isNewItemsBadge })
+                   self.containsNewItemsBadge()
                 {
                     appState.itemManager.updateNewItemsPlacement(
                         section: self.container.section,
@@ -240,8 +234,24 @@ final class LayoutBarPaddingView: NSView {
         }
     }
 
+    @MainActor
+    private func resetStabilizingStateIfNeeded() async {
+        if isStabilizing {
+            isStabilizing = false
+            showOverlay(false)
+            container.canSetArrangedViews = true
+        }
+    }
+
     private func showOverlay(_ visible: Bool) {
         container.alphaValue = visible ? 0.6 : 1.0
+    }
+
+    private func containsNewItemsBadge() -> Bool {
+        for arrangedView in container.arrangedViews where arrangedView.isNewItemsBadge {
+            return true
+        }
+        return false
     }
 
     private func nearestItem(toRightOf index: Int) -> MenuBarItem? {
