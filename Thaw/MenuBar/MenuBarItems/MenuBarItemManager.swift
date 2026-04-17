@@ -1620,6 +1620,41 @@ extension MenuBarItemManager {
         holder.withLock { $0 }
     }
 
+    private nonisolated func disableEventTaps(_ eventTaps: [EventTap]) {
+        for eventTap in eventTaps {
+            eventTap.disable()
+        }
+    }
+
+    private nonisolated func resumeCancellationIfNeeded(
+        state: EventContinuationState,
+        continuation: CheckedContinuation<Void, any Error>
+    ) {
+        if state.didResume.tryClaimOnce() {
+            continuation.resume(throwing: CancellationError())
+        }
+    }
+
+    private nonisolated func makeContinuationTask(
+        eventTaps: [EventTap],
+        state: EventContinuationState,
+        continuation: CheckedContinuation<Void, any Error>,
+        entryEvent: CGEvent,
+        firstLocation: EventTap.Location
+    ) -> Task<Void, Never> {
+        Task {
+            await withTaskCancellationHandler {
+                for eventTap in eventTaps {
+                    eventTap.enable()
+                }
+                entryEvent.post(to: firstLocation)
+            } onCancel: {
+                disableEventTaps(eventTaps)
+                resumeCancellationIfNeeded(state: state, continuation: continuation)
+            }
+        }
+    }
+
     private nonisolated func awaitPostEventBarrierContinuation(
         context: EventContinuationContext,
         state: EventContinuationState,
@@ -1673,19 +1708,13 @@ extension MenuBarItemManager {
             eventTaps.append(eventTap1)
             eventTaps.append(eventTap2)
 
-            let innerTask = Task {
-                await withTaskCancellationHandler {
-                    eventTap1.enable()
-                    eventTap2.enable()
-                    context.entryEvent.post(to: context.firstLocation)
-                } onCancel: {
-                    eventTap1.disable()
-                    eventTap2.disable()
-                    if state.didResume.tryClaimOnce() {
-                        continuation.resume(throwing: CancellationError())
-                    }
-                }
-            }
+            let innerTask = makeContinuationTask(
+                eventTaps: [eventTap1, eventTap2],
+                state: state,
+                continuation: continuation,
+                entryEvent: context.entryEvent,
+                firstLocation: context.firstLocation
+            )
             storeInnerTask(innerTask, in: state.innerTaskHolder)
             if Task.isCancelled { innerTask.cancel() }
         }
@@ -1763,21 +1792,13 @@ extension MenuBarItemManager {
             eventTaps.append(eventTap2)
             eventTaps.append(eventTap3)
 
-            let innerTask = Task {
-                await withTaskCancellationHandler {
-                    eventTap1.enable()
-                    eventTap2.enable()
-                    eventTap3.enable()
-                    context.entryEvent.post(to: context.firstLocation)
-                } onCancel: {
-                    eventTap1.disable()
-                    eventTap2.disable()
-                    eventTap3.disable()
-                    if state.didResume.tryClaimOnce() {
-                        continuation.resume(throwing: CancellationError())
-                    }
-                }
-            }
+            let innerTask = makeContinuationTask(
+                eventTaps: [eventTap1, eventTap2, eventTap3],
+                state: state,
+                continuation: continuation,
+                entryEvent: context.entryEvent,
+                firstLocation: context.firstLocation
+            )
             storeInnerTask(innerTask, in: state.innerTaskHolder)
             if Task.isCancelled { innerTask.cancel() }
         }
