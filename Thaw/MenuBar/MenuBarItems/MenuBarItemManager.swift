@@ -1792,7 +1792,7 @@ extension MenuBarItemManager {
                 kind: kind,
                 context: context,
                 state: state
-            )
+            ),
         ]
         if kind == EventContinuationKind.scromble {
             eventTaps.append(
