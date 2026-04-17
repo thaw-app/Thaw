@@ -229,7 +229,6 @@
 				170423D72B56DE78004A2549 /* XCRemoteSwiftPackageReference "Sparkle" */,
 				17F71BB32B880B4500905CBA /* XCRemoteSwiftPackageReference "CompactSlider" */,
 				7127A9FB2C4881BC00D99DEF /* XCRemoteSwiftPackageReference "Ifrit" */,
-				4D1330A22F91D6E50030817B /* XCRemoteSwiftPackageReference "SwiftLintPlugins" */,
 			);
 			preferredProjectObjectVersion = 90;
 			productRefGroup = 7166832B2A767E6A006ABF84 /* Products */;
@@ -433,13 +432,13 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "";
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 31;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 456BPWQ6U5;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
@@ -468,13 +467,13 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "";
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 31;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 456BPWQ6U5;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
@@ -503,7 +502,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 31;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 456BPWQ6U5;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
@@ -531,7 +530,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 31;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 456BPWQ6U5;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
@@ -612,14 +611,6 @@
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 1.1.5;
-			};
-		};
-		4D1330A22F91D6E50030817B /* XCRemoteSwiftPackageReference "SwiftLintPlugins" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/SimplyDanny/SwiftLintPlugins";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 0.63.2;
 			};
 		};
 		7127A9FB2C4881BC00D99DEF /* XCRemoteSwiftPackageReference "Ifrit" */ = {
