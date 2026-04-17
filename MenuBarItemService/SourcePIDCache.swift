@@ -222,7 +222,9 @@ final class SourcePIDCache {
                 }
 
                 if let pids = pidMappings[pid] {
-                    result.pids.merge(pids) { _, new in new }
+                    for (windowID, pid) in pids {
+                        result.pids[windowID] = pid
+                    }
                 }
             }
 

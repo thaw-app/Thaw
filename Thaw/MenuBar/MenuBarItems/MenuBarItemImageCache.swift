@@ -1124,8 +1124,8 @@ final class MenuBarItemImageCache: ObservableObject {
                 if key.isSystemItem {
                     return allValidTags.contains(key) || recentlyFailedTags.contains(key)
                 }
-                return allValidTags.contains(where: { $0.matchesIgnoringWindowID(key) }) ||
-                    recentlyFailedTags.contains(where: { $0.matchesIgnoringWindowID(key) })
+                return containsTagMatchingIgnoringWindowID(allValidTags, target: key) ||
+                    containsTagMatchingIgnoringWindowID(recentlyFailedTags, target: key)
             }
 
             // Additional cleanup: Remove entries with invalid window information,
@@ -1185,6 +1185,16 @@ final class MenuBarItemImageCache: ObservableObject {
                 )
             }
         }
+    }
+
+    private func containsTagMatchingIgnoringWindowID(
+        _ tags: Set<MenuBarItemTag>,
+        target: MenuBarItemTag
+    ) -> Bool {
+        for tag in tags where tag.matchesIgnoringWindowID(target) {
+            return true
+        }
+        return false
     }
 
     /// Updates the cache for the given sections, if necessary.
