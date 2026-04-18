@@ -28,9 +28,10 @@ struct MenuBarLayoutSettingsPane: View {
     }
 
     var body: some View {
-        if !ScreenCapture.cachedCheckPermissions() {
-            missingScreenRecordingPermissions
-        } else if appState.menuBarManager.isMenuBarHiddenBySystemUserDefaults {
+        // Note: Screen recording permission is NOT required for layout.
+        // Without permission, the layout uses MenuBarIconProvider fallback
+        // to show generic icons instead of captured menu bar item images.
+        if appState.menuBarManager.isMenuBarHiddenBySystemUserDefaults {
             cannotArrange
         } else {
             IceForm(spacing: 20) {
@@ -94,11 +95,11 @@ struct MenuBarLayoutSettingsPane: View {
         .task(id: hasItems) {
             loadDeadlineReached = false
 
-            guard !hasItems, ScreenCapture.cachedCheckPermissions() else {
+            guard !hasItems else {
                 return
             }
 
-            diagLog.debug("Preloading menu bar layout caches (hasItems=\(self.hasItems), screenRecording=\(ScreenCapture.cachedCheckPermissions()))")
+            diagLog.debug("Preloading menu bar layout caches (hasItems=\(self.hasItems))")
 
             // Run cache updates in the background to avoid blocking the UI
             Task {
@@ -168,20 +169,6 @@ struct MenuBarLayoutSettingsPane: View {
         Text("\(Constants.displayName) cannot arrange menu bar items in automatically hidden menu bars.")
             .font(.title3)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-    }
-
-    private var missingScreenRecordingPermissions: some View {
-        VStack {
-            Text("Menu bar layout requires screen recording permissions.")
-                .font(.title2)
-
-            Button {
-                appState.navigationState.settingsNavigationIdentifier = .advanced
-            } label: {
-                Text("Go to Advanced Settings")
-            }
-            .buttonStyle(.link)
-        }
     }
 
     private var loadingMenuBarItems: some View {

@@ -1084,10 +1084,10 @@ final class MenuBarItemImageCache: ObservableObject {
             return
         }
 
-        guard let displayID = await appState.itemManager.itemCache.displayID else {
-            MenuBarItemImageCache.diagLog.warning("updateCacheWithoutChecks: itemCache.displayID is nil, aborting")
-            return
-        }
+        // Get displayID from item cache, or fall back to active menu bar display
+        let displayID = await appState.itemManager.itemCache.displayID
+            ?? Bridging.getActiveMenuBarDisplayID()
+            ?? CGMainDisplayID()
 
         guard let screen = NSScreen.screens.first(where: {
             $0.displayID == displayID

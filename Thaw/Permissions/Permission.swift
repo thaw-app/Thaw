@@ -159,7 +159,9 @@ final class ScreenRecordingPermission: Permission {
             isRequired: false,
             settingsURL: URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"),
             check: {
-                ScreenCapture.checkPermissions()
+                // Use cached version for consistency with UI code.
+                // Cache is invalidated when permission is requested or app becomes active.
+                ScreenCapture.cachedCheckPermissions()
             },
             request: {
                 ScreenCapture.requestPermissions()

@@ -45,6 +45,120 @@ final class ControlItem {
                 }
             }
         }
+
+        /// Returns the accessibility title used to identify this control item.
+        var accessibilityTitle: String {
+            rawValue
+        }
+
+        /// Attempts to find the window ID for this control item using the Accessibility API.
+        ///
+        /// On macOS 26, Control Center owns the status item windows. We set an
+        /// accessibility title when creating the control item, so we can query
+        /// the Accessibility API to find the window by its accessibility title.
+        static func findWindowID(for identifier: Identifier) -> CGWindowID? {
+            let systemWide = AXUIElementCreateSystemWide()
+
+            // Get the menu bar element for the active application
+            var menuBarRef: CFTypeRef?
+            let result = AXUIElementCopyAttributeValue(
+                systemWide,
+                kAXMenuBarAttribute as CFString,
+                &menuBarRef
+            )
+
+            guard result == .success, let menuBar = menuBarRef else {
+                return nil
+            }
+
+            // Get all children of the menu bar (status items)
+            var childrenRef: CFTypeRef?
+            let childrenResult = AXUIElementCopyAttributeValue(
+                // swiftlint:disable:next force_cast
+                menuBar as! AXUIElement,
+                kAXChildrenAttribute as CFString,
+                &childrenRef
+            )
+
+            guard childrenResult == .success,
+                  let childrenArray = childrenRef as? [AXUIElement]
+            else {
+                return nil
+            }
+
+            // Look for a child with matching accessibility title
+            for child in childrenArray {
+                var titleRef: CFTypeRef?
+                let titleResult = AXUIElementCopyAttributeValue(
+                    child,
+                    kAXTitleAttribute as CFString,
+                    &titleRef
+                )
+
+                if titleResult == .success,
+                   let title = titleRef as? String,
+                   title == identifier.accessibilityTitle
+                {
+                    // Found the control item by accessibility title
+                    // Now get its position to correlate with CG window
+                    var positionRef: CFTypeRef?
+                    let positionResult = AXUIElementCopyAttributeValue(
+                        child,
+                        kAXPositionAttribute as CFString,
+                        &positionRef
+                    )
+
+                    if positionResult == .success,
+                       let positionValue = positionRef,
+                       // swiftlint:disable force_cast
+                       AXValueGetType(positionValue as! AXValue) == .cgPoint
+                    {
+                        var position: CGPoint = .zero
+                        AXValueGetValue(positionValue as! AXValue, .cgPoint, &position)
+                        // swiftlint:enable force_cast
+
+                        // Get size to calculate bounds
+                        var sizeRef: CFTypeRef?
+                        let sizeResult = AXUIElementCopyAttributeValue(
+                            child,
+                            kAXSizeAttribute as CFString,
+                            &sizeRef
+                        )
+
+                        if sizeResult == .success,
+                           let sizeValue = sizeRef,
+                           // swiftlint:disable force_cast
+                           AXValueGetType(sizeValue as! AXValue) == .cgSize
+                        {
+                            var size: CGSize = .zero
+                            AXValueGetValue(sizeValue as! AXValue, .cgSize, &size)
+                            // swiftlint:enable force_cast
+
+                            let axFrame = CGRect(origin: position, size: size)
+
+                            // Find the CG window that matches these bounds
+                            let menuBarWindows = Bridging.getMenuBarWindowList(option: .itemsOnly)
+                            for windowID in menuBarWindows {
+                                if let windowInfo = WindowInfo(windowID: windowID) {
+                                    let windowBounds = windowInfo.bounds
+                                    // Allow small tolerance for frame matching
+                                    let tolerance: CGFloat = 5.0
+                                    if abs(windowBounds.origin.x - axFrame.origin.x) < tolerance &&
+                                        abs(windowBounds.origin.y - axFrame.origin.y) < tolerance &&
+                                        abs(windowBounds.width - axFrame.width) < tolerance &&
+                                        abs(windowBounds.height - axFrame.height) < tolerance
+                                    {
+                                        return windowID
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            return nil
+        }
     }
 
     /// A hiding state for a control item.
@@ -73,6 +187,12 @@ final class ControlItem {
             self.statusItem.autosaveName = controlItem.identifier.rawValue
 
             if let button = statusItem.button {
+                // Set the accessibility title so the Accessibility API can find
+                // this control item later. This is the primary method for
+                // identifying control items on macOS 26 where Control Center
+                // owns the status item windows.
+                button.setAccessibilityTitle(controlItem.identifier.rawValue)
+
                 if let contentView = button.window?.contentView {
                     let constraints = contentView.constraintsAffectingLayout(for: .horizontal)
                     if let constraint = constraints.first(where: Predicates.controlItemConstraint(button: button)) {
@@ -160,6 +280,23 @@ final class ControlItem {
     /// a divider between sections.
     var isSectionDivider: Bool {
         identifier != .visible
+    }
+
+    /// The CoreGraphics window identifier for this control item, if available.
+    ///
+    /// First tries the published `window` property (works on pre-macOS 26 and when
+    /// screen recording is available). Falls back to Accessibility API for macOS 26
+    /// where Control Center owns the windows and windowNumber is not available.
+    var windowID: CGWindowID? {
+        // Try the normal approach first (like development branch)
+        if let window = window ?? statusItem.button?.window {
+            let windowNum = CGWindowID(exactly: window.windowNumber)
+            if windowNum != 0 {
+                return windowNum
+            }
+        }
+        // FALLBACK: Use accessibility-based lookup (no screen recording required)
+        return Identifier.findWindowID(for: identifier)
     }
 
     /// A Boolean value that indicates whether the control item is currently

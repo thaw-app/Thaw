@@ -12990,6 +12990,7 @@
     },
     "Go to Advanced Settings" : {
       "comment" : "A link that takes the user to the advanced settings screen.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -17516,6 +17517,7 @@
     },
     "Menu bar layout requires screen recording permissions." : {
       "comment" : "A message displayed when the user does not have the necessary permissions to change the menu bar layout.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {

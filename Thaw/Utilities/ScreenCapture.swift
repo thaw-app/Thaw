@@ -14,6 +14,22 @@ import ScreenCaptureKit
 enum ScreenCapture {
     private static let diagLog = DiagLog(category: "ScreenCapture")
 
+    // MARK: - Cache Management
+
+    /// Context for cached permission check to enable external invalidation.
+    private final class CacheContext {
+        static var shared = CacheContext()
+        var cachedResult: Bool?
+    }
+
+    /// Invalidates the cached permission check result.
+    /// Call this when the permission state may have changed (e.g., after
+    /// requesting permissions or when the app becomes active).
+    static func invalidateCachedPermissions() {
+        CacheContext.shared.cachedResult = nil
+        diagLog.debug("invalidateCachedPermissions: cache cleared")
+    }
+
     // MARK: Permissions
 
     /// Returns a Boolean value that indicates whether the app has screen
@@ -47,21 +63,21 @@ enum ScreenCapture {
     /// calls. Pass `true` to the `reset` parameter to replace the cached
     /// result with a newly computed value.
     static func cachedCheckPermissions(reset: Bool = false) -> Bool {
-        enum Context {
-            static var cachedResult: Bool?
-        }
-        if !reset, let result = Context.cachedResult {
+        if !reset, let result = CacheContext.shared.cachedResult {
             return result
         }
         let result = checkPermissions()
-        diagLog.debug("cachedCheckPermissions: computed fresh result = \(result) (reset=\(reset), wasCached=\(Context.cachedResult != nil))")
-        Context.cachedResult = result
+        diagLog.debug("cachedCheckPermissions: computed fresh result = \(result) (reset=\(reset), wasCached=\(CacheContext.shared.cachedResult != nil))")
+        CacheContext.shared.cachedResult = result
         return result
     }
 
     /// Requests screen capture permissions.
     static func requestPermissions() {
         diagLog.debug("requestPermissions: requesting screen capture access")
+        // Invalidate cache when requesting permissions so subsequent checks
+        // pick up any changes after the user grants/denies.
+        invalidateCachedPermissions()
         if #available(macOS 15.0, *) {
             // CGRequestScreenCaptureAccess() is broken on macOS 15. We can
             // try accessing SCShareableContent to trigger a request if the

@@ -517,7 +517,8 @@ private struct MenuBarSearchContentView: View {
 
     @ViewBuilder
     private var mainContent: some View {
-        if !ScreenCapture.cachedCheckPermissions() {
+        // Use reactive permission check via itemManager.appState so the view updates when permission changes.
+        if !(itemManager.appState?.permissions.screenRecording.hasPermission ?? false) {
             VStack(spacing: 16) {
                 Image(systemName: "exclamationmark.triangle")
                     .font(.system(size: 32))

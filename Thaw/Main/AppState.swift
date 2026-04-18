@@ -261,6 +261,16 @@ final class AppState: ObservableObject {
             }
             .store(in: &c)
 
+        // Invalidate screen capture permission cache when app becomes active.
+        // User may have changed permissions in System Settings while app was backgrounded.
+        NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.diagLog.debug("App became active, invalidating screen capture permission cache")
+                ScreenCapture.invalidateCachedPermissions()
+            }
+            .store(in: &c)
+
         publisherForWindow(.settings)
             .removeNil()
             .map { $0.publisher(for: \.isVisible) }

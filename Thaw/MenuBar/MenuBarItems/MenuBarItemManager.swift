@@ -1249,24 +1249,33 @@ extension MenuBarItemManager {
             // Obtain window IDs from the actual ControlItem objects so the
             // fallback lookup in ControlItemPair can match by window ID when
             // the tag-based and title-based lookups fail (macOS 26+).
+            // Uses windowID property which falls back to Accessibility API when
+            // normal window access is unavailable (no screen recording permission).
             let hiddenControlItemWID: CGWindowID? = appState?.menuBarManager
-                .controlItem(withName: .hidden)?.window
-                .flatMap { CGWindowID(exactly: $0.windowNumber) }
+                .controlItem(withName: .hidden)?.windowID
             let alwaysHiddenControlItemWID: CGWindowID? = appState?.menuBarManager
-                .controlItem(withName: .alwaysHidden)?.window
-                .flatMap { CGWindowID(exactly: $0.windowNumber) }
+                .controlItem(withName: .alwaysHidden)?.windowID
 
             guard let controlItems = ControlItemPair(
                 items: &items,
                 hiddenControlItemWindowID: hiddenControlItemWID,
                 alwaysHiddenControlItemWindowID: alwaysHiddenControlItemWID
             ) else {
-                // ???: Is clearing the cache the best thing to do here?
-                MenuBarItemManager.diagLog.warning("cacheItemsRegardless: Missing control item for hidden section (expected tag: \(MenuBarItemTag.hiddenControlItem)), clearing cache. Items remaining: \(items.count), windowIDs: \(itemWindowIDs.count). hiddenControlItemWID=\(hiddenControlItemWID.map { "\($0)" } ?? "nil"), alwaysHiddenControlItemWID=\(alwaysHiddenControlItemWID.map { "\($0)" } ?? "nil")")
+                // Control items not detected yet (windows may not be ready).
+                // Instead of clearing cache, put all items in visible section
+                // so fallback can still display them.
+                MenuBarItemManager.diagLog.warning("cacheItemsRegardless: Missing control item for hidden section - caching all items as visible. hiddenControlItemWID=\(hiddenControlItemWID.map { "\($0)" } ?? "nil"), alwaysHiddenControlItemWID=\(alwaysHiddenControlItemWID.map { "\($0)" } ?? "nil")")
                 await MainActor.run {
                     self.areControlItemsMissing = true
                 }
-                itemCache = ItemCache(displayID: nil)
+                // Create cache with all items in visible section
+                var cache = ItemCache(displayID: displayID)
+                for item in items where !item.isControlItem {
+                    cache[.visible].append(item)
+                }
+                await MainActor.run {
+                    self.itemCache = cache
+                }
                 return
             }
 

@@ -44,7 +44,8 @@ struct AdvancedSettingsPane: View {
                 sectionDividerStyle
             }
             IceSection("Tooltips") {
-                if ScreenCapture.cachedCheckPermissions() {
+                // Use reactive permission check so the view updates when permission changes.
+                if appState.permissions.screenRecording.hasPermission {
                     showMenuBarTooltips
                     tooltipDelay
                 } else {
