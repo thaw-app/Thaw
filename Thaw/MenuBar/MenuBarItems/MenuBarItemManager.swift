@@ -1696,6 +1696,9 @@ extension MenuBarItemManager {
                 return rEvent
             }
             onMatch(tap)
+            // Defensive: Since this EventTap is created with option: .listenOnly,
+            // mutating rEvent via setTargetPID is for parity only and will not
+            // affect the system event stream.
             rEvent.setTargetPID(context.pid)
             return rEvent
         }
