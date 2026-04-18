@@ -43,8 +43,7 @@ enum MenuBarIconProvider {
             return nil
         }
 
-        let hint = item.title
-        guard let best = AssetCatalogReader.findBestIcon(in: bundleURL, hint: hint) else {
+        guard let best = AssetCatalogReader.findBestIcon(in: bundleURL) else {
             return nil
         }
 

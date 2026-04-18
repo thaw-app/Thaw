@@ -21,13 +21,16 @@ struct AppMapping: Codable {
 
 /// A namespace for reading compiled asset catalog (.car) files and bundle resources.
 enum AssetCatalogReader {
+    private static let diagLog = DiagLog(category: "AssetCatalogReader")
+
     /// 2. Load the JSON Manifest into memory once
     static let manifest: [String: AppMapping] = {
         guard let url = Bundle.main.url(forResource: "AppIcons", withExtension: "json"),
               let data = try? Data(contentsOf: url),
               let decoded = try? JSONDecoder().decode([String: AppMapping].self, from: data)
         else {
-            print("⚠️ Failed to load AppIcons.json manifest")
+            // Note: Cannot use diagLog here as it's a static let initializer.
+            // The app will continue with an empty manifest.
             return [:]
         }
         return decoded
@@ -138,7 +141,7 @@ enum AssetCatalogReader {
 
     // MARK: - Public API
 
-    static func findBestIcon(in bundleURL: URL, hint _: String?) -> (name: String, image: NSImage)? {
+    static func findBestIcon(in bundleURL: URL) -> (name: String, image: NSImage)? {
         guard let bundle = Bundle(url: bundleURL),
               let bundleID = bundle.bundleIdentifier
         else {

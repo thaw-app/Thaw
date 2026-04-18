@@ -117,12 +117,20 @@ enum AXHelpers {
                         unresolvedWindows.contains($0.windowID) &&
                             $0.bounds.center.distance(to: childCenter) <= 1
                     }) {
-                        let axTitle = (try? child.attribute(.title) as String?)
-                            ?? (try? child.attribute(.description) as String?)
+                        // Try title first, fall back to description. Only accept
+                        // non-empty strings to avoid marking as resolved with no value.
+                        let titleCandidate = try? child.attribute(.title) as String?
+                        let descCandidate = try? child.attribute(.description) as String?
+                        let axTitle = [titleCandidate, descCandidate]
+                            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+                            .first { !$0.isEmpty }
+
                         if let axTitle {
                             result[matchedWindow.windowID] = axTitle
+                            unresolvedWindows.remove(matchedWindow.windowID)
                         }
-                        unresolvedWindows.remove(matchedWindow.windowID)
+                        // If no valid title found, leave window unresolved so
+                        // icon resolution can use other metadata.
                     }
                 }
             }

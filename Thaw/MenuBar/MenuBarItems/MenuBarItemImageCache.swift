@@ -412,7 +412,7 @@ final class MenuBarItemImageCache: ObservableObject {
                 continue
             }
 
-            let hasScreenRecording = appState.permissions.screenRecording.hasPermission
+            let hasScreenRecording = appState.hasPermission(.screenRecording)
 
             for section in sections {
                 let items = appState.itemManager.itemCache.managedItems(for: section)
@@ -791,6 +791,9 @@ final class MenuBarItemImageCache: ObservableObject {
         var newImages = [MenuBarItemTag: CapturedImage]()
 
         for item in items {
+            // Yield to main runloop between heavy rendering calls to prevent UI blocking
+            await Task.yield()
+
             if let fallbackIcon = MenuBarIconProvider.icon(for: item, scale: scale) {
                 newImages[item.tag] = fallbackIcon
             }
