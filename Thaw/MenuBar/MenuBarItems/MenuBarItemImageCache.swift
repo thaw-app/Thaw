@@ -127,6 +127,7 @@ final class MenuBarItemImageCache: ObservableObject {
     @MainActor
     func performSetup(with appState: AppState) {
         self.appState = appState
+        MenuBarIconProvider.appState = appState
         configureCancellables()
 
         // Try to load cached images from disk
@@ -411,10 +412,19 @@ final class MenuBarItemImageCache: ObservableObject {
                 continue
             }
 
+            let hasScreenRecording = appState.permissions.screenRecording.hasPermission
+
             for section in sections {
                 let items = appState.itemManager.itemCache.managedItems(for: section)
                 guard !items.isEmpty else { continue }
-                await refreshImages(of: items, scale: screen.backingScaleFactor)
+
+                if hasScreenRecording {
+                    // PRIMARY: Use screen capture
+                    await refreshImages(of: items, scale: screen.backingScaleFactor)
+                } else {
+                    // FALLBACK: Use MenuBarIconProvider
+                    await refreshImagesWithFallback(items: items, scale: screen.backingScaleFactor)
+                }
             }
         }
 
@@ -774,6 +784,32 @@ final class MenuBarItemImageCache: ObservableObject {
         }
     }
 
+    /// Fallback image refresh using MenuBarIconProvider when screen recording
+    /// permission is not granted.
+    @MainActor
+    private func refreshImagesWithFallback(items: [MenuBarItem], scale: CGFloat) async {
+        var newImages = [MenuBarItemTag: CapturedImage]()
+
+        for item in items {
+            if let fallbackIcon = MenuBarIconProvider.icon(for: item, scale: scale) {
+                newImages[item.tag] = fallbackIcon
+            }
+        }
+
+        guard !newImages.isEmpty, !Task.isCancelled else { return }
+
+        var updatedCount = 0
+        for (tag, newImage) in newImages where !CapturedImage.isVisuallyEqual(self.images[tag], newImage) {
+            self.images[tag] = newImage
+            accessCounter += 1
+            accessTimestamps[tag] = accessCounter
+            updatedCount += 1
+        }
+        if updatedCount > 0 {
+            MenuBarItemImageCache.diagLog.debug("refreshImagesWithFallback: ✓ updated \(updatedCount)/\(newImages.count) items")
+        }
+    }
+
     /// Captures the images of the menu bar items in the given section and returns
     /// a dictionary containing the images, keyed by their menu bar item tags.
     private func captureImages(
@@ -1045,12 +1081,6 @@ final class MenuBarItemImageCache: ObservableObject {
             return
         }
 
-        let hasScreenRecording = await appState.hasPermission(.screenRecording)
-        guard hasScreenRecording else {
-            MenuBarItemImageCache.diagLog.debug("updateCacheWithoutChecks: no screen recording permission, aborting")
-            return
-        }
-
         guard let displayID = await appState.itemManager.itemCache.displayID else {
             MenuBarItemImageCache.diagLog.warning("updateCacheWithoutChecks: itemCache.displayID is nil, aborting")
             return
@@ -1066,6 +1096,8 @@ final class MenuBarItemImageCache: ObservableObject {
         let scale = screen.backingScaleFactor
         var newImages = [MenuBarItemTag: CapturedImage]()
 
+        let hasScreenRecording = await appState.hasPermission(.screenRecording)
+
         for section in sections {
             guard !Task.isCancelled else {
                 MenuBarItemImageCache.diagLog.debug("updateCacheWithoutChecks: cancelled before capturing \(section.logString)")
@@ -1076,23 +1108,40 @@ final class MenuBarItemImageCache: ObservableObject {
                 continue
             }
 
-            let sectionImages = await captureImages(
-                for: section,
-                scale: scale,
-                appState: appState
-            )
-
-            guard !sectionImages.isEmpty else {
-                // Expected for off-screen sections (e.g. hidden): live refresh
-                // (refreshImages) handles those items. Only a real concern for
-                // the visible section — check compositeCapture logs for details.
-                MenuBarItemImageCache.diagLog.debug(
-                    "captureImages: no images captured for \(section.logString) (off-screen or transient failure)"
+            if hasScreenRecording {
+                // PRIMARY: Use screen capture when permission granted
+                let sectionImages = await captureImages(
+                    for: section,
+                    scale: scale,
+                    appState: appState
                 )
-                continue
-            }
 
-            newImages.merge(sectionImages) { _, new in new }
+                if sectionImages.isEmpty {
+                    // Expected for off-screen sections (e.g. hidden): live refresh
+                    // (refreshImages) handles those items. Only a real concern for
+                    // the visible section — check compositeCapture logs for details.
+                    MenuBarItemImageCache.diagLog.debug(
+                        "captureImages: no images captured for \(section.logString) (off-screen or transient failure)"
+                    )
+                } else {
+                    newImages.merge(sectionImages) { _, new in new }
+                }
+            } else {
+                // FALLBACK: Use MenuBarIconProvider when no screen recording permission
+                let sectionItems = await appState.itemManager.itemCache.managedItems(for: section)
+                var fallbackCount = 0
+                for item in sectionItems {
+                    if let fallbackIcon = await MenuBarIconProvider.icon(for: item, scale: scale) {
+                        newImages[item.tag] = fallbackIcon
+                        fallbackCount += 1
+                    }
+                }
+                if fallbackCount > 0 {
+                    MenuBarItemImageCache.diagLog.debug(
+                        "MenuBarIconProvider fallback: resolved \(fallbackCount)/\(sectionItems.count) icons for \(section.logString)"
+                    )
+                }
+            }
         }
 
         guard !Task.isCancelled else {
@@ -1296,13 +1345,12 @@ final class MenuBarItemImageCache: ObservableObject {
 
     /// Returns a Boolean value that indicates whether caching menu bar items
     /// failed for the given section.
+    ///
+    /// Note: With the fallback system, this checks whether we have any cached
+    /// images for the section, regardless of whether they came from screen
+    /// capture or the MenuBarIconProvider fallback.
     @MainActor
     func cacheFailed(for section: MenuBarSection.Name) -> Bool {
-        let hasPermission = ScreenCapture.cachedCheckPermissions()
-        guard hasPermission else {
-            MenuBarItemImageCache.diagLog.debug("cacheFailed(\(section.logString)): no screen recording permission (cachedCheckPermissions=false)")
-            return true
-        }
         let items = appState?.itemManager.itemCache[section] ?? []
         guard !items.isEmpty else {
             return false
