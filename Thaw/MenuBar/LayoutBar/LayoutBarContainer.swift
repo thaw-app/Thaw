@@ -288,10 +288,10 @@ final class LayoutBarContainer: NSView {
             // view to trigger a swap
             let midX = destinationView.frame.midX
             let offset = destinationView.frame.width / 2
-            if !((midX - offset) ... (midX + offset)).contains(draggingLocation.x) {
-                if sourceView.oldContainerInfo?.container === self {
-                    return .move
-                }
+            if !((midX - offset) ... (midX + offset)).contains(draggingLocation.x),
+               sourceView.oldContainerInfo?.container === self
+            {
+                return .move
             }
             if let sourceIndex = arrangedViews.firstIndex(of: sourceView) {
                 // source view is already inside this container, so move

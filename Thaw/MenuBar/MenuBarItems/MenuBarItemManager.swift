@@ -1121,10 +1121,11 @@ extension MenuBarItemManager {
                 if let temp = temporarilyShownItemContexts.first(where: {
                     $0.tag.matchesIgnoringWindowID(item.tag) &&
                         $0.sourcePID == (item.sourcePID ?? item.ownerPID)
-                }) {
-                    if context.findSection(for: item) == .visible, temp.originalSection != .visible {
-                        return temp
-                    }
+                }),
+                    context.findSection(for: item) == .visible,
+                    temp.originalSection != .visible
+                {
+                    return temp
                 }
                 return nil
             }()
@@ -3095,18 +3096,17 @@ extension MenuBarItemManager {
 
         // 2. Try the fallback neighbor (opposite side).
         if let fallbackTag = context.fallbackNeighborTag,
-           let fallbackPID = context.fallbackNeighborPID
+           let fallbackPID = context.fallbackNeighborPID,
+           let freshFallback = items.first(where: {
+               $0.tag.matchesIgnoringWindowID(fallbackTag) &&
+                   ($0.sourcePID ?? $0.ownerPID) == fallbackPID
+           })
         {
-            if let freshFallback = items.first(where: {
-                $0.tag.matchesIgnoringWindowID(fallbackTag) &&
-                    ($0.sourcePID ?? $0.ownerPID) == fallbackPID
-            }) {
-                switch context.returnDestination {
-                case .leftOfItem:
-                    return .rightOfItem(freshFallback)
-                case .rightOfItem:
-                    return .leftOfItem(freshFallback)
-                }
+            switch context.returnDestination {
+            case .leftOfItem:
+                return .rightOfItem(freshFallback)
+            case .rightOfItem:
+                return .leftOfItem(freshFallback)
             }
         }
 

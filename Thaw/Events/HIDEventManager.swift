@@ -391,13 +391,14 @@ final class HIDEventManager: ObservableObject {
         }
 
         // Check the mouseMovedTap if it should be active.
-        if let appState, needsMouseMovedTap(appState: appState) {
-            if mouseMovedTap.ensureValid() {
-                // Tap is valid. Make sure it's enabled.
-                if !mouseMovedTap.isEnabled {
-                    Self.diagLog.warning("mouseMovedTap was valid but not enabled, re-enabling")
-                    mouseMovedTap.start()
-                }
+        if let appState,
+           needsMouseMovedTap(appState: appState),
+           mouseMovedTap.ensureValid()
+        {
+            // Tap is valid. Make sure it's enabled.
+            if !mouseMovedTap.isEnabled {
+                Self.diagLog.warning("mouseMovedTap was valid but not enabled, re-enabling")
+                mouseMovedTap.start()
             }
         }
     }

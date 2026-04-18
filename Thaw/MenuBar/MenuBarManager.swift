@@ -154,10 +154,10 @@ final class MenuBarManager: ObservableObject {
                             }
 
                             // Check if any menu bar item has a menu open (for smart strategy)
-                            if appState.settings.general.rehideStrategy == .smart {
-                                if await appState.itemManager.isAnyMenuBarItemMenuOpen() {
-                                    return
-                                }
+                            if appState.settings.general.rehideStrategy == .smart,
+                               await appState.itemManager.isAnyMenuBarItemMenuOpen()
+                            {
+                                return
                             }
 
                             hiddenSection.hide()
