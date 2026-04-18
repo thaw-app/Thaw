@@ -5103,7 +5103,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "为每个显示器设置对应的配置文件。"
+            "value" : "为每个显示器设置对应的配置。"
           }
         },
         "zh-Hant" : {
@@ -18389,7 +18389,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "拖动“新增菜单栏项”标记，设置新检测到的菜单栏项显示位置。"
+            "value" : "拖动“新菜单栏项”标记，设置新检测到的菜单栏项显示位置。"
           }
         },
         "zh-Hant" : {
