@@ -111,9 +111,10 @@ enum MenuBarIconProvider {
             return renderSFSymbol("switch.2", canvasSize: canvasSize, scale: scale)
         }
 
-        // Clock: render the current date/time as text to match the menu bar.
+        // Clock: use SF Symbol since we can't reliably match the user's
+        // System Settings clock format (24h, seconds, date visibility, etc.)
         if tag.title == "Clock" {
-            return renderClockText(canvasSize: canvasSize, scale: scale)
+            return renderSFSymbol("clock.fill", canvasSize: canvasSize, scale: scale)
         }
 
         // Try SF Symbol first.
@@ -166,60 +167,6 @@ enum MenuBarIconProvider {
         ) else {
             return nil
         }
-        return MenuBarItemImageCache.CapturedImage(cgImage: cgImage, scale: scale)
-    }
-
-    /// Renders the current date/time as white text, matching the menu bar clock.
-    private static func renderClockText(canvasSize: CGSize, scale: CGFloat) -> MenuBarItemImageCache.CapturedImage? {
-        let formatter = DateFormatter()
-        formatter.dateFormat = DateFormatter.dateFormat(
-            fromTemplate: "EEE d MMM h:mm a",
-            options: 0,
-            locale: .current
-        )
-        let text = formatter.string(from: Date())
-
-        let font = NSFont.menuBarFont(ofSize: 0)
-        let attrs: [NSAttributedString.Key: Any] = [
-            .font: font,
-            .foregroundColor: NSColor.white,
-        ]
-
-        let textSize = (text as NSString).size(withAttributes: attrs)
-        let pixelW = Int(ceil(textSize.width + 4) * scale)
-        let pixelH = Int(canvasSize.height * scale)
-
-        guard pixelW > 0, pixelH > 0 else { return nil }
-
-        guard let context = CGContext(
-            data: nil,
-            width: pixelW,
-            height: pixelH,
-            bitsPerComponent: 8,
-            bytesPerRow: 0,
-            space: renderColorSpace,
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        ) else {
-            return nil
-        }
-
-        // Scale the context so NSString.draw works in points, not pixels.
-        let nsGraphicsContext = NSGraphicsContext(cgContext: context, flipped: false)
-        NSGraphicsContext.saveGraphicsState()
-        NSGraphicsContext.current = nsGraphicsContext
-        context.scaleBy(x: scale, y: scale)
-
-        let pointH = canvasSize.height
-        let drawX: CGFloat = 2
-        let drawY = (pointH - textSize.height) / 2
-        (text as NSString).draw(
-            at: NSPoint(x: drawX, y: drawY),
-            withAttributes: attrs
-        )
-
-        NSGraphicsContext.restoreGraphicsState()
-
-        guard let cgImage = context.makeImage() else { return nil }
         return MenuBarItemImageCache.CapturedImage(cgImage: cgImage, scale: scale)
     }
 
