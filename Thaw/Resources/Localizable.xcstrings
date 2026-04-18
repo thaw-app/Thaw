@@ -15249,7 +15249,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "保持搜索"
+            "value" : "保留搜索"
           }
         }
       }
@@ -20280,7 +20280,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "打开专注设置"
+            "value" : "打开专注模式"
           }
         },
         "zh-Hant" : {
