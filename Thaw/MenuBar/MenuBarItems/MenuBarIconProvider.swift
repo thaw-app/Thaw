@@ -69,7 +69,7 @@ enum MenuBarIconProvider {
         "FocusModes": "moon.fill",
         "Focus": "moon.fill",
         "Display": "sun.max.fill",
-        // Clock is handled separately as rendered text.
+        "Clock": "clock.fill",
         "FaceTime": "video.fill",
         "MusicRecognition": "shazam.logo.fill",
         "AudioVideoModule": "record.circle",
@@ -109,12 +109,6 @@ enum MenuBarIconProvider {
         // BentoBox is the Control Center aggregate icon.
         if tag.isBentoBox {
             return renderSFSymbol("switch.2", canvasSize: canvasSize, scale: scale)
-        }
-
-        // Clock: use SF Symbol since we can't reliably match the user's
-        // System Settings clock format (24h, seconds, date visibility, etc.)
-        if tag.title == "Clock" {
-            return renderSFSymbol("clock.fill", canvasSize: canvasSize, scale: scale)
         }
 
         // Try SF Symbol first.
@@ -297,18 +291,34 @@ enum MenuBarIconProvider {
 
         for i in 0 ..< (w * h) {
             let offset = i * 4
-            let r = Float(pixels[offset])
-            let g = Float(pixels[offset + 1])
-            let b = Float(pixels[offset + 2])
+            let rPre = Float(pixels[offset])
+            let gPre = Float(pixels[offset + 1])
+            let bPre = Float(pixels[offset + 2])
             let a = Float(pixels[offset + 3])
 
-            // Rec. 601 luminance.
+            // Skip fully transparent pixels to avoid division by zero.
+            guard a > 0 else {
+                pixels[offset] = 0
+                pixels[offset + 1] = 0
+                pixels[offset + 2] = 0
+                pixels[offset + 3] = 0
+                continue
+            }
+
+            // Unpremultiply RGB to get original color values.
+            let r = rPre * 255.0 / a
+            let g = gPre * 255.0 / a
+            let b = bPre * 255.0 / a
+
+            // Rec. 601 luminance from unpremultiplied RGB.
             let lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255.0
             let newAlpha = UInt8(min(lum * a, 255))
 
-            pixels[offset] = 255 // R
-            pixels[offset + 1] = 255 // G
-            pixels[offset + 2] = 255 // B
+            // Write back in premultiplied form: white (255,255,255) * newAlpha/255.
+            // For white, premultiplied R=G=B=newAlpha.
+            pixels[offset] = newAlpha // R (premultiplied white)
+            pixels[offset + 1] = newAlpha // G (premultiplied white)
+            pixels[offset + 2] = newAlpha // B (premultiplied white)
             pixels[offset + 3] = newAlpha
         }
 
