@@ -1649,8 +1649,20 @@ extension MenuBarItemManager {
     ) -> Task<Void, Never> {
         Task {
             await withTaskCancellationHandler {
+                // Check cancellation before enabling taps
+                guard !Task.isCancelled else {
+                    disableEventTaps(eventTaps)
+                    resumeCancellationIfNeeded(state: state, continuation: continuation)
+                    return
+                }
                 for eventTap in eventTaps {
                     eventTap.enable()
+                }
+                // Check cancellation before posting event
+                guard !Task.isCancelled else {
+                    disableEventTaps(eventTaps)
+                    resumeCancellationIfNeeded(state: state, continuation: continuation)
+                    return
                 }
                 entryEvent.post(to: firstLocation)
             } onCancel: {
