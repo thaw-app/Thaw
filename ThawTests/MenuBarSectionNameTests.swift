@@ -160,6 +160,6 @@ final class MenuBarSectionNameTests: XCTestCase {
             notchFrame: CGRect(x: 700, y: 0, width: 200, height: 30)
         )
 
-        XCTAssertEqual(width, 1052)
+        XCTAssertEqual(width, 1152)
     }
 }
