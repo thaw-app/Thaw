@@ -82,10 +82,6 @@ struct MenuBarLayoutSettingsPane: View {
                         }
                     } else {
                         Text("Loading menu bar items…")
-                    }
-                    if loadDeadlineReached {
-                        EmptyView()
-                    } else {
                         ProgressView()
                     }
                 }
