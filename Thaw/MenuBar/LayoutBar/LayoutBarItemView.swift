@@ -114,7 +114,9 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         if let appState {
             let tag = item.tag
             let imageForTag = appState.imageCache.$images
-                .map { images -> MenuBarItemImageCache.CapturedImage? in images[tag] }
+                .map { [weak appState] _ -> MenuBarItemImageCache.CapturedImage? in
+                    appState?.imageCache.image(for: tag)
+                }
 
             imageForTag
                 .removeDuplicates(by: MenuBarItemImageCache.CapturedImage.isVisuallyEqual)

@@ -70,7 +70,6 @@ struct SettingsView: View {
         .navigationTitle(navigationTitle)
     }
 
-    @ViewBuilder
     private var sidebar: some View {
         List {
             Section {
