@@ -340,6 +340,15 @@ final class MenuBarItemImageCache: ObservableObject {
 
     // MARK: Live Refresh
 
+    /// Snapshot of navigation state read in a single MainActor hop.
+    struct NavigationStateSnapshot {
+        let isIceBarPresented: Bool
+        let isSearchPresented: Bool
+        let isAppFrontmost: Bool
+        let isSettingsPresented: Bool
+        let settingsNavigationIdentifier: SettingsNavigationIdentifier?
+    }
+
     /// Refreshes the cache for currently visible consumers, or keeps a warm
     /// background snapshot ready for the layout settings pane when no consumer
     /// is visible.
@@ -348,39 +357,37 @@ final class MenuBarItemImageCache: ObservableObject {
             return
         }
 
-        let isIceBarPresented = await appState.navigationState.isIceBarPresented
-        let isSearchPresented = await appState.navigationState.isSearchPresented
-        let hasVisibleConsumer = await hasVisibleCaptureConsumer(
-            appState: appState,
-            isIceBarPresented: isIceBarPresented,
-            isSearchPresented: isSearchPresented
-        )
+        // Batch all navigation state reads into single MainActor hop
+        let nav = await MainActor.run {
+            NavigationStateSnapshot(
+                isIceBarPresented: appState.navigationState.isIceBarPresented,
+                isSearchPresented: appState.navigationState.isSearchPresented,
+                isAppFrontmost: appState.navigationState.isAppFrontmost,
+                isSettingsPresented: appState.navigationState.isSettingsPresented,
+                settingsNavigationIdentifier: appState.navigationState.settingsNavigationIdentifier
+            )
+        }
+
+        let hasVisibleConsumer = hasVisibleCaptureConsumer(nav: nav)
 
         if hasVisibleConsumer {
-            await updateCache()
+            await updateCache(nav: nav)
         } else {
             await updateCache(
                 sections: MenuBarSection.Name.allCases,
-                allowBackgroundCapture: true
+                allowBackgroundCapture: true,
+                nav: nav
             )
         }
     }
 
     /// Returns whether any visible surface currently needs live item captures.
-    private func hasVisibleCaptureConsumer(
-        appState: AppState,
-        isIceBarPresented: Bool,
-        isSearchPresented: Bool
-    ) async -> Bool {
-        if isIceBarPresented || isSearchPresented {
+    private func hasVisibleCaptureConsumer(nav: NavigationStateSnapshot) -> Bool {
+        if nav.isIceBarPresented || nav.isSearchPresented {
             return true
         }
 
-        let isAppFrontmost = await appState.navigationState.isAppFrontmost
-        let isSettingsPresented = await appState.navigationState.isSettingsPresented
-        let settingsNavID = await appState.navigationState.settingsNavigationIdentifier
-
-        return isAppFrontmost && isSettingsPresented && settingsNavID == .menuBarLayout
+        return nav.isAppFrontmost && nav.isSettingsPresented && nav.settingsNavigationIdentifier == .menuBarLayout
     }
 
     /// Starts or stops the live image refresh loop based on navigation state.
@@ -1251,22 +1258,32 @@ final class MenuBarItemImageCache: ObservableObject {
     func updateCache(
         sections: [MenuBarSection.Name],
         skipRecentMoveCheck: Bool = false,
-        allowBackgroundCapture: Bool = false
+        allowBackgroundCapture: Bool = false,
+        nav: NavigationStateSnapshot? = nil
     ) async {
         guard let appState else {
             MenuBarItemImageCache.diagLog.debug("updateCache: appState is nil, skipping")
             return
         }
 
-        let isIceBarPresented = await appState.navigationState.isIceBarPresented
-        let isSearchPresented = await appState.navigationState.isSearchPresented
+        // Use provided snapshot or read fresh values
+        let navSnapshot: NavigationStateSnapshot
+        if let nav {
+            navSnapshot = nav
+        } else {
+            navSnapshot = await MainActor.run {
+                NavigationStateSnapshot(
+                    isIceBarPresented: appState.navigationState.isIceBarPresented,
+                    isSearchPresented: appState.navigationState.isSearchPresented,
+                    isAppFrontmost: appState.navigationState.isAppFrontmost,
+                    isSettingsPresented: appState.navigationState.isSettingsPresented,
+                    settingsNavigationIdentifier: appState.navigationState.settingsNavigationIdentifier
+                )
+            }
+        }
 
         if !allowBackgroundCapture {
-            let hasVisibleConsumer = await hasVisibleCaptureConsumer(
-                appState: appState,
-                isIceBarPresented: isIceBarPresented,
-                isSearchPresented: isSearchPresented
-            )
+            let hasVisibleConsumer = hasVisibleCaptureConsumer(nav: navSnapshot)
 
             guard hasVisibleConsumer else {
                 // This is the normal path when IceBar/search/settings are not visible — not an error
@@ -1295,26 +1312,37 @@ final class MenuBarItemImageCache: ObservableObject {
             }
         }
 
-        MenuBarItemImageCache.diagLog.debug("updateCache: proceeding with cache update for \(sections.count) sections (iceBar=\(isIceBarPresented), search=\(isSearchPresented), background=\(allowBackgroundCapture))")
+        MenuBarItemImageCache.diagLog.debug("updateCache: proceeding with cache update for \(sections.count) sections (iceBar=\(navSnapshot.isIceBarPresented), search=\(navSnapshot.isSearchPresented), background=\(allowBackgroundCapture))")
         await updateCacheWithoutChecks(sections: sections)
     }
 
     /// Updates the cache for all sections, if necessary.
-    func updateCache() async {
+    func updateCache(nav: NavigationStateSnapshot? = nil) async {
         guard let appState else {
             return
         }
 
-        let isIceBarPresented = await appState.navigationState.isIceBarPresented
-        let isSearchPresented = await appState.navigationState.isSearchPresented
-        let isSettingsPresented = await appState.navigationState
-            .isSettingsPresented
+        // Use provided snapshot or read fresh values
+        let navSnapshot: NavigationStateSnapshot
+        if let nav {
+            navSnapshot = nav
+        } else {
+            navSnapshot = await MainActor.run {
+                NavigationStateSnapshot(
+                    isIceBarPresented: appState.navigationState.isIceBarPresented,
+                    isSearchPresented: appState.navigationState.isSearchPresented,
+                    isAppFrontmost: appState.navigationState.isAppFrontmost,
+                    isSettingsPresented: appState.navigationState.isSettingsPresented,
+                    settingsNavigationIdentifier: appState.navigationState.settingsNavigationIdentifier
+                )
+            }
+        }
 
         var sectionsNeedingDisplay = [MenuBarSection.Name]()
 
-        if isSettingsPresented || isSearchPresented {
+        if navSnapshot.isSettingsPresented || navSnapshot.isSearchPresented {
             sectionsNeedingDisplay = MenuBarSection.Name.allCases
-        } else if isIceBarPresented, let section = await appState.menuBarManager.iceBarPanel
+        } else if navSnapshot.isIceBarPresented, let section = await appState.menuBarManager.iceBarPanel
             .currentSection
         {
             sectionsNeedingDisplay.append(section)
@@ -1322,7 +1350,8 @@ final class MenuBarItemImageCache: ObservableObject {
 
         await updateCache(
             sections: sectionsNeedingDisplay,
-            skipRecentMoveCheck: isIceBarPresented
+            skipRecentMoveCheck: navSnapshot.isIceBarPresented,
+            nav: navSnapshot
         )
     }
 
