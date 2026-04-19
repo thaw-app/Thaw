@@ -9,12 +9,13 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @EnvironmentObject var appState: AppState
+    let appState: AppState
     @ObservedObject var navigationState: AppNavigationState
     @Environment(\.appearsActive) private var appearsActive
     @Environment(\.sidebarRowSize) private var sidebarRowSize
 
     private let sidebarPadding: CGFloat = 3
+    private let sidebarItemCornerRadius: CGFloat = 12
 
     private var sidebarWidth: CGFloat {
         if #available(macOS 26.0, *) {
@@ -71,23 +72,10 @@ struct SettingsView: View {
 
     @ViewBuilder
     private var sidebar: some View {
-        // Use a Binding that wraps the navigation state to ensure updates happen
-        // on the main thread and avoid view update warnings.
-        let selection = Binding<SettingsNavigationIdentifier>(
-            get: { navigationState.settingsNavigationIdentifier },
-            set: { newValue in
-                if navigationState.settingsNavigationIdentifier != newValue {
-                    DispatchQueue.main.async {
-                        navigationState.settingsNavigationIdentifier = newValue
-                    }
-                }
-            }
-        )
-
-        List(selection: selection) {
+        List {
             Section {
                 ForEach(SettingsNavigationIdentifier.allCases) { identifier in
-                    sidebarItem(for: identifier)
+                    sidebarButton(for: identifier)
                 }
             } header: {
                 Text("\(Constants.displayName)")
@@ -106,18 +94,63 @@ struct SettingsView: View {
         .navigationSplitViewColumnWidth(sidebarWidth)
     }
 
-    private func sidebarItem(for identifier: SettingsNavigationIdentifier) -> some View {
+    private func sidebarButton(for identifier: SettingsNavigationIdentifier) -> some View {
+        let isSelected = navigationState.settingsNavigationIdentifier == identifier
+
+        return Button {
+            if !isSelected {
+                navigationState.settingsNavigationIdentifier = identifier
+            }
+        } label: {
+            sidebarItemLabel(for: identifier, isSelected: isSelected)
+        }
+        .buttonStyle(.plain)
+        .listRowInsets(EdgeInsets(top: 2, leading: 6, bottom: 2, trailing: 6))
+        .listRowBackground(Color.clear)
+    }
+
+    private func sidebarItemLabel(
+        for identifier: SettingsNavigationIdentifier,
+        isSelected: Bool
+    ) -> some View {
         Label {
             Text(identifier.localized)
                 .font(.system(size: sidebarFontSize))
-                .foregroundStyle(sidebarTextStyle)
         } icon: {
             identifier.iconResource.view
-                .foregroundStyle(sidebarTextStyle)
                 .padding(sidebarPadding)
         }
-        .frame(height: sidebarItemHeight)
-        .tag(identifier)
+        .foregroundStyle(sidebarItemForegroundStyle(isSelected: isSelected))
+        .frame(maxWidth: .infinity, minHeight: sidebarItemHeight, alignment: .leading)
+        .padding(.horizontal, 10)
+        .background(sidebarItemBackground(isSelected: isSelected))
+        .clipShape(RoundedRectangle(cornerRadius: sidebarItemCornerRadius, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: sidebarItemCornerRadius, style: .continuous))
+    }
+
+    private func sidebarItemForegroundStyle(isSelected: Bool) -> some ShapeStyle {
+        if isSelected {
+            return AnyShapeStyle(.white)
+        }
+        return AnyShapeStyle(sidebarTextStyle)
+    }
+
+    @ViewBuilder
+    private func sidebarItemBackground(isSelected: Bool) -> some View {
+        if isSelected {
+            RoundedRectangle(cornerRadius: sidebarItemCornerRadius, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: appearsActive
+                            ? [Color.accentColor.opacity(0.96), Color.accentColor]
+                            : [Color.secondary.opacity(0.35), Color.secondary.opacity(0.28)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+        } else {
+            Color.clear
+        }
     }
 
     @ToolbarContentBuilder
@@ -135,9 +168,11 @@ struct SettingsView: View {
     private var detailView: some View {
         if #available(macOS 26.0, *) {
             settingsPane
+                .id(navigationState.settingsNavigationIdentifier)
                 .scrollEdgeEffectStyle(.hard, for: .top)
         } else {
             settingsPane
+                .id(navigationState.settingsNavigationIdentifier)
         }
     }
 

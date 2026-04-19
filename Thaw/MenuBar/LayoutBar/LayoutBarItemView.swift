@@ -13,6 +13,18 @@ import Combine
 
 /// A view that displays an image in a menu bar layout view.
 final class LayoutBarItemView: LayoutBarArrangedView {
+    private enum Metrics {
+        static let minWidth: CGFloat = 14
+        static let maxWidth: CGFloat = 240
+        static let minHeight: CGFloat = 18
+        static let placeholderCornerRadius: CGFloat = 6
+        static let placeholderHorizontalInset: CGFloat = 2
+        static let placeholderVerticalInset: CGFloat = 2
+        static let iconInset: CGFloat = 2
+        static let fallbackSymbolPointSize: CGFloat = 11
+        static let unresponsiveBadgeWidth: CGFloat = 15
+    }
+
     private weak var appState: AppState?
 
     private var cancellables = Set<AnyCancellable>()
@@ -22,14 +34,16 @@ final class LayoutBarItemView: LayoutBarArrangedView {
 
     private lazy var tooltipController = CustomTooltipController(text: item.displayName, view: self)
     private var tooltipTrackingArea: NSTrackingArea?
+    private let placeholderImage: NSImage?
 
     /// The image displayed inside the view.
     private var cachedImage: MenuBarItemImageCache.CapturedImage? {
         didSet {
-            if let image = cachedImage {
-                setFrameSize(image.scaledSize)
-            } else {
-                setFrameSize(.zero)
+            let previousSize = preferredSize(for: oldValue)
+            let newSize = preferredSize(for: cachedImage)
+            setFrameSize(newSize)
+            if previousSize != newSize {
+                (superview as? LayoutBarContainer)?.itemPreferredSizeDidChange(self)
             }
             needsDisplay = true
         }
@@ -43,8 +57,12 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     init(appState: AppState, item: MenuBarItem) {
         self.item = item
         self.appState = appState
+        self.placeholderImage = Self.makePlaceholderImage(for: item)
 
-        super.init(frame: CGRect(origin: .zero, size: item.bounds.size))
+        let initialImage = appState.imageCache.image(for: item.tag)
+        self.cachedImage = initialImage
+
+        super.init(frame: CGRect(origin: .zero, size: Self.preferredSize(for: item, image: initialImage)))
         unregisterDraggedTypes()
 
         isEnabled = item.isMovable
@@ -62,7 +80,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     }
 
     override func draggingImage() -> NSImage? {
-        cachedImage?.nsImage
+        cachedImage?.nsImage ?? placeholderBitmapImage()
     }
 
     override func updateTrackingAreas() {
@@ -129,15 +147,19 @@ final class LayoutBarItemView: LayoutBarArrangedView {
 
     override func draw(_: NSRect) {
         if !isDraggingPlaceholder {
-            cachedImage?.nsImage.draw(
-                in: bounds,
-                from: .zero,
-                operation: .sourceOver,
-                fraction: isEnabled ? 1.0 : 0.67
-            )
+            if let capturedImage = cachedImage?.nsImage {
+                capturedImage.draw(
+                    in: bounds,
+                    from: .zero,
+                    operation: .sourceOver,
+                    fraction: isEnabled ? 1.0 : 0.67
+                )
+            } else {
+                drawPlaceholder()
+            }
             if Bridging.isProcessUnresponsive(item.ownerPID) {
                 let warningImage = NSImage.warning
-                let width: CGFloat = 15
+                let width = Metrics.unresponsiveBadgeWidth
                 let scale = width / warningImage.size.width
                 let size = CGSize(
                     width: width,
@@ -178,6 +200,100 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         draggingItem.setDraggingFrame(bounds, contents: draggingImage())
 
         beginDraggingSession(with: [draggingItem], event: event, source: self)
+    }
+
+    private func preferredSize(for image: MenuBarItemImageCache.CapturedImage?) -> CGSize {
+        Self.preferredSize(for: item, image: image)
+    }
+
+    private static func preferredSize(
+        for item: MenuBarItem,
+        image: MenuBarItemImageCache.CapturedImage?
+    ) -> CGSize {
+        if let image {
+            return image.scaledSize
+        }
+
+        let width = item.bounds.width.clamped(to: Metrics.minWidth ... Metrics.maxWidth)
+        let height = max(item.bounds.height, Metrics.minHeight)
+        return CGSize(width: width, height: height)
+    }
+
+    private static func makePlaceholderImage(for item: MenuBarItem) -> NSImage? {
+        if let icon = item.sourceApplication?.icon ?? item.owningApplication?.icon {
+            return icon
+        }
+        return NSImage(
+            systemSymbolName: "menubar.rectangle",
+            accessibilityDescription: item.displayName
+        )
+    }
+
+    private func drawPlaceholder() {
+        let placeholderRect = bounds.insetBy(
+            dx: Metrics.placeholderHorizontalInset,
+            dy: Metrics.placeholderVerticalInset
+        )
+        let backgroundPath = NSBezierPath(
+            roundedRect: placeholderRect,
+            xRadius: Metrics.placeholderCornerRadius,
+            yRadius: Metrics.placeholderCornerRadius
+        )
+        NSColor.quaternaryLabelColor.withAlphaComponent(0.18).setFill()
+        backgroundPath.fill()
+
+        NSColor.separatorColor.withAlphaComponent(0.35).setStroke()
+        backgroundPath.lineWidth = 1
+        backgroundPath.stroke()
+
+        guard let placeholderImage else {
+            return
+        }
+
+        let iconBounds = placeholderRect.insetBy(
+            dx: Metrics.iconInset,
+            dy: Metrics.iconInset
+        )
+        let iconSide = min(iconBounds.width, iconBounds.height)
+        guard iconSide > 0 else {
+            return
+        }
+
+        let iconRect = CGRect(
+            x: placeholderRect.midX - (iconSide / 2),
+            y: placeholderRect.midY - (iconSide / 2),
+            width: iconSide,
+            height: iconSide
+        )
+
+        if placeholderImage.isTemplate {
+            let tinted = placeholderImage.copy() as? NSImage
+            tinted?.isTemplate = true
+            NSColor.secondaryLabelColor.set()
+            tinted?.draw(
+                in: iconRect,
+                from: .zero,
+                operation: .sourceOver,
+                fraction: isEnabled ? 0.8 : 0.5
+            )
+        } else {
+            placeholderImage.draw(
+                in: iconRect,
+                from: .zero,
+                operation: .sourceOver,
+                fraction: isEnabled ? 0.9 : 0.5
+            )
+        }
+    }
+
+    private func placeholderBitmapImage() -> NSImage? {
+        guard let rep = bitmapImageRepForCachingDisplay(in: bounds) else {
+            return nil
+        }
+        cacheDisplay(in: bounds, to: rep)
+        let image = NSImage(size: bounds.size)
+        image.addRepresentation(rep)
+        return image
     }
 }
 

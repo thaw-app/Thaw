@@ -96,20 +96,16 @@ struct MenuBarLayoutSettingsPane: View {
 
             diagLog.debug("Preloading menu bar layout caches (hasItems=\(self.hasItems), screenRecording=\(ScreenCapture.cachedCheckPermissions()))")
 
-            // Run cache updates in the background to avoid blocking the UI
-            Task {
-                await itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
-                diagLog.debug("Preload: itemCache after cacheItemsRegardless: managedItems=\(self.itemManager.itemCache.managedItems.count), visible=\(self.itemManager.itemCache[.visible].count), hidden=\(self.itemManager.itemCache[.hidden].count), alwaysHidden=\(self.itemManager.itemCache[.alwaysHidden].count)")
-                await appState.imageCache.updateCacheWithoutChecks(sections: MenuBarSection.Name.allCases)
-                diagLog.debug("Preload: imageCache after update: \(self.appState.imageCache.images.count) images")
-            }
+            async let preloadCaches: Void = preloadLayoutCaches()
 
             try? await Task.sleep(for: .seconds(3))
 
-            if !hasItems {
+            if !Task.isCancelled, !hasItems {
                 loadDeadlineReached = true
                 diagLog.error("Menu bar layout failed to load items after 3s timeout. cacheItems: \(itemManager.itemCache.managedItems.count), images: \(appState.imageCache.images.count), displayID: \(self.itemManager.itemCache.displayID.map { "\($0)" } ?? "nil")")
             }
+
+            await preloadCaches
         }
     }
 
@@ -227,6 +223,22 @@ struct MenuBarLayoutSettingsPane: View {
                 isResettingLayout = false
             }
         }
+    }
+
+    private func preloadLayoutCaches() async {
+        await itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
+        guard !Task.isCancelled else {
+            return
+        }
+
+        diagLog.debug("Preload: itemCache after cacheItemsRegardless: managedItems=\(self.itemManager.itemCache.managedItems.count), visible=\(self.itemManager.itemCache[.visible].count), hidden=\(self.itemManager.itemCache[.hidden].count), alwaysHidden=\(self.itemManager.itemCache[.alwaysHidden].count)")
+
+        await appState.imageCache.updateCacheWithoutChecks(sections: MenuBarSection.Name.allCases)
+        guard !Task.isCancelled else {
+            return
+        }
+
+        diagLog.debug("Preload: imageCache after update: \(self.appState.imageCache.images.count) images")
     }
 
     private enum ResetStatus {

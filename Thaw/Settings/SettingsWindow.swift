@@ -17,7 +17,7 @@ struct SettingsWindow: Scene {
 
     var body: some Scene {
         IceWindow(id: .settings) {
-            SettingsView(navigationState: appState.navigationState)
+            SettingsView(appState: appState, navigationState: appState.navigationState)
                 .onWindowChange { window in
                     model.observeWindowToolbar(window)
                 }
@@ -32,12 +32,6 @@ struct SettingsWindow: Scene {
                         appState.isUpdateConsentPresented = false
                         Defaults.set(true, forKey: .hasSeenUpdateConsent)
                         appState.updatesManager.automaticallyChecksForUpdates = false
-                    }
-                }
-                .onAppear {
-                    Task { @MainActor in
-                        appState.imageCache.performCacheCleanup()
-                        appState.imageCache.logCacheStatus("Settings opened")
                     }
                 }
                 .frame(minWidth: 850, maxWidth: 1150, minHeight: 550, maxHeight: 750)

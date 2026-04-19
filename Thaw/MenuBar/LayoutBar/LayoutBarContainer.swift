@@ -109,19 +109,20 @@ final class LayoutBarContainer: NSView {
                 setArrangedViews(items: cache.managedItems(for: section))
             }
             .store(in: &c)
-
-            appState.imageCache.$images
-                .debounce(for: .milliseconds(50), scheduler: DispatchQueue.main)
-                .sink { [weak self] _ in
-                    guard let self else {
-                        return
-                    }
-                    layoutArrangedViews()
-                }
-                .store(in: &c)
         }
 
         cancellables = c
+    }
+
+    /// Relayouts the container after one arranged view changed size.
+    ///
+    /// This avoids subscribing the whole container to every image cache update.
+    func itemPreferredSizeDidChange(_ itemView: LayoutBarArrangedView) {
+        guard arrangedViews.contains(itemView) else {
+            return
+        }
+        shouldAnimateNextLayoutPass = false
+        layoutArrangedViews()
     }
 
     /// Performs layout of the container's arranged views.
