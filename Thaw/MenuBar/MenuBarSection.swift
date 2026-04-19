@@ -74,68 +74,110 @@ final class MenuBarSection {
     }
 
     /// The gap that macOS leaves to the left and right of the notch (in points).
-    static let notchGap: CGFloat = 24
+    nonisolated static let notchGap: CGFloat = 24
 
-    /// Checks whether there is enough space to show the hidden items inline
-    /// on the given screen, accounting for the notch and its required gaps.
-    ///
-    /// - Parameter screen: The screen to check space on.
-    /// - Returns: `true` if items will fit without extending into the notch area.
-    private func canShowItemsInline(on screen: NSScreen) -> Bool {
-        guard let appState else { return false }
+    /// The preferred way to present the section on the menu bar.
+    enum PresentationMode: Equatable {
+        /// Show the items inline without modifying the application menus.
+        case inline
+        /// Show the items inline, but only after hiding the application menus.
+        case inlineHidingApplicationMenus
+        /// Fall back to the Thaw Bar.
+        case iceBar
+    }
 
-        // Get the application menu frame to determine where items start
-        guard let appMenuFrame = screen.getApplicationMenuFrame() else {
-            return true // If we can't determine, assume it fits
+    /// Calculates the usable inline width for menu bar items on a screen.
+    nonisolated static func usableInlineWidth(
+        from appMenuRightEdge: CGFloat,
+        screenFrameMinX: CGFloat,
+        screenVisibleMaxX: CGFloat,
+        notchFrame: CGRect?
+    ) -> CGFloat {
+        let clampedAppMenuRightEdge = max(screenFrameMinX, appMenuRightEdge)
+
+        if let notchFrame {
+            let usableLeftOfNotch = notchFrame.minX - notchGap
+            let usableRightOfNotchStart = notchFrame.maxX + notchGap
+            let leftWidth = max(0, usableLeftOfNotch - clampedAppMenuRightEdge)
+            let rightWidth = max(0, screenVisibleMaxX - usableRightOfNotchStart)
+            return leftWidth + rightWidth
         }
 
-        // Calculate total width of items in the sections we want to show
-        var totalItemsWidth: CGFloat = 0
+        return max(0, screenVisibleMaxX - clampedAppMenuRightEdge)
+    }
+
+    /// Decides whether inline presentation fits, optionally allowing the app
+    /// menus to be hidden to recover more space.
+    nonisolated static func presentationMode(
+        totalItemsWidth: CGFloat,
+        appMenuRightEdge: CGFloat,
+        screenFrameMinX: CGFloat,
+        screenVisibleMaxX: CGFloat,
+        notchFrame: CGRect?,
+        allowHidingApplicationMenus: Bool
+    ) -> PresentationMode {
+        let inlineWidth = usableInlineWidth(
+            from: appMenuRightEdge,
+            screenFrameMinX: screenFrameMinX,
+            screenVisibleMaxX: screenVisibleMaxX,
+            notchFrame: notchFrame
+        )
+        if totalItemsWidth <= inlineWidth {
+            return .inline
+        }
+
+        guard allowHidingApplicationMenus else {
+            return .iceBar
+        }
+
+        let inlineWidthWithoutAppMenus = usableInlineWidth(
+            from: screenFrameMinX,
+            screenFrameMinX: screenFrameMinX,
+            screenVisibleMaxX: screenVisibleMaxX,
+            notchFrame: notchFrame
+        )
+        if totalItemsWidth <= inlineWidthWithoutAppMenus {
+            return .inlineHidingApplicationMenus
+        }
+
+        return .iceBar
+    }
+
+    /// Calculates the total width of the items that must be shown when the
+    /// section is expanded.
+    private func totalItemsWidthToShow() -> CGFloat {
+        guard let appState else { return 0 }
+
+        let hiddenItems = appState.itemManager.itemCache[Name.hidden]
+        let visibleItems = appState.itemManager.itemCache[Name.visible]
+        let hiddenWidth = hiddenItems.reduce(0) { acc, item in acc + item.bounds.width }
+        let visibleWidth = visibleItems.reduce(0) { acc, item in acc + item.bounds.width }
 
         switch name {
         case .visible, .hidden:
-            // Include both hidden and visible items
-            let hiddenItems = appState.itemManager.itemCache[Name.hidden]
-            let visibleItems = appState.itemManager.itemCache[Name.visible]
-            let hiddenWidth = hiddenItems.reduce(0) { acc, item in acc + item.bounds.width }
-            let visibleWidth = visibleItems.reduce(0) { acc, item in acc + item.bounds.width }
-            totalItemsWidth = hiddenWidth + visibleWidth
+            return hiddenWidth + visibleWidth
         case .alwaysHidden:
-            // Include always-hidden, hidden, and visible items
             let alwaysHiddenItems = appState.itemManager.itemCache[Name.alwaysHidden]
-            let hiddenItems = appState.itemManager.itemCache[Name.hidden]
-            let visibleItems = appState.itemManager.itemCache[Name.visible]
             let alwaysHiddenWidth = alwaysHiddenItems.reduce(0) { acc, item in acc + item.bounds.width }
-            let hiddenWidth = hiddenItems.reduce(0) { acc, item in acc + item.bounds.width }
-            let visibleWidth = visibleItems.reduce(0) { acc, item in acc + item.bounds.width }
-            totalItemsWidth = alwaysHiddenWidth + hiddenWidth + visibleWidth
+            return alwaysHiddenWidth + hiddenWidth + visibleWidth
+        }
+    }
+
+    /// Chooses how the section should be presented on the given screen.
+    private func presentationMode(on screen: NSScreen) -> PresentationMode {
+        guard let appState else { return .iceBar }
+        guard let appMenuFrame = screen.getApplicationMenuFrame() else {
+            return .inline
         }
 
-        // Get the right edge of the application menu
-        let appMenuRightEdge = appMenuFrame.maxX
-
-        // Check if screen has a notch
-        if let notch = screen.frameOfNotch {
-            // macOS leaves a 24px gap on both sides of the notch
-            let usableLeftOfNotch = notch.minX - Self.notchGap
-            let usableRightOfNotchStart = notch.maxX + Self.notchGap
-
-            // Calculate available space to the left of the notch (from app menu end)
-            let spaceLeftOfNotch = max(0, usableLeftOfNotch - appMenuRightEdge)
-
-            // Calculate available space to the right of the notch (until screen edge)
-            let spaceRightOfNotch = screen.visibleFrame.maxX - usableRightOfNotchStart
-
-            // Total usable space is sum of space on both sides of the notch
-            let totalUsableSpace = spaceLeftOfNotch + spaceRightOfNotch
-
-            // Check if items fit within usable space
-            return totalItemsWidth <= totalUsableSpace
-        } else {
-            // No notch - just check against visible frame
-            let availableSpace = screen.visibleFrame.maxX - appMenuRightEdge
-            return totalItemsWidth <= availableSpace
-        }
+        return Self.presentationMode(
+            totalItemsWidth: totalItemsWidthToShow(),
+            appMenuRightEdge: appMenuFrame.maxX,
+            screenFrameMinX: screen.frame.minX,
+            screenVisibleMaxX: screen.visibleFrame.maxX,
+            notchFrame: screen.frameOfNotch,
+            allowHidingApplicationMenus: appState.settings.advanced.hideApplicationMenus
+        )
     }
 
     /// A weak reference to the menu bar manager.
@@ -275,17 +317,25 @@ final class MenuBarSection {
         // Determine whether we should use the Thaw Bar based on settings.
         let shouldUseIceBarBasedOnSettings = useIceBar
 
-        // Check if items will fit inline (only relevant when not already using Thaw Bar).
-        var canShowInline = true
-        if !shouldUseIceBarBasedOnSettings, let screen = screenForIceBar {
-            canShowInline = canShowItemsInline(on: screen)
-            if !canShowInline {
+        let preferredPresentationMode: PresentationMode
+        if shouldUseIceBarBasedOnSettings {
+            preferredPresentationMode = .iceBar
+        } else if let screen = screenForIceBar {
+            preferredPresentationMode = presentationMode(on: screen)
+            switch preferredPresentationMode {
+            case .inline:
+                break
+            case .inlineHidingApplicationMenus:
+                diagLog.info("Showing items inline by hiding the application menus")
+            case .iceBar:
                 diagLog.info("Not enough space to show items inline, falling back to Thaw Bar")
             }
+        } else {
+            preferredPresentationMode = .inline
         }
 
-        // Use Thaw Bar if settings say so OR if items won't fit inline.
-        if shouldUseIceBarBasedOnSettings || !canShowInline {
+        // Use Ice Thaw if settings say so OR if items still won't fit inline.
+        if preferredPresentationMode == .iceBar {
             // Make sure hidden and always-hidden control items are collapsed.
             // Still update the visible control item (Ice icon) state to show
             // its alternate icon.
@@ -323,6 +373,10 @@ final class MenuBarSection {
         // If we made it here, we're not using the Thaw Bar.
         // Make sure it's closed.
         menuBarManager.iceBarPanel.close()
+
+        if preferredPresentationMode == .inlineHidingApplicationMenus {
+            menuBarManager.hideApplicationMenus()
+        }
 
         switch name {
         case .visible, .hidden:

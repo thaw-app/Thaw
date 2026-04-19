@@ -97,4 +97,69 @@ final class MenuBarSectionNameTests: XCTestCase {
     func testNotchGapIsPositive() {
         XCTAssertGreaterThan(MenuBarSection.notchGap, 0)
     }
+
+    // MARK: - Presentation Mode
+
+    func testPresentationModeUsesInlineWhenItemsAlreadyFit() {
+        let mode = MenuBarSection.presentationMode(
+            totalItemsWidth: 300,
+            appMenuRightEdge: 250,
+            screenFrameMinX: 0,
+            screenVisibleMaxX: 1200,
+            notchFrame: nil,
+            allowHidingApplicationMenus: false
+        )
+
+        XCTAssertEqual(mode, .inline)
+    }
+
+    func testPresentationModeFallsBackToIceBarWhenItemsDoNotFitAndHidingMenusIsDisabled() {
+        let mode = MenuBarSection.presentationMode(
+            totalItemsWidth: 1000,
+            appMenuRightEdge: 350,
+            screenFrameMinX: 0,
+            screenVisibleMaxX: 1200,
+            notchFrame: nil,
+            allowHidingApplicationMenus: false
+        )
+
+        XCTAssertEqual(mode, .iceBar)
+    }
+
+    func testPresentationModeHidesApplicationMenusBeforeUsingIceBar() {
+        let mode = MenuBarSection.presentationMode(
+            totalItemsWidth: 1000,
+            appMenuRightEdge: 350,
+            screenFrameMinX: 0,
+            screenVisibleMaxX: 1200,
+            notchFrame: nil,
+            allowHidingApplicationMenus: true
+        )
+
+        XCTAssertEqual(mode, .inlineHidingApplicationMenus)
+    }
+
+    func testPresentationModeStillUsesIceBarWhenItemsCannotFitEvenAfterHidingMenus() {
+        let mode = MenuBarSection.presentationMode(
+            totalItemsWidth: 1400,
+            appMenuRightEdge: 350,
+            screenFrameMinX: 0,
+            screenVisibleMaxX: 1200,
+            notchFrame: nil,
+            allowHidingApplicationMenus: true
+        )
+
+        XCTAssertEqual(mode, .iceBar)
+    }
+
+    func testUsableInlineWidthAccountsForNotchGapOnBothSides() {
+        let width = MenuBarSection.usableInlineWidth(
+            from: 200,
+            screenFrameMinX: 0,
+            screenVisibleMaxX: 1600,
+            notchFrame: CGRect(x: 700, y: 0, width: 200, height: 30)
+        )
+
+        XCTAssertEqual(width, 1052)
+    }
 }
