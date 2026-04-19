@@ -25,16 +25,13 @@ private struct WindowReaderView: NSViewRepresentable {
 
     var action: (NSWindow?) -> Void
 
-    func makeNSView(context _: Context) -> NSView {
+    func makeNSView(context _: Context) -> Represented {
         let view = Represented()
         view.action = action
         return view
     }
 
-    func updateNSView(_ nsView: NSView, context _: Context) {
-        guard let view = nsView as? Represented else {
-            return
-        }
+    func updateNSView(_ view: Represented, context _: Context) {
         view.action = action
     }
 }
