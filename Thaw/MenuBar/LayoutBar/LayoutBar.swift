@@ -17,7 +17,11 @@ struct LayoutBar: View {
             LayoutBarScrollView(appState: appState, section: section)
         }
 
-        func updateNSView(_: LayoutBarScrollView, context _: Context) {}
+        func updateNSView(_: LayoutBarScrollView, context _: Context) {
+            // Intentionally empty: `LayoutBarScrollView` wires itself to shared
+            // state during initialization, so subsequent updates arrive through
+            // its internal observers rather than SwiftUI's representable hook.
+        }
     }
 
     @EnvironmentObject var appState: AppState

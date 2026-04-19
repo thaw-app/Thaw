@@ -109,7 +109,9 @@ final class DiagnosticLogger: @unchecked Sendable {
         qos: .utility
     )
 
-    private init() {}
+    private init() {
+        // Intentionally empty: `DiagnosticLogger` is a singleton, and log file setup is deferred until logging is enabled.
+    }
 
     // MARK: - File Management
 

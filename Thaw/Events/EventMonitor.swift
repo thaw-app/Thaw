@@ -483,7 +483,9 @@ extension EventMonitor.EventPublisher {
             }
         }
 
-        func request(_: Subscribers.Demand) {}
+        func request(_: Subscribers.Demand) {
+            // Intentionally empty: AppKit pushes events as they occur, so this passive monitor cannot honor Combine backpressure.
+        }
 
         func cancel() {
             box = nil

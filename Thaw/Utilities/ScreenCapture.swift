@@ -67,7 +67,10 @@ enum ScreenCapture {
             // try accessing SCShareableContent to trigger a request if the
             // user doesn't have permissions.
             // Workaround: CGRequestScreenCaptureAccess() is broken on macOS 15+.
-            SCShareableContent.getWithCompletionHandler { _, _ in }
+            SCShareableContent.getWithCompletionHandler { _, _ in
+                // Intentionally empty: the call is only used to trigger the
+                // system screen capture permission prompt on macOS 15+.
+            }
         } else {
             CGRequestScreenCaptureAccess()
         }

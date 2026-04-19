@@ -120,7 +120,9 @@ extension RunLoopLocalEventMonitor.RunLoopLocalEventPublisher {
             self.monitor.start()
         }
 
-        func request(_: Subscribers.Demand) {}
+        func request(_: Subscribers.Demand) {
+            // Intentionally empty: local AppKit events are pushed by the run loop, so this monitor cannot honor Combine backpressure.
+        }
 
         func cancel() {
             monitor.stop()

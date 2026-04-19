@@ -627,13 +627,13 @@ private struct IceBarItemView: View {
 // MARK: - IceBarItemClickView
 
 private struct IceBarItemClickView: NSViewRepresentable {
-    private final class Represented: NSView {
-        let item: MenuBarItem
-        let tooltipDelay: TimeInterval
+    final class Represented: NSView {
+        var item: MenuBarItem
+        var tooltipDelay: TimeInterval
 
-        let leftClickAction: () -> Void
-        let rightClickAction: () -> Void
-        let onHover: (Bool) -> Void
+        var leftClickAction: () -> Void
+        var rightClickAction: () -> Void
+        var onHover: (Bool) -> Void
 
         private var lastLeftMouseDownDate = Date.now
         private var lastRightMouseDownDate = Date.now
@@ -657,6 +657,21 @@ private struct IceBarItemClickView: NSViewRepresentable {
             self.rightClickAction = rightClickAction
             self.onHover = onHover
             super.init(frame: .zero)
+        }
+
+        func update(
+            item: MenuBarItem,
+            tooltipDelay: TimeInterval,
+            leftClickAction: @escaping () -> Void,
+            rightClickAction: @escaping () -> Void,
+            onHover: @escaping (Bool) -> Void
+        ) {
+            self.item = item
+            self.tooltipDelay = tooltipDelay
+            self.leftClickAction = leftClickAction
+            self.rightClickAction = rightClickAction
+            self.onHover = onHover
+            tooltipController.text = item.displayName
         }
 
         @available(*, unavailable)
@@ -735,7 +750,7 @@ private struct IceBarItemClickView: NSViewRepresentable {
     let rightClickAction: () -> Void
     let onHover: (Bool) -> Void
 
-    func makeNSView(context _: Context) -> NSView {
+    func makeNSView(context _: Context) -> Represented {
         Represented(
             item: item,
             tooltipDelay: tooltipDelay,
@@ -745,5 +760,15 @@ private struct IceBarItemClickView: NSViewRepresentable {
         )
     }
 
-    func updateNSView(_: NSView, context _: Context) {}
+    func updateNSView(_ nsView: Represented, context _: Context) {
+        // Keep the backing `NSView` in sync with SwiftUI updates; tooltip text,
+        // tooltip timing, and click handlers can all change after creation.
+        nsView.update(
+            item: item,
+            tooltipDelay: tooltipDelay,
+            leftClickAction: leftClickAction,
+            rightClickAction: rightClickAction,
+            onHover: onHover
+        )
+    }
 }

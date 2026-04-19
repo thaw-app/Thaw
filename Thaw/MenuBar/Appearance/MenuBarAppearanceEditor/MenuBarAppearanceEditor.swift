@@ -326,11 +326,13 @@ private struct PreviewButton: View {
     }
 
     var body: some View {
-        Button("Hold to Preview") {}
-            .buttonStyle(PreviewButtonStyle(isPressed: $isPressed))
-            .onChange(of: isPressed) {
-                manager.previewConfiguration = isPressed ? previewConfiguration : nil
-            }
+        Button("Hold to Preview") {
+            // Intentionally empty: preview state is driven by `PreviewButtonStyle` updating `isPressed` while the button is held.
+        }
+        .buttonStyle(PreviewButtonStyle(isPressed: $isPressed))
+        .onChange(of: isPressed) {
+            manager.previewConfiguration = isPressed ? previewConfiguration : nil
+        }
     }
 }
 

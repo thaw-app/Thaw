@@ -31,7 +31,12 @@ private struct WindowReaderView: NSViewRepresentable {
         return view
     }
 
-    func updateNSView(_: NSView, context _: Context) {}
+    func updateNSView(_ nsView: NSView, context _: Context) {
+        guard let view = nsView as? Represented else {
+            return
+        }
+        view.action = action
+    }
 }
 
 extension View {
