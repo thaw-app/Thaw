@@ -38,6 +38,11 @@ struct MenuBarLayoutSettingsPane: View {
                 layoutBars
                 resetControls
             }
+            .onAppear {
+                // Enable background cache prewarming now that the user has opened
+                // the layout settings pane at least once.
+                appState.imageCache.markSettingsPaneOpened()
+            }
         }
     }
 

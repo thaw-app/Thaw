@@ -115,6 +115,11 @@ final class MenuBarItemImageCache: ObservableObject {
     /// The currently running live-refresh task, if any.
     private var liveRefreshTask: Task<Void, Never>?
 
+    /// Tracks whether the MenuBarLayoutSettingsPane has been opened at least once.
+    /// Used to gate background cache prewarming so captures only occur after the user
+    /// has accessed the layout settings.
+    @Published private(set) var settingsPaneHasBeenOpened = false
+
     deinit {
         memoryPressureSource?.cancel()
         currentUpdateTask?.cancel()
@@ -132,12 +137,26 @@ final class MenuBarItemImageCache: ObservableObject {
         // Try to load cached images from disk
         loadFromDisk()
 
+        // Only prewarm if a visible consumer exists at setup time.
+        // Background prewarming is gated by settingsPaneHasBeenOpened.
+        let hasVisible = hasVisibleCaptureConsumer()
+        guard hasVisible else {
+            return
+        }
+
         // Keep a fresh layout snapshot ready so opening the layout settings
         // pane does not need to capture every item from scratch.
         currentUpdateTask?.cancel()
         currentUpdateTask = Task { [weak self] in
             await self?.refreshVisibleConsumersOrPrewarmLayoutCache()
         }
+    }
+
+    /// Marks that the MenuBarLayoutSettingsPane has been opened.
+    /// Call this from the pane's onAppear or task modifier to enable background cache prewarming.
+    @MainActor
+    func markSettingsPaneOpened() {
+        settingsPaneHasBeenOpened = true
     }
 
     // MARK: Disk Persistence
@@ -301,6 +320,15 @@ final class MenuBarItemImageCache: ObservableObject {
                 guard let self else {
                     return
                 }
+                // Only trigger capture if a visible consumer exists or the settings pane
+                // has been opened at least once (itemCacheChangePublisher may indicate
+                // new items that the layout pane will need).
+                let nav = self.makeNavigationStateSnapshot()
+                let hasVisible = self.hasVisibleCaptureConsumer(nav: nav)
+                let settingsOpened = self.settingsPaneHasBeenOpened
+                guard hasVisible || settingsOpened else {
+                    return
+                }
                 self.currentUpdateTask?.cancel()
                 self.currentUpdateTask = Task {
                     await self.refreshVisibleConsumersOrPrewarmLayoutCache()
@@ -349,26 +377,49 @@ final class MenuBarItemImageCache: ObservableObject {
         let settingsNavigationIdentifier: SettingsNavigationIdentifier?
     }
 
+    /// Constructs a NavigationStateSnapshot from the current appState in a single MainActor hop.
+    /// Centralizes snapshot construction to avoid duplication across multiple call sites.
+    @MainActor
+    private func makeNavigationStateSnapshot() -> NavigationStateSnapshot {
+        guard let appState else {
+            return NavigationStateSnapshot(
+                isIceBarPresented: false,
+                isSearchPresented: false,
+                isAppFrontmost: false,
+                isSettingsPresented: false,
+                settingsNavigationIdentifier: nil
+            )
+        }
+        return NavigationStateSnapshot(
+            isIceBarPresented: appState.navigationState.isIceBarPresented,
+            isSearchPresented: appState.navigationState.isSearchPresented,
+            isAppFrontmost: appState.navigationState.isAppFrontmost,
+            isSettingsPresented: appState.navigationState.isSettingsPresented,
+            settingsNavigationIdentifier: appState.navigationState.settingsNavigationIdentifier
+        )
+    }
+
     /// Refreshes the cache for currently visible consumers, or keeps a warm
     /// background snapshot ready for the layout settings pane when no consumer
     /// is visible.
-    private func refreshVisibleConsumersOrPrewarmLayoutCache() async {
-        guard let appState else {
+    private func refreshVisibleConsumersOrPrewarmLayoutCache(allowBackgroundCapture: Bool = false) async {
+        guard appState != nil else {
             return
         }
 
         // Batch all navigation state reads into single MainActor hop
         let nav = await MainActor.run {
-            NavigationStateSnapshot(
-                isIceBarPresented: appState.navigationState.isIceBarPresented,
-                isSearchPresented: appState.navigationState.isSearchPresented,
-                isAppFrontmost: appState.navigationState.isAppFrontmost,
-                isSettingsPresented: appState.navigationState.isSettingsPresented,
-                settingsNavigationIdentifier: appState.navigationState.settingsNavigationIdentifier
-            )
+            makeNavigationStateSnapshot()
         }
 
         let hasVisibleConsumer = hasVisibleCaptureConsumer(nav: nav)
+
+        // Early-return unless a visible consumer exists or background capture is explicitly allowed.
+        // Background capture is gated by settingsPaneHasBeenOpened to avoid unnecessary full-screen
+        // captures when the user has never opened the layout settings pane.
+        guard hasVisibleConsumer || (allowBackgroundCapture && settingsPaneHasBeenOpened) else {
+            return
+        }
 
         if hasVisibleConsumer {
             await updateCache(nav: nav)
@@ -388,6 +439,22 @@ final class MenuBarItemImageCache: ObservableObject {
         }
 
         return nav.isAppFrontmost && nav.isSettingsPresented && nav.settingsNavigationIdentifier == .menuBarLayout
+    }
+
+    /// Convenience overload that reads current state on MainActor when no snapshot is provided.
+    @MainActor
+    private func hasVisibleCaptureConsumer() -> Bool {
+        guard let appState else {
+            return false
+        }
+        let nav = NavigationStateSnapshot(
+            isIceBarPresented: appState.navigationState.isIceBarPresented,
+            isSearchPresented: appState.navigationState.isSearchPresented,
+            isAppFrontmost: appState.navigationState.isAppFrontmost,
+            isSettingsPresented: appState.navigationState.isSettingsPresented,
+            settingsNavigationIdentifier: appState.navigationState.settingsNavigationIdentifier
+        )
+        return hasVisibleCaptureConsumer(nav: nav)
     }
 
     /// Starts or stops the live image refresh loop based on navigation state.
@@ -1266,19 +1333,13 @@ final class MenuBarItemImageCache: ObservableObject {
             return
         }
 
-        // Use provided snapshot or read fresh values
+        // Use provided snapshot or construct one in a single MainActor hop
         let navSnapshot: NavigationStateSnapshot
         if let nav {
             navSnapshot = nav
         } else {
             navSnapshot = await MainActor.run {
-                NavigationStateSnapshot(
-                    isIceBarPresented: appState.navigationState.isIceBarPresented,
-                    isSearchPresented: appState.navigationState.isSearchPresented,
-                    isAppFrontmost: appState.navigationState.isAppFrontmost,
-                    isSettingsPresented: appState.navigationState.isSettingsPresented,
-                    settingsNavigationIdentifier: appState.navigationState.settingsNavigationIdentifier
-                )
+                makeNavigationStateSnapshot()
             }
         }
 
@@ -1322,19 +1383,13 @@ final class MenuBarItemImageCache: ObservableObject {
             return
         }
 
-        // Use provided snapshot or read fresh values
+        // Use provided snapshot or construct one in a single MainActor hop
         let navSnapshot: NavigationStateSnapshot
         if let nav {
             navSnapshot = nav
         } else {
             navSnapshot = await MainActor.run {
-                NavigationStateSnapshot(
-                    isIceBarPresented: appState.navigationState.isIceBarPresented,
-                    isSearchPresented: appState.navigationState.isSearchPresented,
-                    isAppFrontmost: appState.navigationState.isAppFrontmost,
-                    isSettingsPresented: appState.navigationState.isSettingsPresented,
-                    settingsNavigationIdentifier: appState.navigationState.settingsNavigationIdentifier
-                )
+                makeNavigationStateSnapshot()
             }
         }
 
