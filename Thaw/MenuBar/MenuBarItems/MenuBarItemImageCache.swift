@@ -468,28 +468,32 @@ final class MenuBarItemImageCache: ObservableObject {
             return
         }
 
-        let nav = appState.navigationState
-        let needsRefresh = nav.isIceBarPresented
-            || nav.isSearchPresented
-            || (nav.isAppFrontmost && nav.isSettingsPresented
-                && nav.settingsNavigationIdentifier == .menuBarLayout)
+        // Compute visibility using centralized snapshot and helper to avoid duplication.
+        // Wrapping in Task since this is called from synchronous sink closures on main thread.
+        Task { [weak self, weak appState] in
+            guard let self, let appState else { return }
+            let nav = await MainActor.run {
+                self.makeNavigationStateSnapshot()
+            }
+            let needsRefresh = self.hasVisibleCaptureConsumer(nav: nav)
 
-        if needsRefresh {
-            // Already running — don't restart
-            guard liveRefreshTask == nil else { return }
-            MenuBarItemImageCache.diagLog.debug(
-                "Starting live refresh (iceBar=\(nav.isIceBarPresented), search=\(nav.isSearchPresented), settings=\(nav.isSettingsPresented))"
-            )
-            liveRefreshTask = Task { [weak self, weak appState] in
-                guard let self, let appState else { return }
-                await self.runLiveRefreshLoop(appState: appState)
+            if needsRefresh {
+                // Already running — don't restart
+                guard self.liveRefreshTask == nil else { return }
+                MenuBarItemImageCache.diagLog.debug(
+                    "Starting live refresh (iceBar=\(nav.isIceBarPresented), search=\(nav.isSearchPresented), settings=\(nav.isSettingsPresented))"
+                )
+                self.liveRefreshTask = Task { [weak self, weak appState] in
+                    guard let self, let appState else { return }
+                    await self.runLiveRefreshLoop(appState: appState)
+                }
+            } else {
+                if self.liveRefreshTask != nil {
+                    MenuBarItemImageCache.diagLog.debug("Stopping live refresh")
+                }
+                self.liveRefreshTask?.cancel()
+                self.liveRefreshTask = nil
             }
-        } else {
-            if liveRefreshTask != nil {
-                MenuBarItemImageCache.diagLog.debug("Stopping live refresh")
-            }
-            liveRefreshTask?.cancel()
-            liveRefreshTask = nil
         }
     }
 
