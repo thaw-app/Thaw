@@ -330,8 +330,10 @@ final class MenuBarItemImageCache: ObservableObject {
                     return
                 }
                 self.currentUpdateTask?.cancel()
-                self.currentUpdateTask = Task {
-                    await self.refreshVisibleConsumersOrPrewarmLayoutCache()
+                self.currentUpdateTask = Task { [weak self, settingsOpened] in
+                    await self?.refreshVisibleConsumersOrPrewarmLayoutCache(
+                        allowBackgroundCapture: settingsOpened
+                    )
                 }
             }
             .store(in: &c)
