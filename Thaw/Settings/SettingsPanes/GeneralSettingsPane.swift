@@ -153,12 +153,11 @@ struct GeneralSettingsPane: View {
             Text(imageSet.name.localized)
         } icon: {
             if let nsImage = imageSet.hidden.nsImage(for: appState) {
-                switch imageSet.name {
-                case .custom:
+                if imageSet.name == .custom {
                     Image(size: CGSize(width: 18, height: 18)) { context in
                         context.draw(Image(nsImage: nsImage), in: context.clipBoundingRect)
                     }
-                default:
+                } else {
                     Image(nsImage: nsImage)
                 }
             }
