@@ -74,7 +74,7 @@ final class MenuBarSection {
     }
 
     /// The gap that macOS leaves to the left and right of the notch (in points).
-    nonisolated static let notchGap: CGFloat = 24
+    static nonisolated let notchGap: CGFloat = 24
 
     /// The preferred way to present the section on the menu bar.
     enum PresentationMode: Equatable {
@@ -87,13 +87,13 @@ final class MenuBarSection {
     }
 
     /// Calculates the usable inline width for menu bar items on a screen.
-    nonisolated static func usableInlineWidth(
-        from appMenuRightEdge: CGFloat,
+    static nonisolated func usableInlineWidth(
+        from appMenuRightEdge: CGFloat?,
         screenFrameMinX: CGFloat,
         screenVisibleMaxX: CGFloat,
         notchFrame: CGRect?
     ) -> CGFloat {
-        let clampedAppMenuRightEdge = max(screenFrameMinX, appMenuRightEdge)
+        let clampedAppMenuRightEdge = max(screenFrameMinX, appMenuRightEdge ?? screenFrameMinX)
 
         if let notchFrame {
             let usableLeftOfNotch = notchFrame.minX - notchGap
@@ -108,9 +108,9 @@ final class MenuBarSection {
 
     /// Decides whether inline presentation fits, optionally allowing the app
     /// menus to be hidden to recover more space.
-    nonisolated static func presentationMode(
+    static nonisolated func presentationMode(
         totalItemsWidth: CGFloat,
-        appMenuRightEdge: CGFloat,
+        appMenuRightEdge: CGFloat?,
         screenFrameMinX: CGFloat,
         screenVisibleMaxX: CGFloat,
         notchFrame: CGRect?,
@@ -166,13 +166,11 @@ final class MenuBarSection {
     /// Chooses how the section should be presented on the given screen.
     private func presentationMode(on screen: NSScreen) -> PresentationMode {
         guard let appState else { return .iceBar }
-        guard let appMenuFrame = screen.getApplicationMenuFrame() else {
-            return .inline
-        }
+        let appMenuFrame = screen.getApplicationMenuFrame()
 
         return Self.presentationMode(
             totalItemsWidth: totalItemsWidthToShow(),
-            appMenuRightEdge: appMenuFrame.maxX,
+            appMenuRightEdge: appMenuFrame?.maxX,
             screenFrameMinX: screen.frame.minX,
             screenVisibleMaxX: screen.visibleFrame.maxX,
             notchFrame: screen.frameOfNotch,
