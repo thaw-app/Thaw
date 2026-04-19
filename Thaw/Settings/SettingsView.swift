@@ -129,7 +129,7 @@ struct SettingsView: View {
     }
 
     private func sidebarItemForegroundStyle(isSelected: Bool) -> some ShapeStyle {
-        if isSelected {
+        if isSelected && appearsActive {
             return AnyShapeStyle(.white)
         }
         return AnyShapeStyle(sidebarTextStyle)
