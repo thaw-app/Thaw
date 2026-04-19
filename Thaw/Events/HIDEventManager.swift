@@ -393,13 +393,11 @@ final class HIDEventManager: ObservableObject {
         // Check the mouseMovedTap if it should be active.
         if let appState,
            needsMouseMovedTap(appState: appState),
-           mouseMovedTap.ensureValid()
+           mouseMovedTap.ensureValid(),
+           !mouseMovedTap.isEnabled
         {
-            // Tap is valid. Make sure it's enabled.
-            if !mouseMovedTap.isEnabled {
-                Self.diagLog.warning("mouseMovedTap was valid but not enabled, re-enabling")
-                mouseMovedTap.start()
-            }
+            Self.diagLog.warning("mouseMovedTap was valid but not enabled, re-enabling")
+            mouseMovedTap.start()
         }
     }
 
@@ -449,7 +447,6 @@ extension HIDEventManager {
                    alwaysHiddenSection.isEnabled
                 {
                     alwaysHiddenSection.show()
-                    return
                 }
             } else {
                 guard appState.settings.general.showOnClick else {
