@@ -9,7 +9,7 @@
 import SwiftUI
 
 private struct WindowReaderView: NSViewRepresentable {
-    private final class Represented: NSView {
+    final class Represented: NSView {
         var action: ((NSWindow?) -> Void)?
 
         override func viewDidMoveToWindow() {
