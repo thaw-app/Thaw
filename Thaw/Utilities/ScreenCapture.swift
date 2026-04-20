@@ -104,22 +104,11 @@ enum ScreenCapture {
     ///     Pass `nil` to capture the minimum rectangle that encloses the windows.
     ///   - option: Options that specify which parts of the windows are captured.
     static func captureWindows(with windowIDs: [CGWindowID], screenBounds: CGRect? = nil, option: CGWindowImageOption = []) -> CGImage? {
-        guard let array = Bridging.createCGWindowArray(with: windowIDs) else {
-            diagLog.warning("captureWindows: createCGWindowArray returned nil for \(windowIDs.count) window IDs")
-            return nil
-        }
-        let bounds = screenBounds ?? .null
-        let boundsDesc = bounds.isNull ? "null (auto)" : String(format: "(%.0f,%.0f %.0fx%.0f)", bounds.origin.x, bounds.origin.y, bounds.width, bounds.height)
-        diagLog.debug("captureWindows: bounds=\(boundsDesc), windowCount=\(windowIDs.count), options=\(option.rawValue)")
-        // ScreenCaptureKit doesn't support capturing images of offscreen menu bar
-        // items, so we unfortunately have to use the deprecated CGWindowList API.
-        let image = CGImage(windowListFromArrayScreenBounds: bounds, windowArray: array as CFArray, imageOption: option)
-        if let image {
-            diagLog.debug("captureWindows: captured \(windowIDs.count) windows → \(image.width)×\(image.height)px")
-        } else {
-            diagLog.warning("captureWindows: CGImage(windowListFromArrayScreenBounds:) returned nil for \(windowIDs.count) windows (IDs: \(windowIDs.prefix(5)))")
-        }
-        return image
+        // Use SkyLight's private API (SLWindowListCreateImageFromArray) instead of
+        // the deprecated CGWindowListCreateImageFromArray, which is unavailable
+        // when targeting macOS 26+. ScreenCaptureKit still doesn't support
+        // capturing offscreen menu bar items or windows in other Spaces.
+        return Bridging.captureWindowsImage(windowIDs: windowIDs, screenBounds: screenBounds, options: option)
     }
 
     /// Captures an image of a window.

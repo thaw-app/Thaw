@@ -166,3 +166,25 @@ func getProcessForPID(
     _ pid: pid_t,
     _ psn: inout ProcessSerialNumber
 ) -> OSStatus
+
+// MARK: - SkyLight (Private)
+
+/// Dynamic loader for SkyLight private APIs.
+/// Uses dlsym to avoid link-time dependencies on private symbols.
+enum SkyLightAPI {
+    private static let handle: UnsafeMutableRawPointer? = dlopen("/System/Library/PrivateFrameworks/SkyLight.framework/SkyLight", RTLD_NOW)
+
+    /// Type alias for SLWindowListCreateImageFromArray function
+    typealias SLWindowListCreateImageFromArrayFn = @convention(c) (
+        CGRect,
+        CFArray,
+        CGWindowImageOption
+    ) -> Unmanaged<CGImage>?
+
+    /// Cached function pointer
+    static let createImageFromArray: SLWindowListCreateImageFromArrayFn? = {
+        guard let handle else { return nil }
+        guard let sym = dlsym(handle, "SLWindowListCreateImageFromArray") else { return nil }
+        return unsafeBitCast(sym, to: SLWindowListCreateImageFromArrayFn.self)
+    }()
+}

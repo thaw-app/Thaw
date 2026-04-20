@@ -515,3 +515,48 @@ extension Bridging {
         return array as NSArray?
     }
 }
+
+// MARK: - SkyLight Window Capture
+
+extension Bridging {
+    /// Captures a composite image of an array of windows using SkyLight's private API.
+    ///
+    /// This is the replacement for the deprecated `CGWindowListCreateImageFromArray` API,
+    /// which is unavailable when targeting macOS 26+. SkyLight provides equivalent
+    /// functionality through private APIs loaded dynamically at runtime.
+    ///
+    /// - Parameters:
+    ///   - windowIDs: The identifiers of the windows to capture.
+    ///   - screenBounds: The bounds to capture, specified in screen coordinates.
+    ///     Pass `nil` to capture the minimum rectangle that encloses the windows.
+    ///   - options: Options that specify which parts of the windows are captured.
+    /// - Returns: The captured image, or `nil` if capture failed.
+    static func captureWindowsImage(
+        windowIDs: [CGWindowID],
+        screenBounds: CGRect? = nil,
+        options: CGWindowImageOption = []
+    ) -> CGImage? {
+        guard let fn = SkyLightAPI.createImageFromArray else {
+            diagLog.error("captureWindowsImage: SkyLight API not available (SLWindowListCreateImageFromArray not found)")
+            return nil
+        }
+
+        guard let windowArray = createCGWindowArray(with: windowIDs) else {
+            diagLog.warning("captureWindowsImage: createCGWindowArray returned nil for \(windowIDs.count) window IDs")
+            return nil
+        }
+
+        let bounds = screenBounds ?? .null
+        let boundsDesc = bounds.isNull ? "null (auto)" : String(format: "(%.0f,%.0f %.0fx%.0f)", bounds.origin.x, bounds.origin.y, bounds.width, bounds.height)
+        diagLog.debug("captureWindowsImage: using SkyLight API, bounds=\(boundsDesc), windowCount=\(windowIDs.count), options=\(options.rawValue)")
+
+        // Use SkyLight's private API instead of deprecated CGWindowListCreateImageFromArray
+        guard let image = fn(bounds, windowArray as CFArray, options)?.takeRetainedValue() else {
+            diagLog.warning("captureWindowsImage: SLWindowListCreateImageFromArray returned nil for \(windowIDs.count) windows (IDs: \(windowIDs.prefix(5)))")
+            return nil
+        }
+
+        diagLog.debug("captureWindowsImage: captured \(windowIDs.count) windows → \(image.width)×\(image.height)px")
+        return image
+    }
+}
