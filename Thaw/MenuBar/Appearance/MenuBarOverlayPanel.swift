@@ -483,7 +483,7 @@ final class MenuBarOverlayPanel: NSPanel {
         // Use async ScreenCaptureKit method with task context
         updateTaskContext.setTask(
             for: .desktopWallpaper,
-            timeout: .seconds(5)
+            timeout: .seconds(7)
         ) { [weak self] in
             guard let self else { return }
 
