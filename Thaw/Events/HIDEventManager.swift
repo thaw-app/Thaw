@@ -642,42 +642,36 @@ extension HIDEventManager {
             section.hide()
         }
 
-        guard
-            let frontApp = NSWorkspace.shared.menuBarOwningApplication,
-            let axApp = AXHelpers.application(for: frontApp),
-            let menuBar: UIElement = try? axApp.attribute(.menuBar)
-        else {
+        guard let frontApp = NSWorkspace.shared.menuBarOwningApplication else {
             return true
         }
 
-        for child in AXHelpers.children(for: menuBar) {
-            guard let frame = AXHelpers.frame(for: child) else { continue }
-            if frame.contains(mouseLocation) {
-                let now = CFAbsoluteTimeGetCurrent()
-                guard now - lastAppMenuClickTime >= 0.3 else { return true }
-                lastAppMenuClickTime = now
-
-                let clickPoint = CGPoint(x: frame.midX, y: frame.midY)
-                let pid = frontApp.processIdentifier
-
-                guard let source = CGEventSource(stateID: .hidSystemState) else { return true }
-                let mouseDown = CGEvent(
-                    mouseEventSource: source,
-                    mouseType: .leftMouseDown,
-                    mouseCursorPosition: clickPoint,
-                    mouseButton: .left
-                )
-                let mouseUp = CGEvent(
-                    mouseEventSource: source,
-                    mouseType: .leftMouseUp,
-                    mouseCursorPosition: clickPoint,
-                    mouseButton: .left
-                )
-                mouseDown?.postToPid(pid)
-                mouseUp?.postToPid(pid)
-                return true
-            }
+        guard let frame = applicationMenuItemFrame(at: mouseLocation) else {
+            return true
         }
+
+        let now = CFAbsoluteTimeGetCurrent()
+        guard now - lastAppMenuClickTime >= 0.3 else { return true }
+        lastAppMenuClickTime = now
+
+        let clickPoint = CGPoint(x: frame.midX, y: frame.midY)
+        let pid = frontApp.processIdentifier
+
+        guard let source = CGEventSource(stateID: .hidSystemState) else { return true }
+        let mouseDown = CGEvent(
+            mouseEventSource: source,
+            mouseType: .leftMouseDown,
+            mouseCursorPosition: clickPoint,
+            mouseButton: .left
+        )
+        let mouseUp = CGEvent(
+            mouseEventSource: source,
+            mouseType: .leftMouseUp,
+            mouseCursorPosition: clickPoint,
+            mouseButton: .left
+        )
+        mouseDown?.postToPid(pid)
+        mouseUp?.postToPid(pid)
         return true
     }
 
@@ -1084,11 +1078,7 @@ extension HIDEventManager {
         // the extras menu bar instead of the application menu bar. Skip
         // the check in that state — handleApplicationMenuClickThrough
         // forwards left-clicks to the correct app menu separately.
-        let hasExpandedDivider = appState.menuBarManager.sections.contains { section in
-            section.controlItem.isSectionDivider && section.controlItem.state == .hideSection
-        }
-        let inAppMenu = hasExpandedDivider ? false : isMouseInsideApplicationMenu(appState: appState, screen: screen)
-        return !inAppMenu
+        return !isMouseInsideApplicationMenuClickRegion(appState: appState, screen: screen)
             && !isMouseInsideMenuBarItem(appState: appState, screen: screen)
             && !isMouseInsideIceIcon(appState: appState)
     }
@@ -1119,6 +1109,42 @@ extension HIDEventManager {
             return false
         }
         return iceIconFrame.contains(mouseLocation)
+    }
+
+    /// Returns whether the cursor is inside the same application-menu region
+    /// that the click-through path treats as belonging to the app menu.
+    private func isMouseInsideApplicationMenuClickRegion(
+        appState: AppState,
+        screen: NSScreen
+    ) -> Bool {
+        guard
+            isMouseInsideMenuBar(appState: appState, screen: screen),
+            let mouseLocation = MouseHelpers.locationCoreGraphics
+        else {
+            return false
+        }
+
+        return applicationMenuItemFrame(at: mouseLocation) != nil
+    }
+
+    /// Returns the concrete application menu item frame at the given cursor
+    /// location, matching the menu item hit-testing used by click-through.
+    private func applicationMenuItemFrame(at mouseLocation: CGPoint) -> CGRect? {
+        guard
+            let frontApp = NSWorkspace.shared.menuBarOwningApplication,
+            let axApp = AXHelpers.application(for: frontApp),
+            let menuBar: UIElement = try? axApp.attribute(.menuBar)
+        else {
+            return nil
+        }
+
+        return AXHelpers.children(for: menuBar).first { child in
+            guard let frame = AXHelpers.frame(for: child) else {
+                return false
+            }
+            return frame.contains(mouseLocation)
+        }
+        .flatMap { AXHelpers.frame(for: $0) }
     }
 }
 
