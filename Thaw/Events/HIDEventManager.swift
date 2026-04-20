@@ -1134,8 +1134,9 @@ extension HIDEventManager {
 
     /// Returns whether the cursor is inside the same application-menu region
     /// that the click-through path treats as belonging to the app menu.
-    /// Returns `nil` when the AX result is indeterminate (e.g., when expanded
-    /// section-divider windows interfere with AX hit-testing).
+    /// Returns `nil` when the AX result is indeterminate (AX queries failed),
+    /// `true` when the cursor is inside a menu item, and `false` when AX
+    /// queries succeeded but no menu item contains the cursor.
     private func isMouseInsideApplicationMenuClickRegion(
         appState: AppState,
         screen: NSScreen
@@ -1147,7 +1148,29 @@ extension HIDEventManager {
             return false
         }
 
-        return applicationMenuItemFrame(at: mouseLocation).map { _ in true }
+        // Query AX to determine if the cursor is inside a menu item.
+        // Distinguish between "AX indeterminate" (nil) and "AX succeeded but no hit" (false).
+        guard
+            let frontApp = NSWorkspace.shared.menuBarOwningApplication,
+            let axApp = AXHelpers.application(for: frontApp),
+            let menuBar: UIElement = try? axApp.attribute(.menuBar)
+        else {
+            // AX is indeterminate - can't determine if we're in app menu.
+            return nil
+        }
+
+        // AX queries succeeded - check if cursor is inside any menu item.
+        for child in AXHelpers.children(for: menuBar) {
+            guard let frame = AXHelpers.frame(for: child) else {
+                continue
+            }
+            if frame.contains(mouseLocation) {
+                return true
+            }
+        }
+
+        // AX succeeded but cursor is not in any menu item.
+        return false
     }
 
     /// Returns the concrete application menu item frame at the given cursor
