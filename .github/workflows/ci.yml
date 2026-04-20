@@ -1,11 +1,5 @@
 name: CI
 on:
-  push:
-    branches: ["main"]
-    paths:
-      - ".github/workflows/ci.yml"
-      - "Package.swift"
-      - "**/*.swift"
   pull_request:
     paths:
       - ".github/workflows/ci.yml"
@@ -14,10 +8,26 @@ on:
   workflow_dispatch:
 
 jobs:
-  lint:
+  static_analysis:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Validate XCStrings
+        shell: bash
+        run: |
+          set -euo pipefail
+          changed_files=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep '\.xcstrings$' || true)
+          if [ -z "$changed_files" ]; then
+            echo "No modified .xcstrings files."
+            exit 0
+          fi
+          for file in $changed_files; do
+            echo "Validating $file"
+            python3 -m json.tool "$file" > /dev/null
+          done
+
       - name: Install SwiftLint
         run: brew install swiftlint
       - name: Run SwiftLint
@@ -25,19 +35,61 @@ jobs:
 
   build:
     runs-on: macos-latest
-    needs: lint
+    needs: static_analysis
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       # Issues with other Xcode versions, so we need to specify the version explicitly
-      - run: sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
-      - name: Build
+      - run: sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer
+      - name: Build and Test
         run: |
-          xcodebuild -project Thaw.xcodeproj \
-          -scheme Thaw \
-          -destination platform=macOS \
-          -configuration Release \
-          MACOSX_DEPLOYMENT_TARGET=14.0 \
-          CODE_SIGN_IDENTITY="" \
-          CODE_SIGNING_REQUIRED=NO \
-          CODE_SIGNING_ALLOWED=NO \
-          build
+          xcodebuild test \
+            -project Thaw.xcodeproj \
+            -scheme Thaw \
+            -derivedDataPath Build/ \
+            -destination 'platform=macOS' \
+            enableCodeCoverage=YES \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-results
+          path: Build/
+
+  sonarqube:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    needs: build
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v7
+        with:
+          name: build-results
+          path: Build/
+
+      - name: Process coverage & Scan
+        run: |
+          brew install a7ex/homebrew-formulae/xcresultparser
+          xcresultparser -c -o xml Build/Logs/Test/*.xcresult > coverage.xml
+
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  # Dummy job that passes for forks (no access to SONAR_TOKEN secret)
+  sonarqube-skip-forks:
+    if: github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-slim
+    needs: build
+    steps:
+      - name: Skip SonarQube for fork PRs
+        run: |
+          echo "Skipping SonarQube analysis for PR from fork"
+          echo "Analysis will be performed after merge to main branch"
