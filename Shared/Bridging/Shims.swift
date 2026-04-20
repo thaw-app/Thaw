@@ -172,7 +172,18 @@ func getProcessForPID(
 /// Dynamic loader for SkyLight private APIs.
 /// Uses dlsym to avoid link-time dependencies on private symbols.
 enum SkyLightAPI {
-    private static let handle: UnsafeMutableRawPointer? = dlopen("/System/Library/PrivateFrameworks/SkyLight.framework/SkyLight", RTLD_NOW)
+    private static let diagLog = DiagLog(category: "SkyLightAPI")
+
+    private static let handle: UnsafeMutableRawPointer? = {
+        let handle = dlopen("/System/Library/PrivateFrameworks/SkyLight.framework/SkyLight", RTLD_NOW)
+        if handle == nil {
+            let errorMessage = String(cString: dlerror())
+            diagLog.error("Failed to open SkyLight framework: \(errorMessage)")
+        } else {
+            diagLog.debug("Successfully opened SkyLight framework")
+        }
+        return handle
+    }()
 
     /// Type alias for SLWindowListCreateImageFromArray function
     typealias SLWindowListCreateImageFromArrayFn = @convention(c) (
@@ -183,8 +194,16 @@ enum SkyLightAPI {
 
     /// Cached function pointer
     static let createImageFromArray: SLWindowListCreateImageFromArrayFn? = {
-        guard let handle else { return nil }
-        guard let sym = dlsym(handle, "SLWindowListCreateImageFromArray") else { return nil }
+        guard let handle else {
+            diagLog.error("Cannot load SLWindowListCreateImageFromArray: SkyLight framework handle is nil")
+            return nil
+        }
+        guard let sym = dlsym(handle, "SLWindowListCreateImageFromArray") else {
+            let errorMessage = String(cString: dlerror())
+            diagLog.error("Failed to load SLWindowListCreateImageFromArray symbol: \(errorMessage)")
+            return nil
+        }
+        diagLog.debug("Successfully loaded SLWindowListCreateImageFromArray symbol")
         return unsafeBitCast(sym, to: SLWindowListCreateImageFromArrayFn.self)
     }()
 }

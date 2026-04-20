@@ -333,10 +333,6 @@ private struct IceBarContentView: View {
         }
     }
 
-    private var shape: some InsettableShape {
-        clipShape
-    }
-
     private var height: CGFloat {
         contentHeight
     }

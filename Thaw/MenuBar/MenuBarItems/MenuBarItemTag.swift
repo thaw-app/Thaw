@@ -145,7 +145,7 @@ extension MenuBarItemTag {
     /// These items have fixed positions at the trailing end of the menu bar,
     /// and cannot be hidden.
     ///
-    /// This list contains the "Clock", "Control Center", and "ScreenCaptureUI" items.
+    /// This list contains the "Clock", "Control Center", and "Screen Sharing" (ssMenuAgent) items.
     static let immovableItems: [MenuBarItemTag] = [clock, controlCenter, ssMenuAgent]
 
     /// An array of tags for items that can be moved, but cannot be hidden.

@@ -182,8 +182,8 @@ enum ScreenCapture {
         let frameCaptor = FrameCaptor()
         let stream = SCStream(filter: filter, configuration: configuration, delegate: frameCaptor)
 
-        // Register FrameCaptor to receive sample buffers
-        try stream.addStreamOutput(frameCaptor, type: .screen, sampleHandlerQueue: DispatchQueue(label: "com.stonerl.Thaw.screencapture"))
+        // Register FrameCaptor to receive sample buffers using shared serial queue
+        try stream.addStreamOutput(frameCaptor, type: .screen, sampleHandlerQueue: FrameCaptor.sampleHandlerQueue)
 
         try await stream.startCapture()
 
@@ -263,16 +263,12 @@ private final class ContinuationBox<T, E: Error>: @unchecked Sendable {
 }
 
 private final class FrameCaptor: NSObject, SCStreamOutput, SCStreamDelegate {
+    /// Shared serial queue for all SCStream sample buffer handlers.
+    static let sampleHandlerQueue = DispatchQueue(label: "com.stonerl.Thaw.screencapture")
+
     private var continuation: CheckedContinuation<CGImage?, Never>?
     private var bufferedImage: CGImage?
-    private var stream: SCStream?
     private let lock = NSLock()
-
-    func setStream(_ stream: SCStream) {
-        lock.lock()
-        self.stream = stream
-        lock.unlock()
-    }
 
     func stream(_: SCStream, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, of type: SCStreamOutputType) {
         guard type == .screen else { return }
@@ -300,7 +296,6 @@ private final class FrameCaptor: NSObject, SCStreamOutput, SCStreamDelegate {
         lock.lock()
         if let cont = continuation {
             continuation = nil
-            stream = nil
             lock.unlock()
             cont.resume(returning: image)
         } else {
@@ -333,7 +328,6 @@ private final class FrameCaptor: NSObject, SCStreamOutput, SCStreamDelegate {
         lock.lock()
         let cont = continuation
         continuation = nil
-        stream = nil
         lock.unlock()
 
         // Resume with nil on cancellation; caller remains responsible for stopCapture().

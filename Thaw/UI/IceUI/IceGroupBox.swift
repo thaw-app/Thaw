@@ -18,10 +18,6 @@ struct IceGroupBox<Header: View, Content: View, Footer: View>: View {
         RoundedRectangle(cornerRadius: 11, style: .continuous)
     }
 
-    private var borderStyle: some ShapeStyle {
-        AnyShapeStyle(Color.clear)
-    }
-
     init(
         padding: EdgeInsets = .iceGroupBoxDefaultPadding,
         @ViewBuilder header: () -> Header,
@@ -167,7 +163,6 @@ struct IceGroupBox<Header: View, Content: View, Footer: View>: View {
                 .background {
                     backgroundShape
                         .fill(Color.primary.quinary)
-                        .strokeBorder(borderStyle)
                 }
                 .containerShape(backgroundShape)
 
