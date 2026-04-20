@@ -5,6 +5,15 @@ on:
       - ".github/workflows/ci.yml"
       - "Package.swift"
       - "**/*.swift"
+      - "**/*.xcstrings"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/ci.yml"
+      - "Package.swift"
+      - "**/*.swift"
+      - "**/*.xcstrings"
   workflow_dispatch:
 
 jobs:
@@ -59,9 +68,10 @@ jobs:
           name: coverage-data
           path: Build/Logs/Test/*.xcresult
           retention-days: 1
+          if-no-files-found: error
 
   sonarqube:
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     needs: build
     runs-on: macos-latest
     steps:
@@ -79,7 +89,8 @@ jobs:
       - name: Process coverage & Scan
         run: |
           brew install a7ex/homebrew-formulae/xcresultparser
-          xcresultparser -c -o xml Build/Logs/Test/*.xcresult > coverage.xml
+          NEWEST_BUNDLE=$(ls -t Build/Logs/Test/*.xcresult 2>/dev/null | head -n1)
+          xcresultparser -c -o xml "$NEWEST_BUNDLE" > coverage.xml
 
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6
@@ -88,7 +99,7 @@ jobs:
 
   # Dummy job that passes for forks (no access to SONAR_TOKEN secret)
   sonarqube-skip-forks:
-    if: github.event.pull_request.head.repo.full_name != github.repository
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-slim
     needs: build
     steps:
