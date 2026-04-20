@@ -19,15 +19,15 @@ struct AboutSettingsPane: View {
     }
 
     private var contributeURL: URL {
-        Constants.repositoryURL
+        SharedConstants.repositoryURL
     }
 
     private var issuesURL: URL {
-        Constants.issuesURL
+        SharedConstants.issuesURL
     }
 
     private var donateURL: URL {
-        Constants.donateURL
+        SharedConstants.donateURL
     }
 
     private var lastUpdateCheckString: String {

@@ -55,7 +55,7 @@ final class MenuBarItemSpacingManager {
     {
         let process = Process()
 
-        process.executableURL = Constants.menuBarItemSpacingExecutableURL
+        process.executableURL = SharedConstants.menuBarItemSpacingExecutableURL
         process.arguments = CollectionOfOne(command) + arguments
 
         let task = Task.detached {

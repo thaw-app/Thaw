@@ -169,10 +169,6 @@ func getProcessForPID(
 
 // MARK: - SkyLight (Private)
 
-/// sonarcloud-disable-next-line hardcoded_uri
-/// Path to the SkyLight private framework for window capture APIs.
-private let skyLightFrameworkPath = "/System/Library/PrivateFrameworks/SkyLight.framework/SkyLight"
-
 /// Returns a safe error message from dlerror(), handling NULL returns.
 private func dlerrorMessage() -> String {
     guard let errorPtr = dlerror() else {
@@ -187,7 +183,7 @@ enum SkyLightAPI {
     private static let diagLog = DiagLog(category: "SkyLightAPI")
 
     private static let handle: UnsafeMutableRawPointer? = {
-        let handle = dlopen(skyLightFrameworkPath, RTLD_NOW)
+        let handle = dlopen(SharedConstants.skyLightFrameworkPath, RTLD_NOW)
         if handle == nil {
             diagLog.error("Failed to open SkyLight framework: \(dlerrorMessage())")
         } else {
