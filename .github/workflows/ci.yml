@@ -15,6 +15,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Validate XCStrings
+        if: github.event_name == 'pull_request'
         shell: bash
         run: |
           set -euo pipefail
@@ -47,7 +48,7 @@ jobs:
             -scheme Thaw \
             -derivedDataPath Build/ \
             -destination 'platform=macOS' \
-            enableCodeCoverage=YES \
+            -enableCodeCoverage=YES \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
