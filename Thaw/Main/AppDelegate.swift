@@ -12,6 +12,8 @@ import SwiftUI
 final class AppDelegate: NSObject, NSApplicationDelegate {
     /// The shared app state.
     let appState = AppState()
+    private var isPreparingForTermination = false
+    private var hasRepliedToTerminationRequest = false
 
     // MARK: NSApplicationDelegate Methods
 
@@ -93,26 +95,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return true
     }
 
-    func applicationWillTerminate(_: Notification) {
-        appState.diagLog.info("Application will terminate - checking for blocked items to restore")
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        guard !isPreparingForTermination else {
+            return .terminateLater
+        }
 
-        // Create a semaphore to wait for the async restore operation
-        let semaphore = DispatchSemaphore(value: 0)
+        isPreparingForTermination = true
+        hasRepliedToTerminationRequest = false
+        appState.diagLog.info("Application asked to terminate - restoring blocked items asynchronously")
 
-        Task {
-            // Only restore items that are stuck at x=-1 (blocked state),
-            // leaving normally hidden items in place
+        Task { @MainActor in
             _ = await appState.itemManager.restoreBlockedItemsToVisible()
-            semaphore.signal()
+            replyToTerminationRequest(sender, timedOut: false)
         }
 
-        // Wait up to 5 seconds for the restore to complete
-        let result = semaphore.wait(timeout: .now() + 5)
-        if result == .timedOut {
-            appState.diagLog.warning("Blocked item restore operation timed out during app termination")
-        } else {
-            appState.diagLog.info("Blocked item restore operation completed during app termination")
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(2))
+            replyToTerminationRequest(sender, timedOut: true)
         }
+
+        return .terminateLater
+    }
+
+    func applicationWillTerminate(_: Notification) {
+        appState.diagLog.info("Application will terminate")
     }
 
     // MARK: Other Methods
@@ -254,6 +260,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         #endif
 
         return nil
+    }
+
+    private func replyToTerminationRequest(
+        _ sender: NSApplication,
+        timedOut: Bool
+    ) {
+        guard !hasRepliedToTerminationRequest else {
+            return
+        }
+
+        hasRepliedToTerminationRequest = true
+        isPreparingForTermination = false
+
+        if timedOut {
+            appState.diagLog.warning("Blocked item restore operation timed out during app termination")
+        } else {
+            appState.diagLog.info("Blocked item restore operation completed during app termination")
+        }
+
+        sender.reply(toApplicationShouldTerminate: true)
     }
 
     #if DEBUG
