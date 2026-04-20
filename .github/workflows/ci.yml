@@ -52,11 +52,12 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
 
-      - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v7
+      - name: Upload Coverage Only
+        uses: actions/upload-artifact@v4
         with:
-          name: build-results
-          path: Build/
+          name: coverage-data
+          path: Build/Logs/Test/*.xcresult
+          retention-days: 1
 
   sonarqube:
     if: github.event.pull_request.head.repo.full_name == github.repository
@@ -67,11 +68,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Download Build Artifacts
-        uses: actions/download-artifact@v7
+      - name: Download Coverage Only
+        uses: actions/download-artifact@v4
         with:
-          name: build-results
-          path: Build/
+          name: coverage-data
+          path: Build/Logs/Test/
+
 
       - name: Process coverage & Scan
         run: |
