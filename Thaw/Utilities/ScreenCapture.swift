@@ -187,16 +187,16 @@ enum ScreenCapture {
         )
 
         let configuration = SCStreamConfiguration()
-        configuration.captureResolution = .best
+        // captureResolution is not used here; explicit width/height below take precedence.
         configuration.showsCursor = false
         configuration.width = Int((screenBounds.width * scale).rounded())
         configuration.height = Int((screenBounds.height * scale).rounded())
         configuration.sourceRect = localSourceRect
 
         // Create stream and capture frame
+        // Note: Caller owns the stream and is responsible for stopCapture().
         let frameCaptor = FrameCaptor()
         let stream = SCStream(filter: filter, configuration: configuration, delegate: frameCaptor)
-        frameCaptor.setStream(stream)
 
         // Register FrameCaptor to receive sample buffers
         try stream.addStreamOutput(frameCaptor, type: .screen, sampleHandlerQueue: DispatchQueue(label: "com.stonerl.Thaw.screencapture"))
@@ -341,31 +341,24 @@ private final class FrameCaptor: NSObject, SCStreamOutput, SCStreamDelegate {
                 lock.unlock()
             }
         } onCancel: { [weak self] in
-            Task { [weak self] in
-                self?.stopStreamAndResume()
-            }
+            self?.stopStreamAndResume()
         }
     }
 
     private func stopStreamAndResume() {
         lock.lock()
         let cont = continuation
-        let currentStream = stream
         continuation = nil
         stream = nil
         lock.unlock()
 
-        if let currentStream {
-            Task {
-                try? await currentStream.stopCapture()
-            }
-        }
+        // Resume with nil on cancellation; caller remains responsible for stopCapture().
         cont?.resume(returning: nil)
     }
 }
 
 /// Helper to add timeout to async operations
-private func withTimeout<T>(seconds: TimeInterval, operation: @escaping () async throws -> T) async throws -> T {
+private func withTimeout<T>(seconds: TimeInterval, operation: sending @escaping () async throws -> T) async throws -> T {
     try await withThrowingTaskGroup(of: T.self) { group in
         group.addTask {
             try await operation()
@@ -374,6 +367,8 @@ private func withTimeout<T>(seconds: TimeInterval, operation: @escaping () async
             try await Task.sleep(for: .seconds(seconds))
             throw TimeoutError()
         }
+        // group.next() returning nil is unreachable in this context (always at least one task),
+        // but the guard serves as defensive documentation.
         guard let result = try await group.next() else {
             group.cancelAll()
             throw TimeoutError()
