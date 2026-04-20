@@ -169,6 +169,7 @@ func getProcessForPID(
 
 // MARK: - SkyLight (Private)
 
+/// sonarcloud-disable-next-line hardcoded_uri
 /// Path to the SkyLight private framework for window capture APIs.
 private let skyLightFrameworkPath = "/System/Library/PrivateFrameworks/SkyLight.framework/SkyLight"
 
