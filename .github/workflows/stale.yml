@@ -14,7 +14,9 @@ jobs:
         with:
           days-before-stale: 30
           days-before-close: 7
+          days-before-pr-stale: -1
+          days-before-pr-close: -1
           stale-issue-label: "stale"
           stale-issue-message: "This issue has been automatically marked as stale due to inactivity."
           close-issue-message: "Closing this issue due to prolonged inactivity."
-          exempt-issue-labels: "help wanted,keep open, feature, enhancement"
+          exempt-issue-labels: "help wanted,keep open,feature,enhancement"
