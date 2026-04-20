@@ -18,7 +18,7 @@ on:
 
 jobs:
   static_analysis:
-    runs-on: macos-latest
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v6
         with:
@@ -44,7 +44,7 @@ jobs:
         run: swiftlint --strict
 
   build:
-    runs-on: macos-latest
+    runs-on: macos-26
     needs: static_analysis
     steps:
       - uses: actions/checkout@v6
@@ -73,7 +73,7 @@ jobs:
   sonarqube:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     needs: build
-    runs-on: macos-latest
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v6
         with:
@@ -84,7 +84,6 @@ jobs:
         with:
           name: coverage-data
           path: Build/Logs/Test/
-
 
       - name: Process coverage & Scan
         run: |
