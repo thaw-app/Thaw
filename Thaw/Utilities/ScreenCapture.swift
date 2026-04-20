@@ -78,6 +78,21 @@ enum ScreenCapture {
 
     // MARK: Capture Window(s)
 
+    // NOTE: We intentionally use the deprecated CGWindowList API here instead of
+    // ScreenCaptureKit. SCShareableContent only returns on-screen windows in the
+    // current Space, but we need to capture:
+    //   - Offscreen menu bar items (overflow area)
+    //   - Windows in other Spaces
+    //   - Windows partially clipped by screen edges
+    //
+    // This is an architectural limitation of ScreenCaptureKit (designed for
+    // screen recording/streaming, not arbitrary window capture), not a bug.
+    // Even macOS 15+ does not provide public APIs to enumerate offscreen windows.
+    //
+    // CGWindowList remains the only public API capable of accessing offscreen
+    // and cross-Space window content. We use the hybrid approach:
+    // ScreenCaptureKit for display capture, CGWindowList for window capture.
+
     /// Captures a composite image of an array of windows.
     ///
     /// The windows are composited from front to back, according to the order
