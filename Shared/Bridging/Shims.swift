@@ -172,6 +172,14 @@ func getProcessForPID(
 /// Path to the SkyLight private framework for window capture APIs.
 private let skyLightFrameworkPath = "/System/Library/PrivateFrameworks/SkyLight.framework/SkyLight"
 
+/// Returns a safe error message from dlerror(), handling NULL returns.
+private func dlerrorMessage() -> String {
+    guard let errorPtr = dlerror() else {
+        return "unknown dynamic loader error"
+    }
+    return String(cString: errorPtr)
+}
+
 /// Dynamic loader for SkyLight private APIs.
 /// Uses dlsym to avoid link-time dependencies on private symbols.
 enum SkyLightAPI {
@@ -180,8 +188,7 @@ enum SkyLightAPI {
     private static let handle: UnsafeMutableRawPointer? = {
         let handle = dlopen(skyLightFrameworkPath, RTLD_NOW)
         if handle == nil {
-            let errorMessage = String(cString: dlerror())
-            diagLog.error("Failed to open SkyLight framework: \(errorMessage)")
+            diagLog.error("Failed to open SkyLight framework: \(dlerrorMessage())")
         } else {
             diagLog.debug("Successfully opened SkyLight framework")
         }
@@ -202,8 +209,7 @@ enum SkyLightAPI {
             return nil
         }
         guard let sym = dlsym(handle, "SLWindowListCreateImageFromArray") else {
-            let errorMessage = String(cString: dlerror())
-            diagLog.error("Failed to load SLWindowListCreateImageFromArray symbol: \(errorMessage)")
+            diagLog.error("Failed to load SLWindowListCreateImageFromArray symbol: \(dlerrorMessage())")
             return nil
         }
         diagLog.debug("Successfully loaded SLWindowListCreateImageFromArray symbol")
