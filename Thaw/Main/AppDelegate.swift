@@ -14,6 +14,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let appState = AppState()
     private var isPreparingForTermination = false
     private var hasRepliedToTerminationRequest = false
+    private var terminationAttemptID = UUID()
+    private var terminationTimeoutTask: Task<Void, Never>?
 
     // MARK: NSApplicationDelegate Methods
 
@@ -100,17 +102,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return .terminateLater
         }
 
+        let attemptID = UUID()
+        terminationAttemptID = attemptID
+        terminationTimeoutTask?.cancel()
         isPreparingForTermination = true
         hasRepliedToTerminationRequest = false
         appState.diagLog.info("Application asked to terminate - restoring blocked items asynchronously")
 
         Task { @MainActor in
             _ = await appState.itemManager.restoreBlockedItemsToVisible()
+            guard terminationAttemptID == attemptID else {
+                return
+            }
+            terminationTimeoutTask?.cancel()
             replyToTerminationRequest(sender, timedOut: false)
         }
 
-        Task { @MainActor in
-            try? await Task.sleep(for: .seconds(2))
+        terminationTimeoutTask = Task { @MainActor in
+            do {
+                try await Task.sleep(for: .seconds(2))
+            } catch {
+                return
+            }
+            guard terminationAttemptID == attemptID else {
+                return
+            }
             replyToTerminationRequest(sender, timedOut: true)
         }
 
@@ -272,6 +288,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         hasRepliedToTerminationRequest = true
         isPreparingForTermination = false
+        terminationTimeoutTask?.cancel()
+        terminationTimeoutTask = nil
 
         if timedOut {
             appState.diagLog.warning("Blocked item restore operation timed out during app termination")
