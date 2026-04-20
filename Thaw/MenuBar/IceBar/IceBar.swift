@@ -496,7 +496,6 @@ private struct IceBarContentView: View {
                     }
                 }
                 .frame(height: height)
-                .background(.ultraThinMaterial, in: shape)
             }
             .environment(\.isScrollEnabled, frame.width == screen.frame.width)
             .defaultScrollAnchor(.trailing)
