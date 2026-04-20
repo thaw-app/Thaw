@@ -145,7 +145,7 @@ enum ScreenCapture {
         let excludedWindow = content.windows.first { $0.windowID == windowID }
 
         if excludedWindow == nil {
-            diagLog.warning("captureScreenBelowWindow: window not found for ID=\(windowID), capturing full display")
+            diagLog.debug("captureScreenBelowWindow: window not found for ID=\(windowID), capturing full display")
         }
 
         // Create filter: include display, exclude the specified window
@@ -160,25 +160,47 @@ enum ScreenCapture {
         }
 
         // Configure stream for single frame capture
+        // Convert global screenBounds to display-local coordinates and pixel dimensions
+        let displayFrame = display.frame
+        // Calculate pixel scale from display dimensions (pixels / points)
+        let scale = Double(display.width) / displayFrame.width
+
+        // Display-local coordinates: offset by display origin
+        let localSourceRect = CGRect(
+            x: screenBounds.origin.x - displayFrame.origin.x,
+            y: screenBounds.origin.y - displayFrame.origin.y,
+            width: screenBounds.width,
+            height: screenBounds.height
+        )
+
         let configuration = SCStreamConfiguration()
         configuration.captureResolution = .automatic
         configuration.showsCursor = false
-        configuration.width = Int(screenBounds.width)
-        configuration.height = Int(screenBounds.height)
-        configuration.sourceRect = screenBounds
+        configuration.width = Int(screenBounds.width * scale)
+        configuration.height = Int(screenBounds.height * scale)
+        configuration.sourceRect = localSourceRect
 
         // Create stream and capture frame
         let frameCaptor = FrameCaptor()
         let stream = SCStream(filter: filter, configuration: configuration, delegate: frameCaptor)
+        frameCaptor.setStream(stream)
+
+        // Register FrameCaptor to receive sample buffers
+        try stream.addStreamOutput(frameCaptor, type: .screen, sampleHandlerQueue: DispatchQueue(label: "com.stonerl.Thaw.screencapture"))
 
         try await stream.startCapture()
 
-        // Wait for frame with timeout
-        let image = try await withTimeout(seconds: 5) {
-            await frameCaptor.waitForFrame()
+        // Wait for frame with timeout, ensuring stopCapture() always called
+        let image: CGImage?
+        do {
+            image = try await withTimeout(seconds: 5) {
+                await frameCaptor.waitForFrame()
+            }
+            try? await stream.stopCapture()
+        } catch {
+            try? await stream.stopCapture()
+            throw error
         }
-
-        try await stream.stopCapture()
 
         if let image {
             diagLog.debug("captureScreenBelowWindow: captured below windowID=\(windowID) → \(image.width)×\(image.height)px")
@@ -214,12 +236,20 @@ private enum ScreenCaptureError: Error {
 /// Helper class to capture frames from SCStream
 private final class FrameCaptor: NSObject, SCStreamOutput, SCStreamDelegate {
     private var continuation: CheckedContinuation<CGImage?, Never>?
+    private var bufferedImage: CGImage?
+    private var stream: SCStream?
     private let lock = NSLock()
+
+    func setStream(_ stream: SCStream) {
+        lock.lock()
+        self.stream = stream
+        lock.unlock()
+    }
 
     func stream(_: SCStream, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, of type: SCStreamOutputType) {
         guard type == .screen else { return }
         guard let imageBuffer = sampleBuffer.imageBuffer else {
-            resume(with: nil)
+            resumeOrBuffer(with: nil)
             return
         }
 
@@ -227,31 +257,75 @@ private final class FrameCaptor: NSObject, SCStreamOutput, SCStreamDelegate {
         let ciImage = CIImage(cvImageBuffer: imageBuffer)
         let context = CIContext()
         guard let cgImage = context.createCGImage(ciImage, from: ciImage.extent) else {
-            resume(with: nil)
+            resumeOrBuffer(with: nil)
             return
         }
 
-        resume(with: cgImage)
+        resumeOrBuffer(with: cgImage)
     }
 
     func stream(_: SCStream, didStopWithError _: Error) {
-        resume(with: nil)
+        resumeOrBuffer(with: nil)
+    }
+
+    private func resumeOrBuffer(with image: CGImage?) {
+        lock.lock()
+        if let cont = continuation {
+            continuation = nil
+            stream = nil
+            lock.unlock()
+            cont.resume(returning: image)
+        } else {
+            bufferedImage = image
+            lock.unlock()
+        }
     }
 
     private func resume(with image: CGImage?) {
         lock.lock()
         let cont = continuation
         continuation = nil
+        stream = nil
         lock.unlock()
         cont?.resume(returning: image)
     }
 
     func waitForFrame() async -> CGImage? {
-        await withCheckedContinuation { cont in
-            lock.lock()
-            self.continuation = cont
-            lock.unlock()
+        await withTaskCancellationHandler {
+            await withCheckedContinuation { cont in
+                lock.lock()
+                // Check if frame already buffered
+                if let image = bufferedImage {
+                    bufferedImage = nil
+                    lock.unlock()
+                    cont.resume(returning: image)
+                    return
+                }
+                // Otherwise, install continuation
+                self.continuation = cont
+                lock.unlock()
+            }
+        } onCancel: { [weak self] in
+            Task { @MainActor [weak self] in
+                self?.stopStreamAndResume()
+            }
         }
+    }
+
+    private func stopStreamAndResume() {
+        lock.lock()
+        let cont = continuation
+        let currentStream = stream
+        continuation = nil
+        stream = nil
+        lock.unlock()
+
+        if let currentStream {
+            Task {
+                try? await currentStream.stopCapture()
+            }
+        }
+        cont?.resume(returning: nil)
     }
 }
 
@@ -262,7 +336,7 @@ private func withTimeout<T>(seconds: TimeInterval, operation: @escaping () async
             try await operation()
         }
         group.addTask {
-            try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+            try await Task.sleep(for: .seconds(seconds))
             throw TimeoutError()
         }
         guard let result = try await group.next() else {
