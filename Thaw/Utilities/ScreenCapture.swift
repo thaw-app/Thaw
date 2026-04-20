@@ -214,21 +214,28 @@ enum ScreenCapture {
         return try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
                 box.setContinuation(continuation)
-                SCShareableContent.getWithCompletionHandler { content, error in
-                    guard let continuation = box.takeContinuation() else { return }
-                    if let error {
-                        continuation.resume(throwing: error)
-                    } else if let content {
-                        continuation.resume(returning: content)
-                    } else {
-                        continuation.resume(throwing: ScreenCaptureError.noContent)
-                    }
-                }
+                SCShareableContent.getWithCompletionHandler(makeShareableContentCompletion(box: box))
             }
         } onCancel: {
             // Resume with cancellation error if still pending
             if let continuation = box.takeContinuation() {
                 continuation.resume(throwing: CancellationError())
+            }
+        }
+    }
+
+    /// Creates a completion handler for SCShareableContent request
+    private static func makeShareableContentCompletion(
+        box: ContinuationBox<SCShareableContent, any Error>
+    ) -> @Sendable (SCShareableContent?, Error?) -> Void {
+        { content, error in
+            guard let continuation = box.takeContinuation() else { return }
+            if let error {
+                continuation.resume(throwing: error)
+            } else if let content {
+                continuation.resume(returning: content)
+            } else {
+                continuation.resume(throwing: ScreenCaptureError.noContent)
             }
         }
     }

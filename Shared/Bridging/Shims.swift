@@ -169,13 +169,16 @@ func getProcessForPID(
 
 // MARK: - SkyLight (Private)
 
+/// Path to the SkyLight private framework for window capture APIs.
+private let skyLightFrameworkPath = "/System/Library/PrivateFrameworks/SkyLight.framework/SkyLight"
+
 /// Dynamic loader for SkyLight private APIs.
 /// Uses dlsym to avoid link-time dependencies on private symbols.
 enum SkyLightAPI {
     private static let diagLog = DiagLog(category: "SkyLightAPI")
 
     private static let handle: UnsafeMutableRawPointer? = {
-        let handle = dlopen("/System/Library/PrivateFrameworks/SkyLight.framework/SkyLight", RTLD_NOW)
+        let handle = dlopen(skyLightFrameworkPath, RTLD_NOW)
         if handle == nil {
             let errorMessage = String(cString: dlerror())
             diagLog.error("Failed to open SkyLight framework: \(errorMessage)")
