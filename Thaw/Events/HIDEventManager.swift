@@ -608,9 +608,12 @@ extension HIDEventManager {
     ) -> Bool {
         guard
             isMouseInsideMenuBar(appState: appState, screen: screen),
-            isMouseInsideApplicationMenu(appState: appState, screen: screen),
             let mouseLocation = MouseHelpers.locationCoreGraphics
         else {
+            return false
+        }
+
+        guard applicationMenuItemFrame(at: mouseLocation) != nil else {
             return false
         }
 
@@ -823,7 +826,7 @@ extension HIDEventManager {
             default:
                 return
             }
-        } else if isMouseInsideApplicationMenu(
+        } else if isMouseInsideApplicationMenuClickRegion(
             appState: appState,
             screen: screen
         ) {
