@@ -159,13 +159,11 @@ enum ScreenCapture {
             filter = SCContentFilter(display: display, excludingWindows: [])
         }
 
-        // Configure stream for single frame capture
-        // Convert global screenBounds to display-local coordinates and pixel dimensions
+        // Configure stream for single frame capture.
+        // sourceRect is in display-local points; width/height are in pixels.
         let displayFrame = display.frame
-        // Calculate pixel scale from display dimensions (pixels / points)
-        let scale = Double(display.width) / displayFrame.width
+        let scale = Double(filter.pointPixelScale)
 
-        // Display-local coordinates: offset by display origin
         let localSourceRect = CGRect(
             x: screenBounds.origin.x - displayFrame.origin.x,
             y: screenBounds.origin.y - displayFrame.origin.y,
@@ -174,10 +172,10 @@ enum ScreenCapture {
         )
 
         let configuration = SCStreamConfiguration()
-        configuration.captureResolution = .automatic
+        configuration.captureResolution = .best
         configuration.showsCursor = false
-        configuration.width = Int(screenBounds.width * scale)
-        configuration.height = Int(screenBounds.height * scale)
+        configuration.width = Int((screenBounds.width * scale).rounded())
+        configuration.height = Int((screenBounds.height * scale).rounded())
         configuration.sourceRect = localSourceRect
 
         // Create stream and capture frame
@@ -213,15 +211,25 @@ enum ScreenCapture {
 
     /// Helper to get shareable content using async wrapper
     private static func getShareableContent() async throws -> SCShareableContent {
-        try await withCheckedThrowingContinuation { continuation in
-            SCShareableContent.getWithCompletionHandler { content, error in
-                if let error {
-                    continuation.resume(throwing: error)
-                } else if let content {
-                    continuation.resume(returning: content)
-                } else {
-                    continuation.resume(throwing: ScreenCaptureError.noContent)
+        let box = ContinuationBox<SCShareableContent, any Error>()
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                box.setContinuation(continuation)
+                SCShareableContent.getWithCompletionHandler { content, error in
+                    guard let continuation = box.takeContinuation() else { return }
+                    if let error {
+                        continuation.resume(throwing: error)
+                    } else if let content {
+                        continuation.resume(returning: content)
+                    } else {
+                        continuation.resume(throwing: ScreenCaptureError.noContent)
+                    }
                 }
+            }
+        } onCancel: {
+            // Resume with cancellation error if still pending
+            if let continuation = box.takeContinuation() {
+                continuation.resume(throwing: CancellationError())
             }
         }
     }
@@ -234,6 +242,27 @@ private enum ScreenCaptureError: Error {
 }
 
 /// Helper class to capture frames from SCStream
+/// Thread-safe box for storing and retrieving a continuation across concurrent contexts
+private final class ContinuationBox<T, E: Error>: @unchecked Sendable {
+    private var continuation: CheckedContinuation<T, E>?
+    private let lock = NSLock()
+
+    func setContinuation(_ cont: CheckedContinuation<T, E>) {
+        lock.lock()
+        continuation = cont
+        lock.unlock()
+    }
+
+    /// Returns and clears the continuation atomically, or nil if already taken
+    func takeContinuation() -> CheckedContinuation<T, E>? {
+        lock.lock()
+        let cont = continuation
+        continuation = nil
+        lock.unlock()
+        return cont
+    }
+}
+
 private final class FrameCaptor: NSObject, SCStreamOutput, SCStreamDelegate {
     private var continuation: CheckedContinuation<CGImage?, Never>?
     private var bufferedImage: CGImage?
@@ -281,15 +310,6 @@ private final class FrameCaptor: NSObject, SCStreamOutput, SCStreamDelegate {
         }
     }
 
-    private func resume(with image: CGImage?) {
-        lock.lock()
-        let cont = continuation
-        continuation = nil
-        stream = nil
-        lock.unlock()
-        cont?.resume(returning: image)
-    }
-
     func waitForFrame() async -> CGImage? {
         await withTaskCancellationHandler {
             await withCheckedContinuation { cont in
@@ -306,7 +326,7 @@ private final class FrameCaptor: NSObject, SCStreamOutput, SCStreamDelegate {
                 lock.unlock()
             }
         } onCancel: { [weak self] in
-            Task { @MainActor [weak self] in
+            Task { [weak self] in
                 self?.stopStreamAndResume()
             }
         }
