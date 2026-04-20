@@ -8,6 +8,7 @@
 
 import Cocoa
 import Combine
+import ScreenCaptureKit
 
 // MARK: - Overlay Panel
 
@@ -478,13 +479,29 @@ final class MenuBarOverlayPanel: NSPanel {
         else {
             return
         }
-        let wallpaper = ScreenCapture.captureScreenBelowWindow(
-            with: menuBarWindow.windowID,
-            screenBounds: menuBarWindow.bounds,
-            option: .nominalResolution
-        )
-        if desktopWallpaper?.dataProvider?.data != wallpaper?.dataProvider?.data {
-            desktopWallpaper = wallpaper
+
+        // Use async ScreenCaptureKit method with task context
+        updateTaskContext.setTask(
+            for: .desktopWallpaper,
+            timeout: .seconds(5)
+        ) { [weak self] in
+            guard let self else { return }
+
+            do {
+                let wallpaper = try await ScreenCapture.captureScreenBelowWindow(
+                    excludingWindowID: menuBarWindow.windowID,
+                    screenBounds: menuBarWindow.bounds,
+                    displayID: display
+                )
+
+                await MainActor.run {
+                    if self.desktopWallpaper?.dataProvider?.data != wallpaper?.dataProvider?.data {
+                        self.desktopWallpaper = wallpaper
+                    }
+                }
+            } catch {
+                self.diagLog.warning("updateDesktopWallpaper: capture failed with error: \(error)")
+            }
         }
     }
 
