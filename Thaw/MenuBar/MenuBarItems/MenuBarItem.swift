@@ -210,7 +210,6 @@ struct MenuBarItem: CustomStringConvertible {
     /// This initializer does not perform validity checks on its parameters.
     /// Only call it if you are certain the window is a valid menu bar item
     /// and the source pid belongs to the application that created it.
-    @available(macOS 26.0, *)
     @MainActor
     private init(uncheckedItemWindow itemWindow: WindowInfo, sourcePID: pid_t?, instanceIndex: Int = 0) {
         self.tag = MenuBarItemTag(uncheckedItemWindow: itemWindow, sourcePID: sourcePID, instanceIndex: instanceIndex)
@@ -278,13 +277,17 @@ extension MenuBarItem {
         return windows
     }
 
-    /// Creates and returns a list of menu bar items using experimental
-    /// source pid retrieval for macOS 26.
-    @available(macOS 26.0, *)
+    /// Creates and returns a list of menu bar items for the given display.
+    ///
+    /// - Parameters:
+    ///   - display: An identifier for a display. Pass `nil` to return the menu bar
+    ///     items across all available displays.
+    ///   - option: Options that filter the returned list. Pass an empty option set
+    ///     to return all available menu bar items.
     @MainActor
-    private static func getMenuBarItemsExperimental(on display: CGDirectDisplayID?, option: ListOption) async -> [MenuBarItem] {
+    static func getMenuBarItems(on display: CGDirectDisplayID? = nil, option: ListOption) async -> [MenuBarItem] {
         let windows = getMenuBarItemWindows(on: display, option: option)
-        diagLog.debug("getMenuBarItemsExperimental: processing \(windows.count) windows for source PID resolution")
+        diagLog.debug("getMenuBarItems: processing \(windows.count) windows for source PID resolution")
 
         var items = await withTaskGroup(of: (Int, MenuBarItem).self) { group in
             for (index, window) in windows.enumerated() {
@@ -315,12 +318,11 @@ extension MenuBarItem {
 
         // Post-resolution pass: fix up items with nil sourcePID.
         //
-        // On macOS 26, the SourcePIDCache resolves PIDs by spatially
-        // matching CG window bounds to AX extras menu bar children.
-        // When an app registers multiple NSStatusItems (e.g. OneDrive
-        // for personal and work accounts), the concurrent resolution
-        // may fail for one of the windows due to timing skew between
-        // CG and AX coordinate updates.
+        // The SourcePIDCache resolves PIDs by spatially matching CG window
+        // bounds to AX extras menu bar children. When an app registers
+        // multiple NSStatusItems (e.g. OneDrive for personal and work
+        // accounts), the concurrent resolution may fail for one of the
+        // windows due to timing skew between CG and AX coordinate updates.
         //
         // Only propagate a resolved PID to unresolved items sharing
         // the same title when it is safe to do so. We require that
@@ -366,10 +368,10 @@ extension MenuBarItem {
                     // app where one window simply failed spatial matching.
                     let resolvedCount = resolvedCountByPID[siblingPID, default: 0]
                     guard resolvedCount >= 2 else {
-                        diagLog.debug("getMenuBarItemsExperimental: skipping propagation of sourcePID \(siblingPID) to windowID \(item.windowID) (title=\(title)) — PID has only \(resolvedCount) resolved item(s)")
+                        diagLog.debug("getMenuBarItems: skipping propagation of sourcePID \(siblingPID) to windowID \(item.windowID) (title=\(title)) — PID has only \(resolvedCount) resolved item(s)")
                         continue
                     }
-                    diagLog.debug("getMenuBarItemsExperimental: propagating sourcePID \(siblingPID) to unresolved windowID \(item.windowID) (title=\(title))")
+                    diagLog.debug("getMenuBarItems: propagating sourcePID \(siblingPID) to unresolved windowID \(item.windowID) (title=\(title))")
                     items[idx] = MenuBarItem(uncheckedItemWindow: windows[idx], sourcePID: siblingPID)
                 }
             }
@@ -400,60 +402,11 @@ extension MenuBarItem {
         if !nilPIDItems.isEmpty {
             let itemsDesc = nilPIDItems.prefix(3).map(\.logString).joined(separator: ", ")
             let moreDesc = nilPIDItems.count > 3 ? " and \(nilPIDItems.count - 3) more" : ""
-            diagLog.debug("getMenuBarItemsExperimental: created \(items.count) items, \(nilPIDItems.count) with nil sourcePID: \(itemsDesc)\(moreDesc)")
+            diagLog.debug("getMenuBarItems: created \(items.count) items, \(nilPIDItems.count) with nil sourcePID: \(itemsDesc)\(moreDesc)")
         } else {
-            diagLog.debug("getMenuBarItemsExperimental: created \(items.count) items, all with resolved sourcePID")
+            diagLog.debug("getMenuBarItems: created \(items.count) items, all with resolved sourcePID")
         }
         return items
-    }
-
-    /// Creates and returns a list of menu bar items, defaulting to the
-    /// legacy source pid behavior, prior to macOS 26.
-    @MainActor
-    private static func getMenuBarItemsLegacyMethod(on display: CGDirectDisplayID?, option: ListOption) -> [MenuBarItem] {
-        let windows = getMenuBarItemWindows(on: display, option: option)
-        var items = windows.map { MenuBarItem(uncheckedItemWindow: $0) }
-
-        // Assign instance indices sorted by windowID for stability across
-        // position changes (same approach as the experimental path).
-        var groups = [String: [Int]]()
-        for i in 0 ..< items.count {
-            let key = "\(items[i].tag.namespace):\(items[i].tag.title)"
-            groups[key, default: []].append(i)
-        }
-        for (_, indices) in groups where indices.count > 1 {
-            let sorted = indices.sorted { items[$0].windowID < items[$1].windowID }
-            for (instanceIndex, itemIndex) in sorted.enumerated() where instanceIndex > 0 {
-                items[itemIndex] = MenuBarItem(uncheckedItemWindow: windows[itemIndex], instanceIndex: instanceIndex)
-            }
-        }
-
-        return items
-    }
-
-    /// Creates and returns a list of menu bar items for the given display.
-    ///
-    /// - Parameters:
-    ///   - display: An identifier for a display. Pass `nil` to return the menu bar
-    ///     items across all available displays.
-    ///   - option: Options that filter the returned list. Pass an empty option set
-    ///     to return all available menu bar items.
-    @MainActor
-    static func getMenuBarItems(on display: CGDirectDisplayID? = nil, option: ListOption) async -> [MenuBarItem] {
-        let isMacOS26 = ProcessInfo.processInfo.operatingSystemVersion.majorVersion >= 26 ||
-            (ProcessInfo.processInfo.operatingSystemVersion.majorVersion == 15 &&
-                ProcessInfo.processInfo.operatingSystemVersion.minorVersion >= 4)
-        diagLog.debug("getMenuBarItems: starting (macOS 26 path: \(isMacOS26 ? "experimental" : "legacy"))")
-
-        if #available(macOS 26.0, *) {
-            let items = await getMenuBarItemsExperimental(on: display, option: option)
-            diagLog.debug("getMenuBarItems: experimental path returned \(items.count) items")
-            return items
-        } else {
-            let items = getMenuBarItemsLegacyMethod(on: display, option: option)
-            diagLog.debug("getMenuBarItems: legacy path returned \(items.count) items")
-            return items
-        }
     }
 }
 
@@ -508,7 +461,6 @@ private extension MenuBarItemTag {
     /// This initializer does not perform validity checks on its parameters.
     /// Only call it if you are certain the window is a valid menu bar item
     /// and the source pid belongs to the application that created it.
-    @available(macOS 26.0, *)
     @MainActor
     init(uncheckedItemWindow itemWindow: WindowInfo, sourcePID: pid_t?, instanceIndex: Int = 0) {
         self.namespace = Namespace(uncheckedItemWindow: itemWindow, sourcePID: sourcePID)
@@ -555,7 +507,6 @@ extension MenuBarItemTag.Namespace {
     /// This initializer does not perform validity checks on its parameters.
     /// Only call it if you are certain the window is a valid menu bar item
     /// and the source pid belongs to the application that created it.
-    @available(macOS 26.0, *)
     @MainActor
     init(uncheckedItemWindow itemWindow: WindowInfo, sourcePID: pid_t?) {
         // Check for our own control items by title and owner.

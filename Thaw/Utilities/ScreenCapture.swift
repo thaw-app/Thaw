@@ -62,17 +62,12 @@ enum ScreenCapture {
     /// Requests screen capture permissions.
     static func requestPermissions() {
         diagLog.debug("requestPermissions: requesting screen capture access")
-        if #available(macOS 15.0, *) {
-            // CGRequestScreenCaptureAccess() is broken on macOS 15. We can
-            // try accessing SCShareableContent to trigger a request if the
-            // user doesn't have permissions.
-            // Workaround: CGRequestScreenCaptureAccess() is broken on macOS 15+.
-            SCShareableContent.getWithCompletionHandler { _, _ in
-                // Intentionally empty: the call is only used to trigger the
-                // system screen capture permission prompt on macOS 15+.
-            }
-        } else {
-            CGRequestScreenCaptureAccess()
+        // CGRequestScreenCaptureAccess() is broken on macOS 15+. We can
+        // try accessing SCShareableContent to trigger a request if the
+        // user doesn't have permissions.
+        SCShareableContent.getWithCompletionHandler { _, _ in
+            // Intentionally empty: the call is only used to trigger the
+            // system screen capture permission prompt on macOS 15+.
         }
     }
 

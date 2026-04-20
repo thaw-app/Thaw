@@ -170,17 +170,13 @@ private struct IceSectionLayout: _VariadicView_UnaryViewRoot {
 
 private struct IceSectionDivider: View {
     var body: some View {
-        if #available(macOS 26.0, *) {
-            Rectangle()
-                .fill(.separator.quinary)
-                .frame(height: 1)
-        } else {
-            Divider()
-        }
+        Rectangle()
+            .fill(.separator.quinary)
+            .frame(height: 1)
     }
 }
 
 extension CGFloat {
     /// The default spacing for an ``IceSection``.
-    static let iceSectionDefaultSpacing: CGFloat = if #available(macOS 26.0, *) { 11 } else { 10 }
+    static let iceSectionDefaultSpacing: CGFloat = 11
 }

@@ -39,11 +39,7 @@ struct AboutSettingsPane: View {
     }
 
     var body: some View {
-        if #available(macOS 26.0, *) {
-            contentForm(cornerStyle: .continuous)
-        } else {
-            contentForm(cornerStyle: .circular)
-        }
+        contentForm(cornerStyle: .continuous)
     }
 
     private func contentForm(cornerStyle: RoundedCornerStyle) -> some View {

@@ -61,27 +61,15 @@ private final class SettingsWindowModel: ObservableObject {
             return
         }
 
-        if #available(macOS 15.0, *) {
-            // TODO: Switch to the SwiftUI equivalent once we're targeting macOS 15.
-            //
-            // Performing availability checks in @SceneBuilder is annoyingly difficult,
-            // so we're cheating for now and doing it here.
-            //
-            // SwiftUI seems to create a new toolbar each time the window is opened, so
-            // we're using KVO to make sure the values stay set.
-            //
-            // - FOR FUTURE REFERENCE: Add `.windowToolbarLabelStyle(fixed: .iconOnly)`
-            //   to the body of `SettingsWindow` and remove this publisher.
-            Publishers.CombineLatest3(
-                window.publisher(for: \.toolbar),
-                window.publisher(for: \.toolbar?.displayMode),
-                window.publisher(for: \.toolbar?.allowsDisplayModeCustomization)
-            )
-            .sink { toolbar, _, _ in
-                toolbar?.displayMode = .iconOnly
-                toolbar?.allowsDisplayModeCustomization = false
-            }
-            .store(in: &cancellables)
+        Publishers.CombineLatest3(
+            window.publisher(for: \.toolbar),
+            window.publisher(for: \.toolbar?.displayMode),
+            window.publisher(for: \.toolbar?.allowsDisplayModeCustomization)
+        )
+        .sink { toolbar, _, _ in
+            toolbar?.displayMode = .iconOnly
+            toolbar?.allowsDisplayModeCustomization = false
         }
+        .store(in: &cancellables)
     }
 }

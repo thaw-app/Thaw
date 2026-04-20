@@ -35,22 +35,13 @@ struct SettingsView: View {
     /// State to store measured text widths from sidebar items
     @State private var measuredTextWidths: [SettingsNavigationIdentifier: CGFloat] = [:]
 
-    /// Minimum sidebar width based on macOS version and row size
+    /// Minimum sidebar width based on row size
     private var minSidebarWidth: CGFloat {
-        if #available(macOS 26.0, *) {
-            switch sidebarRowSize {
-            case .small: 200
-            case .medium: 220
-            case .large: 240
-            @unknown default: 220
-            }
-        } else {
-            switch sidebarRowSize {
-            case .small: 190
-            case .medium: 215
-            case .large: 230
-            @unknown default: 215
-            }
+        switch sidebarRowSize {
+        case .small: 200
+        case .medium: 220
+        case .large: 240
+        @unknown default: 220
         }
     }
 
@@ -209,25 +200,13 @@ struct SettingsView: View {
 
     @ToolbarContentBuilder
     private var sidebarToolbarSpacer: some ToolbarContent {
-        if #available(macOS 26.0, *) {
-            ToolbarSpacer(.flexible)
-        } else {
-            ToolbarItem {
-                Spacer(minLength: 0)
-            }
-        }
+        ToolbarSpacer(.flexible)
     }
 
-    @ViewBuilder
     private var detailView: some View {
-        if #available(macOS 26.0, *) {
-            settingsPane
-                .id(navigationState.settingsNavigationIdentifier)
-                .scrollEdgeEffectStyle(.hard, for: .top)
-        } else {
-            settingsPane
-                .id(navigationState.settingsNavigationIdentifier)
-        }
+        settingsPane
+            .id(navigationState.settingsNavigationIdentifier)
+            .scrollEdgeEffectStyle(.hard, for: .top)
     }
 
     @ViewBuilder

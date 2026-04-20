@@ -52,7 +52,6 @@ final class Listener {
     /// Activates the listener without checking if it is already active,
     /// with the requirement that session peers must be signed with the
     /// same team identifier as the service process.
-    @available(macOS 26.0, *)
     private func uncheckedActivateWithSameTeamRequirement() throws {
         xpcListener = try XPCListener(service: name, requirement: .isFromSameTeam()) { [weak self] request in
             request.accept { message in
@@ -80,11 +79,7 @@ final class Listener {
         diagLog.debug("Activating listener")
 
         do {
-            if #available(macOS 26.0, *) {
-                try uncheckedActivateWithSameTeamRequirement()
-            } else {
-                try uncheckedActivate()
-            }
+            try uncheckedActivateWithSameTeamRequirement()
         } catch {
             diagLog.error("Failed to activate listener with error \(error)")
         }

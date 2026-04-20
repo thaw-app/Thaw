@@ -15,19 +15,11 @@ struct IceGroupBox<Header: View, Content: View, Footer: View>: View {
     private let padding: EdgeInsets
 
     private var backgroundShape: some InsettableShape {
-        if #available(macOS 26.0, *) {
-            RoundedRectangle(cornerRadius: 11, style: .continuous)
-        } else {
-            RoundedRectangle(cornerRadius: 7, style: .circular)
-        }
+        RoundedRectangle(cornerRadius: 11, style: .continuous)
     }
 
     private var borderStyle: some ShapeStyle {
-        if #available(macOS 26.0, *) {
-            AnyShapeStyle(Color.clear)
-        } else {
-            AnyShapeStyle(Color.primary.quaternary)
-        }
+        AnyShapeStyle(Color.clear)
     }
 
     init(

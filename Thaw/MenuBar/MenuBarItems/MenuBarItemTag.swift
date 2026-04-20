@@ -145,29 +145,11 @@ extension MenuBarItemTag {
     /// These items have fixed positions at the trailing end of the menu bar,
     /// and cannot be hidden.
     ///
-    /// In macOS 26, this list contains the "Clock" and "Control Center" items.
-    /// In earlier releases, it also contained the "Siri" item.
-    static let immovableItems: [MenuBarItemTag] = {
-        var items = [clock, controlCenter, ssMenuAgent]
-        if #unavailable(macOS 26.0) {
-            items.append(siri)
-        }
-        return items
-    }()
+    /// This list contains the "Clock", "Control Center", and "ScreenCaptureUI" items.
+    static let immovableItems: [MenuBarItemTag] = [clock, controlCenter, ssMenuAgent]
 
-    /// NOTE: MusicRecognition became hideable at some point. If the minimum
-    /// deployment target is raised, this item may need conditional exclusion.
-    ///
-    /// We're using macOS 15.3.2 for now, but it could be earlier.
-    ///
     /// An array of tags for items that can be moved, but cannot be hidden.
-    static let nonHideableItems: [MenuBarItemTag] = {
-        var items = [visibleControlItem, audioVideoModule, faceTime, screenCaptureUI]
-        if #unavailable(macOS 15.3.2) {
-            items.append(musicRecognition)
-        }
-        return items
-    }()
+    static let nonHideableItems: [MenuBarItemTag] = [visibleControlItem, audioVideoModule, faceTime, screenCaptureUI]
 
     /// An array of tags for items representing Ice's control items.
     static let controlItems = ControlItem.Identifier.allCases.map { $0.tag }
@@ -193,11 +175,7 @@ extension MenuBarItemTag {
     static let clock = MenuBarItemTag(namespace: .controlCenter, title: "Clock")
 
     /// The tag for the system "Control Center" item.
-    static let controlCenter = if #available(macOS 26.0, *) {
-        MenuBarItemTag(namespace: .controlCenter, title: "BentoBox-0")
-    } else {
-        MenuBarItemTag(namespace: .controlCenter, title: "BentoBox")
-    }
+    static let controlCenter = MenuBarItemTag(namespace: .controlCenter, title: "BentoBox-0")
 
     /// The tag for the system "FaceTime" item.
     static let faceTime = MenuBarItemTag(namespace: .controlCenter, title: "FaceTime")
@@ -220,13 +198,7 @@ extension MenuBarItemTag {
     static let ssMenuAgent = MenuBarItemTag(namespace: .ssMenuAgent, title: "Item-0")
 
     /// The tag for the system "Time Machine" item.
-    static let timeMachine = if #available(macOS 26.0, *) {
-        MenuBarItemTag(namespace: .systemUIServer, title: "com.apple.menuextra.TimeMachine")
-    } else if #available(macOS 15.0, *) {
-        MenuBarItemTag(namespace: .systemUIServer, title: "TimeMachineMenuExtra.TMMenuExtraHost")
-    } else {
-        MenuBarItemTag(namespace: .systemUIServer, title: "TimeMachine.TMMenuExtraHost")
-    }
+    static let timeMachine = MenuBarItemTag(namespace: .systemUIServer, title: "com.apple.menuextra.TimeMachine")
 }
 
 // MARK: - MenuBarItemTag.Namespace

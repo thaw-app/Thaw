@@ -11,11 +11,7 @@ import SwiftUI
 /// A view that displays a badge indicating a beta feature.
 struct BetaBadge: View {
     private var backgroundShape: some Shape {
-        if #available(macOS 26.0, *) {
-            Capsule(style: .continuous)
-        } else {
-            Capsule(style: .circular)
-        }
+        Capsule(style: .continuous)
     }
 
     var body: some View {

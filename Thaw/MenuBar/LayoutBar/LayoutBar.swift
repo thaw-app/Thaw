@@ -30,11 +30,7 @@ struct LayoutBar: View {
     let section: MenuBarSection.Name
 
     private var backgroundShape: some InsettableShape {
-        if #available(macOS 26.0, *) {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-        } else {
-            RoundedRectangle(cornerRadius: 9, style: .circular)
-        }
+        RoundedRectangle(cornerRadius: 12, style: .continuous)
     }
 
     var body: some View {

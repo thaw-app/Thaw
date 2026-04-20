@@ -92,13 +92,9 @@ final class AppState: ObservableObject {
         menuBarManager.performSetup(with: self)
         diagLog.debug("setupTask: settings and menuBarManager setup complete")
 
-        if #available(macOS 26.0, *) {
-            diagLog.debug("setupTask: starting MenuBarItemService XPC connection (macOS 26+)")
-            await MenuBarItemService.Connection.shared.start()
-            diagLog.debug("setupTask: MenuBarItemService XPC connection started")
-        } else {
-            diagLog.debug("setupTask: skipping MenuBarItemService XPC (pre-macOS 26)")
-        }
+        diagLog.debug("setupTask: starting MenuBarItemService XPC connection")
+        await MenuBarItemService.Connection.shared.start()
+        diagLog.debug("setupTask: MenuBarItemService XPC connection started")
 
         appearanceManager.performSetup(with: self)
         hidEventManager.performSetup(with: self)

@@ -94,13 +94,7 @@ private struct IceFormToggleStyle: ToggleStyle {
 
 extension EdgeInsets {
     /// The default padding for an ``IceForm``.
-    static let iceFormDefaultPadding: EdgeInsets = {
-        var insets = EdgeInsets(all: 20)
-        if #available(macOS 26.0, *) {
-            insets.top = 0
-        }
-        return insets
-    }()
+    static let iceFormDefaultPadding: EdgeInsets = .init(top: 0, leading: 20, bottom: 20, trailing: 20)
 }
 
 extension CGFloat {

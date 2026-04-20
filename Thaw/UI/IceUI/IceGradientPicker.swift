@@ -88,11 +88,7 @@ private struct IceGradientPickerRoot: View {
     private let handleWidth: CGFloat = 10
 
     private var borderShape: some InsettableShape {
-        if #available(macOS 26.0, *) {
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
-        } else {
-            RoundedRectangle(cornerRadius: 5, style: .circular)
-        }
+        RoundedRectangle(cornerRadius: 6, style: .continuous)
     }
 
     var body: some View {
@@ -330,11 +326,7 @@ private struct IceGradientPickerHandle: View {
     }
 
     private var borderShape: some InsettableShape {
-        if #available(macOS 26.0, *) {
-            Capsule(style: .continuous)
-        } else {
-            Capsule(style: .circular)
-        }
+        Capsule(style: .continuous)
     }
 
     var body: some View {

@@ -23,20 +23,12 @@ struct MenuBarAppearanceEditor: View {
     let onDone: (() -> Void)?
 
     var body: some View {
-        if #available(macOS 26.0, *) {
-            VStack(spacing: 0) {
-                panelHeading
-                bodyContent
-            }
-            .safeAreaBar(edge: .bottom, spacing: 0) {
-                bottomBar
-            }
-        } else {
-            VStack(spacing: 0) {
-                panelHeading
-                bodyContent
-                bottomBar
-            }
+        VStack(spacing: 0) {
+            panelHeading
+            bodyContent
+        }
+        .safeAreaBar(edge: .bottom, spacing: 0) {
+            bottomBar
         }
     }
 
@@ -44,12 +36,9 @@ struct MenuBarAppearanceEditor: View {
     private var bodyContent: some View {
         if appState.menuBarManager.isMenuBarHiddenBySystemUserDefaults {
             cannotEdit
-        } else if #available(macOS 26.0, *) {
-            mainForm
-                .scrollEdgeEffectStyle(.hard, for: .vertical)
-                .padding(.top, topPadding)
         } else {
             mainForm
+                .scrollEdgeEffectStyle(.hard, for: .vertical)
                 .padding(.top, topPadding)
         }
     }
@@ -340,11 +329,7 @@ private struct PreviewButtonStyle: ButtonStyle {
     @Binding var isPressed: Bool
 
     private var borderShape: some InsettableShape {
-        if #available(macOS 26.0, *) {
-            AnyInsettableShape(Capsule(style: .continuous))
-        } else {
-            AnyInsettableShape(RoundedRectangle(cornerRadius: 6, style: .circular))
-        }
+        AnyInsettableShape(Capsule(style: .continuous))
     }
 
     func makeBody(configuration: Configuration) -> some View {

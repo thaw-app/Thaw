@@ -51,30 +51,10 @@ struct IceWindow<Content: View>: Scene {
     }
 
     private var windowScene: some Scene {
-        if #available(macOS 15.0, *) {
-            return windowSceneModern
-        } else {
-            return windowSceneLegacy
-        }
-    }
-
-    @available(macOS 15.0, *)
-    private var windowSceneModern: some Scene {
         Window(id.titleKey, id: id.rawValue) {
             windowContentView
         }
         .defaultLaunchBehavior(.suppressed)
-    }
-
-    private var windowSceneLegacy: some Scene {
-        Window(id.titleKey, id: id.rawValue) {
-            windowContentView.once {
-                // On launch, SwiftUI tries to show the first scene provided
-                // to the app. Override this behavior and dismiss the window
-                // the first time it is shown.
-                dismissWindow(id: id)
-            }
-        }
     }
 }
 

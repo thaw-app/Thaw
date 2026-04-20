@@ -56,15 +56,11 @@ struct IceSlider<Value: BinaryFloatingPoint, ValueLabel: View>: View {
     }
 
     private var borderShape: some InsettableShape {
-        if #available(macOS 26.0, *) {
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
-        } else {
-            RoundedRectangle(cornerRadius: 5, style: .circular)
-        }
+        RoundedRectangle(cornerRadius: 6, style: .continuous)
     }
 
     private var height: CGFloat {
-        if #available(macOS 26.0, *) { 24 } else { 22 }
+        24
     }
 
     var body: some View {

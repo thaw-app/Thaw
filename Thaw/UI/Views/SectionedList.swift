@@ -55,15 +55,9 @@ struct SectionedList<ItemID: Hashable>: View {
     }
 
     var body: some View {
-        if #available(macOS 15.0, *) {
-            scrollView
-                .contentMargins(.all, contentPadding, for: .scrollContent)
-                .contentMargins(.all, -0.5, for: .scrollIndicators)
-        } else {
-            scrollView
-                .contentMargins(.all, contentPadding, for: .scrollContent)
-                .contentMargins(.all, -contentPadding, for: .scrollIndicators)
-        }
+        scrollView
+            .contentMargins(.all, contentPadding, for: .scrollContent)
+            .contentMargins(.all, -0.5, for: .scrollIndicators)
     }
 
     private var scrollView: some View {
@@ -205,10 +199,8 @@ private struct SectionedListItemView<ItemID: Hashable>: View {
     private var borderShape: some InsettableShape {
         if !item.isSelectable {
             RoundedRectangle(cornerRadius: 0, style: .circular)
-        } else if #available(macOS 26.0, *) {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
         } else {
-            RoundedRectangle(cornerRadius: 5, style: .circular)
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
         }
     }
 
