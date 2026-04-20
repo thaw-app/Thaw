@@ -34190,7 +34190,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : ""
+            "value" : "Konfiguration für alle Profile aktualisieren"
           }
         },
         "es" : {
@@ -36545,29 +36545,6 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "new",
-                  "value" : "%d apps"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "whitelisted_apps_count" : {
-      "comment" : "Shows the number of whitelisted apps",
-      "localizations" : {
-        "en" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%d app"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
                   "value" : "%d apps"
                 }
               }
