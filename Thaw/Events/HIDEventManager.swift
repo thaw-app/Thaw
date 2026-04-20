@@ -613,7 +613,9 @@ extension HIDEventManager {
             return false
         }
 
-        guard applicationMenuItemFrame(at: mouseLocation) != nil else {
+        // Capture the AX frame before any UI changes; the frame is needed
+        // for click forwarding and can become unavailable after closing/hiding UI.
+        guard let initialFrame = applicationMenuItemFrame(at: mouseLocation) else {
             return false
         }
 
@@ -649,9 +651,8 @@ extension HIDEventManager {
             return true
         }
 
-        guard let frame = applicationMenuItemFrame(at: mouseLocation) else {
-            return true
-        }
+        // Reuse the originally observed frame for click calculation.
+        let frame = initialFrame
 
         let now = CFAbsoluteTimeGetCurrent()
         guard now - lastAppMenuClickTime >= 0.3 else { return true }
@@ -829,7 +830,7 @@ extension HIDEventManager {
         } else if isMouseInsideApplicationMenuClickRegion(
             appState: appState,
             screen: screen
-        ) {
+        ) == true {
             return
         }
 
@@ -1076,12 +1077,29 @@ extension HIDEventManager {
 
         // Then perform expensive Window Server checks.
         //
-        // When expanded section-divider windows are tracked by the Window
-        // Server, the AX-based application menu frame detection can return
-        // the extras menu bar instead of the application menu bar. Skip
-        // the check in that state — handleApplicationMenuClickThrough
-        // forwards left-clicks to the correct app menu separately.
-        return !isMouseInsideApplicationMenuClickRegion(appState: appState, screen: screen)
+        // Always exclude the concrete application-menu click region from empty-space
+        // detection; the function `isMouseInsideApplicationMenuClickRegion` checks whether
+        // the mouse is over a concrete menu item using AX hit-testing, while
+        // `handleApplicationMenuClickThrough` separately handles left-click forwarding
+        // to the application menu. When AX hit-testing is indeterminate (returns nil),
+        // fall back to cheap geometric detection to avoid misclassifying the app menu
+        // area as empty space.
+        let appMenuResult = isMouseInsideApplicationMenuClickRegion(
+            appState: appState,
+            screen: screen
+        )
+
+        // Use the AX result when available; fall back to geometric detection
+        // when hit-testing is indeterminate (e.g., due to expanded section-divider
+        // windows interfering with AX queries).
+        let isInAppMenu: Bool
+        if let result = appMenuResult {
+            isInAppMenu = result
+        } else {
+            isInAppMenu = isMouseInsideApplicationMenu(appState: appState, screen: screen)
+        }
+
+        return !isInAppMenu
             && !isMouseInsideMenuBarItem(appState: appState, screen: screen)
             && !isMouseInsideIceIcon(appState: appState)
     }
@@ -1116,10 +1134,12 @@ extension HIDEventManager {
 
     /// Returns whether the cursor is inside the same application-menu region
     /// that the click-through path treats as belonging to the app menu.
+    /// Returns `nil` when the AX result is indeterminate (e.g., when expanded
+    /// section-divider windows interfere with AX hit-testing).
     private func isMouseInsideApplicationMenuClickRegion(
         appState: AppState,
         screen: NSScreen
-    ) -> Bool {
+    ) -> Bool? {
         guard
             isMouseInsideMenuBar(appState: appState, screen: screen),
             let mouseLocation = MouseHelpers.locationCoreGraphics
@@ -1127,7 +1147,7 @@ extension HIDEventManager {
             return false
         }
 
-        return applicationMenuItemFrame(at: mouseLocation) != nil
+        return applicationMenuItemFrame(at: mouseLocation).map { _ in true }
     }
 
     /// Returns the concrete application menu item frame at the given cursor
@@ -1141,13 +1161,16 @@ extension HIDEventManager {
             return nil
         }
 
-        return AXHelpers.children(for: menuBar).first { child in
+        // Capture the frame during hit-testing to avoid a redundant AX read.
+        for child in AXHelpers.children(for: menuBar) {
             guard let frame = AXHelpers.frame(for: child) else {
-                return false
+                continue
             }
-            return frame.contains(mouseLocation)
+            if frame.contains(mouseLocation) {
+                return frame
+            }
         }
-        .flatMap { AXHelpers.frame(for: $0) }
+        return nil
     }
 }
 
