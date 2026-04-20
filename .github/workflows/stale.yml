@@ -1,0 +1,20 @@
+name: Close stale issues
+
+on:
+  schedule:
+    - cron: "0 0 */3 * *" # Once every 3 days
+
+jobs:
+  stale:
+    runs-on: ubuntu-slim
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/stale@v10
+        with:
+          days-before-stale: 30
+          days-before-close: 7
+          stale-issue-label: "stale"
+          stale-issue-message: "This issue has been automatically marked as stale due to inactivity."
+          close-issue-message: "Closing this issue due to prolonged inactivity."
+          exempt-issue-labels: "help wanted,keep open, feature, enhancement"
