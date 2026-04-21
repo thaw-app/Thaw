@@ -42,6 +42,28 @@ final class HIDEventManager: ObservableObject {
     /// The currently pending show-on-hover delay task.
     private var hoverTask: Task<Void, any Error>?
 
+    /// The pending task that clears the temporary show-on-click guard.
+    private var clickTask: Task<Void, Never>?
+
+    /// The deadline for the temporary show-on-click protection region.
+    private var showOnClickGuardDeadline: ContinuousClock.Instant?
+
+    /// The temporary protected region around the first click that revealed
+    /// hidden items. Clicks inside this region are intercepted until the
+    /// system double-click window expires.
+    private var showOnClickGuardRegion: CGRect?
+
+    /// The display hosting the current protected region.
+    private var showOnClickGuardDisplayID: CGDirectDisplayID?
+
+    /// Whether the next left-mouse-up should also be swallowed after the
+    /// guard consumed a left-mouse-down.
+    private var shouldSwallowShowOnClickMouseUp = false
+
+    /// Whether the guard should be torn down immediately after the matching
+    /// swallowed mouse-up arrives.
+    private var shouldDisarmShowOnClickGuardOnMouseUp = false
+
     /// The number of times the manager has been told to stop.
     private var disableCount = 0
 
@@ -202,6 +224,58 @@ final class HIDEventManager: ObservableObject {
             handleShowOnScroll(with: event, appState: appState, screen: screen)
         }
         return event
+    }
+
+    /// Active tap that temporarily swallows clicks in the protected region
+    /// after a first show-on-click reveal, so a double-click can still be
+    /// recognized even though hidden items have appeared under the cursor.
+    private(set) lazy var showOnClickGuardTap = EventTap(
+        label: "showOnClickGuardTap",
+        types: [.leftMouseDown, .leftMouseUp],
+        location: .sessionEventTap,
+        placement: .headInsertEventTap,
+        option: .defaultTap
+    ) { [weak self] _, event in
+        guard let self else {
+            return event
+        }
+
+        if event.type == .leftMouseUp, shouldSwallowShowOnClickMouseUp {
+            shouldSwallowShowOnClickMouseUp = false
+            let shouldDisarm = shouldDisarmShowOnClickGuardOnMouseUp
+            shouldDisarmShowOnClickGuardOnMouseUp = false
+            if shouldDisarm {
+                disarmShowOnClickGuard()
+            }
+            return nil
+        }
+
+        guard isEnabled, let appState, isShowOnClickGuardActive else {
+            return event
+        }
+
+        guard event.type == .leftMouseDown else {
+            return event
+        }
+
+        guard isPointInsideShowOnClickGuardRegion(NSEvent.mouseLocation) else {
+            return event
+        }
+
+        shouldSwallowShowOnClickMouseUp = true
+
+        let clickState = event.getIntegerValueField(.mouseEventClickState)
+        if clickState > 1,
+           appState.settings.general.showOnClick,
+           appState.settings.general.showOnDoubleClick,
+           let alwaysHiddenSection = appState.menuBarManager.section(withName: .alwaysHidden),
+           alwaysHiddenSection.isEnabled
+        {
+            alwaysHiddenSection.show()
+            shouldDisarmShowOnClickGuardOnMouseUp = true
+        }
+
+        return nil
     }
 
     // MARK: All Monitors
@@ -421,6 +495,7 @@ final class HIDEventManager: ObservableObject {
         }
         disableCount += 1
         lastStopTimestamp = .now
+        disarmShowOnClickGuard()
         dismissMenuBarTooltip()
     }
 }
@@ -471,10 +546,92 @@ extension HIDEventManager {
                 if let hiddenSection = appState.menuBarManager.section(withName: .hidden),
                    hiddenSection.isEnabled
                 {
+                    let shouldArmGuard =
+                        appState.settings.general.showOnDoubleClick
+                        && hiddenSection.isHidden
+                        && (appState.menuBarManager.section(withName: .alwaysHidden)?.isEnabled ?? false)
+
                     hiddenSection.toggle()
+
+                    if shouldArmGuard {
+                        armShowOnClickGuard(screen: screen)
+                    } else {
+                        disarmShowOnClickGuard()
+                    }
                 }
             }
         }
+    }
+
+    private func armShowOnClickGuard(screen: NSScreen) {
+        guard
+            let clickLocation = MouseHelpers.locationAppKit,
+            let menuBarHeight = screen.getMenuBarHeight()
+        else {
+            disarmShowOnClickGuard()
+            return
+        }
+
+        let protectionWidth = max(44, menuBarHeight * 2)
+        let protectionHeight = menuBarHeight + 6
+        let minY = screen.frame.maxY - menuBarHeight - 3
+        showOnClickGuardRegion = CGRect(
+            x: clickLocation.x - protectionWidth / 2,
+            y: minY,
+            width: protectionWidth,
+            height: protectionHeight
+        )
+        showOnClickGuardDisplayID = screen.displayID
+        showOnClickGuardDeadline = .now + .seconds(NSEvent.doubleClickInterval)
+        shouldSwallowShowOnClickMouseUp = false
+        shouldDisarmShowOnClickGuardOnMouseUp = false
+
+        showOnClickGuardTap.start()
+
+        clickTask?.cancel()
+        clickTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(NSEvent.doubleClickInterval))
+            await MainActor.run {
+                self?.disarmShowOnClickGuard()
+            }
+        }
+    }
+
+    private func disarmShowOnClickGuard() {
+        clickTask?.cancel()
+        clickTask = nil
+        showOnClickGuardDeadline = nil
+        showOnClickGuardRegion = nil
+        showOnClickGuardDisplayID = nil
+        shouldSwallowShowOnClickMouseUp = false
+        shouldDisarmShowOnClickGuardOnMouseUp = false
+        showOnClickGuardTap.stop()
+    }
+
+    private var isShowOnClickGuardActive: Bool {
+        guard let deadline = showOnClickGuardDeadline else {
+            return false
+        }
+        if deadline > .now {
+            return showOnClickGuardRegion != nil
+        }
+        disarmShowOnClickGuard()
+        return false
+    }
+
+    private func isPointInsideShowOnClickGuardRegion(_ point: CGPoint) -> Bool {
+        guard isShowOnClickGuardActive,
+              let region = showOnClickGuardRegion,
+              let displayID = showOnClickGuardDisplayID
+        else {
+            return false
+        }
+
+        guard NSScreen.screenWithMouse?.displayID == displayID else {
+            return false
+        }
+
+        return region.contains(point)
     }
 
     // MARK: Handle Smart Rehide
