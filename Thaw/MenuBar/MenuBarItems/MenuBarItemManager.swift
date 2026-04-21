@@ -4095,32 +4095,128 @@ extension MenuBarItemManager {
             return await existingTask.value
         }
 
-        let task = Task.detached(priority: .utility) { () -> Bool in
-            // Get all menu bar items that are currently on screen.
-            let items = await MenuBarItem.getMenuBarItems(option: .onScreen)
-            let sourcePIDs = Set(items.compactMap { $0.sourcePID })
+        let cachedItems = itemCache.managedItems.filter(\.isOnScreen)
+        let controlCenterBundleID = MenuBarItemTag.Namespace.controlCenter.description
 
+        let task = Task.detached(priority: .utility) { () -> Bool in
             // Get all on-screen windows.
             let windows = WindowInfo.createWindows(option: .onScreen)
-
-            MenuBarItemManager.diagLog.debug("Checking for open menus - Found \(items.count) menu bar items with PIDs: \(sourcePIDs)")
-
-            // Check if any of the items' owning applications have a menu-related window.
-            let result = windows.contains { window in
-                // Skip Control Center windows as they can be falsely detected when hovering
-                guard window.owningApplication?.bundleIdentifier != MenuBarItemTag.Namespace.controlCenter.description else {
-                    MenuBarItemManager.diagLog.debug("Skipping Control Center window: PID \(window.ownerPID), title: \(window.title ?? "nil")")
+            let potentialMenuWindows = windows.filter { window in
+                guard window.isMenuRelated, window.title?.isEmpty ?? true else {
                     return false
                 }
+                guard window.owningApplication?.bundleIdentifier != controlCenterBundleID else {
+                    MenuBarItemManager.diagLog.debug(
+                        "Skipping Control Center window: PID \(window.ownerPID), title: \(window.title ?? "nil")"
+                    )
+                    return false
+                }
+                return true
+            }
 
-                let isMenuOpen = sourcePIDs.contains(window.ownerPID) && window.isMenuRelated && (window.title?.isEmpty ?? true)
+            guard !potentialMenuWindows.isEmpty else {
+                MenuBarItemManager.diagLog.debug(
+                    "Menu open check: no candidate menu windows on screen"
+                )
+                return false
+            }
+
+            let fastPathPIDs = Set(cachedItems.compactMap { item -> pid_t? in
+                if let sourcePID = item.sourcePID {
+                    return sourcePID
+                }
+                guard item.owningApplication?.bundleIdentifier != controlCenterBundleID else {
+                    return nil
+                }
+                return item.ownerPID
+            })
+
+            MenuBarItemManager.diagLog.debug(
+                """
+                Checking for open menus - fast path with \(cachedItems.count) cached menu bar items, \
+                \(fastPathPIDs.count) candidate PIDs, \(potentialMenuWindows.count) candidate menu windows
+                """
+            )
+
+            let fastPathResult = potentialMenuWindows.contains { window in
+                let isMenuOpen = fastPathPIDs.contains(window.ownerPID)
                 if isMenuOpen {
-                    MenuBarItemManager.diagLog.debug("Found open menu window: PID \(window.ownerPID), owner: \(window.ownerName as NSObject?), title: \(window.title ?? "nil"), isMenuRelated: \(window.isMenuRelated)")
+                    MenuBarItemManager.diagLog.debug(
+                        """
+                        Found open menu window on fast path: PID \(window.ownerPID), \
+                        owner: \(window.ownerName as NSObject?), title: \(window.title ?? "nil"), \
+                        isMenuRelated: \(window.isMenuRelated)
+                        """
+                    )
                 }
                 return isMenuOpen
             }
 
-            MenuBarItemManager.diagLog.debug("Menu open check result: \(result)")
+            if fastPathResult {
+                MenuBarItemManager.diagLog.debug("Menu open check result: true (fast path)")
+                return true
+            }
+
+            let unresolvedWindows = WindowInfo.createWindows(
+                from: cachedItems.compactMap { item in
+                    guard item.sourcePID == nil, !item.isControlItem else {
+                        return nil
+                    }
+                    guard item.owningApplication?.bundleIdentifier == controlCenterBundleID else {
+                        return nil
+                    }
+                    return item.windowID
+                }
+            )
+
+            guard !unresolvedWindows.isEmpty else {
+                MenuBarItemManager.diagLog.debug("Menu open check result: false (fast path)")
+                return false
+            }
+
+            MenuBarItemManager.diagLog.debug(
+                "Menu open check: precise fallback resolving \(unresolvedWindows.count) unresolved window source PIDs"
+            )
+
+            let resolvedPIDs: Set<pid_t>
+            if #available(macOS 26.0, *) {
+                resolvedPIDs = await withTaskGroup(of: pid_t?.self, returning: Set<pid_t>.self) { group in
+                    for window in unresolvedWindows {
+                        group.addTask {
+                            await MenuBarItemService.Connection.shared.sourcePID(for: window)
+                        }
+                    }
+
+                    var pids = Set<pid_t>()
+                    for await pid in group {
+                        if let pid {
+                            pids.insert(pid)
+                        }
+                    }
+                    return pids
+                }
+            } else {
+                resolvedPIDs = []
+            }
+
+            let precisePIDs = fastPathPIDs.union(resolvedPIDs)
+            let result = potentialMenuWindows.contains { window in
+                let isMenuOpen = precisePIDs.contains(window.ownerPID)
+                if isMenuOpen {
+                    MenuBarItemManager.diagLog.debug(
+                        """
+                        Found open menu window on precise fallback: PID \(window.ownerPID), \
+                        owner: \(window.ownerName as NSObject?), title: \(window.title ?? "nil"), \
+                        isMenuRelated: \(window.isMenuRelated)
+                        """
+                    )
+                }
+                return isMenuOpen
+            }
+
+            MenuBarItemManager.diagLog.debug(
+                "Menu open check result: \(result) (precise fallback with \(resolvedPIDs.count) resolved PIDs)"
+            )
             return result
         }
 
