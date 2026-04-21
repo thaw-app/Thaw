@@ -46,6 +46,12 @@ final class HIDEventManager: ObservableObject {
     /// clear state that belongs to a newer one.
     private var hoverTaskToken: UUID?
 
+    /// A short-lived recovery task that repeatedly re-evaluates show-on-hover
+    /// right after the setting is enabled, so the first hover does not depend
+    /// on a later mouse-moved event or the periodic health check.
+    private var hoverRearmTask: Task<Void, Never>?
+    private var hoverRearmTaskToken: UUID?
+
     /// The currently pending hover action, used to avoid restarting the same
     /// delay window on every small mouse move inside the same region.
     private var pendingHoverAction: HoverAction?
@@ -410,6 +416,9 @@ final class HIDEventManager: ObservableObject {
                 }
 
                 if !showOnHover {
+                    hoverRearmTask?.cancel()
+                    hoverRearmTask = nil
+                    hoverRearmTaskToken = nil
                     hoverTask?.cancel()
                     hoverTask = nil
                     hoverTaskToken = nil
@@ -418,25 +427,13 @@ final class HIDEventManager: ObservableObject {
                 }
 
                 appState.menuBarManager.showOnHoverAllowed = true
+                hoverRearmTask?.cancel()
+                hoverRearmTaskToken = nil
                 hoverTask?.cancel()
                 hoverTask = nil
                 hoverTaskToken = nil
                 pendingHoverAction = nil
-
-                Task { @MainActor [weak self, weak appState] in
-                    try? await Task.sleep(for: .milliseconds(50))
-                    guard
-                        let self,
-                        let appState,
-                        isEnabled,
-                        appState.settings.general.showOnHover,
-                        appState.menuBarManager.showOnHoverAllowed,
-                        let screen = NSScreen.screenWithMouse ?? bestScreen(appState: appState)
-                    else {
-                        return
-                    }
-                    handleShowOnHover(appState: appState, screen: screen)
-                }
+                scheduleHoverRearmChecks(appState: appState)
             }
             .store(in: &c)
 
@@ -565,6 +562,9 @@ final class HIDEventManager: ObservableObject {
         }
         disableCount += 1
         lastStopTimestamp = .now
+        hoverRearmTask?.cancel()
+        hoverRearmTask = nil
+        hoverRearmTaskToken = nil
         disarmShowOnClickGuard()
         dismissMenuBarTooltip()
     }
@@ -573,6 +573,75 @@ final class HIDEventManager: ObservableObject {
 // MARK: - Handler Methods
 
 extension HIDEventManager {
+    private func isMouseNearMenuBar(screen: NSScreen, verticalPadding: CGFloat = 80) -> Bool {
+        guard
+            let mouseLocation = MouseHelpers.locationAppKit,
+            let menuBarHeight = screen.getMenuBarHeight()
+        else {
+            return false
+        }
+
+        return mouseLocation.x >= screen.frame.minX
+            && mouseLocation.x <= screen.frame.maxX
+            && mouseLocation.y <= screen.frame.maxY
+            && mouseLocation.y >= screen.frame.maxY - menuBarHeight - verticalPadding
+    }
+
+    private func scheduleHoverRearmChecks(appState: AppState) {
+        let taskToken = UUID()
+        hoverRearmTaskToken = taskToken
+        hoverRearmTask = Task { @MainActor [weak self, weak appState] in
+            guard let self, let appState else {
+                return
+            }
+
+            defer {
+                if hoverRearmTaskToken == taskToken {
+                    hoverRearmTask = nil
+                    hoverRearmTaskToken = nil
+                }
+            }
+
+            for attempt in 0 ..< 12 {
+                do {
+                    try await Task.sleep(for: attempt == 0 ? .milliseconds(50) : .milliseconds(200))
+                } catch {
+                    return
+                }
+
+                guard
+                    hoverRearmTaskToken == taskToken,
+                    isEnabled,
+                    appState.settings.general.showOnHover,
+                    appState.menuBarManager.showOnHoverAllowed
+                else {
+                    return
+                }
+
+                if needsMouseMovedTap(appState: appState) {
+                    _ = mouseMovedTap.ensureValid()
+                    mouseMovedTap.start()
+                }
+
+                guard let screen = NSScreen.screenWithMouse ?? bestScreen(appState: appState) else {
+                    continue
+                }
+
+                guard isMouseNearMenuBar(screen: screen) else {
+                    return
+                }
+
+                handleShowOnHover(appState: appState, screen: screen)
+
+                if pendingHoverAction == .show ||
+                    !(appState.menuBarManager.section(withName: .hidden)?.isHidden ?? true)
+                {
+                    return
+                }
+            }
+        }
+    }
+
     // MARK: Handle Show On Click
 
     private func handleShowOnClick(appState: AppState, screen: NSScreen, isDoubleClick: Bool = false) {
