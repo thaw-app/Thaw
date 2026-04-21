@@ -162,7 +162,11 @@ struct IceGroupBox<Header: View, Content: View, Footer: View>: View {
                 .padding(padding)
                 .background {
                     backgroundShape
-                        .fill(Color.primary.quinary)
+                        .fill(.thinMaterial)
+                        .overlay {
+                            backgroundShape
+                                .stroke(.separator.opacity(0.5), lineWidth: 0.5)
+                        }
                 }
                 .containerShape(backgroundShape)
 

@@ -93,10 +93,13 @@ struct SettingsView: View {
     var body: some View {
         NavigationSplitView {
             sidebar
+                .background(.regularMaterial, ignoresSafeAreaEdges: .all)
         } detail: {
             detailView
+                .background(.windowBackground, ignoresSafeAreaEdges: .all)
         }
         .navigationTitle(navigationTitle)
+        .background(.windowBackground)
     }
 
     private var sidebar: some View {
@@ -173,26 +176,15 @@ struct SettingsView: View {
         .contentShape(RoundedRectangle(cornerRadius: sidebarItemCornerRadius, style: .continuous))
     }
 
-    private func sidebarItemForegroundStyle(isSelected: Bool) -> some ShapeStyle {
-        if isSelected && appearsActive {
-            return AnyShapeStyle(.white)
-        }
-        return AnyShapeStyle(sidebarTextStyle)
+    private func sidebarItemForegroundStyle(isSelected _: Bool) -> some ShapeStyle {
+        AnyShapeStyle(sidebarTextStyle)
     }
 
     @ViewBuilder
     private func sidebarItemBackground(isSelected: Bool) -> some View {
         if isSelected {
             RoundedRectangle(cornerRadius: sidebarItemCornerRadius, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: appearsActive
-                            ? [Color.accentColor.opacity(0.96), Color.accentColor]
-                            : [Color.secondary.opacity(0.35), Color.secondary.opacity(0.28)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
+                .fill(.selection)
         } else {
             Color.clear
         }

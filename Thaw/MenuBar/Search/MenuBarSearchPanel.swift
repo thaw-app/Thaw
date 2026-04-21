@@ -164,6 +164,10 @@ final class MenuBarSearchPanel: NSPanel {
         self.collectionBehavior = [
             .fullScreenAuxiliary, .ignoresCycle, .moveToActiveSpace,
         ]
+        // Enhanced shadow for glass effect
+        self.hasShadow = true
+        self.backgroundColor = .clear
+        self.isOpaque = false
         // Close panel when it loses key focus (e.g., another app gets focus)
         NotificationCenter.default.addObserver(
             self,
@@ -455,9 +459,13 @@ private struct MenuBarSearchContentView: View {
         }
         .environment(\.menuBarSearchPanel, panel)
         .background {
-            VisualEffectView(material: .sheet, blendingMode: .behindWindow)
-                .opacity(0.5)
+            VisualEffectView(material: .hudWindow, blendingMode: .behindWindow)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(.separator.opacity(0.4), lineWidth: 0.5)
+                }
         }
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .frame(width: 600, height: 400)
         .fixedSize()
         .onAppear {
@@ -503,8 +511,10 @@ private struct MenuBarSearchContentView: View {
                 Spacer()
             }
             .padding(15)
+            .background(.ultraThinMaterial)
 
             Divider()
+                .background(.separator.opacity(0.5))
         }
     }
 
@@ -535,6 +545,7 @@ private struct MenuBarSearchContentView: View {
                 .foregroundStyle(.link)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(.ultraThinMaterial)
         } else if hasItems {
             SectionedList(
                 selection: $model.selection,
@@ -543,6 +554,7 @@ private struct MenuBarSearchContentView: View {
             )
             .contentPadding(8)
             .scrollContentBackground(.hidden)
+            .background(.ultraThinMaterial)
         } else {
             VStack {
                 Text("Loading menu bar items…")
@@ -551,6 +563,7 @@ private struct MenuBarSearchContentView: View {
                     .controlSize(.small)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(.ultraThinMaterial)
         }
     }
 
@@ -587,10 +600,11 @@ private struct MenuBarSearchContentView: View {
             }
         }
         .padding(bottomBarPadding)
-        .background(.thinMaterial)
+        .background(.regularMaterial)
         .buttonStyle(BottomBarButtonStyle())
         .overlay(alignment: .top) {
             Divider()
+                .background(.separator.opacity(0.5))
         }
     }
 
@@ -851,7 +865,7 @@ private struct BottomBarButtonStyle: ButtonStyle {
     @State private var isHovering = false
 
     private var borderShape: some InsettableShape {
-        RoundedRectangle(cornerRadius: 8, style: .continuous)
+        RoundedRectangle(cornerRadius: 6, style: .continuous)
     }
 
     func makeBody(configuration: Configuration) -> some View {
@@ -861,10 +875,13 @@ private struct BottomBarButtonStyle: ButtonStyle {
             .padding(3)
             .background {
                 borderShape
-                    .fill(.regularMaterial)
-                    .brightness(0.25)
+                    .fill(.thinMaterial)
+                    .overlay {
+                        borderShape
+                            .stroke(.separator.opacity(isHovering ? 0.5 : 0.3), lineWidth: 0.5)
+                    }
                     .opacity(
-                        configuration.isPressed ? 0.5 : isHovering ? 0.25 : 0
+                        configuration.isPressed ? 0.7 : isHovering ? 1.0 : 0.5
                     )
             }
             .contentShape([.focusEffect, .interaction], borderShape)
