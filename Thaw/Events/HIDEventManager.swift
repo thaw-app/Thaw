@@ -1470,7 +1470,7 @@ extension HIDEventManager {
         }
 
         return !isInAppMenu
-            && !isMouseInsideCachedMenuBarItem()
+            && !isMouseInsideMenuBarItem(appState: appState, screen: screen)
             && !isMouseInsideIceIcon(appState: appState)
     }
 
