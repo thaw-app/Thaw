@@ -155,7 +155,9 @@ final class HIDEventManager: ObservableObject {
             // show-on-click or smart rehide (the click belongs to the app menu)
             let isAppMenuClick = handleApplicationMenuClickThrough(appState: appState, screen: screen)
             if !isAppMenuClick {
-                handleShowOnClick(appState: appState, screen: screen, isDoubleClick: event.clickCount > 1)
+                // Capture the click location synchronously from the event.
+                let clickLocation = NSEvent.mouseLocation
+                handleShowOnClick(appState: appState, screen: screen, clickLocation: clickLocation, isDoubleClick: event.clickCount > 1)
                 handleSmartRehide(with: event, appState: appState, screen: screen)
             }
         case .rightMouseDown:
@@ -455,14 +457,16 @@ final class HIDEventManager: ObservableObject {
             // When any section's control item state changes, the menu bar layout shifts.
             // Merge all sections into a single publisher so only one cache refresh fires
             // per layout change batch, regardless of how many sections change at once.
+            // Drop the initial emission per publisher so MergeMany no longer relies on
+            // a global dropFirst count and rebuildWindowBoundsLookupFromCurrentLayout()
+            // runs only for real updates.
             Publishers.MergeMany(
-                appState.menuBarManager.sections.map { $0.controlItem.$state.replace(with: ()) }
+                appState.menuBarManager.sections.map {
+                    $0.controlItem.$state
+                        .dropFirst()
+                        .replace(with: ())
+                }
             )
-            // Ignore the initial Published emissions during startup. The item manager
-            // performs its own initial cache pass in AppState setup, and letting the
-            // section-state observer fire immediately causes an extra full menu-bar
-            // scan to preempt startup readiness.
-            .dropFirst(appState.menuBarManager.sections.count)
             .debounce(for: .milliseconds(200), scheduler: DispatchQueue.main)
             .sink { [weak self] in
                 self?.rebuildWindowBoundsLookupFromCurrentLayout()
@@ -649,7 +653,7 @@ extension HIDEventManager {
 
     // MARK: Handle Show On Click
 
-    private func handleShowOnClick(appState: AppState, screen: NSScreen, isDoubleClick: Bool = false) {
+    private func handleShowOnClick(appState: AppState, screen: NSScreen, clickLocation: CGPoint, isDoubleClick: Bool = false) {
         guard isMouseInsideEmptyMenuBarSpace(appState: appState, screen: screen) else {
             return
         }
@@ -698,7 +702,7 @@ extension HIDEventManager {
                     hiddenSection.toggle()
 
                     if shouldArmGuard {
-                        armShowOnClickGuard(screen: screen)
+                        armShowOnClickGuard(screen: screen, at: clickLocation)
                     } else {
                         disarmShowOnClickGuard()
                     }
@@ -707,11 +711,8 @@ extension HIDEventManager {
         }
     }
 
-    private func armShowOnClickGuard(screen: NSScreen) {
-        guard
-            let clickLocation = MouseHelpers.locationAppKit,
-            let menuBarHeight = screen.getMenuBarHeight()
-        else {
+    private func armShowOnClickGuard(screen: NSScreen, at clickLocation: CGPoint) {
+        guard let menuBarHeight = screen.getMenuBarHeight() else {
             disarmShowOnClickGuard()
             return
         }
@@ -760,6 +761,14 @@ extension HIDEventManager {
     }
 
     private func disarmShowOnClickGuard() {
+        // If we're waiting for a swallowed mouse-up, defer disarming until it arrives.
+        // This keeps the CGEventTap active until the swallowed mouse-up is processed
+        // and prevents stray mouse-up delivery.
+        if shouldSwallowShowOnClickMouseUp {
+            shouldDisarmShowOnClickGuardOnMouseUp = true
+            return
+        }
+
         clickTask?.cancel()
         clickTask = nil
         showOnClickGuardDeadline = nil
