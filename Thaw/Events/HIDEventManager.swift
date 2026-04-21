@@ -42,6 +42,10 @@ final class HIDEventManager: ObservableObject {
     /// The currently pending show-on-hover delay task.
     private var hoverTask: Task<Void, any Error>?
 
+    /// Identity token for the current hover task so an older task cannot
+    /// clear state that belongs to a newer one.
+    private var hoverTaskToken: UUID?
+
     /// The currently pending hover action, used to avoid restarting the same
     /// delay window on every small mouse move inside the same region.
     private var pendingHoverAction: HoverAction?
@@ -408,6 +412,7 @@ final class HIDEventManager: ObservableObject {
                 if !showOnHover {
                     hoverTask?.cancel()
                     hoverTask = nil
+                    hoverTaskToken = nil
                     pendingHoverAction = nil
                     return
                 }
@@ -415,6 +420,7 @@ final class HIDEventManager: ObservableObject {
                 appState.menuBarManager.showOnHoverAllowed = true
                 hoverTask?.cancel()
                 hoverTask = nil
+                hoverTaskToken = nil
                 pendingHoverAction = nil
 
                 Task { @MainActor [weak self, weak appState] in
@@ -654,7 +660,11 @@ extension HIDEventManager {
 
         clickTask?.cancel()
         clickTask = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(NSEvent.doubleClickInterval))
+            do {
+                try await Task.sleep(for: .seconds(NSEvent.doubleClickInterval))
+            } catch {
+                return
+            }
             await MainActor.run {
                 self?.disarmShowOnClickGuard()
             }
@@ -975,6 +985,7 @@ extension HIDEventManager {
                 if pendingHoverAction == .show {
                     hoverTask?.cancel()
                     hoverTask = nil
+                    hoverTaskToken = nil
                     pendingHoverAction = nil
                 }
                 return
@@ -984,11 +995,16 @@ extension HIDEventManager {
             }
             hoverTask?.cancel()
             pendingHoverAction = .show
+            let taskToken = UUID()
+            hoverTaskToken = taskToken
             hoverTask = Task {
                 defer {
-                    hoverTask = nil
-                    if pendingHoverAction == .show {
-                        pendingHoverAction = nil
+                    if hoverTaskToken == taskToken {
+                        hoverTask = nil
+                        hoverTaskToken = nil
+                        if pendingHoverAction == .show {
+                            pendingHoverAction = nil
+                        }
                     }
                 }
                 try await Task.sleep(for: .seconds(delay))
@@ -1011,6 +1027,7 @@ extension HIDEventManager {
                 if pendingHoverAction == .hide {
                     hoverTask?.cancel()
                     hoverTask = nil
+                    hoverTaskToken = nil
                     pendingHoverAction = nil
                 }
                 return
@@ -1020,11 +1037,16 @@ extension HIDEventManager {
             }
             hoverTask?.cancel()
             pendingHoverAction = .hide
+            let taskToken = UUID()
+            hoverTaskToken = taskToken
             hoverTask = Task {
                 defer {
-                    hoverTask = nil
-                    if pendingHoverAction == .hide {
-                        pendingHoverAction = nil
+                    if hoverTaskToken == taskToken {
+                        hoverTask = nil
+                        hoverTaskToken = nil
+                        if pendingHoverAction == .hide {
+                            pendingHoverAction = nil
+                        }
                     }
                 }
                 try await Task.sleep(for: .seconds(delay))

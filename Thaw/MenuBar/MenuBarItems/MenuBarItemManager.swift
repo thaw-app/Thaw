@@ -702,12 +702,15 @@ final class MenuBarItemManager: ObservableObject {
         configureCancellables(with: appState)
         initialCacheTask?.cancel()
         MenuBarItemManager.diagLog.debug("performSetup: scheduling initial cacheItemsRegardless off the startup critical path")
-        let initialCacheTask = Task { @MainActor [weak self] in
+        self.initialCacheTask = Task { @MainActor [weak self] in
             guard let self else { return }
             MenuBarItemManager.diagLog.debug(
                 "performSetup: initial cacheItemsRegardless started (fast path without sourcePID resolution)"
             )
             for attempt in 1 ... 10 {
+                if Task.isCancelled {
+                    return
+                }
                 await cacheItemsRegardless(resolveSourcePID: false)
                 if itemCache.displayID != nil {
                     if attempt > 1 {
@@ -721,11 +724,16 @@ final class MenuBarItemManager: ObservableObject {
                 MenuBarItemManager.diagLog.debug(
                     "performSetup: fast initial cache missing control items on attempt \(attempt), retrying shortly"
                 )
-                try? await Task.sleep(for: .milliseconds(100))
+                do {
+                    try await Task.sleep(for: .milliseconds(100))
+                } catch is CancellationError {
+                    return
+                } catch {
+                    return
+                }
             }
             MenuBarItemManager.diagLog.debug("performSetup: initial cache complete, items in cache: visible=\(itemCache[.visible].count), hidden=\(itemCache[.hidden].count), alwaysHidden=\(itemCache[.alwaysHidden].count), managedItems=\(itemCache.managedItems.count)")
         }
-        self.initialCacheTask = initialCacheTask
         // Suppress restore and section-order saves for a settling period after launch.
         // During login (system uptime < 60 s) many apps load over ~30 s, each triggering
         // a cache cycle; without this guard every launch notification causes a restore
@@ -752,7 +760,7 @@ final class MenuBarItemManager: ObservableObject {
         // interleaved with notification-triggered cache cycles between them.
         startupSettlingTask = Task { @MainActor [weak self] in
             guard let self else { return }
-            await initialCacheTask.value
+            await self.initialCacheTask?.value
             do {
                 if .now < deadline {
                     try await Task.sleep(until: deadline, clock: .continuous)
@@ -4084,10 +4092,10 @@ extension MenuBarItemManager {
 
         if let cachedAt = menuOpenCheckCachedAt,
            cachedAt.duration(to: .now) <= cacheFreshness,
-           let cachedResult = menuOpenCheckCachedResult
+           menuOpenCheckCachedResult == true
         {
-            MenuBarItemManager.diagLog.debug("Menu open check: using cached result \(cachedResult)")
-            return cachedResult
+            MenuBarItemManager.diagLog.debug("Menu open check: using cached result true")
+            return true
         }
 
         if let existingTask = menuOpenCheckTask {
@@ -4223,8 +4231,13 @@ extension MenuBarItemManager {
         menuOpenCheckTask = task
         let result = await task.value
         menuOpenCheckTask = nil
-        menuOpenCheckCachedResult = result
-        menuOpenCheckCachedAt = .now
+        if result {
+            menuOpenCheckCachedResult = true
+            menuOpenCheckCachedAt = .now
+        } else {
+            menuOpenCheckCachedResult = nil
+            menuOpenCheckCachedAt = nil
+        }
         return result
     }
 }

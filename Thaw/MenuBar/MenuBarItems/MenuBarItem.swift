@@ -311,6 +311,7 @@ extension MenuBarItem {
                 } else {
                     items[itemIndex] = MenuBarItem(
                         uncheckedItemWindow: windows[itemIndex],
+                        sourcePID: nil,
                         instanceIndex: instanceIndex
                     )
                 }
