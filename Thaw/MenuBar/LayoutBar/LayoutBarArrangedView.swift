@@ -35,6 +35,13 @@ class LayoutBarArrangedView: NSView {
         }
     }
 
+    /// The average color info of the menu bar, used for adaptive coloring.
+    var averageColorInfo: MenuBarAverageColorInfo? {
+        didSet {
+            needsDisplay = true
+        }
+    }
+
     var kind: Kind {
         fatalError("Subclasses must override kind")
     }

@@ -620,10 +620,10 @@ struct MenuBarAverageColorInfo: Hashable {
     /// A Boolean value that indicates whether the menu bar has a
     /// bright color.
     ///
-    /// This value is `true` if ``brightness`` is above `0.67`. At
-    /// the time of writing, if this value is `true`, the menu bar
+    /// This value is `true` if ``brightness`` is above ``Constants.menuBarBrightnessThreshold``.
+    /// At the time of writing, if this value is `true`, the menu bar
     /// draws its items with a darker appearance.
     var isBright: Bool {
-        brightness > 0.67
+        brightness > Constants.menuBarBrightnessThreshold
     }
 }

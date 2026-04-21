@@ -29,4 +29,8 @@ enum Constants {
     static let displayName = Bundle.main.displayName
 
     // swiftlint:enable force_unwrapping
+
+    /// The brightness threshold above which the menu bar is considered "bright".
+    /// When the menu bar brightness exceeds this value, items should use dark colors.
+    static let menuBarBrightnessThreshold: CGFloat = 0.5
 }

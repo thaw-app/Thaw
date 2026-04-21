@@ -17,10 +17,14 @@ final class LayoutBarNewItemsBadgeView: LayoutBarArrangedView {
         static let borderWidth: CGFloat = 1
     }
 
-    private static var textAttributes: [NSAttributedString.Key: Any] {
-        [
+    /// Returns text attributes adapted to the menu bar background brightness.
+    /// When the background is bright, uses dark text; otherwise uses light text.
+    private var textAttributes: [NSAttributedString.Key: Any] {
+        let isBright = averageColorInfo?.isBright ?? false
+        let foregroundColor: NSColor = isBright ? .black : .white
+        return [
             .font: NSFont.systemFont(ofSize: 11, weight: .semibold),
-            .foregroundColor: NSColor.labelColor,
+            .foregroundColor: foregroundColor,
         ]
     }
 
@@ -29,9 +33,14 @@ final class LayoutBarNewItemsBadgeView: LayoutBarArrangedView {
     }
 
     init() {
+        // Initial size calculation using default attributes
+        let tempAttributes: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: 11, weight: .semibold),
+            .foregroundColor: NSColor.labelColor,
+        ]
         let title = NSAttributedString(
             string: String(localized: "New Items"),
-            attributes: Self.textAttributes
+            attributes: tempAttributes
         )
         let textWidth = ceil(title.size().width)
         let badgeWidth = textWidth + (Metrics.horizontalPadding * 2)
@@ -54,17 +63,23 @@ final class LayoutBarNewItemsBadgeView: LayoutBarArrangedView {
             return
         }
 
+        let isBright = averageColorInfo?.isBright ?? false
         let pillPath = NSBezierPath(roundedRect: bounds, xRadius: Metrics.cornerRadius, yRadius: Metrics.cornerRadius)
-        NSColor.controlAccentColor.withAlphaComponent(0.14).setFill()
+
+        // Use adaptive colors based on menu bar background brightness
+        let fillColor: NSColor = isBright ? .black : .white
+        let strokeColor: NSColor = isBright ? .black : .white
+
+        fillColor.withAlphaComponent(0.14).setFill()
         pillPath.fill()
 
-        NSColor.controlAccentColor.withAlphaComponent(0.45).setStroke()
+        strokeColor.withAlphaComponent(0.45).setStroke()
         pillPath.lineWidth = Metrics.borderWidth
         pillPath.stroke()
 
         let title = NSAttributedString(
             string: String(localized: "New Items"),
-            attributes: Self.textAttributes
+            attributes: textAttributes
         )
         let titleSize = title.size()
         let titleOrigin = CGPoint(

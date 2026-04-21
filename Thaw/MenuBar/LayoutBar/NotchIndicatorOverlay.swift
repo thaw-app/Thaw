@@ -13,6 +13,8 @@ import SwiftUI
 /// Displayed at the left edge of the visible section's bar to represent
 /// the area where menu bar items cannot be placed on notched displays.
 struct NotchIndicatorOverlay: View {
+    let averageColorInfo: MenuBarAverageColorInfo?
+
     var body: some View {
         GeometryReader { geometry in
             if let screen = NSScreen.main,
@@ -43,30 +45,63 @@ struct NotchIndicatorOverlay: View {
 
     private var notchIndicator: some View {
         ZStack {
-            // Diagonal white stripes.
-            DiagonalStripes()
+            // Diagonal stripes adapted to menu bar background.
+            DiagonalStripes(color: stripeColor)
                 .clipShape(RoundedRectangle(cornerRadius: 6))
                 .padding(3)
 
             RoundedRectangle(cornerRadius: 6)
-                .strokeBorder(.secondary.opacity(0.4), lineWidth: 1)
+                .strokeBorder(borderColor, lineWidth: 1)
                 .padding(3)
 
             Text("Notch")
                 .font(.system(size: 9, weight: .semibold))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(textColor)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(textPillBackgroundColor)
+                )
         }
+    }
+
+    /// Color for diagonal stripes based on menu bar background brightness.
+    private var stripeColor: Color {
+        let isBright = averageColorInfo?.isBright ?? false
+        return isBright ? .black.opacity(0.25) : .white.opacity(0.25)
+    }
+
+    /// Border color based on menu bar background brightness.
+    private var borderColor: Color {
+        let isBright = averageColorInfo?.isBright ?? false
+        return isBright ? .black.opacity(0.4) : .white.opacity(0.4)
+    }
+
+    /// Text color based on menu bar background brightness.
+    private var textColor: Color {
+        let isBright = averageColorInfo?.isBright ?? false
+        return isBright ? .black.opacity(0.5) : .white.opacity(0.5)
+    }
+
+    /// Background color for the text pill, matching the menu bar background.
+    private var textPillBackgroundColor: Color {
+        guard let colorInfo = averageColorInfo else {
+            return Color(nsColor: .defaultLayoutBar)
+        }
+        return Color(cgColor: colorInfo.color)
     }
 }
 
 /// Draws repeating diagonal stripes.
 private struct DiagonalStripes: View {
+    let color: Color
+
     var body: some View {
         Canvas { context, size in
             let stripeWidth: CGFloat = 3
             let gap: CGFloat = 5
             let step = stripeWidth + gap
-            let color = Color.white.opacity(0.25)
 
             // Draw diagonal lines from bottom-left to top-right across the canvas.
             // Extend the range to cover corners.

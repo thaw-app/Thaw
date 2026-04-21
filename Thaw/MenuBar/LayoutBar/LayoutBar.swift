@@ -47,7 +47,7 @@ struct LayoutBar: View {
             }
             .overlay {
                 if section == .visible, NSScreen.main?.hasNotch == true {
-                    NotchIndicatorOverlay()
+                    NotchIndicatorOverlay(averageColorInfo: appState.menuBarManager.averageColorInfo)
                         .allowsHitTesting(false)
                 }
             }

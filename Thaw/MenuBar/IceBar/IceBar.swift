@@ -344,7 +344,7 @@ private struct IceBarContentView: View {
                 .padding(.horizontal, horizontalPadding)
                 .padding(.vertical, verticalPadding)
                 .menuBarItemContainer(appState: appState, colorInfo: colorManager.colorInfo)
-                .foregroundStyle(colorManager.colorInfo?.color.brightness ?? 0 > 0.67 ? .black : .white)
+                .foregroundStyle((colorManager.colorInfo?.color.brightness ?? 0) > Constants.menuBarBrightnessThreshold ? .black : .white)
                 .clipShape(clipShape)
 
             if configuration.current.hasBorder {
@@ -476,7 +476,7 @@ private struct IceBarContentView: View {
         } else {
             ScrollView(.horizontal) {
                 HStack(spacing: 0) {
-                    let isLightBackground = (colorManager.colorInfo?.color.brightness ?? 0) > 0.67
+                    let isLightBackground = (colorManager.colorInfo?.color.brightness ?? 0) > Constants.menuBarBrightnessThreshold
                     ForEach(items, id: \.windowID) { item in
                         IceBarItemView(
                             imageCache: imageCache,

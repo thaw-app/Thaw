@@ -109,6 +109,20 @@ final class LayoutBarContainer: NSView {
                 setArrangedViews(items: cache.managedItems(for: section))
             }
             .store(in: &c)
+
+            // Observe average color changes to update badge appearance
+            appState.menuBarManager.$averageColorInfo
+                .removeDuplicates()
+                .sink { [weak self] colorInfo in
+                    guard let self else {
+                        return
+                    }
+                    // Update the color info on the badge view
+                    if let badgeView = arrangedViews.first(where: { $0.isNewItemsBadge }) {
+                        badgeView.averageColorInfo = colorInfo
+                    }
+                }
+                .store(in: &c)
         }
 
         cancellables = c
@@ -224,6 +238,7 @@ final class LayoutBarContainer: NSView {
         }
         if let badgeIndex {
             let badgeView = arrangedViews.first(where: { $0.isNewItemsBadge }) ?? LayoutBarNewItemsBadgeView()
+            badgeView.averageColorInfo = appState.menuBarManager.averageColorInfo
             let insertionIndex = badgeIndex.clamped(to: newViews.startIndex ... newViews.endIndex)
             newViews.insert(badgeView, at: insertionIndex)
         }
