@@ -780,6 +780,9 @@ final class MenuBarItemManager: ObservableObject {
             // may have stamped lastMoveOperationTimestamp during settling; without this
             // flag the final restore would be silently skipped by the 5 s cooldown.
             await cacheItemsRegardless(skipRecentMoveCheck: true, resolveSourcePID: false)
+            // Final authoritative recache that resolves source PIDs so items used later
+            // (which read item.sourcePID ?? item.ownerPID) reflect the true source PID.
+            await cacheItemsRegardless(resolveSourcePID: true)
         }
         MenuBarItemManager.diagLog.debug("performSetup: MenuBarItemManager setup complete")
     }
