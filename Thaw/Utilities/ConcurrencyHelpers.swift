@@ -36,8 +36,8 @@ extension Task {
     /// - Returns: The result of the operation, if successful.
     static func withTimeout<C: Clock>(
         _ timeout: C.Instant.Duration,
-        tolerance: C.Instant.Duration?,
-        clock: C,
+        tolerance: C.Instant.Duration? = nil,
+        clock: C = .continuous,
         operation: sending @escaping @isolated(any) () async throws -> Success
     ) async throws -> Success {
         try await withThrowingTaskGroup(of: Success.self) { group in

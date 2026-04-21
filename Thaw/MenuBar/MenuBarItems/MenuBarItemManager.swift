@@ -762,7 +762,7 @@ final class MenuBarItemManager: ObservableObject {
             guard let self else { return }
             await self.initialCacheTask?.value
             do {
-                if .now < deadline {
+                if deadline > .now {
                     try await Task.sleep(until: deadline, clock: .continuous)
                 }
             } catch {
@@ -4191,7 +4191,9 @@ extension MenuBarItemManager {
                 resolvedPIDs = await withTaskGroup(of: pid_t?.self, returning: Set<pid_t>.self) { group in
                     for window in unresolvedWindows {
                         group.addTask {
-                            await MenuBarItemService.Connection.shared.sourcePID(for: window)
+                            try? await Task<pid_t?, any Error>.withTimeout(.seconds(2)) {
+                                await MenuBarItemService.Connection.shared.sourcePID(for: window)
+                            }
                         }
                     }
 

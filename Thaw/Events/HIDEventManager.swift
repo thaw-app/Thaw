@@ -692,8 +692,8 @@ extension HIDEventManager {
                 {
                     let shouldArmGuard =
                         appState.settings.general.showOnDoubleClick
-                        && hiddenSection.isHidden
-                        && (appState.menuBarManager.section(withName: .alwaysHidden)?.isEnabled ?? false)
+                            && hiddenSection.isHidden
+                            && (appState.menuBarManager.section(withName: .alwaysHidden)?.isEnabled ?? false)
 
                     hiddenSection.toggle()
 
