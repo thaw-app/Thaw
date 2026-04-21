@@ -126,6 +126,11 @@ final class MenuBarManager: ObservableObject {
 
         // Handle the `focusedApp` and `smart` rehide strategies.
         NSWorkspace.shared.publisher(for: \.frontmostApplication)
+            // Ignore the initial value during app startup. Treating the
+            // current frontmost app as a "focus change" immediately on launch
+            // triggers an expensive menu-open scan before the item manager
+            // has even finished its first cache pass.
+            .dropFirst()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 if

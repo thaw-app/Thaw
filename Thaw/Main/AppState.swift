@@ -100,7 +100,7 @@ final class AppState: ObservableObject {
         hidEventManager.performSetup(with: self)
         diagLog.debug("setupTask: starting itemManager setup")
         await itemManager.performSetup(with: self)
-        diagLog.debug("setupTask: itemManager setup complete, invalidating menuBarHeightCache")
+        diagLog.debug("setupTask: itemManager setup scheduled, invalidating menuBarHeightCache")
         NSScreen.invalidateMenuBarHeightCache()
         diagLog.debug("setupTask: starting imageCache setup")
         imageCache.performSetup(with: self)

@@ -285,9 +285,81 @@ extension MenuBarItem {
     ///   - option: Options that filter the returned list. Pass an empty option set
     ///     to return all available menu bar items.
     @MainActor
-    static func getMenuBarItems(on display: CGDirectDisplayID? = nil, option: ListOption) async -> [MenuBarItem] {
+    private static func assignStableInstanceIndices(
+        to items: inout [MenuBarItem],
+        using windows: [WindowInfo]
+    ) {
+        // Final pass: assign instance indices to allow individual identification
+        // of items with the same (namespace, title). Sort by windowID within each
+        // group so that indices are stable regardless of item position changes
+        // (e.g. dragging between sections). This prevents image cache collisions
+        // caused by instanceIndex values swapping between cache cycles.
+        var groups = [String: [Int]]()
+        for i in 0 ..< items.count {
+            let key = "\(items[i].tag.namespace):\(items[i].tag.title)"
+            groups[key, default: []].append(i)
+        }
+        for (_, indices) in groups where indices.count > 1 {
+            let sorted = indices.sorted { items[$0].windowID < items[$1].windowID }
+            for (instanceIndex, itemIndex) in sorted.enumerated() where instanceIndex > 0 {
+                if let sourcePID = items[itemIndex].sourcePID {
+                    items[itemIndex] = MenuBarItem(
+                        uncheckedItemWindow: windows[itemIndex],
+                        sourcePID: sourcePID,
+                        instanceIndex: instanceIndex
+                    )
+                } else {
+                    items[itemIndex] = MenuBarItem(
+                        uncheckedItemWindow: windows[itemIndex],
+                        instanceIndex: instanceIndex
+                    )
+                }
+            }
+        }
+    }
+
+    @available(macOS 26.0, *)
+    @MainActor
+    private static func makeItemsWithoutResolvingSourcePID(
+        from windows: [WindowInfo]
+    ) -> [MenuBarItem] {
+        var items = windows.map { window in
+            if let title = window.title, title.hasPrefix("Thaw.ControlItem.") {
+                let ccBundleID = "com.apple.controlcenter"
+                if window.owningApplication?.bundleIdentifier == ccBundleID ||
+                    window.ownerPID == ProcessInfo.processInfo.processIdentifier
+                {
+                    return MenuBarItem(
+                        uncheckedItemWindow: window,
+                        sourcePID: ProcessInfo.processInfo.processIdentifier
+                    )
+                }
+            }
+
+            return MenuBarItem(uncheckedItemWindow: window, sourcePID: nil)
+        }
+
+        assignStableInstanceIndices(to: &items, using: windows)
+        let nilPIDCount = items.filter { $0.sourcePID == nil }.count
+        diagLog.debug(
+            "getMenuBarItemsExperimental: created \(items.count) items without sourcePID resolution, \(nilPIDCount) unresolved"
+        )
+        return items
+    }
+
+    @available(macOS 26.0, *)
+    @MainActor
+    private static func getMenuBarItemsExperimental(
+        on display: CGDirectDisplayID?,
+        option: ListOption,
+        resolveSourcePID: Bool
+    ) async -> [MenuBarItem] {
         let windows = getMenuBarItemWindows(on: display, option: option)
         diagLog.debug("getMenuBarItems: processing \(windows.count) windows for source PID resolution")
+
+        guard resolveSourcePID else {
+            return makeItemsWithoutResolvingSourcePID(from: windows)
+        }
 
         var items = await withTaskGroup(of: (Int, MenuBarItem).self) { group in
             for (index, window) in windows.enumerated() {
@@ -379,26 +451,7 @@ extension MenuBarItem {
             }
         }
 
-        // Final pass: assign instance indices to allow individual identification
-        // of items with the same (namespace, title). Sort by windowID within each
-        // group so that indices are stable regardless of item position changes
-        // (e.g. dragging between sections). This prevents image cache collisions
-        // caused by instanceIndex values swapping between cache cycles.
-        var groups = [String: [Int]]()
-        for i in 0 ..< items.count {
-            let key = "\(items[i].tag.namespace):\(items[i].tag.title)"
-            groups[key, default: []].append(i)
-        }
-        for (_, indices) in groups where indices.count > 1 {
-            let sorted = indices.sorted { items[$0].windowID < items[$1].windowID }
-            for (instanceIndex, itemIndex) in sorted.enumerated() where instanceIndex > 0 {
-                if let sourcePID = items[itemIndex].sourcePID {
-                    items[itemIndex] = MenuBarItem(uncheckedItemWindow: windows[itemIndex], sourcePID: sourcePID, instanceIndex: instanceIndex)
-                } else {
-                    items[itemIndex] = MenuBarItem(uncheckedItemWindow: windows[itemIndex], instanceIndex: instanceIndex)
-                }
-            }
-        }
+        assignStableInstanceIndices(to: &items, using: windows)
 
         let nilPIDItems = items.filter { $0.sourcePID == nil }
         if !nilPIDItems.isEmpty {
@@ -408,6 +461,31 @@ extension MenuBarItem {
         } else {
             diagLog.debug("getMenuBarItems: created \(items.count) items, all with resolved sourcePID")
         }
+        return items
+    }
+
+    /// Creates and returns a list of menu bar items for the given display.
+    ///
+    /// - Parameters:
+    ///   - display: An identifier for a display. Pass `nil` to return the menu bar
+    ///     items across all available displays.
+    ///   - option: Options that filter the returned list. Pass an empty option set
+    ///     to return all available menu bar items.
+    @MainActor
+    static func getMenuBarItems(
+        on display: CGDirectDisplayID? = nil,
+        option: ListOption,
+        resolveSourcePID: Bool = true
+    ) async -> [MenuBarItem] {
+        diagLog.debug(
+            "getMenuBarItems: starting (resolveSourcePID=\(resolveSourcePID))"
+        )
+        let items = await getMenuBarItemsExperimental(
+            on: display,
+            option: option,
+            resolveSourcePID: resolveSourcePID
+        )
+        diagLog.debug("getMenuBarItems: returned \(items.count) items")
         return items
     }
 }
