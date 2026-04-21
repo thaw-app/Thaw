@@ -78,6 +78,9 @@ final class HIDEventManager: ObservableObject {
     /// swallowed mouse-up arrives.
     private var shouldDisarmShowOnClickGuardOnMouseUp = false
 
+    /// Whether guard teardown is pending until the swallowed mouse-up arrives.
+    private var shouldDisarmShowOnClickGuardWhenMouseUpArrives = false
+
     /// The number of times the manager has been told to stop.
     private var disableCount = 0
 
@@ -261,8 +264,10 @@ final class HIDEventManager: ObservableObject {
 
         if event.type == .leftMouseUp, shouldSwallowShowOnClickMouseUp {
             shouldSwallowShowOnClickMouseUp = false
-            let shouldDisarm = shouldDisarmShowOnClickGuardOnMouseUp
+            let shouldDisarm = shouldDisarmShowOnClickGuardOnMouseUp ||
+                shouldDisarmShowOnClickGuardWhenMouseUpArrives
             shouldDisarmShowOnClickGuardOnMouseUp = false
+            shouldDisarmShowOnClickGuardWhenMouseUpArrives = false
             if shouldDisarm {
                 disarmShowOnClickGuard()
             }
@@ -724,6 +729,7 @@ extension HIDEventManager {
         showOnClickGuardDeadline = .now + .seconds(NSEvent.doubleClickInterval)
         shouldSwallowShowOnClickMouseUp = false
         shouldDisarmShowOnClickGuardOnMouseUp = false
+        shouldDisarmShowOnClickGuardWhenMouseUpArrives = false
 
         showOnClickGuardTap.start()
 
@@ -735,9 +741,22 @@ extension HIDEventManager {
                 return
             }
             await MainActor.run {
-                self?.disarmShowOnClickGuard()
+                self?.expireShowOnClickGuard()
             }
         }
+    }
+
+    private func expireShowOnClickGuard() {
+        if shouldSwallowShowOnClickMouseUp {
+            shouldDisarmShowOnClickGuardWhenMouseUpArrives = true
+            showOnClickGuardDeadline = nil
+            showOnClickGuardRegion = nil
+            showOnClickGuardDisplayID = nil
+            clickTask = nil
+            return
+        }
+
+        disarmShowOnClickGuard()
     }
 
     private func disarmShowOnClickGuard() {
@@ -748,6 +767,7 @@ extension HIDEventManager {
         showOnClickGuardDisplayID = nil
         shouldSwallowShowOnClickMouseUp = false
         shouldDisarmShowOnClickGuardOnMouseUp = false
+        shouldDisarmShowOnClickGuardWhenMouseUpArrives = false
         showOnClickGuardTap.stop()
     }
 
