@@ -42,6 +42,10 @@ final class HIDEventManager: ObservableObject {
     /// The currently pending show-on-hover delay task.
     private var hoverTask: Task<Void, any Error>?
 
+    /// The currently pending hover action, used to avoid restarting the same
+    /// delay window on every small mouse move inside the same region.
+    private var pendingHoverAction: HoverAction?
+
     /// The pending task that clears the temporary show-on-click guard.
     private var clickTask: Task<Void, Never>?
 
@@ -66,6 +70,11 @@ final class HIDEventManager: ObservableObject {
 
     /// The number of times the manager has been told to stop.
     private var disableCount = 0
+
+    private enum HoverAction {
+        case show
+        case hide
+    }
 
     /// Timestamp of the last `stopAll()` call, used by the health check
     /// to detect a stuck disabled state.
@@ -348,6 +357,32 @@ final class HIDEventManager: ObservableObject {
         windowBoundsLock.withLock { $0 = entries }
     }
 
+    /// Rebuilds the bounds lookup using the current on-screen menu bar layout.
+    ///
+    /// Section show/hide changes often keep the same window IDs while moving
+    /// items on or off screen. Rebuilding from the last item cache in those
+    /// moments can leave hit testing with stale geometry, so use a direct
+    /// Window Server snapshot instead.
+    private func rebuildWindowBoundsLookupFromCurrentLayout() {
+        let allWindowIDs = Bridging.getMenuBarWindowList(option: [
+            .onScreen, .activeSpace, .itemsOnly,
+        ])
+
+        let entries = allWindowIDs.compactMap { windowID -> (windowID: CGWindowID, bounds: CGRect)? in
+            guard let bounds = Bridging.getWindowBounds(for: windowID) else {
+                return nil
+            }
+
+            guard bounds.width <= Self.maxReasonableItemWidth else {
+                return nil
+            }
+
+            return (windowID: windowID, bounds: bounds)
+        }
+
+        windowBoundsLock.withLock { $0 = entries }
+    }
+
     /// Configures the internal observers for the manager.
     private func configureCancellables() {
         var c = Set<AnyCancellable>()
@@ -360,7 +395,7 @@ final class HIDEventManager: ObservableObject {
                 appState.settings.advanced.$showMenuBarTooltips,
                 appState.settings.displaySettings.$configurations
             )
-            .sink { [weak self] _, _, _ in
+            .sink { [weak self] showOnHover, _, _ in
                 guard let self, isEnabled else {
                     return
                 }
@@ -368,6 +403,33 @@ final class HIDEventManager: ObservableObject {
                     mouseMovedTap.start()
                 } else {
                     mouseMovedTap.stop()
+                }
+
+                if !showOnHover {
+                    hoverTask?.cancel()
+                    hoverTask = nil
+                    pendingHoverAction = nil
+                    return
+                }
+
+                appState.menuBarManager.showOnHoverAllowed = true
+                hoverTask?.cancel()
+                hoverTask = nil
+                pendingHoverAction = nil
+
+                Task { @MainActor [weak self, weak appState] in
+                    try? await Task.sleep(for: .milliseconds(50))
+                    guard
+                        let self,
+                        let appState,
+                        isEnabled,
+                        appState.settings.general.showOnHover,
+                        appState.menuBarManager.showOnHoverAllowed,
+                        let screen = NSScreen.screenWithMouse ?? bestScreen(appState: appState)
+                    else {
+                        return
+                    }
+                    handleShowOnHover(appState: appState, screen: screen)
                 }
             }
             .store(in: &c)
@@ -388,12 +450,14 @@ final class HIDEventManager: ObservableObject {
             Publishers.MergeMany(
                 appState.menuBarManager.sections.map { $0.controlItem.$state.replace(with: ()) }
             )
+            // Ignore the initial Published emissions during startup. The item manager
+            // performs its own initial cache pass in AppState setup, and letting the
+            // section-state observer fire immediately causes an extra full menu-bar
+            // scan to preempt startup readiness.
+            .dropFirst(appState.menuBarManager.sections.count)
             .debounce(for: .milliseconds(200), scheduler: DispatchQueue.main)
-            .sink { [weak appState] in
-                guard let appState else { return }
-                Task {
-                    await appState.itemManager.cacheItemsIfNeeded()
-                }
+            .sink { [weak self] in
+                self?.rebuildWindowBoundsLookupFromCurrentLayout()
             }
             .store(in: &c)
 
@@ -901,8 +965,6 @@ extension HIDEventManager {
 
         let delay = appState.settings.advanced.showOnHoverDelay
 
-        hoverTask?.cancel()
-
         if hiddenSection.isHidden {
             guard
                 isMouseInsideEmptyMenuBarSpace(
@@ -910,10 +972,25 @@ extension HIDEventManager {
                     screen: screen
                 )
             else {
+                if pendingHoverAction == .show {
+                    hoverTask?.cancel()
+                    hoverTask = nil
+                    pendingHoverAction = nil
+                }
                 return
             }
+            guard pendingHoverAction != .show else {
+                return
+            }
+            hoverTask?.cancel()
+            pendingHoverAction = .show
             hoverTask = Task {
-                defer { hoverTask = nil }
+                defer {
+                    hoverTask = nil
+                    if pendingHoverAction == .show {
+                        pendingHoverAction = nil
+                    }
+                }
                 try await Task.sleep(for: .seconds(delay))
                 // Make sure the mouse is still inside.
                 guard
@@ -931,10 +1008,25 @@ extension HIDEventManager {
                 !isMouseInsideMenuBar(appState: appState, screen: screen),
                 !isMouseInsideIceBar(appState: appState)
             else {
+                if pendingHoverAction == .hide {
+                    hoverTask?.cancel()
+                    hoverTask = nil
+                    pendingHoverAction = nil
+                }
                 return
             }
+            guard pendingHoverAction != .hide else {
+                return
+            }
+            hoverTask?.cancel()
+            pendingHoverAction = .hide
             hoverTask = Task {
-                defer { hoverTask = nil }
+                defer {
+                    hoverTask = nil
+                    if pendingHoverAction == .hide {
+                        pendingHoverAction = nil
+                    }
+                }
                 try await Task.sleep(for: .seconds(delay))
                 // Make sure the mouse is still outside.
                 guard
@@ -1167,6 +1259,19 @@ extension HIDEventManager {
         return applicationMenuFrame.contains(mouseLocation)
     }
 
+    /// Returns `true` when the current mouse location hits a cached menu bar item
+    /// bounds entry. This is the fast path used by hover/click hit testing.
+    private func isMouseInsideCachedMenuBarItem() -> Bool {
+        guard let mouseLocation = MouseHelpers.locationCoreGraphics else {
+            return false
+        }
+
+        let entries = windowBoundsLock.withLock { $0 }
+        return entries.contains { entry in
+            entry.bounds.contains(mouseLocation)
+        }
+    }
+
     /// A Boolean value that indicates whether the mouse pointer is within
     /// the bounds of a menu bar item.
     func isMouseInsideMenuBarItem(appState _: AppState, screen _: NSScreen) -> Bool {
@@ -1177,10 +1282,7 @@ extension HIDEventManager {
         // Use the pre-built bounds lookup table, which is rebuilt
         // whenever the item cache changes. This avoids per-event
         // IPC calls to the Window Server.
-        let entries = windowBoundsLock.withLock { $0 }
-        let cacheHit = entries.contains { entry in
-            entry.bounds.contains(mouseLocation)
-        }
+        let cacheHit = isMouseInsideCachedMenuBarItem()
 
         // If we found a hit in the cache, return early.
         if cacheHit {
@@ -1257,7 +1359,7 @@ extension HIDEventManager {
         }
 
         return !isInAppMenu
-            && !isMouseInsideMenuBarItem(appState: appState, screen: screen)
+            && !isMouseInsideCachedMenuBarItem()
             && !isMouseInsideIceIcon(appState: appState)
     }
 

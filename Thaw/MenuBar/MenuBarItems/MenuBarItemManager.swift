@@ -132,6 +132,14 @@ final class MenuBarItemManager: ObservableObject {
     /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
 
+    /// The currently running "is any menu open" probe, reused so concurrent
+    /// smart-rehide callers do not all trigger their own full menu-bar scan.
+    private var menuOpenCheckTask: Task<Bool, Never>?
+
+    /// The most recent open-menu probe result and its timestamp.
+    private var menuOpenCheckCachedResult: Bool?
+    private var menuOpenCheckCachedAt: ContinuousClock.Instant?
+
     /// Timer for lightweight periodic cache checks.
     private var cacheTickCancellable: AnyCancellable?
 
@@ -157,6 +165,9 @@ final class MenuBarItemManager: ObservableObject {
     /// subsequent performSetup() call can cancel the previous settling period
     /// before starting a new one, preventing multiple concurrent settling tasks.
     private var startupSettlingTask: Task<Void, Never>?
+    /// Handle to the initial cache warm-up task. The first full cache can be
+    /// expensive on dense menu bars, so it runs off the startup critical path.
+    private var initialCacheTask: Task<Void, Never>?
     /// Absolute deadline for the current startup settling period. Stored so
     /// that a re-entry of performSetup() (e.g. permission re-grant) can
     /// preserve any remaining time from the original period rather than
@@ -688,10 +699,33 @@ final class MenuBarItemManager: ObservableObject {
         // On first launch (no known identifiers), avoid auto-relocating the leftmost item
         // so everything remains in the hidden section until the user interacts.
         suppressNextNewLeftmostItemRelocation = knownItemIdentifiers.isEmpty
-        MenuBarItemManager.diagLog.debug("performSetup: calling initial cacheItemsRegardless")
-        await cacheItemsRegardless()
-        MenuBarItemManager.diagLog.debug("performSetup: initial cache complete, items in cache: visible=\(itemCache[.visible].count), hidden=\(itemCache[.hidden].count), alwaysHidden=\(itemCache[.alwaysHidden].count), managedItems=\(itemCache.managedItems.count)")
         configureCancellables(with: appState)
+        initialCacheTask?.cancel()
+        MenuBarItemManager.diagLog.debug("performSetup: scheduling initial cacheItemsRegardless off the startup critical path")
+        let initialCacheTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            MenuBarItemManager.diagLog.debug(
+                "performSetup: initial cacheItemsRegardless started (fast path without sourcePID resolution)"
+            )
+            for attempt in 1 ... 10 {
+                await cacheItemsRegardless(resolveSourcePID: false)
+                if itemCache.displayID != nil {
+                    if attempt > 1 {
+                        MenuBarItemManager.diagLog.debug(
+                            "performSetup: fast initial cache succeeded on retry \(attempt)"
+                        )
+                    }
+                    break
+                }
+
+                MenuBarItemManager.diagLog.debug(
+                    "performSetup: fast initial cache missing control items on attempt \(attempt), retrying shortly"
+                )
+                try? await Task.sleep(for: .milliseconds(100))
+            }
+            MenuBarItemManager.diagLog.debug("performSetup: initial cache complete, items in cache: visible=\(itemCache[.visible].count), hidden=\(itemCache[.hidden].count), alwaysHidden=\(itemCache[.alwaysHidden].count), managedItems=\(itemCache.managedItems.count)")
+        }
+        self.initialCacheTask = initialCacheTask
         // Suppress restore and section-order saves for a settling period after launch.
         // During login (system uptime < 60 s) many apps load over ~30 s, each triggering
         // a cache cycle; without this guard every launch notification causes a restore
@@ -718,8 +752,11 @@ final class MenuBarItemManager: ObservableObject {
         // interleaved with notification-triggered cache cycles between them.
         startupSettlingTask = Task { @MainActor [weak self] in
             guard let self else { return }
+            await initialCacheTask.value
             do {
-                try await Task.sleep(until: deadline, clock: .continuous)
+                if .now < deadline {
+                    try await Task.sleep(until: deadline, clock: .continuous)
+                }
             } catch {
                 // Cancelled by a subsequent performSetup() call; exit without
                 // touching shared state — the new call manages isInStartupSettling.
@@ -728,11 +765,13 @@ final class MenuBarItemManager: ObservableObject {
             }
             isInStartupSettling = false
             settlingDeadline = nil
-            MenuBarItemManager.diagLog.debug("performSetup: startup settling period ended, running restore")
+            MenuBarItemManager.diagLog.debug(
+                "performSetup: startup settling period ended, running fast restore without sourcePID resolution"
+            )
             // skipRecentMoveCheck: true — relocateNewLeftmostItems/relocatePendingItems
             // may have stamped lastMoveOperationTimestamp during settling; without this
             // flag the final restore would be silently skipped by the 5 s cooldown.
-            await cacheItemsRegardless(skipRecentMoveCheck: true)
+            await cacheItemsRegardless(skipRecentMoveCheck: true, resolveSourcePID: false)
         }
         MenuBarItemManager.diagLog.debug("performSetup: MenuBarItemManager setup complete")
     }
@@ -1193,9 +1232,12 @@ extension MenuBarItemManager {
     /// arranging them into valid positions if needed.
     func cacheItemsRegardless(
         _ currentItemWindowIDs: [CGWindowID]? = nil,
-        skipRecentMoveCheck: Bool = false
+        skipRecentMoveCheck: Bool = false,
+        resolveSourcePID: Bool = true
     ) async {
-        MenuBarItemManager.diagLog.debug("cacheItemsRegardless: entering (skipRecentMoveCheck=\(skipRecentMoveCheck), hasCurrentItemWindowIDs=\(currentItemWindowIDs != nil))")
+        MenuBarItemManager.diagLog.debug(
+            "cacheItemsRegardless: entering (skipRecentMoveCheck=\(skipRecentMoveCheck), hasCurrentItemWindowIDs=\(currentItemWindowIDs != nil), resolveSourcePID=\(resolveSourcePID))"
+        )
         await cacheActor.runCacheTask { [weak self] in
             defer {
                 self?.backgroundCacheContinuation?.resume()
@@ -1221,14 +1263,20 @@ extension MenuBarItemManager {
             let displayID = Bridging.getActiveMenuBarDisplayID()
             MenuBarItemManager.diagLog.debug("cacheItemsRegardless: displayID=\(displayID.map { "\($0)" } ?? "nil"), previousWindowIDs count=\(previousWindowIDs.count)")
 
-            var items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+            var items = await MenuBarItem.getMenuBarItems(
+                option: .activeSpace,
+                resolveSourcePID: resolveSourcePID
+            )
 
             if items.isEmpty {
                 // Retry once after a small delay if we got zero items. This can happen
                 // due to transient WindowServer glitches or during display reconfigurations.
                 MenuBarItemManager.diagLog.warning("cacheItemsRegardless: getMenuBarItems returned ZERO items, retrying in 250ms...")
                 try? await Task.sleep(for: .milliseconds(250))
-                items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+                items = await MenuBarItem.getMenuBarItems(
+                    option: .activeSpace,
+                    resolveSourcePID: resolveSourcePID
+                )
             }
 
             MenuBarItemManager.diagLog.debug("cacheItemsRegardless: getMenuBarItems returned \(items.count) items")
@@ -4032,31 +4080,55 @@ extension MenuBarItemManager {
     /// Returns a Boolean value that indicates whether any menu bar item
     /// currently has a menu open.
     func isAnyMenuBarItemMenuOpen() async -> Bool {
-        // Get all menu bar items that are currently on screen.
-        let items = await MenuBarItem.getMenuBarItems(option: .onScreen)
-        let sourcePIDs = Set(items.compactMap { $0.sourcePID })
+        let cacheFreshness: Duration = .milliseconds(250)
 
-        // Get all on-screen windows.
-        let windows = WindowInfo.createWindows(option: .onScreen)
-
-        MenuBarItemManager.diagLog.debug("Checking for open menus - Found \(items.count) menu bar items with PIDs: \(sourcePIDs)")
-
-        // Check if any of the items' owning applications have a menu-related window.
-        let result = windows.contains { window in
-            // Skip Control Center windows as they can be falsely detected when hovering
-            guard window.owningApplication?.bundleIdentifier != MenuBarItemTag.Namespace.controlCenter.description else {
-                MenuBarItemManager.diagLog.debug("Skipping Control Center window: PID \(window.ownerPID), title: \(window.title ?? "nil")")
-                return false
-            }
-
-            let isMenuOpen = sourcePIDs.contains(window.ownerPID) && window.isMenuRelated && (window.title?.isEmpty ?? true)
-            if isMenuOpen {
-                MenuBarItemManager.diagLog.debug("Found open menu window: PID \(window.ownerPID), owner: \(window.ownerName as NSObject?), title: \(window.title ?? "nil"), isMenuRelated: \(window.isMenuRelated)")
-            }
-            return isMenuOpen
+        if let cachedAt = menuOpenCheckCachedAt,
+           cachedAt.duration(to: .now) <= cacheFreshness,
+           let cachedResult = menuOpenCheckCachedResult
+        {
+            MenuBarItemManager.diagLog.debug("Menu open check: using cached result \(cachedResult)")
+            return cachedResult
         }
 
-        MenuBarItemManager.diagLog.debug("Menu open check result: \(result)")
+        if let existingTask = menuOpenCheckTask {
+            MenuBarItemManager.diagLog.debug("Menu open check: joining in-flight probe")
+            return await existingTask.value
+        }
+
+        let task = Task.detached(priority: .utility) { () -> Bool in
+            // Get all menu bar items that are currently on screen.
+            let items = await MenuBarItem.getMenuBarItems(option: .onScreen)
+            let sourcePIDs = Set(items.compactMap { $0.sourcePID })
+
+            // Get all on-screen windows.
+            let windows = WindowInfo.createWindows(option: .onScreen)
+
+            MenuBarItemManager.diagLog.debug("Checking for open menus - Found \(items.count) menu bar items with PIDs: \(sourcePIDs)")
+
+            // Check if any of the items' owning applications have a menu-related window.
+            let result = windows.contains { window in
+                // Skip Control Center windows as they can be falsely detected when hovering
+                guard window.owningApplication?.bundleIdentifier != MenuBarItemTag.Namespace.controlCenter.description else {
+                    MenuBarItemManager.diagLog.debug("Skipping Control Center window: PID \(window.ownerPID), title: \(window.title ?? "nil")")
+                    return false
+                }
+
+                let isMenuOpen = sourcePIDs.contains(window.ownerPID) && window.isMenuRelated && (window.title?.isEmpty ?? true)
+                if isMenuOpen {
+                    MenuBarItemManager.diagLog.debug("Found open menu window: PID \(window.ownerPID), owner: \(window.ownerName as NSObject?), title: \(window.title ?? "nil"), isMenuRelated: \(window.isMenuRelated)")
+                }
+                return isMenuOpen
+            }
+
+            MenuBarItemManager.diagLog.debug("Menu open check result: \(result)")
+            return result
+        }
+
+        menuOpenCheckTask = task
+        let result = await task.value
+        menuOpenCheckTask = nil
+        menuOpenCheckCachedResult = result
+        menuOpenCheckCachedAt = .now
         return result
     }
 }
