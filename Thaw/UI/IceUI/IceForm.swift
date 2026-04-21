@@ -47,27 +47,22 @@ struct IceForm<Content: View>: View {
         GeometryReader { geometry in
             ScrollView {
                 contentLayout.frame(
-                    maxWidth: geometry.size.width,
+                    minWidth: geometry.size.width,
                     minHeight: geometry.size.height,
                     alignment: .top
                 )
             }
+            .background(Color.clear)
             .scrollContentBackground(.hidden)
-            .scrollIndicatorsFlash(onAppear: true)
-            .scrollDisabled(contentFrame.height > 0 && contentFrame.height <= geometry.size.height)
         }
-        .focusSection()
-        .accessibilityElement(children: .contain)
     }
 
     private var contentLayout: some View {
-        VStack(alignment: alignment, spacing: spacing) {
-            content
-                .labeledContentStyle(IceFormLabeledContentStyle())
-                .toggleStyle(IceFormToggleStyle())
-        }
-        .padding(padding)
-        .onFrameChange(update: $contentFrame)
+        content
+            .labeledContentStyle(IceFormLabeledContentStyle())
+            .toggleStyle(IceFormToggleStyle())
+            .padding(padding)
+            .onFrameChange(update: $contentFrame)
     }
 }
 

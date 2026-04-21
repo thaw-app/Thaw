@@ -33,7 +33,7 @@ final class IceBarPanel: NSPanel {
     /// Background cache task started when the panel is shown.
     private var cacheTask: Task<Void, Never>?
 
-    /// Creates a new Thaw Bar panel.
+    /// Creates a new Thaw Bar panel with Liquid Glass support.
     init() {
         super.init(
             contentRect: .zero,
@@ -47,7 +47,9 @@ final class IceBarPanel: NSPanel {
         self.allowsToolTipsWhenApplicationIsInactive = true
         self.isFloatingPanel = true
         self.animationBehavior = .none
+        // Liquid Glass: transparent window with shadow
         self.backgroundColor = .clear
+        self.isOpaque = false
         self.hasShadow = true
         self.level = .mainMenu + 1
         self.collectionBehavior = [.fullScreenAuxiliary, .ignoresCycle, .moveToActiveSpace, .stationary]

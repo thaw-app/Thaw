@@ -15,7 +15,7 @@ struct IceGroupBox<Header: View, Content: View, Footer: View>: View {
     private let padding: EdgeInsets
 
     private var backgroundShape: some InsettableShape {
-        RoundedRectangle(cornerRadius: 11, style: .continuous)
+        RoundedRectangle(cornerRadius: 20, style: .continuous)
     }
 
     init(
@@ -136,6 +136,8 @@ struct IceGroupBox<Header: View, Content: View, Footer: View>: View {
             Text(title).font(.headline)
         } content: {
             content()
+        } footer: {
+            EmptyView()
         }
     }
 
@@ -148,6 +150,8 @@ struct IceGroupBox<Header: View, Content: View, Footer: View>: View {
             Text(title).font(.headline)
         } content: {
             content()
+        } footer: {
+            EmptyView()
         }
     }
 
@@ -160,14 +164,10 @@ struct IceGroupBox<Header: View, Content: View, Footer: View>: View {
 
             contentStack
                 .padding(padding)
-                .background {
-                    backgroundShape
-                        .fill(.thinMaterial)
-                        .overlay {
-                            backgroundShape
-                                .stroke(.separator.opacity(0.5), lineWidth: 0.5)
-                        }
-                }
+                .glassEffect(.regular, in: backgroundShape)
+                .overlay(
+                    backgroundShape.strokeBorder(.separator.opacity(0.2), lineWidth: 0.5)
+                )
                 .containerShape(backgroundShape)
 
             footer

@@ -220,7 +220,7 @@ private struct SectionedListItemView<ItemID: Hashable>: View {
     var body: some View {
         ZStack {
             borderShape
-                .fill(.tint.opacity(borderOpacity))
+                .fill(Color.accentColor.opacity(borderOpacity))
             item.content
                 .foregroundStyle(foregroundStyle)
         }

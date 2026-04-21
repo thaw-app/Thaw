@@ -9,14 +9,12 @@
 import SwiftUI
 
 struct MenuBarShapePicker: View {
-    @Environment(\.colorScheme) private var colorScheme
     @Binding var configuration: MenuBarAppearanceConfigurationV2
 
     var body: some View {
         VStack(spacing: 12) {
             shapeKindPicker
             shapePicker
-                .foregroundStyle(colorScheme == .dark ? .primary : .secondary)
             if configuration.shapeKind != .noShape {
                 horizontalMargins
             }
@@ -80,6 +78,7 @@ struct MenuBarShapePicker: View {
 }
 
 private struct MenuBarFullShapePicker: View, Equatable {
+    @Environment(\.colorScheme) private var colorScheme
     @Binding var info: MenuBarFullShapeInfo
     @Binding var leftMargin: Double
     @Binding var rightMargin: Double
@@ -88,6 +87,7 @@ private struct MenuBarFullShapePicker: View, Equatable {
         VStack {
             pickerStack
             exampleStack
+                .foregroundStyle(colorScheme == .dark ? .primary : .secondary)
         }
     }
 
@@ -120,25 +120,40 @@ private struct MenuBarFullShapePicker: View, Equatable {
     private func endCapPickerContentView(endCap: MenuBarEndCap, edge: HorizontalEdge) -> some View {
         switch endCap {
         case .square:
-            Image(size: CGSize(width: 12, height: 12)) { context in
-                context.fill(Path(context.clipBoundingRect), with: .foreground)
-            }
-            .resizable()
-            .help(Text("Square Cap"))
-            .tag(endCap)
+            Image(systemName: "square.fill")
+                .help(Text("Square Cap"))
+                .tag(endCap)
         case .round:
-            Image(size: CGSize(width: 12, height: 12)) { context in
-                let remainder = context.clipBoundingRect
-                    .divided(atDistance: context.clipBoundingRect.width / 2, from: cgRectEdge(for: edge))
-                    .remainder
-                let path1 = Path(remainder)
-                let path2 = Path(ellipseIn: context.clipBoundingRect)
-                context.fill(path1.union(path2), with: .foreground)
-            }
-            .resizable()
+            Image(nsImage: rotatedSymbol(
+                "button.roundedtop.horizontal.fill",
+                degrees: edge == .leading ? 90 : -90
+            ))
             .help(Text("Round Cap"))
             .tag(endCap)
         }
+    }
+
+    private func rotatedSymbol(_ name: String, degrees: Double) -> NSImage {
+        let config = NSImage.SymbolConfiguration(pointSize: 12, weight: .regular)
+        guard
+            let base = NSImage(systemSymbolName: name, accessibilityDescription: nil),
+            let symbol = base.withSymbolConfiguration(config)
+        else { return NSImage() }
+        let src = symbol.size
+        // After 90° rotation the symbol is taller than wide — fit into a square canvas
+        let side = max(src.width, src.height)
+        let outputSize = CGSize(width: side, height: side)
+        let rotated = NSImage(size: outputSize)
+        rotated.lockFocus()
+        let transform = NSAffineTransform()
+        transform.translateX(by: outputSize.width / 2, yBy: outputSize.height / 2)
+        transform.rotate(byDegrees: degrees)
+        transform.translateX(by: -src.width / 2, yBy: -src.height / 2)
+        transform.concat()
+        symbol.draw(in: NSRect(origin: .zero, size: src))
+        rotated.unlockFocus()
+        rotated.isTemplate = true
+        return rotated
     }
 
     private var leadingEndCapPicker: some View {
@@ -177,13 +192,6 @@ private struct MenuBarFullShapePicker: View, Equatable {
         lhs.info == rhs.info &&
             lhs.leftMargin == rhs.leftMargin &&
             lhs.rightMargin == rhs.rightMargin
-    }
-
-    private func cgRectEdge(for edge: HorizontalEdge) -> CGRectEdge {
-        switch edge {
-        case .leading: .minXEdge
-        case .trailing: .maxXEdge
-        }
     }
 }
 

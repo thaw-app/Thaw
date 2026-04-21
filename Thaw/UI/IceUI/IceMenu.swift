@@ -57,6 +57,9 @@ struct IceMenu<Title: View, Label: View, Content: View>: View {
                     .toggleStyle(.automatic)
             } label: {
                 title
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
             }
             .menuStyle(.button)
             .buttonStyle(.bordered)

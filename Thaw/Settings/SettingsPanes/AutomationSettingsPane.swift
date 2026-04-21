@@ -28,7 +28,7 @@ struct AutomationSettingsPane: View {
     // MARK: - Enable Section
 
     private var enableSection: some View {
-        IceSection {
+        IceSection(options: [.isBordered]) {
             VStack(alignment: .leading, spacing: 12) {
                 Toggle("Enable Settings URI Scheme", isOn: $settings.isSettingsURIEnabled)
                     .annotation("Allow external applications to read and modify Thaw settings via thaw:// URLs.")
@@ -50,7 +50,7 @@ struct AutomationSettingsPane: View {
     // MARK: - Whitelist Section
 
     private var whitelistSection: some View {
-        IceSection {
+        IceSection(options: [.isBordered]) {
             VStack(alignment: .leading, spacing: 16) {
                 whitelistHeader
 

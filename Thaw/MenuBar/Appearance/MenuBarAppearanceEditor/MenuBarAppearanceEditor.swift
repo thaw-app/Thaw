@@ -23,13 +23,13 @@ struct MenuBarAppearanceEditor: View {
     let onDone: (() -> Void)?
 
     var body: some View {
-        VStack(spacing: 0) {
-            panelHeading
-            bodyContent
-        }
-        .safeAreaBar(edge: .bottom, spacing: 0) {
-            bottomBar
-        }
+        bodyContent
+            .safeAreaBar(edge: .top, spacing: 0) {
+                panelHeading
+            }
+            .safeAreaBar(edge: .bottom, spacing: 0) {
+                bottomBar
+            }
     }
 
     @ViewBuilder
@@ -38,7 +38,7 @@ struct MenuBarAppearanceEditor: View {
             cannotEdit
         } else {
             mainForm
-                .scrollEdgeEffectStyle(.hard, for: .vertical)
+                .scrollEdgeEffectStyle(.automatic, for: .vertical)
                 .padding(.top, topPadding)
         }
     }
@@ -328,20 +328,12 @@ private struct PreviewButton: View {
 private struct PreviewButtonStyle: ButtonStyle {
     @Binding var isPressed: Bool
 
-    private var borderShape: some InsettableShape {
-        AnyInsettableShape(Capsule(style: .continuous))
-    }
-
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .padding(.horizontal, 10)
             .padding(.vertical, 3)
-            .background {
-                borderShape
-                    .fill(configuration.isPressed ? .tertiary : .quaternary)
-                    .opacity(configuration.isPressed ? 0.5 : 0.75)
-            }
-            .contentShape([.focusEffect, .interaction], borderShape)
+            .glassEffect(.regular.interactive(), in: Capsule(style: .continuous))
+            .opacity(configuration.isPressed ? 0.7 : 1.0)
             .onChange(of: configuration.isPressed) { _, newValue in
                 isPressed = newValue
             }

@@ -25,6 +25,7 @@ enum DynamicItemOverrides {
         "com.raycast.macos", // Raycast — calendar plugin items
         "com.flexibits.fantastical2.mac", // Fantastical — upcoming event label
         "com.flexibits.fantastical2.mac.setapp", // Fantastical (Setapp) — upcoming event label
+        "com.microsoft.OneDrive-mac", // OneDrive
     ]
 
     /// Returns `true` if the given namespace belongs to a known dynamic app.

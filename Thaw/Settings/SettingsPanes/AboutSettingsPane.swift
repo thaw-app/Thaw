@@ -42,30 +42,24 @@ struct AboutSettingsPane: View {
         contentForm(cornerStyle: .continuous)
     }
 
-    private func contentForm(cornerStyle: RoundedCornerStyle) -> some View {
+    private func contentForm(cornerStyle _: RoundedCornerStyle) -> some View {
         IceForm(spacing: 0) {
-            mainContent(containerShape: RoundedRectangle(cornerRadius: 20, style: cornerStyle))
-            Spacer(minLength: 10)
-            bottomBar(containerShape: Capsule(style: cornerStyle))
+            mainContent()
+
+            Spacer(minLength: 20)
+
+            bottomBar()
         }
     }
 
-    private func mainContent(containerShape: some InsettableShape) -> some View {
-        IceSection(spacing: 0, options: .plain) {
-            appIconAndCopyrightSection
-                .layoutPriority(1)
-
-            Spacer(minLength: 0)
-                .frame(maxHeight: 20)
-
-            updatesSection
-                .layoutPriority(1)
+    private func mainContent() -> some View {
+        IceSection(options: [.isBordered]) {
+            VStack(spacing: 24) {
+                appIconAndCopyrightSection
+                updatesSection
+            }
+            .padding(.vertical, 8) // Uses your new 8pt standard for height
         }
-        .padding(.top, 5)
-        .padding([.horizontal, .bottom], 30)
-        .frame(maxHeight: 500)
-        .background(.quinary, in: containerShape)
-        .containerShape(containerShape)
     }
 
     private var appIconAndCopyrightSection: some View {
@@ -167,52 +161,28 @@ struct AboutSettingsPane: View {
         }
     }
 
-    private func bottomBar(containerShape: some InsettableShape) -> some View {
-        HStack {
-            Button("Quit \(Constants.displayName)") {
-                NSApp.terminate(nil)
+    private func bottomBar() -> some View {
+        IceSection(options: [.isBordered]) {
+            HStack(spacing: 0) {
+                Button("Quit \(Constants.displayName)") {
+                    NSApp.terminate(nil)
+                }
+                .foregroundStyle(.red.opacity(0.8))
+                .buttonStyle(.plain)
+
+                Spacer()
+
+                HStack(spacing: 20) {
+                    Button("Acknowledgements") { NSWorkspace.shared.open(acknowledgementsURL) }
+                    Button("Contribute") { openURL(contributeURL) }
+                    Button("Report a Bug") { openURL(issuesURL) }
+                    Button("Support \(Constants.displayName)", systemImage: "heart.circle.fill") {
+                        openURL(donateURL)
+                    }
+                }
+                .buttonStyle(.plain)
             }
-            Spacer()
-            Button("Acknowledgements") {
-                NSWorkspace.shared.open(acknowledgementsURL)
-            }
-            Button("Contribute") {
-                openURL(contributeURL)
-            }
-            Button("Report a Bug") {
-                openURL(issuesURL)
-            }
-            Button("Support \(Constants.displayName)", systemImage: "heart.circle.fill") {
-                openURL(donateURL)
-            }
+            .padding(.horizontal, 8)
         }
-        .padding(8)
-        .buttonStyle(BottomBarButtonStyle())
-        .background(.quinary, in: containerShape)
-        .containerShape(containerShape)
-        .frame(height: 40)
-    }
-}
-
-private struct BottomBarButtonStyle: ButtonStyle {
-    @State private var isHovering = false
-
-    private var borderShape: some InsettableShape {
-        ContainerRelativeShape()
-    }
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .padding(.horizontal, 10)
-            .padding(.vertical, 4)
-            .background {
-                borderShape
-                    .fill(configuration.isPressed ? .tertiary : .quaternary)
-                    .opacity(isHovering ? 1 : 0)
-            }
-            .contentShape([.focusEffect, .interaction], borderShape)
-            .onHover { hovering in
-                isHovering = hovering
-            }
     }
 }

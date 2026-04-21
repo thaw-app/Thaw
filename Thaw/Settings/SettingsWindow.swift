@@ -29,13 +29,11 @@ struct SettingsWindow: Scene {
                         appState.updatesManager.automaticallyChecksForUpdates = false
                     }
                 }
-                .frame(minWidth: 850, minHeight: 645)
+                .frame(minWidth: 850, minHeight: 600)
         }
-        .commandsRemoved()
         .windowResizability(.contentSize)
-        .defaultSize(width: 850, height: 645)
-        .windowToolbarLabelStyle(fixed: .iconOnly)
-        .windowStyle(.automatic)
+        .defaultSize(width: 950, height: 650)
+        .windowStyle(.titleBar)
         .windowToolbarStyle(.unified)
         .environmentObject(appState)
     }

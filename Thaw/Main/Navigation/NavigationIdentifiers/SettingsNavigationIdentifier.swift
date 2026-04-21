@@ -24,8 +24,8 @@ enum SettingsNavigationIdentifier: String, NavigationIdentifier {
         switch self {
         case .general: "General"
         case .displays: "Displays"
-        case .menuBarLayout: "Menu Bar Layout"
-        case .menuBarAppearance: "Menu Bar Appearance"
+        case .menuBarLayout: "Layout"
+        case .menuBarAppearance: "Appearance"
         case .hotkeys: "Hotkeys"
         case .profiles: "Profiles"
         case .advanced: "Advanced"
@@ -44,7 +44,7 @@ enum SettingsNavigationIdentifier: String, NavigationIdentifier {
         case .profiles: .systemSymbol("person.crop.rectangle.stack")
         case .advanced: .systemSymbol("gearshape.2")
         case .automation: .systemSymbol("app.badge.checkmark")
-        case .about: .assetCatalog(.iceCubeStroke)
+        case .about: .systemSymbol("cube")
         }
     }
 }

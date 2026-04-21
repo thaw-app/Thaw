@@ -33,13 +33,9 @@ final class CustomTooltipPanel: NSPanel {
         return field
     }()
 
-    private let effectView: NSVisualEffectView = {
-        let view = NSVisualEffectView()
-        view.material = .toolTip
-        view.state = .active
-        view.isEmphasized = true
-        view.wantsLayer = true
-        view.layer?.cornerRadius = 4
+    private let glassView: NSGlassEffectView = {
+        let view = NSGlassEffectView()
+        view.cornerRadius = 4
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
@@ -63,20 +59,20 @@ final class CustomTooltipPanel: NSPanel {
         let contentView = NSView()
         contentView.translatesAutoresizingMaskIntoConstraints = false
 
-        effectView.addSubview(label)
-        contentView.addSubview(effectView)
+        glassView.addSubview(label)
+        contentView.addSubview(glassView)
         self.contentView = contentView
 
         NSLayoutConstraint.activate([
-            effectView.topAnchor.constraint(equalTo: contentView.topAnchor),
-            effectView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            effectView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            effectView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+            glassView.topAnchor.constraint(equalTo: contentView.topAnchor),
+            glassView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            glassView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            glassView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
 
-            label.topAnchor.constraint(equalTo: effectView.topAnchor, constant: 2),
-            label.leadingAnchor.constraint(equalTo: effectView.leadingAnchor, constant: 6),
-            label.trailingAnchor.constraint(equalTo: effectView.trailingAnchor, constant: -6),
-            label.bottomAnchor.constraint(equalTo: effectView.bottomAnchor, constant: -2),
+            label.topAnchor.constraint(equalTo: glassView.topAnchor, constant: 2),
+            label.leadingAnchor.constraint(equalTo: glassView.leadingAnchor, constant: 6),
+            label.trailingAnchor.constraint(equalTo: glassView.trailingAnchor, constant: -6),
+            label.bottomAnchor.constraint(equalTo: glassView.bottomAnchor, constant: -2),
         ])
     }
 

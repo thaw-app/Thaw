@@ -145,13 +145,13 @@ final class MenuBarSearchPanel: NSPanel {
         true
     }
 
-    /// Creates a menu bar search panel.
+    /// Creates a menu bar search panel with Liquid Glass effect.
     init() {
         super.init(
             contentRect: .zero,
             styleMask: [
                 .titled, .fullSizeContentView, .nonactivatingPanel,
-                .utilityWindow, .hudWindow,
+                .utilityWindow,
             ],
             backing: .buffered,
             defer: false
@@ -164,7 +164,7 @@ final class MenuBarSearchPanel: NSPanel {
         self.collectionBehavior = [
             .fullScreenAuxiliary, .ignoresCycle, .moveToActiveSpace,
         ]
-        // Enhanced shadow for glass effect
+        // Liquid Glass: transparent window with shadow
         self.hasShadow = true
         self.backgroundColor = .clear
         self.isOpaque = false
@@ -285,6 +285,10 @@ final class MenuBarSearchPanel: NSPanel {
         }
 
         contentView = hostingView
+        // Match window corner radius to glass effect
+        contentView?.wantsLayer = true
+        contentView?.layer?.cornerRadius = 16
+        contentView?.layer?.masksToBounds = true
         makeKeyAndOrderFront(nil)
 
         mouseDownMonitor.start()
@@ -451,40 +455,40 @@ private struct MenuBarSearchContentView: View {
         7
     }
 
+    private var bottomBarHorizontalPadding: CGFloat {
+        4
+    }
+
     var body: some View {
-        VStack(spacing: 0) {
-            searchField
-            mainContent
-            bottomBar
-        }
-        .environment(\.menuBarSearchPanel, panel)
-        .background {
-            VisualEffectView(material: .hudWindow, blendingMode: .behindWindow)
-                .overlay {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(.separator.opacity(0.4), lineWidth: 0.5)
-                }
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .frame(width: 600, height: 400)
-        .fixedSize()
-        .onAppear {
-            // Delay focus slightly to ensure the window is fully key
-            // and the text field is ready to receive focus.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                searchFieldIsFocused = true
+        mainContent
+            .safeAreaBar(edge: .top, spacing: 0) {
+                searchField
             }
-        }
-        .onChange(of: model.searchText, initial: true) {
-            updateDisplayedItems()
-            selectFirstDisplayedItem()
-        }
-        .onChange(of: itemManager.itemCache, initial: true) {
-            updateDisplayedItems()
-            if model.selection == nil {
+            .safeAreaBar(edge: .bottom, spacing: 0) {
+                bottomBar
+            }
+            .scrollEdgeEffectStyle(.automatic, for: .vertical)
+            .environment(\.menuBarSearchPanel, panel)
+            .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .frame(width: 600, height: 400)
+            .fixedSize()
+            .onAppear {
+                // Delay focus slightly to ensure the window is fully key
+                // and the text field is ready to receive focus.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                    searchFieldIsFocused = true
+                }
+            }
+            .onChange(of: model.searchText, initial: true) {
+                updateDisplayedItems()
                 selectFirstDisplayedItem()
             }
-        }
+            .onChange(of: itemManager.itemCache, initial: true) {
+                updateDisplayedItems()
+                if model.selection == nil {
+                    selectFirstDisplayedItem()
+                }
+            }
     }
 
     @ViewBuilder
@@ -502,7 +506,6 @@ private struct MenuBarSearchContentView: View {
                 }
                 .labelsHidden()
                 .textFieldStyle(.plain)
-                .multilineTextAlignment(.leading)
                 .font(.system(size: 18))
                 .textContentType(.none)
                 .autocorrectionDisabled(true)
@@ -511,10 +514,10 @@ private struct MenuBarSearchContentView: View {
                 Spacer()
             }
             .padding(15)
-            .background(.ultraThinMaterial)
 
             Divider()
-                .background(.separator.opacity(0.5))
+                .opacity(0.7)
+                .padding(.horizontal, 15)
         }
     }
 
@@ -545,7 +548,6 @@ private struct MenuBarSearchContentView: View {
                 .foregroundStyle(.link)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(.ultraThinMaterial)
         } else if hasItems {
             SectionedList(
                 selection: $model.selection,
@@ -554,7 +556,6 @@ private struct MenuBarSearchContentView: View {
             )
             .contentPadding(8)
             .scrollContentBackground(.hidden)
-            .background(.ultraThinMaterial)
         } else {
             VStack {
                 Text("Loading menu bar items…")
@@ -563,7 +564,6 @@ private struct MenuBarSearchContentView: View {
                     .controlSize(.small)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(.ultraThinMaterial)
         }
     }
 
@@ -600,12 +600,8 @@ private struct MenuBarSearchContentView: View {
             }
         }
         .padding(bottomBarPadding)
-        .background(.regularMaterial)
+        .padding(.horizontal, bottomBarHorizontalPadding)
         .buttonStyle(BottomBarButtonStyle())
-        .overlay(alignment: .top) {
-            Divider()
-                .background(.separator.opacity(0.5))
-        }
     }
 
     private func selectFirstDisplayedItem() {
@@ -641,6 +637,7 @@ private struct MenuBarSearchContentView: View {
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.vertical, 10)
+                        .padding(.leading, 6)
                 }
                 items.append(SearchItem(listItem: headerItem, title: name.displayString))
 
@@ -704,10 +701,6 @@ private struct MenuBarSearchContentView: View {
 private struct EditNameButton: View {
     let action: () -> Void
 
-    private var backgroundShape: some InsettableShape {
-        RoundedRectangle(cornerRadius: 5, style: .continuous)
-    }
-
     var body: some View {
         Button(action: action) {
             HStack(spacing: 5) {
@@ -719,12 +712,7 @@ private struct EditNameButton: View {
                 }
                 .padding(.horizontal, 4)
                 .padding(.vertical, 2)
-                .background {
-                    backgroundShape
-                        .fill(.regularMaterial)
-                        .brightness(0.25)
-                        .opacity(0.5)
-                }
+                .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
                 .foregroundStyle(.secondary)
 
                 Text("+")
@@ -734,12 +722,7 @@ private struct EditNameButton: View {
                 }
                 .padding(.horizontal, 4)
                 .padding(.vertical, 2)
-                .background {
-                    backgroundShape
-                        .fill(.regularMaterial)
-                        .brightness(0.25)
-                        .opacity(0.5)
-                }
+                .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
                 .foregroundStyle(.secondary)
             }
         }
@@ -748,10 +731,6 @@ private struct EditNameButton: View {
 
 private struct EditConfirmButton: View {
     let action: () -> Void
-
-    private var backgroundShape: some InsettableShape {
-        RoundedRectangle(cornerRadius: 5, style: .continuous)
-    }
 
     var body: some View {
         Button(action: action) {
@@ -769,12 +748,7 @@ private struct EditConfirmButton: View {
                     .bold()
                     .padding(.horizontal, 7)
                     .padding(.vertical, 5)
-                    .background {
-                        backgroundShape
-                            .fill(.regularMaterial)
-                            .brightness(0.25)
-                            .opacity(0.5)
-                    }
+                    .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
             }
         }
     }
@@ -782,10 +756,6 @@ private struct EditConfirmButton: View {
 
 private struct EditDiscardButton: View {
     let action: () -> Void
-
-    private var backgroundShape: some InsettableShape {
-        RoundedRectangle(cornerRadius: 5, style: .continuous)
-    }
 
     var body: some View {
         Button(action: action) {
@@ -799,12 +769,7 @@ private struct EditDiscardButton: View {
                     .font(.system(size: 12))
                     .padding(.horizontal, 4)
                     .padding(.vertical, 2)
-                    .background {
-                        backgroundShape
-                            .fill(.regularMaterial)
-                            .brightness(0.25)
-                            .opacity(0.5)
-                    }
+                    .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
             }
         }
     }
@@ -828,10 +793,6 @@ private struct ShowItemButton: View {
     let item: MenuBarItem
     let action: () -> Void
 
-    private var backgroundShape: some InsettableShape {
-        RoundedRectangle(cornerRadius: 5, style: .continuous)
-    }
-
     var body: some View {
         Button(action: action) {
             HStack {
@@ -850,44 +811,19 @@ private struct ShowItemButton: View {
                     .bold()
                     .padding(.horizontal, 7)
                     .padding(.vertical, 5)
-                    .background {
-                        backgroundShape
-                            .fill(.regularMaterial)
-                            .brightness(0.25)
-                            .opacity(0.5)
-                    }
+                    .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
             }
         }
     }
 }
 
 private struct BottomBarButtonStyle: ButtonStyle {
-    @State private var isHovering = false
-
-    private var borderShape: some InsettableShape {
-        RoundedRectangle(cornerRadius: 6, style: .continuous)
-    }
-
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .frame(height: 22)
             .frame(minWidth: 22)
             .padding(3)
-            .background {
-                borderShape
-                    .fill(.thinMaterial)
-                    .overlay {
-                        borderShape
-                            .stroke(.separator.opacity(isHovering ? 0.5 : 0.3), lineWidth: 0.5)
-                    }
-                    .opacity(
-                        configuration.isPressed ? 0.7 : isHovering ? 1.0 : 0.5
-                    )
-            }
-            .contentShape([.focusEffect, .interaction], borderShape)
-            .onHover { hovering in
-                isHovering = hovering
-            }
+            .opacity(configuration.isPressed ? 0.7 : 1.0)
     }
 }
 

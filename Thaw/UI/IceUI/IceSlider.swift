@@ -55,12 +55,12 @@ struct IceSlider<Value: BinaryFloatingPoint, ValueLabel: View>: View {
         self.valueLabel = Text(valueLabelKey)
     }
 
-    private var borderShape: some InsettableShape {
-        RoundedRectangle(cornerRadius: 6, style: .continuous)
-    }
-
     private var height: CGFloat {
         24
+    }
+
+    private var borderShape: some InsettableShape {
+        RoundedRectangle(cornerRadius: 10, style: .continuous)
     }
 
     var body: some View {
@@ -74,26 +74,43 @@ struct IceSlider<Value: BinaryFloatingPoint, ValueLabel: View>: View {
         ) {
             HStack(spacing: 4) {
                 valueLabel
+                    .scaleEffect(x: reversed ? -1 : 1, y: 1)
                 if showsValue {
                     Spacer()
-                    Text(value.formatted())
-                        .monospacedDigit()
-                    if let unit {
-                        Text(unit)
+                    if reversed {
+                        if let unit {
+                            Text(unit)
+                                .scaleEffect(x: -1, y: 1)
+                        }
+                        Text(value.formatted())
+                            .monospacedDigit()
+                            .scaleEffect(x: -1, y: 1)
+                    } else {
+                        Text(value.formatted())
+                            .monospacedDigit()
+                            .scaleEffect(x: 1, y: 1)
+                        if let unit {
+                            Text(unit)
+                                .scaleEffect(x: 1, y: 1)
+                        }
                     }
                 }
             }
             .padding(.horizontal, 8)
-            .opacity(0.5)
+            .opacity(0.8)
             .frame(height: height)
-            .rotationEffect(.degrees(reversed ? 180 : 0))
         }
+        .glassEffect(.regular, in: borderShape)
+        .overlay(
+            borderShape.strokeBorder(.separator.opacity(0.15), lineWidth: 0.5)
+        )
         .compactSliderDisabledHapticFeedback(true)
         .compactSliderSecondaryColor(
-            progressColor: .accentColor.opacity(0.5),
-            focusedProgressColor: .accentColor.opacity(0.75)
+            progressColor: .accentColor.opacity(0.8),
+            focusedProgressColor: .accentColor.opacity(1.0)
         )
-        .rotationEffect(.degrees(reversed ? 180 : 0))
+        .tint(.accentColor)
+        .scaleEffect(x: reversed ? -1 : 1, y: 1)
         .clipShape(borderShape)
         .contentShape([.interaction, .focusEffect], borderShape)
     }

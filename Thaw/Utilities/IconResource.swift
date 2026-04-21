@@ -17,10 +17,19 @@ enum IconResource: Hashable {
     case assetCatalog(_ resource: ImageResource)
 
     /// The view produced by the resource.
+    @ViewBuilder
     var view: some View {
-        image
-            .resizable()
-            .aspectRatio(contentMode: .fit)
+        switch self {
+        case .systemSymbol:
+            // SF Symbols scale with the font environment - no .resizable()
+            image
+        case .assetCatalog:
+            // Asset catalog images need explicit sizing
+            image
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 16, height: 16)
+        }
     }
 
     /// The image produced by the resource.

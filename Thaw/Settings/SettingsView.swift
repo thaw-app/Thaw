@@ -8,197 +8,82 @@
 
 import SwiftUI
 
-// MARK: - Preference Key for Measuring Sidebar Item Widths
-
-private struct SidebarItemWidthPreferenceKey: PreferenceKey {
-    static let defaultValue: [SettingsNavigationIdentifier: CGFloat] = [:]
-
-    static func reduce(
-        value: inout [SettingsNavigationIdentifier: CGFloat],
-        nextValue: () -> [SettingsNavigationIdentifier: CGFloat]
-    ) {
-        value.merge(nextValue()) { _, new in new }
-    }
-}
-
 // MARK: - SettingsView
 
 struct SettingsView: View {
     let appState: AppState
     @ObservedObject var navigationState: AppNavigationState
-    @Environment(\.appearsActive) private var appearsActive
-    @Environment(\.sidebarRowSize) private var sidebarRowSize
 
-    private let sidebarPadding: CGFloat = 3
-    private let sidebarItemCornerRadius: CGFloat = 12
-
-    /// State to store measured text widths from sidebar items
-    @State private var measuredTextWidths: [SettingsNavigationIdentifier: CGFloat] = [:]
-
-    /// Minimum sidebar width based on row size
-    private var minSidebarWidth: CGFloat {
-        switch sidebarRowSize {
-        case .small: 200
-        case .medium: 220
-        case .large: 240
-        @unknown default: 220
-        }
+    private var allSections: [SettingsNavigationIdentifier] {
+        SettingsNavigationIdentifier.allCases
     }
 
-    /// Space for icon including padding and Label internal spacing
-    /// Icon sizes naturally to sidebarItemHeight, so we use that as basis
-    private var iconSpace: CGFloat {
-        sidebarItemHeight + 8
+    private var currentSectionIndex: Int? {
+        allSections.firstIndex(of: navigationState.settingsNavigationIdentifier)
     }
 
-    /// List margins (leading/trailing padding in sidebar)
-    private var listMargins: CGFloat {
-        32
+    private var isFirstSection: Bool {
+        currentSectionIndex == 0
     }
 
-    /// Dynamic sidebar width calculated from measured content
-    private var dynamicSidebarWidth: CGFloat {
-        let maxTextWidth = measuredTextWidths.values.max() ?? 0
-        // 8 = horizontal padding on label (4pt × 2 sides)
-        let calculatedWidth = maxTextWidth + iconSpace + listMargins + 8
-        return max(calculatedWidth, minSidebarWidth)
-    }
-
-    private var sidebarItemHeight: CGFloat {
-        switch sidebarRowSize {
-        case .small: 26
-        case .medium: 32
-        case .large: 34
-        @unknown default: 32
-        }
-    }
-
-    private var sidebarFontSize: CGFloat {
-        switch sidebarRowSize {
-        case .small: 13
-        case .medium: 15
-        case .large: 16
-        @unknown default: 15
-        }
-    }
-
-    private var sidebarTextStyle: some ShapeStyle {
-        appearsActive ? .primary : .secondary
-    }
-
-    private var navigationTitle: LocalizedStringKey {
-        navigationState.settingsNavigationIdentifier.localized
+    private var isLastSection: Bool {
+        currentSectionIndex == allSections.count - 1
     }
 
     var body: some View {
         NavigationSplitView {
             sidebar
-                .background(.regularMaterial, ignoresSafeAreaEdges: .all)
         } detail: {
-            detailView
-                .background(.windowBackground, ignoresSafeAreaEdges: .all)
+            settingsPane
+                .id(navigationState.settingsNavigationIdentifier)
         }
-        .navigationTitle(navigationTitle)
-        .background(.windowBackground)
+        .navigationTitle(navigationState.settingsNavigationIdentifier.localized)
+        .toolbar {
+            ToolbarItem(placement: .navigation) {
+                ControlGroup {
+                    Button(action: navigateBack) {
+                        Label("Back", systemImage: "chevron.left")
+                    }
+                    .disabled(isFirstSection)
+
+                    Button(action: navigateForward) {
+                        Label("Forward", systemImage: "chevron.right")
+                    }
+                    .disabled(isLastSection)
+                }
+                .controlGroupStyle(.navigation)
+            }
+        }
     }
 
     private var sidebar: some View {
-        List {
+        // Use a Binding that wraps the navigation state to ensure updates happen
+        // on the main thread and avoid view update warnings.
+        let selection = Binding<SettingsNavigationIdentifier>(
+            get: { navigationState.settingsNavigationIdentifier },
+            set: { newValue in
+                if navigationState.settingsNavigationIdentifier != newValue {
+                    DispatchQueue.main.async {
+                        navigationState.settingsNavigationIdentifier = newValue
+                    }
+                }
+            }
+        )
+
+        return List(selection: selection) {
             Section {
                 ForEach(SettingsNavigationIdentifier.allCases) { identifier in
-                    sidebarButton(for: identifier)
-                }
-            } header: {
-                Text("\(Constants.displayName)")
-                    .font(.system(size: sidebarFontSize * 2.67, weight: .medium))
-                    .foregroundStyle(sidebarTextStyle)
-                    .padding(.leading, sidebarPadding)
-                    .padding(.bottom, sidebarFontSize)
-            }
-            .collapsible(false)
-        }
-        .scrollDisabled(true)
-        .toolbar(removing: .sidebarToggle)
-        .toolbar {
-            sidebarToolbarSpacer
-        }
-        .navigationSplitViewColumnWidth(
-            min: minSidebarWidth,
-            ideal: dynamicSidebarWidth,
-            max: dynamicSidebarWidth * 1.5
-        )
-        .onPreferenceChange(SidebarItemWidthPreferenceKey.self) { widths in
-            measuredTextWidths = widths
-        }
-    }
-
-    private func sidebarButton(for identifier: SettingsNavigationIdentifier) -> some View {
-        let isSelected = navigationState.settingsNavigationIdentifier == identifier
-
-        return Button {
-            if !isSelected {
-                navigationState.settingsNavigationIdentifier = identifier
-            }
-        } label: {
-            sidebarItemLabel(for: identifier, isSelected: isSelected)
-        }
-        .buttonStyle(.plain)
-        .listRowBackground(Color.clear)
-    }
-
-    private func sidebarItemLabel(
-        for identifier: SettingsNavigationIdentifier,
-        isSelected: Bool
-    ) -> some View {
-        Label {
-            Text(identifier.localized)
-                .font(.system(size: sidebarFontSize))
-                .foregroundStyle(sidebarTextStyle)
-                .background(
-                    GeometryReader { geometry in
-                        Color.clear
-                            .preference(
-                                key: SidebarItemWidthPreferenceKey.self,
-                                value: [identifier: geometry.size.width]
-                            )
+                    Label {
+                        Text(identifier.localized)
+                    } icon: {
+                        identifier.iconResource.view
                     }
-                )
-        } icon: {
-            identifier.iconResource.view
-                .foregroundStyle(sidebarTextStyle)
-                .padding(sidebarPadding)
+                    .tag(identifier)
+                }
+            }
         }
-        .foregroundStyle(sidebarItemForegroundStyle(isSelected: isSelected))
-        .frame(maxWidth: .infinity, minHeight: sidebarItemHeight, alignment: .leading)
-        .padding(.horizontal, 10)
-        .background(sidebarItemBackground(isSelected: isSelected))
-        .clipShape(RoundedRectangle(cornerRadius: sidebarItemCornerRadius, style: .continuous))
-        .contentShape(RoundedRectangle(cornerRadius: sidebarItemCornerRadius, style: .continuous))
-    }
-
-    private func sidebarItemForegroundStyle(isSelected _: Bool) -> some ShapeStyle {
-        AnyShapeStyle(sidebarTextStyle)
-    }
-
-    @ViewBuilder
-    private func sidebarItemBackground(isSelected: Bool) -> some View {
-        if isSelected {
-            RoundedRectangle(cornerRadius: sidebarItemCornerRadius, style: .continuous)
-                .fill(.selection)
-        } else {
-            Color.clear
-        }
-    }
-
-    @ToolbarContentBuilder
-    private var sidebarToolbarSpacer: some ToolbarContent {
-        ToolbarSpacer(.flexible)
-    }
-
-    private var detailView: some View {
-        settingsPane
-            .id(navigationState.settingsNavigationIdentifier)
-            .scrollEdgeEffectStyle(.hard, for: .top)
+        .listStyle(.sidebar)
+        .scrollDisabled(true)
     }
 
     @ViewBuilder
@@ -222,6 +107,32 @@ struct SettingsView: View {
             AutomationSettingsPane()
         case .about:
             AboutSettingsPane(updatesManager: appState.updatesManager)
+        }
+    }
+
+    private func navigateBack() {
+        guard let index = currentSectionIndex, index > 0 else { return }
+        navigationState.settingsNavigationIdentifier = allSections[index - 1]
+    }
+
+    private func navigateForward() {
+        guard let index = currentSectionIndex, index < allSections.count - 1 else { return }
+        navigationState.settingsNavigationIdentifier = allSections[index + 1]
+    }
+}
+
+// MARK: - ToolbarSpacer
+
+struct ToolbarSpacer: ToolbarContent {
+    let placement: ToolbarItemPlacement
+
+    init(_ placement: ToolbarItemPlacement = .automatic) {
+        self.placement = placement
+    }
+
+    var body: some ToolbarContent {
+        ToolbarItem(placement: placement) {
+            Spacer()
         }
     }
 }
