@@ -142,23 +142,25 @@ final class LayoutBarContainer: NSView {
 
             // For Settings window preview: poll to detect window screen changes
             // since didChangeScreenParametersNotification doesn't fire on window movement
-            // For Settings window preview: poll to detect window screen changes
-            // since didChangeScreenParametersNotification doesn't fire on window movement
             screenCheckTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
                 Task { @MainActor in
-                    guard let self else { return }
-                    let currentHasNotch = NSScreen.screenWithActiveMenuBar?.hasNotch ?? false
-                    if self.lastScreenHasNotch != currentHasNotch {
-                        self.lastScreenHasNotch = currentHasNotch
-                        if let badgeView = self.arrangedViews.first(where: { $0.isNewItemsBadge }) {
-                            badgeView.averageColorInfo = appState.menuBarManager.averageColorInfo
-                        }
-                    }
+                    self?.updateBadgeForScreenChange()
                 }
             }
         }
 
         cancellables = c
+    }
+
+    /// Updates the badge view's color info when the screen changes (notch detection)
+    private func updateBadgeForScreenChange() {
+        let currentHasNotch = NSScreen.screenWithActiveMenuBar?.hasNotch ?? false
+        if lastScreenHasNotch != currentHasNotch {
+            lastScreenHasNotch = currentHasNotch
+            if let badgeView = arrangedViews.first(where: { $0.isNewItemsBadge }) {
+                badgeView.averageColorInfo = appState?.menuBarManager.averageColorInfo
+            }
+        }
     }
 
     deinit {
