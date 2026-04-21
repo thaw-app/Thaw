@@ -15,6 +15,9 @@ import SwiftUI
 struct NotchIndicatorOverlay: View {
     let averageColorInfo: MenuBarAverageColorInfo?
 
+    /// Trigger to force redraw when screen parameters change.
+    @State private var screenChangeTrigger = UUID()
+
     var body: some View {
         GeometryReader { geometry in
             if let screen = NSScreen.main,
@@ -41,6 +44,10 @@ struct NotchIndicatorOverlay: View {
                 }
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didChangeScreenParametersNotification)) { _ in
+            screenChangeTrigger = UUID()
+        }
+        .id(screenChangeTrigger)
     }
 
     private var notchIndicator: some View {
@@ -68,19 +75,19 @@ struct NotchIndicatorOverlay: View {
 
     /// Color for diagonal stripes based on menu bar background brightness.
     private var stripeColor: Color {
-        let isBright = averageColorInfo?.isBright ?? false
+        let isBright = isBrightForActiveScreen()
         return isBright ? .black.opacity(0.25) : .white.opacity(0.25)
     }
 
     /// Border color based on menu bar background brightness.
     private var borderColor: Color {
-        let isBright = averageColorInfo?.isBright ?? false
+        let isBright = isBrightForActiveScreen()
         return isBright ? .black.opacity(0.4) : .white.opacity(0.4)
     }
 
     /// Text color based on menu bar background brightness.
     private var textColor: Color {
-        let isBright = averageColorInfo?.isBright ?? false
+        let isBright = isBrightForActiveScreen()
         return isBright ? .black.opacity(0.5) : .white.opacity(0.5)
     }
 
@@ -90,6 +97,13 @@ struct NotchIndicatorOverlay: View {
             return Color(nsColor: .defaultLayoutBar)
         }
         return Color(cgColor: colorInfo.color)
+    }
+
+    /// Helper to check brightness using the active screen for notch detection.
+    private func isBrightForActiveScreen() -> Bool {
+        guard let colorInfo = averageColorInfo else { return false }
+        let activeScreen = NSScreen.screenWithActiveMenuBar
+        return colorInfo.isBright(for: activeScreen)
     }
 }
 

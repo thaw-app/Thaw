@@ -93,6 +93,10 @@ final class LayoutBarContainer: NSView {
         fatalError("init(coder:) has not been implemented")
     }
 
+    /// Timer to periodically check if window moved to different screen (for Settings window preview)
+    private var screenCheckTimer: Timer?
+    private var lastScreenHasNotch: Bool?
+
     private func configureCancellables() {
         var c = Set<AnyCancellable>()
 
@@ -123,9 +127,42 @@ final class LayoutBarContainer: NSView {
                     }
                 }
                 .store(in: &c)
+
+            // Observe screen parameter changes (moving between displays) to update badge
+            NotificationCenter.default
+                .publisher(for: NSApplication.didChangeScreenParametersNotification)
+                .sink { [weak self] _ in
+                    guard let self else { return }
+                    // Force update badge's color info and redraw when screen changes
+                    if let badgeView = arrangedViews.first(where: { $0.isNewItemsBadge }) {
+                        badgeView.averageColorInfo = appState.menuBarManager.averageColorInfo
+                    }
+                }
+                .store(in: &c)
+
+            // For Settings window preview: poll to detect window screen changes
+            // since didChangeScreenParametersNotification doesn't fire on window movement
+            // For Settings window preview: poll to detect window screen changes
+            // since didChangeScreenParametersNotification doesn't fire on window movement
+            screenCheckTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
+                Task { @MainActor in
+                    guard let self else { return }
+                    let currentHasNotch = NSScreen.screenWithActiveMenuBar?.hasNotch ?? false
+                    if self.lastScreenHasNotch != currentHasNotch {
+                        self.lastScreenHasNotch = currentHasNotch
+                        if let badgeView = self.arrangedViews.first(where: { $0.isNewItemsBadge }) {
+                            badgeView.averageColorInfo = appState.menuBarManager.averageColorInfo
+                        }
+                    }
+                }
+            }
         }
 
         cancellables = c
+    }
+
+    deinit {
+        screenCheckTimer?.invalidate()
     }
 
     /// Relayouts the container after one arranged view changed size.

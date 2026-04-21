@@ -20,7 +20,7 @@ final class LayoutBarNewItemsBadgeView: LayoutBarArrangedView {
     /// Returns text attributes adapted to the menu bar background brightness.
     /// When the background is bright, uses dark text; otherwise uses light text.
     private var textAttributes: [NSAttributedString.Key: Any] {
-        let isBright = averageColorInfo?.isBright ?? false
+        let isBright = isBrightForActiveScreen()
         let foregroundColor: NSColor = isBright ? .black : .white
         return [
             .font: NSFont.systemFont(ofSize: 11, weight: .semibold),
@@ -63,7 +63,7 @@ final class LayoutBarNewItemsBadgeView: LayoutBarArrangedView {
             return
         }
 
-        let isBright = averageColorInfo?.isBright ?? false
+        let isBright = isBrightForActiveScreen()
         let pillPath = NSBezierPath(roundedRect: bounds, xRadius: Metrics.cornerRadius, yRadius: Metrics.cornerRadius)
 
         // Use adaptive colors based on menu bar background brightness
@@ -87,6 +87,13 @@ final class LayoutBarNewItemsBadgeView: LayoutBarArrangedView {
             y: bounds.midY - (titleSize.height / 2)
         )
         title.draw(at: titleOrigin)
+    }
+
+    /// Helper to check brightness using the active screen for notch detection.
+    private func isBrightForActiveScreen() -> Bool {
+        guard let colorInfo = averageColorInfo else { return false }
+        let activeScreen = NSScreen.screenWithActiveMenuBar
+        return colorInfo.isBright(for: activeScreen)
     }
 
     override func mouseDragged(with event: NSEvent) {

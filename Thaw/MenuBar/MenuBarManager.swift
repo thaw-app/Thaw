@@ -626,4 +626,18 @@ struct MenuBarAverageColorInfo: Hashable {
     var isBright: Bool {
         brightness > Constants.menuBarBrightnessThreshold
     }
+
+    /// Returns whether the menu bar has a bright color for the given screen.
+    /// Uses a lower threshold for notched displays to bias toward black text.
+    /// - Parameter screen: The screen to check for notch presence
+    /// - Returns: `true` if the background is bright enough to require dark text
+    func isBright(for _: NSScreen?) -> Bool {
+        // Check the active menu bar screen for notch, not the passed screen
+        let activeScreen = NSScreen.screenWithActiveMenuBar
+        let hasNotch = activeScreen?.hasNotch == true
+        let threshold = hasNotch
+            ? Constants.notchedDisplayBrightnessThreshold
+            : Constants.menuBarBrightnessThreshold
+        return brightness > threshold
+    }
 }

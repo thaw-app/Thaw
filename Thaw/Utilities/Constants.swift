@@ -32,5 +32,10 @@ enum Constants {
 
     /// The brightness threshold above which the menu bar is considered "bright".
     /// When the menu bar brightness exceeds this value, items should use dark colors.
-    static let menuBarBrightnessThreshold: CGFloat = 0.5
+    /// Used for non-notched displays.
+    static let menuBarBrightnessThreshold: CGFloat = 0.67
+
+    /// The brightness threshold for notched displays.
+    /// Lower value means items turn black earlier (more aggressive dark text).
+    static let notchedDisplayBrightnessThreshold: CGFloat = 0.5
 }
