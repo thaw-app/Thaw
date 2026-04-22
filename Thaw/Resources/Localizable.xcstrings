@@ -21844,7 +21844,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "没有已授权的应用"
+            "value" : "没有白名单应用\""
           }
         },
         "zh-Hant" : {
