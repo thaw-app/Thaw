@@ -7831,8 +7831,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Can toggle settings: auto-rehide, show on click/hover/scroll, Thaw Bar, and other boolean options."
+            "state" : "translated",
+            "value" : "可切换设置，包括自动重新隐藏、点击/悬停/滚动显示、Thaw Bar 等布尔选项。"
           }
         },
         "zh-Hant" : {
