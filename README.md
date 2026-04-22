@@ -169,6 +169,8 @@ Thaw is currently available in the following languages:
 
 _Note: languages marked with (\*) are currently only available in the development branch._
 
+Help translate Thaw via [Crowdin](https://crowdin.com/project/thaw)
+
 ## Features/Roadmap
 
 <details>
