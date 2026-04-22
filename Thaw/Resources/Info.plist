@@ -23,5 +23,7 @@
 	<string>https://github.com/sponsors/stonerl</string>
 	<key>ThawMenuBarItemSpacingExecutableURI</key>
 	<string>file:///usr/bin/env</string>
+	<key>ThawSkyLightFrameworkPath</key>
+	<string>/System/Library/PrivateFrameworks/SkyLight.framework/SkyLight</string>
 </dict>
 </plist>

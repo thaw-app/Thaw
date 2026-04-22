@@ -14,8 +14,11 @@ import Foundation
 enum SharedConstants {
     // MARK: - System Framework Paths
 
+    /// Info.plist key used to configure the SkyLight private framework path.
+    static let skyLightFrameworkPathInfoPlistKey = "ThawSkyLightFrameworkPath"
+
     /// Path to the SkyLight private framework for window capture APIs.
-    static let skyLightFrameworkPath = "/System/Library/PrivateFrameworks/SkyLight.framework/SkyLight"
+    static let skyLightFrameworkPath: String = requiredInfoPlistString(skyLightFrameworkPathInfoPlistKey)
 
     // MARK: - App URLs (from Info.plist)
 
@@ -42,6 +45,14 @@ enum SharedConstants {
     static let menuBarItemSpacingExecutableURL: URL = requiredInfoPlistURL(menuBarItemSpacingExecutableURIInfoPlistKey)
 
     // MARK: - Helpers
+
+    /// Returns a required string from Info.plist.
+    private static func requiredInfoPlistString(_ key: String) -> String {
+        guard let value = Bundle.main.object(forInfoDictionaryKey: key) as? String else {
+            fatalError("Missing or invalid Info.plist string for key: \(key)")
+        }
+        return value
+    }
 
     /// Returns a required URL from Info.plist.
     private static func requiredInfoPlistURL(_ key: String) -> URL {
