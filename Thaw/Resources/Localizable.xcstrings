@@ -4781,7 +4781,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "允许外部应用通过 thaw:// URLs 读取和修改 Thaw 的设置。"
+            "value" : "允许外部应用通过 thaw:// 链接读取和修改 Thaw 的设置。"
           }
         },
         "zh-Hant" : {
@@ -10431,7 +10431,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "创建日期: %@"
+            "value" : "创建日期：%@"
           }
         },
         "zh-Hant" : {
@@ -16420,7 +16420,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "使用说明"
+            "value" : "工作原理"
           }
         },
         "zh-Hant" : {
@@ -20714,7 +20714,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "修改日期: %@"
+            "value" : "修改日期：%@"
           }
         },
         "zh-Hant" : {
@@ -23652,7 +23652,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "配置: %@"
+            "value" : "配置：%@"
           }
         },
         "zh-Hant" : {
