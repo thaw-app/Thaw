@@ -108,8 +108,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "\"%1$@\" (%2$@) wants to control Thaw settings via URL scheme.\n\nIf allowed, this app will be able to:\n• Read current settings and configurations\n• Toggle and change boolean settings\n• Modify numeric values (timers, delays, intervals)\n• Change enum settings (rehide strategy, Thaw Bar location)\n• Modify per-display configurations\n\nThis permission persists until manually removed in Settings > Automation.%3$@"
+            "state" : "translated",
+            "value" : "\"%1$@\" (%2$@) 希望通过 URL Scheme 控制 Thaw 的设置。\n\n如果允许，该应用将能够：\n• 读取当前设置与配置\n• 切换和修改布尔类型设置\n• 修改数值参数（计时器、延迟、间隔等）\n• 更改枚举类型设置（如重新隐藏策略、Thaw Bar 位置）\n• 修改各显示器的独立配置\n\n此权限将持续生效，直到在「设置 > 自动化」中手动移除。%3$@"
           }
         },
         "zh-Hant" : {
@@ -4210,8 +4210,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Add"
+            "state" : "translated",
+            "value" : "添加"
           }
         },
         "zh-Hant" : {
@@ -4323,8 +4323,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Add Application Manually"
+            "state" : "translated",
+            "value" : "手动添加应用"
           }
         },
         "zh-Hant" : {
@@ -4549,8 +4549,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow"
+            "state" : "translated",
+            "value" : "允许"
           }
         },
         "zh-Hant" : {
@@ -4662,8 +4662,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow \"%@\" to control Thaw settings?"
+            "state" : "translated",
+            "value" : "是否允许 \"%@\" 控制 Thaw 的设置？"
           }
         },
         "zh-Hant" : {
@@ -4780,8 +4780,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow external applications to read and modify Thaw settings via thaw:// URLs."
+            "state" : "translated",
+            "value" : "允许外部应用通过 thaw:// URLs 读取和修改 Thaw 的设置。"
           }
         },
         "zh-Hant" : {
@@ -5458,8 +5458,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply a Thaw menu bar profile when this Focus activates."
+            "state" : "translated",
+            "value" : "启用专注模式时切换到指定的 Thaw 菜单栏配置"
           }
         },
         "zh-Hant" : {
@@ -5910,8 +5910,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apps that request settings access will appear here after you approve them."
+            "state" : "translated",
+            "value" : "已获批准访问设置的应用将显示在此处。"
           }
         },
         "zh-Hant" : {
@@ -6023,8 +6023,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Are you sure you want to delete the profile \"%@\"? This cannot be undone."
+            "state" : "translated",
+            "value" : "确定要删除配置 \"%@\" 吗？此操作无法撤销。"
           }
         },
         "zh-Hant" : {
@@ -7040,8 +7040,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Automation"
+            "state" : "translated",
+            "value" : "自动化"
           }
         },
         "zh-Hant" : {
@@ -7718,8 +7718,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Can modify settings"
+            "state" : "translated",
+            "value" : "允许修改设置"
           }
         },
         "zh-Hant" : {
@@ -10430,8 +10430,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Created: %@"
+            "state" : "translated",
+            "value" : "创建日期: %@"
           }
         },
         "zh-Hant" : {
@@ -11108,8 +11108,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete Profile?"
+            "state" : "translated",
+            "value" : "是否删除该配置？"
           }
         },
         "zh-Hant" : {
@@ -11221,8 +11221,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Deny"
+            "state" : "translated",
+            "value" : "拒绝"
           }
         },
         "zh-Hant" : {
@@ -13933,8 +13933,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enable Settings URI Scheme"
+            "state" : "translated",
+            "value" : "启用设置 URI Scheme"
           }
         },
         "zh-Hant" : {
@@ -16419,8 +16419,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "How It Works"
+            "state" : "translated",
+            "value" : "使用说明"
           }
         },
         "zh-Hant" : {
@@ -16984,8 +16984,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If not whitelisted, you'll see a confirmation dialog showing the app name and what it wants to do."
+            "state" : "translated",
+            "value" : "未在白名单中的应用将触发确认对话框，显示应用名称及其请求的权限。"
           }
         },
         "zh-Hant" : {
@@ -17097,8 +17097,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If you approve, the app is permanently whitelisted and can modify settings anytime without asking again."
+            "state" : "translated",
+            "value" : "一旦批准，该应用将被永久列入白名单，之后可在不再次提示的情况下修改设置。"
           }
         },
         "zh-Hant" : {
@@ -20713,8 +20713,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Modified: %@"
+            "state" : "translated",
+            "value" : "修改日期: %@"
           }
         },
         "zh-Hant" : {
@@ -21843,8 +21843,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No whitelisted apps"
+            "state" : "translated",
+            "value" : "没有已授权的应用"
           }
         },
         "zh-Hant" : {
@@ -23651,8 +23651,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Profile: %@"
+            "state" : "translated",
+            "value" : "配置: %@"
           }
         },
         "zh-Hant" : {
@@ -24329,8 +24329,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Remove %@ from whitelist"
+            "state" : "translated",
+            "value" : "将 %@ 从白名单中移除"
           }
         },
         "zh-Hant" : {
@@ -24442,8 +24442,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Remove from whitelist"
+            "state" : "translated",
+            "value" : "移出白名单"
           }
         },
         "zh-Hant" : {
@@ -27951,8 +27951,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Settings URI is disabled. External apps cannot read or modify Thaw settings."
+            "state" : "translated",
+            "value" : "设置 URI 功能已关闭，外部应用无法访问或更改 Thaw 设置。"
           }
         },
         "zh-Hant" : {
@@ -31341,8 +31341,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Supported Settings"
+            "state" : "translated",
+            "value" : "支持的设置"
           }
         },
         "zh-Hant" : {
@@ -35974,8 +35974,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "When an app sends a thaw:// URL to change settings, Thaw checks if that app is whitelisted."
+            "state" : "translated",
+            "value" : "当应用通过 thaw:// URL 请求修改设置时，Thaw 会检查该应用是否在白名单中。"
           }
         },
         "zh-Hant" : {
@@ -36087,8 +36087,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Whitelisted Applications"
+            "state" : "translated",
+            "value" : "白名单应用"
           }
         },
         "zh-Hant" : {
@@ -36200,8 +36200,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Whitelisted apps can read settings, toggle boolean options, set numeric values (timers, delays), change enum settings (rehide strategy, Thaw Bar location), and modify per-display configurations. This includes auto-rehide, show on click/hover/scroll/double-click, Thaw Bar, hide application menus, enable always-hidden section, show tooltips, and diagnostic logging."
+            "state" : "translated",
+            "value" : "白名单应用可读取设置、切换布尔类型选项、设置数值参数（计时器、延迟等）、更改枚举设置（重新隐藏策略、Thaw Bar 位置），并支持按显示器的配置修改。功能涵盖自动重新隐藏、点击/悬停/滚动/双击显示、Thaw Bar、隐藏应用菜单、始终隐藏区域、工具提示及诊断日志。"
           }
         },
         "zh-Hant" : {
@@ -36880,8 +36880,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "You can remove apps from this list at any time to revoke their access."
+            "state" : "translated",
+            "value" : "您可随时将应用从列表中移除，以取消其访问权限。"
           }
         },
         "zh-Hant" : {
