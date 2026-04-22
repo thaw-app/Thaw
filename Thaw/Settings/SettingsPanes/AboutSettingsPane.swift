@@ -88,8 +88,7 @@ struct AboutSettingsPane: View {
                         .foregroundStyle(.primary)
 
                     HStack(spacing: 6) {
-                        let versionText =
-                            "Version \(Constants.versionString) (\(Constants.buildString))"
+                        let versionText = LocalizedStringResource("Version \(Constants.versionString) (\(Constants.buildString))")
 
                         Text(versionText)
                             .font(.system(size: 15))
@@ -99,7 +98,7 @@ struct AboutSettingsPane: View {
                         Button {
                             let pasteboard = NSPasteboard.general
                             pasteboard.clearContents()
-                            pasteboard.setString(versionText, forType: .string)
+                            pasteboard.setString(String(localized: versionText), forType: .string)
                         } label: {
                             Image(systemName: "doc.on.doc")
                         }
