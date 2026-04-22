@@ -10870,6 +10870,9 @@
         }
       }
     },
+    "Copy version info" : {
+
+    },
     "Created: %@" : {
       "comment" : "A sublabel within the profile list showing when a profile was created.",
       "localizations" : {
@@ -37171,6 +37174,7 @@
     },
     "Version %@ (%@)" : {
       "comment" : "A label displaying the current version and build number of the app. The first argument is the version string. The second argument is the build string.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {

@@ -87,9 +87,26 @@ struct AboutSettingsPane: View {
                         .font(.system(size: 80))
                         .foregroundStyle(.primary)
 
-                    Text("Version \(Constants.versionString) (\(Constants.buildString))")
-                        .font(.system(size: 15))
+                    HStack(spacing: 6) {
+                        let versionText =
+                            "Version \(Constants.versionString) (\(Constants.buildString))"
+
+                        Text(versionText)
+                            .font(.system(size: 15))
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+
+                        Button {
+                            let pasteboard = NSPasteboard.general
+                            pasteboard.clearContents()
+                            pasteboard.setString(versionText, forType: .string)
+                        } label: {
+                            Image(systemName: "doc.on.doc")
+                        }
+                        .buttonStyle(.plain)
                         .foregroundStyle(.secondary)
+                        .help("Copy version info")
+                    }
 
                     Text(Constants.copyrightString)
                         .font(.system(size: 14))
