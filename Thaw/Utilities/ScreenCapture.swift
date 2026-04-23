@@ -190,7 +190,7 @@ enum ScreenCapture {
         // Wait for frame with timeout, ensuring stopCapture() always called
         let image: CGImage?
         do {
-            image = try await withTimeout(seconds: 5) {
+            image = try await Task<CGImage?, any Error>.withTimeout(.seconds(5), tolerance: nil, clock: .continuous) {
                 await frameCaptor.waitForFrame()
             }
             try? await stream.stopCapture()
@@ -351,26 +351,3 @@ private final class FrameCaptor: NSObject, SCStreamOutput, SCStreamDelegate {
         cont?.resume(returning: nil)
     }
 }
-
-/// Helper to add timeout to async operations
-private func withTimeout<T>(seconds: TimeInterval, operation: sending @escaping () async throws -> T) async throws -> T {
-    try await withThrowingTaskGroup(of: T.self) { group in
-        group.addTask {
-            try await operation()
-        }
-        group.addTask {
-            try await Task.sleep(for: .seconds(seconds))
-            throw TimeoutError()
-        }
-        // group.next() returning nil is unreachable in this context (always at least one task),
-        // but the guard serves as defensive documentation.
-        guard let result = try await group.next() else {
-            group.cancelAll()
-            throw TimeoutError()
-        }
-        group.cancelAll()
-        return result
-    }
-}
-
-private struct TimeoutError: Error {}

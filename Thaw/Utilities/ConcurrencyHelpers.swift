@@ -34,7 +34,7 @@ extension Task {
     ///   - operation: The operation to perform.
     ///
     /// - Returns: The result of the operation, if successful.
-    private static func withTimeout<C: Clock>(
+    static func withTimeout<C: Clock>(
         _ timeout: C.Instant.Duration,
         tolerance: C.Instant.Duration?,
         clock: C,
