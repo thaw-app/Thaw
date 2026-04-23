@@ -285,9 +285,9 @@ final class MenuBarSearchPanel: NSPanel {
         }
 
         contentView = hostingView
-        // Match window corner radius to glass effect
-        contentView?.wantsLayer = true
+        // Match window corner radius and curve to glass effect (.continuous)
         contentView?.layer?.cornerRadius = 16
+        contentView?.layer?.cornerCurve = .continuous
         contentView?.layer?.masksToBounds = true
         makeKeyAndOrderFront(nil)
 

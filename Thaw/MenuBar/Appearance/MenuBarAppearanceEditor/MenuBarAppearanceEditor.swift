@@ -333,6 +333,8 @@ private struct PreviewButtonStyle: ButtonStyle {
             .padding(.horizontal, 10)
             .padding(.vertical, 3)
             .glassEffect(.regular.interactive(), in: Capsule(style: .continuous))
+            // Intentional: additional opacity dim on top of glassEffect's interactive press
+            // feedback to strengthen the visual response while the preview is held.
             .opacity(configuration.isPressed ? 0.7 : 1.0)
             .onChange(of: configuration.isPressed) { _, newValue in
                 isPressed = newValue

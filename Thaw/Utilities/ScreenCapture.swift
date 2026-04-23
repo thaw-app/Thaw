@@ -269,7 +269,7 @@ private final class ContinuationBox<T, E: Error>: @unchecked Sendable {
     }
 }
 
-private final class FrameCaptor: NSObject, SCStreamOutput, SCStreamDelegate {
+private final class FrameCaptor: NSObject, SCStreamOutput, SCStreamDelegate, @unchecked Sendable {
     /// Shared serial queue for all SCStream sample buffer handlers.
     static let sampleHandlerQueue = DispatchQueue(label: "com.stonerl.Thaw.screencapture")
 

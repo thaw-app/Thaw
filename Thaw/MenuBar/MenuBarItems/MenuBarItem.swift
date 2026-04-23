@@ -362,7 +362,10 @@ extension MenuBarItem {
 
             for idx in unresolvedIndices {
                 let item = items[idx]
-                if let title = item.title, let siblingPID = titleToPID[title] ?? nil {
+                if let title = item.title,
+                   let entry = titleToPID[title],
+                   let siblingPID = entry
+                {
                     // Only propagate if the resolved PID is already known
                     // to own multiple items, confirming it is a multi-item
                     // app where one window simply failed spatial matching.

@@ -335,10 +335,6 @@ private struct IceBarContentView: View {
         }
     }
 
-    private var height: CGFloat {
-        contentHeight
-    }
-
     var body: some View {
         ZStack {
             content
@@ -493,7 +489,7 @@ private struct IceBarContentView: View {
                         )
                     }
                 }
-                .frame(height: height)
+                .frame(height: contentHeight)
             }
             .environment(\.isScrollEnabled, frame.width == screen.frame.width)
             .defaultScrollAnchor(.trailing)

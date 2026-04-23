@@ -60,15 +60,6 @@ final class Listener {
         }
     }
 
-    /// Activates the listener without checking if it is already active.
-    private func uncheckedActivate() throws {
-        xpcListener = try XPCListener(service: name) { [weak self] request in
-            request.accept { message in
-                self?.handleMessage(message)
-            }
-        }
-    }
-
     /// Activates the listener.
     func activate() {
         guard xpcListener == nil else {
