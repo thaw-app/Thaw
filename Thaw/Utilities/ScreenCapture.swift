@@ -282,10 +282,10 @@ private final class FrameCaptor: NSObject, SCStreamOutput, SCStreamDelegate {
 
         // Check frame status - only process complete frames
         guard let attachments = CMSampleBufferGetSampleAttachmentsArray(sampleBuffer, createIfNecessary: false) as? [[SCStreamFrameInfo: Any]],
-              let frameStatus = attachments.first?[SCStreamFrameInfo.status] as? SCFrameStatus,
+              let statusInt = attachments.first?[SCStreamFrameInfo.status] as? Int,
+              let frameStatus = SCFrameStatus(rawValue: statusInt),
               frameStatus == .complete
         else {
-            resumeOrBuffer(with: nil)
             return
         }
 
