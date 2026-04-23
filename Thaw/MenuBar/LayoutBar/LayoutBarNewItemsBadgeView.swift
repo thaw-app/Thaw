@@ -92,8 +92,7 @@ final class LayoutBarNewItemsBadgeView: LayoutBarArrangedView {
     /// Helper to check brightness using the active screen for notch detection.
     private func isBrightForActiveScreen() -> Bool {
         guard let colorInfo = averageColorInfo else { return false }
-        let activeScreen = NSScreen.screenWithActiveMenuBar
-        return colorInfo.isBright(for: activeScreen)
+        return colorInfo.isBright(for: nil)
     }
 
     override func mouseDragged(with event: NSEvent) {
