@@ -83,7 +83,6 @@ struct SettingsView: View {
             }
         }
         .listStyle(.sidebar)
-        .scrollDisabled(true)
     }
 
     @ViewBuilder
