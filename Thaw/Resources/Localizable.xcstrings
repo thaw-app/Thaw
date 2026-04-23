@@ -24,8 +24,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "\"%1$@\" (%2$@) desea controlar los ajustes de Thaw mediante un esquema de URL.\n\nSi se permite, esta aplicación podrá:\n• Leer los ajustes y configuraciones actuales\n• Activar y desactivar ajustes booleanos\n• Modificar valores numéricos (temporizadores, retrasos, intervalos)\n• Cambiar ajustes de menú (estrategia de ocultación, ubicación de la barra de Thaw)\n• Modificar configuraciones para cada pantalla\n\nEste permiso permanecerá activo hasta que se elimine manualmente en Ajustes > Automatización.%3$@"
+            "state" : "new",
+            "value" : "\"%1$@\" (%2$@) wants to control Thaw settings via URL scheme.\n\nIf allowed, this app will be able to:\n• Read current settings and configurations\n• Toggle and change boolean settings\n• Modify numeric values (timers, delays, intervals)\n• Change enum settings (rehide strategy, Thaw Bar location)\n• Modify per-display configurations\n\nThis permission persists until manually removed in Settings > Automation.%3$@"
           }
         },
         "fr" : {
@@ -8037,8 +8037,8 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Permet de modifier les paramètres"
+            "state" : "new",
+            "value" : "Can modify settings"
           }
         },
         "hu" : {
@@ -10871,122 +10871,7 @@
       }
     },
     "Copy version info" : {
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Copy version info"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Copy version info"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Copiar información de versión"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Copy version info"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Copy version info"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Copy version info"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Copy version info"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Copy version info"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Copy version info"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Copy version info"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Copy version info"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Copy version info"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Copy version info"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Copy version info"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Copy version info"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Copy version info"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sao chép thông tin phiên bản"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "复制版本信息"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Copy version info"
-          }
-        }
-      }
+
     },
     "Created: %@" : {
       "comment" : "A sublabel within the profile list showing when a profile was created.",
@@ -17640,8 +17525,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "冰块"
+            "state" : "new",
+            "value" : "Ice Cube"
           }
         },
         "zh-Hant" : {
@@ -23024,8 +22909,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "No hay aplicaciones en la whitelist"
+            "state" : "new",
+            "value" : "No whitelisted apps"
           }
         },
         "fr" : {
@@ -37066,8 +36951,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Utilice el clic de opción para abrir la sección siempre oculta"
+            "state" : "new",
+            "value" : "Use Option-click to open always-hidden section"
           }
         },
         "fr" : {
@@ -38340,14 +38225,14 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "whitelisted_apps_count"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "白名单应用数量"
+            "state" : "new",
+            "value" : "whitelisted_apps_count"
           }
         },
         "zh-Hant" : {
