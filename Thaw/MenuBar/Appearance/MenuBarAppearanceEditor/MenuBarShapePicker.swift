@@ -116,24 +116,10 @@ private struct MenuBarFullShapePicker: View, Equatable {
         .frame(height: 24)
     }
 
-    @ViewBuilder
-    private func endCapPickerContentView(endCap: MenuBarEndCap, edge: HorizontalEdge) -> some View {
-        switch endCap {
-        case .square:
-            Image(systemName: "square.fill")
-                .help(Text("Square Cap"))
-                .tag(endCap)
-        case .round:
-            Image(nsImage: rotatedSymbol(
-                "button.roundedtop.horizontal.fill",
-                degrees: edge == .leading ? 90 : -90
-            ))
-            .help(Text("Round Cap"))
-            .tag(endCap)
-        }
-    }
+    private static let leadingRoundCap = makeRotatedSymbol("button.roundedtop.horizontal.fill", degrees: 90)
+    private static let trailingRoundCap = makeRotatedSymbol("button.roundedtop.horizontal.fill", degrees: -90)
 
-    private func rotatedSymbol(_ name: String, degrees: Double) -> NSImage {
+    private static func makeRotatedSymbol(_ name: String, degrees: CGFloat) -> NSImage {
         let config = NSImage.SymbolConfiguration(pointSize: 12, weight: .regular)
         guard
             let base = NSImage(systemSymbolName: name, accessibilityDescription: nil),
@@ -142,18 +128,31 @@ private struct MenuBarFullShapePicker: View, Equatable {
         let src = symbol.size
         // After 90° rotation the symbol is taller than wide — fit into a square canvas
         let side = max(src.width, src.height)
-        let outputSize = CGSize(width: side, height: side)
-        let rotated = NSImage(size: outputSize)
-        rotated.lockFocus()
-        let transform = NSAffineTransform()
-        transform.translateX(by: outputSize.width / 2, yBy: outputSize.height / 2)
-        transform.rotate(byDegrees: degrees)
-        transform.translateX(by: -src.width / 2, yBy: -src.height / 2)
-        transform.concat()
-        symbol.draw(in: NSRect(origin: .zero, size: src))
-        rotated.unlockFocus()
-        rotated.isTemplate = true
-        return rotated
+        let image = NSImage(size: CGSize(width: side, height: side), flipped: false) { rect in
+            let t = NSAffineTransform()
+            t.translateX(by: rect.width / 2, yBy: rect.height / 2)
+            t.rotate(byDegrees: degrees)
+            t.translateX(by: -src.width / 2, yBy: -src.height / 2)
+            t.concat()
+            symbol.draw(in: NSRect(origin: .zero, size: src))
+            return true
+        }
+        image.isTemplate = true
+        return image
+    }
+
+    @ViewBuilder
+    private func endCapPickerContentView(endCap: MenuBarEndCap, edge: HorizontalEdge) -> some View {
+        switch endCap {
+        case .square:
+            Image(systemName: "square.fill")
+                .help(Text("Square Cap"))
+                .tag(endCap)
+        case .round:
+            Image(nsImage: edge == .leading ? Self.leadingRoundCap : Self.trailingRoundCap)
+                .help(Text("Round Cap"))
+                .tag(endCap)
+        }
     }
 
     private var leadingEndCapPicker: some View {
