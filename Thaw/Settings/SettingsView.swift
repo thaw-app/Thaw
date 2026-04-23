@@ -120,19 +120,3 @@ struct SettingsView: View {
         navigationState.settingsNavigationIdentifier = allSections[index + 1]
     }
 }
-
-// MARK: - ToolbarSpacer
-
-struct ToolbarSpacer: ToolbarContent {
-    let placement: ToolbarItemPlacement
-
-    init(_ placement: ToolbarItemPlacement = .automatic) {
-        self.placement = placement
-    }
-
-    var body: some ToolbarContent {
-        ToolbarItem(placement: placement) {
-            Spacer()
-        }
-    }
-}
