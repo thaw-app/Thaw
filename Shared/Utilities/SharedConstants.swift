@@ -8,9 +8,9 @@
 
 import Foundation
 
-/// Centralized repository for all URIs and paths used across the project.
-/// All hardcoded URIs should be defined here to satisfy static analysis tools
-/// and provide a single source of truth.
+/// Constants shared across all targets (main app and XPC services).
+/// Only values that are needed in every target belong here; app-only
+/// constants live in `Constants` (Thaw target).
 enum SharedConstants {
     // MARK: - System Framework Paths
 
@@ -20,49 +20,13 @@ enum SharedConstants {
     /// Path to the SkyLight private framework for window capture APIs.
     static let skyLightFrameworkPath: String = requiredInfoPlistString(skyLightFrameworkPathInfoPlistKey)
 
-    // MARK: - App URLs (from Info.plist)
-
-    /// Info.plist key used to configure the repository URL.
-    static let repositoryURLInfoPlistKey = "ThawRepositoryURL"
-
-    /// Info.plist key used to configure the donation URL.
-    static let donateURLInfoPlistKey = "ThawDonateURL"
-
-    /// Info.plist key used to configure the executable URI for
-    /// `MenuBarItemSpacingManager` shell commands.
-    static let menuBarItemSpacingExecutableURIInfoPlistKey = "ThawMenuBarItemSpacingExecutableURI"
-
-    /// The project's GitHub repository URL.
-    static let repositoryURL: URL = requiredInfoPlistURL(repositoryURLInfoPlistKey)
-
-    /// The URL for filing issues.
-    static let issuesURL = repositoryURL.appendingPathComponent("issues")
-
-    /// The URL for sponsoring/donating.
-    static let donateURL: URL = requiredInfoPlistURL(donateURLInfoPlistKey)
-
-    /// The executable URL used by `MenuBarItemSpacingManager`.
-    static let menuBarItemSpacingExecutableURL: URL = requiredInfoPlistURL(menuBarItemSpacingExecutableURIInfoPlistKey)
-
     // MARK: - Helpers
 
-    /// Returns a required string from Info.plist.
+    /// Returns a required string from the bundle's Info.plist.
     private static func requiredInfoPlistString(_ key: String) -> String {
         guard let value = Bundle.main.object(forInfoDictionaryKey: key) as? String else {
             fatalError("Missing or invalid Info.plist string for key: \(key)")
         }
         return value
-    }
-
-    /// Returns a required URL from Info.plist.
-    private static func requiredInfoPlistURL(_ key: String) -> URL {
-        guard
-            let value = Bundle.main.object(forInfoDictionaryKey: key) as? String,
-            let url = URL(string: value),
-            url.scheme != nil
-        else {
-            fatalError("Missing or invalid Info.plist URL for key: \(key)")
-        }
-        return url
     }
 }

@@ -8,8 +8,8 @@
 
 import Foundation
 
-/// App-specific bundle constants.
-/// All URIs and paths are defined in SharedConstants.swift (Shared module).
+/// App-specific constants for the main Thaw target.
+/// System-framework paths shared with XPC targets live in `SharedConstants`.
 enum Constants {
     // swiftlint:disable force_unwrapping
 
@@ -38,4 +38,42 @@ enum Constants {
     /// The brightness threshold for notched displays.
     /// Lower value means items turn black earlier (more aggressive dark text).
     static let notchedDisplayBrightnessThreshold: CGFloat = 0.5
+
+    // MARK: - App URLs (from Info.plist)
+
+    /// Info.plist key used to configure the repository URL.
+    static let repositoryURLInfoPlistKey = "ThawRepositoryURL"
+
+    /// Info.plist key used to configure the donation URL.
+    static let donateURLInfoPlistKey = "ThawDonateURL"
+
+    /// Info.plist key used to configure the executable URI for
+    /// `MenuBarItemSpacingManager` shell commands.
+    static let menuBarItemSpacingExecutableURIInfoPlistKey = "ThawMenuBarItemSpacingExecutableURI"
+
+    /// The project's GitHub repository URL.
+    static let repositoryURL: URL = requiredInfoPlistURL(repositoryURLInfoPlistKey)
+
+    /// The URL for filing issues.
+    static let issuesURL = repositoryURL.appendingPathComponent("issues")
+
+    /// The URL for sponsoring/donating.
+    static let donateURL: URL = requiredInfoPlistURL(donateURLInfoPlistKey)
+
+    /// The executable URL used by `MenuBarItemSpacingManager`.
+    static let menuBarItemSpacingExecutableURL: URL = requiredInfoPlistURL(menuBarItemSpacingExecutableURIInfoPlistKey)
+
+    // MARK: - Helpers
+
+    /// Returns a required URL from the bundle's Info.plist.
+    private static func requiredInfoPlistURL(_ key: String) -> URL {
+        guard
+            let value = Bundle.main.object(forInfoDictionaryKey: key) as? String,
+            let url = URL(string: value),
+            url.scheme != nil
+        else {
+            fatalError("Missing or invalid Info.plist URL for key: \(key)")
+        }
+        return url
+    }
 }
