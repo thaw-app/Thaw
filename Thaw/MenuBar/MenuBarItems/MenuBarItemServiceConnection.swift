@@ -8,6 +8,7 @@
 
 import Foundation
 import os.lock
+import XPC
 
 // MARK: - MenuBarItemService.Connection
 
@@ -43,35 +44,30 @@ extension MenuBarItemService {
         func start() async {
             diagLog.debug("Starting MenuBarItemService connection")
 
-            await withCheckedContinuation { continuation in
-                guard let response = session.send(request: .start) else {
-                    diagLog.error("Start request returned nil")
-                    continuation.resume()
-                    return
-                }
-                if case .start = response {
-                    continuation.resume()
-                } else {
-                    diagLog.error("Start request returned invalid response \(String(describing: response))")
-                    continuation.resume()
-                }
+            let response = await session.sendAsync(request: .start)
+            guard let response else {
+                diagLog.error("Start request returned nil")
+                return
+            }
+            if case .start = response {
+                // success
+            } else {
+                diagLog.error("Start request returned invalid response \(String(describing: response))")
             }
         }
 
         /// Returns the source process identifier for the given window.
         func sourcePID(for window: WindowInfo) async -> pid_t? {
-            await withCheckedContinuation { continuation in
-                guard let response = session.send(request: .sourcePID(window)) else {
-                    diagLog.error("Source PID request returned nil")
-                    continuation.resume(returning: nil)
-                    return
-                }
-                if case let .sourcePID(pid) = response {
-                    continuation.resume(returning: pid)
-                } else {
-                    diagLog.error("Source PID request returned invalid response \(String(describing: response))")
-                    continuation.resume(returning: nil)
-                }
+            let response = await session.sendAsync(request: .sourcePID(window))
+            guard let response else {
+                diagLog.error("Source PID request returned nil")
+                return nil
+            }
+            if case let .sourcePID(pid) = response {
+                return pid
+            } else {
+                diagLog.error("Source PID request returned invalid response \(String(describing: response))")
+                return nil
             }
         }
     }
@@ -147,22 +143,80 @@ extension MenuBarItemService {
             storage.withLock { $0.cancel(reason: reason) }
         }
 
-        /// Sends the given request to the service and returns the response.
-        func send(request: Request) -> Response? {
-            let session: XPCSession
+        /// Sends the given request to the service asynchronously and returns the response.
+        ///
+        /// Uses the non-blocking `XPCSession.send(_:replyHandler:)` API so that Swift
+        /// cooperative-thread-pool threads are never stranded on a blocking C call.
+        /// The continuation is protected by a shared `OSAllocatedUnfairLock`-guarded
+        /// box so that exactly one of (reply handler) or (cancellation handler) resumes
+        /// it. This lets upstream `Task` cancellation (e.g. from `Task.withTimeout`)
+        /// unblock the caller immediately without stranding a thread.
+        func sendAsync(request: Request) async -> Response? {
+            let xpcSession: XPCSession
             do {
-                session = try storage.withLock { try $0.getSession() }
+                xpcSession = try storage.withLock { try $0.getSession() }
             } catch {
                 diagLog.error("Failed to get or create XPC session: \(error)")
                 return nil
             }
 
-            do {
-                let reply = try session.sendSync(request)
-                return try reply.decode(as: Response.self)
-            } catch {
-                diagLog.error("XPC session send failed for request \(String(describing: request)): \(error)")
-                return nil
+            // Shared mutable box: holds the continuation until one of the two
+            // racing paths (reply handler vs. cancellation handler) claims it.
+            // Setting the stored value to nil is the "claim" — whichever path
+            // wins claims it and resumes; the other path sees nil and does nothing.
+            typealias Cont = CheckedContinuation<Response?, Never>
+            let box = OSAllocatedUnfairLock<Cont?>(initialState: nil)
+
+            return await withTaskCancellationHandler {
+                await withCheckedContinuation { (continuation: Cont) in
+                    // Store the continuation so the cancellation handler can reach it.
+                    box.withLock { $0 = continuation }
+
+                    // Fast path: task was cancelled before we stored the continuation,
+                    // so the onCancel handler already fired and saw nil. Claim & resume.
+                    if Task.isCancelled {
+                        if let cont = box.withLock({ $0.take() }) {
+                            cont.resume(returning: nil)
+                        }
+                        return
+                    }
+
+                    do {
+                        try xpcSession.send(request) { (result: Result<XPCReceivedMessage, XPCRichError>) in
+                            guard let cont = box.withLock({ $0.take() }) else { return }
+                            switch result {
+                            case let .success(message):
+                                do {
+                                    try cont.resume(returning: message.decode(as: Response.self))
+                                } catch {
+                                    self.diagLog.error(
+                                        "XPC reply decode failed for request \(String(describing: request)): \(error)"
+                                    )
+                                    cont.resume(returning: nil)
+                                }
+                            case let .failure(error):
+                                self.diagLog.error(
+                                    "XPC session send failed for request \(String(describing: request)): \(error)"
+                                )
+                                cont.resume(returning: nil)
+                            }
+                        }
+                    } catch {
+                        if let cont = box.withLock({ $0.take() }) {
+                            diagLog.error(
+                                "XPC session send failed for request \(String(describing: request)): \(error)"
+                            )
+                            cont.resume(returning: nil)
+                        }
+                    }
+                }
+            } onCancel: {
+                // Fired on an arbitrary thread when the enclosing Task is cancelled.
+                // Claim the continuation and resume it immediately so the caller is
+                // unblocked. The XPC reply handler will see the box is empty and no-op.
+                if let cont = box.withLock({ $0.take() }) {
+                    cont.resume(returning: nil)
+                }
             }
         }
     }
