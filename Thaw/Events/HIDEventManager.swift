@@ -403,6 +403,14 @@ final class HIDEventManager: ObservableObject {
     /// items on or off screen. Rebuilding from the last item cache in those
     /// moments can leave hit testing with stale geometry, so use a direct
     /// Window Server snapshot instead.
+    ///
+    /// Unlike ``rebuildWindowBoundsLookup(from:)``, this method intentionally
+    /// omits the managed-items fallback. During a section transition the cached
+    /// bounds are stale (items have moved on/off screen while keeping the same
+    /// window ID), so appending them here would corrupt rather than improve the
+    /// lookup. The trade-off is that an item not yet reported by the Window
+    /// Server immediately after a transition may be briefly unhittable; that
+    /// window is typically sub-frame and acceptable given the correctness gain.
     private func rebuildWindowBoundsLookupFromCurrentLayout() {
         let allWindowIDs = Bridging.getMenuBarWindowList(option: [
             .onScreen, .activeSpace, .itemsOnly,
@@ -696,15 +704,16 @@ extension HIDEventManager {
     // MARK: Handle Show On Click
 
     private func handleShowOnClick(appState: AppState, screen: NSScreen, clickLocation: CGPoint, isDoubleClick: Bool = false) {
+        guard appState.settings.general.showOnClick else {
+            return
+        }
+
         guard isMouseInsideEmptyMenuBarSpace(appState: appState, screen: screen) else {
             return
         }
 
         if isDoubleClick {
-            guard
-                appState.settings.general.showOnClick,
-                appState.settings.general.showOnDoubleClick
-            else {
+            guard appState.settings.general.showOnDoubleClick else {
                 return
             }
             Task {
@@ -715,10 +724,6 @@ extension HIDEventManager {
                 }
             }
         } else {
-            guard appState.settings.general.showOnClick else {
-                return
-            }
-
             if NSEvent.modifierFlags.contains(.control) {
                 handleSecondaryContextMenu(appState: appState, screen: screen)
                 return
