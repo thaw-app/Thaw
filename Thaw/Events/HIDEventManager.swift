@@ -156,8 +156,21 @@ final class HIDEventManager: ObservableObject {
     private(set) lazy var mouseDownMonitor = EventMonitor.universal(
         for: [.leftMouseDown, .rightMouseDown]
     ) { [weak self] event in
-        guard let self, isEnabled, let appState, let screen = bestScreen(appState: appState)
-        else {
+        guard let self, isEnabled, let appState else {
+            return event
+        }
+        // Prefer the screen the mouse is physically on so clicks on the external
+        // monitor's menu bar are processed against the correct display geometry.
+        // Fall back to the active-menu-bar screen when the mouse screen has no
+        // visible menu bar (e.g. a fullscreen app is suppressing it), which
+        // preserves the original guard against acting on inactive menu bars.
+        let mouseScreen = NSScreen.screenWithMouse ?? NSScreen.main
+        let screen: NSScreen
+        if let s = mouseScreen, s.getMenuBarHeight() != nil {
+            screen = s
+        } else if let s = bestScreen(appState: appState) {
+            screen = s
+        } else {
             return event
         }
         switch event.type {
@@ -1277,12 +1290,16 @@ extension HIDEventManager {
 // MARK: - Helper Methods
 
 extension HIDEventManager {
-    /// Returns the best screen to use for event manager calculations.
+    /// Returns the best screen to use for hover, scroll, and tooltip calculations.
     ///
     /// Always returns the screen that currently owns the active menu bar.
     /// This prevents showing the hidden section or IceBar on a monitor
     /// whose menu bar is inactive (e.g. when another monitor has a
     /// fullscreen app), where clicking icons would have no effect.
+    ///
+    /// For mouse-down events, `mouseDownMonitor` resolves the screen from
+    /// `NSScreen.screenWithMouse` instead so that clicks on a secondary
+    /// display's menu bar are evaluated against the correct display geometry.
     func bestScreen(appState _: AppState) -> NSScreen? {
         NSScreen.screenWithActiveMenuBar ?? NSScreen.main
     }
