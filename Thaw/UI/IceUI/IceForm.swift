@@ -55,6 +55,8 @@ struct IceForm<Content: View>: View {
             .background(Color.clear)
             .scrollContentBackground(.hidden)
         }
+        .focusSection()
+        .accessibilityElement(children: .contain)
     }
 
     private var contentLayout: some View {

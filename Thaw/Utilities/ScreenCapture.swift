@@ -62,12 +62,12 @@ enum ScreenCapture {
     /// Requests screen capture permissions.
     static func requestPermissions() {
         diagLog.debug("requestPermissions: requesting screen capture access")
-        // CGRequestScreenCaptureAccess() is broken on macOS 15+. We can
-        // try accessing SCShareableContent to trigger a request if the
-        // user doesn't have permissions.
+        // CGRequestScreenCaptureAccess() is broken on newer macOS versions.
+        // Use SCShareableContent.getWithCompletionHandler to trigger the
+        // system screen capture permission prompt instead.
         SCShareableContent.getWithCompletionHandler { _, _ in
             // Intentionally empty: the call is only used to trigger the
-            // system screen capture permission prompt on macOS 15+.
+            // system screen capture permission prompt.
         }
     }
 
@@ -343,17 +343,18 @@ private final class FrameCaptor: NSObject, SCStreamOutput, SCStreamDelegate, @un
                 lock.unlock()
             }
         } onCancel: { [weak self] in
-            self?.stopStreamAndResume()
+            self?.cancelPendingWait()
         }
     }
 
-    private func stopStreamAndResume() {
+    /// Clears the stored continuation and resumes it with nil.
+    /// Does not stop the SCStream; the caller remains responsible for stopCapture().
+    private func cancelPendingWait() {
         lock.lock()
         let cont = continuation
         continuation = nil
         lock.unlock()
 
-        // Resume with nil on cancellation; caller remains responsible for stopCapture().
         cont?.resume(returning: nil)
     }
 }
