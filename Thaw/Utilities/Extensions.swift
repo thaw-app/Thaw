@@ -711,22 +711,23 @@ extension NSScreen {
         return hasNotch ? 37.0 : NSStatusBar.system.thickness
     }
 
-    /// Returns the frame of the application menu on this screen.
+    /// Returns the raw frame of the application menu on this screen, as
+    /// reported by the Accessibility API, without any notch-capping applied.
     ///
     /// Results are cached per-display and invalidated when the frontmost
     /// application changes, avoiding repeated Accessibility API round-trips.
-    /// - Parameters:
-    ///   - bypassCache: If `true`, always queries the Accessibility API
-    ///     instead of using cached values. Use this when polling for changes.
-    ///   - ignoreNotch: If `true`, returns the full menu frame without capping
-    ///     at the notch. Use this for visual overlay calculations.
-    func getApplicationMenuFrame(bypassCache: Bool = false, ignoreNotch: Bool = false) -> CGRect? {
+    /// Callers that need a notch-capped width should apply the cap themselves
+    /// using `frameOfNotch`.
+    ///
+    /// - Parameter bypassCache: If `true`, always queries the Accessibility API
+    ///   instead of using cached values. Use this when polling for changes.
+    func getApplicationMenuFrame(bypassCache: Bool = false) -> CGRect? {
         NSScreen.invalidateApplicationMenuFrameCacheIfNeeded()
         if !bypassCache, let cached = NSScreen.applicationMenuFrameCache[displayID] {
             return cached
         }
 
-        let result = computeApplicationMenuFrame(ignoreNotch: ignoreNotch)
+        let result = computeApplicationMenuFrame()
         if !bypassCache, let result {
             NSScreen.applicationMenuFrameCache[displayID] = result
         }
@@ -734,10 +735,9 @@ extension NSScreen {
     }
 
     /// Performs the actual Accessibility API queries to determine the
-    /// application menu frame. Called only on cache miss.
-    /// - Parameter ignoreNotch: If `true`, returns the full menu frame without
-    ///   capping at the notch.
-    private func computeApplicationMenuFrame(ignoreNotch: Bool = false) -> CGRect? {
+    /// application menu frame. Returns the raw frame without notch-capping.
+    /// Called only on cache miss.
+    private func computeApplicationMenuFrame() -> CGRect? {
         let displayBounds = CGDisplayBounds(displayID)
 
         // Accessibility API has trouble with secondary screens.
@@ -786,17 +786,6 @@ extension NSScreen {
 
         if applicationMenuFrame.width <= 0 || applicationMenuFrame.isNull {
             return nil
-        }
-
-        // Avoid counting the notch as usable application menu width.
-        if !ignoreNotch, let notch = frameOfNotch {
-            let cappedWidth = min(applicationMenuFrame.width, notch.minX - frame.minX)
-            return CGRect(
-                x: applicationMenuFrame.minX,
-                y: applicationMenuFrame.minY,
-                width: cappedWidth,
-                height: applicationMenuFrame.height
-            )
         }
 
         return applicationMenuFrame
