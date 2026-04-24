@@ -291,17 +291,26 @@ final class MenuBarOverlayPanel: NSPanel {
                 for: .applicationMenuFrame,
                 timeout: .seconds(10)
             ) { [weak self] in
+                // Poll until AX returns a frame, then do a confirm run to
+                // make sure the value has settled before committing it.
+                // The old frame is held throughout so the overlay shows no
+                // visual gap — a single clean swap happens once confirmed.
+                var candidate: CGRect?
                 for _ in 0 ..< 10 {
                     try Task.checkCancellation()
                     guard let self else { return }
-                    if let latestFrame = self.owningScreen
-                        .getApplicationMenuFrame(bypassCache: true),
-                        latestFrame != self.applicationMenuFrame
-                    {
-                        self.insertUpdateFlag(.applicationMenuFrame)
-                        break
+                    let latest = self.owningScreen
+                        .getApplicationMenuFrame(bypassCache: true)
+                    if let latest {
+                        if latest == candidate {
+                            // Confirmed: two consecutive reads agree.
+                            self.insertUpdateFlag(.applicationMenuFrame)
+                            break
+                        }
+                        // New or changed candidate — start confirming it.
+                        candidate = latest
                     }
-                    try await Task.sleep(for: .milliseconds(100))
+                    try await Task.sleep(for: .milliseconds(150))
                 }
             }
             Task {
