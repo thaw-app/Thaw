@@ -428,6 +428,11 @@ final class HIDEventManager: ObservableObject {
         var c = Set<AnyCancellable>()
 
         if let appState {
+            // Pre-seed so the initial CombineLatest3 emission is treated as a
+            // no-op when showOnHover is already true at subscription time,
+            // avoiding unnecessary startup rearm work.
+            lastShowOnHover = appState.settings.general.showOnHover
+
             // Start or stop the mouse-moved tap when show-on-hover,
             // menu-bar-tooltips, or per-display configurations change.
             Publishers.CombineLatest3(
