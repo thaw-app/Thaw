@@ -58,11 +58,13 @@ struct IceForm<Content: View>: View {
     }
 
     private var contentLayout: some View {
-        content
-            .labeledContentStyle(IceFormLabeledContentStyle())
-            .toggleStyle(IceFormToggleStyle())
-            .padding(padding)
-            .onFrameChange(update: $contentFrame)
+        VStack(alignment: alignment, spacing: spacing) {
+            content
+        }
+        .labeledContentStyle(IceFormLabeledContentStyle())
+        .toggleStyle(IceFormToggleStyle())
+        .padding(padding)
+        .onFrameChange(update: $contentFrame)
     }
 }
 
