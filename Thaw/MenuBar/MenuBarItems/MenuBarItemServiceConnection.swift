@@ -187,7 +187,8 @@ extension MenuBarItemService {
                             switch result {
                             case let .success(message):
                                 do {
-                                    try cont.resume(returning: message.decode(as: Response.self))
+                                    let decoded = try message.decode(as: Response.self)
+                                    cont.resume(returning: decoded)
                                 } catch {
                                     self.diagLog.error(
                                         "XPC reply decode failed for request \(String(describing: request)): \(error)"
@@ -202,10 +203,10 @@ extension MenuBarItemService {
                             }
                         }
                     } catch {
+                        diagLog.error(
+                            "XPC session send failed for request \(String(describing: request)): \(error)"
+                        )
                         if let cont = box.withLock({ $0.take() }) {
-                            diagLog.error(
-                                "XPC session send failed for request \(String(describing: request)): \(error)"
-                            )
                             cont.resume(returning: nil)
                         }
                     }
