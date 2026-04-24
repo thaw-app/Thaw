@@ -1448,9 +1448,16 @@ extension HIDEventManager {
         else {
             return false
         }
+        // Extend the frame left to the screen edge to cover the Apple menu.
         applicationMenuFrame.size.width +=
             applicationMenuFrame.origin.x - screen.frame.origin.x
         applicationMenuFrame.origin.x = screen.frame.origin.x
+        // Cap the right edge at the notch so locations over the notch are not
+        // counted as inside the application menu.
+        if let notch = screen.frameOfNotch {
+            let cappedMaxX = min(applicationMenuFrame.maxX, notch.minX)
+            applicationMenuFrame.size.width = cappedMaxX - applicationMenuFrame.origin.x
+        }
         return applicationMenuFrame.contains(mouseLocation)
     }
 

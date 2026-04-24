@@ -759,14 +759,10 @@ extension NSScreen {
                     return CGRect(x: frame.minX, y: applicationMenuFrame.minY, width: applicationMenuFrame.width, height: applicationMenuFrame.height)
                 }
             }
-            // Fallback: If AX fails for secondary screen, try getting main screen's menu width
+            // Fallback: If AX fails for secondary screen, use the main screen's raw menu width.
+            // No notch-capping here — callers apply any notch adjustments they need.
             if let mainFrame = mainScreen.getApplicationMenuFrame() {
-                // Do not over-extend into notch area; cap width at notch start if present.
-                var width = mainFrame.width
-                if let notch = frameOfNotch {
-                    width = min(width, notch.minX - frame.minX)
-                }
-                return CGRect(x: frame.minX, y: mainFrame.minY, width: width, height: mainFrame.height)
+                return CGRect(x: frame.minX, y: mainFrame.minY, width: mainFrame.width, height: mainFrame.height)
             }
             return nil
         }
