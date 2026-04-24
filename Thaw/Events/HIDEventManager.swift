@@ -777,7 +777,10 @@ extension HIDEventManager {
 
         // Validate (and recreate if needed) before enabling; a stale Mach port
         // would silently no-op on start() and leave the guard tap inactive.
-        showOnClickGuardTap.ensureValid()
+        guard showOnClickGuardTap.ensureValid() else {
+            disarmShowOnClickGuard()
+            return
+        }
         showOnClickGuardTap.start()
 
         clickTask?.cancel()
