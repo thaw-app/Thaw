@@ -343,19 +343,19 @@ extension MenuBarItem {
             }
 
             // Build a lookup from window title to resolved sourcePID.
-            // Use nil as a sentinel for conflicting PIDs (different
-            // apps sharing the same title, e.g. multiple apps using
-            // "Item-0").
-            var titleToPID = [String: pid_t?]()
+            // .resolved(pid) means exactly one PID maps to this title;
+            // .ambiguous means multiple different PIDs share the title
+            // (e.g. two apps both using "Item-0") and propagation is unsafe.
+            var titleToPID = [String: ResolvedPID]()
             for item in items where item.sourcePID != nil {
                 if let title = item.title, let pid = item.sourcePID {
                     if let existing = titleToPID[title] {
                         // Mark as ambiguous if different PIDs share this title.
-                        if existing != pid {
-                            titleToPID[title] = nil as pid_t?
+                        if case let .resolved(existingPID) = existing, existingPID != pid {
+                            titleToPID[title] = .ambiguous
                         }
                     } else {
-                        titleToPID[title] = pid
+                        titleToPID[title] = .resolved(pid)
                     }
                 }
             }
@@ -363,8 +363,7 @@ extension MenuBarItem {
             for idx in unresolvedIndices {
                 let item = items[idx]
                 if let title = item.title,
-                   let entry = titleToPID[title],
-                   let siblingPID = entry
+                   case let .resolved(siblingPID) = titleToPID[title]
                 {
                     // Only propagate if the resolved PID is already known
                     // to own multiple items, confirming it is a multi-item
@@ -545,4 +544,12 @@ extension MenuBarItemTag.Namespace {
             self = .uuid(uuid)
         }
     }
+}
+
+/// Maps a window title to a resolved PID for the PID-propagation pass.
+private enum ResolvedPID {
+    /// Exactly one PID maps to this title; propagation is safe.
+    case resolved(pid_t)
+    /// Multiple different PIDs share this title; propagation is unsafe.
+    case ambiguous
 }

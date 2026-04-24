@@ -273,6 +273,9 @@ private final class FrameCaptor: NSObject, SCStreamOutput, SCStreamDelegate, @un
     /// Shared serial queue for all SCStream sample buffer handlers.
     static let sampleHandlerQueue = DispatchQueue(label: "com.stonerl.Thaw.screencapture")
 
+    /// Reused across frames to avoid repeated GPU/Metal setup costs.
+    private let ciContext = CIContext()
+
     private var continuation: CheckedContinuation<CGImage?, Never>?
     private var bufferedImage: CGImage?
     private let lock = NSLock()
@@ -296,8 +299,7 @@ private final class FrameCaptor: NSObject, SCStreamOutput, SCStreamDelegate, @un
 
         // Convert CVImageBuffer to CGImage
         let ciImage = CIImage(cvImageBuffer: imageBuffer)
-        let context = CIContext()
-        guard let cgImage = context.createCGImage(ciImage, from: ciImage.extent) else {
+        guard let cgImage = ciContext.createCGImage(ciImage, from: ciImage.extent) else {
             resumeOrBuffer(with: nil)
             return
         }

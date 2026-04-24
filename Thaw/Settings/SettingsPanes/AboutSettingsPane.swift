@@ -39,10 +39,10 @@ struct AboutSettingsPane: View {
     }
 
     var body: some View {
-        contentForm(cornerStyle: .continuous)
+        contentForm()
     }
 
-    private func contentForm(cornerStyle _: RoundedCornerStyle) -> some View {
+    private func contentForm() -> some View {
         IceForm(spacing: 0) {
             mainContent()
 

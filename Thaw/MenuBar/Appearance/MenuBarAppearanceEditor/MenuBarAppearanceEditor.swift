@@ -38,6 +38,8 @@ struct MenuBarAppearanceEditor: View {
             cannotEdit
         } else {
             mainForm
+                // Use .automatic to match the soft scroll-edge style of other
+                // settings surfaces (e.g. IceForm-based panes).
                 .scrollEdgeEffectStyle(.automatic, for: .vertical)
                 .padding(.top, topPadding)
         }

@@ -99,10 +99,10 @@ struct NotchIndicatorOverlay: View {
         return Color(cgColor: colorInfo.color)
     }
 
-    /// Helper to check brightness using the active screen for notch detection.
+    /// Helper to check brightness using the same screen used for notch geometry.
     private func isBrightForActiveScreen() -> Bool {
         guard let colorInfo = averageColorInfo else { return false }
-        return colorInfo.isBright(for: nil)
+        return colorInfo.isBright(for: NSScreen.main)
     }
 }
 
