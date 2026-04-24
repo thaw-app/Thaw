@@ -59,6 +59,10 @@ final class CustomTooltipPanel: NSPanel {
         let contentView = NSView()
         contentView.translatesAutoresizingMaskIntoConstraints = false
 
+        let labelContainer = NSView()
+        labelContainer.translatesAutoresizingMaskIntoConstraints = false
+        labelContainer.addSubview(label)
+
         glassView.addSubview(label)
         contentView.addSubview(glassView)
         self.contentView = contentView
