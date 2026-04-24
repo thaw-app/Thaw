@@ -24,8 +24,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "\"%1$@\" (%2$@) wants to control Thaw settings via URL scheme.\n\nIf allowed, this app will be able to:\n• Read current settings and configurations\n• Toggle and change boolean settings\n• Modify numeric values (timers, delays, intervals)\n• Change enum settings (rehide strategy, Thaw Bar location)\n• Modify per-display configurations\n\nThis permission persists until manually removed in Settings > Automation.%3$@"
+            "state" : "translated",
+            "value" : "\"%1$@\" (%2$@) desea controlar los ajustes de Thaw mediante un esquema de URL.\n\nSi se permite, esta aplicación podrá:\n• Leer los ajustes y configuraciones actuales\n• Activar y desactivar ajustes booleanos\n• Modificar valores numéricos (temporizadores, retrasos, intervalos)\n• Cambiar ajustes de menú (estrategia de ocultación, ubicación de la barra de Thaw)\n• Modificar configuraciones para cada pantalla\n\nEste permiso permanecerá activo hasta que se elimine manualmente en Ajustes > Automatización.%3$@"
           }
         },
         "fr" : {
@@ -42,8 +42,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "\"%1$@\" (%2$@) wants to control Thaw settings via URL scheme.\n\nIf allowed, this app will be able to:\n• Read current settings and configurations\n• Toggle and change boolean settings\n• Modify numeric values (timers, delays, intervals)\n• Change enum settings (rehide strategy, Thaw Bar location)\n• Modify per-display configurations\n\nThis permission persists until manually removed in Settings > Automation.%3$@"
+            "state" : "translated",
+            "value" : "\"%1$@\" (%2$@) ingin mengontrol pengaturan Thaw melalui skema URL.\n\nJika dizinkan, aplikasi ini dapat:\n• Membaca pengaturan dan konfigurasi saat ini\n• Mengaktifkan atau menonaktifkan pengaturan boolean\n• Mengubah nilai numerik (waktu, jeda, interval)\n• Mengubah pengaturan enum (strategi sembunyi-ulang, lokasi Bar Thaw)\n• Mengubah konfigurasi per layar\n\nIzin ini akan tetap berlaku hingga dihapus secara manual di Pengaturan > Otomatisasi.%3$@"
           }
         },
         "it" : {
@@ -161,8 +161,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Remove %@ from whitelist"
+            "state" : "translated",
+            "value" : "Hapus %@ dari daftar yang izinkan"
           }
         },
         "it" : {
@@ -875,8 +875,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Rename"
+            "state" : "translated",
+            "value" : "Ubah Nama"
           }
         },
         "it" : {
@@ -994,8 +994,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Remove from whitelist"
+            "state" : "translated",
+            "value" : "Hapus dari daftar yang diizinkan"
           }
         },
         "it" : {
@@ -1708,8 +1708,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Profiles"
+            "state" : "translated",
+            "value" : "Profil"
           }
         },
         "it" : {
@@ -1827,8 +1827,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Profile: %@"
+            "state" : "translated",
+            "value" : "Profil: %@"
           }
         },
         "it" : {
@@ -1946,8 +1946,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Profile name"
+            "state" : "translated",
+            "value" : "Nama profil"
           }
         },
         "it" : {
@@ -2065,8 +2065,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Profile"
+            "state" : "translated",
+            "value" : "Profil"
           }
         },
         "it" : {
@@ -3255,8 +3255,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Save Current"
+            "state" : "translated",
+            "value" : "Simpan Saat Ini"
           }
         },
         "it" : {
@@ -5278,8 +5278,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu Bar Profile"
+            "state" : "translated",
+            "value" : "Profil Baru Menu"
           }
         },
         "it" : {
@@ -6944,8 +6944,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Modified: %@"
+            "state" : "translated",
+            "value" : "Diubah: %@"
           }
         },
         "it" : {
@@ -7063,8 +7063,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move the New Items badge to choose where newly detected items will appear."
+            "state" : "translated",
+            "value" : "Pindahkan lencana Item Baru untuk mengatur lokasi item baru muncul."
           }
         },
         "it" : {
@@ -7182,8 +7182,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Open Focus Settings"
+            "state" : "translated",
+            "value" : "Buka Pengaturan Fokus"
           }
         },
         "it" : {
@@ -7658,7 +7658,7 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "OK"
           }
         },
@@ -7896,7 +7896,7 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "Notch"
           }
         },
@@ -8473,8 +8473,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No whitelisted apps"
+            "state" : "translated",
+            "value" : "No hay aplicaciones en la whitelist"
           }
         },
         "fr" : {
@@ -8491,8 +8491,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No whitelisted apps"
+            "state" : "translated",
+            "value" : "Tidak ada aplikasi yang dizinkan"
           }
         },
         "it" : {
@@ -8729,8 +8729,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No profiles saved. Save your current configuration to create one."
+            "state" : "translated",
+            "value" : "Belum ada profil tersimpan. Simpan konfigurasi saat ini untuk membuat profil."
           }
         },
         "it" : {
@@ -8848,8 +8848,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No profile selected"
+            "state" : "translated",
+            "value" : "Tidak ada profil yang dipilih"
           }
         },
         "it" : {
@@ -9086,8 +9086,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "New profile name"
+            "state" : "translated",
+            "value" : "Nama profil baru"
           }
         },
         "it" : {
@@ -9205,8 +9205,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "New Items"
+            "state" : "translated",
+            "value" : "Item Baru"
           }
         },
         "it" : {
@@ -9919,8 +9919,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update All"
+            "state" : "translated",
+            "value" : "Perbarui Semua"
           }
         },
         "it" : {
@@ -10038,8 +10038,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update"
+            "state" : "translated",
+            "value" : "Perbarui"
           }
         },
         "it" : {
@@ -10752,8 +10752,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update Configuration Only"
+            "state" : "translated",
+            "value" : "Hanya Perbarui Konfigurasi"
           }
         },
         "it" : {
@@ -11228,8 +11228,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "To switch profiles with Focus modes, add Thaw as a Focus Filter in System Settings → Focus → [Mode] → Focus Filters."
+            "state" : "translated",
+            "value" : "Untuk mengganti profil dengan mode Fokus, tambahkan Thaw sebagai Filter Fokus di Pengaturan Sistem > Fokus > [Mode] > Filter Fokus."
           }
         },
         "it" : {
@@ -11704,8 +11704,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update Configuration on All Profiles"
+            "state" : "translated",
+            "value" : "Perbarui Konfigurasi ke Semua Profil"
           }
         },
         "it" : {
@@ -11805,8 +11805,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update Layout Only"
+            "state" : "translated",
+            "value" : "Actualizar disposición solamente"
           }
         },
         "fr" : {
@@ -11823,8 +11823,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update Layout Only"
+            "state" : "translated",
+            "value" : "Hanya Perbarui Tata Letak"
           }
         },
         "it" : {
@@ -12400,8 +12400,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Whitelisted apps can read settings, toggle boolean options, set numeric values (timers, delays), change enum settings (rehide strategy, Thaw Bar location), and modify per-display configurations. This includes auto-rehide, show on click/hover/scroll/double-click, Thaw Bar, hide application menus, enable always-hidden section, show tooltips, and diagnostic logging."
+            "state" : "translated",
+            "value" : "Las aplicaciones en whitelist pueden leer los ajustes, cambiar opciones booleanas, establecer valores numéricos (temporizadores, retrasos), cambiar ajustes de menu (ocultar estrategia, ubicación de la barra Thaw) y modificar las configuraciones por pantalla. Esto incluye auto-reocultar, mostrar al hacer click/hover/scroll/double-click, Thaw Bar, ocultar los menús de la aplicación, habilitar siempre la sección oculta, mostrar las sugerencias y el registro de diagnóstico."
           }
         },
         "fr" : {
@@ -12418,8 +12418,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Whitelisted apps can read settings, toggle boolean options, set numeric values (timers, delays), change enum settings (rehide strategy, Thaw Bar location), and modify per-display configurations. This includes auto-rehide, show on click/hover/scroll/double-click, Thaw Bar, hide application menus, enable always-hidden section, show tooltips, and diagnostic logging."
+            "state" : "translated",
+            "value" : "Aplikasi dalam daftar izin dapat menbaca pengaturan, mengaktifkan atau menonaktifkan opsi boolean, mengubah nilai numberik (waktu, jeda), mengubah pengaturan enum (strategi sembunyi ulang, lokasi Bar Thaw), serta mengubah konfigurasi per layar. Ini mencakup sembunyi-ulang otomatis, tampil saat klik/arah kursor/gulir/klik dua kali, Bar Thaw, menyembunyikan menu aplikasi, mengaktifkan bagian selalu-tersembunyi, tip alat, dan pencatatan diagnostik."
           }
         },
         "it" : {
@@ -12537,8 +12537,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Whitelisted Applications"
+            "state" : "translated",
+            "value" : "Aplikasi yang Diizinkan"
           }
         },
         "it" : {
@@ -12656,8 +12656,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "When an app sends a thaw:// URL to change settings, Thaw checks if that app is whitelisted."
+            "state" : "translated",
+            "value" : "Saat apilkasi mengubah pengaturan melalui thaw://URL, Thaw akan memeriksa apakah aplikasi tersebut ada dalam daftar izin."
           }
         },
         "it" : {
@@ -12775,8 +12775,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "When a Focus mode deactivates, the display profile is automatically restored."
+            "state" : "translated",
+            "value" : "Saat mode Fokus dinonaktifkan, profil layar akan dipulihkan secara otomatis."
           }
         },
         "it" : {
@@ -13132,8 +13132,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update this profile with the current state"
+            "state" : "translated",
+            "value" : "Perbarui profil ini dengan kondisi saat ini"
           }
         },
         "it" : {
@@ -13352,8 +13352,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Use the faster LCS (Longest Common Subsequence) algorithm for profile sorting on notched displays instead of the full sort. LCS minimises the number of moves but may be less reliable on notched displays with smaller resolutions."
+            "state" : "translated",
+            "value" : "Utilice el algoritmo LCS más rápido (una secuencia común más larga) para ordenar perfiles en pantallas marcadas en lugar del tipo completo. LCS minimiza el número de movimientos, pero puede ser menos fiable en pantallas con resoluciones más pequeñas."
           }
         },
         "fr" : {
@@ -13370,8 +13370,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Use the faster LCS (Longest Common Subsequence) algorithm for profile sorting on notched displays instead of the full sort. LCS minimises the number of moves but may be less reliable on notched displays with smaller resolutions."
+            "state" : "translated",
+            "value" : "Gunakan algoritma LCS (Longest Common Subsequence) yang lebih cepat untuk mengurutkan profil pada layar notch sebagai pengganti algoritma bawaan. LCS mengurangi jumlah perpindahan, tetapi mungkin kurang optimal di layar notch beresolusi kecil."
           }
         },
         "it" : {
@@ -13471,8 +13471,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Use Option-click to open always-hidden section"
+            "state" : "translated",
+            "value" : "Utilice el clic de opción para abrir la sección siempre oculta"
           }
         },
         "fr" : {
@@ -13489,8 +13489,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Use Option-click to open always-hidden section"
+            "state" : "translated",
+            "value" : "Gunakan Option-Klik untuk membuka bagian selalu-tersembunyi"
           }
         },
         "it" : {
@@ -13608,8 +13608,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Use LCS sorting on notched displays"
+            "state" : "translated",
+            "value" : "Gunakan algoritma LCS di layar notch"
           }
         },
         "it" : {
@@ -14322,8 +14322,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Set Menu Bar Profile"
+            "state" : "translated",
+            "value" : "Set Profil Bar Menu"
           }
         },
         "it" : {
@@ -16345,8 +16345,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Settings URI is disabled. External apps cannot read or modify Thaw settings."
+            "state" : "translated",
+            "value" : "Pengaturan URL saat ini tidak aktif. Aplikasi eksternal tidak dapat membaca atau mengubah pengaturan Thaw."
           }
         },
         "it" : {
@@ -17535,8 +17535,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Supported Settings"
+            "state" : "translated",
+            "value" : "Pengaturan yang Didukung"
           }
         },
         "it" : {
@@ -19094,7 +19094,7 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%@"
           }
         },
@@ -19320,8 +19320,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Automation"
+            "state" : "translated",
+            "value" : "Otomatisasi"
           }
         },
         "it" : {
@@ -19915,8 +19915,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Auto-Switch"
+            "state" : "translated",
+            "value" : "Beralih Otomatis"
           }
         },
         "it" : {
@@ -20034,8 +20034,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Assign a profile to each display."
+            "state" : "translated",
+            "value" : "Tetapkan profil untuk setiap layar."
           }
         },
         "it" : {
@@ -20391,8 +20391,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Are you sure you want to delete the profile \"%@\"? This cannot be undone."
+            "state" : "translated",
+            "value" : "Yakin ingin menghapus profil \"%@\"? Tindakan ini tidak dapat dibatalkan."
           }
         },
         "it" : {
@@ -20510,8 +20510,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apps that request settings access will appear here after you approve them."
+            "state" : "translated",
+            "value" : "Aplikasi yang meminta akses pengaturan akan ditampilakn di sini setelah disetujui."
           }
         },
         "it" : {
@@ -20986,8 +20986,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply a Thaw menu bar profile when this Focus activates."
+            "state" : "translated",
+            "value" : "Terapkan profil bar menu Thaw saat Fokus ini aktif."
           }
         },
         "it" : {
@@ -21224,7 +21224,7 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "BETA"
           }
         },
@@ -21938,7 +21938,7 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "Chevron"
           }
         },
@@ -23247,8 +23247,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Can toggle settings: auto-rehide, show on click/hover/scroll, Thaw Bar, and other boolean options."
+            "state" : "translated",
+            "value" : "Dapat mengaktifkan atau menonaktifkan pengaturan: sembunyi-ulang otomatis, tampil saat klik/arah kursor/gulir/klik dua kali, Bar Thaw, serta pengaturan boolean lainnya."
           }
         },
         "it" : {
@@ -23354,8 +23354,8 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Can modify settings"
+            "state" : "translated",
+            "value" : "Permet de modifier les paramètres"
           }
         },
         "hu" : {
@@ -23366,8 +23366,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Can modify settings"
+            "state" : "translated",
+            "value" : "Dapat mengubah pengaturan"
           }
         },
         "it" : {
@@ -23485,8 +23485,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Bundle Identifier (e.g., com.droppy)"
+            "state" : "translated",
+            "value" : "Bundle Identifier (mis. com.droppy)"
           }
         },
         "it" : {
@@ -23497,8 +23497,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Bundle Identifier (e.g., com.droppy)"
+            "state" : "translated",
+            "value" : "バンドルID（例：com.droppy）"
           }
         },
         "ko" : {
@@ -24092,7 +24092,7 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "+"
           }
         },
@@ -24211,7 +24211,7 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "•"
           }
         },
@@ -24701,7 +24701,7 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%lld fps"
           }
         },
@@ -25548,7 +25548,7 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "⎋"
           }
         },
@@ -26506,7 +26506,7 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "⌘"
           }
         },
@@ -26625,7 +26625,7 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "1"
           }
         },
@@ -26971,7 +26971,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ijinkan aplikasi eksternal untuk membaca dan mengubah pengaturan Thaw via thaw://URL."
+            "value" : "Izinkan aplikasi eksternal untuk membaca dan mengubah pengaturan Thaw via thaw://URL."
           }
         },
         "it" : {
@@ -27090,7 +27090,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ijinkan \"%@\" untuk mengatur pengaturan Thaw?"
+            "value" : "Izinkan \"%@\" untuk mengatur pengaturan Thaw?"
           }
         },
         "it" : {
@@ -27209,7 +27209,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ijinkan"
+            "value" : "Izinkan"
           }
         },
         "it" : {
@@ -27446,8 +27446,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Add Application Manually"
+            "state" : "translated",
+            "value" : "Tambahkan Aplikasi Secara Manual"
           }
         },
         "it" : {
@@ -27934,7 +27934,7 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "1."
           }
         },
@@ -28291,7 +28291,7 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "4."
           }
         },
@@ -28410,7 +28410,7 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "3."
           }
         },
@@ -28529,7 +28529,7 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "3"
           }
         },
@@ -28648,7 +28648,7 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "2."
           }
         },
@@ -28767,7 +28767,7 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "2"
           }
         },
@@ -30897,8 +30897,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Export Profile(s)"
+            "state" : "translated",
+            "value" : "Ekspor Profil"
           }
         },
         "it" : {
@@ -31016,8 +31016,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Export"
+            "state" : "translated",
+            "value" : "Ekspor"
           }
         },
         "it" : {
@@ -31373,8 +31373,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "How It Works"
+            "state" : "translated",
+            "value" : "Cara Kerja"
           }
         },
         "it" : {
@@ -32325,8 +32325,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Keep search"
+            "state" : "translated",
+            "value" : "Tetap cari"
           }
         },
         "it" : {
@@ -32801,8 +32801,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Import Profile(s)"
+            "state" : "translated",
+            "value" : "Impor Profil"
           }
         },
         "it" : {
@@ -33039,8 +33039,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If you approve, the app is permanently whitelisted and can modify settings anytime without asking again."
+            "state" : "translated",
+            "value" : "Jika diizinkan, aplikasi ini akan masuk daftar izin permanen dan dapat mengubah pengaturan kapanpun tanpa izin lagi."
           }
         },
         "it" : {
@@ -33158,8 +33158,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If not whitelisted, you'll see a confirmation dialog showing the app name and what it wants to do."
+            "state" : "translated",
+            "value" : "Jika tidak ada dalam daftar izin, dialog konfirmasi akan menampilkan nama aplikasi dan tindakan yang diminta."
           }
         },
         "it" : {
@@ -33527,7 +33527,7 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "Ice Cube"
           }
         },
@@ -33587,8 +33587,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Ice Cube"
+            "state" : "translated",
+            "value" : "冰块"
           }
         },
         "zh-Hant" : {
@@ -33634,8 +33634,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Error"
+            "state" : "translated",
+            "value" : "Kesalahan"
           }
         },
         "it" : {
@@ -34348,8 +34348,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Deny"
+            "state" : "translated",
+            "value" : "Tolak"
           }
         },
         "it" : {
@@ -34467,8 +34467,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete Profile?"
+            "state" : "translated",
+            "value" : "Hapus Profil?"
           }
         },
         "it" : {
@@ -34586,8 +34586,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete"
+            "state" : "translated",
+            "value" : "Hapus"
           }
         },
         "it" : {
@@ -35181,8 +35181,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Created: %@"
+            "state" : "translated",
+            "value" : "Dibuat: %@"
           }
         },
         "it" : {
@@ -35266,7 +35266,122 @@
       }
     },
     "Copy version info" : {
-
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copy version info"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copy version info"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copiar información de versión"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copy version info"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copy version info"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Salin informasi versi"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copy version info"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "バージョン情報をコピー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copy version info"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copy version info"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copy version info"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copy version info"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copy version info"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copy version info"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copy version info"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copy version info"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sao chép thông tin phiên bản"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "复制版本信息"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copy version info"
+          }
+        }
+      }
     },
     "Contribute" : {
       "comment" : "A button that opens a website where users can contribute to the project.",
@@ -36136,8 +36251,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enable Settings URI Scheme"
+            "state" : "translated",
+            "value" : "Aktifkan Pengaturan Skema URL"
           }
         },
         "it" : {
@@ -36850,8 +36965,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Edit Menu Bar Layout…"
+            "state" : "translated",
+            "value" : "Edit Tata Letak Baru Menu…"
           }
         },
         "it" : {
@@ -36970,7 +37085,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ubah Tampilan Bar Menu…"
+            "value" : "Edit Tampilan Bar Menu…"
           }
         },
         "it" : {
@@ -37088,7 +37203,7 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "E"
           }
         },
@@ -37100,7 +37215,7 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "E"
           }
         },
@@ -37207,8 +37322,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Duplicate"
+            "state" : "translated",
+            "value" : "Duplikasi"
           }
         },
         "it" : {
@@ -38397,8 +38512,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "You can remove apps from this list at any time to revoke their access."
+            "state" : "translated",
+            "value" : "Aplikasi dapat dihapus dari daftar ini kapan saja untuk mengubah akses."
           }
         },
         "it" : {
