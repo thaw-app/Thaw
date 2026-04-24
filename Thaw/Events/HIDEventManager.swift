@@ -770,6 +770,9 @@ extension HIDEventManager {
         showOnClickGuardDeadline = .now + .seconds(NSEvent.doubleClickInterval)
         guardMouseUpState = .idle
 
+        // Validate (and recreate if needed) before enabling; a stale Mach port
+        // would silently no-op on start() and leave the guard tap inactive.
+        showOnClickGuardTap.ensureValid()
         showOnClickGuardTap.start()
 
         clickTask?.cancel()
