@@ -70,13 +70,19 @@ final class HIDEventManager: ObservableObject {
     /// The display hosting the current protected region.
     private var showOnClickGuardDisplayID: CGDirectDisplayID?
 
-    /// Whether the next left-mouse-up should also be swallowed after the
-    /// guard consumed a left-mouse-down.
-    private var shouldSwallowShowOnClickMouseUp = false
+    /// Tracks the state of the swallow/disarm lifecycle for the click guard tap.
+    private enum GuardMouseUpState {
+        /// No mouse-down has been swallowed; guard tap is idle between clicks.
+        case idle
+        /// A mouse-down was swallowed; swallow the matching mouse-up but keep
+        /// the guard armed afterward (double-click window still open).
+        case swallowing
+        /// A mouse-down was swallowed and teardown is pending; swallow the
+        /// matching mouse-up then fully disarm the guard.
+        case swallowingThenDisarm
+    }
 
-    /// Whether guard teardown should occur once the swallowed mouse-up arrives.
-    /// Consolidates the two previous deferred-disarm flags.
-    private var pendingDisarmOnMouseUp = false
+    private var guardMouseUpState: GuardMouseUpState = .idle
 
     /// The number of times the manager has been told to stop.
     private var disableCount = 0
@@ -263,11 +269,10 @@ final class HIDEventManager: ObservableObject {
 
         expireShowOnClickGuardIfNeeded()
 
-        if event.type == .leftMouseUp, shouldSwallowShowOnClickMouseUp {
-            shouldSwallowShowOnClickMouseUp = false
-            let shouldDisarm = pendingDisarmOnMouseUp
-            pendingDisarmOnMouseUp = false
-            if shouldDisarm {
+        if event.type == .leftMouseUp, guardMouseUpState != .idle {
+            let state = guardMouseUpState
+            guardMouseUpState = .idle
+            if state == .swallowingThenDisarm {
                 disarmShowOnClickGuard()
             }
             return nil
@@ -285,8 +290,6 @@ final class HIDEventManager: ObservableObject {
             return event
         }
 
-        shouldSwallowShowOnClickMouseUp = true
-
         let clickState = event.getIntegerValueField(.mouseEventClickState)
         if clickState > 1,
            appState.settings.general.showOnClick,
@@ -295,7 +298,9 @@ final class HIDEventManager: ObservableObject {
            alwaysHiddenSection.isEnabled
         {
             alwaysHiddenSection.show()
-            pendingDisarmOnMouseUp = true
+            guardMouseUpState = .swallowingThenDisarm
+        } else {
+            guardMouseUpState = .swallowing
         }
 
         return nil
@@ -729,8 +734,7 @@ extension HIDEventManager {
         )
         showOnClickGuardDisplayID = screen.displayID
         showOnClickGuardDeadline = .now + .seconds(NSEvent.doubleClickInterval)
-        shouldSwallowShowOnClickMouseUp = false
-        pendingDisarmOnMouseUp = false
+        guardMouseUpState = .idle
 
         showOnClickGuardTap.start()
 
@@ -748,10 +752,10 @@ extension HIDEventManager {
     }
 
     private func expireShowOnClickGuard() {
-        if shouldSwallowShowOnClickMouseUp {
+        if guardMouseUpState != .idle {
             // Mouse button is still held; defer full teardown until the
             // swallowed mouse-up arrives so the tap stays active.
-            pendingDisarmOnMouseUp = true
+            guardMouseUpState = .swallowingThenDisarm
             showOnClickGuardDeadline = nil
             showOnClickGuardRegion = nil
             showOnClickGuardDisplayID = nil
@@ -765,9 +769,9 @@ extension HIDEventManager {
     private func disarmShowOnClickGuard() {
         // If we're waiting for a swallowed mouse-up, defer disarming until it arrives.
         // This keeps the CGEventTap active until the swallowed mouse-up is processed
-        // and prevents stray mouse-up delivery.
-        if shouldSwallowShowOnClickMouseUp {
-            pendingDisarmOnMouseUp = true
+        // and prevents a stray mouse-up being delivered to the system.
+        if guardMouseUpState != .idle {
+            guardMouseUpState = .swallowingThenDisarm
             return
         }
 
@@ -776,8 +780,7 @@ extension HIDEventManager {
         showOnClickGuardDeadline = nil
         showOnClickGuardRegion = nil
         showOnClickGuardDisplayID = nil
-        shouldSwallowShowOnClickMouseUp = false
-        pendingDisarmOnMouseUp = false
+        guardMouseUpState = .idle
         showOnClickGuardTap.stop()
     }
 
