@@ -782,7 +782,9 @@ final class MenuBarItemManager: ObservableObject {
             await cacheItemsRegardless(skipRecentMoveCheck: true, resolveSourcePID: false)
             // Final authoritative recache that resolves source PIDs so items used later
             // (which read item.sourcePID ?? item.ownerPID) reflect the true source PID.
-            await cacheItemsRegardless(resolveSourcePID: true)
+            // skipRecentMoveCheck: true ensures this pass is never suppressed by the
+            // 1-second recent-move cooldown stamped by the fast restore above.
+            await cacheItemsRegardless(skipRecentMoveCheck: true, resolveSourcePID: true)
         }
         MenuBarItemManager.diagLog.debug("performSetup: MenuBarItemManager setup complete")
     }

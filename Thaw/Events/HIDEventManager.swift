@@ -74,12 +74,9 @@ final class HIDEventManager: ObservableObject {
     /// guard consumed a left-mouse-down.
     private var shouldSwallowShowOnClickMouseUp = false
 
-    /// Whether the guard should be torn down immediately after the matching
-    /// swallowed mouse-up arrives.
-    private var shouldDisarmShowOnClickGuardOnMouseUp = false
-
-    /// Whether guard teardown is pending until the swallowed mouse-up arrives.
-    private var shouldDisarmShowOnClickGuardWhenMouseUpArrives = false
+    /// Whether guard teardown should occur once the swallowed mouse-up arrives.
+    /// Consolidates the two previous deferred-disarm flags.
+    private var pendingDisarmOnMouseUp = false
 
     /// The number of times the manager has been told to stop.
     private var disableCount = 0
@@ -264,12 +261,12 @@ final class HIDEventManager: ObservableObject {
             return event
         }
 
+        expireShowOnClickGuardIfNeeded()
+
         if event.type == .leftMouseUp, shouldSwallowShowOnClickMouseUp {
             shouldSwallowShowOnClickMouseUp = false
-            let shouldDisarm = shouldDisarmShowOnClickGuardOnMouseUp ||
-                shouldDisarmShowOnClickGuardWhenMouseUpArrives
-            shouldDisarmShowOnClickGuardOnMouseUp = false
-            shouldDisarmShowOnClickGuardWhenMouseUpArrives = false
+            let shouldDisarm = pendingDisarmOnMouseUp
+            pendingDisarmOnMouseUp = false
             if shouldDisarm {
                 disarmShowOnClickGuard()
             }
@@ -298,7 +295,7 @@ final class HIDEventManager: ObservableObject {
            alwaysHiddenSection.isEnabled
         {
             alwaysHiddenSection.show()
-            shouldDisarmShowOnClickGuardOnMouseUp = true
+            pendingDisarmOnMouseUp = true
         }
 
         return nil
@@ -574,6 +571,10 @@ final class HIDEventManager: ObservableObject {
         hoverRearmTask?.cancel()
         hoverRearmTask = nil
         hoverRearmTaskToken = nil
+        hoverTask?.cancel()
+        hoverTask = nil
+        hoverTaskToken = nil
+        pendingHoverAction = nil
         disarmShowOnClickGuard()
         dismissMenuBarTooltip()
     }
@@ -729,8 +730,7 @@ extension HIDEventManager {
         showOnClickGuardDisplayID = screen.displayID
         showOnClickGuardDeadline = .now + .seconds(NSEvent.doubleClickInterval)
         shouldSwallowShowOnClickMouseUp = false
-        shouldDisarmShowOnClickGuardOnMouseUp = false
-        shouldDisarmShowOnClickGuardWhenMouseUpArrives = false
+        pendingDisarmOnMouseUp = false
 
         showOnClickGuardTap.start()
 
@@ -749,7 +749,9 @@ extension HIDEventManager {
 
     private func expireShowOnClickGuard() {
         if shouldSwallowShowOnClickMouseUp {
-            shouldDisarmShowOnClickGuardWhenMouseUpArrives = true
+            // Mouse button is still held; defer full teardown until the
+            // swallowed mouse-up arrives so the tap stays active.
+            pendingDisarmOnMouseUp = true
             showOnClickGuardDeadline = nil
             showOnClickGuardRegion = nil
             showOnClickGuardDisplayID = nil
@@ -765,7 +767,7 @@ extension HIDEventManager {
         // This keeps the CGEventTap active until the swallowed mouse-up is processed
         // and prevents stray mouse-up delivery.
         if shouldSwallowShowOnClickMouseUp {
-            shouldDisarmShowOnClickGuardOnMouseUp = true
+            pendingDisarmOnMouseUp = true
             return
         }
 
@@ -775,23 +777,32 @@ extension HIDEventManager {
         showOnClickGuardRegion = nil
         showOnClickGuardDisplayID = nil
         shouldSwallowShowOnClickMouseUp = false
-        shouldDisarmShowOnClickGuardOnMouseUp = false
-        shouldDisarmShowOnClickGuardWhenMouseUpArrives = false
+        pendingDisarmOnMouseUp = false
         showOnClickGuardTap.stop()
     }
 
+    /// Tears down the guard if its deadline has passed. Call this before
+    /// reading `isShowOnClickGuardActive` in contexts that need to react
+    /// to expiry (e.g. the tap callback, hit-test helpers).
+    private func expireShowOnClickGuardIfNeeded() {
+        guard let deadline = showOnClickGuardDeadline, deadline <= .now else {
+            return
+        }
+        expireShowOnClickGuard()
+    }
+
+    /// Pure read — returns whether the guard is currently armed and within its
+    /// deadline. Does not mutate state; call `expireShowOnClickGuardIfNeeded()`
+    /// first if expiry should be applied.
     private var isShowOnClickGuardActive: Bool {
         guard let deadline = showOnClickGuardDeadline else {
             return false
         }
-        if deadline > .now {
-            return showOnClickGuardRegion != nil
-        }
-        disarmShowOnClickGuard()
-        return false
+        return deadline > .now && showOnClickGuardRegion != nil
     }
 
     private func isPointInsideShowOnClickGuardRegion(_ point: CGPoint) -> Bool {
+        expireShowOnClickGuardIfNeeded()
         guard isShowOnClickGuardActive,
               let region = showOnClickGuardRegion,
               let displayID = showOnClickGuardDisplayID
@@ -1106,8 +1117,9 @@ extension HIDEventManager {
                     }
                 }
                 try await Task.sleep(for: .seconds(delay))
-                // Make sure the mouse is still inside.
+                // Make sure the manager is still enabled and the mouse is still inside.
                 guard
+                    isEnabled,
                     isMouseInsideEmptyMenuBarSpace(
                         appState: appState,
                         screen: screen
@@ -1148,8 +1160,9 @@ extension HIDEventManager {
                     }
                 }
                 try await Task.sleep(for: .seconds(delay))
-                // Make sure the mouse is still outside.
+                // Make sure the manager is still enabled and the mouse is still outside.
                 guard
+                    isEnabled,
                     !isMouseInsideMenuBar(appState: appState, screen: screen),
                     !isMouseInsideIceBar(appState: appState)
                 else {
