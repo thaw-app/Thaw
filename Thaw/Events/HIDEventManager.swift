@@ -695,55 +695,58 @@ extension HIDEventManager {
             return
         }
 
-        Task {
-            if isDoubleClick {
-                guard
-                    appState.settings.general.showOnClick,
-                    appState.settings.general.showOnDoubleClick
-                else {
-                    return
-                }
+        if isDoubleClick {
+            guard
+                appState.settings.general.showOnClick,
+                appState.settings.general.showOnDoubleClick
+            else {
+                return
+            }
+            Task {
                 if let alwaysHiddenSection = appState.menuBarManager.section(withName: .alwaysHidden),
                    alwaysHiddenSection.isEnabled
                 {
                     alwaysHiddenSection.show()
                 }
-            } else {
-                guard appState.settings.general.showOnClick else {
-                    return
-                }
+            }
+        } else {
+            guard appState.settings.general.showOnClick else {
+                return
+            }
 
-                if NSEvent.modifierFlags == .control {
-                    handleSecondaryContextMenu(appState: appState, screen: screen)
-                    return
-                }
+            if NSEvent.modifierFlags == .control {
+                handleSecondaryContextMenu(appState: appState, screen: screen)
+                return
+            }
 
-                if NSEvent.modifierFlags == .option {
-                    if appState.settings.advanced.useOptionClickToShowAlwaysHiddenSection,
-                       let alwaysHiddenSection = appState.menuBarManager.section(withName: .alwaysHidden),
-                       alwaysHiddenSection.isEnabled
-                    {
-                        alwaysHiddenSection.show()
-                    }
-                    return
-                }
-
-                if let hiddenSection = appState.menuBarManager.section(withName: .hidden),
-                   hiddenSection.isEnabled
+            if NSEvent.modifierFlags == .option {
+                if appState.settings.advanced.useOptionClickToShowAlwaysHiddenSection,
+                   let alwaysHiddenSection = appState.menuBarManager.section(withName: .alwaysHidden),
+                   alwaysHiddenSection.isEnabled
                 {
-                    let shouldArmGuard =
-                        appState.settings.general.showOnDoubleClick
-                            && hiddenSection.isHidden
-                            && (appState.menuBarManager.section(withName: .alwaysHidden)?.isEnabled ?? false)
-
-                    hiddenSection.toggle()
-
-                    if shouldArmGuard {
-                        armShowOnClickGuard(screen: screen, at: clickLocation)
-                    } else {
-                        disarmShowOnClickGuard()
-                    }
+                    Task { alwaysHiddenSection.show() }
                 }
+                return
+            }
+
+            if let hiddenSection = appState.menuBarManager.section(withName: .hidden),
+               hiddenSection.isEnabled
+            {
+                let shouldArmGuard =
+                    appState.settings.general.showOnDoubleClick
+                        && hiddenSection.isHidden
+                        && (appState.menuBarManager.section(withName: .alwaysHidden)?.isEnabled ?? false)
+
+                // Arm the guard synchronously before toggling so the CGEventTap
+                // is active before any second click can arrive; a Task hop would
+                // leave a window where the tap is not yet started.
+                if shouldArmGuard {
+                    armShowOnClickGuard(screen: screen, at: clickLocation)
+                } else {
+                    disarmShowOnClickGuard()
+                }
+
+                Task { hiddenSection.toggle() }
             }
         }
     }
