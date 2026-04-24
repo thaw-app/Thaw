@@ -63,6 +63,10 @@ final class HIDEventManager: ObservableObject {
     /// The pending task that clears the temporary show-on-click guard.
     private var clickTask: Task<Void, Never>?
 
+    /// Identity token for the current click task so a late/re-armed task
+    /// cannot call expireShowOnClickGuard after it has been superseded.
+    private var clickTaskToken: UUID?
+
     /// The deadline for the temporary show-on-click protection region.
     private var showOnClickGuardDeadline: ContinuousClock.Instant?
 
@@ -753,6 +757,8 @@ extension HIDEventManager {
         showOnClickGuardTap.start()
 
         clickTask?.cancel()
+        let token = UUID()
+        clickTaskToken = token
         clickTask = Task { [weak self] in
             do {
                 try await Task.sleep(for: .seconds(NSEvent.doubleClickInterval))
@@ -760,6 +766,7 @@ extension HIDEventManager {
                 return
             }
             await MainActor.run {
+                guard self?.clickTaskToken == token else { return }
                 self?.expireShowOnClickGuard()
             }
         }
@@ -774,6 +781,7 @@ extension HIDEventManager {
             showOnClickGuardRegion = nil
             showOnClickGuardDisplayID = nil
             clickTask = nil
+            clickTaskToken = nil
             return
         }
 
@@ -791,6 +799,7 @@ extension HIDEventManager {
 
         clickTask?.cancel()
         clickTask = nil
+        clickTaskToken = nil
         showOnClickGuardDeadline = nil
         showOnClickGuardRegion = nil
         showOnClickGuardDisplayID = nil
