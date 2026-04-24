@@ -577,12 +577,12 @@ final class ControlItem {
                     return
                 }
 
-                if modifierFlags == .control {
+                if modifierFlags.contains(.control) {
                     showMenu()
                     return
                 }
 
-                if modifierFlags == .option {
+                if modifierFlags.contains(.option) {
                     // Option-click: only toggle always-hidden if enabled.
                     if
                         appState.settings.advanced.useOptionClickToShowAlwaysHiddenSection,
