@@ -63,7 +63,7 @@ final class CustomTooltipPanel: NSPanel {
         labelContainer.translatesAutoresizingMaskIntoConstraints = false
         labelContainer.addSubview(label)
 
-        glassView.addSubview(label)
+        glassView.contentView = labelContainer
         contentView.addSubview(glassView)
         self.contentView = contentView
 
@@ -73,10 +73,10 @@ final class CustomTooltipPanel: NSPanel {
             glassView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             glassView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
 
-            label.topAnchor.constraint(equalTo: glassView.topAnchor, constant: 2),
-            label.leadingAnchor.constraint(equalTo: glassView.leadingAnchor, constant: 6),
-            label.trailingAnchor.constraint(equalTo: glassView.trailingAnchor, constant: -6),
-            label.bottomAnchor.constraint(equalTo: glassView.bottomAnchor, constant: -2),
+            label.topAnchor.constraint(equalTo: labelContainer.topAnchor, constant: 2),
+            label.leadingAnchor.constraint(equalTo: labelContainer.leadingAnchor, constant: 6),
+            label.trailingAnchor.constraint(equalTo: labelContainer.trailingAnchor, constant: -6),
+            label.bottomAnchor.constraint(equalTo: labelContainer.bottomAnchor, constant: -2),
         ])
     }
 
