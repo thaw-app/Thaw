@@ -52,6 +52,10 @@ final class HIDEventManager: ObservableObject {
     private var hoverRearmTask: Task<Void, Never>?
     private var hoverRearmTaskToken: UUID?
 
+    /// Tracks the last seen value of showOnHover so the CombineLatest3 sink
+    /// can restrict rearm logic to false→true transitions only.
+    private var lastShowOnHover: Bool?
+
     /// The currently pending hover action, used to avoid restarting the same
     /// delay window on every small mouse move inside the same region.
     private var pendingHoverAction: HoverAction?
@@ -424,6 +428,8 @@ final class HIDEventManager: ObservableObject {
                     mouseMovedTap.stop()
                 }
 
+                defer { lastShowOnHover = showOnHover }
+
                 if !showOnHover {
                     hoverRearmTask?.cancel()
                     hoverRearmTask = nil
@@ -435,8 +441,16 @@ final class HIDEventManager: ObservableObject {
                     return
                 }
 
+                // Only rearm when showOnHover transitions false→true; skip the
+                // rearm path when other inputs (tooltips, display config) change
+                // while showOnHover was already enabled.
+                guard lastShowOnHover != true else {
+                    return
+                }
+
                 appState.menuBarManager.showOnHoverAllowed = true
                 hoverRearmTask?.cancel()
+                hoverRearmTask = nil
                 hoverRearmTaskToken = nil
                 hoverTask?.cancel()
                 hoverTask = nil

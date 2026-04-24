@@ -718,6 +718,11 @@ final class MenuBarItemManager: ObservableObject {
                             "performSetup: fast initial cache succeeded on retry \(attempt)"
                         )
                     }
+                    // Fast path succeeded; kick off authoritative PID resolution
+                    // concurrently so we don't block restore logic.
+                    Task { @MainActor [weak self] in
+                        await self?.cacheItemsRegardless(resolveSourcePID: true)
+                    }
                     break
                 }
 
