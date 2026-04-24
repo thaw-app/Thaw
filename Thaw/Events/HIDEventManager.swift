@@ -719,12 +719,12 @@ extension HIDEventManager {
                 return
             }
 
-            if NSEvent.modifierFlags == .control {
+            if NSEvent.modifierFlags.contains(.control) {
                 handleSecondaryContextMenu(appState: appState, screen: screen)
                 return
             }
 
-            if NSEvent.modifierFlags == .option {
+            if NSEvent.modifierFlags.contains(.option) {
                 if appState.settings.advanced.useOptionClickToShowAlwaysHiddenSection,
                    let alwaysHiddenSection = appState.menuBarManager.section(withName: .alwaysHidden),
                    alwaysHiddenSection.isEnabled
