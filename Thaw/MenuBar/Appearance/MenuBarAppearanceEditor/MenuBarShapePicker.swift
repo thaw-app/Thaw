@@ -188,7 +188,8 @@ private struct MenuBarFullShapePicker: View, Equatable {
     }
 
     static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.info == rhs.info &&
+        lhs.colorScheme == rhs.colorScheme &&
+            lhs.info == rhs.info &&
             lhs.leftMargin == rhs.leftMargin &&
             lhs.rightMargin == rhs.rightMargin
     }
