@@ -332,6 +332,12 @@ private final class FrameCaptor: NSObject, SCStreamOutput, SCStreamDelegate, @un
                     cont.resume(returning: image)
                     return
                 }
+                // If already cancelled, resume immediately instead of storing continuation.
+                if Task.isCancelled {
+                    lock.unlock()
+                    cont.resume(returning: nil)
+                    return
+                }
                 // Otherwise, install continuation
                 self.continuation = cont
                 lock.unlock()
