@@ -6137,7 +6137,7 @@
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld aplikací"
+                  "value" : "%lld aplikace"
                 }
               },
               "one" : {
@@ -36918,7 +36918,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Použijte třídění LCS na displejích s výřezem"
+            "value" : "Použít třídění LCS na displejích s výřezem"
           }
         },
         "de" : {
