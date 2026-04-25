@@ -3226,13 +3226,22 @@ extension MenuBarItemManager {
         } catch {
             MenuBarItemManager.diagLog.error("Error clicking item (first attempt): \(error) — attempting fallback click")
 
-            // Fallback: re-fetch live bounds and retry with default attempt count.
+            // Fallback: re-fetch the item from the live window list so the
+            // click targets a fresh MenuBarItem with current windowID and
+            // bounds, rather than the potentially stale pre-click struct.
+            let fallbackItems = await MenuBarItem.getMenuBarItems(on: resolvedDisplayID, option: .onScreen)
+            let fallbackItem = fallbackItems.first(where: { $0.windowID == clickItem.windowID }) ??
+                fallbackItems.first(where: {
+                    $0.tag.matchesIgnoringWindowID(clickItem.tag) &&
+                        ($0.sourcePID ?? $0.ownerPID) == (clickItem.sourcePID ?? clickItem.ownerPID)
+                }) ?? clickItem
+
             // We stay inside temporarilyShow so that idsBeforeClick and context
             // remain in scope — shownInterfaceWindow can still be captured if
             // the fallback succeeds, keeping isShowingInterface accurate for
             // the rehide logic.
             do {
-                try await click(item: clickItem, with: mouseButton, skipInputPause: true)
+                try await click(item: fallbackItem, with: mouseButton, skipInputPause: true)
             } catch {
                 MenuBarItemManager.diagLog.error("Fallback click also failed for \(item.logString): \(error)")
                 // Icon is visible but both click attempts failed.
