@@ -4093,7 +4093,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zpřístupnení"
+            "value" : "Zpřístupnění"
           }
         },
         "de" : {
@@ -6181,7 +6181,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aplikace s přístupem k nastavení, se zobrazí zde, když je schválíte."
+            "value" : "Aplikace s přístupem k nastavení se zobrazí zde, když je schválíte."
           }
         },
         "de" : {
@@ -18342,7 +18342,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Import profil(ů)"
+            "value" : "Importovat profil(y)"
           }
         },
         "de" : {
@@ -18461,7 +18461,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Import nastavení"
+            "value" : "Importovat nastavení"
           }
         },
         "de" : {
