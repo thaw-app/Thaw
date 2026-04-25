@@ -98,5 +98,5 @@ extension EdgeInsets {
 
 extension CGFloat {
     /// The default spacing for an ``IceForm``.
-    static let iceFormDefaultSpacing: CGFloat = 10
+    static let iceFormDefaultSpacing: CGFloat = 24
 }

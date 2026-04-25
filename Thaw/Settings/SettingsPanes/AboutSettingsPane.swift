@@ -43,11 +43,9 @@ struct AboutSettingsPane: View {
     }
 
     private func contentForm() -> some View {
-        IceForm(spacing: 0) {
+        IceForm {
             mainContent()
-
-            Spacer(minLength: 20)
-
+            Spacer()
             bottomBar()
         }
     }

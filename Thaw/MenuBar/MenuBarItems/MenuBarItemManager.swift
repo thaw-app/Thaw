@@ -3015,6 +3015,7 @@ extension MenuBarItemManager {
     /// - Returns: A ``TemporaryShowResult`` describing whether the move and
     ///   click succeeded. Only act on ``TemporaryShowResult/movedButClickFailed``
     ///   for fallback clicks — the item is hidden for every other non-success case.
+    @discardableResult
     func temporarilyShow(item: MenuBarItem, clickingWith mouseButton: CGMouseButton, on displayID: CGDirectDisplayID? = nil, fastPath: Bool = false) async -> TemporaryShowResult {
         guard let appState else {
             MenuBarItemManager.diagLog.error("Missing AppState, so not showing \(item.logString)")

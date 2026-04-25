@@ -128,7 +128,6 @@ struct IceSection<Header: View, Content: View, Footer: View>: View {
 
                 footerView
             }
-            .padding(.bottom, 24)
         }
     }
 
