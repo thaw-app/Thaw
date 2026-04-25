@@ -3131,12 +3131,15 @@ extension MenuBarItemManager {
             // not updated during a move() call, so itemCache.address(for:) would
             // always return originalSection here — giving a false negative.
             // Instead, compare live Window Server bounds against the origin
-            // captured before the move started.
-            // If either read is nil (window gone or pre-move capture missed),
-            // the comparison returns true — we assume the item may have moved
-            // and preserve the rehide metadata to be safe.
+            // captured before the move started. Any nil (window gone or
+            // pre-move capture missed) is treated as moved/unknown — preserving
+            // rehide metadata is the safe-side choice.
             let currentOrigin = Bridging.getWindowBounds(for: item.windowID)?.origin
-            let itemHasMoved = currentOrigin != preMoveOrigin
+            // Treat any nil as "moved/unknown" — preserving rehide metadata is
+            // the safe-side choice when the move outcome cannot be determined.
+            // Note: in Swift nil != nil evaluates to false, so without the nil
+            // guards both-nil would wrongly indicate "item never moved."
+            let itemHasMoved = currentOrigin == nil || preMoveOrigin == nil || currentOrigin != preMoveOrigin
 
             if itemHasMoved {
                 // The item is no longer where it started — keep the rehide

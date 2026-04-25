@@ -972,8 +972,6 @@ extension NSPanel {
     ///
     /// Uses KVO on `isVisible` rather than polling, so the caller is resumed
     /// immediately when the panel hides with no busy-waiting on the main thread.
-    /// A minimum of one run-loop turn is always yielded so that `orderOut`/`close`
-    /// has a chance to propagate through AppKit before the continuation resumes.
     ///
     /// Must be called on the main actor because `NSPanel.isVisible` is an
     /// AppKit property that is only safe to read on the main thread.
@@ -984,15 +982,33 @@ extension NSPanel {
 
         await withTaskGroup(of: Void.self) { group in
             // Task 1: resume as soon as isVisible becomes false via KVO.
+            // Uses tryClaimOnce() so the continuation is resumed exactly once
+            // whether the KVO fires first or the task is cancelled by
+            // group.cancelAll() when the timeout wins — preventing a hang.
             group.addTask { @MainActor [weak self] in
                 guard let self else { return }
                 var bag = Set<AnyCancellable>()
-                await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
-                    self.publisher(for: \.isVisible)
-                        .filter { !$0 }
-                        .first()
-                        .sink { _ in cont.resume() }
-                        .store(in: &bag)
+                // claimed ensures the continuation is resumed exactly once
+                // across the KVO path and the cancellation path.
+                let claimed = OSAllocatedUnfairLock(initialState: false)
+                let contHolder = OSAllocatedUnfairLock<CheckedContinuation<Void, Never>?>(initialState: nil)
+                await withTaskCancellationHandler {
+                    await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
+                        contHolder.withLock { $0 = cont }
+                        self.publisher(for: \.isVisible)
+                            .filter { !$0 }
+                            .first()
+                            .sink { _ in
+                                if claimed.tryClaimOnce() {
+                                    contHolder.withLock { $0 }?.resume()
+                                }
+                            }
+                            .store(in: &bag)
+                    }
+                } onCancel: {
+                    if claimed.tryClaimOnce() {
+                        contHolder.withLock { $0 }?.resume()
+                    }
                 }
             }
             // Task 2: timeout guard — resumes the group if the panel never
