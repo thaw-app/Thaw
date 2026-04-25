@@ -526,17 +526,28 @@ private struct IceBarItemView: View {
             }
             let clickStartTime = Date.now
             IceBarItemView.diagLog.debug("leftClick: user clicked \(item.logString)")
+            let panel = menuBarManager.iceBarPanel
             menuBarManager.section(withName: section)?.hide()
             Task {
-                try await Task.sleep(for: .milliseconds(25))
+                // Wait until the IceBar panel is fully closed before checking
+                // item visibility. A blind 25 ms sleep is not enough under
+                // CPU load — the panel can still be on-screen when
+                // isWindowOnScreen runs, causing the wrong branch to be taken.
+                await waitForPanelClosed(panel, timeout: .milliseconds(200))
                 if Bridging.isWindowOnScreen(item.windowID) {
                     try await itemManager.click(item: item, with: .left)
                     let duration = Date.now.timeIntervalSince(clickStartTime)
                     IceBarItemView.diagLog.debug("leftClick: ✓ completed in \(Int(duration * 1000))ms (on-screen path)")
                 } else {
-                    await itemManager.temporarilyShow(item: item, clickingWith: .left, on: displayID, fastPath: true)
+                    let ok = await itemManager.temporarilyShow(item: item, clickingWith: .left, on: displayID, fastPath: true)
+                    if !ok {
+                        // Fallback: item moved into view but click failed.
+                        // Try one direct click with live bounds.
+                        IceBarItemView.diagLog.warning("leftClick: temp-show click failed, attempting fallback click")
+                        try? await itemManager.click(item: item, with: .left)
+                    }
                     let duration = Date.now.timeIntervalSince(clickStartTime)
-                    IceBarItemView.diagLog.debug("leftClick: ✓ completed in \(Int(duration * 1000))ms (temp-show path)")
+                    IceBarItemView.diagLog.debug("leftClick: ✓ completed in \(Int(duration * 1000))ms (temp-show path, ok=\(ok))")
                 }
             }
         }
@@ -547,15 +558,34 @@ private struct IceBarItemView: View {
             guard let itemManager, let menuBarManager else {
                 return
             }
+            let panel = menuBarManager.iceBarPanel
             menuBarManager.section(withName: section)?.hide()
             Task {
-                try await Task.sleep(for: .milliseconds(25))
+                await waitForPanelClosed(panel, timeout: .milliseconds(200))
                 if Bridging.isWindowOnScreen(item.windowID) {
                     try await itemManager.click(item: item, with: .right)
                 } else {
-                    await itemManager.temporarilyShow(item: item, clickingWith: .right, on: displayID, fastPath: true)
+                    let ok = await itemManager.temporarilyShow(item: item, clickingWith: .right, on: displayID, fastPath: true)
+                    if !ok {
+                        IceBarItemView.diagLog.warning("rightClick: temp-show click failed, attempting fallback click")
+                        try? await itemManager.click(item: item, with: .right)
+                    }
                 }
             }
+        }
+    }
+
+    /// Polls until `panel.isVisible` is false or `timeout` elapses.
+    /// Enforces a minimum 10 ms wait so the run loop can process the
+    /// `orderOut` call from `section.hide()`.
+    private func waitForPanelClosed(_ panel: IceBarPanel, timeout: Duration) async {
+        let pollInterval = Duration.milliseconds(10)
+        let deadline = ContinuousClock.now + timeout
+        // Always wait at least one poll interval so the orderOut has a
+        // chance to propagate through the window server.
+        try? await Task.sleep(for: pollInterval)
+        while panel.isVisible, ContinuousClock.now < deadline {
+            try? await Task.sleep(for: pollInterval)
         }
     }
 

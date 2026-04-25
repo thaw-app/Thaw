@@ -2922,6 +2922,30 @@ extension MenuBarItemManager {
         }
     }
 
+    /// Waits until the item's Window Server origin differs from `previousOrigin`,
+    /// or until `timeout` elapses.
+    ///
+    /// Used on the fast path of `temporarilyShow` as a lightweight alternative
+    /// to `waitForItemPositionToSettle`: we only need to confirm the Window
+    /// Server has applied the new position — we don't need two consecutive
+    /// identical readings.
+    private nonisolated func waitForItemToLeaveOrigin(
+        item: MenuBarItem,
+        previousOrigin: CGPoint,
+        timeout: Duration
+    ) async {
+        let pollInterval = Duration.milliseconds(15)
+        let deadline = ContinuousClock.now + timeout
+        while ContinuousClock.now < deadline {
+            await eventSleep(for: pollInterval)
+            if let currentOrigin = Bridging.getWindowBounds(for: item.windowID)?.origin,
+               currentOrigin != previousOrigin
+            {
+                return
+            }
+        }
+    }
+
     /// Schedules a timer for the given interval that rehides the
     /// temporarily shown items when fired.
     private func runRehideTimer(for interval: TimeInterval? = nil) {
@@ -2959,10 +2983,16 @@ extension MenuBarItemManager {
     ///   - item: The item to temporarily show.
     ///   - mouseButton: The mouse button to click the item with.
     ///   - displayID: The display identifier to show the item on.
-    func temporarilyShow(item: MenuBarItem, clickingWith mouseButton: CGMouseButton, on displayID: CGDirectDisplayID? = nil, fastPath: Bool = false) async {
+    /// Temporarily moves `item` into the visible area next to the Ice icon,
+    /// clicks it, then schedules a rehide.
+    ///
+    /// - Returns: `true` if the item was successfully moved **and** clicked;
+    ///   `false` if either step failed (the caller may attempt a fallback click).
+    @discardableResult
+    func temporarilyShow(item: MenuBarItem, clickingWith mouseButton: CGMouseButton, on displayID: CGDirectDisplayID? = nil, fastPath: Bool = false) async -> Bool {
         guard let appState else {
             MenuBarItemManager.diagLog.error("Missing AppState, so not showing \(item.logString)")
-            return
+            return false
         }
 
         MenuBarItemManager.diagLog.debug("temporarilyShow: started for \(item.logString)")
@@ -3007,7 +3037,7 @@ extension MenuBarItemManager {
 
         guard let returnInfo = getReturnDestination(for: item, in: items) else {
             MenuBarItemManager.diagLog.error("No return destination for \(item.logString) on display \(resolvedDisplayID)")
-            return
+            return false
         }
 
         // Prefer inserting to the left of the Thaw/visible control item so the icon appears
@@ -3021,7 +3051,7 @@ extension MenuBarItemManager {
             let alert = NSAlert()
             alert.messageText = String(localized: "Not enough room to show \"\(item.displayName)\"")
             alert.runModal()
-            return
+            return false
         }
 
         let moveDestination: MoveDestination = .leftOfItem(anchor)
@@ -3052,12 +3082,18 @@ extension MenuBarItemManager {
 
         MenuBarItemManager.diagLog.debug("Temporarily showing \(item.logString) on display \(resolvedDisplayID)")
 
+        // Capture the item's origin before the move so the fast-path settle
+        // can detect when the Window Server has applied the new position.
+        let preMoveOrigin = Bridging.getWindowBounds(for: item.windowID)?.origin
+
         do {
             if fastPath {
-                // Single attempt move — the first attempt always repositions the item
-                // close enough. Skipping retries eliminates the visible jitter from
-                // the 8-attempt retry loop with exponentially increasing timeouts.
-                try await move(item: item, to: moveDestination, on: resolvedDisplayID, skipInputPause: true, maxMoveAttempts: 1)
+                // Two-attempt move on the fast path. The first attempt almost always
+                // repositions the item correctly; the second is a cheap safety net for
+                // the rare case where the event cycle is dropped under CPU load.
+                // Keeping retries at 2 (vs. the default 8) avoids the visible jitter
+                // from a long retry loop while still tolerating one bad cycle.
+                try await move(item: item, to: moveDestination, on: resolvedDisplayID, skipInputPause: true, maxMoveAttempts: 2)
             } else {
                 try await move(item: item, to: moveDestination, on: resolvedDisplayID, skipInputPause: true)
             }
@@ -3066,7 +3102,7 @@ extension MenuBarItemManager {
             pendingRelocations.removeValue(forKey: tagIdentifier)
             pendingReturnDestinations.removeValue(forKey: tagIdentifier)
             persistPendingRelocations()
-            return
+            return false
         }
 
         let context = TemporarilyShownItemContext(
@@ -3087,9 +3123,22 @@ extension MenuBarItemManager {
 
         let clickItem: MenuBarItem
         if fastPath {
-            // Fast path: skip settle wait, re-fetch, and extra sleep to minimize
-            // the time the jittering icon is visible before the menu opens.
-            clickItem = item
+            // Fast path: lightweight settle (max 150 ms, 15 ms poll) so the
+            // click target coordinates are live rather than the pre-move bounds.
+            // This is shorter than the full waitForItemPositionToSettle (250 ms)
+            // to keep the IceBar click feel snappy.
+            if let preMoveOrigin {
+                await waitForItemToLeaveOrigin(item: item, previousOrigin: preMoveOrigin, timeout: .milliseconds(150))
+            }
+
+            // Re-fetch the item so getCurrentBounds inside postClickEvents
+            // uses a fresh window reference rather than the stale pre-move struct.
+            let refreshedItems = await MenuBarItem.getMenuBarItems(on: resolvedDisplayID, option: .onScreen)
+            clickItem = refreshedItems.first(where: { $0.windowID == item.windowID }) ??
+                refreshedItems.first(where: {
+                    $0.tag.matchesIgnoringWindowID(item.tag) &&
+                        ($0.sourcePID ?? $0.ownerPID) == (item.sourcePID ?? item.ownerPID)
+                }) ?? item
         } else {
             // Wait for the item's position to stabilize after the move. Some
             // apps need time to process the window relocation before they can
@@ -3117,7 +3166,9 @@ extension MenuBarItemManager {
             try await click(item: clickItem, with: mouseButton, skipInputPause: true)
         } catch {
             MenuBarItemManager.diagLog.error("Error clicking item: \(error)")
-            return
+            // Icon is now visible but the click failed. Return false so the
+            // caller can attempt a fallback click with live bounds.
+            return false
         }
 
         await eventSleep(for: .milliseconds(100))
@@ -3127,6 +3178,8 @@ extension MenuBarItemManager {
         context.shownInterfaceWindow = windowsAfterClick.first { window in
             window.ownerPID == clickPID && !idsBeforeClick.contains(window.windowID)
         }
+
+        return true
     }
 
     /// Resolves the best move destination for returning a temporarily shown
