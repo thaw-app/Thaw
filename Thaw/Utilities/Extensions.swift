@@ -964,3 +964,45 @@ extension Sequence where Element == MenuBarItem {
         first { $0.tag == tag }
     }
 }
+
+// MARK: - NSPanel
+
+extension NSPanel {
+    /// Waits until the panel is no longer visible, or until `timeout` elapses.
+    ///
+    /// Uses KVO on `isVisible` rather than polling, so the caller is resumed
+    /// immediately when the panel hides with no busy-waiting on the main thread.
+    /// A minimum of one run-loop turn is always yielded so that `orderOut`/`close`
+    /// has a chance to propagate through AppKit before the continuation resumes.
+    ///
+    /// Must be called on the main actor because `NSPanel.isVisible` is an
+    /// AppKit property that is only safe to read on the main thread.
+    @MainActor
+    func waitUntilClosed(timeout: Duration = .milliseconds(200)) async {
+        // Fast-path: already hidden.
+        guard isVisible else { return }
+
+        await withTaskGroup(of: Void.self) { group in
+            // Task 1: resume as soon as isVisible becomes false via KVO.
+            group.addTask { @MainActor [weak self] in
+                guard let self else { return }
+                var bag = Set<AnyCancellable>()
+                await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
+                    self.publisher(for: \.isVisible)
+                        .filter { !$0 }
+                        .first()
+                        .sink { _ in cont.resume() }
+                        .store(in: &bag)
+                }
+            }
+            // Task 2: timeout guard — resumes the group if the panel never
+            // becomes invisible within the allotted time.
+            group.addTask {
+                try? await Task.sleep(for: timeout)
+            }
+            // Whichever task finishes first wins; cancel the other.
+            _ = await group.next()
+            group.cancelAll()
+        }
+    }
+}

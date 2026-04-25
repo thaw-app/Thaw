@@ -93,8 +93,7 @@ final class LayoutBarContainer: NSView {
         fatalError("init(coder:) has not been implemented")
     }
 
-    /// Timer to periodically check if window moved to different screen (for Settings window preview)
-    private var screenCheckTimer: Timer?
+    /// Tracks the last known notch state to avoid redundant badge updates.
     private var lastScreenHasNotch: Bool?
 
     private func configureCancellables() {
@@ -140,13 +139,21 @@ final class LayoutBarContainer: NSView {
                 }
                 .store(in: &c)
 
-            // For Settings window preview: poll to detect window screen changes
-            // since didChangeScreenParametersNotification doesn't fire on window movement
-            screenCheckTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
-                Task { @MainActor in
-                    self?.updateBadgeForScreenChange()
+            // Detect when the Settings window is dragged to a display with a
+            // different notch state. NSApplication.didChangeScreenParametersNotification
+            // does not fire for window movement between screens, but
+            // NSWindow.didChangeScreenNotification does.
+            NotificationCenter.default
+                .publisher(for: NSWindow.didChangeScreenNotification)
+                .receive(on: DispatchQueue.main)
+                .sink { [weak self] notification in
+                    guard let self,
+                          let notifyingWindow = notification.object as? NSWindow,
+                          notifyingWindow === self.window
+                    else { return }
+                    updateBadgeForScreenChange()
                 }
-            }
+                .store(in: &c)
         }
 
         cancellables = c
@@ -161,10 +168,6 @@ final class LayoutBarContainer: NSView {
                 badgeView.averageColorInfo = appState?.menuBarManager.averageColorInfo
             }
         }
-    }
-
-    deinit {
-        screenCheckTimer?.invalidate()
     }
 
     /// Relayouts the container after one arranged view changed size.

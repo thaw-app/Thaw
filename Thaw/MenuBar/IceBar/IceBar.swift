@@ -530,10 +530,9 @@ private struct IceBarItemView: View {
             menuBarManager.section(withName: section)?.hide()
             Task {
                 // Wait until the IceBar panel is fully closed before checking
-                // item visibility. A blind 25 ms sleep is not enough under
-                // CPU load — the panel can still be on-screen when
-                // isWindowOnScreen runs, causing the wrong branch to be taken.
-                await waitForPanelClosed(panel, timeout: .milliseconds(200))
+                // item visibility. Uses KVO on isVisible so we resume as soon
+                // as the panel hides rather than busy-polling.
+                await panel.waitUntilClosed(timeout: .milliseconds(200))
                 if Bridging.isWindowOnScreen(item.windowID) {
                     try await itemManager.click(item: item, with: .left)
                     let duration = Date.now.timeIntervalSince(clickStartTime)
@@ -558,7 +557,7 @@ private struct IceBarItemView: View {
             let panel = menuBarManager.iceBarPanel
             menuBarManager.section(withName: section)?.hide()
             Task {
-                await waitForPanelClosed(panel, timeout: .milliseconds(200))
+                await panel.waitUntilClosed(timeout: .milliseconds(200))
                 if Bridging.isWindowOnScreen(item.windowID) {
                     try await itemManager.click(item: item, with: .right)
                 } else {
@@ -566,24 +565,6 @@ private struct IceBarItemView: View {
                     IceBarItemView.diagLog.debug("rightClick: temp-show result=\(result)")
                 }
             }
-        }
-    }
-
-    /// Polls until `panel.isVisible` is false or `timeout` elapses.
-    /// Enforces a minimum 10 ms wait so the run loop can process the
-    /// `orderOut` call from `section.hide()`.
-    ///
-    /// Must run on the main actor: `NSPanel.isVisible` is a UIKit/AppKit
-    /// property and is only safe to read from the main thread.
-    @MainActor
-    private func waitForPanelClosed(_ panel: IceBarPanel, timeout: Duration) async {
-        let pollInterval = Duration.milliseconds(10)
-        let deadline = ContinuousClock.now + timeout
-        // Always wait at least one poll interval so the orderOut has a
-        // chance to propagate through the window server.
-        try? await Task.sleep(for: pollInterval)
-        while panel.isVisible, ContinuousClock.now < deadline {
-            try? await Task.sleep(for: pollInterval)
         }
     }
 
