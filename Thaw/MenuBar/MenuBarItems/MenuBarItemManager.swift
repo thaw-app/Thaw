@@ -3125,9 +3125,33 @@ extension MenuBarItemManager {
             }
         } catch {
             MenuBarItemManager.diagLog.error("Error showing item: \(error)")
-            pendingRelocations.removeValue(forKey: tagIdentifier)
-            pendingReturnDestinations.removeValue(forKey: tagIdentifier)
-            persistPendingRelocations()
+
+            // Check whether the item actually left its original section despite
+            // the move throwing. move() can throw after a partial reposition
+            // (e.g. retry loop exhausted after validateItemPositionAfterMove ran),
+            // leaving the item somewhere other than originalSection.
+            let currentSection = itemCache.address(for: item.tag)?.section
+            let itemHasMoved = currentSection != nil && currentSection != originalSection
+
+            if itemHasMoved {
+                // The item is no longer where it started — keep the rehide
+                // metadata so the persistent-relocation path can restore it
+                // when the app relaunches or the rehide timer fires.
+                MenuBarItemManager.diagLog.warning("move() threw but item \(item.logString) is no longer in \(originalSection) — preserving pending rehide metadata")
+                // pendingRelocations already set above; re-assert return destination
+                // in case it was not yet written (guard-exit paths above this block).
+                pendingReturnDestinations[tagIdentifier] = [
+                    "neighbor": neighborTag.tagIdentifier,
+                    "position": position,
+                ]
+                persistPendingRelocations()
+            } else {
+                // Item never moved — safe to discard the speculative metadata.
+                pendingRelocations.removeValue(forKey: tagIdentifier)
+                pendingReturnDestinations.removeValue(forKey: tagIdentifier)
+                persistPendingRelocations()
+            }
+
             return .showFailed
         }
 
