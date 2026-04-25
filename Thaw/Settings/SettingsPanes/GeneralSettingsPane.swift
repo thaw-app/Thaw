@@ -172,7 +172,7 @@ struct GeneralSettingsPane: View {
             Toggle("Show on click", isOn: $settings.showOnClick)
                 .annotation("Click an empty area of the menu bar to show hidden menu bar items.")
 
-            if settings.showOnClick {
+            if settings.showOnClick && appState.settings.advanced.enableAlwaysHiddenSection {
                 Toggle("Double-click for always-hidden", isOn: $settings.showOnDoubleClick)
                     .annotation("Double-click an empty area of the menu bar to show always-hidden menu bar items.")
             }
