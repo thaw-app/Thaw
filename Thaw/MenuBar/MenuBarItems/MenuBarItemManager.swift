@@ -3057,13 +3057,13 @@ extension MenuBarItemManager {
             rehideCancellable?.cancel()
             await rehideTemporarilyShownItems(force: true, isCalledFromTemporarilyShow: true)
 
-            // If a different item is still stuck after force-rehide (all move
-            // attempts timed out — typically a dead PID or broken EventTap),
-            // proceeding would pile more semaphore-saturating move operations
-            // on top of already-broken state. Bail out early; the stuck item
-            // remains in temporarilyShownItemContexts for the rehide timer.
+            // Only treat contexts with rehideAttempts > 0 as genuinely stuck
+            // (move was attempted and failed). Contexts with rehideAttempts == 0
+            // but notFoundAttempts > 0 are merely not visible on the active
+            // space right now — they are transient and will retry fine.
+            // Bailing on notFound items would leave them permanently stranded.
             let stuckItems = temporarilyShownItemContexts.filter {
-                !$0.tag.matchesIgnoringWindowID(item.tag)
+                !$0.tag.matchesIgnoringWindowID(item.tag) && $0.rehideAttempts > 0
             }
             if !stuckItems.isEmpty {
                 MenuBarItemManager.diagLog.error(
@@ -3073,6 +3073,9 @@ extension MenuBarItemManager {
                     Avoiding further semaphore saturation.
                     """
                 )
+                // Re-arm the rehide timer so stuck contexts are retried rather
+                // than left stranded with no scheduled retry.
+                runRehideTimer()
                 return .showFailed
             }
 
