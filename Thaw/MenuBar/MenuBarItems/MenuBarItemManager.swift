@@ -2322,10 +2322,12 @@ extension MenuBarItemManager {
         warpCursorAfter: Bool = true
     ) async throws {
         do {
-            try await eventSemaphore.wait(timeout: .milliseconds(1500))
+            try await eventSemaphore.wait(timeout: .milliseconds(3500))
         } catch is SimpleSemaphore.TimeoutError {
-            MenuBarItemManager.diagLog.error("eventSemaphore timed out (1.5s) in postMoveEvents, forcing signal and retrying")
-            await eventSemaphore.signal()
+            // wait(timeout:) already restores the semaphore count via cancelWaiter
+            // when it times out — do NOT call signal() here or the semaphore
+            // is over-released and two callers can hold it simultaneously.
+            MenuBarItemManager.diagLog.error("eventSemaphore timed out (3.5s) in postMoveEvents")
             throw EventError.cannotComplete
         }
         defer { Task.detached { [eventSemaphore] in await eventSemaphore.signal() } }
@@ -2607,14 +2609,15 @@ extension MenuBarItemManager {
     ///   - item: The menu bar item to click.
     ///   - mouseButton: The mouse button to click the item with.
     private func postClickEvents(item: MenuBarItem, mouseButton: CGMouseButton) async throws {
-        // Try to acquire semaphore with timeout. 1.5 s is enough for any
-        // legitimate in-flight operation to finish; the old 5 s budget meant
-        // a 3-attempt click could block for up to 15 s on a busy system.
+        // Try to acquire semaphore with timeout. 3.5 s covers legitimate slow
+        // operations (adaptive click cap is 1000 ms × 2 for double mouseUp =
+        // ~2 s of event work plus overhead). wait(timeout:) already restores
+        // the semaphore count via cancelWaiter on timeout — do NOT call
+        // signal() in the catch block or the semaphore is over-released.
         do {
-            try await eventSemaphore.wait(timeout: .milliseconds(1500))
+            try await eventSemaphore.wait(timeout: .milliseconds(3500))
         } catch is SimpleSemaphore.TimeoutError {
-            MenuBarItemManager.diagLog.error("eventSemaphore timed out (1.5s) in postClickEvents for \(item.logString), forcing signal and retrying")
-            await eventSemaphore.signal()
+            MenuBarItemManager.diagLog.error("eventSemaphore timed out (3.5s) in postClickEvents for \(item.logString)")
             throw EventError.cannotComplete
         }
         defer { Task.detached { [eventSemaphore] in await eventSemaphore.signal() } }
