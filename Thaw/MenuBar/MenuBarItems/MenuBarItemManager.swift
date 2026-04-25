@@ -3126,12 +3126,17 @@ extension MenuBarItemManager {
         } catch {
             MenuBarItemManager.diagLog.error("Error showing item: \(error)")
 
-            // Check whether the item actually left its original section despite
-            // the move throwing. move() can throw after a partial reposition
-            // (e.g. retry loop exhausted after validateItemPositionAfterMove ran),
-            // leaving the item somewhere other than originalSection.
-            let currentSection = itemCache.address(for: item.tag)?.section
-            let itemHasMoved = currentSection != nil && currentSection != originalSection
+            // Determine whether the item physically left its original position
+            // despite move() throwing. itemCache is a pre-move snapshot and is
+            // not updated during a move() call, so itemCache.address(for:) would
+            // always return originalSection here — giving a false negative.
+            // Instead, compare live Window Server bounds against the origin
+            // captured before the move started.
+            // If either read is nil (window gone or pre-move capture missed),
+            // the comparison returns true — we assume the item may have moved
+            // and preserve the rehide metadata to be safe.
+            let currentOrigin = Bridging.getWindowBounds(for: item.windowID)?.origin
+            let itemHasMoved = currentOrigin != preMoveOrigin
 
             if itemHasMoved {
                 // The item is no longer where it started — keep the rehide
