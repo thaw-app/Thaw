@@ -2332,6 +2332,15 @@ extension MenuBarItemManager {
         }
         defer { Task.detached { [eventSemaphore] in await eventSemaphore.signal() } }
 
+        // Fast-fail if the target process is dead. CGEvent.tapCreateForPid
+        // silently produces an invalid Mach port for dead PIDs, causing every
+        // scrombleEvent to time out and burn the full 3.5 s semaphore budget.
+        let eventPID = getEventPID(for: item)
+        if kill(eventPID, 0) == -1, errno == ESRCH {
+            MenuBarItemManager.diagLog.error("postMoveEvents: target PID \(eventPID) for \(item.logString) is dead — skipping move")
+            throw EventError.cannotComplete
+        }
+
         var itemOrigin = try await getCurrentBounds(for: item).origin
         let targetPoints = try await getTargetPoints(forMoving: item, to: destination, on: displayID)
         // Capture mouse location only when this call owns the cursor warp.
@@ -3048,9 +3057,25 @@ extension MenuBarItemManager {
             rehideCancellable?.cancel()
             await rehideTemporarilyShownItems(force: true, isCalledFromTemporarilyShow: true)
 
-            // If some items failed to rehide (e.g. move timed out), don't remove
-            // them from the contexts list. They will be retried by the rehide timer
-            // or the next temporarilyShow call.
+            // If a different item is still stuck after force-rehide (all move
+            // attempts timed out — typically a dead PID or broken EventTap),
+            // proceeding would pile more semaphore-saturating move operations
+            // on top of already-broken state. Bail out early; the stuck item
+            // remains in temporarilyShownItemContexts for the rehide timer.
+            let stuckItems = temporarilyShownItemContexts.filter {
+                !$0.tag.matchesIgnoringWindowID(item.tag)
+            }
+            if !stuckItems.isEmpty {
+                MenuBarItemManager.diagLog.error(
+                    """
+                    temporarilyShow: aborting — \(stuckItems.count) item(s) still stuck \
+                    after force-rehide: \(stuckItems.map { $0.tag }). \
+                    Avoiding further semaphore saturation.
+                    """
+                )
+                return .showFailed
+            }
+
             if temporarilyShownItemContexts.contains(where: { $0.tag.matchesIgnoringWindowID(item.tag) }) {
                 // The item we want to show is already in the temporary list.
                 // This can happen if the user clicks the same item twice very fast.
@@ -3454,13 +3479,27 @@ extension MenuBarItemManager {
                     \(error)
                     """
                 )
+                // Maximum total attempts across all timer rounds.
+                // 3 per-call attempts × 3 timer rounds = 9. Beyond this the
+                // item is permanently stuck (dead PID, broken EventTap, etc.)
+                // and retrying only keeps the event semaphore saturated.
+                let maxTotalRehideAttempts = 9
                 if context.rehideAttempts < 3 {
                     currentContexts.append(context) // Try again immediately.
-                } else {
-                    // Move failed 3 times with the item present. Reset and
-                    // schedule a longer-delay retry.
-                    context.rehideAttempts = 0
+                } else if context.rehideAttempts < maxTotalRehideAttempts {
+                    // Per-call cap reached; schedule a longer-delay retry.
                     failedContexts.append(context)
+                } else {
+                    // Total cap reached — permanently drop this context.
+                    // pendingRelocations entry is preserved so the next cache
+                    // cycle (relocatePendingItems) can recover on restart.
+                    MenuBarItemManager.diagLog.error(
+                        """
+                        Giving up rehide for \(item.logString) after \
+                        \(context.rehideAttempts) total attempts; \
+                        pendingRelocations will handle recovery on next launch
+                        """
+                    )
                 }
             }
         }
