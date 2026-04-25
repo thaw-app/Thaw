@@ -2583,8 +2583,12 @@ extension MenuBarItemManager {
             }
         }
 
-        // After all attempts, validate the final position
+        // All attempts exhausted without confirmed position. Run the stuck-item
+        // validator first (recovers x=-1 blocks), then throw so callers know
+        // the item did not reach the destination.
         await validateItemPositionAfterMove(item: item, destination: destination, on: resolvedDisplayID)
+        MenuBarItemManager.diagLog.error("move: all \(maxAttempts) attempt(s) exhausted without verifying \(item.logString) reached \(destination.logString)")
+        throw EventError.cannotComplete
     }
 }
 
@@ -3183,24 +3187,34 @@ extension MenuBarItemManager {
         }
 
         let idsBeforeClick = Set(Bridging.getWindowList(option: .onScreen))
+        let clickPID = clickItem.sourcePID ?? clickItem.ownerPID
 
         do {
             // Single attempt: the item is already at a known-good position with
-            // fresh bounds. If it fails, return false immediately so the caller
-            // (IceBarItemView) fires a fallback click with default retry count
+            // fresh bounds. If it fails, fall through to the fallback path below
             // rather than spending 3× the semaphore timeout here.
             try await click(item: clickItem, with: mouseButton, skipInputPause: true, maxAttempts: 1)
         } catch {
-            MenuBarItemManager.diagLog.error("Error clicking item: \(error)")
-            // Icon is now visible but the click failed. Return .movedButClickFailed
-            // so the caller can attempt a fallback click with live bounds.
-            return .movedButClickFailed
+            MenuBarItemManager.diagLog.error("Error clicking item (first attempt): \(error) — attempting fallback click")
+
+            // Fallback: re-fetch live bounds and retry with default attempt count.
+            // We stay inside temporarilyShow so that idsBeforeClick and context
+            // remain in scope — shownInterfaceWindow can still be captured if
+            // the fallback succeeds, keeping isShowingInterface accurate for
+            // the rehide logic.
+            do {
+                try await click(item: clickItem, with: mouseButton, skipInputPause: true)
+            } catch {
+                MenuBarItemManager.diagLog.error("Fallback click also failed for \(item.logString): \(error)")
+                // Icon is visible but both click attempts failed.
+                return .movedButClickFailed
+            }
         }
 
+        // Capture the popup window opened by whichever click path succeeded.
         await eventSleep(for: .milliseconds(100))
         let windowsAfterClick = WindowInfo.createWindows(option: .onScreen)
 
-        let clickPID = clickItem.sourcePID ?? clickItem.ownerPID
         context.shownInterfaceWindow = windowsAfterClick.first { window in
             window.ownerPID == clickPID && !idsBeforeClick.contains(window.windowID)
         }

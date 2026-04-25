@@ -539,16 +539,12 @@ private struct IceBarItemView: View {
                     let duration = Date.now.timeIntervalSince(clickStartTime)
                     IceBarItemView.diagLog.debug("leftClick: ✓ completed in \(Int(duration * 1000))ms (on-screen path)")
                 } else {
+                    // temporarilyShow handles move, click, and fallback click
+                    // internally so that shownInterfaceWindow is always captured
+                    // regardless of which click attempt succeeds.
                     let result = await itemManager.temporarilyShow(item: item, clickingWith: .left, on: displayID, fastPath: true)
-                    if result == .movedButClickFailed {
-                        // Item is visible but the synthetic click failed.
-                        // Try a direct click with live bounds — only safe because
-                        // the move succeeded and the icon is on-screen.
-                        IceBarItemView.diagLog.warning("leftClick: temp-show click failed, attempting fallback click")
-                        try? await itemManager.click(item: item, with: .left)
-                    }
                     let duration = Date.now.timeIntervalSince(clickStartTime)
-                    IceBarItemView.diagLog.debug("leftClick: ✓ completed in \(Int(duration * 1000))ms (temp-show path, result=\(result))")
+                    IceBarItemView.diagLog.debug("leftClick: completed in \(Int(duration * 1000))ms (temp-show path, result=\(result))")
                 }
             }
         }
@@ -567,10 +563,7 @@ private struct IceBarItemView: View {
                     try await itemManager.click(item: item, with: .right)
                 } else {
                     let result = await itemManager.temporarilyShow(item: item, clickingWith: .right, on: displayID, fastPath: true)
-                    if result == .movedButClickFailed {
-                        IceBarItemView.diagLog.warning("rightClick: temp-show click failed, attempting fallback click")
-                        try? await itemManager.click(item: item, with: .right)
-                    }
+                    IceBarItemView.diagLog.debug("rightClick: temp-show result=\(result)")
                 }
             }
         }
@@ -579,6 +572,10 @@ private struct IceBarItemView: View {
     /// Polls until `panel.isVisible` is false or `timeout` elapses.
     /// Enforces a minimum 10 ms wait so the run loop can process the
     /// `orderOut` call from `section.hide()`.
+    ///
+    /// Must run on the main actor: `NSPanel.isVisible` is a UIKit/AppKit
+    /// property and is only safe to read from the main thread.
+    @MainActor
     private func waitForPanelClosed(_ panel: IceBarPanel, timeout: Duration) async {
         let pollInterval = Duration.milliseconds(10)
         let deadline = ContinuousClock.now + timeout
