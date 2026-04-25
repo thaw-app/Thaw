@@ -97,12 +97,11 @@ struct IceSlider<Value: BinaryFloatingPoint, ValueLabel: View>: View {
                 }
             }
             .padding(.horizontal, 8)
-            .opacity(0.8)
             .frame(height: height)
         }
         .glassEffect(.regular, in: borderShape)
         .overlay(
-            borderShape.strokeBorder(.separator.opacity(0.15), lineWidth: 0.5)
+            borderShape.strokeBorder(.separator, lineWidth: 0.5)
         )
         .compactSliderDisabledHapticFeedback(true)
         .compactSliderSecondaryColor(

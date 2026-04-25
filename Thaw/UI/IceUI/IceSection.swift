@@ -120,7 +120,7 @@ struct IceSection<Header: View, Content: View, Footer: View>: View {
                     .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .strokeBorder(.separator.opacity(0.2), lineWidth: 0.5)
+                            .strokeBorder(.separator, lineWidth: 0.5)
                     )
                 } else {
                     contentLayout
@@ -190,7 +190,6 @@ private struct IceSectionLayout: _VariadicView_UnaryViewRoot {
 private struct IceSectionDivider: View {
     var body: some View {
         Divider()
-            .opacity(0.4)
             .padding(.horizontal, 4)
     }
 }

@@ -221,7 +221,6 @@ private struct HotkeyRecorderButtonStyle: ButtonStyle {
         let isProminent = configuration.isPressed != isHighlighted
         borderShape
             .fill(isProminent ? .tertiary : .quaternary)
-            .opacity(isProminent ? 0.5 : 0.75)
             .overlay {
                 configuration.label
                     .lineLimit(1)

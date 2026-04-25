@@ -166,7 +166,7 @@ struct IceGroupBox<Header: View, Content: View, Footer: View>: View {
                 .padding(padding)
                 .glassEffect(.regular, in: backgroundShape)
                 .overlay(
-                    backgroundShape.strokeBorder(.separator.opacity(0.2), lineWidth: 0.5)
+                    backgroundShape.strokeBorder(.separator, lineWidth: 0.5)
                 )
                 .containerShape(backgroundShape)
 

@@ -241,10 +241,10 @@ final class LayoutBarItemView: LayoutBarArrangedView {
             xRadius: Metrics.placeholderCornerRadius,
             yRadius: Metrics.placeholderCornerRadius
         )
-        NSColor.quaternaryLabelColor.withAlphaComponent(0.18).setFill()
+        NSColor.quaternaryLabelColor.withAlphaComponent(0.35).setFill()
         backgroundPath.fill()
 
-        NSColor.separatorColor.withAlphaComponent(0.35).setStroke()
+        NSColor.separatorColor.withAlphaComponent(0.6).setStroke()
         backgroundPath.lineWidth = 1
         backgroundPath.stroke()
 

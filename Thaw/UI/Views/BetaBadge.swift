@@ -21,7 +21,7 @@ struct BetaBadge: View {
             .padding(.vertical, 1)
             .background {
                 backgroundShape
-                    .fill(.foreground.opacity(0.25))
+                    .fill(.quaternary)
             }
             .foregroundStyle(.green)
     }

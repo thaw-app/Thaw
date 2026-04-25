@@ -516,7 +516,6 @@ private struct MenuBarSearchContentView: View {
             .padding(15)
 
             Divider()
-                .opacity(0.7)
                 .padding(.horizontal, 15)
         }
     }

@@ -76,19 +76,19 @@ struct NotchIndicatorOverlay: View {
     /// Color for diagonal stripes based on menu bar background brightness.
     private var stripeColor: Color {
         let isBright = isBrightForActiveScreen()
-        return isBright ? .black.opacity(0.25) : .white.opacity(0.25)
+        return isBright ? .black.opacity(0.5) : .white.opacity(0.5)
     }
 
     /// Border color based on menu bar background brightness.
     private var borderColor: Color {
         let isBright = isBrightForActiveScreen()
-        return isBright ? .black.opacity(0.4) : .white.opacity(0.4)
+        return isBright ? .black.opacity(0.65) : .white.opacity(0.65)
     }
 
     /// Text color based on menu bar background brightness.
     private var textColor: Color {
         let isBright = isBrightForActiveScreen()
-        return isBright ? .black.opacity(0.5) : .white.opacity(0.5)
+        return isBright ? .black : .white
     }
 
     /// Background color for the text pill, matching the menu bar background.

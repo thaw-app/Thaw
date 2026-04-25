@@ -99,7 +99,7 @@ struct AboutSettingsPane: View {
 
                     Text(Constants.copyrightString)
                         .font(.system(size: 14))
-                        .foregroundStyle(.secondary.opacity(0.67))
+                        .foregroundStyle(.secondary)
                 }
                 .fontWeight(.medium)
             }
@@ -157,7 +157,7 @@ struct AboutSettingsPane: View {
                 .font(.caption)
                 .monospacedDigit()
                 .foregroundStyle(.secondary)
-                .opacity(updatesManager.lastUpdateCheckDate == nil ? 0.5 : 1.0)
+                .opacity(updatesManager.lastUpdateCheckDate == nil ? 0.75 : 1.0)
         }
     }
 
@@ -167,7 +167,7 @@ struct AboutSettingsPane: View {
                 Button("Quit \(Constants.displayName)") {
                     NSApp.terminate(nil)
                 }
-                .foregroundStyle(.red.opacity(0.8))
+                .foregroundStyle(.red)
                 .buttonStyle(.plain)
 
                 Spacer()

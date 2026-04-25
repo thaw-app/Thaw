@@ -70,10 +70,10 @@ final class LayoutBarNewItemsBadgeView: LayoutBarArrangedView {
         let fillColor: NSColor = isBright ? .black : .white
         let strokeColor: NSColor = isBright ? .black : .white
 
-        fillColor.withAlphaComponent(0.14).setFill()
+        fillColor.withAlphaComponent(0.25).setFill()
         pillPath.fill()
 
-        strokeColor.withAlphaComponent(0.45).setStroke()
+        strokeColor.withAlphaComponent(0.65).setStroke()
         pillPath.lineWidth = Metrics.borderWidth
         pillPath.stroke()
 
