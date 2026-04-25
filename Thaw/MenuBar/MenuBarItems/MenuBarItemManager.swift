@@ -2986,27 +2986,35 @@ extension MenuBarItemManager {
             }
     }
 
-    /// Temporarily shows the given item.
-    ///
-    /// The item is cached and returned to its original location after approximately
-    /// 15 seconds, though it may be sooner (e.g., when switching apps) or later
-    /// due to the smart rehide logic (e.g., +1s for recent user input, +3s when
-    /// a menu is open).
-    ///
-    /// - Parameters:
-    ///   - item: The item to temporarily show.
-    ///   - mouseButton: The mouse button to click the item with.
-    ///   - displayID: The display identifier to show the item on.
+    /// The result of a ``temporarilyShow(item:clickingWith:on:fastPath:)`` call.
+    enum TemporaryShowResult {
+        /// The item was never moved — a precondition failed (missing state,
+        /// no return destination, no anchor, or the move itself failed).
+        /// The item is still hidden; do **not** attempt a fallback click.
+        case showFailed
+        /// The item was moved into the visible area **and** the synthetic
+        /// click completed successfully.
+        case movedAndClicked
+        /// The item was moved into the visible area but the synthetic click
+        /// failed. The icon is now visible; callers may attempt a fallback
+        /// click using live bounds.
+        case movedButClickFailed
+    }
+
     /// Temporarily moves `item` into the visible area next to the Ice icon,
     /// clicks it, then schedules a rehide.
     ///
-    /// - Returns: `true` if the item was successfully moved **and** clicked;
-    ///   `false` if either step failed (the caller may attempt a fallback click).
-    @discardableResult
-    func temporarilyShow(item: MenuBarItem, clickingWith mouseButton: CGMouseButton, on displayID: CGDirectDisplayID? = nil, fastPath: Bool = false) async -> Bool {
+    /// The item is returned to its original location after approximately
+    /// 15 seconds, though it may be sooner (e.g. when switching apps) or
+    /// later due to the smart rehide logic.
+    ///
+    /// - Returns: A ``TemporaryShowResult`` describing whether the move and
+    ///   click succeeded. Only act on ``TemporaryShowResult/movedButClickFailed``
+    ///   for fallback clicks — the item is hidden for every other non-success case.
+    func temporarilyShow(item: MenuBarItem, clickingWith mouseButton: CGMouseButton, on displayID: CGDirectDisplayID? = nil, fastPath: Bool = false) async -> TemporaryShowResult {
         guard let appState else {
             MenuBarItemManager.diagLog.error("Missing AppState, so not showing \(item.logString)")
-            return false
+            return .showFailed
         }
 
         MenuBarItemManager.diagLog.debug("temporarilyShow: started for \(item.logString)")
@@ -3051,7 +3059,7 @@ extension MenuBarItemManager {
 
         guard let returnInfo = getReturnDestination(for: item, in: items) else {
             MenuBarItemManager.diagLog.error("No return destination for \(item.logString) on display \(resolvedDisplayID)")
-            return false
+            return .showFailed
         }
 
         // Prefer inserting to the left of the Thaw/visible control item so the icon appears
@@ -3065,7 +3073,7 @@ extension MenuBarItemManager {
             let alert = NSAlert()
             alert.messageText = String(localized: "Not enough room to show \"\(item.displayName)\"")
             alert.runModal()
-            return false
+            return .showFailed
         }
 
         let moveDestination: MoveDestination = .leftOfItem(anchor)
@@ -3116,7 +3124,7 @@ extension MenuBarItemManager {
             pendingRelocations.removeValue(forKey: tagIdentifier)
             pendingReturnDestinations.removeValue(forKey: tagIdentifier)
             persistPendingRelocations()
-            return false
+            return .showFailed
         }
 
         let context = TemporarilyShownItemContext(
@@ -3184,9 +3192,9 @@ extension MenuBarItemManager {
             try await click(item: clickItem, with: mouseButton, skipInputPause: true, maxAttempts: 1)
         } catch {
             MenuBarItemManager.diagLog.error("Error clicking item: \(error)")
-            // Icon is now visible but the click failed. Return false so the
-            // caller can attempt a fallback click with live bounds.
-            return false
+            // Icon is now visible but the click failed. Return .movedButClickFailed
+            // so the caller can attempt a fallback click with live bounds.
+            return .movedButClickFailed
         }
 
         await eventSleep(for: .milliseconds(100))
@@ -3197,7 +3205,7 @@ extension MenuBarItemManager {
             window.ownerPID == clickPID && !idsBeforeClick.contains(window.windowID)
         }
 
-        return true
+        return .movedAndClicked
     }
 
     /// Resolves the best move destination for returning a temporarily shown

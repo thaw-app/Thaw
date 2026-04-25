@@ -688,11 +688,16 @@ private struct MenuBarSearchContentView: View {
             if Bridging.isWindowOnScreen(item.windowID) {
                 try await itemManager.click(item: item, with: .left)
             } else {
-                await itemManager.temporarilyShow(
+                let result = await itemManager.temporarilyShow(
                     item: item,
                     clickingWith: .left,
                     on: displayID
                 )
+                if result == .movedButClickFailed {
+                    // Item is visible but the synthetic click failed.
+                    // Try a direct click with live bounds.
+                    try? await itemManager.click(item: item, with: .left)
+                }
             }
         }
     }

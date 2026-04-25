@@ -539,15 +539,16 @@ private struct IceBarItemView: View {
                     let duration = Date.now.timeIntervalSince(clickStartTime)
                     IceBarItemView.diagLog.debug("leftClick: ✓ completed in \(Int(duration * 1000))ms (on-screen path)")
                 } else {
-                    let ok = await itemManager.temporarilyShow(item: item, clickingWith: .left, on: displayID, fastPath: true)
-                    if !ok {
-                        // Fallback: item moved into view but click failed.
-                        // Try one direct click with live bounds.
+                    let result = await itemManager.temporarilyShow(item: item, clickingWith: .left, on: displayID, fastPath: true)
+                    if result == .movedButClickFailed {
+                        // Item is visible but the synthetic click failed.
+                        // Try a direct click with live bounds — only safe because
+                        // the move succeeded and the icon is on-screen.
                         IceBarItemView.diagLog.warning("leftClick: temp-show click failed, attempting fallback click")
                         try? await itemManager.click(item: item, with: .left)
                     }
                     let duration = Date.now.timeIntervalSince(clickStartTime)
-                    IceBarItemView.diagLog.debug("leftClick: ✓ completed in \(Int(duration * 1000))ms (temp-show path, ok=\(ok))")
+                    IceBarItemView.diagLog.debug("leftClick: ✓ completed in \(Int(duration * 1000))ms (temp-show path, result=\(result))")
                 }
             }
         }
@@ -565,8 +566,8 @@ private struct IceBarItemView: View {
                 if Bridging.isWindowOnScreen(item.windowID) {
                     try await itemManager.click(item: item, with: .right)
                 } else {
-                    let ok = await itemManager.temporarilyShow(item: item, clickingWith: .right, on: displayID, fastPath: true)
-                    if !ok {
+                    let result = await itemManager.temporarilyShow(item: item, clickingWith: .right, on: displayID, fastPath: true)
+                    if result == .movedButClickFailed {
                         IceBarItemView.diagLog.warning("rightClick: temp-show click failed, attempting fallback click")
                         try? await itemManager.click(item: item, with: .right)
                     }
