@@ -73,7 +73,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "\"%1$@\" (%2$@) chce kontrolować ustawienia Thaw korzystając ze schematu URL.\n\nW przypadku udzielenia zgody, aplikacja ta będzie mogła:\n• Odczytywać obecne ustawienia\n• Przełączać i zmieniać opcje binarne\n• Modyfikować wartości liczbowe (liczniki, opóźnienia, interwały)\n• Zmieniać ustawienia wyliczeniowe (strategia ponownego ukrywania, lokalizacja paska Thaw Bar)\n• Modyfikować konfiguracje poszczególnych ekranów\n\nTo uprawnienie pozostaje aktywne do momentu jego ręcznego usunięcia w sekcji Ustawienia > Automatyzacja.%3$@"
+            "value" : "\"%1$@\" (%2$@) chce kontrolować ustawienia Thaw korzystając ze schematu URL.\n\nW przypadku udzielenia zgody, aplikacja ta będzie mogła:\n• Odczytywać obecne ustawienia\n• Przełączać i zmieniać opcje binarne\n• Modyfikować wartości liczbowe (liczniki, opóźnienia, interwały)\n• Zmieniać ustawienia wyliczeniowe (strategia ponownego ukrywania, lokalizacja paska Thaw Bar)\n• Modyfikować konfiguracje poszczególnych ekranów\n\nTo uprawnienie pozostaje aktywne do momentu jego ręcznego usunięcia w sekcji Ustawienia → Automatyzacja.%3$@"
           }
         },
         "pt-BR" : {
@@ -2487,7 +2487,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "."
+            "value" : "•"
           }
         },
         "pt-BR" : {
@@ -4867,7 +4867,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zezwolić \"%@\" na kontrolowanie ustawień Thaw?"
+            "value" : "Zezwolić aplikacji ”%@” na kontrolowanie ustawień Thaw?"
           }
         },
         "pt-BR" : {
@@ -22611,7 +22611,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zmofyfikowano: %@"
+            "value" : "Zmodyfikowano: %@"
           }
         },
         "pt-BR" : {
