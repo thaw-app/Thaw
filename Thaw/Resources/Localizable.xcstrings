@@ -6,8 +6,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "\"%1$@\" (%2$@) wants to control Thaw settings via URL scheme.\n\nIf allowed, this app will be able to:\n• Read current settings and configurations\n• Toggle and change boolean settings\n• Modify numeric values (timers, delays, intervals)\n• Change enum settings (rehide strategy, Thaw Bar location)\n• Modify per-display configurations\n\nThis permission persists until manually removed in Settings > Automation.%3$@"
+            "state" : "translated",
+            "value" : "„%1$@“ (%2$@) žádá o povolení ovládat nastavení aplikace Thaw prostřednictvím URL schématu.\n\nPokud bude povoleno, bude tato aplikace moci:\n• Číst aktuální nastavení a konfigurace\n• Měnit logické volby\n• Upravovat číselné hodnoty (časovače, zpoždění, intervaly)\n• Měnit nastavení výčtu (strategie opětovného skrytí, umístění lišty Thaw)\n• Upravovat konfigurace pro jednotlivé obrazovky\n\nToto oprávnění zůstává platné, dokud nebude ručně odstraněno v Nastavení > Automatizace.%3$@"
           }
         },
         "de" : {
@@ -131,7 +131,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%@"
           }
         },
@@ -2426,7 +2426,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "•"
           }
         },
@@ -2545,7 +2545,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "+"
           }
         },
@@ -2664,7 +2664,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "⌘"
           }
         },
@@ -2783,7 +2783,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "⎋"
           }
         },
@@ -2902,7 +2902,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "1"
           }
         },
@@ -3021,7 +3021,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "1."
           }
         },
@@ -3140,7 +3140,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "2"
           }
         },
@@ -3259,7 +3259,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "2."
           }
         },
@@ -3378,7 +3378,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "3"
           }
         },
@@ -3497,7 +3497,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "3."
           }
         },
@@ -3616,7 +3616,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "4."
           }
         },
@@ -4093,7 +4093,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Přístupnost"
+            "value" : "Zpřístupnení"
           }
         },
         "de" : {
@@ -4330,8 +4330,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Add"
+            "state" : "translated",
+            "value" : "Přidat"
           }
         },
         "de" : {
@@ -4449,8 +4449,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Add Application Manually"
+            "state" : "translated",
+            "value" : "Přidat aplikaci ručně"
           }
         },
         "de" : {
@@ -4687,8 +4687,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow"
+            "state" : "translated",
+            "value" : "Povolit"
           }
         },
         "de" : {
@@ -4806,8 +4806,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow \"%@\" to control Thaw settings?"
+            "state" : "translated",
+            "value" : "Povolit aplikaci „%@“, aby měnila nastavení Thaw?"
           }
         },
         "de" : {
@@ -4925,8 +4925,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow external applications to read and modify Thaw settings via thaw:// URLs."
+            "state" : "translated",
+            "value" : "Povolit jiným aplikacím, aby četly a měnily nastavení Thaw pomocí URL thaw://."
           }
         },
         "de" : {
@@ -5517,7 +5517,15 @@
     },
     "Appearance" : {
       "comment" : "The localized string key for the \"Appearance\" section in the \"Settings\" interface.",
-      "isCommentAutoGenerated" : true
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vzhled"
+          }
+        }
+      }
     },
     "Apply" : {
       "comment" : "A button that applies the current value of a slider to a setting.",
@@ -5643,8 +5651,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply a Thaw menu bar profile when this Focus activates."
+            "state" : "translated",
+            "value" : "Po aktivaci tohoto režimu soustředění přepne Thaw svůj profil."
           }
         },
         "de" : {
@@ -6114,13 +6122,66 @@
         }
       }
     },
+    "apps %lld" : {
+      "comment" : "Shows the number of whitelisted apps",
+      "localizations" : {
+        "cs" : {
+          "variations" : {
+            "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld aplikace"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld aplikací"
+                }
+              },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld aplikace"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld aplikací"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld app"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld apps"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Apps that request settings access will appear here after you approve them." : {
       "comment" : "A description of the whitelisted apps section.",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apps that request settings access will appear here after you approve them."
+            "state" : "translated",
+            "value" : "Aplikace s přístupem k nastavení, se zobrazí zde, když je schválíte."
           }
         },
         "de" : {
@@ -6238,8 +6299,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Are you sure you want to delete the profile \"%@\"? This cannot be undone."
+            "state" : "translated",
+            "value" : "Určitě chcete smazat profil „%@“? Akci nelze vzít zpět."
           }
         },
         "de" : {
@@ -6595,8 +6656,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Assign a profile to each display."
+            "state" : "translated",
+            "value" : "Přiřadit profil jednotlivým obrazovkám."
           }
         },
         "de" : {
@@ -6714,8 +6775,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Auto-Switch"
+            "state" : "translated",
+            "value" : "Automatické přepínání"
           }
         },
         "de" : {
@@ -7309,8 +7370,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Automation"
+            "state" : "translated",
+            "value" : "Automatizace"
           }
         },
         "de" : {
@@ -7425,14 +7486,22 @@
     },
     "Back" : {
       "comment" : "A button that navigates back to the previous settings section.",
-      "isCommentAutoGenerated" : true
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zpět"
+          }
+        }
+      }
     },
     "BETA" : {
       "comment" : "The text displayed in the badge.",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "BETA"
           }
         },
@@ -7908,8 +7977,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Bundle Identifier (e.g., com.droppy)"
+            "state" : "translated",
+            "value" : "Identifikátor balíčku (např. com.droppy)"
           }
         },
         "de" : {
@@ -8027,8 +8096,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Can modify settings"
+            "state" : "translated",
+            "value" : "Může měnit nastavení"
           }
         },
         "de" : {
@@ -8146,8 +8215,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Can toggle settings: auto-rehide, show on click/hover/scroll, Thaw Bar, and other boolean options."
+            "state" : "translated",
+            "value" : "Může přepínat nastavení: automatické skrytí, zobrazení při kliknutí/najetí myší/rolování, lišta Thaw a další přepínače."
           }
         },
         "de" : {
@@ -10882,8 +10951,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Copy version info"
+            "state" : "translated",
+            "value" : "Zkopírovat informace o verzi"
           }
         },
         "de" : {
@@ -11001,8 +11070,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Created: %@"
+            "state" : "translated",
+            "value" : "Vytvořen: %@"
           }
         },
         "de" : {
@@ -11596,8 +11665,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete"
+            "state" : "translated",
+            "value" : "Smazat"
           }
         },
         "de" : {
@@ -11715,8 +11784,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete Profile?"
+            "state" : "translated",
+            "value" : "Smazat profil?"
           }
         },
         "de" : {
@@ -11834,8 +11903,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Deny"
+            "state" : "translated",
+            "value" : "Zamítnout"
           }
         },
         "de" : {
@@ -13619,8 +13688,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Duplicate"
+            "state" : "translated",
+            "value" : "Duplikovat"
           }
         },
         "de" : {
@@ -13857,7 +13926,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "E"
           }
         },
@@ -14095,8 +14164,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Edit Menu Bar Layout…"
+            "state" : "translated",
+            "value" : "Upravit rozložení řádku nabídek…"
           }
         },
         "de" : {
@@ -14690,8 +14759,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enable Settings URI Scheme"
+            "state" : "translated",
+            "value" : "Povolit schéma URI pro nastavení"
           }
         },
         "de" : {
@@ -15047,8 +15116,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Error"
+            "state" : "translated",
+            "value" : "Chyba"
           }
         },
         "de" : {
@@ -15285,8 +15354,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Export"
+            "state" : "translated",
+            "value" : "Exportovat"
           }
         },
         "de" : {
@@ -15404,8 +15473,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Export Profile(s)"
+            "state" : "translated",
+            "value" : "Exportovat profil(y)"
           }
         },
         "de" : {
@@ -15639,7 +15708,15 @@
     },
     "Forward" : {
       "comment" : "A button that navigates to the next settings pane.",
-      "isCommentAutoGenerated" : true
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vpřed"
+          }
+        }
+      }
     },
     "Full" : {
       "comment" : "Localized string key for the menu bar shape kind that takes up the full menu bar.",
@@ -17312,8 +17389,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "How It Works"
+            "state" : "translated",
+            "value" : "Jak aplikace funguje"
           }
         },
         "de" : {
@@ -17907,8 +17984,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If not whitelisted, you'll see a confirmation dialog showing the app name and what it wants to do."
+            "state" : "translated",
+            "value" : "Pokud aplikace není na seznamu povolených, zobrazí se potvrzovací dialogové okno s názvem aplikace a popisem požadované akce."
           }
         },
         "de" : {
@@ -18026,8 +18103,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If you approve, the app is permanently whitelisted and can modify settings anytime without asking again."
+            "state" : "translated",
+            "value" : "Pokud udělíte oprávnění, aplikace bude trvale zařazena na seznam povolených a bude moci kdykoli měnit nastavení, aniž by vás o to znovu žádala."
           }
         },
         "de" : {
@@ -18264,8 +18341,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Import Profile(s)"
+            "state" : "translated",
+            "value" : "Import profil(ů)"
           }
         },
         "de" : {
@@ -18740,8 +18817,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Keep search"
+            "state" : "translated",
+            "value" : "Nemazat po vyhledání"
           }
         },
         "de" : {
@@ -19094,7 +19171,15 @@
     },
     "Layout" : {
       "comment" : "The localized string key for the \"Layout\" option in the \"Settings\" interface.",
-      "isCommentAutoGenerated" : true
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rozložení"
+          }
+        }
+      }
     },
     "Layout reset. Items were moved to the Hidden section." : {
       "comment" : "A message displayed after successfully resetting the menu bar layout.",
@@ -21362,8 +21447,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu Bar Profile"
+            "state" : "translated",
+            "value" : "Profil řádku nabídek"
           }
         },
         "de" : {
@@ -21719,8 +21804,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Modified: %@"
+            "state" : "translated",
+            "value" : "Upraven: %@"
           }
         },
         "de" : {
@@ -21957,8 +22042,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move the New Items badge to choose where newly detected items will appear."
+            "state" : "translated",
+            "value" : "Přesuňte odznáček „Nové položky“, abyste určili, kde se budou nově zjištěné ikony zobrazovat."
           }
         },
         "de" : {
@@ -22195,8 +22280,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "New Items"
+            "state" : "translated",
+            "value" : "Nové položky"
           }
         },
         "de" : {
@@ -22314,8 +22399,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "New profile name"
+            "state" : "translated",
+            "value" : "Název nového profilu"
           }
         },
         "de" : {
@@ -22552,8 +22637,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No profile selected"
+            "state" : "translated",
+            "value" : "Nebyl vybrán profil"
           }
         },
         "de" : {
@@ -22671,8 +22756,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No profiles saved. Save your current configuration to create one."
+            "state" : "translated",
+            "value" : "Žádné profily nejsou uloženy. Chcete-li profil vytvořit, uložte aktuální nastavení."
           }
         },
         "de" : {
@@ -22909,8 +22994,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No whitelisted apps"
+            "state" : "translated",
+            "value" : "Žádné aplikace na seznamu povolených"
           }
         },
         "de" : {
@@ -23504,8 +23589,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Notch"
+            "state" : "translated",
+            "value" : "Výřez"
           }
         },
         "de" : {
@@ -23742,7 +23827,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "OK"
           }
         },
@@ -24099,8 +24184,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Open Focus Settings"
+            "state" : "translated",
+            "value" : "Otevřít nastavení Soustředění"
           }
         },
         "de" : {
@@ -24575,8 +24660,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Profile"
+            "state" : "translated",
+            "value" : "Profil"
           }
         },
         "de" : {
@@ -24694,8 +24779,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Profile name"
+            "state" : "translated",
+            "value" : "Název profilu"
           }
         },
         "de" : {
@@ -24813,8 +24898,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Profile: %@"
+            "state" : "translated",
+            "value" : "Profil: %@"
           }
         },
         "de" : {
@@ -24932,8 +25017,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Profiles"
+            "state" : "translated",
+            "value" : "Profily"
           }
         },
         "de" : {
@@ -25527,8 +25612,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Remove %@ from whitelist"
+            "state" : "translated",
+            "value" : "Odebrat %@ ze seznamu povolených"
           }
         },
         "de" : {
@@ -25646,8 +25731,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Remove from whitelist"
+            "state" : "translated",
+            "value" : "Odebrat ze seznamu povolených"
           }
         },
         "de" : {
@@ -25765,8 +25850,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Rename"
+            "state" : "translated",
+            "value" : "Přejmenovat"
           }
         },
         "de" : {
@@ -28145,8 +28230,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Save Current"
+            "state" : "translated",
+            "value" : "Uložit aktuální"
           }
         },
         "de" : {
@@ -29216,8 +29301,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Set Menu Bar Profile"
+            "state" : "translated",
+            "value" : "Nastavit profil řádku nabídek"
           }
         },
         "de" : {
@@ -29335,8 +29420,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Settings URI is disabled. External apps cannot read or modify Thaw settings."
+            "state" : "translated",
+            "value" : "URI nastavení je deaktivováno. Externí aplikace nemohou číst ani měnit nastavení aplikace Thaw."
           }
         },
         "de" : {
@@ -32905,8 +32990,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Supported Settings"
+            "state" : "translated",
+            "value" : "Podporované volby nastavení"
           }
         },
         "de" : {
@@ -34452,8 +34537,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "To switch profiles with Focus modes, add Thaw as a Focus Filter in System Settings → Focus → [Mode] → Focus Filters."
+            "state" : "translated",
+            "value" : "Chcete-li přepínat profily s režimy soustředění, přidejte filtr „Thaw“ jako filtr soustředění v nastavení systému → Soustředění → [Režim soustředení] → Filtry režimu soustředění."
           }
         },
         "de" : {
@@ -35642,8 +35727,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update"
+            "state" : "translated",
+            "value" : "Aktualizovat"
           }
         },
         "de" : {
@@ -35761,8 +35846,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update All"
+            "state" : "translated",
+            "value" : "Aktualizovat vše"
           }
         },
         "de" : {
@@ -35999,8 +36084,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update Configuration on All Profiles"
+            "state" : "translated",
+            "value" : "Aktualizovat konfiguraci všech profilů"
           }
         },
         "de" : {
@@ -36118,8 +36203,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update Configuration Only"
+            "state" : "translated",
+            "value" : "Aktualizovat pouze konfiguraci"
           }
         },
         "de" : {
@@ -36237,8 +36322,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update Layout Only"
+            "state" : "translated",
+            "value" : "Aktualizovat pouze rozložení"
           }
         },
         "de" : {
@@ -36356,8 +36441,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update this profile with the current state"
+            "state" : "translated",
+            "value" : "Aktualizovat tento profil současným nastavením"
           }
         },
         "de" : {
@@ -36832,8 +36917,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Use LCS sorting on notched displays"
+            "state" : "translated",
+            "value" : "Použijte třídění LCS na displejích s výřezem"
           }
         },
         "de" : {
@@ -36951,8 +37036,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Use Option-click to open always-hidden section"
+            "state" : "translated",
+            "value" : "Kliknutím s podrženou klávesou Option otevřete sekci „vždy skryté“"
           }
         },
         "de" : {
@@ -37070,8 +37155,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Use the faster LCS (Longest Common Subsequence) algorithm for profile sorting on notched displays instead of the full sort. LCS minimises the number of moves but may be less reliable on notched displays with smaller resolutions."
+            "state" : "translated",
+            "value" : "Pro třídění profilů na displejích s výřezem použijte rychlejší algoritmus LCS (Longest Common Subsequence) namísto úplného třídění. Algoritmus LCS minimalizuje počet přesunů, ale na displejích s výřezem a nižším rozlišením může být méně spolehlivý."
           }
         },
         "de" : {
@@ -37665,8 +37750,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "When a Focus mode deactivates, the display profile is automatically restored."
+            "state" : "translated",
+            "value" : "Jakmile se režim Soustředění deaktivuje, profil zobrazení se automaticky obnoví."
           }
         },
         "de" : {
@@ -37784,8 +37869,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "When an app sends a thaw:// URL to change settings, Thaw checks if that app is whitelisted."
+            "state" : "translated",
+            "value" : "Když aplikace odešle URL thaw:// za účelem změny nastavení, Thaw zkontroluje, zda je aplikace na seznamu povolených."
           }
         },
         "de" : {
@@ -37903,8 +37988,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Whitelisted Applications"
+            "state" : "translated",
+            "value" : "Seznam povolených aplikací"
           }
         },
         "de" : {
@@ -38022,8 +38107,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Whitelisted apps can read settings, toggle boolean options, set numeric values (timers, delays), change enum settings (rehide strategy, Thaw Bar location), and modify per-display configurations. This includes auto-rehide, show on click/hover/scroll/double-click, Thaw Bar, hide application menus, enable always-hidden section, show tooltips, and diagnostic logging."
+            "state" : "translated",
+            "value" : "Aplikace na seznamu povolených mohou číst nastavení, přepínat logické volby, nastavovat číselné hodnoty (časovače, zpoždění), měnit nastavení výčtových typů (strategie opětovného skrytí, umístění lišty Thaw) a upravovat konfigurace jednotlivých displejů. Patří sem automatické opětovné skrytí, zobrazení při kliknutí/najetí myší/rolování/dvojitém kliknutí, řádek Thaw, skrytí nabídek aplikací, povolení sekce „vždy skryté“, zobrazení popisků a diagnostické protokolování."
           }
         },
         "de" : {
@@ -38132,29 +38217,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Whitelisted apps can read settings, toggle boolean options, set numeric values (timers, delays), change enum settings (rehide strategy, Thaw Bar location), and modify per-display configurations. This includes auto-rehide, show on click/hover/scroll/double-click, Thaw Bar, hide application menus, enable always-hidden section, show tooltips, and diagnostic logging."
-          }
-        }
-      }
-    },
-    "apps %lld" : {
-      "comment" : "Shows the number of whitelisted apps",
-      "localizations" : {
-        "en" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld app"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld apps"
-                }
-              }
-            }
           }
         }
       }
@@ -38402,8 +38464,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "You can remove apps from this list at any time to revoke their access."
+            "state" : "translated",
+            "value" : "Aplikace můžete z tohoto seznamu kdykoli odstranit a tím jim odebrat přístup."
           }
         },
         "de" : {
