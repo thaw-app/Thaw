@@ -2322,9 +2322,9 @@ extension MenuBarItemManager {
         warpCursorAfter: Bool = true
     ) async throws {
         do {
-            try await eventSemaphore.wait(timeout: .seconds(5))
+            try await eventSemaphore.wait(timeout: .milliseconds(1500))
         } catch is SimpleSemaphore.TimeoutError {
-            MenuBarItemManager.diagLog.error("eventSemaphore timed out in postMoveEvents, forcing signal and retrying")
+            MenuBarItemManager.diagLog.error("eventSemaphore timed out (1.5s) in postMoveEvents, forcing signal and retrying")
             await eventSemaphore.signal()
             throw EventError.cannotComplete
         }
@@ -2607,11 +2607,13 @@ extension MenuBarItemManager {
     ///   - item: The menu bar item to click.
     ///   - mouseButton: The mouse button to click the item with.
     private func postClickEvents(item: MenuBarItem, mouseButton: CGMouseButton) async throws {
-        // Try to acquire semaphore with timeout
+        // Try to acquire semaphore with timeout. 1.5 s is enough for any
+        // legitimate in-flight operation to finish; the old 5 s budget meant
+        // a 3-attempt click could block for up to 15 s on a busy system.
         do {
-            try await eventSemaphore.wait(timeout: .seconds(5))
+            try await eventSemaphore.wait(timeout: .milliseconds(1500))
         } catch is SimpleSemaphore.TimeoutError {
-            MenuBarItemManager.diagLog.error("eventSemaphore timed out in postClickEvents for \(item.logString), forcing signal and retrying")
+            MenuBarItemManager.diagLog.error("eventSemaphore timed out (1.5s) in postClickEvents for \(item.logString), forcing signal and retrying")
             await eventSemaphore.signal()
             throw EventError.cannotComplete
         }
@@ -2692,7 +2694,16 @@ extension MenuBarItemManager {
     /// - Parameters:
     ///   - item: The menu bar item to click.
     ///   - mouseButton: The mouse button to click the item with.
-    func click(item: MenuBarItem, with mouseButton: CGMouseButton, skipInputPause: Bool = false) async throws {
+    /// Clicks a menu bar item with the given mouse button.
+    ///
+    /// - Parameters:
+    ///   - item: The menu bar item to click.
+    ///   - mouseButton: The mouse button to click the item with.
+    ///   - skipInputPause: Skip waiting for user input to pause.
+    ///   - maxAttempts: Maximum number of click attempts (default 3).
+    ///     Pass `1` from `temporarilyShow` so a single failure returns
+    ///     immediately and the caller's fallback path fires promptly.
+    func click(item: MenuBarItem, with mouseButton: CGMouseButton, skipInputPause: Bool = false, maxAttempts: Int = 3) async throws {
         guard let appState else {
             throw EventError.cannotComplete
         }
@@ -2713,7 +2724,7 @@ extension MenuBarItemManager {
             appState.hidEventManager.startAll()
         }
 
-        let maxAttempts = 3 // Reduced from 4 to minimize accumulated delay
+        let maxAttempts = max(1, maxAttempts)
         let attemptStartTime = Date.now
         for n in 1 ... maxAttempts {
             guard !Task.isCancelled else {
@@ -3163,7 +3174,11 @@ extension MenuBarItemManager {
         let idsBeforeClick = Set(Bridging.getWindowList(option: .onScreen))
 
         do {
-            try await click(item: clickItem, with: mouseButton, skipInputPause: true)
+            // Single attempt: the item is already at a known-good position with
+            // fresh bounds. If it fails, return false immediately so the caller
+            // (IceBarItemView) fires a fallback click with default retry count
+            // rather than spending 3× the semaphore timeout here.
+            try await click(item: clickItem, with: mouseButton, skipInputPause: true, maxAttempts: 1)
         } catch {
             MenuBarItemManager.diagLog.error("Error clicking item: \(error)")
             // Icon is now visible but the click failed. Return false so the
