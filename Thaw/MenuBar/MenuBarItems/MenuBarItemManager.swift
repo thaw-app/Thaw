@@ -413,6 +413,34 @@ final class MenuBarItemManager: ObservableObject {
         }
     }
 
+    /// Prefix used in `pendingRelocations` values to mark items whose rehide
+    /// failed terminally in the current session. The suffix is the item's
+    /// `windowID` at the time of failure, used to detect app relaunches.
+    private static let waitForRelaunchPrefix = "waitForRelaunch:"
+
+    /// Returns a `pendingRelocations` sentinel value that suppresses same-session
+    /// move attempts. Encodes `windowID` so that a relaunch (new windowID) clears
+    /// the suppression automatically.
+    private func waitForRelaunchValue(windowID: CGWindowID, section: MenuBarSection.Name) -> String {
+        "\(Self.waitForRelaunchPrefix)\(windowID):\(sectionKey(for: section))"
+    }
+
+    /// Parses a `pendingRelocations` sentinel value.
+    /// Returns `(windowID, section)` if the value is a wait-for-relaunch entry,
+    /// or `nil` if it is a plain section key.
+    private func parseWaitForRelaunch(_ value: String) -> (windowID: CGWindowID, section: MenuBarSection.Name)? {
+        guard value.hasPrefix(Self.waitForRelaunchPrefix) else { return nil }
+        let payload = value.dropFirst(Self.waitForRelaunchPrefix.count)
+        // Format: "<windowID>:<sectionKey>"
+        guard let colonIndex = payload.firstIndex(of: ":") else { return nil }
+        let widString = String(payload[payload.startIndex ..< colonIndex])
+        let secString = String(payload[payload.index(after: colonIndex)...])
+        guard let wid = CGWindowID(widString),
+              let section = sectionName(for: secString)
+        else { return nil }
+        return (wid, section)
+    }
+
     /// Returns the effective section for newly detected menu bar items, falling back
     /// to hidden when the always-hidden section is currently disabled.
     var effectiveNewItemsSection: MenuBarSection.Name {
@@ -3493,14 +3521,24 @@ extension MenuBarItemManager {
                     // Per-call cap reached; schedule a longer-delay retry.
                     failedContexts.append(context)
                 } else {
-                    // Total cap reached — permanently drop this context.
-                    // pendingRelocations entry is preserved so the next cache
-                    // cycle (relocatePendingItems) can recover on restart.
+                    // Total cap reached — drop this context from same-session retries.
+                    // Overwrite the pendingRelocations entry with a waitForRelaunch
+                    // sentinel so relocatePendingItems() skips move() this session.
+                    // The sentinel encodes the current windowID; when the app
+                    // relaunches its status item gets a new windowID, clearing the
+                    // suppression automatically.
+                    let tagIdentifier = context.tag.tagIdentifier
+                    pendingRelocations[tagIdentifier] = waitForRelaunchValue(
+                        windowID: item.windowID,
+                        section: context.originalSection
+                    )
+                    persistPendingRelocations()
                     MenuBarItemManager.diagLog.error(
                         """
                         Giving up rehide for \(item.logString) after \
                         \(context.rehideAttempts) total attempts; \
-                        pendingRelocations will handle recovery on next launch
+                        marked waitForRelaunch — relocatePendingItems will \
+                        retry only after app relaunch (new windowID)
                         """
                     )
                 }
@@ -3783,7 +3821,33 @@ extension MenuBarItemManager {
             guard !activelyShownTags.contains(tagIdentifier) else {
                 continue
             }
-            guard let targetSection = sectionName(for: sectionString),
+
+            // Handle waitForRelaunch sentinel — item hit the rehide cap this
+            // session. Skip the move unless the app has relaunched (new windowID).
+            if let sentinel = parseWaitForRelaunch(sectionString) {
+                guard let item = items.first(where: { tagIdentifier == $0.tag.tagIdentifier }) else {
+                    // App not running at all — keep the entry for next launch.
+                    continue
+                }
+                if item.windowID == sentinel.windowID {
+                    // Same session / same window — skip to avoid re-saturating
+                    // the event semaphore with a known-broken move.
+                    MenuBarItemManager.diagLog.debug(
+                        "relocatePendingItems: skipping \(item.logString) — waitForRelaunch sentinel active (same windowID)"
+                    )
+                    continue
+                }
+                // WindowID changed — app relaunched. Promote back to a normal
+                // pending relocation so the regular move path runs below.
+                MenuBarItemManager.diagLog.info(
+                    "relocatePendingItems: \(item.logString) has new windowID — clearing waitForRelaunch sentinel"
+                )
+                pendingRelocations[tagIdentifier] = sectionKey(for: sentinel.section)
+                persistPendingRelocations()
+                // Fall through to the normal relocation logic with the promoted value.
+            }
+
+            guard let targetSection = sectionName(for: pendingRelocations[tagIdentifier] ?? sectionString),
                   targetSection != .visible
             else {
                 // Nothing to do if the original section was visible.
