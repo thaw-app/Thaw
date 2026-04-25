@@ -131,7 +131,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%@"
           }
         },
@@ -2426,7 +2426,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "•"
           }
         },
@@ -2545,7 +2545,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "+"
           }
         },
@@ -2563,7 +2563,7 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "+"
           }
         },
@@ -2664,7 +2664,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "⌘"
           }
         },
@@ -2682,7 +2682,7 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "⌘"
           }
         },
@@ -2783,7 +2783,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "⎋"
           }
         },
@@ -2801,7 +2801,7 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "⎋"
           }
         },
@@ -2902,7 +2902,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "1"
           }
         },
@@ -2920,7 +2920,7 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "1"
           }
         },
@@ -3021,7 +3021,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "1."
           }
         },
@@ -3039,7 +3039,7 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "1."
           }
         },
@@ -3140,7 +3140,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "2"
           }
         },
@@ -3158,7 +3158,7 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "2"
           }
         },
@@ -3259,7 +3259,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "2."
           }
         },
@@ -3277,7 +3277,7 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "2."
           }
         },
@@ -3378,7 +3378,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "3"
           }
         },
@@ -3396,7 +3396,7 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "3"
           }
         },
@@ -3497,7 +3497,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "3."
           }
         },
@@ -3515,7 +3515,7 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "3."
           }
         },
@@ -3616,7 +3616,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "4."
           }
         },
@@ -3634,7 +3634,7 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "4."
           }
         },
@@ -4093,7 +4093,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Přístupnost"
+            "value" : "Zpřístupnění"
           }
         },
         "de" : {
@@ -4348,8 +4348,8 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ajouter"
+            "state" : "new",
+            "value" : "Add"
           }
         },
         "hu" : {
@@ -4467,8 +4467,8 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ajouter une application manuellement"
+            "state" : "new",
+            "value" : "Add Application Manually"
           }
         },
         "hu" : {
@@ -4705,8 +4705,8 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Autoriser"
+            "state" : "new",
+            "value" : "Allow"
           }
         },
         "hu" : {
@@ -4824,8 +4824,8 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Autoriser \"%@\" à contrôler les paramètres de Thaw ?"
+            "state" : "new",
+            "value" : "Allow \"%@\" to control Thaw settings?"
           }
         },
         "hu" : {
@@ -4943,8 +4943,8 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Permettre aux applications externes de lire et de modifier les paramètres de Thaw via les URLs thaw://."
+            "state" : "new",
+            "value" : "Allow external applications to read and modify Thaw settings via thaw:// URLs."
           }
         },
         "hu" : {
@@ -5517,119 +5517,12 @@
     },
     "Appearance" : {
       "comment" : "The localized string key for the \"Appearance\" section in the \"Settings\" interface.",
+      "isCommentAutoGenerated" : true,
       "localizations" : {
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Vzhled"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Appearance"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Apariencia"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Apparence"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Appearance"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tampilan"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Appearance"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Appearance"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Appearance"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Appearance"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Appearance"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Appearance"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Appearance"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Appearance"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Appearance"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Appearance"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Appearance"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Appearance"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Appearance"
           }
         }
       }
@@ -6262,24 +6155,6 @@
             }
           }
         },
-        "de" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "new",
-                  "value" : "%lld app"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "new",
-                  "value" : "%lld apps"
-                }
-              }
-            }
-          }
-        },
         "en" : {
           "variations" : {
             "plural" : {
@@ -6292,306 +6167,6 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld apps"
-                }
-              }
-            }
-          }
-        },
-        "es" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld app"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld apps"
-                }
-              }
-            }
-          }
-        },
-        "fr" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "new",
-                  "value" : "%lld app"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "new",
-                  "value" : "%lld apps"
-                }
-              }
-            }
-          }
-        },
-        "hu" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "new",
-                  "value" : "%lld app"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "new",
-                  "value" : "%lld apps"
-                }
-              }
-            }
-          }
-        },
-        "id" : {
-          "variations" : {
-            "plural" : {
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld aplikasi"
-                }
-              }
-            }
-          }
-        },
-        "it" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "new",
-                  "value" : "%lld app"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "new",
-                  "value" : "%lld apps"
-                }
-              }
-            }
-          }
-        },
-        "ja" : {
-          "variations" : {
-            "plural" : {
-              "other" : {
-                "stringUnit" : {
-                  "state" : "new",
-                  "value" : "%lld apps"
-                }
-              }
-            }
-          }
-        },
-        "ko" : {
-          "variations" : {
-            "plural" : {
-              "other" : {
-                "stringUnit" : {
-                  "state" : "new",
-                  "value" : "%lld apps"
-                }
-              }
-            }
-          }
-        },
-        "nl" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "new",
-                  "value" : "%lld app"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "new",
-                  "value" : "%lld apps"
-                }
-              }
-            }
-          }
-        },
-        "pl" : {
-          "variations" : {
-            "plural" : {
-              "few" : {
-                "stringUnit" : {
-                  "state" : "new",
-                  "value" : "%lld apps"
-                }
-              },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "new",
-                  "value" : "%lld apps"
-                }
-              },
-              "one" : {
-                "stringUnit" : {
-                  "state" : "new",
-                  "value" : "%lld app"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "new",
-                  "value" : "%lld apps"
-                }
-              }
-            }
-          }
-        },
-        "pt-BR" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "new",
-                  "value" : "%lld app"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "new",
-                  "value" : "%lld apps"
-                }
-              }
-            }
-          }
-        },
-        "ru" : {
-          "variations" : {
-            "plural" : {
-              "few" : {
-                "stringUnit" : {
-                  "state" : "new",
-                  "value" : "%lld apps"
-                }
-              },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "new",
-                  "value" : "%lld apps"
-                }
-              },
-              "one" : {
-                "stringUnit" : {
-                  "state" : "new",
-                  "value" : "%lld app"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "new",
-                  "value" : "%lld apps"
-                }
-              }
-            }
-          }
-        },
-        "th" : {
-          "variations" : {
-            "plural" : {
-              "other" : {
-                "stringUnit" : {
-                  "state" : "new",
-                  "value" : "%lld apps"
-                }
-              }
-            }
-          }
-        },
-        "tr" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "new",
-                  "value" : "%lld app"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "new",
-                  "value" : "%lld apps"
-                }
-              }
-            }
-          }
-        },
-        "uk" : {
-          "variations" : {
-            "plural" : {
-              "few" : {
-                "stringUnit" : {
-                  "state" : "new",
-                  "value" : "%lld apps"
-                }
-              },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "new",
-                  "value" : "%lld apps"
-                }
-              },
-              "one" : {
-                "stringUnit" : {
-                  "state" : "new",
-                  "value" : "%lld app"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "new",
-                  "value" : "%lld apps"
-                }
-              }
-            }
-          }
-        },
-        "vi" : {
-          "variations" : {
-            "plural" : {
-              "other" : {
-                "stringUnit" : {
-                  "state" : "new",
-                  "value" : "%lld apps"
-                }
-              }
-            }
-          }
-        },
-        "zh-Hans" : {
-          "variations" : {
-            "plural" : {
-              "other" : {
-                "stringUnit" : {
-                  "state" : "new",
-                  "value" : "%lld apps"
-                }
-              }
-            }
-          }
-        },
-        "zh-Hant" : {
-          "variations" : {
-            "plural" : {
-              "other" : {
-                "stringUnit" : {
-                  "state" : "new",
                   "value" : "%lld apps"
                 }
               }
@@ -6623,8 +6198,8 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Les applications qui demandent un accès aux paramètres apparaîtront ici une fois approuvées."
+            "state" : "new",
+            "value" : "Apps that request settings access will appear here after you approve them."
           }
         },
         "hu" : {
@@ -6742,8 +6317,8 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Êtes-vous sûr de vouloir supprimer le profil \"%@\" ? Cette action est irréversible."
+            "state" : "new",
+            "value" : "Are you sure you want to delete the profile \"%@\"? This cannot be undone."
           }
         },
         "hu" : {
@@ -7099,8 +6674,8 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Assignez un profil à chaque écran."
+            "state" : "new",
+            "value" : "Assign a profile to each display."
           }
         },
         "hu" : {
@@ -7218,7 +6793,7 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "Auto-Switch"
           }
         },
@@ -7813,8 +7388,8 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatisation"
+            "state" : "new",
+            "value" : "Automation"
           }
         },
         "hu" : {
@@ -7911,119 +7486,12 @@
     },
     "Back" : {
       "comment" : "A button that navigates back to the previous settings section.",
+      "isCommentAutoGenerated" : true,
       "localizations" : {
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Zpět"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Back"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Atrás"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Retour"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Back"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kembali"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Back"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Back"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Back"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Back"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Back"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Back"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Back"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Back"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Back"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Back"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Back"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Back"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Back"
           }
         }
       }
@@ -8033,7 +7501,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "BETA"
           }
         },
@@ -8527,8 +7995,8 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Identifiant du paquet (par exemple \"com.droppy\")"
+            "state" : "new",
+            "value" : "Bundle Identifier (e.g., com.droppy)"
           }
         },
         "hu" : {
@@ -10074,7 +9542,7 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "Chevron"
           }
         },
@@ -11501,8 +10969,8 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Copier les infos de la version"
+            "state" : "new",
+            "value" : "Copy version info"
           }
         },
         "hu" : {
@@ -12453,8 +11921,8 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Refuser"
+            "state" : "new",
+            "value" : "Deny"
           }
         },
         "hu" : {
@@ -14238,8 +13706,8 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dupliquer"
+            "state" : "new",
+            "value" : "Duplicate"
           }
         },
         "hu" : {
@@ -14458,7 +13926,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "E"
           }
         },
@@ -15309,8 +14777,8 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Activer l'accès aux paramètres grâce au schéma URI"
+            "state" : "new",
+            "value" : "Enable Settings URI Scheme"
           }
         },
         "hu" : {
@@ -15666,8 +15134,8 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Erreur"
+            "state" : "new",
+            "value" : "Error"
           }
         },
         "hu" : {
@@ -15904,8 +15372,8 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Exporter"
+            "state" : "new",
+            "value" : "Export"
           }
         },
         "hu" : {
@@ -16023,8 +15491,8 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Exporter le(s) profil(s)"
+            "state" : "new",
+            "value" : "Export Profile(s)"
           }
         },
         "hu" : {
@@ -16240,119 +15708,12 @@
     },
     "Forward" : {
       "comment" : "A button that navigates to the next settings pane.",
+      "isCommentAutoGenerated" : true,
       "localizations" : {
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Vpřed"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Forward"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Adelante"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Forward"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Forward"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lanjut"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Forward"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Forward"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Forward"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Forward"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Forward"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Forward"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Forward"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Forward"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Forward"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Forward"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Forward"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Forward"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Forward"
           }
         }
       }
@@ -18046,8 +17407,8 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Comment ça marche"
+            "state" : "new",
+            "value" : "How It Works"
           }
         },
         "hu" : {
@@ -18998,8 +18359,8 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Importer le(s) profil(s)"
+            "state" : "new",
+            "value" : "Import Profile(s)"
           }
         },
         "hu" : {
@@ -19100,7 +18461,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Import nastavení"
+            "value" : "Importovat nastavení"
           }
         },
         "de" : {
@@ -19810,119 +19171,12 @@
     },
     "Layout" : {
       "comment" : "The localized string key for the \"Layout\" option in the \"Settings\" interface.",
+      "isCommentAutoGenerated" : true,
       "localizations" : {
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Rozložení"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Layout"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Disposición"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Layout"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Layout"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tata Letak"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Layout"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Layout"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Layout"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Layout"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Layout"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Layout"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Layout"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Layout"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Layout"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Layout"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Layout"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Layout"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Layout"
           }
         }
       }
@@ -21021,7 +20275,7 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "max"
           }
         },
@@ -24573,7 +23827,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "OK"
           }
         },
@@ -25662,8 +24916,8 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Profil: %@"
+            "state" : "new",
+            "value" : "Profile: %@"
           }
         },
         "hu" : {
@@ -25781,8 +25035,8 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Profils"
+            "state" : "new",
+            "value" : "Profiles"
           }
         },
         "hu" : {
@@ -26376,8 +25630,8 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Retirer %@ de la liste blanche"
+            "state" : "new",
+            "value" : "Remove %@ from whitelist"
           }
         },
         "hu" : {
@@ -26495,8 +25749,8 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Retirer de la liste blanche"
+            "state" : "new",
+            "value" : "Remove from whitelist"
           }
         },
         "hu" : {
@@ -26614,8 +25868,8 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Renommer"
+            "state" : "new",
+            "value" : "Rename"
           }
         },
         "hu" : {
@@ -28994,8 +28248,8 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sauvegarder le profil actuel"
+            "state" : "new",
+            "value" : "Save Current"
           }
         },
         "hu" : {
@@ -33159,7 +32413,7 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "Stable"
           }
         },
