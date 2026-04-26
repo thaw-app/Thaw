@@ -72,8 +72,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "\"%1$@\" (%2$@) chce kontrolować ustawienia Thaw korzystając ze schematu URL.\n\nW przypadku udzielenia zgody, aplikacja ta będzie mogła:\n• Odczytywać obecne ustawienia\n• Przełączać i zmieniać opcje binarne\n• Modyfikować wartości liczbowe (liczniki, opóźnienia, interwały)\n• Zmieniać ustawienia wyliczeniowe (strategia ponownego ukrywania, lokalizacja paska Thaw Bar)\n• Modyfikować konfiguracje poszczególnych ekranów\n\nTo uprawnienie pozostaje aktywne do momentu jego ręcznego usunięcia w sekcji Ustawienia → Automatyzacja.%3$@"
+            "state" : "new",
+            "value" : "\"%1$@\" (%2$@) wants to control Thaw settings via URL scheme.\n\nIf allowed, this app will be able to:\n• Read current settings and configurations\n• Toggle and change boolean settings\n• Modify numeric values (timers, delays, intervals)\n• Change enum settings (rehide strategy, Thaw Bar location)\n• Modify per-display configurations\n\nThis permission persists until manually removed in Settings > Automation.%3$@"
           }
         },
         "pt-BR" : {
@@ -191,7 +191,7 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "%@"
           }
         },
@@ -2486,7 +2486,7 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "•"
           }
         },
@@ -2605,7 +2605,7 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "+"
           }
         },
@@ -2724,7 +2724,7 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "⌘"
           }
         },
@@ -2843,7 +2843,7 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "⎋"
           }
         },
@@ -2962,7 +2962,7 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "1"
           }
         },
@@ -3081,7 +3081,7 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "1."
           }
         },
@@ -3200,7 +3200,7 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "2"
           }
         },
@@ -3319,7 +3319,7 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "2."
           }
         },
@@ -3438,7 +3438,7 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "3"
           }
         },
@@ -3557,7 +3557,7 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "3."
           }
         },
@@ -3676,7 +3676,7 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "4."
           }
         },
@@ -3915,7 +3915,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "O aplikacji"
+            "value" : "O"
           }
         },
         "pt-BR" : {
@@ -4390,8 +4390,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dodaj"
+            "state" : "new",
+            "value" : "Add"
           }
         },
         "pt-BR" : {
@@ -4509,8 +4509,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dodaj aplikację ręcznie"
+            "state" : "new",
+            "value" : "Add Application Manually"
           }
         },
         "pt-BR" : {
@@ -4747,8 +4747,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zezwól"
+            "state" : "new",
+            "value" : "Allow"
           }
         },
         "pt-BR" : {
@@ -4866,8 +4866,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zezwolić aplikacji ”%@” na kontrolowanie ustawień Thaw?"
+            "state" : "new",
+            "value" : "Allow \"%@\" to control Thaw settings?"
           }
         },
         "pt-BR" : {
@@ -4985,8 +4985,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zezwalaj aplikacjom zewnętrznym na odczyt i modyfikację ustawień Thaw za pomocą adresów URL thaw://."
+            "state" : "new",
+            "value" : "Allow external applications to read and modify Thaw settings via thaw:// URLs."
           }
         },
         "pt-BR" : {
@@ -5580,8 +5580,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wygląd"
+            "state" : "new",
+            "value" : "Appearance"
           }
         },
         "pt-BR" : {
@@ -5818,8 +5818,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zastosuj profil paska menu Thaw, gdy ten tryb Skupienia zostanie aktywowany."
+            "state" : "new",
+            "value" : "Apply a Thaw menu bar profile when this Focus activates."
           }
         },
         "pt-BR" : {
@@ -6429,26 +6429,26 @@
             "plural" : {
               "few" : {
                 "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld aplikacje"
+                  "state" : "new",
+                  "value" : "%lld apps"
                 }
               },
               "many" : {
                 "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld aplikacji"
+                  "state" : "new",
+                  "value" : "%lld apps"
                 }
               },
               "one" : {
                 "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld aplikacja"
+                  "state" : "new",
+                  "value" : "%lld app"
                 }
               },
               "other" : {
                 "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld aplikacje"
+                  "state" : "new",
+                  "value" : "%lld apps"
                 }
               }
             }
@@ -6665,8 +6665,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aplikacje proszące o dostęp do ustawień pojawią się tutaj po ich zatwierdzeniu."
+            "state" : "new",
+            "value" : "Apps that request settings access will appear here after you approve them."
           }
         },
         "pt-BR" : {
@@ -6784,8 +6784,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Czy na pewno chcesz usunąć profil \"%@\"? Tej operacji nie można cofnąć."
+            "state" : "new",
+            "value" : "Are you sure you want to delete the profile \"%@\"? This cannot be undone."
           }
         },
         "pt-BR" : {
@@ -7141,8 +7141,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Przypisz profil do każdego ekranu."
+            "state" : "new",
+            "value" : "Assign a profile to each display."
           }
         },
         "pt-BR" : {
@@ -7260,8 +7260,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Autoprzełączanie"
+            "state" : "new",
+            "value" : "Auto-Switch"
           }
         },
         "pt-BR" : {
@@ -7855,8 +7855,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatyzacja"
+            "state" : "new",
+            "value" : "Automation"
           }
         },
         "pt-BR" : {
@@ -7974,8 +7974,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wstecz"
+            "state" : "new",
+            "value" : "Back"
           }
         },
         "pt-BR" : {
@@ -8093,7 +8093,7 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "BETA"
           }
         },
@@ -8569,8 +8569,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Identyfikator aplikacji (np. com.droppy)"
+            "state" : "new",
+            "value" : "Bundle Identifier (e.g., com.droppy)"
           }
         },
         "pt-BR" : {
@@ -8688,8 +8688,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Może zmieniać ustawienia"
+            "state" : "new",
+            "value" : "Can modify settings"
           }
         },
         "pt-BR" : {
@@ -8807,8 +8807,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Możesz przełączać opcje: automatyczne ukrywanie, pokazywanie przy kliknięciu/najechaniu/scrollowaniu, Thaw Bar oraz pozostałe ustawienia binarne."
+            "state" : "new",
+            "value" : "Can toggle settings: auto-rehide, show on click/hover/scroll, Thaw Bar, and other boolean options."
           }
         },
         "pt-BR" : {
@@ -11543,8 +11543,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kopiuj informacje o wersji"
+            "state" : "new",
+            "value" : "Copy version info"
           }
         },
         "pt-BR" : {
@@ -11662,8 +11662,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Utworzono: %@"
+            "state" : "new",
+            "value" : "Created: %@"
           }
         },
         "pt-BR" : {
@@ -12257,8 +12257,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Usuń"
+            "state" : "new",
+            "value" : "Delete"
           }
         },
         "pt-BR" : {
@@ -12376,8 +12376,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Usunąć profil?"
+            "state" : "new",
+            "value" : "Delete Profile?"
           }
         },
         "pt-BR" : {
@@ -12495,8 +12495,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zabroń"
+            "state" : "new",
+            "value" : "Deny"
           }
         },
         "pt-BR" : {
@@ -12614,8 +12614,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Deweloperska"
+            "state" : "new",
+            "value" : "Development"
           }
         },
         "pt-BR" : {
@@ -14280,8 +14280,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Duplikuj"
+            "state" : "new",
+            "value" : "Duplicate"
           }
         },
         "pt-BR" : {
@@ -14518,7 +14518,7 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "E"
           }
         },
@@ -14756,8 +14756,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Edytuj układ paska menu…"
+            "state" : "new",
+            "value" : "Edit Menu Bar Layout…"
           }
         },
         "pt-BR" : {
@@ -15351,8 +15351,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Włącz obsługę schematów URI dla ustawień"
+            "state" : "new",
+            "value" : "Enable Settings URI Scheme"
           }
         },
         "pt-BR" : {
@@ -15708,8 +15708,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Błąd"
+            "state" : "new",
+            "value" : "Error"
           }
         },
         "pt-BR" : {
@@ -15946,8 +15946,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Eksport"
+            "state" : "new",
+            "value" : "Export"
           }
         },
         "pt-BR" : {
@@ -16065,8 +16065,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Eksportuj profil(e)"
+            "state" : "new",
+            "value" : "Export Profile(s)"
           }
         },
         "pt-BR" : {
@@ -16184,8 +16184,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wyróżnienie"
+            "state" : "new",
+            "value" : "Focus"
           }
         },
         "pt-BR" : {
@@ -16303,8 +16303,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dalej"
+            "state" : "new",
+            "value" : "Forward"
           }
         },
         "pt-BR" : {
@@ -16898,7 +16898,7 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "Gradient"
           }
         },
@@ -18088,8 +18088,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Jak to działa"
+            "state" : "new",
+            "value" : "How It Works"
           }
         },
         "pt-BR" : {
@@ -18683,8 +18683,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Jeśli aplikacja nie znajduje się na białej liście, pojawia się komunikat z jej nazwą oraz informacją o planowanych operacjach."
+            "state" : "new",
+            "value" : "If not whitelisted, you'll see a confirmation dialog showing the app name and what it wants to do."
           }
         },
         "pt-BR" : {
@@ -18802,8 +18802,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zatwierdzenie spowoduje trwałe odblokowanie aplikacji, umożliwiając jej edycję ustawień bez każdorazowej prośby o zgodę."
+            "state" : "new",
+            "value" : "If you approve, the app is permanently whitelisted and can modify settings anytime without asking again."
           }
         },
         "pt-BR" : {
@@ -19040,8 +19040,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Importuj profil(e)"
+            "state" : "new",
+            "value" : "Import Profile(s)"
           }
         },
         "pt-BR" : {
@@ -19516,8 +19516,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pokazuj wyszukiwanie"
+            "state" : "new",
+            "value" : "Keep search"
           }
         },
         "pt-BR" : {
@@ -19873,8 +19873,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Układ"
+            "state" : "new",
+            "value" : "Layout"
           }
         },
         "pt-BR" : {
@@ -21063,8 +21063,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "maks"
+            "state" : "new",
+            "value" : "max"
           }
         },
         "pt-BR" : {
@@ -22253,8 +22253,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Profil paska menu"
+            "state" : "new",
+            "value" : "Menu Bar Profile"
           }
         },
         "pt-BR" : {
@@ -22610,8 +22610,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zmodyfikowano: %@"
+            "state" : "new",
+            "value" : "Modified: %@"
           }
         },
         "pt-BR" : {
@@ -22848,8 +22848,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Przeciągnij plakietkę \"Nowe elementy\", aby określić lokalizację nowo wykrytych obiektów."
+            "state" : "new",
+            "value" : "Move the New Items badge to choose where newly detected items will appear."
           }
         },
         "pt-BR" : {
@@ -23086,8 +23086,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nowe obiekty"
+            "state" : "new",
+            "value" : "New Items"
           }
         },
         "pt-BR" : {
@@ -23205,8 +23205,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nowa nazwa profilu"
+            "state" : "new",
+            "value" : "New profile name"
           }
         },
         "pt-BR" : {
@@ -23443,8 +23443,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nie wybrano profilu"
+            "state" : "new",
+            "value" : "No profile selected"
           }
         },
         "pt-BR" : {
@@ -23562,8 +23562,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nie zapisano żadnych profili. Aby utworzyć profil, zapisz aktualną konfigurację."
+            "state" : "new",
+            "value" : "No profiles saved. Save your current configuration to create one."
           }
         },
         "pt-BR" : {
@@ -23800,8 +23800,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Brak aplikacji na liście dozwolonych"
+            "state" : "new",
+            "value" : "No whitelisted apps"
           }
         },
         "pt-BR" : {
@@ -24395,7 +24395,7 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "Notch"
           }
         },
@@ -24633,7 +24633,7 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "OK"
           }
         },
@@ -24990,8 +24990,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Otwórz ustawienia trybu skupienia"
+            "state" : "new",
+            "value" : "Open Focus Settings"
           }
         },
         "pt-BR" : {
@@ -25466,8 +25466,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Profil"
+            "state" : "new",
+            "value" : "Profile"
           }
         },
         "pt-BR" : {
@@ -25585,8 +25585,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nazwa profilu"
+            "state" : "new",
+            "value" : "Profile name"
           }
         },
         "pt-BR" : {
@@ -25704,8 +25704,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Profil: %@"
+            "state" : "new",
+            "value" : "Profile: %@"
           }
         },
         "pt-BR" : {
@@ -25823,8 +25823,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Profile"
+            "state" : "new",
+            "value" : "Profiles"
           }
         },
         "pt-BR" : {
@@ -26418,8 +26418,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Usuń %@ z listy dozwolonych aplikacji"
+            "state" : "new",
+            "value" : "Remove %@ from whitelist"
           }
         },
         "pt-BR" : {
@@ -26537,8 +26537,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Usuń z listy dozwolonych aplikacji"
+            "state" : "new",
+            "value" : "Remove from whitelist"
           }
         },
         "pt-BR" : {
@@ -26656,8 +26656,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zmień nazwę"
+            "state" : "new",
+            "value" : "Rename"
           }
         },
         "pt-BR" : {
@@ -27370,8 +27370,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zresetować wszystkie ustawienia?"
+            "state" : "new",
+            "value" : "Reset all settings?"
           }
         },
         "pt-BR" : {
@@ -29036,8 +29036,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zapisz bieżący"
+            "state" : "new",
+            "value" : "Save Current"
           }
         },
         "pt-BR" : {
@@ -30107,8 +30107,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ustaw profil paska menu"
+            "state" : "new",
+            "value" : "Set Menu Bar Profile"
           }
         },
         "pt-BR" : {
@@ -30226,8 +30226,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Identyfikator URI ustawień jest wyłączony. Aplikacje zewnętrzne nie mogą odczytywać ani modyfikować ustawień Thaw."
+            "state" : "new",
+            "value" : "Settings URI is disabled. External apps cannot read or modify Thaw settings."
           }
         },
         "pt-BR" : {
@@ -33796,8 +33796,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Obsługiwane ustawienia"
+            "state" : "new",
+            "value" : "Supported Settings"
           }
         },
         "pt-BR" : {
@@ -35343,8 +35343,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aby przełączać profile za pomocą trybów skupienia, dodaj Thaw jako filtr skupienia w menu Ustawienia systemowe → Tryb skupienia → [Tryb] → Filtry trybu skupienia."
+            "state" : "new",
+            "value" : "To switch profiles with Focus modes, add Thaw as a Focus Filter in System Settings → Focus → [Mode] → Focus Filters."
           }
         },
         "pt-BR" : {
@@ -36533,8 +36533,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aktualizuj"
+            "state" : "new",
+            "value" : "Update"
           }
         },
         "pt-BR" : {
@@ -36652,8 +36652,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aktualizuj wszystkie"
+            "state" : "new",
+            "value" : "Update All"
           }
         },
         "pt-BR" : {
@@ -36890,8 +36890,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zaktualizuj konfigurację we wszystkich profilach"
+            "state" : "new",
+            "value" : "Update Configuration on All Profiles"
           }
         },
         "pt-BR" : {
@@ -37009,8 +37009,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aktualizuj tylko konfigurację"
+            "state" : "new",
+            "value" : "Update Configuration Only"
           }
         },
         "pt-BR" : {
@@ -37128,8 +37128,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aktualizuj tylko układ"
+            "state" : "new",
+            "value" : "Update Layout Only"
           }
         },
         "pt-BR" : {
@@ -37247,8 +37247,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nanieś aktualne zmiany na ten profil"
+            "state" : "new",
+            "value" : "Update this profile with the current state"
           }
         },
         "pt-BR" : {
@@ -37723,8 +37723,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Włącz sortowanie LCS dla ekranów z notchem"
+            "state" : "new",
+            "value" : "Use LCS sorting on notched displays"
           }
         },
         "pt-BR" : {
@@ -37842,8 +37842,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kliknij z wciśniętym klawiszem Option, aby otworzyć zawsze ukrytą sekcję"
+            "state" : "new",
+            "value" : "Use Option-click to open always-hidden section"
           }
         },
         "pt-BR" : {
@@ -37961,8 +37961,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zastosuj szybszy algorytm LCS zamiast pełnego sortowania przy porządkowaniu profili na ekranach z notchem. LCS ogranicza liczbę przesunięć, choć przy mniejszych rozdzielczościach może działać mniej stabilnie."
+            "state" : "new",
+            "value" : "Use the faster LCS (Longest Common Subsequence) algorithm for profile sorting on notched displays instead of the full sort. LCS minimises the number of moves but may be less reliable on notched displays with smaller resolutions."
           }
         },
         "pt-BR" : {
@@ -38556,8 +38556,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wyłączenie trybu Skupienie powoduje automatyczne przywrócenie profilu wyświetlania."
+            "state" : "new",
+            "value" : "When a Focus mode deactivates, the display profile is automatically restored."
           }
         },
         "pt-BR" : {
@@ -38675,8 +38675,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gdy aplikacja korzysta z adresu URL thaw:// do zmiany konfiguracji, system Thaw upewnia się, że znajduje się ona na liście wyjątków."
+            "state" : "new",
+            "value" : "When an app sends a thaw:// URL to change settings, Thaw checks if that app is whitelisted."
           }
         },
         "pt-BR" : {
@@ -38794,8 +38794,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dozwolone aplikacje"
+            "state" : "new",
+            "value" : "Whitelisted Applications"
           }
         },
         "pt-BR" : {
@@ -38913,8 +38913,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aplikacje z białej listy mogą odczytywać ustawienia, przełączać opcje binarne, ustawiać wartości liczbowe (liczniki, opóźnienia), zmieniać ustawienia wyliczeniowe (strategia ponownego ukrywania, lokalizacja paska Thaw Bar) oraz modyfikować konfiguracje dla poszczególnych ekranów. Obejmuje to automatyczne ponowne ukrywanie, pokazywanie przy kliknięciu/najechaniu/przewinięciu/dwukrotnym kliknięciu, pasek Thaw Bar, ukrywanie menu aplikacji, włączanie sekcji zawsze ukrytej, wyświetlanie podpowiedzi oraz logowanie diagnostyczne."
+            "state" : "new",
+            "value" : "Whitelisted apps can read settings, toggle boolean options, set numeric values (timers, delays), change enum settings (rehide strategy, Thaw Bar location), and modify per-display configurations. This includes auto-rehide, show on click/hover/scroll/double-click, Thaw Bar, hide application menus, enable always-hidden section, show tooltips, and diagnostic logging."
           }
         },
         "pt-BR" : {
@@ -39270,8 +39270,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "W każdej chwili możesz usunąć aplikacje z tej listy, aby odebrać im uprawnienia."
+            "state" : "new",
+            "value" : "You can remove apps from this list at any time to revoke their access."
           }
         },
         "pt-BR" : {
