@@ -181,7 +181,7 @@ final class HIDEventManager: ObservableObject {
             if !isAppMenuClick {
                 // Capture the click location synchronously from the event.
                 let clickLocation = NSEvent.mouseLocation
-                handleShowOnClick(appState: appState, screen: screen, clickLocation: clickLocation, isDoubleClick: event.clickCount > 1)
+                handleShowOnClick(appState: appState, screen: screen, clickLocation: clickLocation, modifierFlags: event.modifierFlags, isDoubleClick: event.clickCount > 1)
                 handleSmartRehide(with: event, appState: appState, screen: screen)
             }
         case .rightMouseDown:
@@ -703,7 +703,7 @@ extension HIDEventManager {
 
     // MARK: Handle Show On Click
 
-    private func handleShowOnClick(appState: AppState, screen: NSScreen, clickLocation: CGPoint, isDoubleClick: Bool = false) {
+    private func handleShowOnClick(appState: AppState, screen: NSScreen, clickLocation: CGPoint, modifierFlags: NSEvent.ModifierFlags, isDoubleClick: Bool = false) {
         guard appState.settings.general.showOnClick else {
             return
         }
@@ -724,12 +724,12 @@ extension HIDEventManager {
                 }
             }
         } else {
-            if NSEvent.modifierFlags.contains(.control) {
+            if modifierFlags.contains(.control) {
                 handleSecondaryContextMenu(appState: appState, screen: screen)
                 return
             }
 
-            if NSEvent.modifierFlags.contains(.option) {
+            if modifierFlags.contains(.option) {
                 if appState.settings.advanced.useOptionClickToShowAlwaysHiddenSection,
                    let alwaysHiddenSection = appState.menuBarManager.section(withName: .alwaysHidden),
                    alwaysHiddenSection.isEnabled
@@ -1585,7 +1585,11 @@ extension HIDEventManager {
             let visibleSection = appState.menuBarManager.section(
                 withName: .visible
             ),
-            let iceIconFrame = visibleSection.controlItem.frame,
+            // Use the live window frame instead of the debounced controlItem.frame.
+            // controlItem.frame has a 50ms debounce and can be stale immediately
+            // after the context menu closes, causing hit-testing to incorrectly
+            // classify an icon click as empty-space and double-fire show/toggle.
+            let iceIconFrame = visibleSection.controlItem.window?.frame,
             let mouseLocation = MouseHelpers.locationAppKit
         else {
             return false
