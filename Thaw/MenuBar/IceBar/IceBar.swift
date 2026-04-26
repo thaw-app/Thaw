@@ -459,7 +459,7 @@ private struct IceBarContentView: View {
                     .buttonStyle(.plain)
                     .foregroundStyle(.link)
                 } else {
-                    Text("Unable to display menu bar items")
+                    Text("Loading menu bar items…")
                     ProgressView()
                         .controlSize(.small)
                 }
