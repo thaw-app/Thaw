@@ -7,7 +7,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "„%1$@“ (%2$@) žádá o povolení ovládat nastavení aplikace Thaw prostřednictvím URL schématu.\n\nPokud bude povoleno, bude tato aplikace moci:\n• Číst aktuální nastavení a konfigurace\n• Měnit logické volby\n• Upravovat číselné hodnoty (časovače, zpoždění, intervaly)\n• Měnit nastavení výčtu (strategie opětovného skrytí, umístění lišty Thaw)\n• Upravovat konfigurace pro jednotlivé obrazovky\n\nToto oprávnění zůstává platné, dokud nebude ručně odstraněno v Nastavení > Automatizace.%3$@"
+            "value" : "„%1$@“ (%2$@) žádá o povolení ovládat nastavení aplikace Thaw prostřednictvím URL schématu.\n\nPokud bude povoleno, bude tato aplikace moci:\n• Číst aktuální nastavení a konfigurace\n• Přepínat logické volby\n• Upravovat číselné hodnoty (časovače, zpoždění, intervaly)\n• Měnit nastavení výběrových typů (způsoby opětovného skrytí, umístění lišty Thaw)\n• Upravovat konfigurace pro jednotlivé obrazovky\n\nToto oprávnění zůstává platné, dokud aplikaci ručně neodstraníte v nastavení Thaw → Automatizace.%3$@"
           }
         },
         "de" : {
@@ -131,7 +131,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%@"
           }
         },
@@ -2426,7 +2426,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "•"
           }
         },
@@ -2545,7 +2545,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "+"
           }
         },
@@ -2664,7 +2664,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "⌘"
           }
         },
@@ -2783,7 +2783,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "⎋"
           }
         },
@@ -2902,7 +2902,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "1"
           }
         },
@@ -3021,7 +3021,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "1."
           }
         },
@@ -3140,7 +3140,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "2"
           }
         },
@@ -3259,7 +3259,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "2."
           }
         },
@@ -3378,7 +3378,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "3"
           }
         },
@@ -3497,7 +3497,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "3."
           }
         },
@@ -3616,7 +3616,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "4."
           }
         },
@@ -4093,7 +4093,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Přístupnost"
+            "value" : "Zpřístupnění"
           }
         },
         "de" : {
@@ -8033,7 +8033,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "BETA"
           }
         },
@@ -9819,7 +9819,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Přejděte do části Nastavení systému > Řádek nabídek a povolte %@"
+            "value" : "Přejděte do části Nastavení systému → Řádek nabídek a povolte %@"
           }
         },
         "de" : {
@@ -14458,7 +14458,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "E"
           }
         },
@@ -18029,7 +18029,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Jak aplikace funguje"
+            "value" : "Jak funguje automatizace"
           }
         },
         "de" : {
@@ -19457,7 +19457,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nemazat po vyhledání"
+            "value" : "Nemazat vyhledávací pole"
           }
         },
         "de" : {
@@ -24573,7 +24573,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "OK"
           }
         },
@@ -32547,7 +32547,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zobrazí pozadí řádku nabídek. Tuto možnost zapněte, pokud používáte dynamickou tapetu nebo máte v nastavení systému vypnutou možnost „Zobrazit pozadí řádku nabídek“."
+            "value" : "Zobrazí pozadí řádku nabídek. Tuto možnost zapněte, pokud používáte dynamickou tapetu nebo máte v Nastavení systému vypnutou možnost „Zobrazit pozadí řádku nabídek“."
           }
         },
         "de" : {
@@ -35284,7 +35284,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Chcete-li přepínat profily s režimy soustředění, přidejte filtr „Thaw“ jako filtr soustředění v nastavení systému → Soustředění → [Režim soustředení] → Filtry režimu soustředění."
+            "value" : "Chcete-li přepínat profily s režimy soustředění, přidejte filtr „Thaw“ jako filtr soustředění v Nastavení systému → Soustředění → [Režim soustředení] → Filtry režimu soustředění."
           }
         },
         "de" : {
@@ -37664,7 +37664,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Použít třídění LCS na displejích s výřezem"
+            "value" : "Na displejích s výřezem řadit metodou LCS"
           }
         },
         "de" : {
@@ -37902,7 +37902,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pro třídění profilů na displejích s výřezem použijte rychlejší algoritmus LCS (Longest Common Subsequence) namísto úplného třídění. Algoritmus LCS minimalizuje počet přesunů, ale na displejích s výřezem a nižším rozlišením může být méně spolehlivý."
+            "value" : "Po přepnutí profilů se ikony v řádku nabídek na displejích s výřezem seřadí pomocí rychlejší metody LCS („nejdelší společná posloupnost“) namísto úplného přeřazení. Metoda LCS sníží počet přesunů, ale na displejích s výřezem a nižším rozlišením může být méně spolehlivá."
           }
         },
         "de" : {
@@ -38854,7 +38854,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aplikace na seznamu povolených mohou číst nastavení, přepínat logické volby, nastavovat číselné hodnoty (časovače, zpoždění), měnit nastavení výčtových typů (strategie opětovného skrytí, umístění lišty Thaw) a upravovat konfigurace jednotlivých displejů. Patří sem automatické opětovné skrytí, zobrazení při kliknutí/najetí myší/rolování/dvojitém kliknutí, řádek Thaw, skrytí nabídek aplikací, povolení sekce „vždy skryté“, zobrazení popisků a diagnostické protokolování."
+            "value" : "Aplikace na seznamu povolených mohou číst nastavení, přepínat logické volby, nastavovat číselné hodnoty (časovače, zpoždění), měnit nastavení výběrových typů (způsoby opětovného skrytí, umístění lišty Thaw) a upravovat konfigurace jednotlivých displejů. Patří sem automatické opětovné skrytí, zobrazení při kliknutí/najetí myší/rolování/dvojitém kliknutí, řádek Thaw, skrytí nabídek aplikací, povolení sekce „vždy skryté“, zobrazení popisků a diagnostické protokolování."
           }
         },
         "de" : {
