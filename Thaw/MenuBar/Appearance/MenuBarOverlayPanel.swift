@@ -752,6 +752,9 @@ private final class MenuBarOverlayPanelContentView: NSView {
     /// `applicationMenuFrame` and prevents the trailing shape from being drawn
     /// with a stale (transitional) icon layout immediately after an app switch.
     private func scheduleItemWindowsConfirmation(for screen: NSScreen) {
+        // Hoist displayID before entering the Task so that no AppKit
+        // (NSScreen) access occurs off the main thread.
+        let displayID = screen.displayID
         itemWindowsConfirmTask?.cancel()
         itemWindowsConfirmTask = Task { [weak self] in
             guard let self else { return }
@@ -759,7 +762,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
             for _ in 0 ..< 10 {
                 guard !Task.isCancelled else { return }
                 let latest = MenuBarItem.getMenuBarItemWindows(
-                    on: screen.displayID,
+                    on: displayID,
                     option: .onScreen
                 )
                 let latestWidth = latest.reduce(into: CGFloat(0)) { $0 += $1.bounds.width }
