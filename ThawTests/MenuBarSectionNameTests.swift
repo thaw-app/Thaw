@@ -162,4 +162,90 @@ final class MenuBarSectionNameTests: XCTestCase {
 
         XCTAssertEqual(width, 1152)
     }
+
+    // MARK: - usableInlineWidth
+
+    func testUsableInlineWidthFallsBackToScreenFrameMinXWhenAppMenuRightEdgeIsNil() {
+        let width = MenuBarSection.usableInlineWidth(
+            from: nil,
+            screenFrameMinX: 100,
+            screenVisibleMaxX: 1600,
+            notchFrame: nil
+        )
+
+        XCTAssertEqual(width, 1500)
+    }
+
+    func testUsableInlineWidthClampsAppMenuRightEdgeBelowScreenFrameMinX() {
+        // appMenuRightEdge(50) < screenFrameMinX(100) → clamped to 100
+        let width = MenuBarSection.usableInlineWidth(
+            from: 50,
+            screenFrameMinX: 100,
+            screenVisibleMaxX: 1600,
+            notchFrame: nil
+        )
+
+        XCTAssertEqual(width, 1500)
+    }
+
+    func testUsableInlineWidthReturnsZeroWhenScreenVisibleMaxXEqualsAppMenuRightEdgeNoNotch() {
+        let width = MenuBarSection.usableInlineWidth(
+            from: 1600,
+            screenFrameMinX: 0,
+            screenVisibleMaxX: 1600,
+            notchFrame: nil
+        )
+
+        XCTAssertEqual(width, 0)
+    }
+
+    func testUsableInlineWidthReturnsZeroWhenScreenVisibleMaxXIsLessThanAppMenuRightEdgeNoNotch() {
+        let width = MenuBarSection.usableInlineWidth(
+            from: 1700,
+            screenFrameMinX: 0,
+            screenVisibleMaxX: 1600,
+            notchFrame: nil
+        )
+
+        XCTAssertEqual(width, 0)
+    }
+
+    func testUsableInlineWidthClampsLeftRegionToZeroWhenNotchOverlapsAppMenu() {
+        // notchFrame.minX(300) - notchGap(24) = 276 < appMenuRightEdge(400) → leftWidth = 0
+        // rightWidth = max(0, 1600 - (500 + 24)) = 1076
+        let width = MenuBarSection.usableInlineWidth(
+            from: 400,
+            screenFrameMinX: 0,
+            screenVisibleMaxX: 1600,
+            notchFrame: CGRect(x: 300, y: 0, width: 200, height: 30)
+        )
+
+        XCTAssertEqual(width, 1076)
+    }
+
+    func testUsableInlineWidthClampsRightRegionToZeroWhenScreenEndsBeforeNotchEnds() {
+        // screenVisibleMaxX(920) < notchFrame.maxX(900) + notchGap(24) = 924 → rightWidth = 0
+        // leftWidth = max(0, 700 - 24 - 200) = 476
+        let width = MenuBarSection.usableInlineWidth(
+            from: 200,
+            screenFrameMinX: 0,
+            screenVisibleMaxX: 920,
+            notchFrame: CGRect(x: 700, y: 0, width: 200, height: 30)
+        )
+
+        XCTAssertEqual(width, 476)
+    }
+
+    func testUsableInlineWidthReturnsZeroWhenBothNotchRegionsCollapse() {
+        // appMenuRightEdge(750) > notchFrame.minX(700) - notchGap(24) → leftWidth = 0
+        // screenVisibleMaxX(910) < notchFrame.maxX(900) + notchGap(24) = 924 → rightWidth = 0
+        let width = MenuBarSection.usableInlineWidth(
+            from: 750,
+            screenFrameMinX: 0,
+            screenVisibleMaxX: 910,
+            notchFrame: CGRect(x: 700, y: 0, width: 200, height: 30)
+        )
+
+        XCTAssertEqual(width, 0)
+    }
 }
