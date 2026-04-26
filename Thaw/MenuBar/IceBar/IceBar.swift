@@ -533,8 +533,18 @@ private struct IceBarItemView: View {
                 // item visibility. Uses KVO on isVisible so we resume as soon
                 // as the panel hides rather than busy-polling.
                 await panel.waitUntilClosed(timeout: .milliseconds(200))
-                if Bridging.isWindowOnScreen(item.windowID) {
-                    try await itemManager.click(item: item, with: .left)
+                // Re-fetch on-screen items and match by tag+PID rather than
+                // the cached windowID. After a long sleep macOS recycles
+                // CGWindowIDs, so item.windowID may belong to an unrelated
+                // window, causing isWindowOnScreen to return a false positive
+                // and the click to target the wrong window entirely.
+                let liveItems = await MenuBarItem.getMenuBarItems(on: displayID, option: .onScreen)
+                let liveItem = liveItems.first(where: {
+                    $0.tag.matchesIgnoringWindowID(item.tag) &&
+                        ($0.sourcePID ?? $0.ownerPID) == (item.sourcePID ?? item.ownerPID)
+                })
+                if let liveItem, Bridging.isWindowOnScreen(liveItem.windowID) {
+                    try await itemManager.click(item: liveItem, with: .left)
                     let duration = Date.now.timeIntervalSince(clickStartTime)
                     IceBarItemView.diagLog.debug("leftClick: ✓ completed in \(Int(duration * 1000))ms (on-screen path)")
                 } else {
@@ -558,8 +568,15 @@ private struct IceBarItemView: View {
             menuBarManager.section(withName: section)?.hide()
             Task {
                 await panel.waitUntilClosed(timeout: .milliseconds(200))
-                if Bridging.isWindowOnScreen(item.windowID) {
-                    try await itemManager.click(item: item, with: .right)
+                // Same stale-windowID guard as leftClickAction — re-fetch live
+                // items and match by tag+PID to get a post-wake windowID.
+                let liveItems = await MenuBarItem.getMenuBarItems(on: displayID, option: .onScreen)
+                let liveItem = liveItems.first(where: {
+                    $0.tag.matchesIgnoringWindowID(item.tag) &&
+                        ($0.sourcePID ?? $0.ownerPID) == (item.sourcePID ?? item.ownerPID)
+                })
+                if let liveItem, Bridging.isWindowOnScreen(liveItem.windowID) {
+                    try await itemManager.click(item: liveItem, with: .right)
                 } else {
                     let result = await itemManager.temporarilyShow(item: item, clickingWith: .right, on: displayID, fastPath: true)
                     IceBarItemView.diagLog.debug("rightClick: temp-show result=\(result)")
