@@ -759,15 +759,15 @@ private final class MenuBarOverlayPanelContentView: NSView {
         itemWindowsConfirmTask = Task { [weak self] in
             guard let self else { return }
             var candidate: [WindowInfo]?
+            var candidateWidth: CGFloat = 0
             for _ in 0 ..< 10 {
                 guard !Task.isCancelled else { return }
                 let latest = MenuBarItem.getMenuBarItemWindows(
                     on: displayID,
                     option: .onScreen
                 )
-                let latestWidth = latest.reduce(into: CGFloat(0)) { $0 += $1.bounds.width }
-                let candidateWidth = candidate?.reduce(into: CGFloat(0)) { $0 += $1.bounds.width }
-                if let candidateWidth, abs(latestWidth - candidateWidth) < 1 {
+                let latestWidth = latest.reduce(0) { $0 + $1.bounds.width }
+                if candidate != nil, abs(latestWidth - candidateWidth) < 1 {
                     // Two consecutive reads agree on total icon width — settled.
                     await MainActor.run {
                         guard !Task.isCancelled else { return }
@@ -778,6 +778,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
                 }
                 // Different from candidate — start confirming the new snapshot.
                 candidate = latest
+                candidateWidth = latestWidth
                 try? await Task.sleep(for: .milliseconds(150))
             }
             // Exhausted retries — commit whatever we last saw rather than
