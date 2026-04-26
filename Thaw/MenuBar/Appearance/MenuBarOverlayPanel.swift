@@ -614,6 +614,12 @@ private final class MenuBarOverlayPanelContentView: NSView {
     /// being queried synchronously during each `draw(_:)` call.
     private var cachedItemWindows: [WindowInfo] = []
 
+    /// In-flight confirmation task for settling the trailing item-window cache
+    /// after an app switch. Cancelled and replaced whenever a new
+    /// applicationMenuFrame value arrives so that only the latest app's icon
+    /// layout is committed.
+    private var itemWindowsConfirmTask: Task<Void, Never>?
+
     /// The overlay panel that contains the content view.
     private var overlayPanel: MenuBarOverlayPanel? {
         window as? MenuBarOverlayPanel
@@ -683,10 +689,17 @@ private final class MenuBarOverlayPanelContentView: NSView {
             // Redraw whenever the application menu frame changes.
             // Also refresh cached item windows to pick up items added/removed
             // by other apps (e.g. status bar icons appearing or disappearing).
+            //
+            // The item windows are re-read with a two-read confirmation loop
+            // (mirroring the AX confirmation used for applicationMenuFrame) so
+            // that we never commit a transitional Window Server layout. The
+            // trailing shape shadow artefact on app-switch was caused by
+            // calling updateCachedItemWindows() synchronously here, before the
+            // icon windows had settled into their new positions.
             overlayPanel.$applicationMenuFrame
                 .sink { [weak self] _ in
-                    self?.updateCachedItemWindows()
-                    self?.needsDisplay = true
+                    guard let self, let screen = self.overlayPanel?.owningScreen else { return }
+                    self.scheduleItemWindowsConfirmation(for: screen)
                 }
                 .store(in: &c)
             // Redraw whenever the desktop wallpaper changes.
@@ -716,7 +729,13 @@ private final class MenuBarOverlayPanelContentView: NSView {
     }
 
     /// Refreshes the cached menu bar item windows from the Window Server.
+    ///
+    /// Calling this directly (e.g. from the controlItem frame-change path)
+    /// cancels any in-flight confirmation task so that a fresh synchronous read
+    /// always wins over a stale async one.
     private func updateCachedItemWindows() {
+        itemWindowsConfirmTask?.cancel()
+        itemWindowsConfirmTask = nil
         guard let screen = overlayPanel?.owningScreen else {
             cachedItemWindows = []
             return
@@ -725,6 +744,49 @@ private final class MenuBarOverlayPanelContentView: NSView {
             on: screen.displayID,
             option: .onScreen
         )
+    }
+
+    /// Starts an async confirmation task that re-reads menu bar item windows
+    /// until two consecutive reads return the same total width, then commits
+    /// the result. This mirrors the two-read AX confirmation used for
+    /// `applicationMenuFrame` and prevents the trailing shape from being drawn
+    /// with a stale (transitional) icon layout immediately after an app switch.
+    private func scheduleItemWindowsConfirmation(for screen: NSScreen) {
+        itemWindowsConfirmTask?.cancel()
+        itemWindowsConfirmTask = Task { [weak self] in
+            guard let self else { return }
+            var candidate: [WindowInfo]?
+            for _ in 0 ..< 10 {
+                guard !Task.isCancelled else { return }
+                let latest = MenuBarItem.getMenuBarItemWindows(
+                    on: screen.displayID,
+                    option: .onScreen
+                )
+                let latestWidth = latest.reduce(into: CGFloat(0)) { $0 += $1.bounds.width }
+                let candidateWidth = candidate?.reduce(into: CGFloat(0)) { $0 += $1.bounds.width }
+                if let candidateWidth, abs(latestWidth - candidateWidth) < 1 {
+                    // Two consecutive reads agree on total icon width — settled.
+                    await MainActor.run {
+                        guard !Task.isCancelled else { return }
+                        self.cachedItemWindows = latest
+                        self.needsDisplay = true
+                    }
+                    return
+                }
+                // Different from candidate — start confirming the new snapshot.
+                candidate = latest
+                try? await Task.sleep(for: .milliseconds(150))
+            }
+            // Exhausted retries — commit whatever we last saw rather than
+            // leaving the cache stale.
+            if let candidate {
+                await MainActor.run {
+                    guard !Task.isCancelled else { return }
+                    self.cachedItemWindows = candidate
+                    self.needsDisplay = true
+                }
+            }
+        }
     }
 
     /// Returns a path in the given rectangle, with the given end caps,
