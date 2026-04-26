@@ -720,7 +720,7 @@ extension HIDEventManager {
                 if let alwaysHiddenSection = appState.menuBarManager.section(withName: .alwaysHidden),
                    alwaysHiddenSection.isEnabled
                 {
-                    alwaysHiddenSection.show()
+                    alwaysHiddenSection.toggle()
                 }
             }
         } else {
@@ -734,7 +734,7 @@ extension HIDEventManager {
                    let alwaysHiddenSection = appState.menuBarManager.section(withName: .alwaysHidden),
                    alwaysHiddenSection.isEnabled
                 {
-                    Task { alwaysHiddenSection.show() }
+                    Task { alwaysHiddenSection.toggle() }
                 }
                 return
             }
@@ -742,6 +742,17 @@ extension HIDEventManager {
             if let hiddenSection = appState.menuBarManager.section(withName: .hidden),
                hiddenSection.isEnabled
             {
+                // If the always-hidden section is currently showing via the Thaw
+                // Bar, a plain click should close it rather than switch the Thaw
+                // Bar to the hidden section.
+                if appState.menuBarManager.iceBarPanel.currentSection == .alwaysHidden,
+                   let alwaysHiddenSection = appState.menuBarManager.section(withName: .alwaysHidden)
+                {
+                    disarmShowOnClickGuard()
+                    Task { alwaysHiddenSection.hide() }
+                    return
+                }
+
                 let shouldArmGuard =
                     appState.settings.general.showOnDoubleClick
                         && hiddenSection.isHidden
