@@ -533,17 +533,7 @@ private struct IceBarItemView: View {
                 // item visibility. Uses KVO on isVisible so we resume as soon
                 // as the panel hides rather than busy-polling.
                 await panel.waitUntilClosed(timeout: .milliseconds(200))
-                // Re-fetch on-screen items and match by tag+PID rather than
-                // the cached windowID. After a long sleep macOS recycles
-                // CGWindowIDs, so item.windowID may belong to an unrelated
-                // window, causing isWindowOnScreen to return a false positive
-                // and the click to target the wrong window entirely.
-                let liveItems = await MenuBarItem.getMenuBarItems(on: displayID, option: .onScreen)
-                let liveItem = liveItems.first(where: {
-                    $0.tag.matchesIgnoringWindowID(item.tag) &&
-                        ($0.sourcePID ?? $0.ownerPID) == (item.sourcePID ?? item.ownerPID)
-                })
-                if let liveItem, Bridging.isWindowOnScreen(liveItem.windowID) {
+                if let liveItem = await liveOnScreenItem(matching: item, on: displayID) {
                     try await itemManager.click(item: liveItem, with: .left)
                     let duration = Date.now.timeIntervalSince(clickStartTime)
                     IceBarItemView.diagLog.debug("leftClick: ✓ completed in \(Int(duration * 1000))ms (on-screen path)")
@@ -568,14 +558,7 @@ private struct IceBarItemView: View {
             menuBarManager.section(withName: section)?.hide()
             Task {
                 await panel.waitUntilClosed(timeout: .milliseconds(200))
-                // Same stale-windowID guard as leftClickAction — re-fetch live
-                // items and match by tag+PID to get a post-wake windowID.
-                let liveItems = await MenuBarItem.getMenuBarItems(on: displayID, option: .onScreen)
-                let liveItem = liveItems.first(where: {
-                    $0.tag.matchesIgnoringWindowID(item.tag) &&
-                        ($0.sourcePID ?? $0.ownerPID) == (item.sourcePID ?? item.ownerPID)
-                })
-                if let liveItem, Bridging.isWindowOnScreen(liveItem.windowID) {
+                if let liveItem = await liveOnScreenItem(matching: item, on: displayID) {
                     try await itemManager.click(item: liveItem, with: .right)
                 } else {
                     let result = await itemManager.temporarilyShow(item: item, clickingWith: .right, on: displayID, fastPath: true)
@@ -583,6 +566,21 @@ private struct IceBarItemView: View {
                 }
             }
         }
+    }
+
+    /// Re-fetches on-screen items and returns the live `MenuBarItem` whose
+    /// tag+PID matches `item`, or `nil` if the item is not currently on-screen.
+    ///
+    /// Matching by tag+PID rather than the cached `windowID` guards against
+    /// CGWindowID recycling after a long system sleep, which would otherwise
+    /// cause `isWindowOnScreen` to return a false positive for an unrelated window.
+    private func liveOnScreenItem(matching item: MenuBarItem, on displayID: CGDirectDisplayID) async -> MenuBarItem? {
+        let liveItems = await MenuBarItem.getMenuBarItems(on: displayID, option: .onScreen)
+        guard let liveItem = liveItems.first(where: {
+            $0.tag.matchesIgnoringWindowID(item.tag) &&
+                ($0.sourcePID ?? $0.ownerPID) == (item.sourcePID ?? item.ownerPID)
+        }) else { return nil }
+        return Bridging.isWindowOnScreen(liveItem.windowID) ? liveItem : nil
     }
 
     private var image: NSImage? {
