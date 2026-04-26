@@ -73,7 +73,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "\"%1$@\" (%2$@) chce kontrolować ustawienia Thaw za pomocą schematu URL.\n\nJeśli wyrazisz zgodę, ta aplikacja będzie mogła:\n• Odczytywać bieżące parametry i konfiguracje\n• Przełączać i zmieniać ustawienia włącz/wyłącz\n• Modyfikować wartości liczbowe (liczniki, opóźnienia, interwały)\n• Zmieniać ustawienia typu enum (strategię ponownego ukrywania, położenie paska Thaw)\n• Modyfikować konfiguracje dla poszczególnych wyświetlaczy\n\nTo uprawnienie pozostanie aktywne do momentu jego ręcznego cofnięcia w sekcji Ustawienia > Automatyzacja.%3$@"
+            "value" : "\"%1$@\" (%2$@) chce kontrolować ustawienia Thaw korzystając ze schematu URL.\n\nW przypadku udzielenia zgody, aplikacja ta będzie mogła:\n• Odczytywać obecne ustawienia\n• Przełączać i zmieniać opcje binarne\n• Modyfikować wartości liczbowe (liczniki, opóźnienia, interwały)\n• Zmieniać ustawienia wyliczeniowe (strategia ponownego ukrywania, lokalizacja paska Thaw Bar)\n• Modyfikować konfiguracje poszczególnych ekranów\n\nTo uprawnienie pozostaje aktywne do momentu jego ręcznego usunięcia w sekcji Ustawienia → Automatyzacja.%3$@"
           }
         },
         "pt-BR" : {
@@ -96,8 +96,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "“%1$@” (%2$@), URL şeması aracılığıyla Thaw ayarlarını kontrol etmek istiyor.\n\nİzin verilirse, bu uygulama aşağıdakileri yapabilir:\n• Mevcut ayarları ve yapılandırmaları okuyabilir\n• Mantıksal ayarları açıp kapatabilir ve değiştirebilir\n• Sayısal değerleri (zamanlayıcılar, bekleme süreleri, zaman aralıkları) değiştirebilir\n• Liste ayarlarını (yeniden gizleme stratejisi, Thaw Bar konumu) değiştirebilir\n• Her ekran için yapılandırmaları değiştirebilir\n\nBu izin, Ayarlar > Otomasyon'da el ile kaldırılana kadar geçerli kalır.%3$@"
+            "state" : "new",
+            "value" : "\"%1$@\" (%2$@) wants to control Thaw settings via URL scheme.\n\nIf allowed, this app will be able to:\n• Read current settings and configurations\n• Toggle and change boolean settings\n• Modify numeric values (timers, delays, intervals)\n• Change enum settings (rehide strategy, Thaw Bar location)\n• Modify per-display configurations\n\nThis permission persists until manually removed in Settings > Automation.%3$@"
           }
         },
         "uk" : {
@@ -131,7 +131,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%@"
           }
         },
@@ -2426,7 +2426,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "•"
           }
         },
@@ -2545,7 +2545,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "+"
           }
         },
@@ -2664,7 +2664,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "⌘"
           }
         },
@@ -2783,7 +2783,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "⎋"
           }
         },
@@ -2902,7 +2902,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "1"
           }
         },
@@ -3021,7 +3021,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "1."
           }
         },
@@ -3140,7 +3140,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "2"
           }
         },
@@ -3259,7 +3259,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "2."
           }
         },
@@ -3378,7 +3378,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "3"
           }
         },
@@ -3497,7 +3497,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "3."
           }
         },
@@ -3616,7 +3616,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "4."
           }
         },
@@ -4093,7 +4093,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Přístupnost"
+            "value" : "Zpřístupnění"
           }
         },
         "de" : {
@@ -4748,7 +4748,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pozwól"
+            "value" : "Zezwól"
           }
         },
         "pt-BR" : {
@@ -4867,7 +4867,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pozwolić \"%@\" na kontrolowanie ustawień Thaw?"
+            "value" : "Zezwolić aplikacji ”%@” na kontrolowanie ustawień Thaw?"
           }
         },
         "pt-BR" : {
@@ -4890,8 +4890,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "“%@”nın Thaw ayarlarını kontrol etmesine izin verilsin mi?"
+            "state" : "new",
+            "value" : "Allow \"%@\" to control Thaw settings?"
           }
         },
         "uk" : {
@@ -4986,7 +4986,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pozwalaj zewnętrznym aplikacjom na odczytywanie i modyfikowanie ustawień Thaw za pomocą adresów URL typu thaw://."
+            "value" : "Zezwalaj aplikacjom zewnętrznym na odczyt i modyfikację ustawień Thaw za pomocą adresów URL thaw://."
           }
         },
         "pt-BR" : {
@@ -5819,7 +5819,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aktywuj profil paska menu Thaw, gdy włączy się ten tryb skupienia."
+            "value" : "Zastosuj profil paska menu Thaw, gdy ten tryb Skupienia zostanie aktywowany."
           }
         },
         "pt-BR" : {
@@ -6448,7 +6448,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld aplikacji"
+                  "value" : "%lld aplikacje"
                 }
               }
             }
@@ -6666,7 +6666,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aplikacje, które żądają dostępu do ustawień, pojawią się tutaj po ich zatwierdzeniu."
+            "value" : "Aplikacje proszące o dostęp do ustawień pojawią się tutaj po ich zatwierdzeniu."
           }
         },
         "pt-BR" : {
@@ -7142,7 +7142,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Przypisz profil do każdego wyświetlacza."
+            "value" : "Przypisz profil do każdego ekranu."
           }
         },
         "pt-BR" : {
@@ -7261,7 +7261,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Automatyczne przełączanie"
+            "value" : "Autoprzełączanie"
           }
         },
         "pt-BR" : {
@@ -7975,7 +7975,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wróć"
+            "value" : "Wstecz"
           }
         },
         "pt-BR" : {
@@ -8033,7 +8033,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "BETA"
           }
         },
@@ -8570,7 +8570,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Identyfikator pakietu (np. com.droppy)"
+            "value" : "Identyfikator aplikacji (np. com.droppy)"
           }
         },
         "pt-BR" : {
@@ -8689,7 +8689,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Może modyfikować ustawienia"
+            "value" : "Może zmieniać ustawienia"
           }
         },
         "pt-BR" : {
@@ -8808,7 +8808,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Może przełączać ustawienia: automatyczne ukrywanie, pokazywanie po kliknięciu/najechaniu/przewinięciu, pasek Thaw oraz inne opcje włącz/wyłącz."
+            "value" : "Możesz przełączać opcje: automatyczne ukrywanie, pokazywanie przy kliknięciu/najechaniu/scrollowaniu, Thaw Bar oraz pozostałe ustawienia binarne."
           }
         },
         "pt-BR" : {
@@ -9819,7 +9819,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Přejděte do části Nastavení systému > Řádek nabídek a povolte %@"
+            "value" : "Přejděte do části Nastavení systému → Řádek nabídek a povolte %@"
           }
         },
         "de" : {
@@ -12615,7 +12615,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wersja rozwojowa"
+            "value" : "Deweloperska"
           }
         },
         "pt-BR" : {
@@ -14281,7 +14281,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Powiel"
+            "value" : "Duplikuj"
           }
         },
         "pt-BR" : {
@@ -14458,7 +14458,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "E"
           }
         },
@@ -15352,7 +15352,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Włącz schemat URI ustawień"
+            "value" : "Włącz obsługę schematów URI dla ustawień"
           }
         },
         "pt-BR" : {
@@ -15947,7 +15947,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Eksportuj"
+            "value" : "Eksport"
           }
         },
         "pt-BR" : {
@@ -16185,7 +16185,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aktywne okno"
+            "value" : "Wyróżnienie"
           }
         },
         "pt-BR" : {
@@ -18684,7 +18684,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Jeśli aplikacja nie jest na białej liście, wyświetlone zostanie okno dialogowe z nazwą aplikacji i listą czynności, które chce ona wykonać."
+            "value" : "Jeśli aplikacja nie znajduje się na białej liście, pojawia się komunikat z jej nazwą oraz informacją o planowanych operacjach."
           }
         },
         "pt-BR" : {
@@ -18803,7 +18803,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Jeśli wyrazisz zgodę, aplikacja zostanie trwale dodana do białej listy i będzie mogła modyfikować ustawienia w dowolnym momencie, bez ponownego pytania."
+            "value" : "Zatwierdzenie spowoduje trwałe odblokowanie aplikacji, umożliwiając jej edycję ustawień bez każdorazowej prośby o zgodę."
           }
         },
         "pt-BR" : {
@@ -19517,7 +19517,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zachowaj wyszukiwanie"
+            "value" : "Pokazuj wyszukiwanie"
           }
         },
         "pt-BR" : {
@@ -22849,7 +22849,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Przeciągnij plakietkę „Nowe elementy”, aby wybrać, gdzie pojawią się nowo wykryte elementy."
+            "value" : "Przeciągnij plakietkę \"Nowe elementy\", aby określić lokalizację nowo wykrytych obiektów."
           }
         },
         "pt-BR" : {
@@ -23087,7 +23087,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nowe elementy"
+            "value" : "Nowe obiekty"
           }
         },
         "pt-BR" : {
@@ -23206,7 +23206,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nazwa nowego profilu"
+            "value" : "Nowa nazwa profilu"
           }
         },
         "pt-BR" : {
@@ -23563,7 +23563,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Brak zapisanych profili. Zapisz bieżącą konfigurację, aby utworzyć profil."
+            "value" : "Nie zapisano żadnych profili. Aby utworzyć profil, zapisz aktualną konfigurację."
           }
         },
         "pt-BR" : {
@@ -23801,7 +23801,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Brak aplikacji na białej liście"
+            "value" : "Brak aplikacji na liście dozwolonych"
           }
         },
         "pt-BR" : {
@@ -24573,7 +24573,7 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "OK"
           }
         },
@@ -26419,7 +26419,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Usuń %@ z białej listy"
+            "value" : "Usuń %@ z listy dozwolonych aplikacji"
           }
         },
         "pt-BR" : {
@@ -26538,7 +26538,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Usuń z białej listy"
+            "value" : "Usuń z listy dozwolonych aplikacji"
           }
         },
         "pt-BR" : {
@@ -29037,7 +29037,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zapisz bieżącą"
+            "value" : "Zapisz bieżący"
           }
         },
         "pt-BR" : {
@@ -30227,7 +30227,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "URI ustawień jest wyłączony. Zewnętrzne aplikacje nie mogą odczytywać ani modyfikować ustawień Thaw."
+            "value" : "Identyfikator URI ustawień jest wyłączony. Aplikacje zewnętrzne nie mogą odczytywać ani modyfikować ustawień Thaw."
           }
         },
         "pt-BR" : {
@@ -32547,7 +32547,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zobrazí pozadí řádku nabídek. Tuto možnost zapněte, pokud používáte dynamickou tapetu nebo máte v nastavení systému vypnutou možnost „Zobrazit pozadí řádku nabídek“."
+            "value" : "Zobrazí pozadí řádku nabídek. Tuto možnost zapněte, pokud používáte dynamickou tapetu nebo máte v Nastavení systému vypnutou možnost „Zobrazit pozadí řádku nabídek“."
           }
         },
         "de" : {
@@ -33797,7 +33797,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wspierane ustawienia"
+            "value" : "Obsługiwane ustawienia"
           }
         },
         "pt-BR" : {
@@ -35344,7 +35344,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aby przełączać profile za pomocą trybów skupienia, dodaj Thaw jako filtr trybu skupienia w aplikacji Ustawienia systemowe → Tryb skupienia → [Tryb] → Filtry trybu skupienia."
+            "value" : "Aby przełączać profile za pomocą trybów skupienia, dodaj Thaw jako filtr skupienia w menu Ustawienia systemowe → Tryb skupienia → [Tryb] → Filtry trybu skupienia."
           }
         },
         "pt-BR" : {
@@ -36534,7 +36534,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Uaktualnij"
+            "value" : "Aktualizuj"
           }
         },
         "pt-BR" : {
@@ -36653,7 +36653,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Uaktualnij wszystko"
+            "value" : "Aktualizuj wszystkie"
           }
         },
         "pt-BR" : {
@@ -36891,7 +36891,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Uaktualnij konfigurację dla wszystkich profili"
+            "value" : "Zaktualizuj konfigurację we wszystkich profilach"
           }
         },
         "pt-BR" : {
@@ -37010,7 +37010,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Uaktualnij tylko konfigurację"
+            "value" : "Aktualizuj tylko konfigurację"
           }
         },
         "pt-BR" : {
@@ -37129,7 +37129,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Uaktualnij tylko układ"
+            "value" : "Aktualizuj tylko układ"
           }
         },
         "pt-BR" : {
@@ -37248,7 +37248,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Uaktualnij ten profil do bieżącego stanu"
+            "value" : "Nanieś aktualne zmiany na ten profil"
           }
         },
         "pt-BR" : {
@@ -37724,7 +37724,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Używaj sortowania LCS na wyświetlaczach z notchem"
+            "value" : "Włącz sortowanie LCS dla ekranów z notchem"
           }
         },
         "pt-BR" : {
@@ -37843,7 +37843,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kliknięcie z klawiszem Option otwiera zawsze ukrytą sekcję"
+            "value" : "Kliknij z wciśniętym klawiszem Option, aby otworzyć zawsze ukrytą sekcję"
           }
         },
         "pt-BR" : {
@@ -37962,7 +37962,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Używaj szybszego algorytmu LCS (Longest Common Subsequence) do sortowania profili na wyświetlaczach z notchem zamiast pełnego sortowania. LCS minimalizuje liczbę przesunięć, ale może być mniej niezawodny na ekranach z notchem o niższej rozdzielczości."
+            "value" : "Zastosuj szybszy algorytm LCS zamiast pełnego sortowania przy porządkowaniu profili na ekranach z notchem. LCS ogranicza liczbę przesunięć, choć przy mniejszych rozdzielczościach może działać mniej stabilnie."
           }
         },
         "pt-BR" : {
@@ -38557,7 +38557,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Po wyłączeniu trybu skupienia profil wyświetlacza jest automatycznie przywracany."
+            "value" : "Wyłączenie trybu Skupienie powoduje automatyczne przywrócenie profilu wyświetlania."
           }
         },
         "pt-BR" : {
@@ -38676,7 +38676,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gdy aplikacja wysyła adres URL typu thaw:// w celu zmiany ustawień, Thaw sprawdza, czy ta aplikacja znajduje się na białej liście."
+            "value" : "Gdy aplikacja korzysta z adresu URL thaw:// do zmiany konfiguracji, system Thaw upewnia się, że znajduje się ona na liście wyjątków."
           }
         },
         "pt-BR" : {
@@ -38795,7 +38795,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aplikacje na białej liście"
+            "value" : "Dozwolone aplikacje"
           }
         },
         "pt-BR" : {
@@ -38914,7 +38914,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aplikacje na białej liście mogą odczytywać ustawienia, przełączać opcje włącz/wyłącz, ustawiać wartości liczbowe (liczniki, opóźnienia), zmieniać ustawienia typu enum (strategię ponownego ukrywania, położenie paska Thaw) oraz modyfikować konfiguracje poszczególnych ekranów. Obejmuje to automatyczne ukrywanie, pokazywanie po kliknięciu/najechaniu/przewinięciu/dwukrotnym kliknięciu, pasek Thaw, ukrywanie menu aplikacji, włączanie sekcji zawsze ukrytej, wyświetlanie podpowiedzi oraz logowanie diagnostyczne."
+            "value" : "Aplikacje z białej listy mogą odczytywać ustawienia, przełączać opcje binarne, ustawiać wartości liczbowe (liczniki, opóźnienia), zmieniać ustawienia wyliczeniowe (strategia ponownego ukrywania, lokalizacja paska Thaw Bar) oraz modyfikować konfiguracje dla poszczególnych ekranów. Obejmuje to automatyczne ponowne ukrywanie, pokazywanie przy kliknięciu/najechaniu/przewinięciu/dwukrotnym kliknięciu, pasek Thaw Bar, ukrywanie menu aplikacji, włączanie sekcji zawsze ukrytej, wyświetlanie podpowiedzi oraz logowanie diagnostyczne."
           }
         },
         "pt-BR" : {
@@ -39271,7 +39271,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Możesz usunąć aplikacje z tej listy w dowolnym momencie, aby odebrać im dostęp."
+            "value" : "W każdej chwili możesz usunąć aplikacje z tej listy, aby odebrać im uprawnienia."
           }
         },
         "pt-BR" : {
