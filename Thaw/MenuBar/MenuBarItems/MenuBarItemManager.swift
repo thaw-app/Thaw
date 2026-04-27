@@ -149,6 +149,14 @@ final class MenuBarItemManager: ObservableObject {
     private var suppressNextNewLeftmostItemRelocation = false
     /// Continuation to signal when background cache task completes.
     private var backgroundCacheContinuation: CheckedContinuation<Void, Never>?
+    /// Token bound to the current cache run. Only the task that started with
+    /// this token may resume backgroundCacheContinuation, preventing cancelled
+    /// tasks from waking waiters prematurely.
+    private var currentCacheToken: UUID = .init()
+    /// Identifiers seen during startup settling. Merged into knownItemIdentifiers
+    /// only after settling ends so true new arrivals after settling are still
+    /// recognized as new.
+    private var startupSeenIdentifiers = Set<String>()
     /// Suppresses image cache updates during layout reset to prevent stale cache during moves.
     var isResettingLayout = false
     /// Suppresses saving section order during an active order-restore pass.
@@ -851,6 +859,14 @@ final class MenuBarItemManager: ObservableObject {
             // skipRecentMoveCheck: true ensures this pass is never suppressed by the
             // 1-second recent-move cooldown stamped by the fast restore above.
             await cacheItemsRegardless(skipRecentMoveCheck: true, resolveSourcePID: true)
+            // Merge settling-time identifiers into the persistent set so they
+            // aren't treated as new on future cache passes, but only after
+            // relocation/restore has had a chance to run with correct sourcePIDs.
+            if !startupSeenIdentifiers.isEmpty {
+                knownItemIdentifiers.formUnion(startupSeenIdentifiers)
+                persistKnownItemIdentifiers()
+                startupSeenIdentifiers.removeAll()
+            }
         }
         MenuBarItemManager.diagLog.debug("performSetup: MenuBarItemManager setup complete")
     }
@@ -1319,15 +1335,20 @@ extension MenuBarItemManager {
     func cacheItemsRegardless(
         _ currentItemWindowIDs: [CGWindowID]? = nil,
         skipRecentMoveCheck: Bool = false,
-        resolveSourcePID: Bool = true
+        resolveSourcePID: Bool = true,
+        cacheToken: UUID? = nil
     ) async {
         MenuBarItemManager.diagLog.debug(
             "cacheItemsRegardless: entering (skipRecentMoveCheck=\(skipRecentMoveCheck), hasCurrentItemWindowIDs=\(currentItemWindowIDs != nil), resolveSourcePID=\(resolveSourcePID))"
         )
+        let token = cacheToken ?? UUID()
+        currentCacheToken = token
         await cacheActor.runCacheTask { [weak self] in
             defer {
-                self?.backgroundCacheContinuation?.resume()
-                self?.backgroundCacheContinuation = nil
+                if let self, self.currentCacheToken == token {
+                    self.backgroundCacheContinuation?.resume()
+                    self.backgroundCacheContinuation = nil
+                }
             }
 
             guard let self else {
@@ -3679,14 +3700,13 @@ extension MenuBarItemManager {
         // alwaysHiddenTags causes ALL items to appear as "new" on the next
         // pass with correct sourcePIDs, triggering a destructive relocation
         // cascade that moves every hidden/always-hidden item to visible.
-        // Seed identifiers and skip relocation; the settling-end restore pass
-        // will handle correct placement.
+        // Record identifiers in a temporary set instead of knownItemIdentifiers
+        // so true new arrivals after settling are still recognized as new.
         if isInStartupSettling {
             let identifiers = items
                 .filter { !$0.isControlItem }
                 .map { "\($0.tag.namespace):\($0.tag.title)" }
-            knownItemIdentifiers.formUnion(identifiers)
-            persistKnownItemIdentifiers()
+            startupSeenIdentifiers.formUnion(identifiers)
             return false
         }
 
@@ -4874,10 +4894,12 @@ extension MenuBarItemManager {
 
         await cacheActor.clearCachedItemWindowIDs()
         itemCache = ItemCache(displayID: nil)
+        let resetToken = UUID()
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
             self.backgroundCacheContinuation = continuation
+            self.currentCacheToken = resetToken
             Task { [weak self] in
-                await self?.cacheItemsRegardless(skipRecentMoveCheck: true)
+                await self?.cacheItemsRegardless(skipRecentMoveCheck: true, cacheToken: resetToken)
             }
         }
         suppressNextNewLeftmostItemRelocation = false
