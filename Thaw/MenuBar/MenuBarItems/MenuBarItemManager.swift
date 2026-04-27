@@ -837,18 +837,17 @@ final class MenuBarItemManager: ObservableObject {
             guard let self else { return }
             MenuBarItemManager.diagLog.debug("App launched, refreshing cache for potential new items")
             Task { [weak self] in
-                guard let self else { return }
-                await self.cacheItemsRegardless()
+                await self?.cacheItemsRegardless()
                 // Many apps register their NSStatusItem more than 1s after
                 // didLaunch fires, so the initial cache pass above sees no
                 // new window IDs and relocateNewLeftmostItems no-ops. Re-check
                 // at +2.5s and +5s to catch late arrivals; cacheItemsIfNeeded
                 // bails when window IDs are unchanged, so this is cheap when
                 // the item already showed up on the first pass.
-                try? await Task.sleep(for: .seconds(2.5))
-                await self.cacheItemsIfNeeded()
-                try? await Task.sleep(for: .seconds(2.5))
-                await self.cacheItemsIfNeeded()
+                try await Task.sleep(for: .seconds(2.5))
+                await self?.cacheItemsIfNeeded()
+                try await Task.sleep(for: .seconds(2.5))
+                await self?.cacheItemsIfNeeded()
             }
         }
         .store(in: &c)
