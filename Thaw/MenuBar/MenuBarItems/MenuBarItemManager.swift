@@ -1377,8 +1377,6 @@ extension MenuBarItemManager {
             }
 
             let itemWindowIDs = currentItemWindowIDs ?? items.reversed().map { $0.windowID }
-            await cacheActor.updateCachedItemWindowIDs(itemWindowIDs)
-
             await MainActor.run {
                 MenuBarItemTag.Namespace.pruneUUIDCache(keeping: Set(itemWindowIDs))
                 self.pruneMoveOperationTimeouts(keeping: Set(items.map(\.tag)))
@@ -1460,6 +1458,7 @@ extension MenuBarItemManager {
             // load at login or restart in quick succession (app update checks).
             // A final cacheItemsRegardless() after the period ends handles restore.
             guard !isInStartupSettling else {
+                await cacheActor.updateCachedItemWindowIDs(itemWindowIDs)
                 await uncheckedCacheItems(items: items, controlItems: controlItems, displayID: displayID)
                 // Absorb items that appear during settling into the profile
                 // snapshot so they aren't treated as late arrivals afterwards.
@@ -1529,6 +1528,7 @@ extension MenuBarItemManager {
                 return
             }
 
+            await cacheActor.updateCachedItemWindowIDs(itemWindowIDs)
             await uncheckedCacheItems(items: items, controlItems: controlItems, displayID: displayID)
 
             // Reset the flag since no restore happened in this cache cycle.
@@ -3655,6 +3655,11 @@ extension MenuBarItemManager {
         previousWindowIDs: [CGWindowID]
     ) async -> Bool {
         guard appState != nil else { return false }
+
+        // If the cache is empty, the previous pass failed. Don't treat all items as new.
+        guard !itemCache.managedItems.isEmpty else {
+            return false
+        }
 
         if suppressNextNewLeftmostItemRelocation {
             // Seed known identifiers so these baseline items won't be treated as "new"
