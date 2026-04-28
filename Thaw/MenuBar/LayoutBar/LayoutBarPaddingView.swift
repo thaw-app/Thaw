@@ -16,6 +16,13 @@ final class LayoutBarPaddingView: NSView {
     private let container: LayoutBarContainer
     private var isStabilizing = false
 
+    private var notchView: NotchIndicatorView?
+    private var notchWidthConstraint: NSLayoutConstraint?
+    private var notchTrailingConstraint: NSLayoutConstraint?
+    private var minWidthConstraint: NSLayoutConstraint?
+    private var containerLeadingAfterNotchConstraint: NSLayoutConstraint?
+    private var notchObservers = Set<AnyCancellable>()
+
     private func layoutWatchdogDuration() -> Duration? {
         switch MenuBarItemManager.layoutWatchdogTimeout {
         case let .seconds(s):
@@ -53,6 +60,9 @@ final class LayoutBarPaddingView: NSView {
         ])
 
         registerForDraggedTypes([.layoutBarItem])
+
+        configureNotchObservers(appState: appState)
+        updateNotchPresentation()
     }
 
     @available(*, unavailable)
@@ -327,5 +337,116 @@ final class LayoutBarPaddingView: NSView {
             appState.imageCache.performCacheCleanup()
         }
         await appState.imageCache.updateCacheWithoutChecks(sections: MenuBarSection.Name.allCases)
+    }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        if window != nil {
+            updateNotchPresentation()
+        }
+    }
+
+    private func configureNotchObservers(appState: AppState) {
+        guard container.section == .visible else {
+            return
+        }
+
+        NotificationCenter.default
+            .publisher(for: NSApplication.didChangeScreenParametersNotification)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.updateNotchPresentation()
+            }
+            .store(in: &notchObservers)
+
+        NotificationCenter.default
+            .publisher(for: NSWindow.didChangeScreenNotification)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] notification in
+                guard let self,
+                      let notifyingWindow = notification.object as? NSWindow,
+                      notifyingWindow === self.window
+                else { return }
+                self.updateNotchPresentation()
+            }
+            .store(in: &notchObservers)
+
+        appState.menuBarManager.$averageColorInfo
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] colorInfo in
+                self?.notchView?.averageColorInfo = colorInfo
+            }
+            .store(in: &notchObservers)
+    }
+
+    private func updateNotchPresentation() {
+        guard
+            container.section == .visible,
+            let screen = NSScreen.screenWithActiveMenuBar ?? NSScreen.main,
+            screen.hasNotch,
+            let notch = screen.frameOfNotch
+        else {
+            tearDownNotchPresentation()
+            return
+        }
+
+        let notchIndicatorWidth = notch.width + MenuBarSection.notchGap
+        // Distance from the bar's trailing edge to the notch indicator's
+        // trailing edge — equals the real-world items area (everything
+        // right of `notch.maxX + notchGap` in the menu bar) plus the 7.5pt
+        // cosmetic inset that sits between items and the rounded edge.
+        let notchTrailingOffset = max(0, screen.frame.maxX - notch.maxX - MenuBarSection.notchGap) + 7.5
+        // Bar must always be wide enough to represent the real-world span
+        // from `notch.minX` to `screen.maxX`, plus 7.5pt cosmetic inset on
+        // each side. When the Settings pane is wider, the bar grows past
+        // this and the empty area is shown to the LEFT of the notch.
+        let barMinWidth = max(0, screen.frame.maxX - notch.minX) + 15
+        let colorInfo = container.appState?.menuBarManager.averageColorInfo
+
+        if let notchView {
+            notchView.isHidden = false
+            notchView.averageColorInfo = colorInfo
+            notchWidthConstraint?.constant = notchIndicatorWidth
+            notchTrailingConstraint?.constant = -notchTrailingOffset
+            minWidthConstraint?.constant = barMinWidth
+            return
+        }
+
+        let view = NotchIndicatorView(averageColorInfo: colorInfo)
+        addSubview(view, positioned: .below, relativeTo: container)
+        self.notchView = view
+
+        let widthConstraint = view.widthAnchor.constraint(equalToConstant: notchIndicatorWidth)
+        let trailingConstraint = view.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -notchTrailingOffset)
+        let containerLeading = container.leadingAnchor.constraint(greaterThanOrEqualTo: view.trailingAnchor)
+        let minWidth = widthAnchor.constraint(greaterThanOrEqualToConstant: barMinWidth)
+
+        NSLayoutConstraint.activate([
+            trailingConstraint,
+            view.topAnchor.constraint(equalTo: topAnchor),
+            view.bottomAnchor.constraint(equalTo: bottomAnchor),
+            widthConstraint,
+            containerLeading,
+            minWidth,
+        ])
+
+        notchWidthConstraint = widthConstraint
+        notchTrailingConstraint = trailingConstraint
+        containerLeadingAfterNotchConstraint = containerLeading
+        minWidthConstraint = minWidth
+    }
+
+    private func tearDownNotchPresentation() {
+        notchWidthConstraint?.isActive = false
+        notchTrailingConstraint?.isActive = false
+        containerLeadingAfterNotchConstraint?.isActive = false
+        minWidthConstraint?.isActive = false
+        notchWidthConstraint = nil
+        notchTrailingConstraint = nil
+        containerLeadingAfterNotchConstraint = nil
+        minWidthConstraint = nil
+        notchView?.removeFromSuperview()
+        notchView = nil
     }
 }

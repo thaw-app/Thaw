@@ -6,53 +6,57 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Cocoa
 import SwiftUI
 
-/// A visual indicator overlay showing the notch dead zone in the Layout Bar.
+/// A non-interactive view that visualises the notch dead zone at the
+/// leading edge of the visible Layout Bar.
 ///
-/// Displayed at the left edge of the visible section's bar to represent
-/// the area where menu bar items cannot be placed on notched displays.
-struct NotchIndicatorOverlay: View {
-    let averageColorInfo: MenuBarAverageColorInfo?
-
-    /// Trigger to force redraw when screen parameters change.
-    @State private var screenChangeTrigger = UUID()
-
-    var body: some View {
-        GeometryReader { geometry in
-            if let screen = NSScreen.main,
-               let notch = screen.frameOfNotch
-            {
-                let notchGap = MenuBarSection.notchGap
-                let notchTotalWidth = notch.width + 2 * notchGap
-                // Total right-side space: from screen center to right edge,
-                // which includes both the notch area and the usable area.
-                let rightSideTotal = screen.frame.width / 2
-                let notchFraction = notchTotalWidth / max(rightSideTotal, 1)
-
-                // The layout bar represents the right side of the screen.
-                // Scale the notch proportionally.
-                let proportionalWidth = max(30, geometry.size.width * notchFraction)
-                // Cap at 45% of the bar width.
-                let clampedWidth = min(proportionalWidth, geometry.size.width * 0.45)
-
-                HStack(spacing: 0) {
-                    notchIndicator
-                        .frame(width: clampedWidth)
-                        .frame(maxHeight: .infinity)
-                    Spacer()
-                }
-            }
+/// Lives inside the scrollable document view and is sized in real screen
+/// points so it scrolls with the layout content and stays in 1:1 scale
+/// with the menu bar items beside it.
+final class NotchIndicatorView: NSView {
+    /// Colour palette used to keep the indicator legible against the
+    /// current menu bar background.
+    var averageColorInfo: MenuBarAverageColorInfo? {
+        didSet {
+            hosting.rootView = NotchIndicatorContent(averageColorInfo: averageColorInfo)
         }
-        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didChangeScreenParametersNotification)) { _ in
-            screenChangeTrigger = UUID()
-        }
-        .id(screenChangeTrigger)
     }
 
-    private var notchIndicator: some View {
+    private let hosting: NSHostingView<NotchIndicatorContent>
+
+    init(averageColorInfo: MenuBarAverageColorInfo?) {
+        self.averageColorInfo = averageColorInfo
+        self.hosting = NSHostingView(rootView: NotchIndicatorContent(averageColorInfo: averageColorInfo))
+        super.init(frame: .zero)
+        translatesAutoresizingMaskIntoConstraints = false
+        unregisterDraggedTypes()
+
+        hosting.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(hosting)
+        NSLayoutConstraint.activate([
+            hosting.leadingAnchor.constraint(equalTo: leadingAnchor),
+            hosting.trailingAnchor.constraint(equalTo: trailingAnchor),
+            hosting.topAnchor.constraint(equalTo: topAnchor),
+            hosting.bottomAnchor.constraint(equalTo: bottomAnchor),
+        ])
+    }
+
+    @available(*, unavailable)
+    required init?(coder _: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+}
+
+/// SwiftUI body for the notch indicator. Hosted in `NSHostingView` so the
+/// parent `NSView` supplies the frame in real screen points instead of
+/// relying on `GeometryReader` math.
+private struct NotchIndicatorContent: View {
+    let averageColorInfo: MenuBarAverageColorInfo?
+
+    var body: some View {
         ZStack {
-            // Diagonal stripes adapted to menu bar background.
             DiagonalStripes(color: stripeColor)
                 .clipShape(RoundedRectangle(cornerRadius: 6))
                 .padding(3)
@@ -73,25 +77,18 @@ struct NotchIndicatorOverlay: View {
         }
     }
 
-    /// Color for diagonal stripes based on menu bar background brightness.
     private var stripeColor: Color {
-        let isBright = isBrightForActiveScreen()
-        return isBright ? .black.opacity(0.5) : .white.opacity(0.5)
+        isBright ? .black.opacity(0.5) : .white.opacity(0.5)
     }
 
-    /// Border color based on menu bar background brightness.
     private var borderColor: Color {
-        let isBright = isBrightForActiveScreen()
-        return isBright ? .black.opacity(0.65) : .white.opacity(0.65)
+        isBright ? .black.opacity(0.65) : .white.opacity(0.65)
     }
 
-    /// Text color based on menu bar background brightness.
     private var textColor: Color {
-        let isBright = isBrightForActiveScreen()
-        return isBright ? .black : .white
+        isBright ? .black : .white
     }
 
-    /// Background color for the text pill, matching the menu bar background.
     private var textPillBackgroundColor: Color {
         guard let colorInfo = averageColorInfo else {
             return Color(nsColor: .defaultLayoutBar)
@@ -99,14 +96,13 @@ struct NotchIndicatorOverlay: View {
         return Color(cgColor: colorInfo.color)
     }
 
-    /// Helper to check brightness using the same screen used for notch geometry.
-    private func isBrightForActiveScreen() -> Bool {
+    private var isBright: Bool {
         guard let colorInfo = averageColorInfo else { return false }
-        return colorInfo.isBright(for: NSScreen.main)
+        return colorInfo.isBright(for: NSScreen.screenWithActiveMenuBar ?? NSScreen.main)
     }
 }
 
-/// Draws repeating diagonal stripes.
+/// Repeating diagonal stripes used as the notch indicator's fill.
 private struct DiagonalStripes: View {
     let color: Color
 
