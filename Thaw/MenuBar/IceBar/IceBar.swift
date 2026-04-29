@@ -303,6 +303,7 @@ private struct IceBarContentView: View {
 
     private var items: [MenuBarItem] {
         itemManager.itemCache.managedItems(for: section)
+            .filter { !$0.tag.isTransientCaptureIndicator }
     }
 
     private var configuration: MenuBarAppearanceConfigurationV2 {

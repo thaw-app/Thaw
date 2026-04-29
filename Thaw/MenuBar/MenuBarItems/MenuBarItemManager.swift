@@ -1326,8 +1326,6 @@ extension MenuBarItemManager {
         if !disappearedTags.isEmpty {
             MenuBarItemManager.diagLog.debug("Clearing image cache for \(disappearedTags.count) disappeared items")
             appState?.imageCache.removeImages(for: disappearedTags)
-            // Also clear the IceBar's cached window image to force background refresh
-            appState?.menuBarManager.iceBarPanel.clearCachedWindowImage()
         }
 
         // Reset isRestoringItemOrder if it's been stuck for too long (10 seconds).
