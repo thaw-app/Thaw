@@ -313,16 +313,37 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
                 spaceChangePublisher,
                 screenChangePublisher,
                 colorChangePublisher,
-                itemCacheChangePublisher,
             ])
             .debounce(for: .milliseconds(200), scheduler: DispatchQueue.main)
             .sink { [weak self] _ in
                 guard let self else {
                     return
                 }
-                // Only trigger capture if a visible consumer exists or the settings pane
-                // has been opened at least once (itemCacheChangePublisher may indicate
-                // new items that the layout pane will need).
+                // Space/screen/color changes are noisy during Mission Control and
+                // desktop switching. Only refresh when a capture consumer is
+                // actually visible, otherwise background captures can spuriously
+                // trigger transient recording indicators on inactive desktops.
+                let nav = self.makeNavigationStateSnapshot()
+                let hasVisible = self.hasVisibleCaptureConsumer(nav: nav)
+                guard hasVisible else {
+                    return
+                }
+                self.currentUpdateTask?.cancel()
+                self.currentUpdateTask = Task { [weak self] in
+                    await self?.refreshVisibleConsumersOrPrewarmLayoutCache()
+                }
+            }
+            .store(in: &c)
+
+            itemCacheChangePublisher
+            .debounce(for: .milliseconds(200), scheduler: DispatchQueue.main)
+            .sink { [weak self] _ in
+                guard let self else {
+                    return
+                }
+                // Item-cache changes can indicate newly-arrived menu bar items that
+                // the layout settings pane will need even while hidden, so this is
+                // the only path allowed to prewarm in the background.
                 let nav = self.makeNavigationStateSnapshot()
                 let hasVisible = self.hasVisibleCaptureConsumer(nav: nav)
                 let settingsOpened = self.settingsPaneHasBeenOpened
