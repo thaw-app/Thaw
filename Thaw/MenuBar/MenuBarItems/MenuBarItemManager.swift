@@ -902,7 +902,22 @@ final class MenuBarItemManager: ObservableObject {
         .sink { [weak self] _ in
             guard let self else { return }
             MenuBarItemManager.diagLog.debug("App terminated, refreshing cache")
-            Task {
+            Task { [weak self] in
+                guard let self else { return }
+                // Some apps tear down their NSStatusItem asynchronously after
+                // didTerminate fires, so one pass is not enough to drop the
+                // stale cached imagery. Re-check a few times after the process
+                // exit until the window list has actually settled.
+                //
+                // NOTE: We avoid calling performCacheCleanup between cache passes
+                // because it can remove image cache entries for items that are
+                // about to be restored by restoreItemsToSavedSections when the
+                // app quickly relaunches. Let the normal cache update logic handle
+                // cleanup to preserve images during the restore window.
+                await self.cacheItemsRegardless(skipRecentMoveCheck: true)
+                try? await Task.sleep(for: .milliseconds(500))
+                await self.cacheItemsIfNeeded()
+                try? await Task.sleep(for: .seconds(1.5))
                 await self.cacheItemsIfNeeded()
             }
         }
@@ -4200,16 +4215,25 @@ extension MenuBarItemManager {
     ) async -> Bool {
         guard !savedSectionOrder.isEmpty else { return false }
         guard !suppressNextNewLeftmostItemRelocation else { return false }
-        // 5 s cooldown (up from 2 s) gives more time for the system to settle after a
-        // restore before another one can start, preventing cascading icon moves when
-        // multiple apps restart in quick succession (e.g. app update checks).
-        guard !lastMoveOperationOccurred(within: .seconds(5)) else { return false }
 
         let currentWindowIDSet = Set(items.map(\.windowID))
         let previousWindowIDSet = Set(previousWindowIDs)
 
         // Detect actual window ID changes (some windows disappeared = app restart).
         let windowIDsChanged = !previousWindowIDSet.isEmpty && !previousWindowIDSet.isSubset(of: currentWindowIDSet)
+
+        // 5 s cooldown gives more time for the system to settle after a restore before
+        // another one can start, preventing cascading icon moves when multiple apps
+        // restart in quick succession (e.g. app update checks).
+        // Bypass the cooldown when there's clear evidence of an app restart (window ID
+        // changes), as this indicates a new app launch that needs immediate restoration.
+        if lastMoveOperationOccurred(within: .seconds(5)) {
+            guard windowIDsChanged else {
+                MenuBarItemManager.diagLog.debug("restoreItemsToSavedSections: within 5s cooldown and no window ID changes, skipping")
+                return false
+            }
+            MenuBarItemManager.diagLog.debug("restoreItemsToSavedSections: within 5s cooldown but window IDs changed, proceeding with restore")
+        }
 
         // Get current item tags and check if any saved items are present.
         let currentTags = Set(items.map { "\($0.tag.namespace):\($0.tag.title)" })
