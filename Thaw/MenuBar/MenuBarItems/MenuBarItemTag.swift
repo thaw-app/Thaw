@@ -69,6 +69,14 @@ struct MenuBarItemTag: Hashable, CustomStringConvertible {
         namespace.isUUID && title == "System Status Item Clone"
     }
 
+    /// A Boolean value that indicates whether the item is a transient system
+    /// indicator shown while screen, camera, or microphone capture is active.
+    var isTransientCaptureIndicator: Bool {
+        self == Self.audioVideoModule ||
+            self == Self.screenCaptureUI ||
+            (namespace.isUUID && title == Self.audioVideoModule.title)
+    }
+
     /// A textual representation of the tag.
     var description: String {
         var result = String(describing: namespace)

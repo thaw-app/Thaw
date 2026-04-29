@@ -557,6 +557,31 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
 
     // MARK: Capturing Images
 
+    private nonisolated func transientCaptureIndicatorBounds(on displayID: CGDirectDisplayID?) async -> [CGRect] {
+        let indicators = await MenuBarItem.getMenuBarItems(
+            on: displayID,
+            option: .activeSpace,
+            resolveSourcePID: false
+        )
+        .filter { $0.tag.isTransientCaptureIndicator }
+
+        return indicators.compactMap { item in
+            let bounds = Bridging.getWindowBounds(for: item.windowID) ?? item.bounds
+            return bounds.isNull || bounds.isEmpty ? nil : bounds
+        }
+    }
+
+    private nonisolated func isItemCaptureOccluded(
+        by transientIndicatorBounds: [CGRect],
+        item: MenuBarItem,
+        bounds: CGRect
+    ) -> Bool {
+        guard !item.tag.isTransientCaptureIndicator else {
+            return false
+        }
+        return transientIndicatorBounds.contains { $0.intersects(bounds) }
+    }
+
     /// Captures a composite image of the given items, then crops out an image
     /// for each item and returns the result.
     ///
@@ -739,15 +764,6 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
         // fail -> blacklist -> cooldown -> retry cycle.
         let capturable = items.filter { !$0.isControlItem }
 
-        // Use individual capture after a move operation, since composite capture
-        // doesn't account for overlapping items.
-        if await appState.itemManager.lastMoveOperationOccurred(
-            within: .seconds(2)
-        ) {
-            MenuBarItemImageCache.diagLog.debug("Capturing individually due to recent item movement")
-            return individualCapture(capturable, scale: scale)
-        }
-
         // Pre-filter off-screen items: hidden section items are positioned past
         // the right edge of the screen. Including them in compositeCapture
         // inflates boundsUnion → CGWindowListCreateImageFromArray returns an
@@ -761,14 +777,23 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
         let screenFrame = await MainActor.run {
             NSScreen.screens.first { $0.displayID == displayID }?.frame
         }
+        let transientIndicatorBounds = await transientCaptureIndicatorBounds(on: displayID)
+        guard transientIndicatorBounds.isEmpty else {
+            MenuBarItemImageCache.diagLog.debug(
+                "captureImages: transient capture indicator active, preserving existing cached images"
+            )
+            return CaptureResult()
+        }
 
         // Fetch window bounds once for all items. This single pass is reused for
         // both the off-screen filter and the subsequent compositeCapture, avoiding
         // a redundant system call and eliminating the TOCTOU race where a window
         // could move between the two lookups.
         var onScreenItemsWithBounds: [(item: MenuBarItem, bounds: CGRect)] = []
+        var individuallyCapturableItems = [MenuBarItem]()
         var offScreenCount = 0
         var nilBoundsCount = 0
+        var occludedByTransientIndicatorCount = 0
 
         for item in capturable {
             guard let bounds = Bridging.getWindowBounds(for: item.windowID) else {
@@ -777,6 +802,11 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
                 nilBoundsCount += 1
                 continue
             }
+            if isItemCaptureOccluded(by: transientIndicatorBounds, item: item, bounds: bounds) {
+                occludedByTransientIndicatorCount += 1
+                continue
+            }
+            individuallyCapturableItems.append(item)
             if let screenFrame, !screenFrame.intersects(bounds) {
                 offScreenCount += 1
             } else {
@@ -793,6 +823,20 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
             MenuBarItemImageCache.diagLog.debug(
                 "captureImages: \(offScreenCount)/\(capturable.count) off-screen items skipped (live refresh handles them)"
             )
+        }
+        if occludedByTransientIndicatorCount > 0 {
+            MenuBarItemImageCache.diagLog.debug(
+                "captureImages: skipped \(occludedByTransientIndicatorCount)/\(capturable.count) item(s) occluded by transient capture indicator"
+            )
+        }
+
+        // Use individual capture after a move operation, since composite capture
+        // doesn't account for overlapping items.
+        if await appState.itemManager.lastMoveOperationOccurred(
+            within: .seconds(2)
+        ) {
+            MenuBarItemImageCache.diagLog.debug("Capturing individually due to recent item movement")
+            return individualCapture(individuallyCapturableItems, scale: scale)
         }
 
         guard !onScreenItemsWithBounds.isEmpty else {
@@ -839,14 +883,32 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
         var windowIDs = [CGWindowID]()
         var storage = [CGWindowID: (MenuBarItem, CGRect)]()
         var boundsUnion = CGRect.null
+        let displayID = Bridging.getActiveMenuBarDisplayID() ?? CGMainDisplayID()
+        let transientIndicatorBounds = await transientCaptureIndicatorBounds(on: displayID)
+        guard transientIndicatorBounds.isEmpty else {
+            MenuBarItemImageCache.diagLog.debug(
+                "refreshImages: transient capture indicator active, preserving existing cached images"
+            )
+            return
+        }
+        var occludedByTransientIndicatorCount = 0
 
         for item in items {
             guard let bounds = Bridging.getWindowBounds(for: item.windowID) else {
                 continue
             }
+            if isItemCaptureOccluded(by: transientIndicatorBounds, item: item, bounds: bounds) {
+                occludedByTransientIndicatorCount += 1
+                continue
+            }
             windowIDs.append(item.windowID)
             storage[item.windowID] = (item, bounds)
             boundsUnion = boundsUnion.union(bounds)
+        }
+        if occludedByTransientIndicatorCount > 0 {
+            MenuBarItemImageCache.diagLog.debug(
+                "refreshImages: skipped \(occludedByTransientIndicatorCount) item(s) occluded by transient capture indicator"
+            )
         }
 
         guard !windowIDs.isEmpty else {

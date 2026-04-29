@@ -326,6 +326,29 @@ final class MenuBarItemTagTests: XCTestCase {
         XCTAssertFalse(tag.canBeHidden)
     }
 
+    // MARK: - Transient Capture Indicator Tests
+
+    func testAudioVideoModuleIsTransientCaptureIndicator() {
+        XCTAssertTrue(MenuBarItemTag.audioVideoModule.isTransientCaptureIndicator)
+    }
+
+    func testScreenCaptureUIIsTransientCaptureIndicator() {
+        XCTAssertTrue(MenuBarItemTag.screenCaptureUI.isTransientCaptureIndicator)
+    }
+
+    func testUUIDAudioVideoModuleIsTransientCaptureIndicator() {
+        let tag = MenuBarItemTag(
+            namespace: .uuid(UUID()),
+            title: "AudioVideoModule"
+        )
+
+        XCTAssertTrue(tag.isTransientCaptureIndicator)
+    }
+
+    func testFaceTimeIsNotTransientCaptureIndicator() {
+        XCTAssertFalse(MenuBarItemTag.faceTime.isTransientCaptureIndicator)
+    }
+
     // MARK: - Control Item Tests
 
     func testHiddenControlItemIsControlItem() {

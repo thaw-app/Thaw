@@ -208,7 +208,7 @@ final class IceBarPanel: NSPanel {
         cacheTask?.cancel()
         cacheTask = Task { [weak appState] in
             guard let appState else { return }
-            await appState.itemManager.rehideTemporarilyShownItems(force: true)
+            await appState.itemManager.rehideTemporarilyShownItems()
             guard !Task.isCancelled else { return }
             await appState.itemManager.cacheItemsIfNeeded()
             guard !Task.isCancelled else { return }
@@ -642,7 +642,7 @@ private struct IceBarItemView: View {
                 // item visibility. Uses KVO on isVisible so we resume as soon
                 // as the panel hides rather than busy-polling.
                 await panel.waitUntilClosed(timeout: .milliseconds(200))
-                if let liveItem = await liveOnScreenItem(matching: item, on: displayID) {
+                if let liveItem = await liveOnScreenItem(matching: item, section: section, on: displayID) {
                     try await itemManager.click(item: liveItem, with: .left)
                     let duration = Date.now.timeIntervalSince(clickStartTime)
                     IceBarItemView.diagLog.debug("leftClick: ✓ completed in \(Int(duration * 1000))ms (on-screen path)")
@@ -650,7 +650,7 @@ private struct IceBarItemView: View {
                     // temporarilyShow handles move, click, and fallback click
                     // internally so that shownInterfaceWindow is always captured
                     // regardless of which click attempt succeeds.
-                    let result = await itemManager.temporarilyShow(item: item, clickingWith: .left, on: displayID, fastPath: true)
+                    let result = await itemManager.temporarilyShow(item: item, clickingWith: .left, on: displayID)
                     let duration = Date.now.timeIntervalSince(clickStartTime)
                     IceBarItemView.diagLog.debug("leftClick: completed in \(Int(duration * 1000))ms (temp-show path, result=\(result))")
                 }
@@ -667,24 +667,35 @@ private struct IceBarItemView: View {
             menuBarManager.section(withName: section)?.hide()
             Task {
                 await panel.waitUntilClosed(timeout: .milliseconds(200))
-                if let liveItem = await liveOnScreenItem(matching: item, on: displayID) {
+                if let liveItem = await liveOnScreenItem(matching: item, section: section, on: displayID) {
                     try await itemManager.click(item: liveItem, with: .right)
                 } else {
-                    let result = await itemManager.temporarilyShow(item: item, clickingWith: .right, on: displayID, fastPath: true)
+                    let result = await itemManager.temporarilyShow(item: item, clickingWith: .right, on: displayID)
                     IceBarItemView.diagLog.debug("rightClick: temp-show result=\(result)")
                 }
             }
         }
     }
 
-    /// Re-fetches on-screen items and returns the live `MenuBarItem` whose
-    /// tag+PID matches `item`, or `nil` if the item is not currently on-screen.
+    /// Re-fetches on-screen items and returns the live `MenuBarItem` for the clicked row.
     ///
-    /// Matching by tag+PID rather than the cached `windowID` guards against
-    /// CGWindowID recycling after a long system sleep, which would otherwise
-    /// cause `isWindowOnScreen` to return a false positive for an unrelated window.
-    private func liveOnScreenItem(matching item: MenuBarItem, on displayID: CGDirectDisplayID) async -> MenuBarItem? {
+    /// Hidden and always-hidden rows must use an exact window match. Some menu
+    /// extras, especially Control Center-hosted items, share generic tag/title
+    /// data; a same-tag fallback can click an already-visible neighbor instead
+    /// of moving the hidden row out.
+    private func liveOnScreenItem(
+        matching item: MenuBarItem,
+        section: MenuBarSection.Name,
+        on displayID: CGDirectDisplayID
+    ) async -> MenuBarItem? {
         let liveItems = await MenuBarItem.getMenuBarItems(on: displayID, option: .onScreen)
+        if section != .visible {
+            guard let liveItem = liveItems.first(where: { $0.windowID == item.windowID }) else {
+                return nil
+            }
+            return Bridging.isWindowOnScreen(liveItem.windowID) ? liveItem : nil
+        }
+
         guard let liveItem = liveItems.first(where: {
             $0.tag.matchesIgnoringWindowID(item.tag) &&
                 ($0.sourcePID ?? $0.ownerPID) == (item.sourcePID ?? item.ownerPID)

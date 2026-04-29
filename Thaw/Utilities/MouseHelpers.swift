@@ -137,23 +137,39 @@ enum MouseHelpers {
         let result = CGWarpMouseCursorPosition(point)
         if result != .success {
             diagLog.warning("CGWarpMouseCursorPosition failed (error: \(result.rawValue)), falling back to CGEvent mouseMoved")
-            // Posting a mouseMoved event is more reliable than warp when a
-            // menu is tracking the cursor — the event updates the cursor
-            // position in the Window Server even if warp is blocked.
-            guard
-                let source = CGEventSource(stateID: .hidSystemState),
-                let event = CGEvent(
-                    mouseEventSource: source,
-                    mouseType: .mouseMoved,
-                    mouseCursorPosition: point,
-                    mouseButton: .left
-                )
-            else {
-                diagLog.error("Failed to create fallback mouseMoved event")
-                return
-            }
-            event.post(tap: .cghidEventTap)
+            postMouseMoved(to: point)
         }
+    }
+
+    /// Restores the cursor to a point and reinforces the move shortly after.
+    ///
+    /// Menus and system capture indicators can briefly block or overwrite a
+    /// single cursor warp. Posting a mouse-moved event plus a delayed second
+    /// warp keeps synthetic menu bar interactions from leaving the user's
+    /// cursor at the drag or click endpoint.
+    static func restoreCursor(to point: CGPoint) {
+        warpCursor(to: point)
+        postMouseMoved(to: point)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            warpCursor(to: point)
+            postMouseMoved(to: point)
+        }
+    }
+
+    private static func postMouseMoved(to point: CGPoint) {
+        guard
+            let source = CGEventSource(stateID: .hidSystemState),
+            let event = CGEvent(
+                mouseEventSource: source,
+                mouseType: .mouseMoved,
+                mouseCursorPosition: point,
+                mouseButton: .left
+            )
+        else {
+            diagLog.error("Failed to create fallback mouseMoved event")
+            return
+        }
+        event.post(tap: .cghidEventTap)
     }
 
     /// Connects or disconnects the positions of the mouse and cursor.

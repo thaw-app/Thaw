@@ -1720,20 +1720,59 @@ extension MenuBarItemManager {
         await task.value
     }
 
-    /// Returns the current bounds for the given item, with a refresh fallback if the window is missing.
+    /// Returns whether two menu bar item snapshots represent the same app-owned item.
+    private nonisolated func isSameMenuBarItemInstance(_ lhs: MenuBarItem, as rhs: MenuBarItem) -> Bool {
+        lhs.tag.matchesIgnoringWindowID(rhs.tag) &&
+            (lhs.sourcePID ?? lhs.ownerPID) == (rhs.sourcePID ?? rhs.ownerPID)
+    }
+
+    /// Returns whether cached bounds are plausible on a visible display.
+    ///
+    /// Hidden menu bar items are moved far off-screen horizontally, while live
+    /// menu bar items still intersect their owning display. When Window Server
+    /// briefly fails to resolve a window ID after a move, a recent on-screen
+    /// snapshot is safer than falling through to an unrelated same-tag item.
+    private nonisolated func hasVisibleDisplayIntersection(_ bounds: CGRect) -> Bool {
+        NSScreen.screens.contains { screen in
+            screen.frame.intersects(bounds)
+        }
+    }
+
+    /// Returns the current bounds for the given item, with a guarded refresh fallback if the window is missing.
     private nonisolated func getCurrentBounds(for item: MenuBarItem) async throws -> CGRect {
         // First attempt: current windowID.
         if let bounds = Bridging.getWindowBounds(for: item.windowID) {
             return bounds
         }
 
-        // Fallback: refresh on-screen items and pick the matching tag (prefer same windowID, then non-clone).
+        // If the caller already passed a live on-screen snapshot, prefer that
+        // over a broad same-tag lookup. Generic Control Center item titles can
+        // otherwise resolve to a neighboring system item, such as the language
+        // input menu, when a moved item's window ID is momentarily unavailable.
+        if item.isOnScreen, hasVisibleDisplayIntersection(item.bounds) {
+            return item.bounds
+        }
+
+        // Fallback: refresh on-screen items and only accept candidates that
+        // match both tag and source/owner PID. If there are multiple possible
+        // matches, fail rather than risk clicking the wrong menu bar item.
         let refreshed = await MenuBarItem.getMenuBarItems(option: .onScreen)
-        if let refreshedItem = refreshed.first(where: { $0.windowID == item.windowID && $0.tag == item.tag }) ??
-            refreshed.first(where: { $0.tag.matchesIgnoringWindowID(item.tag) && !$0.isSystemClone }) ??
-            refreshed.first(where: { $0.tag.matchesIgnoringWindowID(item.tag) })
-        {
+        if let refreshedItem = refreshed.first(where: {
+            $0.windowID == item.windowID && isSameMenuBarItemInstance($0, as: item)
+        }) {
             return refreshedItem.bounds
+        }
+
+        let matchingCandidates = refreshed.filter { candidate in
+            isSameMenuBarItemInstance(candidate, as: item) && !candidate.isSystemClone
+        }
+        if matchingCandidates.count == 1, let refreshedItem = matchingCandidates.first {
+            return refreshedItem.bounds
+        }
+        if matchingCandidates.count > 1 {
+            MenuBarItemManager.diagLog.warning(
+                "Ambiguous bounds fallback for \(item.logString): \(matchingCandidates.count) same-tag/same-PID candidates"
+            )
         }
 
         throw EventError.missingItemBounds(item)
@@ -2461,7 +2500,7 @@ extension MenuBarItemManager {
         MouseHelpers.hideCursor()
         defer {
             if let mouseLocation {
-                MouseHelpers.warpCursor(to: mouseLocation)
+                MouseHelpers.restoreCursor(to: mouseLocation)
             }
             MouseHelpers.showCursor()
             lastMoveOperationTimestamp = .now
@@ -2632,7 +2671,7 @@ extension MenuBarItemManager {
         let mouseLocation = try getMouseLocation()
         MouseHelpers.hideCursor(watchdogTimeout: watchdogTimeout)
         defer {
-            MouseHelpers.warpCursor(to: mouseLocation)
+            MouseHelpers.restoreCursor(to: mouseLocation)
             MouseHelpers.showCursor()
         }
 
@@ -2769,7 +2808,7 @@ extension MenuBarItemManager {
         try await Task.sleep(for: .milliseconds(10))
         MouseHelpers.hideCursor()
         defer {
-            MouseHelpers.warpCursor(to: mouseLocation)
+            MouseHelpers.restoreCursor(to: mouseLocation)
             MouseHelpers.showCursor()
         }
 
@@ -2907,6 +2946,9 @@ extension MenuBarItemManager {
         /// The window of the item's shown interface.
         var shownInterfaceWindow: WindowInfo?
 
+        /// The bounds of the item while it is temporarily shown.
+        var shownItemBounds: CGRect?
+
         /// The number of attempts that have been made to rehide the item.
         var rehideAttempts = 0
 
@@ -2932,12 +2974,11 @@ extension MenuBarItemManager {
             if let window = shownInterfaceWindow,
                let current = WindowInfo(windowID: window.windowID)
             {
-                if current.layer == CGWindowLevelForKey(.popUpMenuWindow)
-                    || current.layer == CGWindowLevelForKey(.popUpMenuWindow) - 1
-                    || current.layer == CGWindowLevelForKey(.statusWindow)
-                    || current.layer == CGWindowLevelForKey(.mainMenuWindow)
-                {
-                    return current.isOnScreen
+                if Self.isMenuInterfaceWindow(current) {
+                    guard let shownItemBounds else {
+                        return current.isOnScreen
+                    }
+                    return current.isOnScreen && Self.isPopupWindow(current, near: shownItemBounds)
                 }
                 if let app = current.owningApplication {
                     return app.isActive && current.isOnScreen
@@ -2958,27 +2999,46 @@ extension MenuBarItemManager {
         }
 
         /// Checks whether the item's owning application has any visible
-        /// popup-menu window on screen.
+        /// popup/menu window on screen.
         ///
-        /// Only matches the pop-up menu level (the level macOS uses for
-        /// menus opened from menu bar items). Status-level and main-menu
-        /// level windows are excluded because those are the menu bar items
-        /// themselves — including the temporarily-shown item we're
-        /// tracking — not popups created by clicking them. A liberal
-        /// "above normal" match was previously used as a catch-all, but
-        /// it matched floating panels, modal levels, and other unrelated
-        /// app windows, keeping `isShowingInterface` true indefinitely
-        /// and preventing rehide.
+        /// macOS 26 can host menu extra popups in Control Center or Window
+        /// Server windows instead of the source app's PID. To avoid hiding the
+        /// temporary item while its menu is still open, accept menu-like
+        /// windows that are spatially attached to the shown menu bar item.
         private func appHasVisiblePopup() -> Bool {
             let windows = WindowInfo.createWindows(option: .onScreen)
-            let popUpLevel = CGWindowLevelForKey(.popUpMenuWindow)
             return windows.contains { window in
-                guard window.ownerPID == sourcePID else {
+                guard Self.isMenuInterfaceWindow(window) else {
                     return false
                 }
-                let level = CGWindowLevel(Int32(window.layer))
-                return level == popUpLevel || level == popUpLevel - 1
+                guard let shownItemBounds else {
+                    return window.ownerPID == sourcePID
+                }
+                return Self.isPopupWindow(window, near: shownItemBounds)
             }
+        }
+
+        static func isMenuInterfaceWindow(_ window: WindowInfo) -> Bool {
+            let level = CGWindowLevel(Int32(window.layer))
+            return level == CGWindowLevelForKey(.popUpMenuWindow) ||
+                level == CGWindowLevelForKey(.popUpMenuWindow) - 1 ||
+                level == CGWindowLevelForKey(.mainMenuWindow)
+        }
+
+        static func isPopupWindow(_ window: WindowInfo, near itemBounds: CGRect) -> Bool {
+            let horizontalPadding: CGFloat = 180
+            let verticalPadding: CGFloat = 48
+            let isTallerThanStatusItem = window.bounds.height > itemBounds.height + 8
+            guard isTallerThanStatusItem else {
+                return false
+            }
+            let expandedItemBounds = itemBounds.insetBy(
+                dx: -horizontalPadding,
+                dy: -verticalPadding
+            )
+            let horizontallyNear = window.bounds.maxX >= itemBounds.minX - horizontalPadding &&
+                window.bounds.minX <= itemBounds.maxX + horizontalPadding
+            return expandedItemBounds.intersects(window.bounds) || horizontallyNear
         }
 
         init(
@@ -3199,6 +3259,16 @@ extension MenuBarItemManager {
         // Fetch items specifically for the display where the item lives.
         let items = await MenuBarItem.getMenuBarItems(on: resolvedDisplayID, option: .activeSpace)
 
+        if items.contains(where: { $0.tag.isTransientCaptureIndicator }) {
+            MenuBarItemManager.diagLog.info(
+                """
+                temporarilyShow: deferring \(item.logString) because a transient \
+                capture indicator is present on display \(resolvedDisplayID)
+                """
+            )
+            return .showFailed
+        }
+
         guard let returnInfo = getReturnDestination(for: item, in: items) else {
             MenuBarItemManager.diagLog.error("No return destination for \(item.logString) on display \(resolvedDisplayID)")
             return .showFailed
@@ -3357,6 +3427,8 @@ extension MenuBarItemManager {
 
         let idsBeforeClick = Set(Bridging.getWindowList(option: .onScreen))
         let clickPID = clickItem.sourcePID ?? clickItem.ownerPID
+        let clickItemBounds = Bridging.getWindowBounds(for: clickItem.windowID) ?? clickItem.bounds
+        context.shownItemBounds = clickItemBounds
 
         do {
             // Single attempt: the item is already at a known-good position with
@@ -3394,7 +3466,19 @@ extension MenuBarItemManager {
         let windowsAfterClick = WindowInfo.createWindows(option: .onScreen)
 
         context.shownInterfaceWindow = windowsAfterClick.first { window in
-            window.ownerPID == clickPID && !idsBeforeClick.contains(window.windowID)
+            guard !idsBeforeClick.contains(window.windowID) else {
+                return false
+            }
+            guard TemporarilyShownItemContext.isMenuInterfaceWindow(window) else {
+                return false
+            }
+            guard TemporarilyShownItemContext.isPopupWindow(window, near: clickItemBounds) else {
+                return false
+            }
+            if window.ownerPID == clickPID {
+                return true
+            }
+            return true
         }
 
         return .movedAndClicked
@@ -3778,12 +3862,14 @@ extension MenuBarItemManager {
             return true
         }
 
-        // Non-hideable system items (screen recording, mic, camera indicators)
-        // must always appear in the visible section. If macOS placed one to the
-        // left of our hidden control item, move it back immediately — no
-        // newness check needed since these items should never be in a hidden
-        // section.
-        if let systemItem = leftmostItems.first(where: { !$0.canBeHidden }) {
+        // Durable non-hideable system items must always appear in the visible
+        // section. Transient capture indicators are intentionally excluded:
+        // moving them while active can leave macOS's recording icon stranded
+        // next to Thaw's expand icon after capture ends.
+        if let skippedIndicator = leftmostItems.first(where: { $0.tag.isTransientCaptureIndicator }) {
+            MenuBarItemManager.diagLog.debug("Skipping relocation for transient capture indicator \(skippedIndicator.logString)")
+        }
+        if let systemItem = leftmostItems.first(where: { !$0.canBeHidden && !$0.tag.isTransientCaptureIndicator }) {
             MenuBarItemManager.diagLog.info("Relocating non-hideable system item \(systemItem.logString) to visible section")
             do {
                 try await move(
