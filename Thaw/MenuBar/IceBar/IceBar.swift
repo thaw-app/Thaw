@@ -64,6 +64,12 @@ final class IceBarPanel: NSPanel {
         colorManager.performSetup(with: self)
     }
 
+    /// Clears the cached window image to force a background refresh.
+    /// Call this when menu bar items disappear to prevent stale background.
+    func clearCachedWindowImage() {
+        colorManager.clearCachedWindowImage()
+    }
+
     /// Configures the internal observers.
     private func configureCancellables() {
         var c = Set<AnyCancellable>()

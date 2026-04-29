@@ -1313,6 +1313,18 @@ extension MenuBarItemManager {
             return
         }
 
+        // Clear image cache entries for items that disappeared (in old cache but not new).
+        // This prevents stale background clipping when apps close.
+        let oldTags = Set(itemCache.managedItems.map(\.tag))
+        let newTags = Set(context.cache.managedItems.map(\.tag))
+        let disappearedTags = oldTags.subtracting(newTags)
+        if !disappearedTags.isEmpty {
+            MenuBarItemManager.diagLog.debug("Clearing image cache for \(disappearedTags.count) disappeared items")
+            appState?.imageCache.removeImages(for: disappearedTags)
+            // Also clear the IceBar's cached window image to force background refresh
+            appState?.menuBarManager.iceBarPanel.clearCachedWindowImage()
+        }
+
         itemCache = context.cache
 
         // Reset isRestoringItemOrder if it's been stuck for too long (10 seconds).

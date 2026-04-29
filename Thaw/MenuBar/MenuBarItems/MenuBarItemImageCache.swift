@@ -1258,6 +1258,18 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
         }
     }
 
+    /// Removes cached images for the specified tags.
+    /// Called when items disappear from the menu bar to prevent stale background.
+    @MainActor
+    func removeImages(for tags: Set<MenuBarItemTag>) {
+        guard !tags.isEmpty else { return }
+        for tag in tags {
+            images.removeValue(forKey: tag)
+            accessTimestamps.removeValue(forKey: tag)
+        }
+        MenuBarItemImageCache.diagLog.debug("Removed \(tags.count) images from cache")
+    }
+
     /// Returns the current cache size for monitoring purposes.
     var cacheSize: Int {
         images.count
