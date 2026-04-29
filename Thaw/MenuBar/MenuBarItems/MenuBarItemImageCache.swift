@@ -841,7 +841,9 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
         // Thaw's own control items always capture as transparent via
         // CGWindowListCreateImage, so skip them to avoid the perpetual
         // fail -> blacklist -> cooldown -> retry cycle.
-        let capturable = items.filter { !$0.isControlItem }
+        // Also skip transient capture indicators (recording/mic icons) to prevent
+        // them from appearing as stale background artifacts when recording stops.
+        let capturable = items.filter { !$0.isControlItem && !$0.tag.isTransientCaptureIndicator }
 
         // Pre-filter off-screen items: hidden section items are positioned past
         // the right edge of the screen. Including them in compositeCapture
@@ -941,11 +943,15 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
         of items: [MenuBarItem],
         scale: CGFloat
     ) async {
+        // Filter out transient capture indicators to prevent them from appearing
+        // as stale background artifacts when recording stops.
+        let filteredItems = items.filter { !$0.tag.isTransientCaptureIndicator }
+
         var windowIDs = [CGWindowID]()
         var storage = [CGWindowID: (MenuBarItem, CGRect)]()
         var boundsUnion = CGRect.null
 
-        for item in items {
+        for item in filteredItems {
             guard let bounds = Bridging.getWindowBounds(for: item.windowID) else {
                 continue
             }
