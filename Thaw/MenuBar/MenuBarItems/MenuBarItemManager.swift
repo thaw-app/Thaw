@@ -3891,9 +3891,31 @@ extension MenuBarItemManager {
             // Only treat as "new" if we don't have a saved section for this item.
             // Items with saved sections should be handled by restoreItemsToSavedSections,
             // not by the "new item" relocation logic.
+            //
+            // We check multiple forms of the identifier to handle instanceIndex changes
+            // and different identifier formats:
+            // 1. Base identifier (namespace:title)
+            // 2. uniqueIdentifier (namespace:title:instanceIndex if > 0)
+            // 3. Namespace-only lookup for dynamic-title apps
             let hasSavedSection = savedSectionForIdentifier[identifier] != nil ||
                 savedSectionForIdentifier[item.uniqueIdentifier] != nil
-            guard !hasSavedSection else { return false }
+
+            // Additional check: look for any saved identifier with the same base namespace:title
+            // This handles cases where instanceIndex changes between app restarts
+            let baseIdentifier = identifier
+            let hasSavedSectionWithSameBase = savedSectionForIdentifier.contains { savedID, _ in
+                let savedBase = savedID.split(separator: ":", maxSplits: 2).prefix(2).joined(separator: ":")
+                return savedBase == baseIdentifier
+            }
+
+            guard !hasSavedSection, !hasSavedSectionWithSameBase else {
+                if hasSavedSection {
+                    MenuBarItemManager.diagLog.debug("Skipping relocation for \(item.logString) - has saved section")
+                } else {
+                    MenuBarItemManager.diagLog.debug("Skipping relocation for \(item.logString) - has saved section with same base identifier")
+                }
+                return false
+            }
 
             // Also skip items from bundle IDs that have explicitly saved sections in
             // hidden/always-hidden. This protects multi-icon apps (Stats, Hammerspoon,
