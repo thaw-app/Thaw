@@ -17709,7 +17709,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Horyzontalny"
+            "value" : "Poziomy"
           }
         }
       }
@@ -38473,7 +38473,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Poziomy"
+            "value" : "Pionowy"
           }
         }
       }
