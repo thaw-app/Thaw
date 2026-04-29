@@ -1464,43 +1464,6 @@ extension MenuBarItemManager {
         await enforceControlItemOrder(controlItems: controlItems)
 
         guard !Task.isCancelled else {
-            MenuBarItemManager.diagLog.debug("cacheItemsRegardless: cancelled before restoreItemsToSavedSections")
-            return
-        }
-
-        // Skip all restore logic during the startup settling period.
-        // The settling period prevents cascading icon moves when many apps
-        // load at login or restart in quick succession (app update checks).
-        if !isInStartupSettling {
-            // Cross-section restore: move items back to their saved section
-            // BEFORE relocateNewLeftmostItems runs. This ensures items that
-            // have saved sections are restored to their proper places before
-            // the "new item" relocation logic can move them to the default
-            // section (which is usually hidden/always-hidden).
-            isRestoringItemOrder = true
-            isRestoringItemOrderTimestamp = Date()
-            let didRestoreSections = await restoreItemsToSavedSections(
-                items,
-                controlItems: controlItems,
-                previousWindowIDs: previousWindowIDs
-            )
-            if didRestoreSections {
-                MenuBarItemManager.diagLog.debug("Restored item to saved section; scheduling recache")
-                let continuation = self.backgroundCacheContinuation
-                self.backgroundCacheContinuation = nil
-                Task { [weak self] in
-                    try? await Task.sleep(for: MenuBarItemManager.uiSettleDelay)
-                    await self?.cacheItemsRegardless(skipRecentMoveCheck: true)
-                    self?.isRestoringItemOrder = false
-                    continuation?.resume()
-                    try? await Task.sleep(for: MenuBarItemManager.uiSettleDelay)
-                    await self?.cacheItemsIfNeeded()
-                }
-                return
-            }
-        }
-
-        guard !Task.isCancelled else {
             MenuBarItemManager.diagLog.debug("cacheItemsRegardless: cancelled before relocateNewLeftmostItems")
             return
         }
@@ -1533,7 +1496,9 @@ extension MenuBarItemManager {
             return
         }
 
-        // During startup settling, just cache items without restore/relocate.
+        // Skip all restore logic during the startup settling period.
+        // The settling period prevents cascading icon moves when many apps
+        // load at login or restart in quick succession (app update checks).
         // A final cacheItemsRegardless() after the period ends handles restore.
         guard !isInStartupSettling else {
             await uncheckedCacheItems(items: items, controlItems: controlItems, displayID: displayID)
@@ -1547,10 +1512,32 @@ extension MenuBarItemManager {
             MenuBarItemManager.diagLog.debug("cacheItemsRegardless: startup settling active, skipping restore")
             return
         }
-        // Note: isRestoringItemOrder remains true here so that if a concurrent
-        // cache call occurs (e.g., from app launch notification), it won't
-        // prematurely reset the flag and allow saveSectionOrder to run while
-        // we're still in the cooldown period from previous moves.
+
+        // Cross-section restore: move items back to their saved section
+        // before restoreSavedItemOrder handles within-section reordering.
+        // Set the flag before calling so that any intermediate cache
+        // updates during move() don't overwrite the saved section order.
+        isRestoringItemOrder = true
+        isRestoringItemOrderTimestamp = Date()
+        let didRestoreSections = await restoreItemsToSavedSections(
+            items,
+            controlItems: controlItems,
+            previousWindowIDs: previousWindowIDs
+        )
+        if didRestoreSections {
+            MenuBarItemManager.diagLog.debug("Restored item to saved section; scheduling recache")
+            let continuation = self.backgroundCacheContinuation
+            self.backgroundCacheContinuation = nil
+            Task { [weak self] in
+                try? await Task.sleep(for: MenuBarItemManager.uiSettleDelay)
+                await self?.cacheItemsRegardless(skipRecentMoveCheck: true)
+                self?.isRestoringItemOrder = false
+                continuation?.resume()
+                try? await Task.sleep(for: MenuBarItemManager.uiSettleDelay)
+                await self?.cacheItemsIfNeeded()
+            }
+            return
+        }
 
         let didRestoreOrder = await restoreSavedItemOrder(
             items,
