@@ -1318,14 +1318,17 @@ extension MenuBarItemManager {
         let oldTags = Set(itemCache.managedItems.map(\.tag))
         let newTags = Set(context.cache.managedItems.map(\.tag))
         let disappearedTags = oldTags.subtracting(newTags)
+
+        // IMPORTANT: Update itemCache FIRST before clearing images/window cache.
+        // This ensures the IceBar renders with the updated item list, not the old one.
+        itemCache = context.cache
+
         if !disappearedTags.isEmpty {
             MenuBarItemManager.diagLog.debug("Clearing image cache for \(disappearedTags.count) disappeared items")
             appState?.imageCache.removeImages(for: disappearedTags)
             // Also clear the IceBar's cached window image to force background refresh
             appState?.menuBarManager.iceBarPanel.clearCachedWindowImage()
         }
-
-        itemCache = context.cache
 
         // Reset isRestoringItemOrder if it's been stuck for too long (10 seconds).
         // This prevents stale flags from blocking saves after user manual moves.
