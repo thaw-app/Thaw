@@ -1296,9 +1296,13 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
             return
         }
 
-        // Get the set of valid item tags from all sections to clean up stale entries
+        // Get the set of valid item tags from all sections to clean up stale entries.
+        // Exclude transient capture indicators so ephemeral recording/capture
+        // UI does not become a retained cache entry during unrelated refreshes.
         let allValidTags = Set(
-            appState.itemManager.itemCache.managedItems.map(\.tag)
+            appState.itemManager.itemCache.managedItems
+                .map(\.tag)
+                .filter { !$0.isTransientCaptureIndicator }
         )
 
         await MainActor.run { [newImages, allValidTags] in
