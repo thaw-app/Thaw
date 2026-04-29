@@ -2954,23 +2954,26 @@ extension MenuBarItemManager {
         }
 
         /// Checks whether the item's owning application has any visible
-        /// popup, menu, or overlay window on screen.
+        /// popup-menu window on screen.
+        ///
+        /// Only matches the pop-up menu level (the level macOS uses for
+        /// menus opened from menu bar items). Status-level and main-menu
+        /// level windows are excluded because those are the menu bar items
+        /// themselves — including the temporarily-shown item we're
+        /// tracking — not popups created by clicking them. A liberal
+        /// "above normal" match was previously used as a catch-all, but
+        /// it matched floating panels, modal levels, and other unrelated
+        /// app windows, keeping `isShowingInterface` true indefinitely
+        /// and preventing rehide.
         private func appHasVisiblePopup() -> Bool {
             let windows = WindowInfo.createWindows(option: .onScreen)
+            let popUpLevel = CGWindowLevelForKey(.popUpMenuWindow)
             return windows.contains { window in
                 guard window.ownerPID == sourcePID else {
                     return false
                 }
-                // Menu-level or status-level windows are popups.
-                if window.isMenuRelated {
-                    return true
-                }
-                // Above-normal layer windows (overlays, popovers) that
-                // belong to the app also count.
-                if window.layer > CGWindowLevelForKey(.normalWindow) {
-                    return true
-                }
-                return false
+                let level = CGWindowLevel(Int32(window.layer))
+                return level == popUpLevel || level == popUpLevel - 1
             }
         }
 
@@ -3090,8 +3093,11 @@ extension MenuBarItemManager {
             }
         }
         // Also rehide when frontmost app changes (smart-ish).
+        // Debounce so rapid app switches (Cmd-Tab spam) collapse to one
+        // rehide attempt instead of queuing a separate Task per change —
+        // each rehide call can do an expensive on-screen window enumeration.
         rehideCancellable = NSWorkspace.shared.publisher(for: \.frontmostApplication)
-            .receive(on: DispatchQueue.main)
+            .debounce(for: .milliseconds(200), scheduler: DispatchQueue.main)
             .sink { [weak self] _ in
                 guard let self else { return }
                 Task { await self.rehideTemporarilyShownItems() }
