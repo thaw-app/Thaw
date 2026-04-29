@@ -359,6 +359,35 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
             }
             .store(in: &c)
 
+            // Monitor for transient capture indicators (recording icons) appearing/disappearing.
+            // These need immediate cache refresh to ensure proper display in IceBar/Search.
+            // Track the set of transient indicator tags to detect when specific indicators disappear.
+            let transientIndicatorPublisher: AnyPublisher<Set<MenuBarItemTag>, Never> = appState.itemManager.$itemCache
+                .map { cache -> Set<MenuBarItemTag> in
+                    // Get all transient indicator tags from the current items
+                    Set(cache.managedItems.filter { $0.tag.isTransientCaptureIndicator }.map { $0.tag })
+                }
+                .removeDuplicates()
+                .dropFirst() // Skip initial value to avoid refresh on startup
+                .eraseToAnyPublisher()
+
+            transientIndicatorPublisher
+            .debounce(for: .milliseconds(150), scheduler: DispatchQueue.main)
+            .sink { [weak self] currentIndicatorTags in
+                guard let self else { return }
+                // Check if any cached transient indicators are no longer present
+                let cachedIndicatorTags = Set(self.images.keys.filter { $0.isTransientCaptureIndicator })
+                let disappearedIndicators = cachedIndicatorTags.subtracting(currentIndicatorTags)
+                guard !disappearedIndicators.isEmpty else { return }
+                // Transient indicators disappeared - clean up stale entries immediately
+                MenuBarItemImageCache.diagLog.debug("Transient indicators disappeared: \(disappearedIndicators.map { $0.title }), removing from cache")
+                for tag in disappearedIndicators {
+                    self.images.removeValue(forKey: tag)
+                    self.accessTimestamps.removeValue(forKey: tag)
+                }
+            }
+            .store(in: &c)
+
             // Observe navigation state changes to start/stop live refresh
             Publishers.CombineLatest4(
                 appState.navigationState.$isIceBarPresented,
@@ -571,9 +600,63 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
                 guard !items.isEmpty else { continue }
                 await refreshImages(of: items, scale: screen.backingScaleFactor)
             }
+
+            // Clean up stale transient indicator entries every iteration.
+            // When recording stops, the indicator window disappears but its cached
+            // image entry remains. Query the actual window list directly (not itemCache
+            // which may be stale) to detect disappeared indicators.
+            let displayIDForCleanup = appState.itemManager.itemCache.displayID
+                ?? Bridging.getActiveMenuBarDisplayID()
+                ?? CGMainDisplayID()
+            let currentIndicatorTags = await getCurrentTransientIndicatorTags(on: displayIDForCleanup)
+            let cachedIndicatorTags = Set(self.images.keys.filter { $0.isTransientCaptureIndicator })
+            let staleIndicatorTags = cachedIndicatorTags.subtracting(currentIndicatorTags)
+            if !staleIndicatorTags.isEmpty {
+                MenuBarItemImageCache.diagLog.debug("Live refresh: removing \(staleIndicatorTags.count) stale transient indicator entries")
+                for tag in staleIndicatorTags {
+                    self.images.removeValue(forKey: tag)
+                    self.accessTimestamps.removeValue(forKey: tag)
+                }
+            }
+            
+            // Additional cleanup: Also remove transient indicators whose windows
+            // are no longer on screen (extra safety check for hover-stuck items)
+            let onScreenIndicatorTags = await getOnScreenTransientIndicatorTags(on: displayIDForCleanup)
+            let offScreenCachedIndicators = cachedIndicatorTags.subtracting(onScreenIndicatorTags)
+            if !offScreenCachedIndicators.isEmpty {
+                MenuBarItemImageCache.diagLog.debug("Live refresh: removing \(offScreenCachedIndicators.count) off-screen transient indicator entries")
+                for tag in offScreenCachedIndicators {
+                    self.images.removeValue(forKey: tag)
+                    self.accessTimestamps.removeValue(forKey: tag)
+                }
+            }
         }
 
         MenuBarItemImageCache.diagLog.debug("Live refresh loop stopped")
+    }
+
+    /// Queries the actual window list to get current transient indicator tags.
+    /// This bypasses the itemCache which may be stale.
+    private nonisolated func getCurrentTransientIndicatorTags(on displayID: CGDirectDisplayID) async -> Set<MenuBarItemTag> {
+        let indicators = await MenuBarItem.getMenuBarItems(
+            on: displayID,
+            option: .activeSpace,
+            resolveSourcePID: false
+        )
+        .filter { $0.tag.isTransientCaptureIndicator }
+        return Set(indicators.map { $0.tag })
+    }
+
+    /// Queries the actual window list to get on-screen transient indicator tags.
+    /// Uses .onScreen option to only get visible windows.
+    private nonisolated func getOnScreenTransientIndicatorTags(on displayID: CGDirectDisplayID) async -> Set<MenuBarItemTag> {
+        let indicators = await MenuBarItem.getMenuBarItems(
+            on: displayID,
+            option: .onScreen,
+            resolveSourcePID: false
+        )
+        .filter { $0.tag.isTransientCaptureIndicator }
+        return Set(indicators.map { $0.tag })
     }
 
     // MARK: Capturing Images
@@ -977,7 +1060,7 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
 
         guard !newImages.isEmpty, !Task.isCancelled else { return }
 
-        await MainActor.run { [newImages] in
+        await MainActor.run { [newImages, items] in
             var updatedCount = 0
             for (tag, newImage) in newImages where !CapturedImage.isVisuallyEqual(self.images[tag], newImage) {
                 self.images[tag] = newImage
@@ -1150,6 +1233,29 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
             return entry.value
         }
         return nil
+    }
+
+    /// Removes stale transient capture indicator entries from the cache.
+    /// Called when hover ends on a transient indicator to ensure it disappears
+    /// if recording has stopped.
+    @MainActor
+    func removeStaleTransientIndicators() {
+        let displayID = Bridging.getActiveMenuBarDisplayID() ?? CGMainDisplayID()
+        Task { [weak self] in
+            guard let self else { return }
+            let currentIndicators = await self.getOnScreenTransientIndicatorTags(on: displayID)
+            let cachedIndicators = Set(self.images.keys.filter { $0.isTransientCaptureIndicator })
+            let stale = cachedIndicators.subtracting(currentIndicators)
+            if !stale.isEmpty {
+                MenuBarItemImageCache.diagLog.debug("Removing \(stale.count) stale transient indicators on hover end")
+                await MainActor.run {
+                    for tag in stale {
+                        self.images.removeValue(forKey: tag)
+                        self.accessTimestamps.removeValue(forKey: tag)
+                    }
+                }
+            }
+        }
     }
 
     /// Returns the current cache size for monitoring purposes.
