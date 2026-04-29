@@ -3260,16 +3260,6 @@ extension MenuBarItemManager {
         // Fetch items specifically for the display where the item lives.
         let items = await MenuBarItem.getMenuBarItems(on: resolvedDisplayID, option: .activeSpace)
 
-        if items.contains(where: { $0.tag.isTransientCaptureIndicator }) {
-            MenuBarItemManager.diagLog.info(
-                """
-                temporarilyShow: deferring \(item.logString) because a transient \
-                capture indicator is present on display \(resolvedDisplayID)
-                """
-            )
-            return .showFailed
-        }
-
         guard let returnInfo = getReturnDestination(for: item, in: items) else {
             MenuBarItemManager.diagLog.error("No return destination for \(item.logString) on display \(resolvedDisplayID)")
             return .showFailed
