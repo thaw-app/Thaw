@@ -752,6 +752,14 @@ private struct IceBarItemView: View {
                         rightClickAction: rightClickAction,
                         onHover: { hovering in
                             isHovered = hovering
+                            // When hover ends, trigger cleanup of stale transient indicators
+                            if !hovering, item.tag.isTransientCaptureIndicator {
+                                Task { @MainActor in
+                                    // Small delay to allow state to settle
+                                    try? await Task.sleep(for: .milliseconds(100))
+                                    imageCache.removeStaleTransientIndicators()
+                                }
+                            }
                         }
                     )
                 }
@@ -759,6 +767,10 @@ private struct IceBarItemView: View {
                 .accessibilityLabel(item.displayName)
                 .accessibilityAction(named: "left click", leftClickAction)
                 .accessibilityAction(named: "right click", rightClickAction)
+                // Force refresh when transient indicator state might have changed
+                .onChange(of: imageCache.images) { _ in
+                    // Trigger re-evaluation of `image` when cache changes
+                }
         }
     }
 }
