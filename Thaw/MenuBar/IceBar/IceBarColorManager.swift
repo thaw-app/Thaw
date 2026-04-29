@@ -205,9 +205,18 @@ final class IceBarColorManager: ObservableObject {
         updateColorInfo(with: frame, screen: screen)
     }
 
-    /// Clears the cached window image to force a refresh on next update.
+    /// Clears the cached window image and color info to force a refresh on next update.
     /// Call this when menu bar items disappear to prevent stale background.
     func clearCachedWindowImage() {
         windowImage = nil
+        // Also clear colorInfo to force a complete re-capture.
+        // Otherwise the IceBar would still use the old color info with the new (stale) window image.
+        colorInfo = nil
+        
+        // Trigger an immediate update if the panel is visible.
+        // This ensures the background is re-captured without waiting for the next periodic refresh.
+        if let iceBarPanel, iceBarPanel.isVisible, let screen = iceBarPanel.screen {
+            updateAllProperties(with: iceBarPanel.frame, screen: screen)
+        }
     }
 }
