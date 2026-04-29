@@ -2891,6 +2891,7 @@ extension MenuBarItemManager {
             do {
                 let clickStartTime = Date.now
                 try await postClickEvents(item: item, mouseButton: mouseButton)
+                scheduleImageCacheRefreshAfterMenuDismissal(appState: appState)
                 let clickDuration = Date.now.timeIntervalSince(clickStartTime)
                 MenuBarItemManager.diagLog.debug("Attempt \(n) succeeded in \(Int(clickDuration * 1000))ms, finished with click")
                 return
@@ -2905,6 +2906,55 @@ extension MenuBarItemManager {
                     throw error
                 }
                 throw EventError.cannotComplete
+            }
+        }
+    }
+
+    /// Waits for a clicked menu extra to open and then dismiss its menu,
+    /// refreshing the off-screen image cache once the pressed background
+    /// should no longer be captured.
+    private func scheduleImageCacheRefreshAfterMenuDismissal(appState: AppState) {
+        Task { [weak self, weak appState] in
+            guard let self, let appState else {
+                return
+            }
+
+            let menuOpenPollInterval: Duration = .milliseconds(75)
+            let menuClosePollInterval: Duration = .milliseconds(125)
+            let menuOpenDeadline = ContinuousClock.now + .milliseconds(500)
+
+            var sawMenuOpen = false
+            while ContinuousClock.now < menuOpenDeadline {
+                if await self.isAnyMenuBarItemMenuOpen() {
+                    sawMenuOpen = true
+                    break
+                }
+                try? await Task.sleep(for: menuOpenPollInterval)
+            }
+
+            guard sawMenuOpen else {
+                return
+            }
+
+            let menuCloseDeadline = ContinuousClock.now + .seconds(8)
+            while ContinuousClock.now < menuCloseDeadline {
+                try? await Task.sleep(for: menuClosePollInterval)
+                guard !Task.isCancelled else {
+                    return
+                }
+                if await !self.isAnyMenuBarItemMenuOpen() {
+                    await self.cacheItemsIfNeeded()
+                    guard !Task.isCancelled else {
+                        return
+                    }
+                    await appState.imageCache.updateCacheWithoutChecks(
+                        sections: MenuBarSection.Name.allCases
+                    )
+                    MenuBarItemManager.diagLog.debug(
+                        "Refreshed item image cache after menu dismissal"
+                    )
+                    return
+                }
             }
         }
     }
