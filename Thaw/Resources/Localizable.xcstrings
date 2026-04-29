@@ -12,8 +12,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "\"%1$@\" (%2$@) wants to control Thaw settings via URL scheme.\n\nIf allowed, this app will be able to:\n• Read current settings and configurations\n• Toggle and change boolean settings\n• Modify numeric values (timers, delays, intervals)\n• Change enum settings (rehide strategy, Thaw Bar location)\n• Modify per-display configurations\n\nThis permission persists until manually removed in Settings > Automation.%3$@"
+            "state" : "translated",
+            "value" : "\"%1$@\" (%2$@) will Thaw-Einstellungen über das URL-Schema steuern.\n\nWenn erlaubt, wird diese Anwendung in der Lage sein folgendes zu tun:\n• aktuelle Einstellungen und Konfigurationen\nlesen\n• booleschen Einstellungen umschalten und ändern\n• numerische Werte ändern (Timer, Verzögerungen, Intervalle)\n• Einstellungen ändern (Versteck-Strategie, Ort der Thaw-Leiste)\n• modifizieren der Konfigurationen pro Anzeige\n\nDiese Berechtigung bleibt bestehen, bis sie manuel unter Einstellungen > Automatisierung entfernt wird.%3$@"
           }
         },
         "en" : {
@@ -73,7 +73,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "\"%1$@\" (%2$@) chce kontrolować ustawienia Thaw korzystając ze schematu URL.\n\nW przypadku udzielenia zgody, aplikacja ta będzie mogła:\n• Odczytywać obecne ustawienia\n• Przełączać i zmieniać opcje binarne\n• Modyfikować wartości liczbowe (liczniki, opóźnienia, interwały)\n• Zmieniać ustawienia wyliczeniowe (strategia ponownego ukrywania, lokalizacja paska Thaw Bar)\n• Modyfikować konfiguracje poszczególnych ekranów\n\nTo uprawnienie pozostaje aktywne do momentu jego ręcznego usunięcia w sekcji Ustawienia → Automatyzacja.%3$@"
+            "value" : "\"%1$@\" (%2$@) chce kontrolować ustawienia Thaw za pomocą schematu URL.\n\nJeśli wyrazisz zgodę, ta aplikacja będzie mogła:\n• Odczytywać bieżące parametry i konfiguracje\n• Przełączać i zmieniać ustawienia włącz/wyłącz\n• Modyfikować wartości liczbowe (liczniki, opóźnienia, interwały)\n• Zmieniać ustawienia typu enum (strategię ponownego ukrywania, położenie paska Thaw)\n• Modyfikować konfiguracje dla poszczególnych wyświetlaczy\n\nTo uprawnienie pozostanie aktywne do momentu jego ręcznego cofnięcia w sekcji Ustawienia > Automatyzacja.%3$@"
           }
         },
         "pt-BR" : {
@@ -96,8 +96,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "\"%1$@\" (%2$@) wants to control Thaw settings via URL scheme.\n\nIf allowed, this app will be able to:\n• Read current settings and configurations\n• Toggle and change boolean settings\n• Modify numeric values (timers, delays, intervals)\n• Change enum settings (rehide strategy, Thaw Bar location)\n• Modify per-display configurations\n\nThis permission persists until manually removed in Settings > Automation.%3$@"
+            "state" : "translated",
+            "value" : "“%1$@” (%2$@), URL şeması aracılığıyla Thaw ayarlarını kontrol etmek istiyor.\n\nİzin verilirse, bu uygulama aşağıdakileri yapabilir:\n• Mevcut ayarları ve yapılandırmaları okuyabilir\n• Mantıksal ayarları açıp kapatabilir ve değiştirebilir\n• Sayısal değerleri (zamanlayıcılar, bekleme süreleri, zaman aralıkları) değiştirebilir\n• Liste ayarlarını (yeniden gizleme stratejisi, Thaw Bar konumu) değiştirebilir\n• Her ekran için yapılandırmaları değiştirebilir\n\nBu izin, Ayarlar > Otomasyon'da el ile kaldırılana kadar geçerli kalır.%3$@"
           }
         },
         "uk" : {
@@ -131,13 +131,13 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "%@"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%@"
           }
         },
@@ -239,7 +239,7 @@
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%@"
           }
         }
@@ -2044,7 +2044,7 @@
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%lld fps"
           }
         }
@@ -2426,13 +2426,13 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "•"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "•"
           }
         },
@@ -2534,7 +2534,7 @@
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "•"
           }
         }
@@ -2545,13 +2545,13 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "+"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "+"
           }
         },
@@ -2653,7 +2653,7 @@
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "+"
           }
         }
@@ -2664,13 +2664,13 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "⌘"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "⌘"
           }
         },
@@ -2772,7 +2772,7 @@
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "⌘"
           }
         }
@@ -2783,13 +2783,13 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "⎋"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "⎋"
           }
         },
@@ -2891,7 +2891,7 @@
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "⎋"
           }
         }
@@ -2902,13 +2902,13 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "1"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "1"
           }
         },
@@ -3010,7 +3010,7 @@
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "1"
           }
         }
@@ -3021,13 +3021,13 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "1."
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "1."
           }
         },
@@ -3129,7 +3129,7 @@
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "1."
           }
         }
@@ -3140,13 +3140,13 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "2"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "2"
           }
         },
@@ -3248,7 +3248,7 @@
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "2"
           }
         }
@@ -3259,13 +3259,13 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "2."
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "2."
           }
         },
@@ -3378,13 +3378,13 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "3"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "3"
           }
         },
@@ -3486,7 +3486,7 @@
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "3"
           }
         }
@@ -3497,13 +3497,13 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "3."
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "3."
           }
         },
@@ -3616,13 +3616,13 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "4."
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "4."
           }
         },
@@ -4093,7 +4093,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zpřístupnění"
+            "value" : "Přístupnost"
           }
         },
         "de" : {
@@ -4336,8 +4336,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Add"
+            "state" : "translated",
+            "value" : "Hinzufügen"
           }
         },
         "es" : {
@@ -4438,8 +4438,8 @@
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Add"
+            "state" : "translated",
+            "value" : "新增"
           }
         }
       }
@@ -4455,8 +4455,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Add Application Manually"
+            "state" : "translated",
+            "value" : "Anwendung manuell hinzufügen"
           }
         },
         "es" : {
@@ -4557,8 +4557,8 @@
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Add Application Manually"
+            "state" : "translated",
+            "value" : "手動增加程式"
           }
         }
       }
@@ -4693,8 +4693,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow"
+            "state" : "translated",
+            "value" : "Erlauben"
           }
         },
         "es" : {
@@ -4748,7 +4748,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zezwól"
+            "value" : "Pozwól"
           }
         },
         "pt-BR" : {
@@ -4795,8 +4795,8 @@
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow"
+            "state" : "translated",
+            "value" : "允許"
           }
         }
       }
@@ -4812,8 +4812,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow \"%@\" to control Thaw settings?"
+            "state" : "translated",
+            "value" : "\"%@\" erlauben die Thaw-Einstellungen zu kontrollieren?"
           }
         },
         "es" : {
@@ -4867,7 +4867,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zezwolić aplikacji ”%@” na kontrolowanie ustawień Thaw?"
+            "value" : "Pozwolić \"%@\" na kontrolowanie ustawień Thaw?"
           }
         },
         "pt-BR" : {
@@ -4890,8 +4890,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow \"%@\" to control Thaw settings?"
+            "state" : "translated",
+            "value" : "“%@”nın Thaw ayarlarını kontrol etmesine izin verilsin mi?"
           }
         },
         "uk" : {
@@ -4914,8 +4914,8 @@
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow \"%@\" to control Thaw settings?"
+            "state" : "translated",
+            "value" : "允許「%@」控制 Thaw 設定嗎？"
           }
         }
       }
@@ -4931,8 +4931,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow external applications to read and modify Thaw settings via thaw:// URLs."
+            "state" : "translated",
+            "value" : "Externen Anwendungen erlauben Thaw-Einstellungen über thaw:// URLs zu lesen und zu ändern."
           }
         },
         "es" : {
@@ -4986,7 +4986,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zezwalaj aplikacjom zewnętrznym na odczyt i modyfikację ustawień Thaw za pomocą adresów URL thaw://."
+            "value" : "Pozwalaj zewnętrznym aplikacjom na odczytywanie i modyfikowanie ustawień Thaw za pomocą adresów URL typu thaw://."
           }
         },
         "pt-BR" : {
@@ -5526,8 +5526,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Appearance"
+            "state" : "translated",
+            "value" : "Darstellung"
           }
         },
         "es" : {
@@ -5562,8 +5562,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Appearance"
+            "state" : "translated",
+            "value" : "外観"
           }
         },
         "ko" : {
@@ -5622,14 +5622,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Appearance"
+            "state" : "translated",
+            "value" : "外观"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Appearance"
+            "state" : "translated",
+            "value" : "外觀"
           }
         }
       }
@@ -5764,8 +5764,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply a Thaw menu bar profile when this Focus activates."
+            "state" : "translated",
+            "value" : "Ein Thaw-Menüleisten-Profil anwenden, wenn dieser Fokus aktiviert wird."
           }
         },
         "es" : {
@@ -5819,7 +5819,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zastosuj profil paska menu Thaw, gdy ten tryb Skupienia zostanie aktywowany."
+            "value" : "Aktywuj profil paska menu Thaw, gdy włączy się ten tryb skupienia."
           }
         },
         "pt-BR" : {
@@ -6267,14 +6267,14 @@
             "plural" : {
               "one" : {
                 "stringUnit" : {
-                  "state" : "new",
-                  "value" : "%lld app"
+                  "state" : "translated",
+                  "value" : "Anwendung"
                 }
               },
               "other" : {
                 "stringUnit" : {
-                  "state" : "new",
-                  "value" : "%lld apps"
+                  "state" : "translated",
+                  "value" : "Anwendungen"
                 }
               }
             }
@@ -6387,8 +6387,8 @@
             "plural" : {
               "other" : {
                 "stringUnit" : {
-                  "state" : "new",
-                  "value" : "%lld apps"
+                  "state" : "translated",
+                  "value" : "%lld個のアプリ"
                 }
               }
             }
@@ -6448,7 +6448,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld aplikacje"
+                  "value" : "%lld aplikacji"
                 }
               }
             }
@@ -6579,8 +6579,8 @@
             "plural" : {
               "other" : {
                 "stringUnit" : {
-                  "state" : "new",
-                  "value" : "%lld apps"
+                  "state" : "translated",
+                  "value" : "%lld 个应用"
                 }
               }
             }
@@ -6591,8 +6591,8 @@
             "plural" : {
               "other" : {
                 "stringUnit" : {
-                  "state" : "new",
-                  "value" : "%lld apps"
+                  "state" : "translated",
+                  "value" : "%lld個應用程式"
                 }
               }
             }
@@ -6611,8 +6611,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apps that request settings access will appear here after you approve them."
+            "state" : "translated",
+            "value" : "Anwendungen die Zugriff auf die Einstellungen anfragen, erscheinen hier nach dem Zulassen."
           }
         },
         "es" : {
@@ -6666,7 +6666,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aplikacje proszące o dostęp do ustawień pojawią się tutaj po ich zatwierdzeniu."
+            "value" : "Aplikacje, które żądają dostępu do ustawień, pojawią się tutaj po ich zatwierdzeniu."
           }
         },
         "pt-BR" : {
@@ -6730,8 +6730,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Are you sure you want to delete the profile \"%@\"? This cannot be undone."
+            "state" : "translated",
+            "value" : "Das Profil \"%@\" sicher löschen? Dies kann nicht rückgängig gemacht werden."
           }
         },
         "es" : {
@@ -7142,7 +7142,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Przypisz profil do każdego ekranu."
+            "value" : "Przypisz profil do każdego wyświetlacza."
           }
         },
         "pt-BR" : {
@@ -7206,8 +7206,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Auto-Switch"
+            "state" : "translated",
+            "value" : "Auto-Umschalten"
           }
         },
         "es" : {
@@ -7261,7 +7261,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Autoprzełączanie"
+            "value" : "Automatyczne przełączanie"
           }
         },
         "pt-BR" : {
@@ -7801,8 +7801,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Automation"
+            "state" : "translated",
+            "value" : "Automatisierung"
           }
         },
         "es" : {
@@ -7903,8 +7903,8 @@
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Automation"
+            "state" : "translated",
+            "value" : "自動化"
           }
         }
       }
@@ -7920,8 +7920,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Back"
+            "state" : "translated",
+            "value" : "Zurück"
           }
         },
         "es" : {
@@ -7956,8 +7956,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Back"
+            "state" : "translated",
+            "value" : "戻る"
           }
         },
         "ko" : {
@@ -7975,7 +7975,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wstecz"
+            "value" : "Wróć"
           }
         },
         "pt-BR" : {
@@ -8016,14 +8016,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Back"
+            "state" : "translated",
+            "value" : "返回"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Back"
+            "state" : "translated",
+            "value" : "返回"
           }
         }
       }
@@ -8033,13 +8033,13 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "BETA"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "BETA"
           }
         },
@@ -8141,8 +8141,8 @@
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "BETA"
+            "state" : "translated",
+            "value" : "測試版"
           }
         }
       }
@@ -8515,8 +8515,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Bundle Identifier (e.g., com.droppy)"
+            "state" : "translated",
+            "value" : "Bundle Identifier (z.B. com.droppy)"
           }
         },
         "es" : {
@@ -8570,7 +8570,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Identyfikator aplikacji (np. com.droppy)"
+            "value" : "Identyfikator pakietu (np. com.droppy)"
           }
         },
         "pt-BR" : {
@@ -8617,8 +8617,8 @@
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Bundle Identifier (e.g., com.droppy)"
+            "state" : "translated",
+            "value" : "Bundle Id（如：com.droppy）"
           }
         }
       }
@@ -8634,8 +8634,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Can modify settings"
+            "state" : "translated",
+            "value" : "Darf Einstellungen ändern"
           }
         },
         "es" : {
@@ -8689,7 +8689,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Może zmieniać ustawienia"
+            "value" : "Może modyfikować ustawienia"
           }
         },
         "pt-BR" : {
@@ -8753,8 +8753,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Can toggle settings: auto-rehide, show on click/hover/scroll, Thaw Bar, and other boolean options."
+            "state" : "translated",
+            "value" : "Kann Einstellungen umschalten: automatisches Verstecken, beim Klicken/Schweben/Scrollen anzeigen, Thawleiste und andere Umschaltoptionen."
           }
         },
         "es" : {
@@ -8808,7 +8808,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Możesz przełączać opcje: automatyczne ukrywanie, pokazywanie przy kliknięciu/najechaniu/scrollowaniu, Thaw Bar oraz pozostałe ustawienia binarne."
+            "value" : "Może przełączać ustawienia: automatyczne ukrywanie, pokazywanie po kliknięciu/najechaniu/przewinięciu, pasek Thaw oraz inne opcje włącz/wyłącz."
           }
         },
         "pt-BR" : {
@@ -9819,7 +9819,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Přejděte do části Nastavení systému → Řádek nabídek a povolte %@"
+            "value" : "Přejděte do části Nastavení systému > Řádek nabídek a povolte %@"
           }
         },
         "de" : {
@@ -11489,8 +11489,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Copy version info"
+            "state" : "translated",
+            "value" : "Versionsinfo kopieren"
           }
         },
         "es" : {
@@ -11608,8 +11608,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Created: %@"
+            "state" : "translated",
+            "value" : "Erstellt: %@"
           }
         },
         "es" : {
@@ -12203,8 +12203,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete"
+            "state" : "translated",
+            "value" : "Löschen"
           }
         },
         "es" : {
@@ -12305,8 +12305,8 @@
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete"
+            "state" : "translated",
+            "value" : "刪除"
           }
         }
       }
@@ -12322,8 +12322,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete Profile?"
+            "state" : "translated",
+            "value" : "Profil löschen"
           }
         },
         "es" : {
@@ -12441,8 +12441,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Deny"
+            "state" : "translated",
+            "value" : "Verweigern"
           }
         },
         "es" : {
@@ -12543,8 +12543,8 @@
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Deny"
+            "state" : "translated",
+            "value" : "拒絕"
           }
         }
       }
@@ -12615,7 +12615,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Deweloperska"
+            "value" : "Wersja rozwojowa"
           }
         },
         "pt-BR" : {
@@ -14226,8 +14226,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Duplicate"
+            "state" : "translated",
+            "value" : "Duplizieren"
           }
         },
         "es" : {
@@ -14281,7 +14281,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Duplikuj"
+            "value" : "Powiel"
           }
         },
         "pt-BR" : {
@@ -14458,14 +14458,14 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "E"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "E"
+            "state" : "translated",
+            "value" : "B"
           }
         },
         "es" : {
@@ -14566,7 +14566,7 @@
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "E"
           }
         }
@@ -14702,8 +14702,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Edit Menu Bar Layout…"
+            "state" : "translated",
+            "value" : "Menüleisten-Layout bearbeiten"
           }
         },
         "es" : {
@@ -15297,8 +15297,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enable Settings URI Scheme"
+            "state" : "translated",
+            "value" : "Einstellungs-URL-Schema aktivieren"
           }
         },
         "es" : {
@@ -15352,7 +15352,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Włącz obsługę schematów URI dla ustawień"
+            "value" : "Włącz schemat URI ustawień"
           }
         },
         "pt-BR" : {
@@ -15654,8 +15654,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Error"
+            "state" : "translated",
+            "value" : "Fehler"
           }
         },
         "es" : {
@@ -15756,8 +15756,8 @@
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Error"
+            "state" : "translated",
+            "value" : "錯誤"
           }
         }
       }
@@ -15892,8 +15892,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Export"
+            "state" : "translated",
+            "value" : "Exportieren"
           }
         },
         "es" : {
@@ -15947,7 +15947,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Eksport"
+            "value" : "Eksportuj"
           }
         },
         "pt-BR" : {
@@ -15994,8 +15994,8 @@
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Export"
+            "state" : "translated",
+            "value" : "導出"
           }
         }
       }
@@ -16011,8 +16011,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Export Profile(s)"
+            "state" : "translated",
+            "value" : "Profil(e) exportieren"
           }
         },
         "es" : {
@@ -16185,7 +16185,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wyróżnienie"
+            "value" : "Aktywne okno"
           }
         },
         "pt-BR" : {
@@ -16249,8 +16249,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Forward"
+            "state" : "translated",
+            "value" : "Weiter"
           }
         },
         "es" : {
@@ -16285,8 +16285,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Forward"
+            "state" : "translated",
+            "value" : "進む"
           }
         },
         "ko" : {
@@ -16345,8 +16345,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Forward"
+            "state" : "translated",
+            "value" : "前进"
           }
         },
         "zh-Hant" : {
@@ -17796,8 +17796,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Hotkeys"
+            "state" : "translated",
+            "value" : "Tastaturkürzel"
           }
         },
         "es" : {
@@ -18034,8 +18034,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "How It Works"
+            "state" : "translated",
+            "value" : "So funktioniert es"
           }
         },
         "es" : {
@@ -18629,8 +18629,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If not whitelisted, you'll see a confirmation dialog showing the app name and what it wants to do."
+            "state" : "translated",
+            "value" : "Wenn die Anwendung nicht auf der Whitelist steht, erscheint eine Bestätigungsabfrage die den Anwendungsnamen zeigt und auflistet was die Anwendung tun will."
           }
         },
         "es" : {
@@ -18684,7 +18684,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Jeśli aplikacja nie znajduje się na białej liście, pojawia się komunikat z jej nazwą oraz informacją o planowanych operacjach."
+            "value" : "Jeśli aplikacja nie jest na białej liście, wyświetlone zostanie okno dialogowe z nazwą aplikacji i listą czynności, które chce ona wykonać."
           }
         },
         "pt-BR" : {
@@ -18748,8 +18748,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If you approve, the app is permanently whitelisted and can modify settings anytime without asking again."
+            "state" : "translated",
+            "value" : "Wenn bestätigt, wird die Anwendung dauerhaft auf der Whitelist stehen und kann Einstellungen jederzeit ohne erneute Rückfrage verändern."
           }
         },
         "es" : {
@@ -18803,7 +18803,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zatwierdzenie spowoduje trwałe odblokowanie aplikacji, umożliwiając jej edycję ustawień bez każdorazowej prośby o zgodę."
+            "value" : "Jeśli wyrazisz zgodę, aplikacja zostanie trwale dodana do białej listy i będzie mogła modyfikować ustawienia w dowolnym momencie, bez ponownego pytania."
           }
         },
         "pt-BR" : {
@@ -18986,8 +18986,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Import Profile(s)"
+            "state" : "translated",
+            "value" : "Profil(e) importieren"
           }
         },
         "es" : {
@@ -19462,8 +19462,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Keep search"
+            "state" : "translated",
+            "value" : "Weitersuchen"
           }
         },
         "es" : {
@@ -19517,7 +19517,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pokazuj wyszukiwanie"
+            "value" : "Zachowaj wyszukiwanie"
           }
         },
         "pt-BR" : {
@@ -19819,7 +19819,7 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "Layout"
           }
         },
@@ -19855,8 +19855,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Layout"
+            "state" : "translated",
+            "value" : "レイアウト"
           }
         },
         "ko" : {
@@ -19915,8 +19915,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Layout"
+            "state" : "translated",
+            "value" : "布局"
           }
         },
         "zh-Hant" : {
@@ -22199,8 +22199,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu Bar Profile"
+            "state" : "translated",
+            "value" : "Menüleisten-Profil"
           }
         },
         "es" : {
@@ -22556,8 +22556,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Modified: %@"
+            "state" : "translated",
+            "value" : "Geändert: %@"
           }
         },
         "es" : {
@@ -22794,8 +22794,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move the New Items badge to choose where newly detected items will appear."
+            "state" : "translated",
+            "value" : "Das Neue Einträge-Symbol bewegen, um auszuwählen wo neu erkannte Einträge erscheinen werden."
           }
         },
         "es" : {
@@ -22849,7 +22849,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Przeciągnij plakietkę \"Nowe elementy\", aby określić lokalizację nowo wykrytych obiektów."
+            "value" : "Przeciągnij plakietkę „Nowe elementy”, aby wybrać, gdzie pojawią się nowo wykryte elementy."
           }
         },
         "pt-BR" : {
@@ -23032,8 +23032,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "New Items"
+            "state" : "translated",
+            "value" : "Neue Einträge"
           }
         },
         "es" : {
@@ -23087,7 +23087,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nowe obiekty"
+            "value" : "Nowe elementy"
           }
         },
         "pt-BR" : {
@@ -23151,8 +23151,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "New profile name"
+            "state" : "translated",
+            "value" : "Neuer Profilname"
           }
         },
         "es" : {
@@ -23206,7 +23206,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nowa nazwa profilu"
+            "value" : "Nazwa nowego profilu"
           }
         },
         "pt-BR" : {
@@ -23389,8 +23389,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No profile selected"
+            "state" : "translated",
+            "value" : "Kein Profil ausgewählt"
           }
         },
         "es" : {
@@ -23508,8 +23508,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No profiles saved. Save your current configuration to create one."
+            "state" : "translated",
+            "value" : "Keine Profile gespeichert. Die aktuelle Konfiguration speichern, um ein Profil zu erstellen."
           }
         },
         "es" : {
@@ -23563,7 +23563,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nie zapisano żadnych profili. Aby utworzyć profil, zapisz aktualną konfigurację."
+            "value" : "Brak zapisanych profili. Zapisz bieżącą konfigurację, aby utworzyć profil."
           }
         },
         "pt-BR" : {
@@ -23746,8 +23746,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No whitelisted apps"
+            "state" : "translated",
+            "value" : "Keine Anwendungen auf der Whitelist"
           }
         },
         "es" : {
@@ -23801,7 +23801,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Brak aplikacji na liście dozwolonych"
+            "value" : "Brak aplikacji na białej liście"
           }
         },
         "pt-BR" : {
@@ -24341,7 +24341,7 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "Notch"
           }
         },
@@ -24570,20 +24570,135 @@
     },
     "Off" : {
       "comment" : "A label for the icon refresh rate when it is set to 0.",
-      "isCommentAutoGenerated" : true
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Off"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Off"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Off"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Off"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Off"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Off"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Off"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Off"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Off"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Off"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Off"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Off"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Off"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Off"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Off"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Off"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Off"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Off"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Off"
+          }
+        }
+      }
     },
     "OK" : {
       "comment" : "A button that dismisses an alert.",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "new",
             "value" : "OK"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "OK"
           }
         },
@@ -24940,8 +25055,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Open Focus Settings"
+            "state" : "translated",
+            "value" : "Fokus-Einstellungen öffnen"
           }
         },
         "es" : {
@@ -25416,8 +25531,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Profile"
+            "state" : "translated",
+            "value" : "Profil"
           }
         },
         "es" : {
@@ -25535,8 +25650,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Profile name"
+            "state" : "translated",
+            "value" : "Profilname"
           }
         },
         "es" : {
@@ -25654,8 +25769,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Profile: %@"
+            "state" : "translated",
+            "value" : "Profil: %@"
           }
         },
         "es" : {
@@ -25773,8 +25888,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Profiles"
+            "state" : "translated",
+            "value" : "Profile"
           }
         },
         "es" : {
@@ -26368,8 +26483,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Remove %@ from whitelist"
+            "state" : "translated",
+            "value" : "Entferne %@ von der Whitelist"
           }
         },
         "es" : {
@@ -26423,7 +26538,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Usuń %@ z listy dozwolonych aplikacji"
+            "value" : "Usuń %@ z białej listy"
           }
         },
         "pt-BR" : {
@@ -26487,8 +26602,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Remove from whitelist"
+            "state" : "translated",
+            "value" : "Von der Whitelist entfernen"
           }
         },
         "es" : {
@@ -26542,7 +26657,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Usuń z listy dozwolonych aplikacji"
+            "value" : "Usuń z białej listy"
           }
         },
         "pt-BR" : {
@@ -26606,8 +26721,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Rename"
+            "state" : "translated",
+            "value" : "Umbenennen"
           }
         },
         "es" : {
@@ -28986,8 +29101,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Save Current"
+            "state" : "translated",
+            "value" : "Jetziges Profil speichern"
           }
         },
         "es" : {
@@ -29041,7 +29156,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zapisz bieżący"
+            "value" : "Zapisz bieżącą"
           }
         },
         "pt-BR" : {
@@ -30057,8 +30172,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Set Menu Bar Profile"
+            "state" : "translated",
+            "value" : "Menüleistenprofil festlegen"
           }
         },
         "es" : {
@@ -30176,8 +30291,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Settings URI is disabled. External apps cannot read or modify Thaw settings."
+            "state" : "translated",
+            "value" : "Einstellungs-URL ist deaktiviert. Externe Apps können die Thaw-Einstellungen nicht lesen oder ändern."
           }
         },
         "es" : {
@@ -30231,7 +30346,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Identyfikator URI ustawień jest wyłączony. Aplikacje zewnętrzne nie mogą odczytywać ani modyfikować ustawień Thaw."
+            "value" : "URI ustawień jest wyłączony. Zewnętrzne aplikacje nie mogą odczytywać ani modyfikować ustawień Thaw."
           }
         },
         "pt-BR" : {
@@ -32551,7 +32666,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zobrazí pozadí řádku nabídek. Tuto možnost zapněte, pokud používáte dynamickou tapetu nebo máte v Nastavení systému vypnutou možnost „Zobrazit pozadí řádku nabídek“."
+            "value" : "Zobrazí pozadí řádku nabídek. Tuto možnost zapněte, pokud používáte dynamickou tapetu nebo máte v nastavení systému vypnutou možnost „Zobrazit pozadí řádku nabídek“."
           }
         },
         "de" : {
@@ -32675,7 +32790,7 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "Smart"
           }
         },
@@ -33746,8 +33861,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Supported Settings"
+            "state" : "translated",
+            "value" : "Unterstütze Einstellungen"
           }
         },
         "es" : {
@@ -33801,7 +33916,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Obsługiwane ustawienia"
+            "value" : "Wspierane ustawienia"
           }
         },
         "pt-BR" : {
@@ -35293,8 +35408,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "To switch profiles with Focus modes, add Thaw as a Focus Filter in System Settings → Focus → [Mode] → Focus Filters."
+            "state" : "translated",
+            "value" : "Um Profile mit dem Fokus zu wechseln, muss Thaw als Fokusfilter unter Systemeinstellungen → Fokus → [gewünschter Modus] → Fokusfilter hinzugefügt werden."
           }
         },
         "es" : {
@@ -35348,7 +35463,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aby przełączać profile za pomocą trybów skupienia, dodaj Thaw jako filtr skupienia w menu Ustawienia systemowe → Tryb skupienia → [Tryb] → Filtry trybu skupienia."
+            "value" : "Aby przełączać profile za pomocą trybów skupienia, dodaj Thaw jako filtr trybu skupienia w aplikacji Ustawienia systemowe → Tryb skupienia → [Tryb] → Filtry trybu skupienia."
           }
         },
         "pt-BR" : {
@@ -35888,8 +36003,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Tooltips"
+            "state" : "translated",
+            "value" : "Tooltipps"
           }
         },
         "es" : {
@@ -36483,8 +36598,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update"
+            "state" : "translated",
+            "value" : "Aktualisieren"
           }
         },
         "es" : {
@@ -36538,7 +36653,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aktualizuj"
+            "value" : "Uaktualnij"
           }
         },
         "pt-BR" : {
@@ -36602,8 +36717,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update All"
+            "state" : "translated",
+            "value" : "Alle aktualisieren"
           }
         },
         "es" : {
@@ -36657,7 +36772,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aktualizuj wszystkie"
+            "value" : "Uaktualnij wszystko"
           }
         },
         "pt-BR" : {
@@ -36895,7 +37010,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zaktualizuj konfigurację we wszystkich profilach"
+            "value" : "Uaktualnij konfigurację dla wszystkich profili"
           }
         },
         "pt-BR" : {
@@ -36959,8 +37074,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update Configuration Only"
+            "state" : "translated",
+            "value" : "Nur Konfiguration aktualisieren"
           }
         },
         "es" : {
@@ -37014,7 +37129,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aktualizuj tylko konfigurację"
+            "value" : "Uaktualnij tylko konfigurację"
           }
         },
         "pt-BR" : {
@@ -37078,8 +37193,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update Layout Only"
+            "state" : "translated",
+            "value" : "Nur Layout aktualisieren"
           }
         },
         "es" : {
@@ -37133,7 +37248,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aktualizuj tylko układ"
+            "value" : "Uaktualnij tylko układ"
           }
         },
         "pt-BR" : {
@@ -37197,8 +37312,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update this profile with the current state"
+            "state" : "translated",
+            "value" : "Aktualisiere dieses Profil mit dem aktuellen Zustand"
           }
         },
         "es" : {
@@ -37252,7 +37367,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nanieś aktualne zmiany na ten profil"
+            "value" : "Uaktualnij ten profil do bieżącego stanu"
           }
         },
         "pt-BR" : {
@@ -37673,8 +37788,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Use LCS sorting on notched displays"
+            "state" : "translated",
+            "value" : "LCS-Sortierung auf Bildschirmen mit Notch verwenden"
           }
         },
         "es" : {
@@ -37728,7 +37843,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Włącz sortowanie LCS dla ekranów z notchem"
+            "value" : "Używaj sortowania LCS na wyświetlaczach z notchem"
           }
         },
         "pt-BR" : {
@@ -37792,8 +37907,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Use Option-click to open always-hidden section"
+            "state" : "translated",
+            "value" : "Benutze Option + Klick um den Immer-Versteckt Bereich zu öffnen"
           }
         },
         "es" : {
@@ -37847,7 +37962,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kliknij z wciśniętym klawiszem Option, aby otworzyć zawsze ukrytą sekcję"
+            "value" : "Kliknięcie z klawiszem Option otwiera zawsze ukrytą sekcję"
           }
         },
         "pt-BR" : {
@@ -37911,8 +38026,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Use the faster LCS (Longest Common Subsequence) algorithm for profile sorting on notched displays instead of the full sort. LCS minimises the number of moves but may be less reliable on notched displays with smaller resolutions."
+            "state" : "translated",
+            "value" : "Den schnelleren LCS-Algoritmus (Longest Common Subsequence) für die Profilsortierung anstatt der vollständigen Sortierung auf Bildschirmen mit Notch nutzen. LCS minimiert die Anzahl der Bewegungen kann aber auf Bildschirmen mit Notch mit geringeren Auflösungen weniger zuverlässig sein."
           }
         },
         "es" : {
@@ -37966,7 +38081,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zastosuj szybszy algorytm LCS zamiast pełnego sortowania przy porządkowaniu profili na ekranach z notchem. LCS ogranicza liczbę przesunięć, choć przy mniejszych rozdzielczościach może działać mniej stabilnie."
+            "value" : "Używaj szybszego algorytmu LCS (Longest Common Subsequence) do sortowania profili na wyświetlaczach z notchem zamiast pełnego sortowania. LCS minimalizuje liczbę przesunięć, ale może być mniej niezawodny na ekranach z notchem o niższej rozdzielczości."
           }
         },
         "pt-BR" : {
@@ -38506,8 +38621,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "When a Focus mode deactivates, the display profile is automatically restored."
+            "state" : "translated",
+            "value" : "Wenn ein Fokus-Modus deaktiviert wird, wird das Profil automatisch wiederhergestellt."
           }
         },
         "es" : {
@@ -38561,7 +38676,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wyłączenie trybu Skupienie powoduje automatyczne przywrócenie profilu wyświetlania."
+            "value" : "Po wyłączeniu trybu skupienia profil wyświetlacza jest automatycznie przywracany."
           }
         },
         "pt-BR" : {
@@ -38625,8 +38740,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "When an app sends a thaw:// URL to change settings, Thaw checks if that app is whitelisted."
+            "state" : "translated",
+            "value" : "Wenn eine Anwendung eine Einstellungsänderung über eine thaw:// URL schickt, überprüft Thaw ob die Anwendung auf der Whitelist steht."
           }
         },
         "es" : {
@@ -38680,7 +38795,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gdy aplikacja korzysta z adresu URL thaw:// do zmiany konfiguracji, system Thaw upewnia się, że znajduje się ona na liście wyjątków."
+            "value" : "Gdy aplikacja wysyła adres URL typu thaw:// w celu zmiany ustawień, Thaw sprawdza, czy ta aplikacja znajduje się na białej liście."
           }
         },
         "pt-BR" : {
@@ -38744,8 +38859,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Whitelisted Applications"
+            "state" : "translated",
+            "value" : "Anwendungen auf der Whitelist"
           }
         },
         "es" : {
@@ -38799,7 +38914,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dozwolone aplikacje"
+            "value" : "Aplikacje na białej liście"
           }
         },
         "pt-BR" : {
@@ -38863,8 +38978,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Whitelisted apps can read settings, toggle boolean options, set numeric values (timers, delays), change enum settings (rehide strategy, Thaw Bar location), and modify per-display configurations. This includes auto-rehide, show on click/hover/scroll/double-click, Thaw Bar, hide application menus, enable always-hidden section, show tooltips, and diagnostic logging."
+            "state" : "translated",
+            "value" : "Anwendungen auf der Whitelist können Einstellungen lesen, boolesche Optionen einschalten, numerische Werte festlegen (Timer, Verzögerung), Enum-Einstellungen ändern (Strategie neu verstecken, Thaw Bar Standort) und Konfigurationen pro Anzeige ändern. Dazu gehören automatisches Verstecken, Anzeigen bei Klick/Darüberschweben/ScrollenDoppelklick, Thaw-Leiste, verstecke Anwendungsmenüs, Aktivieren des Immer-Versteckt Bereichs, Anzeige von Tooltips und Diagnoseprotokollierung."
           }
         },
         "es" : {
@@ -38918,7 +39033,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aplikacje z białej listy mogą odczytywać ustawienia, przełączać opcje binarne, ustawiać wartości liczbowe (liczniki, opóźnienia), zmieniać ustawienia wyliczeniowe (strategia ponownego ukrywania, lokalizacja paska Thaw Bar) oraz modyfikować konfiguracje dla poszczególnych ekranów. Obejmuje to automatyczne ponowne ukrywanie, pokazywanie przy kliknięciu/najechaniu/przewinięciu/dwukrotnym kliknięciu, pasek Thaw Bar, ukrywanie menu aplikacji, włączanie sekcji zawsze ukrytej, wyświetlanie podpowiedzi oraz logowanie diagnostyczne."
+            "value" : "Aplikacje na białej liście mogą odczytywać ustawienia, przełączać opcje włącz/wyłącz, ustawiać wartości liczbowe (liczniki, opóźnienia), zmieniać ustawienia typu enum (strategię ponownego ukrywania, położenie paska Thaw) oraz modyfikować konfiguracje poszczególnych ekranów. Obejmuje to automatyczne ukrywanie, pokazywanie po kliknięciu/najechaniu/przewinięciu/dwukrotnym kliknięciu, pasek Thaw, ukrywanie menu aplikacji, włączanie sekcji zawsze ukrytej, wyświetlanie podpowiedzi oraz logowanie diagnostyczne."
           }
         },
         "pt-BR" : {
@@ -39220,8 +39335,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "You can remove apps from this list at any time to revoke their access."
+            "state" : "translated",
+            "value" : "Anwendungen können von dieser Liste jederzeit gelöscht und deren Berechtigungen damit wieder entzogen werden."
           }
         },
         "es" : {
@@ -39275,7 +39390,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "W każdej chwili możesz usunąć aplikacje z tej listy, aby odebrać im uprawnienia."
+            "value" : "Możesz usunąć aplikacje z tej listy w dowolnym momencie, aby odebrać im dostęp."
           }
         },
         "pt-BR" : {
