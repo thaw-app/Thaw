@@ -21206,7 +21206,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Maksymalna ilość elementów w rzędzie siatki."
+            "value" : "Maksymalna liczba elementów w jednym wierszu siatki."
           }
         }
       }
