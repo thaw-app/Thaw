@@ -1464,6 +1464,43 @@ extension MenuBarItemManager {
         await enforceControlItemOrder(controlItems: controlItems)
 
         guard !Task.isCancelled else {
+            MenuBarItemManager.diagLog.debug("cacheItemsRegardless: cancelled before restoreItemsToSavedSections")
+            return
+        }
+
+        // Skip all restore logic during the startup settling period.
+        // The settling period prevents cascading icon moves when many apps
+        // load at login or restart in quick succession (app update checks).
+        if !isInStartupSettling {
+            // Cross-section restore: move items back to their saved section
+            // BEFORE relocateNewLeftmostItems runs. This ensures items that
+            // have saved sections are restored to their proper places before
+            // the "new item" relocation logic can move them to the default
+            // section (which is usually hidden/always-hidden).
+            isRestoringItemOrder = true
+            isRestoringItemOrderTimestamp = Date()
+            let didRestoreSections = await restoreItemsToSavedSections(
+                items,
+                controlItems: controlItems,
+                previousWindowIDs: previousWindowIDs
+            )
+            if didRestoreSections {
+                MenuBarItemManager.diagLog.debug("Restored item to saved section; scheduling recache")
+                let continuation = self.backgroundCacheContinuation
+                self.backgroundCacheContinuation = nil
+                Task { [weak self] in
+                    try? await Task.sleep(for: MenuBarItemManager.uiSettleDelay)
+                    await self?.cacheItemsRegardless(skipRecentMoveCheck: true)
+                    self?.isRestoringItemOrder = false
+                    continuation?.resume()
+                    try? await Task.sleep(for: MenuBarItemManager.uiSettleDelay)
+                    await self?.cacheItemsIfNeeded()
+                }
+                return
+            }
+        }
+
+        guard !Task.isCancelled else {
             MenuBarItemManager.diagLog.debug("cacheItemsRegardless: cancelled before relocateNewLeftmostItems")
             return
         }
@@ -1496,9 +1533,7 @@ extension MenuBarItemManager {
             return
         }
 
-        // Skip all restore logic during the startup settling period.
-        // The settling period prevents cascading icon moves when many apps
-        // load at login or restart in quick succession (app update checks).
+        // During startup settling, just cache items without restore/relocate.
         // A final cacheItemsRegardless() after the period ends handles restore.
         guard !isInStartupSettling else {
             await uncheckedCacheItems(items: items, controlItems: controlItems, displayID: displayID)
@@ -1510,32 +1545,6 @@ extension MenuBarItemManager {
                 }
             }
             MenuBarItemManager.diagLog.debug("cacheItemsRegardless: startup settling active, skipping restore")
-            return
-        }
-
-        // Cross-section restore: move items back to their saved section
-        // before restoreSavedItemOrder handles within-section reordering.
-        // Set the flag before calling so that any intermediate cache
-        // updates during move() don't overwrite the saved section order.
-        isRestoringItemOrder = true
-        isRestoringItemOrderTimestamp = Date()
-        let didRestoreSections = await restoreItemsToSavedSections(
-            items,
-            controlItems: controlItems,
-            previousWindowIDs: previousWindowIDs
-        )
-        if didRestoreSections {
-            MenuBarItemManager.diagLog.debug("Restored item to saved section; scheduling recache")
-            let continuation = self.backgroundCacheContinuation
-            self.backgroundCacheContinuation = nil
-            Task { [weak self] in
-                try? await Task.sleep(for: MenuBarItemManager.uiSettleDelay)
-                await self?.cacheItemsRegardless(skipRecentMoveCheck: true)
-                self?.isRestoringItemOrder = false
-                continuation?.resume()
-                try? await Task.sleep(for: MenuBarItemManager.uiSettleDelay)
-                await self?.cacheItemsIfNeeded()
-            }
             return
         }
         // Note: isRestoringItemOrder remains true here so that if a concurrent
@@ -2527,7 +2536,7 @@ extension MenuBarItemManager {
         MouseHelpers.hideCursor()
         defer {
             if let mouseLocation {
-                MouseHelpers.restoreCursor(to: mouseLocation)
+                MouseHelpers.warpCursor(to: mouseLocation)
             }
             MouseHelpers.showCursor()
             lastMoveOperationTimestamp = .now
@@ -2698,7 +2707,7 @@ extension MenuBarItemManager {
         let mouseLocation = try getMouseLocation()
         MouseHelpers.hideCursor(watchdogTimeout: watchdogTimeout)
         defer {
-            MouseHelpers.restoreCursor(to: mouseLocation)
+            MouseHelpers.warpCursor(to: mouseLocation)
             MouseHelpers.showCursor()
         }
 
@@ -2835,7 +2844,7 @@ extension MenuBarItemManager {
         try await Task.sleep(for: .milliseconds(10))
         MouseHelpers.hideCursor()
         defer {
-            MouseHelpers.restoreCursor(to: mouseLocation)
+            MouseHelpers.warpCursor(to: mouseLocation)
             MouseHelpers.showCursor()
         }
 
@@ -2918,7 +2927,6 @@ extension MenuBarItemManager {
             do {
                 let clickStartTime = Date.now
                 try await postClickEvents(item: item, mouseButton: mouseButton)
-                scheduleImageCacheRefreshAfterMenuDismissal(appState: appState)
                 let clickDuration = Date.now.timeIntervalSince(clickStartTime)
                 MenuBarItemManager.diagLog.debug("Attempt \(n) succeeded in \(Int(clickDuration * 1000))ms, finished with click")
                 return
@@ -2937,54 +2945,6 @@ extension MenuBarItemManager {
         }
     }
 
-    /// Waits for a clicked menu extra to open and then dismiss its menu,
-    /// refreshing the off-screen image cache once the pressed background
-    /// should no longer be captured.
-    private func scheduleImageCacheRefreshAfterMenuDismissal(appState: AppState) {
-        Task { [weak self, weak appState] in
-            guard let self, let appState else {
-                return
-            }
-
-            let menuOpenPollInterval: Duration = .milliseconds(75)
-            let menuClosePollInterval: Duration = .milliseconds(125)
-            let menuOpenDeadline = ContinuousClock.now + .milliseconds(500)
-
-            var sawMenuOpen = false
-            while ContinuousClock.now < menuOpenDeadline {
-                if await self.isAnyMenuBarItemMenuOpen() {
-                    sawMenuOpen = true
-                    break
-                }
-                try? await Task.sleep(for: menuOpenPollInterval)
-            }
-
-            guard sawMenuOpen else {
-                return
-            }
-
-            let menuCloseDeadline = ContinuousClock.now + .seconds(8)
-            while ContinuousClock.now < menuCloseDeadline {
-                try? await Task.sleep(for: menuClosePollInterval)
-                guard !Task.isCancelled else {
-                    return
-                }
-                if await !self.isAnyMenuBarItemMenuOpen() {
-                    await self.cacheItemsIfNeeded()
-                    guard !Task.isCancelled else {
-                        return
-                    }
-                    await appState.imageCache.updateCacheWithoutChecks(
-                        sections: MenuBarSection.Name.allCases
-                    )
-                    MenuBarItemManager.diagLog.debug(
-                        "Refreshed item image cache after menu dismissal"
-                    )
-                    return
-                }
-            }
-        }
-    }
 }
 
 // MARK: - Temporarily Showing Items
@@ -3023,9 +2983,6 @@ extension MenuBarItemManager {
         /// The window of the item's shown interface.
         var shownInterfaceWindow: WindowInfo?
 
-        /// The bounds of the item while it is temporarily shown.
-        var shownItemBounds: CGRect?
-
         /// The number of attempts that have been made to rehide the item.
         var rehideAttempts = 0
 
@@ -3046,16 +3003,15 @@ extension MenuBarItemManager {
         /// A Boolean value that indicates whether the menu bar item's
         /// interface is showing.
         var isShowingInterface: Bool {
-            // First check the tracked popup window — this is the most
-            // reliable signal when available.
             if let window = shownInterfaceWindow,
                let current = WindowInfo(windowID: window.windowID)
             {
-                if Self.isMenuInterfaceWindow(current) {
-                    guard let shownItemBounds else {
-                        return current.isOnScreen
-                    }
-                    return current.isOnScreen && Self.isPopupWindow(current, near: shownItemBounds)
+                if current.layer == CGWindowLevelForKey(.popUpMenuWindow)
+                    || current.layer == CGWindowLevelForKey(.popUpMenuWindow) - 1
+                    || current.layer == CGWindowLevelForKey(.statusWindow)
+                    || current.layer == CGWindowLevelForKey(.mainMenuWindow)
+                {
+                    return current.isOnScreen
                 }
                 if let app = current.owningApplication {
                     return app.isActive && current.isOnScreen
@@ -3076,46 +3032,27 @@ extension MenuBarItemManager {
         }
 
         /// Checks whether the item's owning application has any visible
-        /// popup/menu window on screen.
+        /// popup-menu window on screen.
         ///
-        /// macOS 26 can host menu extra popups in Control Center or Window
-        /// Server windows instead of the source app's PID. To avoid hiding the
-        /// temporary item while its menu is still open, accept menu-like
-        /// windows that are spatially attached to the shown menu bar item.
+        /// Only matches the pop-up menu level (the level macOS uses for
+        /// menus opened from menu bar items). Status-level and main-menu
+        /// level windows are excluded because those are the menu bar items
+        /// themselves — including the temporarily-shown item we're
+        /// tracking — not popups created by clicking them. A liberal
+        /// "above normal" match was previously used as a catch-all, but
+        /// it matched floating panels, modal levels, and other unrelated
+        /// app windows, keeping `isShowingInterface` true indefinitely
+        /// and preventing rehide.
         private func appHasVisiblePopup() -> Bool {
             let windows = WindowInfo.createWindows(option: .onScreen)
+            let popUpLevel = CGWindowLevelForKey(.popUpMenuWindow)
             return windows.contains { window in
-                guard Self.isMenuInterfaceWindow(window) else {
+                guard window.ownerPID == sourcePID else {
                     return false
                 }
-                guard let shownItemBounds else {
-                    return window.ownerPID == sourcePID
-                }
-                return Self.isPopupWindow(window, near: shownItemBounds)
+                let level = CGWindowLevel(Int32(window.layer))
+                return level == popUpLevel || level == popUpLevel - 1
             }
-        }
-
-        static func isMenuInterfaceWindow(_ window: WindowInfo) -> Bool {
-            let level = CGWindowLevel(Int32(window.layer))
-            return level == CGWindowLevelForKey(.popUpMenuWindow) ||
-                level == CGWindowLevelForKey(.popUpMenuWindow) - 1 ||
-                level == CGWindowLevelForKey(.mainMenuWindow)
-        }
-
-        static func isPopupWindow(_ window: WindowInfo, near itemBounds: CGRect) -> Bool {
-            let horizontalPadding: CGFloat = 180
-            let verticalPadding: CGFloat = 48
-            let isTallerThanStatusItem = window.bounds.height > itemBounds.height + 8
-            guard isTallerThanStatusItem else {
-                return false
-            }
-            let expandedItemBounds = itemBounds.insetBy(
-                dx: -horizontalPadding,
-                dy: -verticalPadding
-            )
-            let horizontallyNear = window.bounds.maxX >= itemBounds.minX - horizontalPadding &&
-                window.bounds.minX <= itemBounds.maxX + horizontalPadding
-            return expandedItemBounds.intersects(window.bounds) || horizontallyNear
         }
 
         init(
@@ -3504,8 +3441,6 @@ extension MenuBarItemManager {
 
         let idsBeforeClick = Set(Bridging.getWindowList(option: .onScreen))
         let clickPID = clickItem.sourcePID ?? clickItem.ownerPID
-        let clickItemBounds = Bridging.getWindowBounds(for: clickItem.windowID) ?? clickItem.bounds
-        context.shownItemBounds = clickItemBounds
 
         do {
             // Single attempt: the item is already at a known-good position with
@@ -3543,19 +3478,7 @@ extension MenuBarItemManager {
         let windowsAfterClick = WindowInfo.createWindows(option: .onScreen)
 
         context.shownInterfaceWindow = windowsAfterClick.first { window in
-            guard !idsBeforeClick.contains(window.windowID) else {
-                return false
-            }
-            guard TemporarilyShownItemContext.isMenuInterfaceWindow(window) else {
-                return false
-            }
-            guard TemporarilyShownItemContext.isPopupWindow(window, near: clickItemBounds) else {
-                return false
-            }
-            if window.ownerPID == clickPID {
-                return true
-            }
-            return true
+            window.ownerPID == clickPID && !idsBeforeClick.contains(window.windowID)
         }
 
         return .movedAndClicked
