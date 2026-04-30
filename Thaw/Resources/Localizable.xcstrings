@@ -4,12 +4,6 @@
     "\"%@\" (%@) wants to control Thaw settings via URL scheme.\n\nIf allowed, this app will be able to:\n• Read current settings and configurations\n• Toggle and change boolean settings\n• Modify numeric values (timers, delays, intervals)\n• Change enum settings (rehide strategy, Thaw Bar location)\n• Modify per-display configurations\n\nThis permission persists until manually removed in Settings > Automation.%@" : {
       "comment" : "Informative text in an NSAlert confirmation dialog for first-time authorization of the Settings URI handler. The first argument is the app name. The second argument is the bundle identifier. The third argument is the string “”, the string “\n\nSigned by: %arg”, or the string “\n\n⚠️ Warning: This app is not code-signed.”.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "\"%1$@\" (%2$@) wants to control Thaw settings via URL scheme.\n\nIf allowed, this app will be able to:\n• Read current settings and configurations\n• Toggle and change boolean settings\n• Modify numeric values (timers, delays, intervals)\n• Change enum settings (rehide strategy, Thaw Bar location)\n• Modify per-display configurations\n\nThis permission persists until manually removed in Settings > Automation.%3$@"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -135,12 +129,6 @@
     "%@" : {
       "comment" : "The title and version number of the app, along with the copyright notice.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "new",
@@ -260,12 +248,6 @@
     "%@ %@ Section" : {
       "comment" : "A menu item title that toggles the visibility of a section in the menu bar. The argument is the name of the section.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@ %@ Section"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -385,12 +367,6 @@
     "%@ Bar" : {
       "comment" : "The title of the window displayed in the menu bar.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@ Bar"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -510,12 +486,6 @@
     "%@ can work in a limited mode without this permission." : {
       "comment" : "A callout box that explains that the app can work in a limited mode without a particular permission.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@ can work in a limited mode without this permission."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -635,12 +605,6 @@
     "%@ cannot arrange menu bar items in automatically hidden menu bars." : {
       "comment" : "A view that shows a message when the menu bar layout can't be arranged in automatically hidden menu bars.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@ cannot arrange menu bar items in automatically hidden menu bars."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -760,12 +724,6 @@
     "%@ cannot edit the appearance of automatically hidden menu bars." : {
       "comment" : "A view that appears when the user tries to edit the appearance of a menu bar that the system has hidden automatically.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@ cannot edit the appearance of automatically hidden menu bars."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -885,12 +843,6 @@
     "%@ icon" : {
       "comment" : "The text that will be displayed in the \"Location\" picker view for the Ice Bar.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@ icon"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1010,12 +962,6 @@
     "%@ is currently running. Running multiple menu bar managers at the same time can cause display issues and unexpected behavior. Consider quitting %@ before using Thaw." : {
       "comment" : "Informative text in the warning alert. The",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%1$@ is currently running. Running multiple menu bar managers at the same time can cause display issues and unexpected behavior. Consider quitting %2$@ before using Thaw."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1141,12 +1087,6 @@
     "%@ is unresponsive. Until it is restarted, it cannot be moved. Movement of other menu bar items may also be affected until this is resolved." : {
       "comment" : "The informative text of the alert displayed when a menu bar item is unresponsive.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@ is unresponsive. Until it is restarted, it cannot be moved. Movement of other menu bar items may also be affected until this is resolved."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1266,12 +1206,6 @@
     "%@ needs this to:" : {
       "comment" : "A section within a permission box that lists the reasons why a particular permission is needed. The argument is the name of the app.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@ needs this to:"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1391,12 +1325,6 @@
     "%@ needs your permission to manage the menu bar." : {
       "comment" : "A paragraph explaining the app's purpose and its commitment to user privacy.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@ needs your permission to manage the menu bar."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1516,12 +1444,6 @@
     "%@ Settings…" : {
       "comment" : "The title of the menu item that opens the settings window.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@ Settings…"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1641,42 +1563,6 @@
     "%lf seconds" : {
       "comment" : "A localized string key that represents a duration in seconds. The argument is a number of seconds.",
       "localizations" : {
-        "base" : {
-          "variations" : {
-            "plural" : {
-              "few" : {
-                "stringUnit" : {
-                  "state" : "needs_review",
-                  "value" : "%lf seconds"
-                }
-              },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "needs_review",
-                  "value" : "%lf seconds"
-                }
-              },
-              "one" : {
-                "stringUnit" : {
-                  "state" : "needs_review",
-                  "value" : "%lf second"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "needs_review",
-                  "value" : "%lf seconds"
-                }
-              },
-              "two" : {
-                "stringUnit" : {
-                  "state" : "needs_review",
-                  "value" : "%lf seconds"
-                }
-              }
-            }
-          }
-        },
         "cs" : {
           "variations" : {
             "plural" : {
@@ -2049,12 +1935,6 @@
       "comment" : "A label displaying the number of columns in the grid layout. The value is the number of columns in the grid.",
       "isCommentAutoGenerated" : true,
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%lld"
-          }
-        },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2066,12 +1946,6 @@
     "%lld fps" : {
       "comment" : "A label showing the current frame rate of the icon refresh timer. The argument is the current frame rate, rounded to the nearest whole number.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%lld fps"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2191,42 +2065,6 @@
     "%lld seconds" : {
       "comment" : "Text that describes the rehide interval, in seconds. The argument is the number of seconds.",
       "localizations" : {
-        "base" : {
-          "variations" : {
-            "plural" : {
-              "few" : {
-                "stringUnit" : {
-                  "state" : "needs_review",
-                  "value" : "%lld seconds"
-                }
-              },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "needs_review",
-                  "value" : "%lld seconds"
-                }
-              },
-              "one" : {
-                "stringUnit" : {
-                  "state" : "needs_review",
-                  "value" : "%lld second"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "needs_review",
-                  "value" : "%lld seconds"
-                }
-              },
-              "two" : {
-                "stringUnit" : {
-                  "state" : "needs_review",
-                  "value" : "%lld seconds"
-                }
-              }
-            }
-          }
-        },
         "cs" : {
           "variations" : {
             "plural" : {
@@ -2598,12 +2436,6 @@
     "•" : {
       "comment" : "A bullet point used in lists.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "•"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "new",
@@ -2723,12 +2555,6 @@
     "+" : {
       "comment" : "A plus sign used in a menu bar search panel.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "+"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "new",
@@ -2848,12 +2674,6 @@
     "⌘" : {
       "comment" : "A command key character.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "⌘"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "new",
@@ -2973,12 +2793,6 @@
     "⎋" : {
       "comment" : "A symbol representing the action of cancelling or discarding something.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "⎋"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "new",
@@ -3098,12 +2912,6 @@
     "1" : {
       "comment" : "A label for a menu bar item with a width of 1.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "1"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "new",
@@ -3223,12 +3031,6 @@
     "1." : {
       "comment" : "The first step in the process of how Thaw works.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "1."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "new",
@@ -3348,12 +3150,6 @@
     "2" : {
       "comment" : "A description of a menu bar item with a value of 2.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "2"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "new",
@@ -3473,12 +3269,6 @@
     "2." : {
       "comment" : "A step in the process of how apps can modify settings.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "2."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "new",
@@ -3598,12 +3388,6 @@
     "3" : {
       "comment" : "A label for a menu item with a value of \"3\".",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "3"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "new",
@@ -3723,12 +3507,6 @@
     "3." : {
       "comment" : "A step in the process of how to use Thaw.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "3."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "new",
@@ -3848,12 +3626,6 @@
     "4." : {
       "comment" : "A step in the process of using Thaw.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "4."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "new",
@@ -3973,12 +3745,6 @@
     "A new update is available" : {
       "comment" : "Title of a notification when a new update is available.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "A new update is available"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -4098,12 +3864,6 @@
     "About" : {
       "comment" : "The \"About\" navigation identifier.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "About"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -4223,12 +3983,6 @@
     "Absolutely no personal information is collected or stored." : {
       "comment" : "A description of how user data is handled by the app.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Absolutely no personal information is collected or stored."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -4348,12 +4102,6 @@
     "Accessibility" : {
       "comment" : "Title of the accessibility permission.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Accessibility"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -4473,12 +4221,6 @@
     "Acknowledgements" : {
       "comment" : "The button that opens the acknowledgements page.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Acknowledgements"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -4598,12 +4340,6 @@
     "Add" : {
       "comment" : "A button that adds an app to the whitelist.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Add"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -4723,12 +4459,6 @@
     "Add Application Manually" : {
       "comment" : "A heading for the section where users can add apps manually.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Add Application Manually"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -4848,12 +4578,6 @@
     "Advanced" : {
       "comment" : "The \"Advanced\" section in the \"Settings\" interface.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Advanced"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -4973,12 +4697,6 @@
     "Allow" : {
       "comment" : "Button title for allowing the app to control Thaw settings.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Allow"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5098,12 +4816,6 @@
     "Allow \"%@\" to control Thaw settings?" : {
       "comment" : "Title of an NSAlert dialog that asks the user for permission to control Thaw settings.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Allow \"%@\" to control Thaw settings?"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5223,12 +4935,6 @@
     "Allow external applications to read and modify Thaw settings via thaw:// URLs." : {
       "comment" : "Toggle label for the settings URI scheme.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Allow external applications to read and modify Thaw settings via thaw:// URLs."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5348,12 +5054,6 @@
     "Always show hidden items" : {
       "comment" : "A toggle that allows users to configure whether hidden menu bar items should always be visible in the native menu bar on a particular display.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Always show hidden items"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5473,12 +5173,6 @@
     "Always show hidden menu bar items in the menu bar on this display." : {
       "comment" : "A toggle that allows users to choose whether to always show hidden menu bar items on a specific display.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Always show hidden menu bar items in the menu bar on this display."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5598,12 +5292,6 @@
     "Always show the %@ Bar at the mouse pointer's location when it is shown using a hotkey." : {
       "comment" : "A toggle that lets users decide whether the location of the \\(Constants.displayName) Bar should be fixed at the mouse pointer's location when it is shown using a hotkey.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Always show the %@ Bar at the mouse pointer's location when it is shown using a hotkey."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5723,12 +5411,6 @@
     "Always-Hidden" : {
       "comment" : "Localized string key for the \"Always-Hidden\" menu bar section.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Always-Hidden"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5848,12 +5530,6 @@
     "Appearance" : {
       "comment" : "The localized string key for the \"Appearance\" section in the \"Settings\" interface.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Appearance"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5973,12 +5649,6 @@
     "Apply" : {
       "comment" : "A button that applies the current value of a slider to a setting.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Apply"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -6098,12 +5768,6 @@
     "Apply a Thaw menu bar profile when this Focus activates." : {
       "comment" : "Description of the \"Set Menu Bar Profile\" focus filter intent, including the category name.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Apply a Thaw menu bar profile when this Focus activates."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -6223,12 +5887,6 @@
     "Apply different settings based on the current system appearance." : {
       "comment" : "Label for a toggle that allows the user to choose whether to use different appearance settings based on the current system appearance.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Apply different settings based on the current system appearance."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -6348,12 +6006,6 @@
     "Apply the current spacing" : {
       "comment" : "A button that applies the current menu bar item spacing setting.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Apply the current spacing"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -6473,12 +6125,6 @@
     "Applying this setting will relaunch all apps with menu bar items. Some apps may need to be manually relaunched." : {
       "comment" : "Note displayed in the annotation for the `spacingOptions` view, explaining that applying the menu bar item spacing setting will require a system restart.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Applying this setting will relaunch all apps with menu bar items. Some apps may need to be manually relaunched."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -6598,42 +6244,6 @@
     "apps %lld" : {
       "comment" : "Shows the number of whitelisted apps",
       "localizations" : {
-        "base" : {
-          "variations" : {
-            "plural" : {
-              "few" : {
-                "stringUnit" : {
-                  "state" : "needs_review",
-                  "value" : "%lld apps"
-                }
-              },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "needs_review",
-                  "value" : "%lld apps"
-                }
-              },
-              "one" : {
-                "stringUnit" : {
-                  "state" : "needs_review",
-                  "value" : "%lld app"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "needs_review",
-                  "value" : "%lld apps"
-                }
-              },
-              "two" : {
-                "stringUnit" : {
-                  "state" : "needs_review",
-                  "value" : "%lld apps"
-                }
-              }
-            }
-          }
-        },
         "cs" : {
           "variations" : {
             "plural" : {
@@ -7005,12 +6615,6 @@
     "Apps that request settings access will appear here after you approve them." : {
       "comment" : "A description of the whitelisted apps section.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Apps that request settings access will appear here after you approve them."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -7130,12 +6734,6 @@
     "Are you sure you want to delete the profile \"%@\"? This cannot be undone." : {
       "comment" : "A message displayed when a user attempts to delete a profile. The argument is the name of the profile that is about to be deleted.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Are you sure you want to delete the profile \"%@\"? This cannot be undone."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -7255,12 +6853,6 @@
     "Arrange menu bar items." : {
       "comment" : "A detail about the \"Accessibility\" permission, describing the app's ability to rearrange menu bar items.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Arrange menu bar items."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -7380,12 +6972,6 @@
     "Arrow" : {
       "comment" : "Localized string key for each case in the `Name` enum.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Arrow"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -7505,12 +7091,6 @@
     "Assign a profile to each display." : {
       "comment" : "Description text in the auto-switch section of the profile settings pane.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Assign a profile to each display."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -7630,12 +7210,6 @@
     "Auto-Switch" : {
       "comment" : "Section header for the \"Auto-Switch\" settings in the profile settings pane.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Auto-Switch"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -7755,12 +7329,6 @@
     "Automatically check for updates" : {
       "comment" : "A toggle that lets the user enable or disable automatic checking for updates.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Automatically check for updates"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -7880,12 +7448,6 @@
     "Automatically download and install updates" : {
       "comment" : "A toggle label that allows the user to enable or disable automatic update checking.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Automatically download and install updates"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -8005,12 +7567,6 @@
     "Automatically download updates" : {
       "comment" : "A toggle that lets the user enable or disable automatic downloading of updates.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Automatically download updates"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -8130,12 +7686,6 @@
     "Automatically rehide" : {
       "comment" : "A toggle that enables or disables automatic rehiding of the hidden menu bar items.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Automatically rehide"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -8255,12 +7805,6 @@
     "Automation" : {
       "comment" : "The \"Automation\" tab in the settings interface.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Automation"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -8380,12 +7924,6 @@
     "Back" : {
       "comment" : "A button that navigates back to the previous settings section.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Back"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -8505,12 +8043,6 @@
     "BETA" : {
       "comment" : "The text displayed in the badge.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "BETA"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "new",
@@ -8630,12 +8162,6 @@
     "Border" : {
       "comment" : "A toggle that lets the user enable or disable the border around the view.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Border"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -8755,12 +8281,6 @@
     "Border Color" : {
       "comment" : "A label for selecting the border color of the menu bar.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Border Color"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -8880,12 +8400,6 @@
     "Border Width" : {
       "comment" : "Label for a picker that allows the user to select the border width of the menu bar.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Border Width"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -9005,12 +8519,6 @@
     "Bundle Identifier (e.g., com.droppy)" : {
       "comment" : "A label for a text field where the user can enter a bundle identifier.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Bundle Identifier (e.g., com.droppy)"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -9130,12 +8638,6 @@
     "Can modify settings" : {
       "comment" : "A description of the permission that allows an app to modify Thaw settings.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Can modify settings"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -9255,12 +8757,6 @@
     "Can toggle settings: auto-rehide, show on click/hover/scroll, Thaw Bar, and other boolean options." : {
       "comment" : "Description of the permissions of a whitelisted app.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Can toggle settings: auto-rehide, show on click/hover/scroll, Thaw Bar, and other boolean options."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -9380,12 +8876,6 @@
     "Cancel" : {
       "comment" : "The button to cancel the reset action.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Cancel"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -9505,12 +8995,6 @@
     "Cannot move %@ icon." : {
       "comment" : "Alert shown when trying to drag the \\(Constants.displayName) icon out of the visible section.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Cannot move %@ icon."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -9630,12 +9114,6 @@
     "Change the menu bar's appearance." : {
       "comment" : "Detail about the \"Screen Recording\" permission, describing how to change the menu bar's appearance.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Change the menu bar's appearance."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -9755,12 +9233,6 @@
     "Check Automatically" : {
       "comment" : "A button that enables automatic update checking.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Check Automatically"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -9880,12 +9352,6 @@
     "Check for Updates" : {
       "comment" : "A button that triggers a check for updates.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Check for Updates"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -10005,12 +9471,6 @@
     "Check for updates automatically?" : {
       "comment" : "A title for a sheet that lets a user decide whether or not to have \\(Constants.displayName) automatically check for updates.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Check for updates automatically?"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -10130,12 +9590,6 @@
     "Check for Updates…" : {
       "comment" : "Title of a menu item that checks for software updates.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Check for Updates…"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -10255,12 +9709,6 @@
     "Check permissions" : {
       "comment" : "A button label that, when tapped, opens the app's settings to allow the app to access screen recording permissions.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Check permissions"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -10380,12 +9828,6 @@
     "Check System Settings > Menu Bar and enable %@" : {
       "comment" : "A message displayed when Thaw is disabled in System Settings and how to solve it.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Check System Settings > Menu Bar and enable %@"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -10505,12 +9947,6 @@
     "Checking for updates is not supported in debug mode." : {
       "comment" : "Alert message displayed in debug mode when checking for app updates.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Checking for updates is not supported in debug mode."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -10630,12 +10066,6 @@
     "Chevron" : {
       "comment" : "Localized string key representation of the \"Chevron\" case in the `SectionDividerStyle` enum.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Chevron"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -10755,12 +10185,6 @@
     "Chevron (Down)" : {
       "comment" : "Localized string key representation of the \"Chevron (Down)\" case in the `SectionDividerStyle` enum.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Chevron (Down)"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -10880,12 +10304,6 @@
     "Choose a custom icon to show in the menu bar." : {
       "comment" : "Label for a button that allows the user to import a custom icon for the app.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Choose a custom icon to show in the menu bar."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -11005,12 +10423,6 @@
     "Choose image…" : {
       "comment" : "A button to import a custom icon for the app.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Choose image…"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -11130,12 +10542,6 @@
     "Click an empty area of the menu bar to show hidden menu bar items." : {
       "comment" : "Toggle that allows the user to enable or disable the feature of showing hidden menu bar items by clicking on an empty area of the menu bar.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Click an empty area of the menu bar to show hidden menu bar items."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -11255,12 +10661,6 @@
     "Click Item" : {
       "comment" : "A button label that appears when the item is currently being displayed.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Click Item"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -11381,12 +10781,6 @@
       "comment" : "A label displayed above a stepper that lets the user select the number of columns in the grid layout.",
       "isCommentAutoGenerated" : true,
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Columns"
-          }
-        },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
@@ -11398,12 +10792,6 @@
     "Confirm" : {
       "comment" : "A label displayed as a button in the edit actions hint.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Confirm"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -11523,12 +10911,6 @@
     "Conflicting Menu Bar Manager Detected" : {
       "comment" : "Title of an alert that appears when a conflicting menu bar manager is detected.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Conflicting Menu Bar Manager Detected"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -11648,12 +11030,6 @@
     "Continue" : {
       "comment" : "Label for the \"Continue\" button in the Permissions view.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Continue"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -11773,12 +11149,6 @@
     "Continue Anyway" : {
       "comment" : "Title of a button in an alert displayed when a conflicting menu bar management app is detected, allowing the user to continue using Thaw.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Continue Anyway"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -11898,12 +11268,6 @@
     "Continue in Limited Mode" : {
       "comment" : "Label for the button that allows the user to continue using the app in limited mode, where some features may be restricted.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Continue in Limited Mode"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -12023,12 +11387,6 @@
     "Contribute" : {
       "comment" : "A button that opens a website where users can contribute to the project.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Contribute"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -12147,12 +11505,6 @@
     },
     "Copy version info" : {
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Copy version info"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -12272,12 +11624,6 @@
     "Created: %@" : {
       "comment" : "A sublabel within the profile list showing when a profile was created.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Created: %@"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -12397,12 +11743,6 @@
     "Custom" : {
       "comment" : "Placeholder name for a custom control item image set.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Custom"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -12522,12 +11862,6 @@
     "Custom icon uses dynamic appearance" : {
       "comment" : "A toggle that lets the user choose whether the custom ice icon should use a dynamic appearance.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Custom icon uses dynamic appearance"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -12647,12 +11981,6 @@
     "Dark Appearance" : {
       "comment" : "Title of the system appearance when the user has a dark appearance.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Dark Appearance"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -12772,12 +12100,6 @@
     "default" : {
       "comment" : "Label for the default item spacing offset.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "default"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -12897,12 +12219,6 @@
     "Delete" : {
       "comment" : "A button that triggers a confirmation sheet for deleting a profile.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Delete"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -13022,12 +12338,6 @@
     "Delete Profile?" : {
       "comment" : "An alert title that asks the user to confirm deleting a profile.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Delete Profile?"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -13147,12 +12457,6 @@
     "Deny" : {
       "comment" : "Button title for denying access to the settings URI.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Deny"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -13272,12 +12576,6 @@
     "Development" : {
       "comment" : "A label for the \"Development\" segment in the update channel picker.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Development"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -13397,12 +12695,6 @@
     "Diagnostics" : {
       "comment" : "Section title in the advanced settings pane for diagnostics settings.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Diagnostics"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -13522,12 +12814,6 @@
     "Discard" : {
       "comment" : "A button label that dismisses an edit prompt.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Discard"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -13647,12 +12933,6 @@
     "Display images of individual menu bar items." : {
       "comment" : "Descriptive detail for the \"Screen Recording\" permission, describing the app's ability to display images of individual menu bar items.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Display images of individual menu bar items."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -13772,12 +13052,6 @@
     "Display the icon as a monochrome image that dynamically adjusts to match the menu bar's appearance. This setting removes all color from the icon, but ensures consistent rendering with both light and dark backgrounds." : {
       "comment" : "A description of a setting that controls whether a custom ice icon uses a dynamic or static appearance.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Display the icon as a monochrome image that dynamically adjusts to match the menu bar's appearance. This setting removes all color from the icon, but ensures consistent rendering with both light and dark backgrounds."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -13897,12 +13171,6 @@
     "Displays" : {
       "comment" : "The localized string key for the \"Displays\" section in the \"Settings\" interface.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Displays"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -14022,12 +13290,6 @@
     "Don't Check" : {
       "comment" : "A button that disables automatic update checking.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Don't Check"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -14147,12 +13409,6 @@
     "Done" : {
       "comment" : "A button that dismisses the current view.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Done"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -14272,12 +13528,6 @@
     "Door" : {
       "comment" : "Name of the \"Door\" control item image.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Door"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -14397,12 +13647,6 @@
     "Dot" : {
       "comment" : "Description of a control item with a dot shape.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Dot"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -14522,12 +13766,6 @@
     "Double-click an empty area of the menu bar to show always-hidden menu bar items." : {
       "comment" : "Toggle that allows users to enable or disable the feature of showing always-hidden menu bar items by double-clicking an empty area of the menu bar.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Double-click an empty area of the menu bar to show always-hidden menu bar items."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -14647,12 +13885,6 @@
     "Double-click for always-hidden" : {
       "comment" : "A toggle that allows users to enable always-hidden menu bar items by double-clicking an empty area of the menu bar.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Double-click for always-hidden"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -14772,12 +14004,6 @@
     "Drag to arrange your menu bar items into different sections." : {
       "comment" : "A description of how to rearrange menu bar items.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Drag to arrange your menu bar items into different sections."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -14897,12 +14123,6 @@
     "Due to a bug in a previous version of the app, the data for %@'s menu bar sections was corrupted and had to be reset." : {
       "comment" : "Text in an alert that informs the user that the preferred positions of some menu bar controls have been reset because they were corrupted.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Due to a bug in a previous version of the app, the data for %@'s menu bar sections was corrupted and had to be reset."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -15022,12 +14242,6 @@
     "Duplicate" : {
       "comment" : "A button to duplicate a saved profile.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Duplicate"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -15147,12 +14361,6 @@
     "Dynamic" : {
       "comment" : "Localized string key representation of the Ice Bar location option \"Dynamic\".",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Dynamic"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -15272,12 +14480,6 @@
     "E" : {
       "comment" : "A letter \"E\" used in the \"Edit Name\" button.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "E"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "new",
@@ -15397,12 +14599,6 @@
     "Edit Menu Bar Appearance…" : {
       "comment" : "Title of a menu item in the secondary context menu that allows the user to edit the appearance of the menu bar.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Edit Menu Bar Appearance…"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -15522,12 +14718,6 @@
     "Edit Menu Bar Layout…" : {
       "comment" : "Label for a menu item that opens the menu bar layout settings.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Edit Menu Bar Layout…"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -15647,12 +14837,6 @@
     "Edit Name" : {
       "comment" : "A button label that translates to \"Edit Name\".",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Edit Name"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -15772,12 +14956,6 @@
     "Ellipsis" : {
       "comment" : "Description of an ellipsis icon.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Ellipsis"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -15897,12 +15075,6 @@
     "Enable diagnostic logging" : {
       "comment" : "A toggle that enables or disables diagnostic logging.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Enable diagnostic logging"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -16022,12 +15194,6 @@
     "Enable secondary context menu" : {
       "comment" : "A toggle that enables or disables the secondary context menu.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Enable secondary context menu"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -16147,12 +15313,6 @@
     "Enable Settings URI Scheme" : {
       "comment" : "A toggle that enables or disables the ability for external apps to read and modify Thaw settings via thaw:// URLs.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Enable Settings URI Scheme"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -16272,12 +15432,6 @@
     "Enable the %@ Bar" : {
       "comment" : "A label describing an action that enables or disables the main application bar.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Enable the %@ Bar"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -16397,12 +15551,6 @@
     "Enable the always-hidden section" : {
       "comment" : "A toggle that enables or disables the always-hidden section in the advanced settings.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Enable the always-hidden section"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -16522,12 +15670,6 @@
     "Error" : {
       "comment" : "An alert title.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Error"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -16647,12 +15789,6 @@
     "ERROR" : {
       "comment" : "A label that appears when a hotkey is not set.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "ERROR"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -16772,12 +15908,6 @@
     "Export" : {
       "comment" : "A menu item that exports a profile to a file.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Export"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -16897,12 +16027,6 @@
     "Export Profile(s)" : {
       "comment" : "A button label that exports one or more profiles.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Export Profile(s)"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -17022,12 +16146,6 @@
     "Focus" : {
       "comment" : "Localized string key for the \"Focus\" case in the `RehideStrategy` enum.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Focus"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -17147,12 +16265,6 @@
     "Forward" : {
       "comment" : "A button that navigates to the next settings pane.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Forward"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -17272,12 +16384,6 @@
     "Full" : {
       "comment" : "Localized string key for the menu bar shape kind that takes up the full menu bar.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Full"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -17397,12 +16503,6 @@
     "General" : {
       "comment" : "Localized string key for each case in the enum.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "General"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -17522,12 +16622,6 @@
     "Get real-time information about the menu bar." : {
       "comment" : "A detail about the \"Accessibility\" permission, explaining that the app needs permission to get real-time information about the menu bar.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Get real-time information about the menu bar."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -17647,12 +16741,6 @@
     "Go to Advanced Settings" : {
       "comment" : "A link that takes the user to the advanced settings screen.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Go to Advanced Settings"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -17772,12 +16860,6 @@
     "Gradient" : {
       "comment" : "Localized string key representation of the `MenuBarTintKind.gradient` case.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Gradient"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -17897,12 +16979,6 @@
     "Grant Permission" : {
       "comment" : "A button label that requests permission from the user.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Grant Permission"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -18023,12 +17099,6 @@
       "comment" : "Label for the grid layout mode.",
       "isCommentAutoGenerated" : true,
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Grid"
-          }
-        },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
@@ -18040,12 +17110,6 @@
     "Hidden" : {
       "comment" : "Localized string key for the \"Hidden\" menu bar section.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Hidden"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -18165,12 +17229,6 @@
     "Hide Always-Hidden Section" : {
       "comment" : "Title for a menu bar item that hides an always-hidden section.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Hide Always-Hidden Section"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -18290,12 +17348,6 @@
     "Hide app menus when showing menu bar items" : {
       "comment" : "A toggle that lets the user decide whether to hide the app menus when displaying menu bar items.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Hide app menus when showing menu bar items"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -18415,12 +17467,6 @@
     "Hide Hidden Section" : {
       "comment" : "Title of a menu item that toggles the visibility of a hidden section in the menu bar.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Hide Hidden Section"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -18540,12 +17586,6 @@
     "Hold to Preview" : {
       "comment" : "A button that, when held, allows users to preview changes in a menu bar.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Hold to Preview"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -18666,12 +17706,6 @@
       "comment" : "Localized string key for the horizontal layout mode.",
       "isCommentAutoGenerated" : true,
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Horizontal"
-          }
-        },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
@@ -18683,12 +17717,6 @@
     "Hotkey is reserved by macOS" : {
       "comment" : "An alert title that informs the user that a hotkey they are trying to set is reserved by macOS.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Hotkey is reserved by macOS"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -18808,12 +17836,6 @@
     "Hotkeys" : {
       "comment" : "The title of the \"Hotkeys\" section in the \"Settings\" interface.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Hotkeys"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -18933,12 +17955,6 @@
     "Hover over an empty area of the menu bar to show hidden menu bar items." : {
       "comment" : "Text displayed in a toggle that allows the user to enable or disable the feature of showing hidden menu bar items by hovering over an empty area of the menu bar.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Hover over an empty area of the menu bar to show hidden menu bar items."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -19058,12 +18074,6 @@
     "How It Works" : {
       "comment" : "A heading for the instructions on how the app works.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "How It Works"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -19183,12 +18193,6 @@
     "How often animated menu bar icons are refreshed in panels. Higher values are smoother but use more CPU." : {
       "comment" : "Description of the icon refresh rate setting in the advanced settings pane.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "How often animated menu bar icons are refreshed in panels. Higher values are smoother but use more CPU."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -19308,12 +18312,6 @@
     "Ice Cube" : {
       "comment" : "Localized string key for the Ice Cube control item image.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Ice Cube"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -19433,12 +18431,6 @@
     "Icon positions cannot be restored." : {
       "comment" : "A footnote explaining that icon positions cannot be restored when importing settings from Ice.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Icon positions cannot be restored."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -19558,12 +18550,6 @@
     "Icon refresh rate" : {
       "comment" : "A label displayed above a slider that controls how often animated menu bar icons are refreshed in panels. Higher values are smoother but use more CPU.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Icon refresh rate"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -19683,12 +18669,6 @@
     "If not whitelisted, you'll see a confirmation dialog showing the app name and what it wants to do." : {
       "comment" : "A step in the process of using Thaw.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "If not whitelisted, you'll see a confirmation dialog showing the app name and what it wants to do."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -19808,12 +18788,6 @@
     "If you approve, the app is permanently whitelisted and can modify settings anytime without asking again." : {
       "comment" : "A step in the process of whitelisting an app.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "If you approve, the app is permanently whitelisted and can modify settings anytime without asking again."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -19933,12 +18907,6 @@
     "Import failed. You can configure settings manually." : {
       "comment" : "A message displayed when the user attempts to import their Ice settings but fails. It instructs the user to configure settings manually.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Import failed. You can configure settings manually."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -20058,12 +19026,6 @@
     "Import Profile(s)" : {
       "comment" : "A button label that imports one or more profiles.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Import Profile(s)"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -20183,12 +19145,6 @@
     "Import Settings" : {
       "comment" : "A heading displayed above the import settings section.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Import Settings"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -20308,12 +19264,6 @@
     "Imported" : {
       "comment" : "A button that is disabled and shows \"Imported\" when the user has successfully imported their settings.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Imported"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -20434,12 +19384,6 @@
       "comment" : "A description of the grid layout.",
       "isCommentAutoGenerated" : true,
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Items are arranged in a grid with multiple columns."
-          }
-        },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
@@ -20452,12 +19396,6 @@
       "comment" : "A description of the horizontal layout of the ice bar.",
       "isCommentAutoGenerated" : true,
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Items are arranged in a single horizontal row."
-          }
-        },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
@@ -20470,12 +19408,6 @@
       "comment" : "A description of the vertical layout of the menu bar.",
       "isCommentAutoGenerated" : true,
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Items are stacked vertically in a single column."
-          }
-        },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
@@ -20487,12 +19419,6 @@
     "Items can also be arranged by ⌘ Command + dragging them in the menu bar." : {
       "comment" : "A description of how to rearrange menu bar items using keyboard shortcuts.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Items can also be arranged by ⌘ Command + dragging them in the menu bar."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -20612,12 +19538,6 @@
     "Keep search" : {
       "comment" : "A toggle to keep a search query open.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Keep search"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -20737,12 +19657,6 @@
     "Last checked: %@" : {
       "comment" : "A text label displaying the date and time of the last update check. The text is monospaced and has a secondary foreground color. If there is no previous check, the text is hidden.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Last checked: %@"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -20862,12 +19776,6 @@
     "Launch at Login" : {
       "comment" : "A toggle that allows the user to decide whether the app should launch automatically when the device boots.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Launch at Login"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -20987,12 +19895,6 @@
     "Layout" : {
       "comment" : "The localized string key for the \"Layout\" option in the \"Settings\" interface.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Layout"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -21112,12 +20014,6 @@
     "Layout reset. Items were moved to the Hidden section." : {
       "comment" : "A message displayed after successfully resetting the menu bar layout.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Layout reset. Items were moved to the Hidden section."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -21237,12 +20133,6 @@
     "Leading End Cap" : {
       "comment" : "A label for the leading end cap picker in the menu bar shape picker.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Leading End Cap"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -21362,12 +20252,6 @@
     "left click" : {
       "comment" : "The accessibility action name for a left click on an ice bar item.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "left click"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -21487,12 +20371,6 @@
     "Left margin" : {
       "comment" : "Label for a slider that adjusts the left margin in the menu bar shape picker.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Left margin"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -21612,12 +20490,6 @@
     "Light Appearance" : {
       "comment" : "Title for the light appearance in the interface.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Light Appearance"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -21737,12 +20609,6 @@
     "Loading menu bar items…" : {
       "comment" : "A message displayed while waiting for menu bar items to load.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Loading menu bar items…"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -21862,12 +20728,6 @@
     "Location" : {
       "comment" : "Label for a picker that lets the user choose the location of the hidden menu bar in the screen.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Location"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -21987,12 +20847,6 @@
     "macOS prohibits \"%@\" from being moved." : {
       "comment" : "The text that appears below the main message text in the alert displayed when a menu bar item is not movable.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "macOS prohibits \"%@\" from being moved."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -22112,12 +20966,6 @@
     "Make more room in the menu bar by hiding the current app menus if needed. macOS requires %@ to make itself visible in the Dock while this setting is in effect." : {
       "comment" : "A description of the \"Hide app menus when showing menu bar items\" toggle.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Make more room in the menu bar by hiding the current app menus if needed. macOS requires %@ to make itself visible in the Dock while this setting is in effect."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -22237,12 +21085,6 @@
     "max" : {
       "comment" : "Text displayed in a setting that allows the user to select the maximum item spacing.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "max"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -22361,12 +21203,6 @@
     },
     "Maximum number of items per row in the grid layout." : {
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Maximum number of items per row in the grid layout."
-          }
-        },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
@@ -22378,12 +21214,6 @@
     "Menu Bar Appearance" : {
       "comment" : "The title of the view.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Menu Bar Appearance"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -22503,12 +21333,6 @@
     "Menu bar item is not movable." : {
       "comment" : "Message text in an alert that appears when a menu bar item is not movable.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Menu bar item is not movable."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -22628,12 +21452,6 @@
     "Menu bar item spacing" : {
       "comment" : "A label displayed above the control that adjusts the spacing of menu bar items.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Menu bar item spacing"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -22753,12 +21571,6 @@
     "Menu Bar Items" : {
       "comment" : "Section title in the hotkeys settings pane for menu bar items.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Menu Bar Items"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -22878,12 +21690,6 @@
     "Menu bar items are rehidden after a fixed amount of time." : {
       "comment" : "A description of how the rehide strategy works when set to \"timed\".",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Menu bar items are rehidden after a fixed amount of time."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -23003,12 +21809,6 @@
     "Menu bar items are rehidden using a smart algorithm." : {
       "comment" : "A description of how the smart rehide strategy works.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Menu bar items are rehidden using a smart algorithm."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -23128,12 +21928,6 @@
     "Menu bar items are rehidden when the focused app changes." : {
       "comment" : "A description of the rehide strategy when it's set to \"focused app\".",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Menu bar items are rehidden when the focused app changes."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -23253,12 +22047,6 @@
     "Menu bar layout requires screen recording permissions." : {
       "comment" : "A message displayed when the user does not have the necessary permissions to change the menu bar layout.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Menu bar layout requires screen recording permissions."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -23378,12 +22166,6 @@
     "Menu Bar Overlay" : {
       "comment" : "Title of the menu bar overlay panel.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Menu Bar Overlay"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -23503,12 +22285,6 @@
     "Menu Bar Profile" : {
       "comment" : "Display name for the entity type representing a Thaw profile.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Menu Bar Profile"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -23628,12 +22404,6 @@
     "Menu Bar Sections" : {
       "comment" : "Section header for advanced settings related to menu bar sections.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Menu Bar Sections"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -23753,12 +22523,6 @@
     "Menu Bar Shape" : {
       "comment" : "Section header for the \"Menu Bar Shape\" section in the menu bar appearance editor.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Menu Bar Shape"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -23878,12 +22642,6 @@
     "Modified: %@" : {
       "comment" : "A sublabel within the profile list showing when a profile was last modified.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Modified: %@"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -24003,12 +22761,6 @@
     "Mouse pointer" : {
       "comment" : "Localized string key for the \"Mouse pointer\" option in the Ice Bar location picker.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Mouse pointer"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -24128,12 +22880,6 @@
     "Move the New Items badge to choose where newly detected items will appear." : {
       "comment" : "A description of how to use the New Items badge.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Move the New Items badge to choose where newly detected items will appear."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -24253,12 +22999,6 @@
     "Never" : {
       "comment" : "Text displayed in the \"Last update check\" section of the about settings pane, indicating that the last update check date is unknown.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Never"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -24378,12 +23118,6 @@
     "New Items" : {
       "comment" : "Title of a badge that displays the number of new items.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "New Items"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -24503,12 +23237,6 @@
     "New profile name" : {
       "comment" : "A text field for entering a new profile name.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "New profile name"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -24628,12 +23356,6 @@
     "No items in this section" : {
       "comment" : "A message displayed when a section of the Ice Bar has no items.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "No items in this section"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -24753,12 +23475,6 @@
     "No profile selected" : {
       "comment" : "Subtitle of the display representation of the ThawFocusFilter intent when no profile is selected.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "No profile selected"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -24878,12 +23594,6 @@
     "No profiles saved. Save your current configuration to create one." : {
       "comment" : "A message displayed when there are no profiles saved.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "No profiles saved. Save your current configuration to create one."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -25003,12 +23713,6 @@
     "No shape kind selected" : {
       "comment" : "A message displayed when the user hasn't selected a shape kind for the menu bar.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "No shape kind selected"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -25128,12 +23832,6 @@
     "No whitelisted apps" : {
       "comment" : "A message displayed when there are no whitelisted apps.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "No whitelisted apps"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -25253,12 +23951,6 @@
     "none" : {
       "comment" : "Label for the item spacing offset when it is set to 0.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "none"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -25378,12 +24070,6 @@
     "None" : {
       "comment" : "Title for the menu bar shape kind option that does not use a custom shape.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "None"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -25503,12 +24189,6 @@
     "Not available because the %@ Bar is enabled for this display." : {
       "comment" : "A message explaining that the \"Always show hidden items\" toggle is not available when the \"Use \\(Constants.displayName) Bar\" toggle is enabled.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Not available because the %@ Bar is enabled for this display."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -25628,12 +24308,6 @@
     "Not enough room to show \"%@\"" : {
       "comment" : "Title of an alert that appears when there is not enough room to show a menu bar item.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Not enough room to show \"%@\""
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -25753,12 +24427,6 @@
     "Notch" : {
       "comment" : "A label describing a display with a notch.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Notch"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -25878,12 +24546,6 @@
     "Note: You may need to log out and back in for this setting to apply properly." : {
       "comment" : "Note displayed in the annotation for the `GeneralSettingsPane` view, explaining that the spacing setting may require a logout and login to take effect.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Note: You may need to log out and back in for this setting to apply properly."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -26003,12 +24665,6 @@
     "Off" : {
       "comment" : "A label for the icon refresh rate when it is set to 0.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Off"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "new",
@@ -26128,12 +24784,6 @@
     "OK" : {
       "comment" : "A button that dismisses an alert.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "OK"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "new",
@@ -26253,12 +24903,6 @@
     "One or more section dividers are hidden by macOS" : {
       "comment" : "A message displayed when macOS hides one or more section dividers in the menu bar.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "One or more section dividers are hidden by macOS"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -26378,12 +25022,6 @@
     "Open %@ Settings" : {
       "comment" : "A button that opens the settings app to grant screen recording permissions for the \\(Constants.displayName) Bar.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Open %@ Settings"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -26503,12 +25141,6 @@
     "Open Focus Settings" : {
       "comment" : "A button that opens the Focus settings app.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Open Focus Settings"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -26628,12 +25260,6 @@
     "Other" : {
       "comment" : "Section title for advanced settings related to other functionality.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Other"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -26753,12 +25379,6 @@
     "Permission Granted" : {
       "comment" : "A label indicating that a user has granted a permission.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Permission Granted"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -26878,12 +25498,6 @@
     "Permissions" : {
       "comment" : "The title of the permissions view.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Permissions"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -27003,12 +25617,6 @@
     "Profile" : {
       "comment" : "Title of the parameter in the \"Set Menu Bar Profile\" focus filter.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Profile"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -27128,12 +25736,6 @@
     "Profile name" : {
       "comment" : "A text field label for entering a profile name.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Profile name"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -27253,12 +25855,6 @@
     "Profile: %@" : {
       "comment" : "A subtitle for the \"Set Menu Bar Profile\" focus filter.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Profile: %@"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -27378,12 +25974,6 @@
     "Profiles" : {
       "comment" : "The title of the \"Profiles\" section in the \"Settings\" interface.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Profiles"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -27503,12 +26093,6 @@
     "Quit" : {
       "comment" : "A button label that quits the application.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Quit"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -27628,12 +26212,6 @@
     "Quit %@" : {
       "comment" : "A button that quits the app.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Quit %@"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -27753,12 +26331,6 @@
     "Quit Thaw" : {
       "comment" : "Title of the second button in an alert that warns about a conflicting menu bar manager.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Quit Thaw"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -27878,12 +26450,6 @@
     "Record Hotkey" : {
       "comment" : "A label for the button that starts recording a hotkey.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Record Hotkey"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -28003,12 +26569,6 @@
     "Remove %@ from whitelist" : {
       "comment" : "A label for a button that removes an app from the whitelist. The argument is the name of the app.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Remove %@ from whitelist"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -28128,12 +26688,6 @@
     "Remove from whitelist" : {
       "comment" : "A label for a button that removes an app from the whitelist.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Remove from whitelist"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -28253,12 +26807,6 @@
     "Rename" : {
       "comment" : "A menu item that lets the user rename a profile.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Rename"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -28378,12 +26926,6 @@
     "Report a Bug" : {
       "comment" : "A button that opens a web page where users can report bugs.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Report a Bug"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -28503,12 +27045,6 @@
     "Reset" : {
       "comment" : "The destructive button to confirm resetting settings.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Reset"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -28628,12 +27164,6 @@
     "Reset %@" : {
       "comment" : "A button that resets all settings to defaults",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Reset %@"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -28753,12 +27283,6 @@
     "Reset all settings" : {
       "comment" : "A button that resets all settings to defaults.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Reset all settings"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -28878,12 +27402,6 @@
     "Reset all settings to their default values. This action cannot be undone." : {
       "comment" : "A description of what resetting all settings does.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Reset all settings to their default values. This action cannot be undone."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -29003,12 +27521,6 @@
     "Reset all settings?" : {
       "comment" : "An alert title that asks the user to confirm resetting all settings.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Reset all settings?"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -29128,12 +27640,6 @@
     "Reset completed with %lld item(s) that could not be moved. Check the menu bar and try again if needed." : {
       "comment" : "A message describing the result of a menu bar layout reset, including the number of items that could not be moved.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Reset completed with %lld item(s) that could not be moved. Check the menu bar and try again if needed."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -29253,12 +27759,6 @@
     "Reset failed: %@" : {
       "comment" : "A message that is displayed when the menu bar layout reset fails. The argument is a message describing the failure.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Reset failed: %@"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -29378,12 +27878,6 @@
     "Reset Layout" : {
       "comment" : "A button label that resets the menu bar layout.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Reset Layout"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -29503,12 +27997,6 @@
     "Reset Menu Bar Appearance" : {
       "comment" : "The title of an alert that appears when the user chooses to reset the appearance of the menu bar.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Reset Menu Bar Appearance"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -29628,12 +28116,6 @@
     "Reset menu bar layout" : {
       "comment" : "A label for a button that resets the menu bar layout.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Reset menu bar layout"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -29753,12 +28235,6 @@
     "Reset menu bar layout?" : {
       "comment" : "An alert title that asks the user to confirm resetting the menu bar layout.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Reset menu bar layout?"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -29878,12 +28354,6 @@
     "Reset to the default spacing" : {
       "comment" : "A button that resets the menu bar item spacing to its default value.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Reset to the default spacing"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -30003,12 +28473,6 @@
     "Resets dividers and moves every movable item except the %@ icon to hidden — just like a fresh install." : {
       "comment" : "A description of what resetting the menu bar layout does.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Resets dividers and moves every movable item except the %@ icon to hidden — just like a fresh install."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -30128,12 +28592,6 @@
     "Restores divider defaults and moves every movable item except the %@ icon to Hidden. Use this if the layout looks broken or items won’t load." : {
       "comment" : "A message displayed in an alert when the user confirms resetting the menu bar layout.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Restores divider defaults and moves every movable item except the %@ icon to Hidden. Use this if the layout looks broken or items won’t load."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -30253,12 +28711,6 @@
     "right click" : {
       "comment" : "A named accessibility action for a right click on an ice bar item.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "right click"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -30378,12 +28830,6 @@
     "Right margin" : {
       "comment" : "Label for a slider that adjusts the right margin in the menu bar shape picker.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Right margin"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -30503,12 +28949,6 @@
     "Right-click in an empty area of the menu bar to display a minimal version of %@'s menu. Disable this setting if you encounter conflicts with other apps." : {
       "comment" : "A description of a feature that lets users access a simplified version of the menu bar when right-clicking in an empty area.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Right-click in an empty area of the menu bar to display a minimal version of %@'s menu. Disable this setting if you encounter conflicts with other apps."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -30628,12 +29068,6 @@
     "Round Cap" : {
       "comment" : "A description of a round-shaped menu bar end cap.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Round Cap"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -30753,12 +29187,6 @@
     "Save Current" : {
       "comment" : "A button that saves the current profile when pressed.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Save Current"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -30878,12 +29306,6 @@
     "Screen Recording" : {
       "comment" : "Title of the screen recording permission.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Screen Recording"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -31003,12 +29425,6 @@
     "Screen recording permissions are required to display tooltips." : {
       "comment" : "A message displayed in the \"Permissions\" section of the advanced settings pane, explaining that screen recording permissions are needed to show tooltips.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Screen recording permissions are required to display tooltips."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -31128,12 +29544,6 @@
     "Screen recording permissions are required to search menu bar items." : {
       "comment" : "A message displayed when screen recording permissions are not granted.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Screen recording permissions are required to search menu bar items."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -31253,12 +29663,6 @@
     "Scroll or swipe in the menu bar to show hidden menu bar items." : {
       "comment" : "Label for a toggle that enables or disables showing hidden menu bar items when scrolling or swiping in the menu bar.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Scroll or swipe in the menu bar to show hidden menu bar items."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -31378,12 +29782,6 @@
     "Search menu bar items" : {
       "comment" : "A description of an action that searches menu bar items.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Search menu bar items"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -31503,12 +29901,6 @@
     "Search Menu Bar Items" : {
       "comment" : "Text for a menu item that allows the user to search through the menu bar items.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Search Menu Bar Items"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -31628,12 +30020,6 @@
     "Search menu bar items…" : {
       "comment" : "A placeholder text for a search field within a menu bar search panel.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Search menu bar items…"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -31753,12 +30139,6 @@
     "Section divider style" : {
       "comment" : "Label for a picker that lets the user choose the style of divider to use between menu bar sections.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Section divider style"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -31878,12 +30258,6 @@
     "Set Menu Bar Profile" : {
       "comment" : "Title and description of the Focus Filter.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Set Menu Bar Profile"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -32003,12 +30377,6 @@
     "Settings URI is disabled. External apps cannot read or modify Thaw settings." : {
       "comment" : "Text displayed in a callout box when the Settings URI is disabled.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Settings URI is disabled. External apps cannot read or modify Thaw settings."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -32128,12 +30496,6 @@
     "Shadow" : {
       "comment" : "A toggle that lets the user enable or disable the shadow effect.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Shadow"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -32253,12 +30615,6 @@
     "Shape Kind" : {
       "comment" : "Label for the picker that lets the user select the shape kind for the menu bar.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Shape Kind"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -32378,12 +30734,6 @@
     "Should %@ automatically check for updates? You can always check manually from the Thaw menu bar icon or Settings → About." : {
       "comment" : "A description below the toggle that explains its purpose.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Should %@ automatically check for updates? You can always check manually from the Thaw menu bar icon or Settings → About."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -32503,12 +30853,6 @@
     "Show %@ icon" : {
       "comment" : "A toggle that lets the user decide whether to show the \\(Constants.displayName) icon in the menu bar. The argument is the name of the \\(Constants.displayName) icon.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Show %@ icon"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -32628,12 +30972,6 @@
     "Show a tooltip when hovering over menu bar items in the actual menu bar." : {
       "comment" : "Annotation for the setting that controls whether to show tooltips in the menu bar.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Show a tooltip when hovering over menu bar items in the actual menu bar."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -32753,12 +31091,6 @@
     "Show all sections when ⌘ Command + dragging menu bar items" : {
       "comment" : "A toggle that enables or disables showing all menu bar sections when dragging them with ⌘ Command.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Show all sections when ⌘ Command + dragging menu bar items"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -32878,12 +31210,6 @@
     "Show Always-Hidden Section" : {
       "comment" : "Title of a menu item that shows an always-hidden section in the menu bar.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Show Always-Hidden Section"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -33003,12 +31329,6 @@
     "Show at mouse pointer on hotkey" : {
       "comment" : "A toggle that lets the user decide whether the location of the Ice Bar should be updated to the mouse pointer's location whenever it is shown using a hotkey.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Show at mouse pointer on hotkey"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -33128,12 +31448,6 @@
     "Show hidden menu bar items in a separate bar below the menu bar on this display." : {
       "comment" : "Label for a toggle that allows the user to enable or disable the display bar on a specific display.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Show hidden menu bar items in a separate bar below the menu bar on this display."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -33253,12 +31567,6 @@
     "Show Hidden Section" : {
       "comment" : "Title of a menu item that shows a hidden section in the menu bar.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Show Hidden Section"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -33378,12 +31686,6 @@
     "Show Item" : {
       "comment" : "A button label that shows the user how to display an item.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Show Item"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -33503,12 +31805,6 @@
     "Show Log Files in Finder" : {
       "comment" : "A button that opens the directory containing diagnostic log files.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Show Log Files in Finder"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -33629,12 +31925,6 @@
       "comment" : "A toggle that lets the user enable or disable the display of the system menu bar background.",
       "extractionState" : "stale",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Show menu bar background"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -33754,12 +32044,6 @@
     "Show on click" : {
       "comment" : "A toggle that enables or disables showing hidden menu bar items when the menu bar is clicked.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Show on click"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -33879,12 +32163,6 @@
     "Show on hover" : {
       "comment" : "A toggle that enables or disables showing hidden menu bar items when hovering over an empty area of the menu bar.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Show on hover"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -34004,12 +32282,6 @@
     "Show on hover delay" : {
       "comment" : "A label displayed above the slider that controls the delay before showing the menu on hover.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Show on hover delay"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -34129,12 +32401,6 @@
     "Show on scroll" : {
       "comment" : "A toggle that lets the user enable or disable showing hidden menu bar items when scrolling or swiping in the menu bar.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Show on scroll"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -34254,12 +32520,6 @@
     "Show the %@ icon in the menu bar. Click to show hidden items, double-click for always-hidden, and right-click for settings." : {
       "comment" : "Toggle that lets the user decide whether to show the \\(Constants.displayName) icon in the menu bar.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Show the %@ icon in the menu bar. Click to show hidden items, double-click for always-hidden, and right-click for settings."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -34379,12 +32639,6 @@
     "Show tooltips in the menu bar" : {
       "comment" : "A toggle that enables or disables tooltips in the menu bar.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Show tooltips in the menu bar"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -34505,12 +32759,6 @@
       "comment" : "An annotation for the toggle that lets the user know how to enable the feature.",
       "extractionState" : "stale",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Shows the system's menu bar background. Enable this if you use a dynamic wallpaper or have 'Show menu bar background' disabled in System Settings."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -34630,12 +32878,6 @@
     "Smart" : {
       "comment" : "Localized string key for the \"Smart\" rehide strategy.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Smart"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -34755,12 +32997,6 @@
     "Solid" : {
       "comment" : "Localized string key representation of the `.solid` case in `MenuBarTintKind`.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Solid"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -34880,12 +33116,6 @@
     "Split" : {
       "comment" : "Localized string key for a menu bar shape kind that splits the menu bar between its leading and trailing sides.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Split"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -35005,12 +33235,6 @@
     "Square Cap" : {
       "comment" : "A label describing a square-capped shape.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Square Cap"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -35130,12 +33354,6 @@
     "Stable" : {
       "comment" : "A segment in the update channel picker that displays \"Stable\".",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Stable"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -35255,12 +33473,6 @@
     "Strategy" : {
       "comment" : "Label for the \"Strategy\" picker in the \"Rehide Options\" section of the General Settings pane.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Strategy"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -35380,12 +33592,6 @@
     "Successfully imported %lld settings!" : {
       "comment" : "A success message displayed when the user successfully imports settings from the original app. The argument is the number of settings that were successfully imported.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Successfully imported %lld settings!"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -35505,12 +33711,6 @@
     "Sunglasses" : {
       "comment" : "Localized string key for the \"Custom\" control item image.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Sunglasses"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -35630,12 +33830,6 @@
     "Support %@" : {
       "comment" : "A button that opens a URL to support the app. The system image is a filled circle with a heart.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Support %@"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -35755,12 +33949,6 @@
     "Supported Settings" : {
       "comment" : "A label displayed under the list of whitelisted apps.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Supported Settings"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -35880,12 +34068,6 @@
     "The %@ Bar is centered below the %@ icon." : {
       "comment" : "A description of the location of the Ice Bar when it is displayed below the Ice icon.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "The %@ Bar is centered below the %@ icon."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -36005,12 +34187,6 @@
     "The %@ Bar is centered below the mouse pointer." : {
       "comment" : "A description of the location of the Ice Bar when it is positioned below the mouse pointer.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "The %@ Bar is centered below the mouse pointer."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -36130,12 +34306,6 @@
     "The %@ Bar requires screen recording permissions." : {
       "comment" : "A message displayed when the user hasn't granted the app permission to access the screen. Clicking the button opens the app's settings to grant the permission.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "The %@ Bar requires screen recording permissions."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -36255,12 +34425,6 @@
     "The %@ Bar's location changes based on context." : {
       "comment" : "A description of how the location of the Ice Bar changes based on context.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "The %@ Bar's location changes based on context."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -36380,12 +34544,6 @@
     "The %@ icon must always remain in the visible section." : {
       "comment" : "The message text in an alert that appears when the user tries to drag the \\(Constants.displayName) icon out of the visible section.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "The %@ icon must always remain in the visible section."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -36505,12 +34663,6 @@
     "The amount of time to wait before showing a tooltip over a menu bar item." : {
       "comment" : "Label for a slider that controls the delay before showing a tooltip over a menu bar item.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "The amount of time to wait before showing a tooltip over a menu bar item."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -36630,12 +34782,6 @@
     "The amount of time to wait before showing on hover." : {
       "comment" : "Label for the slider that controls the amount of time to wait before showing on hover.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "The amount of time to wait before showing on hover."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -36755,12 +34901,6 @@
     "This action cannot be undone." : {
       "comment" : "A message presented when the user confirms they want to reset the menu bar appearance.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "This action cannot be undone."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -36880,12 +35020,6 @@
     "This will reset all settings to their default values. This action cannot be undone." : {
       "comment" : "A message displayed in an alert when the user confirms resetting all settings.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "This will reset all settings to their default values. This action cannot be undone."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -37005,12 +35139,6 @@
     "Timed" : {
       "comment" : "Localized string key for the \"Timed\" option in the \"Auto-rehide\" settings.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Timed"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -37130,12 +35258,6 @@
     "Tint" : {
       "comment" : "A section for adjusting the tint of the menu bar.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Tint"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -37255,12 +35377,6 @@
     "Tip: You can also edit these settings by right-clicking in an empty area of the menu bar." : {
       "comment" : "Tip text that appears in the menu bar appearance editor, encouraging users to edit the settings by right-clicking in an empty area of the menu bar.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Tip: You can also edit these settings by right-clicking in an empty area of the menu bar."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -37380,12 +35496,6 @@
     "To switch profiles with Focus modes, add Thaw as a Focus Filter in System Settings → Focus → [Mode] → Focus Filters." : {
       "comment" : "A description of how to add Thaw as a Focus Filter in System Settings.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "To switch profiles with Focus modes, add Thaw as a Focus Filter in System Settings → Focus → [Mode] → Focus Filters."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -37505,12 +35615,6 @@
     "Toggle application menus" : {
       "comment" : "A label for an action that toggles the visibility of application menus.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Toggle application menus"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -37630,12 +35734,6 @@
     "Toggle the always-hidden section" : {
       "comment" : "A label describing the action of toggling the always-hidden section in the menu bar.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Toggle the always-hidden section"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -37755,12 +35853,6 @@
     "Toggle the hidden section" : {
       "comment" : "A description of an action that toggles the visibility of the hidden menu bar section.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Toggle the hidden section"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -37880,12 +35972,6 @@
     "Tooltip delay" : {
       "comment" : "A label describing the tooltip delay setting.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Tooltip delay"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -38005,12 +36091,6 @@
     "Tooltips" : {
       "comment" : "Section title for settings related to tooltips.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Tooltips"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -38130,12 +36210,6 @@
     "Trailing End Cap" : {
       "comment" : "A label for the trailing end cap picker in the menu bar shape picker.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Trailing End Cap"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -38255,12 +36329,6 @@
     "Type Hotkey" : {
       "comment" : "A label displayed in the leading segment of the hotkey recorder when it is recording.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Type Hotkey"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -38380,12 +36448,6 @@
     "Unable to display menu bar items" : {
       "comment" : "A message displayed when the menu bar items cannot be displayed.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Unable to display menu bar items"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -38505,12 +36567,6 @@
     "Unable to load menu bar items" : {
       "comment" : "A message displayed when the app is unable to load the user's menu bar items.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Unable to load menu bar items"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -38630,12 +36686,6 @@
     "Update" : {
       "comment" : "A button that updates a saved profile with the current configuration.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Update"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -38755,12 +36805,6 @@
     "Update All" : {
       "comment" : "A menu option to update a profile with the current state of both its layout and configuration.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Update All"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -38880,12 +36924,6 @@
     "Update channel" : {
       "comment" : "A label displayed above a picker for selecting the update channel.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Update channel"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -39005,12 +37043,6 @@
     "Update Configuration on All Profiles" : {
       "comment" : "A menu item that allows updating the configuration of all profiles to match the current state of the app.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Update Configuration on All Profiles"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -39130,12 +37162,6 @@
     "Update Configuration Only" : {
       "comment" : "A menu item that updates only the configuration part of a profile.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Update Configuration Only"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -39255,12 +37281,6 @@
     "Update Layout Only" : {
       "comment" : "A menu item that updates only the layout of a profile.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Update Layout Only"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -39380,12 +37400,6 @@
     "Update this profile with the current state" : {
       "comment" : "A menu item that updates a profile with the current state of the app.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Update this profile with the current state"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -39505,12 +37519,6 @@
     "Use %@ Bar" : {
       "comment" : "A toggle that lets the user enable or disable the use of the \\(Constants.displayName) Bar. The argument is the name of the \\(Constants.displayName) Bar.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Use %@ Bar"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -39630,12 +37638,6 @@
     "Use dynamic appearance" : {
       "comment" : "A toggle that lets the user choose whether to use different appearance settings based on the current system appearance.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Use dynamic appearance"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -39755,12 +37757,6 @@
     "Use inset shape on screens with notch" : {
       "comment" : "A toggle that lets the user choose whether to use an inset shape on screens with notches.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Use inset shape on screens with notch"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -39880,12 +37876,6 @@
     "Use LCS sorting on notched displays" : {
       "comment" : "A toggle that lets the user choose whether to use the LCS sorting algorithm for profile sorting on notched displays.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Use LCS sorting on notched displays"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -40005,12 +37995,6 @@
     "Use Option-click to open always-hidden section" : {
       "comment" : "A toggle that lets the user choose whether to use option-click to open the always-hidden section.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Use Option-click to open always-hidden section"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -40130,12 +38114,6 @@
     "Use the faster LCS (Longest Common Subsequence) algorithm for profile sorting on notched displays instead of the full sort. LCS minimises the number of moves but may be less reliable on notched displays with smaller resolutions." : {
       "comment" : "A tooltip that explains the purpose of a setting.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Use the faster LCS (Longest Common Subsequence) algorithm for profile sorting on notched displays instead of the full sort. LCS minimises the number of moves but may be less reliable on notched displays with smaller resolutions."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -40255,12 +38233,6 @@
     "Version %@ (%@)" : {
       "comment" : "A label displaying the current version and build number of the app. The first argument is the version string. The second argument is the build string.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Version %@ (%@)"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -40380,12 +38352,6 @@
     "Version %@ (%@) is now available" : {
       "comment" : "The body text of a notification that alerts the user that a new update is available. The first argument is the version string of the new update. The second argument is the version string of the new update.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Version %@ (%@) is now available"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -40506,12 +38472,6 @@
       "comment" : "Label for the vertical layout mode.",
       "isCommentAutoGenerated" : true,
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Vertical"
-          }
-        },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
@@ -40523,12 +38483,6 @@
     "Visible" : {
       "comment" : "Localized string key for the display string of a menu bar section.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Visible"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -40648,12 +38602,6 @@
     "We found settings from Ice (the original app)." : {
       "comment" : "A description of the feature that allows users to import settings from the original app, Ice.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "We found settings from Ice (the original app)."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -40773,12 +38721,6 @@
     "When a Focus mode deactivates, the display profile is automatically restored." : {
       "comment" : "A description of how a display profile is restored when a Focus mode deactivates.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "When a Focus mode deactivates, the display profile is automatically restored."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -40898,12 +38840,6 @@
     "When an app sends a thaw:// URL to change settings, Thaw checks if that app is whitelisted." : {
       "comment" : "A step in the process of how to use Thaw.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "When an app sends a thaw:// URL to change settings, Thaw checks if that app is whitelisted."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -41023,12 +38959,6 @@
     "Whitelisted Applications" : {
       "comment" : "A heading for the list of whitelisted apps.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Whitelisted Applications"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -41148,12 +39078,6 @@
     "Whitelisted apps can read settings, toggle boolean options, set numeric values (timers, delays), change enum settings (rehide strategy, Thaw Bar location), and modify per-display configurations. This includes auto-rehide, show on click/hover/scroll/double-click, Thaw Bar, hide application menus, enable always-hidden section, show tooltips, and diagnostic logging." : {
       "comment" : "A description of the settings that can be modified by whitelisted apps.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Whitelisted apps can read settings, toggle boolean options, set numeric values (timers, delays), change enum settings (rehide strategy, Thaw Bar location), and modify per-display configurations. This includes auto-rehide, show on click/hover/scroll/double-click, Thaw Bar, hide application menus, enable always-hidden section, show tooltips, and diagnostic logging."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -41273,12 +39197,6 @@
     "Would you like to import your existing configuration?" : {
       "comment" : "A question displayed to the user when they first open the app, asking if they would like to import their existing configuration.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Would you like to import your existing configuration?"
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -41398,12 +39316,6 @@
     "Writes detailed debug logs to a file for troubleshooting. Log files are saved to ~/Library/Logs/Thaw/. Disable when not needed to avoid unnecessary disk writes." : {
       "comment" : "A description of the diagnostic logging feature.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Writes detailed debug logs to a file for troubleshooting. Log files are saved to ~/Library/Logs/Thaw/. Disable when not needed to avoid unnecessary disk writes."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
@@ -41523,12 +39435,6 @@
     "You can remove apps from this list at any time to revoke their access." : {
       "comment" : "A description of how to remove apps from the whitelist.",
       "localizations" : {
-        "base" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "You can remove apps from this list at any time to revoke their access."
-          }
-        },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
