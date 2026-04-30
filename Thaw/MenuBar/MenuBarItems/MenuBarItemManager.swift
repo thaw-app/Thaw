@@ -3683,20 +3683,6 @@ extension MenuBarItemManager {
     ) async -> Bool {
         guard appState != nil else { return false }
 
-        // Skip when any hideable item has an unresolved sourcePID. Without
-        // sourcePID resolution, third-party items hosted by Control Center
-        // fall back to namespace "com.apple.controlcenter", which prevents
-        // matching against savedSectionOrder (real bundle IDs) and
-        // bundleIDsWithSavedHiddenItems. In that state, existing items can be
-        // misclassified as "new" and relocated. The next cache pass with
-        // resolved sourcePIDs will handle relocation safely.
-        if items.contains(where: { !$0.isControlItem && $0.sourcePID == nil }) {
-            MenuBarItemManager.diagLog.debug(
-                "relocateNewLeftmostItems: skipping, items have unresolved sourcePIDs"
-            )
-            return false
-        }
-
         if suppressNextNewLeftmostItemRelocation {
             // Seed known identifiers so these baseline items won't be treated as "new"
             // on subsequent cache passes, then clear the suppression flag.
@@ -3822,6 +3808,22 @@ extension MenuBarItemManager {
         // tag/namespace) and not already placed/pinned in hidden areas.
         let hideableLeftmost = leftmostItems.filter(\.canBeHidden)
         let previousIDs = Set(previousWindowIDs)
+
+        // Skip when any hideable item has an unresolved sourcePID. Without
+        // sourcePID resolution, third-party items hosted by Control Center
+        // fall back to namespace "com.apple.controlcenter", which prevents
+        // matching against savedSectionOrder (real bundle IDs) and
+        // bundleIDsWithSavedHiddenItems. In that state, existing items can be
+        // misclassified as "new" and relocated. The next cache pass with
+        // resolved sourcePIDs will handle relocation safely. The Thaw-icon
+        // and non-hideable-system-item branches above use windowID-based
+        // logic and run before this guard so they remain unaffected.
+        if hideableLeftmost.contains(where: { $0.sourcePID == nil }) {
+            MenuBarItemManager.diagLog.debug(
+                "relocateNewLeftmostItems: skipping, hideable items have unresolved sourcePIDs"
+            )
+            return false
+        }
 
         // Build lookup for saved sections (same logic as restoreItemsToSavedSections).
         var savedSectionForIdentifier = [String: MenuBarSection.Name]()
