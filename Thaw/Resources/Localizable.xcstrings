@@ -8,7 +8,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "kopie"
+            "value" : " - kopie"
           }
         }
       }
@@ -16248,7 +16248,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zápis profilů pro export se nezdařil."
+            "value" : "Nezdařilo se zakódování profilů pro export."
           }
         }
       }
@@ -16260,7 +16260,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aktualizace konfigurace profil(ů) %lld se nezdařila."
+            "value" : "Aktualizace konfigurace %lld profilu(ů) se nezdařila."
           }
         }
       }
