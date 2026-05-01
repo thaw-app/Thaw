@@ -36,8 +36,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : " Copy"
+            "state" : "translated",
+            "value" : " Salin"
           }
         },
         "it" : {
@@ -155,7 +155,7 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "("
           }
         },
@@ -274,7 +274,7 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : ")"
           }
         },
@@ -518,7 +518,7 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%1$@ (%2$@)"
           }
         },
@@ -5318,8 +5318,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow \"%1$@\" to control %2$@ settings?"
+            "state" : "translated",
+            "value" : "Izinkan \"%1$@\" untuk mengendalikan pengaturan %2$@?"
           }
         },
         "it" : {
@@ -13423,8 +13423,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "disconnected"
+            "state" : "translated",
+            "value" : "terputus"
           }
         },
         "it" : {
@@ -16755,8 +16755,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Failed to encode profiles for export."
+            "state" : "translated",
+            "value" : "Gagal mengenkode profil untuk diekspor."
           }
         },
         "it" : {
@@ -16874,8 +16874,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Failed to update configuration on %lld profile(s)."
+            "state" : "translated",
+            "value" : "Gagal memperbarui konfigurasi pada profil %lld."
           }
         },
         "it" : {
@@ -19736,8 +19736,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If granted, this app will be able to:\n\n• Read current settings and configurations\n• Turn features and options on or off\n• Adjust timing values (delays, intervals, timers)\n• Change how %1$@ Bar behaves\n• Customize settings for each display\n\nThis permission stays active until removed in %2$@'s Automation settings."
+            "state" : "translated",
+            "value" : "Jika izin ini diberikan, aplikasi ini akan dapat:\n\n• Membaca pengaturan dan konfigurasi saat ini\n• Mengaktifkan atau menonaktifkan fitur dan opsi\n• Menyesuaikan nilai waktu (penundaan, interval, pengatur waktu)\n• Mengubah perilaku %1$@ Bar\n• Menyesuaikan pengaturan untuk setiap tampilan\n\nIzin ini akan tetap aktif hingga dihapus di pengaturan Otomatisasi %2$@."
           }
         },
         "it" : {
@@ -32319,8 +32319,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Should %1$@ automatically check for updates? You can always check manually from the %2$@ menu bar icon or Settings %3$@ About."
+            "state" : "translated",
+            "value" : "Chcete, aby aplikace %1$@ automaticky kontrolovala aktualizace? Můžete je kdykoliv vyhledat ručně z ikony %2$@ v řádku nabídek nebo v Nastavení %3$@ O aplikaci."
           }
         },
         "de" : {
@@ -32355,8 +32355,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Should %1$@ automatically check for updates? You can always check manually from the %2$@ menu bar icon or Settings %3$@ About."
+            "state" : "translated",
+            "value" : "Perlukah %1$@ memeriksa pembaruan secara otomatis? Anda selalu dapat memeriksa secara manual melalui ikon menu bar %2$@ atau pada Pengaturan Tentang %3$@."
           }
         },
         "it" : {
@@ -34259,8 +34259,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Signed by: %@"
+            "state" : "translated",
+            "value" : "Ditandatangani oleh: %@"
           }
         },
         "it" : {
@@ -37002,8 +37002,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "To switch profiles with Focus modes, add Thaw as a Focus Filter in System Settings %1$@ Focus %2$@ [Mode] %3$@ Focus Filters. When a Focus mode deactivates, the display profile is automatically restored."
+            "state" : "translated",
+            "value" : "Untuk berpindah profil dengan mode Fokus, tambahkan Thaw sebagai Filter Fokus di Pengaturan Sistem %1$@ [Mode] Fokus %2$@ %3$@ Filter Fokus. Ketika sebuah mode Fokus dinonaktifkan, profil tampilan akan dipulihkan otomatis."
           }
         },
         "it" : {
@@ -38192,8 +38192,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Untitled"
+            "state" : "translated",
+            "value" : "Tanpa Judul"
           }
         },
         "it" : {
@@ -40334,8 +40334,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Warning: This app is not code-signed."
+            "state" : "translated",
+            "value" : "Peringatan: Aplikasi ini tidak dilengkapi tanda tangan digital."
           }
         },
         "it" : {
