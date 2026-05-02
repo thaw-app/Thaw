@@ -66,8 +66,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : " Copy"
+            "state" : "translated",
+            "value" : " Kopia"
           }
         },
         "pt-BR" : {
@@ -185,7 +185,7 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "("
           }
         },
@@ -304,7 +304,7 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : ")"
           }
         },
@@ -548,7 +548,7 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%1$@ (%2$@)"
           }
         },
@@ -2353,7 +2353,7 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%lld"
           }
         },
@@ -5348,8 +5348,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow \"%1$@\" to control %2$@ settings?"
+            "state" : "translated",
+            "value" : "Pozwolić „%1$@” kontrolować ustawienia %2$@ ?"
           }
         },
         "pt-BR" : {
@@ -13453,8 +13453,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "disconnected"
+            "state" : "translated",
+            "value" : "rozłączone"
           }
         },
         "pt-BR" : {
@@ -16785,8 +16785,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Failed to encode profiles for export."
+            "state" : "translated",
+            "value" : "Nie można zakodować profili do eksportu."
           }
         },
         "pt-BR" : {
@@ -16904,8 +16904,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Failed to update configuration on %lld profile(s)."
+            "state" : "translated",
+            "value" : "Wystąpił błąd podczas aktualizacji konfiguracji dla %lld profili."
           }
         },
         "pt-BR" : {
@@ -19766,8 +19766,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If granted, this app will be able to:\n\n• Read current settings and configurations\n• Turn features and options on or off\n• Adjust timing values (delays, intervals, timers)\n• Change how %1$@ Bar behaves\n• Customize settings for each display\n\nThis permission stays active until removed in %2$@'s Automation settings."
+            "state" : "translated",
+            "value" : "Udzielenie uprawnienia umożliwi tej aplikacji:\n\n• odczyt aktualnych ustawień i konfiguracji\n• włączanie lub wyłączanie funkcji i opcji\n• modyfikację wartości czasowych (opóźnienia, interwały, timery)\n• zmianę zachowania paska %1$@\n• dostosowanie ustawień dla każdego wyświetlacza\n\nUprawnienie pozostanie aktywne do momentu usunięcia go w ustawieniach automatyzacji aplikacji %2$@."
           }
         },
         "pt-BR" : {
@@ -32385,8 +32385,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Should %1$@ automatically check for updates? You can always check manually from the %2$@ menu bar icon or Settings %3$@ About."
+            "state" : "translated",
+            "value" : "Czy %1$@ powinien automatycznie sprawdzać dostępność aktualizacji? Zawsze możesz sprawdzić to ręcznie z poziomu ikony %2$@ na pasku menu lub w ustawienia %3$@ „O programie”."
           }
         },
         "pt-BR" : {
@@ -34289,8 +34289,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Signed by: %@"
+            "state" : "translated",
+            "value" : "Podpisane przez: %@"
           }
         },
         "pt-BR" : {
@@ -37032,8 +37032,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "To switch profiles with Focus modes, add Thaw as a Focus Filter in System Settings %1$@ Focus %2$@ [Mode] %3$@ Focus Filters. When a Focus mode deactivates, the display profile is automatically restored."
+            "state" : "translated",
+            "value" : "Aby przełączać profile za pomocą trybów skupienia, dodaj Thaw jako filtr trybu skupienia w Ustawieniach systemowych %1$@ Tryb skupienia %2$@ [Tryb] %3$@ Filtry trybu skupienia. Po wyłączeniu trybu skupienia profil wyświetlacza jest automatycznie przywracany."
           }
         },
         "pt-BR" : {
@@ -38222,8 +38222,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Untitled"
+            "state" : "translated",
+            "value" : "Nienazwany"
           }
         },
         "pt-BR" : {
@@ -40364,8 +40364,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Warning: This app is not code-signed."
+            "state" : "translated",
+            "value" : "Uwaga: ta aplikacja nie ma podpisu cyfrowego."
           }
         },
         "pt-BR" : {
