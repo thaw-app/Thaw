@@ -12,8 +12,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : " Copy"
+            "state" : "translated",
+            "value" : " Kopieren"
           }
         },
         "es" : {
@@ -36,8 +36,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : " Copy"
+            "state" : "translated",
+            "value" : " Salin"
           }
         },
         "it" : {
@@ -67,7 +67,7 @@
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : " Kopia"
+            "value" : "-kopia"
           }
         },
         "pt-BR" : {
@@ -78,8 +78,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : " Copy"
+            "state" : "translated",
+            "value" : " Копировать"
           }
         },
         "th" : {
@@ -102,8 +102,8 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : " Copy"
+            "state" : "translated",
+            "value" : " Sao chép"
           }
         },
         "zh-Hans" : {
@@ -131,7 +131,7 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "("
           }
         },
@@ -155,7 +155,7 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "("
           }
         },
@@ -197,7 +197,7 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "("
           }
         },
@@ -221,7 +221,7 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "("
           }
         },
@@ -250,7 +250,7 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : ")"
           }
         },
@@ -274,7 +274,7 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : ")"
           }
         },
@@ -316,7 +316,7 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : ")"
           }
         },
@@ -340,7 +340,7 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : ")"
           }
         },
@@ -488,7 +488,7 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%1$@ (%2$@)"
           }
         },
@@ -518,7 +518,7 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%1$@ (%2$@)"
           }
         },
@@ -560,7 +560,7 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%1$@ (%2$@)"
           }
         },
@@ -584,8 +584,8 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ (%2$@)"
+            "state" : "translated",
+            "value" : "%1$@(%2$@)"
           }
         },
         "zh-Hans" : {
@@ -2365,7 +2365,7 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%lld"
           }
         },
@@ -2389,7 +2389,7 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%lld"
           }
         },
@@ -3569,7 +3569,7 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "1."
           }
         },
@@ -3807,7 +3807,7 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "2."
           }
         },
@@ -4045,7 +4045,7 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "3."
           }
         },
@@ -4164,7 +4164,7 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "4."
           }
         },
@@ -4569,7 +4569,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zpřístupnění"
+            "value" : "Přístupnost"
           }
         },
         "de" : {
@@ -4878,8 +4878,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Add"
+            "state" : "translated",
+            "value" : "Добавить"
           }
         },
         "th" : {
@@ -4997,8 +4997,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Add Application Manually"
+            "state" : "translated",
+            "value" : "Добавить приложение вручную"
           }
         },
         "th" : {
@@ -5235,8 +5235,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow"
+            "state" : "translated",
+            "value" : "Разрешить"
           }
         },
         "th" : {
@@ -5288,8 +5288,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow \"%1$@\" to control %2$@ settings?"
+            "state" : "translated",
+            "value" : "\"%1$@\" erlauben, %2$@ Einstellungen zu kontrollieren?"
           }
         },
         "en" : {
@@ -5318,8 +5318,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow \"%1$@\" to control %2$@ settings?"
+            "state" : "translated",
+            "value" : "Izinkan \"%1$@\" untuk mengendalikan pengaturan %2$@?"
           }
         },
         "it" : {
@@ -5360,8 +5360,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow \"%1$@\" to control %2$@ settings?"
+            "state" : "translated",
+            "value" : "Разрешить \"%1$@\" для управления настройками %2$@?"
           }
         },
         "th" : {
@@ -5384,8 +5384,8 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow \"%1$@\" to control %2$@ settings?"
+            "state" : "translated",
+            "value" : "Cho phép \"%1$@\" kiểm soát cài đặt %2$@?"
           }
         },
         "zh-Hans" : {
@@ -5479,8 +5479,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow external applications to read and modify Thaw settings via thaw:// URLs."
+            "state" : "translated",
+            "value" : "Разрешить внешним приложениям считывать и изменять настройки Thaw через URL-адреса thaw:// ."
           }
         },
         "th" : {
@@ -6074,8 +6074,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Appearance"
+            "state" : "translated",
+            "value" : "Оформление"
           }
         },
         "th" : {
@@ -6098,8 +6098,8 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Appearance"
+            "state" : "translated",
+            "value" : "Giao diện"
           }
         },
         "zh-Hans" : {
@@ -6959,26 +6959,26 @@
             "plural" : {
               "few" : {
                 "stringUnit" : {
-                  "state" : "new",
-                  "value" : "%lld apps"
+                  "state" : "translated",
+                  "value" : "%lld приложений"
                 }
               },
               "many" : {
                 "stringUnit" : {
-                  "state" : "new",
-                  "value" : "%lld apps"
+                  "state" : "translated",
+                  "value" : "%lld приложений"
                 }
               },
               "one" : {
                 "stringUnit" : {
-                  "state" : "new",
-                  "value" : "%lld app"
+                  "state" : "translated",
+                  "value" : "%lld приложение"
                 }
               },
               "other" : {
                 "stringUnit" : {
-                  "state" : "new",
-                  "value" : "%lld apps"
+                  "state" : "translated",
+                  "value" : "%lld приложений"
                 }
               }
             }
@@ -7049,8 +7049,8 @@
             "plural" : {
               "other" : {
                 "stringUnit" : {
-                  "state" : "new",
-                  "value" : "%lld apps"
+                  "state" : "translated",
+                  "value" : "%lld ứng dụng"
                 }
               }
             }
@@ -7088,7 +7088,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aplikace s přístupem k nastavení se po schválení zobrazí zde."
+            "value" : "Aplikace s přístupem k nastavení se zobrazí zde, když je schválíte."
           }
         },
         "de" : {
@@ -7159,8 +7159,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apps that request settings access will appear here after you approve them."
+            "state" : "translated",
+            "value" : "Приложения, запрашивающие доступ к настройкам, появятся здесь после их утверждения."
           }
         },
         "th" : {
@@ -8349,8 +8349,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Automation"
+            "state" : "translated",
+            "value" : "Автоматизация"
           }
         },
         "th" : {
@@ -8468,8 +8468,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Back"
+            "state" : "translated",
+            "value" : "Назад"
           }
         },
         "th" : {
@@ -8492,8 +8492,8 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Back"
+            "state" : "translated",
+            "value" : "Quay lại"
           }
         },
         "zh-Hans" : {
@@ -9063,8 +9063,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Bundle Identifier (e.g., com.droppy)"
+            "state" : "translated",
+            "value" : "Идентификатор пакета (например, com.droppy)"
           }
         },
         "th" : {
@@ -11205,8 +11205,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Columns"
+            "state" : "translated",
+            "value" : "Колонки"
           }
         },
         "th" : {
@@ -11229,8 +11229,8 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Columns"
+            "state" : "translated",
+            "value" : "Cột"
           }
         },
         "zh-Hans" : {
@@ -12037,8 +12037,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Copy version info"
+            "state" : "translated",
+            "value" : "Скопировать информацию о версии"
           }
         },
         "th" : {
@@ -12989,8 +12989,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Deny"
+            "state" : "translated",
+            "value" : "Запретить"
           }
         },
         "th" : {
@@ -13399,8 +13399,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "disconnected"
+            "state" : "translated",
+            "value" : "nicht verbunden"
           }
         },
         "es" : {
@@ -13423,8 +13423,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "disconnected"
+            "state" : "translated",
+            "value" : "terputus"
           }
         },
         "it" : {
@@ -13465,8 +13465,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "disconnected"
+            "state" : "translated",
+            "value" : "отключено"
           }
         },
         "th" : {
@@ -13489,8 +13489,8 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "disconnected"
+            "state" : "translated",
+            "value" : "bị ngắt kết nối"
           }
         },
         "zh-Hans" : {
@@ -15369,8 +15369,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Edit Menu Bar Layout…"
+            "state" : "translated",
+            "value" : "Изменить макет панели меню…"
           }
         },
         "th" : {
@@ -15964,8 +15964,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enable Settings URI Scheme"
+            "state" : "translated",
+            "value" : "Включить схему URI настроек"
           }
         },
         "th" : {
@@ -16731,8 +16731,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Failed to encode profiles for export."
+            "state" : "translated",
+            "value" : "Fehler beim Kodieren der Profile für den Export."
           }
         },
         "es" : {
@@ -16755,8 +16755,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Failed to encode profiles for export."
+            "state" : "translated",
+            "value" : "Gagal mengenkode profil untuk diekspor."
           }
         },
         "it" : {
@@ -16797,8 +16797,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Failed to encode profiles for export."
+            "state" : "translated",
+            "value" : "Не удалось кодировать профили для экспорта."
           }
         },
         "th" : {
@@ -16821,8 +16821,8 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Failed to encode profiles for export."
+            "state" : "translated",
+            "value" : "Không thể mã hóa hồ sơ để xuất."
           }
         },
         "zh-Hans" : {
@@ -16850,8 +16850,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Failed to update configuration on %lld profile(s)."
+            "state" : "translated",
+            "value" : "Konfiguration von %lld Profil(en) konnte nicht aktualisiert werden."
           }
         },
         "es" : {
@@ -16874,8 +16874,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Failed to update configuration on %lld profile(s)."
+            "state" : "translated",
+            "value" : "Gagal memperbarui konfigurasi pada profil %lld."
           }
         },
         "it" : {
@@ -16916,8 +16916,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Failed to update configuration on %lld profile(s)."
+            "state" : "translated",
+            "value" : "Не удалось обновить конфигурацию на профиле %lld."
           }
         },
         "th" : {
@@ -16940,8 +16940,8 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Failed to update configuration on %lld profile(s)."
+            "state" : "translated",
+            "value" : "Không cập nhật được cấu hình trên (những) cấu hình %lld cũ."
           }
         },
         "zh-Hans" : {
@@ -17154,8 +17154,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Forward"
+            "state" : "translated",
+            "value" : "Переслать"
           }
         },
         "th" : {
@@ -17178,8 +17178,8 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Forward"
+            "state" : "translated",
+            "value" : "Đi tới"
           }
         },
         "zh-Hans" : {
@@ -17987,8 +17987,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Grid"
+            "state" : "translated",
+            "value" : "Сетка"
           }
         },
         "th" : {
@@ -18011,8 +18011,8 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Grid"
+            "state" : "translated",
+            "value" : "Lưới"
           }
         },
         "zh-Hans" : {
@@ -18701,8 +18701,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Horizontal"
+            "state" : "translated",
+            "value" : "Горизонтальный"
           }
         },
         "th" : {
@@ -18725,8 +18725,8 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Horizontal"
+            "state" : "translated",
+            "value" : "Nằm ngang"
           }
         },
         "zh-Hans" : {
@@ -19177,8 +19177,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "How It Works"
+            "state" : "translated",
+            "value" : "Как это работает"
           }
         },
         "th" : {
@@ -19706,8 +19706,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If granted, this app will be able to:\n\n• Read current settings and configurations\n• Turn features and options on or off\n• Adjust timing values (delays, intervals, timers)\n• Change how %1$@ Bar behaves\n• Customize settings for each display\n\nThis permission stays active until removed in %2$@'s Automation settings."
+            "state" : "translated",
+            "value" : "Wenn das erlaubt wird, kann die Anwendung folgendes tun:\n\n• aktuelle Einstellungen und Konfiguration lesen\n• An- und Abschalten von Einstellungen und Funktionen\n• anpassen von Zeitwerten (Timer, Zeitversatz, Intervalle)\n• ändern des Verhaltens der %1$@-Leiste\n• Einstellungen für jeden Bildschirm anpassen\n\nDiese Berechtigung bleibt aktiv, bis sie in den Automatisierungs-Einstellungen von %2$@ entfernt wird."
           }
         },
         "en" : {
@@ -19736,8 +19736,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If granted, this app will be able to:\n\n• Read current settings and configurations\n• Turn features and options on or off\n• Adjust timing values (delays, intervals, timers)\n• Change how %1$@ Bar behaves\n• Customize settings for each display\n\nThis permission stays active until removed in %2$@'s Automation settings."
+            "state" : "translated",
+            "value" : "Jika izin ini diberikan, aplikasi ini akan dapat:\n\n• Membaca pengaturan dan konfigurasi saat ini\n• Mengaktifkan atau menonaktifkan fitur dan opsi\n• Menyesuaikan nilai waktu (penundaan, interval, pengatur waktu)\n• Mengubah perilaku %1$@ Bar\n• Menyesuaikan pengaturan untuk setiap tampilan\n\nIzin ini akan tetap aktif hingga dihapus di pengaturan Otomatisasi %2$@."
           }
         },
         "it" : {
@@ -19802,8 +19802,8 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If granted, this app will be able to:\n\n• Read current settings and configurations\n• Turn features and options on or off\n• Adjust timing values (delays, intervals, timers)\n• Change how %1$@ Bar behaves\n• Customize settings for each display\n\nThis permission stays active until removed in %2$@'s Automation settings."
+            "state" : "translated",
+            "value" : "Nếu được cấp, ứng dụng này sẽ có thể:\n\n• Đọc các cài đặt và cấu hình hiện tại\n• Bật hoặc tắt các tính năng và tùy chọn\n• Điều chỉnh các giá trị thời gian (độ trễ, khoảng thời gian, bộ hẹn giờ)\n• Thay đổi cách hoạt động của %1$@ Bar\n• Tùy chỉnh cài đặt cho từng màn hình\n\nQuyền này vẫn hoạt động cho đến khi bị xóa trong cài đặt Tự động hóa của %2$@."
           }
         },
         "zh-Hans" : {
@@ -19897,8 +19897,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If not whitelisted, you'll see a confirmation dialog showing the app name and what it wants to do."
+            "state" : "translated",
+            "value" : "Если вы не добавили в белый список, вы увидите диалоговое окно подтверждения с указанием имени приложения и того, что оно хочет сделать."
           }
         },
         "th" : {
@@ -20016,8 +20016,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If you approve, the app is permanently whitelisted and can modify settings anytime without asking again."
+            "state" : "translated",
+            "value" : "Если вы одобрите, приложение постоянно добавляется в белый список и может изменять настройки в любое время без повторного запроса."
           }
         },
         "th" : {
@@ -20611,8 +20611,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Items are arranged in a grid with multiple columns."
+            "state" : "translated",
+            "value" : "Элементы располагаются в сетке с несколькими колонками."
           }
         },
         "th" : {
@@ -20635,8 +20635,8 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Items are arranged in a grid with multiple columns."
+            "state" : "translated",
+            "value" : "Các mục được sắp xếp theo dạng lưới có nhiều cột."
           }
         },
         "zh-Hans" : {
@@ -20730,8 +20730,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Items are arranged in a single horizontal row."
+            "state" : "translated",
+            "value" : "Элементы располагаются в одной горизонтальной строке."
           }
         },
         "th" : {
@@ -20754,8 +20754,8 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Items are arranged in a single horizontal row."
+            "state" : "translated",
+            "value" : "Các mục được sắp xếp thành một hàng ngang."
           }
         },
         "zh-Hans" : {
@@ -20849,8 +20849,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Items are stacked vertically in a single column."
+            "state" : "translated",
+            "value" : "Элементы складываются вертикально в одном столбце."
           }
         },
         "th" : {
@@ -20873,8 +20873,8 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Items are stacked vertically in a single column."
+            "state" : "translated",
+            "value" : "Các mục được xếp theo chiều dọc trong một cột duy nhất."
           }
         },
         "zh-Hans" : {
@@ -21087,8 +21087,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Keep search"
+            "state" : "translated",
+            "value" : "Продолжить поиск"
           }
         },
         "th" : {
@@ -21468,8 +21468,8 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Layout"
+            "state" : "translated",
+            "value" : "Cách trình bày"
           }
         },
         "zh-Hans" : {
@@ -21492,7 +21492,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Obnovení rozložení. Všechny ikony se skryly."
+            "value" : "Obnovení rozložení. Položky byly přesunuty do sekce „Skryté“."
           }
         },
         "de" : {
@@ -22752,8 +22752,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Maximum number of items per row in the grid layout."
+            "state" : "translated",
+            "value" : "Максимальное количество элементов в строке в макете сетки."
           }
         },
         "th" : {
@@ -22776,8 +22776,8 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Maximum number of items per row in the grid layout."
+            "state" : "translated",
+            "value" : "Số mục tối đa trên mỗi hàng trong bố cục lưới."
           }
         },
         "zh-Hans" : {
@@ -24466,7 +24466,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nově zjištěné ikony se budou zobrazovat tam, kam přesunete odznáček „Nové položky“."
+            "value" : "Přesuňte odznáček „Nové položky“, abyste určili, kde se budou nově zjištěné ikony zobrazovat."
           }
         },
         "de" : {
@@ -25489,8 +25489,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No whitelisted apps"
+            "state" : "translated",
+            "value" : "Нет приложений из белого списка"
           }
         },
         "th" : {
@@ -26322,8 +26322,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Off"
+            "state" : "translated",
+            "value" : "Выкл"
           }
         },
         "th" : {
@@ -26346,8 +26346,8 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Off"
+            "state" : "translated",
+            "value" : "Tắt"
           }
         },
         "zh-Hans" : {
@@ -28226,8 +28226,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Remove %@ from whitelist"
+            "state" : "translated",
+            "value" : "Удалить %@ из белого списка"
           }
         },
         "th" : {
@@ -28345,8 +28345,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Remove from whitelist"
+            "state" : "translated",
+            "value" : "Удалить из белого списка"
           }
         },
         "th" : {
@@ -31249,7 +31249,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Rolujte nebo táhněte kurzorem po řádku nabídek, aby se zobrazily skryté položky."
+            "value" : "Rolujte nebo přejeďte kurzorem po řádku nabídek, aby se zobrazily skryté položky."
           }
         },
         "de" : {
@@ -32034,8 +32034,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Settings URI is disabled. External apps cannot read or modify Thaw settings."
+            "state" : "translated",
+            "value" : "URI настроек отключен. Внешние приложения не могут читать или изменять настройки Thaw."
           }
         },
         "th" : {
@@ -32325,8 +32325,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Should %1$@ automatically check for updates? You can always check manually from the %2$@ menu bar icon or Settings %3$@ About."
+            "state" : "translated",
+            "value" : "Soll %1$@ automatisch nach neuen Updates suchen? Diese Einstellung kann jederzeit über das %2$@ Menüleisten-Symbol oder unter Einstellungen %3$@ Über geändert werden."
           }
         },
         "en" : {
@@ -32355,8 +32355,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Should %1$@ automatically check for updates? You can always check manually from the %2$@ menu bar icon or Settings %3$@ About."
+            "state" : "translated",
+            "value" : "Perlukah %1$@ memeriksa pembaruan secara otomatis? Anda selalu dapat memeriksa secara manual melalui ikon menu bar %2$@ atau pada Pengaturan Tentang %3$@."
           }
         },
         "it" : {
@@ -32421,8 +32421,8 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Should %1$@ automatically check for updates? You can always check manually from the %2$@ menu bar icon or Settings %3$@ About."
+            "state" : "translated",
+            "value" : "%1$@ có nên tự động kiểm tra các bản cập nhật không? Bạn luôn có thể kiểm tra thủ công từ biểu tượng thanh menu %2$@ hoặc Cài đặt %3$@ Giới thiệu."
           }
         },
         "zh-Hans" : {
@@ -34235,8 +34235,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Signed by: %@"
+            "state" : "translated",
+            "value" : "Signiert von: %@"
           }
         },
         "es" : {
@@ -34259,8 +34259,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Signed by: %@"
+            "state" : "translated",
+            "value" : "Ditandatangani oleh: %@"
           }
         },
         "it" : {
@@ -34301,8 +34301,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Signed by: %@"
+            "state" : "translated",
+            "value" : "Подписано: %@"
           }
         },
         "th" : {
@@ -34325,8 +34325,8 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Signed by: %@"
+            "state" : "translated",
+            "value" : "Ký bởi: %@"
           }
         },
         "zh-Hans" : {
@@ -35491,8 +35491,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Supported Settings"
+            "state" : "translated",
+            "value" : "Поддерживаемые настройки"
           }
         },
         "th" : {
@@ -36972,8 +36972,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "To switch profiles with Focus modes, add Thaw as a Focus Filter in System Settings %1$@ Focus %2$@ [Mode] %3$@ Focus Filters. When a Focus mode deactivates, the display profile is automatically restored."
+            "state" : "translated",
+            "value" : "Um Profile mit dem Fokus zu wechseln, muss Thaw als Fokusfilter unter Systemeinstellungen%1$@ Fokus %2$@ [gewünschter Modus] %3$@ Fokusfilter hinzugefügt werden. Wenn sich ein Fokus deaktiviert, wird das Bildschirmprofil automatisch wiederhergestellt."
           }
         },
         "en" : {
@@ -37002,8 +37002,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "To switch profiles with Focus modes, add Thaw as a Focus Filter in System Settings %1$@ Focus %2$@ [Mode] %3$@ Focus Filters. When a Focus mode deactivates, the display profile is automatically restored."
+            "state" : "translated",
+            "value" : "Untuk berpindah profil dengan mode Fokus, tambahkan Thaw sebagai Filter Fokus di Pengaturan Sistem %1$@ [Mode] Fokus %2$@ %3$@ Filter Fokus. Ketika sebuah mode Fokus dinonaktifkan, profil tampilan akan dipulihkan otomatis."
           }
         },
         "it" : {
@@ -37068,8 +37068,8 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "To switch profiles with Focus modes, add Thaw as a Focus Filter in System Settings %1$@ Focus %2$@ [Mode] %3$@ Focus Filters. When a Focus mode deactivates, the display profile is automatically restored."
+            "state" : "translated",
+            "value" : "Để chuyển đổi cấu hình với Chế độ lấy nét, hãy thêm Làm tan băng làm Bộ lọc lấy nét trong Cài đặt hệ thống %1$@ Lấy nét %2$@ [Chế độ] %3$@ Bộ lọc lấy nét. Khi chế độ Lấy nét tắt, cấu hình hiển thị sẽ tự động được khôi phục."
           }
         },
         "zh-Hans" : {
@@ -38168,8 +38168,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Untitled"
+            "state" : "translated",
+            "value" : "Unbenannt"
           }
         },
         "es" : {
@@ -38192,8 +38192,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Untitled"
+            "state" : "translated",
+            "value" : "Tanpa Judul"
           }
         },
         "it" : {
@@ -38258,8 +38258,8 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Untitled"
+            "state" : "translated",
+            "value" : "Không có tiêu đề"
           }
         },
         "zh-Hans" : {
@@ -40162,8 +40162,8 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Vertical"
+            "state" : "translated",
+            "value" : "Thẳng đứng"
           }
         },
         "zh-Hans" : {
@@ -40310,8 +40310,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Warning: This app is not code-signed."
+            "state" : "translated",
+            "value" : "Warnung: Diese Anwendung ist nicht Code-signiert."
           }
         },
         "es" : {
@@ -40334,8 +40334,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Warning: This app is not code-signed."
+            "state" : "translated",
+            "value" : "Peringatan: Aplikasi ini tidak dilengkapi tanda tangan digital."
           }
         },
         "it" : {
@@ -40400,8 +40400,8 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Warning: This app is not code-signed."
+            "state" : "translated",
+            "value" : "Cảnh báo: Ứng dụng này không được ký mã."
           }
         },
         "zh-Hans" : {
@@ -41209,8 +41209,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "You can remove apps from this list at any time to revoke their access."
+            "state" : "translated",
+            "value" : "Вы можете удалить приложения из этого списка в любое время, чтобы отменить их доступ."
           }
         },
         "th" : {
