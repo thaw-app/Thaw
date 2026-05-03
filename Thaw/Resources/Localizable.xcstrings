@@ -84,7 +84,7 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "("
           }
         },
@@ -203,7 +203,7 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : ")"
           }
         },
@@ -322,7 +322,7 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%@"
           }
         },
@@ -447,7 +447,7 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%1$@ (%2$@)"
           }
         },
@@ -1208,8 +1208,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ is currently running. Running multiple menu bar managers at the same time can cause display issues and unexpected behavior. Consider quitting %2$@ before using %3$@."
+            "state" : "translated",
+            "value" : "%1$@ ist gerade gestartet. Das gleichzeitige Ausführen mehrerer Menüleisten-Manager kann Darstellungsprobleme und unerwartetes Verhalten verursachen. Bitte in Erwägung ziehen %2$@ vor der Verwendung von %3$@ zu beenden."
           }
         },
         "en" : {
@@ -1268,8 +1268,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ is currently running. Running multiple menu bar managers at the same time can cause display issues and unexpected behavior. Consider quitting %2$@ before using %3$@."
+            "state" : "translated",
+            "value" : "%1$@ jest obecnie uruchomiony. Korzystanie z wielu menedżerów paska menu jednocześnie może powodować problemy z wyświetlaniem i nieoczekiwane zachowanie. Rozważ zamknięcie %2$@ przed użyciem aplikacji %3$@."
           }
         },
         "pt-BR" : {
@@ -1286,8 +1286,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ is currently running. Running multiple menu bar managers at the same time can cause display issues and unexpected behavior. Consider quitting %2$@ before using %3$@."
+            "state" : "translated",
+            "value" : "%1$@ กำลังทำงาน การเรียกใช้โปรแกรมจัดการแถบเมนูหลายตัวในเวลาเดียวกันอาจทำให้เกิดปัญหาด้านการแสดงผลและพฤติกรรมที่ไม่คาดคิด ลองปิด %2$@ ก่อนใช้ Thaw"
           }
         },
         "tr" : {
@@ -2252,7 +2252,7 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%lld"
           }
         },
@@ -2371,7 +2371,7 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%lld fps"
           }
         },
@@ -2861,7 +2861,7 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "•"
           }
         },
@@ -2980,7 +2980,7 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "+"
           }
         },
@@ -3099,7 +3099,7 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "⌘"
           }
         },
@@ -3218,7 +3218,7 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "⎋"
           }
         },
@@ -3337,7 +3337,7 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "1"
           }
         },
@@ -3456,7 +3456,7 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "1."
           }
         },
@@ -3575,7 +3575,7 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "2"
           }
         },
@@ -3694,7 +3694,7 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "2."
           }
         },
@@ -3813,7 +3813,7 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "3"
           }
         },
@@ -3932,7 +3932,7 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "3."
           }
         },
@@ -4051,7 +4051,7 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "4."
           }
         },
@@ -4765,8 +4765,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Add"
+            "state" : "translated",
+            "value" : "เพิ่ม"
           }
         },
         "tr" : {
@@ -4884,8 +4884,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Add Application Manually"
+            "state" : "translated",
+            "value" : "เพิ่มแอปพลิเคชันด้วยตนเอง"
           }
         },
         "tr" : {
@@ -5122,8 +5122,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow"
+            "state" : "translated",
+            "value" : "อนุญาต"
           }
         },
         "tr" : {
@@ -5247,8 +5247,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow \"%1$@\" to control %2$@ settings?"
+            "state" : "translated",
+            "value" : "อนุญาตให้ \"%1$@\" ควบคุมการตั้งค่า %2$@ หรือไม่?"
           }
         },
         "tr" : {
@@ -5366,8 +5366,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow external applications to read and modify Thaw settings via thaw:// URLs."
+            "state" : "translated",
+            "value" : "อนุญาตให้แอปพลิเคชันภายนอกอ่านและแก้ไขการตั้งค่า Thaw ผ่าน thaw:// URLs"
           }
         },
         "tr" : {
@@ -5961,8 +5961,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Appearance"
+            "state" : "translated",
+            "value" : "ลักษณะ"
           }
         },
         "tr" : {
@@ -6199,8 +6199,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply a Thaw menu bar profile when this Focus activates."
+            "state" : "translated",
+            "value" : "ใช้โปรไฟล์แถบเมนู Thaw เมื่อ Focus นี้เปิดใช้งาน"
           }
         },
         "tr" : {
@@ -6870,8 +6870,8 @@
             "plural" : {
               "other" : {
                 "stringUnit" : {
-                  "state" : "new",
-                  "value" : "%lld apps"
+                  "state" : "translated",
+                  "value" : "%lld แอป"
                 }
               }
             }
@@ -7046,8 +7046,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apps that request settings access will appear here after you approve them."
+            "state" : "translated",
+            "value" : "แอปที่ขอสิทธิ์การเข้าถึงการตั้งค่าจะปรากฏที่นี่หลังจากที่คุณอนุมัติ"
           }
         },
         "tr" : {
@@ -7165,8 +7165,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Are you sure you want to delete the profile \"%@\"? This cannot be undone."
+            "state" : "translated",
+            "value" : "คุณแน่ใจหรือไม่ว่าต้องการลบโปรไฟล์ \"%@\"? การดำเนินการนี้ไม่สามารถยกเลิกได้"
           }
         },
         "tr" : {
@@ -7522,8 +7522,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Assign a profile to each display."
+            "state" : "translated",
+            "value" : "กำหนดโปรไฟล์ให้กับแต่ละหน้าจอ"
           }
         },
         "tr" : {
@@ -7641,8 +7641,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Auto-Switch"
+            "state" : "translated",
+            "value" : "เปลี่ยนโปรไฟล์อัตโนมัติ"
           }
         },
         "tr" : {
@@ -8236,8 +8236,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Automation"
+            "state" : "translated",
+            "value" : "อัตโนมัติ"
           }
         },
         "tr" : {
@@ -8355,8 +8355,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Back"
+            "state" : "translated",
+            "value" : "กลับ"
           }
         },
         "tr" : {
@@ -8474,7 +8474,7 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "BETA"
           }
         },
@@ -8950,8 +8950,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Bundle Identifier (e.g., com.droppy)"
+            "state" : "translated",
+            "value" : "Bundle Identifier (เช่น com.droppy)"
           }
         },
         "tr" : {
@@ -9069,8 +9069,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Can modify settings"
+            "state" : "translated",
+            "value" : "สามารถแก้ไขการตั้งค่าได้"
           }
         },
         "tr" : {
@@ -11092,8 +11092,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Columns"
+            "state" : "translated",
+            "value" : "คอลัมน์"
           }
         },
         "tr" : {
@@ -11853,8 +11853,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Copy"
+            "state" : "translated",
+            "value" : "Kopie"
           }
         },
         "es" : {
@@ -11907,8 +11907,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Copy"
+            "state" : "translated",
+            "value" : "-kopia"
           }
         },
         "pt-BR" : {
@@ -11925,8 +11925,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Copy"
+            "state" : "translated",
+            "value" : "คัดลอก"
           }
         },
         "tr" : {
@@ -12044,8 +12044,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Copy version info"
+            "state" : "translated",
+            "value" : "คัดลอกข้อมูลเวอร์ชั่น"
           }
         },
         "tr" : {
@@ -12163,8 +12163,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Created: %@"
+            "state" : "translated",
+            "value" : "สร้างเมื่อ: %@"
           }
         },
         "tr" : {
@@ -12758,8 +12758,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete"
+            "state" : "translated",
+            "value" : "ลบ"
           }
         },
         "tr" : {
@@ -12877,8 +12877,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete Profile?"
+            "state" : "translated",
+            "value" : "ลบโปรไฟล์?"
           }
         },
         "tr" : {
@@ -12996,8 +12996,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Deny"
+            "state" : "translated",
+            "value" : "ปฏิเสธ"
           }
         },
         "tr" : {
@@ -13472,8 +13472,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "disconnected"
+            "state" : "translated",
+            "value" : "ขาดการเชื่อมต่อ"
           }
         },
         "tr" : {
@@ -14900,8 +14900,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Duplicate"
+            "state" : "translated",
+            "value" : "ทำสำเนา"
           }
         },
         "tr" : {
@@ -15138,7 +15138,7 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "E"
           }
         },
@@ -15376,8 +15376,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Edit Menu Bar Layout…"
+            "state" : "translated",
+            "value" : "แก้ไขการจัดวางแถบเมนู…"
           }
         },
         "tr" : {
@@ -15971,8 +15971,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enable Settings URI Scheme"
+            "state" : "translated",
+            "value" : "เปิดใช้งาน Settings URI Scheme"
           }
         },
         "tr" : {
@@ -16328,8 +16328,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Error"
+            "state" : "translated",
+            "value" : "ข้อผิดพลาด"
           }
         },
         "tr" : {
@@ -16566,8 +16566,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Export"
+            "state" : "translated",
+            "value" : "ส่งออก"
           }
         },
         "tr" : {
@@ -16685,8 +16685,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Export Profile(s)"
+            "state" : "translated",
+            "value" : "ส่งออกโปรไฟล์"
           }
         },
         "tr" : {
@@ -16804,8 +16804,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Failed to encode profiles for export."
+            "state" : "translated",
+            "value" : "ไม่สามารถเข้ารหัสโปรไฟล์สำหรับการส่งออกได้"
           }
         },
         "tr" : {
@@ -16923,8 +16923,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Failed to update configuration on %lld profile(s)."
+            "state" : "translated",
+            "value" : "ไม่สามารถอัปเดตการตั้งค่าใน %lld โปรไฟล์ได้"
           }
         },
         "tr" : {
@@ -17161,8 +17161,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Forward"
+            "state" : "translated",
+            "value" : "ไปข้างหน้า"
           }
         },
         "tr" : {
@@ -17994,8 +17994,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Grid"
+            "state" : "translated",
+            "value" : "ตาราง"
           }
         },
         "tr" : {
@@ -18708,8 +18708,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Horizontal"
+            "state" : "translated",
+            "value" : "แนวนอน"
           }
         },
         "tr" : {
@@ -19184,8 +19184,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "How It Works"
+            "state" : "translated",
+            "value" : "วิธีการทำงาน"
           }
         },
         "tr" : {
@@ -19698,7 +19698,122 @@
     },
     "If effects are not visible, disable \"Show menu bar background\" in System Settings %@ Menu Bar" : {
       "comment" : "A tooltip that describes the effect of disabling the \"Show menu bar background\" setting in System Settings.",
-      "isCommentAutoGenerated" : true
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "If effects are not visible, disable \"Show menu bar background\" in System Settings %@ Menu Bar"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "If effects are not visible, disable \"Show menu bar background\" in System Settings %@ Menu Bar"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "If effects are not visible, disable \"Show menu bar background\" in System Settings %@ Menu Bar"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "If effects are not visible, disable \"Show menu bar background\" in System Settings %@ Menu Bar"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "If effects are not visible, disable \"Show menu bar background\" in System Settings %@ Menu Bar"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "If effects are not visible, disable \"Show menu bar background\" in System Settings %@ Menu Bar"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "If effects are not visible, disable \"Show menu bar background\" in System Settings %@ Menu Bar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "If effects are not visible, disable \"Show menu bar background\" in System Settings %@ Menu Bar"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "If effects are not visible, disable \"Show menu bar background\" in System Settings %@ Menu Bar"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "If effects are not visible, disable \"Show menu bar background\" in System Settings %@ Menu Bar"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "If effects are not visible, disable \"Show menu bar background\" in System Settings %@ Menu Bar"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "If effects are not visible, disable \"Show menu bar background\" in System Settings %@ Menu Bar"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "If effects are not visible, disable \"Show menu bar background\" in System Settings %@ Menu Bar"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "หากเอฟเฟกต์ไม่แสดงผล ให้ปิดตัวเลือก “แสดงพื้นหลังแถบเมนู” ใน การตั้งค่าระบบ %@ แถบเมนู"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "If effects are not visible, disable \"Show menu bar background\" in System Settings %@ Menu Bar"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "If effects are not visible, disable \"Show menu bar background\" in System Settings %@ Menu Bar"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "If effects are not visible, disable \"Show menu bar background\" in System Settings %@ Menu Bar"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "If effects are not visible, disable \"Show menu bar background\" in System Settings %@ Menu Bar"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "If effects are not visible, disable \"Show menu bar background\" in System Settings %@ Menu Bar"
+          }
+        }
+      }
     },
     "If granted, this app will be able to:\n\n• Read current settings and configurations\n• Turn features and options on or off\n• Adjust timing values (delays, intervals, timers)\n• Change how %@ Bar behaves\n• Customize settings for each display\n\nThis permission stays active until removed in %@'s Automation settings." : {
       "comment" : "Text of the main body of the alert.",
@@ -19789,8 +19904,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If granted, this app will be able to:\n\n• Read current settings and configurations\n• Turn features and options on or off\n• Adjust timing values (delays, intervals, timers)\n• Change how %1$@ Bar behaves\n• Customize settings for each display\n\nThis permission stays active until removed in %2$@'s Automation settings."
+            "state" : "translated",
+            "value" : "หากได้รับอนุญาต แอปนี้จะสามารถ:\n\n• อ่านการตั้งค่าและการกำหนดค่าปัจจุบัน\n• เปิดหรือปิดฟีเจอร์และตัวเลือกต่าง ๆ\n• ปรับค่าเวลา (การหน่วง, ช่วงเวลา, ตัวตั้งเวลา)\n• เปลี่ยนพฤติกรรมการทำงานของแถบ %1$@ \n• กำหนดการตั้งค่าแยกสำหรับแต่ละจอแสดงผล\n\nสิทธิ์นี้จะยังคงใช้งานได้จนกว่าจะถูกลบออกในการตั้งค่าระบบอัตโนมัติของ %2$@"
           }
         },
         "tr" : {
@@ -19908,8 +20023,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If not whitelisted, you'll see a confirmation dialog showing the app name and what it wants to do."
+            "state" : "translated",
+            "value" : "หากแอปไม่อยู่ในรายการที่อนุญาต คุณจะเห็นกล่องโต้ตอบยืนยันที่แสดงชื่อแอปและสิ่งที่ต้องการทำ"
           }
         },
         "tr" : {
@@ -20027,8 +20142,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If you approve, the app is permanently whitelisted and can modify settings anytime without asking again."
+            "state" : "translated",
+            "value" : "หากคุณอนุมัติ แอปจะถูกเพิ่มในรายการที่อนุญาตอย่างถาวรและสามารถแก้ไขการตั้งค่าได้ทุกเวลาโดยไม่ต้องถามอีก"
           }
         },
         "tr" : {
@@ -20265,8 +20380,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Import Profile(s)"
+            "state" : "translated",
+            "value" : "นำเข้าโปรไฟล์"
           }
         },
         "tr" : {
@@ -20622,8 +20737,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Items are arranged in a grid with multiple columns."
+            "state" : "translated",
+            "value" : "รายการถูกจัดเรียงในรูปแบบตารางที่มีหลายคอลัมน์"
           }
         },
         "tr" : {
@@ -20741,8 +20856,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Items are arranged in a single horizontal row."
+            "state" : "translated",
+            "value" : "รายการถูกจัดเรียงในแถวแนวนอนเดียว"
           }
         },
         "tr" : {
@@ -20860,8 +20975,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Items are stacked vertically in a single column."
+            "state" : "translated",
+            "value" : "รายการถูกจัดเรียงในแนวตั้งในคอลัมน์เดียว"
           }
         },
         "tr" : {
@@ -21098,8 +21213,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Keep search"
+            "state" : "translated",
+            "value" : "เก็บการค้นหา"
           }
         },
         "tr" : {
@@ -21455,8 +21570,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Layout"
+            "state" : "translated",
+            "value" : "การจัดวาง"
           }
         },
         "tr" : {
@@ -22764,8 +22879,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Maximum number of items per row in the grid layout."
+            "state" : "translated",
+            "value" : "จำนวนรายการสูงสุดต่อแถวในการจัดวางแบบตาราง"
           }
         },
         "tr" : {
@@ -23954,8 +24069,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu Bar Profile"
+            "state" : "translated",
+            "value" : "โปรไฟล์แถบเมนู"
           }
         },
         "tr" : {
@@ -24311,8 +24426,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Modified: %@"
+            "state" : "translated",
+            "value" : "แก้ไขเมื่อ: %@"
           }
         },
         "tr" : {
@@ -24549,8 +24664,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move the New Items badge to choose where newly detected items will appear."
+            "state" : "translated",
+            "value" : "ย้ายป้าย 'รายการใหม่' เพื่อเลือกตำแหน่งที่รายการที่ตรวจพบใหม่จะปรากฏ"
           }
         },
         "tr" : {
@@ -24787,8 +24902,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "New Items"
+            "state" : "translated",
+            "value" : "รายการใหม่"
           }
         },
         "tr" : {
@@ -24906,8 +25021,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "New profile name"
+            "state" : "translated",
+            "value" : "ชื่อโปรไฟล์ใหม่"
           }
         },
         "tr" : {
@@ -25144,8 +25259,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No profile selected"
+            "state" : "translated",
+            "value" : "ไม่มีรายการในหมวดหมู่นี้"
           }
         },
         "tr" : {
@@ -25263,8 +25378,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No profiles saved. Save your current configuration to create one."
+            "state" : "translated",
+            "value" : "ไม่มีโปรไฟล์ที่บันทึกไว้ บันทึกการตั้งค่าปัจจุบันเพื่อสร้างโปรไฟล์"
           }
         },
         "tr" : {
@@ -25501,8 +25616,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No whitelisted apps"
+            "state" : "translated",
+            "value" : "ไม่มีแอปในรายการที่อนุญาต"
           }
         },
         "tr" : {
@@ -26334,8 +26449,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Off"
+            "state" : "translated",
+            "value" : "ปิด"
           }
         },
         "tr" : {
@@ -26610,7 +26725,122 @@
     },
     "Opacity" : {
       "comment" : "A label for the opacity of the menu bar.",
-      "isCommentAutoGenerated" : true
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Opacity"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Opacity"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Opacity"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Opacity"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Opacity"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Opacity"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Opacity"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Opacity"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Opacity"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Opacity"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Opacity"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Opacity"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Opacity"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ความทึบแสง"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Opacity"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Opacity"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Opacity"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Opacity"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Opacity"
+          }
+        }
+      }
     },
     "Open %@ Settings" : {
       "comment" : "A button that opens the settings app to grant screen recording permissions for the \\(Constants.displayName) Bar.",
@@ -26814,8 +27044,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Open Focus Settings"
+            "state" : "translated",
+            "value" : "เปิดการตั้งค่า Focus"
           }
         },
         "tr" : {
@@ -27290,8 +27520,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Profile"
+            "state" : "translated",
+            "value" : "โปรไฟล์"
           }
         },
         "tr" : {
@@ -27409,8 +27639,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Profile name"
+            "state" : "translated",
+            "value" : "ชื่อโปรไฟล์"
           }
         },
         "tr" : {
@@ -27528,8 +27758,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Profile: %@"
+            "state" : "translated",
+            "value" : "โปรไฟล์: %@"
           }
         },
         "tr" : {
@@ -27647,8 +27877,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Profiles"
+            "state" : "translated",
+            "value" : "โปรไฟล์"
           }
         },
         "tr" : {
@@ -28123,8 +28353,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Remove %@ from whitelist"
+            "state" : "translated",
+            "value" : "ลบ %@ ออกจากรายการที่อนุญาต"
           }
         },
         "tr" : {
@@ -28242,8 +28472,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Remove from whitelist"
+            "state" : "translated",
+            "value" : "ลบออกจากรายการที่อนุญาต"
           }
         },
         "tr" : {
@@ -28361,8 +28591,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Rename"
+            "state" : "translated",
+            "value" : "เปลี่ยนชื่อ"
           }
         },
         "tr" : {
@@ -30741,8 +30971,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Save Current"
+            "state" : "translated",
+            "value" : "บันทึกปัจจุบัน"
           }
         },
         "tr" : {
@@ -31812,8 +32042,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Set Menu Bar Profile"
+            "state" : "translated",
+            "value" : "กำหนดโปรไฟล์แถบเมนู"
           }
         },
         "tr" : {
@@ -31859,8 +32089,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Settings URI is disabled. External apps cannot read or modify %@ settings."
+            "state" : "translated",
+            "value" : "Einstellungs-URL ist deaktiviert. Externe Anwendungen können die %@-Einstellungen nicht lesen oder ändern."
           }
         },
         "es" : {
@@ -31913,8 +32143,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Settings URI is disabled. External apps cannot read or modify %@ settings."
+            "state" : "translated",
+            "value" : "URI ustawień jest wyłączony. Zewnętrzne aplikacje nie mogą odczytywać ani modyfikować ustawień %@."
           }
         },
         "pt-BR" : {
@@ -31931,8 +32161,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Settings URI is disabled. External apps cannot read or modify %@ settings."
+            "state" : "translated",
+            "value" : "Settings URI ถูกปิดใช้งาน แอปภายนอกไม่สามารถอ่านหรือแก้ไขการตั้งค่า %@ ได้"
           }
         },
         "tr" : {
@@ -32294,8 +32524,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Should %1$@ automatically check for updates? You can always check manually from the %2$@ menu bar icon or Settings %3$@ About."
+            "state" : "translated",
+            "value" : "%1$@ ควรตรวจสอบการอัปเดตโดยอัตโนมัติหรือไม่ คุณสามารถตรวจสอบด้วยตนเองได้ตลอดเวลาจากไอคอนแถบเมนู %2$@ หรือจาก การตั้งค่า %3$@ เกี่ยวกับ"
           }
         },
         "tr" : {
@@ -34198,8 +34428,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Signed by: %@"
+            "state" : "translated",
+            "value" : "ลงนามโดย: %@"
           }
         },
         "tr" : {
@@ -35388,8 +35618,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Supported Settings"
+            "state" : "translated",
+            "value" : "การตั้งค่าที่รองรับ"
           }
         },
         "tr" : {
@@ -36863,8 +37093,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "To switch profiles with Focus modes, add %1$@ as a Focus Filter in System Settings %2$@ Focus %3$@ [Mode] %4$@ Focus Filters. When a Focus mode deactivates, the display profile is automatically restored."
+            "state" : "translated",
+            "value" : "Um Profile mit dem Fokus zu wechseln, muss %1$@ als Fokusfilter unter Systemeinstellungen%2$@ Fokus %3$@ [gewünschter Modus] %4$@ Fokusfilter hinzugefügt werden. Wenn sich ein Fokus deaktiviert, wird das Bildschirmprofil automatisch wiederhergestellt."
           }
         },
         "en" : {
@@ -36923,8 +37153,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "To switch profiles with Focus modes, add %1$@ as a Focus Filter in System Settings %2$@ Focus %3$@ [Mode] %4$@ Focus Filters. When a Focus mode deactivates, the display profile is automatically restored."
+            "state" : "translated",
+            "value" : "Aby przełączać profile za pomocą trybów skupienia, dodaj %1$@ jako filtr trybu skupienia w Ustawieniach systemowych %2$@ Tryb skupienia %3$@ [Tryb] %4$@ Filtry trybu skupienia. Po wyłączeniu trybu skupienia profil wyświetlacza zostanie automatycznie przywrócony."
           }
         },
         "pt-BR" : {
@@ -36941,8 +37171,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "To switch profiles with Focus modes, add %1$@ as a Focus Filter in System Settings %2$@ Focus %3$@ [Mode] %4$@ Focus Filters. When a Focus mode deactivates, the display profile is automatically restored."
+            "state" : "translated",
+            "value" : "หากต้องการสลับโปรไฟล์ตาม Focus Mode ให้เพิ่ม %1$@ เป็น Focus Filter ได้ที่ System Settings %2$@ Focus %3$@ [Mode] %4$@ Focus Filters เมื่อ Focus Mode สิ้นสุด โปรไฟล์การแสดงผลจะถูกเรียกคืนโดยอัตโนมัติ"
           }
         },
         "tr" : {
@@ -38131,8 +38361,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Untitled"
+            "state" : "translated",
+            "value" : "ไม่มีชื่อ"
           }
         },
         "tr" : {
@@ -38250,8 +38480,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update"
+            "state" : "translated",
+            "value" : "อัปเดต"
           }
         },
         "tr" : {
@@ -38369,8 +38599,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update All"
+            "state" : "translated",
+            "value" : "อัปเดตทั้งหมด"
           }
         },
         "tr" : {
@@ -38607,8 +38837,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update Configuration on All Profiles"
+            "state" : "translated",
+            "value" : "อัปเดตการตั้งค่าในโปรไฟล์ทั้งหมด"
           }
         },
         "tr" : {
@@ -38726,8 +38956,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update Configuration Only"
+            "state" : "translated",
+            "value" : "อัปเดตเฉพาะการตั้งค่า"
           }
         },
         "tr" : {
@@ -38845,8 +39075,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update Layout Only"
+            "state" : "translated",
+            "value" : "อัปเดตเฉพาะการจัดวาง"
           }
         },
         "tr" : {
@@ -38964,8 +39194,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update this profile with the current state"
+            "state" : "translated",
+            "value" : "อัปเดตโปรไฟล์นี้ด้วยสถานะปัจจุบัน"
           }
         },
         "tr" : {
@@ -39440,8 +39670,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Use LCS sorting on notched displays"
+            "state" : "translated",
+            "value" : "ใช้การเรียงลำดับ LCS บนหน้าจอที่มี notch"
           }
         },
         "tr" : {
@@ -39559,8 +39789,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Use Option-click to open always-hidden section"
+            "state" : "translated",
+            "value" : "ใช้ Option-คลิก เพื่อเปิด \"หมวดหมู่ที่ซ่อนอยู่เสมอ\""
           }
         },
         "tr" : {
@@ -39678,8 +39908,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Use the faster LCS (Longest Common Subsequence) algorithm for profile sorting on notched displays instead of the full sort. LCS minimises the number of moves but may be less reliable on notched displays with smaller resolutions."
+            "state" : "translated",
+            "value" : "ใช้อัลกอริทึม LCS (Longest Common Subsequence) ที่เร็วกว่าสำหรับการเรียงลำดับโปรไฟล์บนหน้าจอที่มี notch แทนการเรียงลำดับแบบสมบูรณ์ LCS ช่วยลดจำนวนการเคลื่อนที่ แต่อาจไม่น่าเชื่อถือบนหน้าจอที่มี notch ที่มีความละเอียดต่ำกว่า"
           }
         },
         "tr" : {
@@ -40035,8 +40265,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Vertical"
+            "state" : "translated",
+            "value" : "แนวตั้ง"
           }
         },
         "tr" : {
@@ -40273,8 +40503,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Warning: This app is not code-signed."
+            "state" : "translated",
+            "value" : "คำเตือน: แอปนี้ไม่ได้รับการลงนามรหัส"
           }
         },
         "tr" : {
@@ -40511,8 +40741,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "When an app sends a thaw:// URL to change settings, Thaw checks if that app is whitelisted."
+            "state" : "translated",
+            "value" : "เมื่อแอปส่ง thaw:// URL เพื่อเปลี่ยนการตั้งค่า Thaw จะตรวจสอบว่าแอปนั้นอยู่ในรายการที่อนุญาตหรือไม่"
           }
         },
         "tr" : {
@@ -40630,8 +40860,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Whitelisted Applications"
+            "state" : "translated",
+            "value" : "แอปพลิเคชันที่อนุญาต"
           }
         },
         "tr" : {
@@ -40677,8 +40907,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Whitelisted apps can read settings, toggle boolean options, set numeric values (timers, delays), change enum settings (rehide strategy, %1$@ Bar location), and modify per-display configurations. This includes auto-rehide, show on click/hover/scroll/double-click, %2$@ Bar, hide application menus, enable always-hidden section, show tooltips, and diagnostic logging."
+            "state" : "translated",
+            "value" : "Anwendungen auf der Whitelist können Einstellungen lesen, Optionen umschalten, numerische Werte festlegen (Timer, Verzögerung), Einstellungen ändern (Strategie für automatisches verstecken, %1$@-Bar Standort) und Konfigurationen pro Anzeige ändern. Dazu gehören automatisches Verstecken, Anzeigen bei Klick/Darüberschweben/Scrollen/Doppelklick, %2$@-Leiste, verstecke Anwendungsmenüs, Aktivieren des Immer-Versteckt Bereichs, Anzeige von Tooltips und Diagnoseprotokollierung."
           }
         },
         "en" : {
@@ -40737,8 +40967,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Whitelisted apps can read settings, toggle boolean options, set numeric values (timers, delays), change enum settings (rehide strategy, %1$@ Bar location), and modify per-display configurations. This includes auto-rehide, show on click/hover/scroll/double-click, %2$@ Bar, hide application menus, enable always-hidden section, show tooltips, and diagnostic logging."
+            "state" : "translated",
+            "value" : "Aplikacje na białej liście mogą odczytywać ustawienia, przełączać opcje włącz/wyłącz, ustawiać wartości liczbowe (liczniki, opóźnienia), zmieniać ustawienia typu enum (strategię ponownego ukrywania, położenie paska %1$@) oraz modyfikować konfiguracje dla poszczególnych wyświetlaczy. Obejmuje to automatyczne ukrywanie, pokazywanie po kliknięciu/najechaniu/przewinięciu/dwukrotnym kliknięciu, pasek %2$@, ukrywanie menu aplikacji, włączanie sekcji zawsze ukrytej, wyświetlanie podpowiedzi oraz logowanie diagnostyczne."
           }
         },
         "pt-BR" : {
@@ -40755,8 +40985,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Whitelisted apps can read settings, toggle boolean options, set numeric values (timers, delays), change enum settings (rehide strategy, %1$@ Bar location), and modify per-display configurations. This includes auto-rehide, show on click/hover/scroll/double-click, %2$@ Bar, hide application menus, enable always-hidden section, show tooltips, and diagnostic logging."
+            "state" : "translated",
+            "value" : "แอปในรายการที่อนุญาตสามารถอ่านการตั้งค่า สลับตัวเลือกแบบ boolean ตั้งค่าตัวเลข (ตัวจับเวลา, ความล่าช้า) เปลี่ยนการตั้งค่าแบบ enum (กลยุทธ์การซ่อนอีกครั้ง, ตำแหน่งแถบ %1$@) และแก้ไขการตั้งค่าสำหรับแต่ละหน้าจอ ซึ่งรวมถึงการซ่อนอัตโนมัติ แสดงเมื่อคลิก/วางเมาส์/เลื่อน/ดับเบิลคลิก, แถบ %2$@, ซ่อนเมนูแอปพลิเคชัน, เปิดใช้งาน \"หมวดหมู่ที่ซ่อนอยู่เสมอ\", แสดงคำแนะนำ และบันทึกการวินิจฉัย"
           }
         },
         "tr" : {
@@ -41112,8 +41342,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "You can remove apps from this list at any time to revoke their access."
+            "state" : "translated",
+            "value" : "คุณสามารถลบแอปออกจากรายการนี้ได้ตลอดเวลาเพื่อเพิกถอนสิทธิ์การเข้าถึง"
           }
         },
         "tr" : {
