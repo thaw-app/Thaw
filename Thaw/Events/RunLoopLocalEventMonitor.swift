@@ -138,7 +138,9 @@ extension RunLoopLocalEventMonitor.RunLoopLocalEventPublisher {
             self.monitor.start()
         }
 
-        func request(_: Subscribers.Demand) {}
+        func request(_: Subscribers.Demand) {
+            // Backpressure is not applicable — events are pushed by the run loop regardless of demand.
+        }
 
         func cancel() {
             monitor.stop()
