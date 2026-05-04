@@ -314,23 +314,27 @@ private final class FrameCaptor: NSObject, SCStreamOutput, SCStreamDelegate, @un
     func waitForFrame() async -> CGImage? {
         await withTaskCancellationHandler {
             await withCheckedContinuation { cont in
-                let (image, shouldResume) = lock.withLock { state -> (CGImage?, Bool) in
-                    if let image = state.bufferedImage {
-                        state.bufferedImage = nil
-                        return (image, true)
-                    }
-                    if Task.isCancelled {
-                        return (nil, true)
-                    }
-                    state.continuation = cont
-                    return (nil, false)
-                }
-                if shouldResume {
-                    cont.resume(returning: image)
-                }
+                claimOrRegister(cont: cont)
             }
         } onCancel: { [weak self] in
             self?.cancelPendingWait()
+        }
+    }
+
+    private func claimOrRegister(cont: CheckedContinuation<CGImage?, Never>) {
+        let (image, shouldResume) = lock.withLock { state -> (CGImage?, Bool) in
+            if let image = state.bufferedImage {
+                state.bufferedImage = nil
+                return (image, true)
+            }
+            if Task.isCancelled {
+                return (nil, true)
+            }
+            state.continuation = cont
+            return (nil, false)
+        }
+        if shouldResume {
+            cont.resume(returning: image)
         }
     }
 
