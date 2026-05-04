@@ -105,10 +105,10 @@ final class MenuBarItemSpacingManager {
             )
             app.forceTerminate()
             try? await Task.sleep(for: .seconds(1))
-        }
 
-        if !app.isTerminated {
-            throw AppNotTerminatedError()
+            if !app.isTerminated {
+                throw AppNotTerminatedError()
+            }
         }
 
         MenuBarItemSpacingManager.diagLog.debug(
