@@ -1294,7 +1294,7 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
                 guard !oldKey.isSystemItem, !newKeysSet.contains(oldKey) else {
                     return false
                 }
-                return newKeysSet.contains(where: { $0.matchesIgnoringWindowID(oldKey) })
+                return containsTagMatchingIgnoringWindowID(newKeysSet, target: oldKey)
             }
             for tag in staleKeys {
                 images.removeValue(forKey: tag)
