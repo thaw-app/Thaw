@@ -1657,6 +1657,35 @@ extension MenuBarItemManager {
         if activeProfileLayout != nil,
            !activeProfileItemIdentifiers.isEmpty
         {
+            // App-relaunch detection: uniqueIdentifier is namespace:title
+            // (windowID-independent and stable across restarts), so a
+            // relaunched app keeps the same identifier and would be filtered
+            // out of newProfileItems by profileSortedItemIdentifiers below.
+            // A fresh windowID for a profile-tracked item means the app
+            // re-registered its NSStatusItem at whatever position macOS
+            // chose, which is usually not the saved profile position. Drop
+            // such identifiers from the sorted snapshot so the existing
+            // late-arrival path picks them up.
+            let previousWindowIDSet = Set(previousWindowIDs)
+            if !previousWindowIDSet.isEmpty {
+                let relaunchedIdentifiers = Set(
+                    items
+                        .filter { item in
+                            !item.isControlItem
+                                && !previousWindowIDSet.contains(item.windowID)
+                                && activeProfileItemIdentifiers.contains(item.uniqueIdentifier)
+                        }
+                        .map(\.uniqueIdentifier)
+                )
+                if !relaunchedIdentifiers.isEmpty {
+                    let staleSorted = relaunchedIdentifiers.intersection(profileSortedItemIdentifiers)
+                    if !staleSorted.isEmpty {
+                        MenuBarItemManager.diagLog.info("Profile re-sort: detected \(staleSorted.count) relaunched profile item(s) with fresh windowID: \(staleSorted.sorted())")
+                        profileSortedItemIdentifiers.subtract(staleSorted)
+                    }
+                }
+            }
+
             await MainActor.run {
                 guard profileResortTask == nil,
                       !isApplyingProfileLayout
@@ -4924,6 +4953,19 @@ extension MenuBarItemManager {
         itemSectionMap: [String: String],
         itemOrder: [String: [String]]
     ) async {
+        // Wait for the startup settling period to end before applying the
+        // profile. During settling, cacheItemsRegardless skips restore and
+        // absorbs every current item into profileSortedItemIdentifiers; a
+        // layout applied here has its moves silently shadowed and the
+        // late-arrival re-sort path is broken for items that appeared
+        // inside the window.
+        if let settlingTask = startupSettlingTask, isInStartupSettling {
+            MenuBarItemManager.diagLog.debug(
+                "applyProfileLayout: waiting for startup settling to end"
+            )
+            await settlingTask.value
+        }
+
         // Directly set in-memory state (avoids cache cycle race).
         pinnedHiddenBundleIDs = pinnedHidden
         pinnedAlwaysHiddenBundleIDs = pinnedAlwaysHidden
