@@ -227,6 +227,7 @@ struct PermissionsView: View {
                 }
 
                 if iceImportResult?.success == true {
+                    // Disabled status label — no action needed.
                     Button("Imported") {}
                         .foregroundStyle(.green)
                         .disabled(true)
