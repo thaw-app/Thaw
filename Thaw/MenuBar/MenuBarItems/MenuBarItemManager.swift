@@ -1562,6 +1562,40 @@ extension MenuBarItemManager {
             return
         }
 
+        // App-relaunch detection: uniqueIdentifier is namespace:title
+        // (windowID-independent and stable across restarts), so a
+        // relaunched app keeps the same identifier and would be filtered
+        // out of newProfileItems by profileSortedItemIdentifiers in the
+        // late-arrival check below. A windowID not in previousWindowIDs
+        // for a profile-tracked item means the app re-registered its
+        // NSStatusItem at whatever position macOS chose, which is
+        // usually not the saved profile position. Drop such identifiers
+        // from the sorted snapshot so the late-arrival path picks them
+        // up. Run this BEFORE the relocate/restore early returns: those
+        // paths schedule a recache after which previousWindowIDs already
+        // contains the freshly registered windowID, and the signal would
+        // be lost.
+        if activeProfileLayout != nil,
+           !activeProfileItemIdentifiers.isEmpty,
+           !previousWindowIDs.isEmpty
+        {
+            let previousWindowIDSet = Set(previousWindowIDs)
+            let relaunchedIdentifiers = Set(
+                items
+                    .filter { item in
+                        !item.isControlItem
+                            && !previousWindowIDSet.contains(item.windowID)
+                            && activeProfileItemIdentifiers.contains(item.uniqueIdentifier)
+                    }
+                    .map(\.uniqueIdentifier)
+            )
+            let staleSorted = relaunchedIdentifiers.intersection(profileSortedItemIdentifiers)
+            if !staleSorted.isEmpty {
+                MenuBarItemManager.diagLog.info("Profile re-sort: detected \(staleSorted.count) relaunched profile item(s) with fresh windowID: \(staleSorted.sorted())")
+                profileSortedItemIdentifiers.subtract(staleSorted)
+            }
+        }
+
         if await relocateNewLeftmostItems(
             items,
             controlItems: controlItems,
@@ -1657,35 +1691,6 @@ extension MenuBarItemManager {
         if activeProfileLayout != nil,
            !activeProfileItemIdentifiers.isEmpty
         {
-            // App-relaunch detection: uniqueIdentifier is namespace:title
-            // (windowID-independent and stable across restarts), so a
-            // relaunched app keeps the same identifier and would be filtered
-            // out of newProfileItems by profileSortedItemIdentifiers below.
-            // A fresh windowID for a profile-tracked item means the app
-            // re-registered its NSStatusItem at whatever position macOS
-            // chose, which is usually not the saved profile position. Drop
-            // such identifiers from the sorted snapshot so the existing
-            // late-arrival path picks them up.
-            let previousWindowIDSet = Set(previousWindowIDs)
-            if !previousWindowIDSet.isEmpty {
-                let relaunchedIdentifiers = Set(
-                    items
-                        .filter { item in
-                            !item.isControlItem
-                                && !previousWindowIDSet.contains(item.windowID)
-                                && activeProfileItemIdentifiers.contains(item.uniqueIdentifier)
-                        }
-                        .map(\.uniqueIdentifier)
-                )
-                if !relaunchedIdentifiers.isEmpty {
-                    let staleSorted = relaunchedIdentifiers.intersection(profileSortedItemIdentifiers)
-                    if !staleSorted.isEmpty {
-                        MenuBarItemManager.diagLog.info("Profile re-sort: detected \(staleSorted.count) relaunched profile item(s) with fresh windowID: \(staleSorted.sorted())")
-                        profileSortedItemIdentifiers.subtract(staleSorted)
-                    }
-                }
-            }
-
             await MainActor.run {
                 guard profileResortTask == nil,
                       !isApplyingProfileLayout
@@ -4954,12 +4959,18 @@ extension MenuBarItemManager {
         itemOrder: [String: [String]]
     ) async {
         // Wait for the startup settling period to end before applying the
-        // profile. During settling, cacheItemsRegardless skips restore and
-        // absorbs every current item into profileSortedItemIdentifiers; a
-        // layout applied here has its moves silently shadowed and the
+        // profile. During settling, cacheItemsRegardless skips restore
+        // and absorbs every current item into profileSortedItemIdentifiers;
+        // a layout applied here has its moves silently shadowed and the
         // late-arrival re-sort path is broken for items that appeared
-        // inside the window.
-        if let settlingTask = startupSettlingTask, isInStartupSettling {
+        // inside the window. Loop in case performSetup re-enters while
+        // we are awaiting (e.g. a permission re-grant during login):
+        // re-entry cancels the captured task and starts a new settling
+        // window, so resuming on a single captured task could land us
+        // back inside an active window. Re-check isInStartupSettling
+        // after each await and pick up the current startupSettlingTask.
+        while isInStartupSettling {
+            guard let settlingTask = startupSettlingTask else { break }
             MenuBarItemManager.diagLog.debug(
                 "applyProfileLayout: waiting for startup settling to end"
             )
