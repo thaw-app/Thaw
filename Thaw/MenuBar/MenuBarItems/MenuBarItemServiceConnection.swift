@@ -169,52 +169,61 @@ extension MenuBarItemService {
 
             return await withTaskCancellationHandler {
                 await withCheckedContinuation { (continuation: Cont) in
-                    // Store the continuation so the cancellation handler can reach it.
-                    box.withLock { $0 = continuation }
-
-                    // Fast path: task was cancelled before we stored the continuation,
-                    // so the onCancel handler already fired and saw nil. Claim & resume.
-                    if Task.isCancelled {
-                        if let cont = box.withLock({ $0.take() }) {
-                            cont.resume(returning: nil)
-                        }
-                        return
-                    }
-
-                    do {
-                        try xpcSession.send(request) { (result: Result<XPCReceivedMessage, XPCRichError>) in
-                            guard let cont = box.withLock({ $0.take() }) else { return }
-                            switch result {
-                            case let .success(message):
-                                do {
-                                    let decoded = try message.decode(as: Response.self)
-                                    cont.resume(returning: decoded)
-                                } catch {
-                                    self.diagLog.error(
-                                        "XPC reply decode failed for request \(String(describing: request)): \(error)"
-                                    )
-                                    cont.resume(returning: nil)
-                                }
-                            case let .failure(error):
-                                self.diagLog.error(
-                                    "XPC session send failed for request \(String(describing: request)): \(error)"
-                                )
-                                cont.resume(returning: nil)
-                            }
-                        }
-                    } catch {
-                        diagLog.error(
-                            "XPC session send failed for request \(String(describing: request)): \(error)"
-                        )
-                        if let cont = box.withLock({ $0.take() }) {
-                            cont.resume(returning: nil)
-                        }
-                    }
+                    performXPCSend(xpcSession, request: request, box: box, continuation: continuation)
                 }
             } onCancel: {
                 // Fired on an arbitrary thread when the enclosing Task is cancelled.
                 // Claim the continuation and resume it immediately so the caller is
                 // unblocked. The XPC reply handler will see the box is empty and no-op.
+                if let cont = box.withLock({ $0.take() }) {
+                    cont.resume(returning: nil)
+                }
+            }
+        }
+
+        private func performXPCSend(
+            _ xpcSession: XPCSession,
+            request: Request,
+            box: OSAllocatedUnfairLock<CheckedContinuation<Response?, Never>?>,
+            continuation: CheckedContinuation<Response?, Never>
+        ) {
+            // Store the continuation so the cancellation handler can reach it.
+            box.withLock { $0 = continuation }
+
+            // Fast path: task was cancelled before we stored the continuation,
+            // so the onCancel handler already fired and saw nil. Claim & resume.
+            if Task.isCancelled {
+                if let cont = box.withLock({ $0.take() }) {
+                    cont.resume(returning: nil)
+                }
+                return
+            }
+
+            do {
+                try xpcSession.send(request) { (result: Result<XPCReceivedMessage, XPCRichError>) in
+                    guard let cont = box.withLock({ $0.take() }) else { return }
+                    switch result {
+                    case let .success(message):
+                        do {
+                            let decoded = try message.decode(as: Response.self)
+                            cont.resume(returning: decoded)
+                        } catch {
+                            self.diagLog.error(
+                                "XPC reply decode failed for request \(String(describing: request)): \(error)"
+                            )
+                            cont.resume(returning: nil)
+                        }
+                    case let .failure(error):
+                        self.diagLog.error(
+                            "XPC session send failed for request \(String(describing: request)): \(error)"
+                        )
+                        cont.resume(returning: nil)
+                    }
+                }
+            } catch {
+                diagLog.error(
+                    "XPC session send failed for request \(String(describing: request)): \(error)"
+                )
                 if let cont = box.withLock({ $0.take() }) {
                     cont.resume(returning: nil)
                 }
