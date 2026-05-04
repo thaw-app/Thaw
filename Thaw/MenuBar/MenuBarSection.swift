@@ -37,16 +37,8 @@ final class MenuBarSection {
         }
 
         /// Localized string key representation.
-        /// - Note: The switch duplication with `displayString` is intentional —
-        ///   `LocalizedStringKey` requires string literals for correct key lookup.
-        ///   Collapsing to `LocalizedStringKey(displayString)` would pass an
-        ///   already-translated string as the key, breaking non-English locales.
-        var localized: LocalizedStringKey { // NOSONAR
-            switch self {
-            case .visible: "Visible"
-            case .hidden: "Hidden"
-            case .alwaysHidden: "Always-Hidden"
-            }
+        var localized: LocalizedStringKey {
+            LocalizedStringKey(displayString)
         }
     }
 
