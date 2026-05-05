@@ -51,16 +51,32 @@ final class MenuBarItemSpacingManager {
     var offset = 0
 
     /// Runs a command with the given arguments.
-    private func runCommand(_ command: String, with arguments: [String])
-        async throws
-    {
-        let process = Process()
-
-        process.executableURL = Constants.menuBarItemSpacingExecutableURL
-        process.arguments = CollectionOfOne(command) + arguments
-
-        try process.run()
-        process.waitUntilExit()
+    private func runCommand(_ command: String, with arguments: [String]) async throws {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            let process = Process()
+            process.executableURL = Constants.menuBarItemSpacingExecutableURL
+            process.arguments = CollectionOfOne(command) + arguments
+            process.terminationHandler = { process in
+                if process.terminationStatus == 0 {
+                    continuation.resume()
+                } else {
+                    continuation.resume(throwing: MenuBarItemSpacingError(
+                        kind: .nonZeroExitStatus(process.terminationStatus),
+                        command: command,
+                        arguments: arguments
+                    ))
+                }
+            }
+            do {
+                try process.run()
+            } catch {
+                continuation.resume(throwing: MenuBarItemSpacingError(
+                    kind: .processRun(error),
+                    command: command,
+                    arguments: arguments
+                ))
+            }
+        }
     }
 
     /// Sets the value for the specified key to the key's default value plus the given offset.
