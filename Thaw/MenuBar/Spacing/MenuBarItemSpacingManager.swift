@@ -200,7 +200,7 @@ final class MenuBarItemSpacingManager {
                     let app = NSRunningApplication(processIdentifier: pid),
                     app != .current
                 else {
-                    break
+                    continue
                 }
                 group.addTask {
                     do {
