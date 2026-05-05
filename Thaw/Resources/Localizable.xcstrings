@@ -5761,6 +5761,7 @@
     },
     "Always-Hidden" : {
       "comment" : "Localized string key for the \"Always-Hidden\" menu bar section.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -18060,6 +18061,7 @@
     },
     "Hidden" : {
       "comment" : "Localized string key for the \"Hidden\" menu bar section.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -40934,6 +40936,7 @@
     },
     "Visible" : {
       "comment" : "Localized string key for the display string of a menu bar section.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
