@@ -4553,7 +4553,7 @@ extension MenuBarItemManager {
         return result
     }
 
-    private nonisolated func resolveSourcePID(for window: CGWindowID) async -> pid_t? {
+    private nonisolated func resolveSourcePID(for window: WindowInfo) async -> pid_t? {
         try? await Task<pid_t?, any Error>.withTimeout(.seconds(2)) {
             await MenuBarItemService.Connection.shared.sourcePID(for: window)
         }
