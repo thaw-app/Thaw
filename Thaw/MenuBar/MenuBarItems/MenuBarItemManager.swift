@@ -4553,8 +4553,8 @@ extension MenuBarItemManager {
                 group.addTask { await MenuBarItemManager.resolveSourcePID(for: window) }
             }
             var pids = Set<pid_t>()
-            for await pid in group where pid != nil {
-                pids.insert(pid!)
+            for await pid in group {
+                if let pid { pids.insert(pid) }
             }
             return pids
         }
