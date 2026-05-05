@@ -4505,19 +4505,7 @@ extension MenuBarItemManager {
                 "Menu open check: precise fallback resolving \(unresolvedWindows.count) unresolved window source PIDs"
             )
 
-            let resolvedPIDs: Set<pid_t> = await withTaskGroup(of: pid_t?.self, returning: Set<pid_t>.self) { group in
-                for window in unresolvedWindows {
-                    group.addTask { await self.resolveSourcePID(for: window) }
-                }
-
-                var pids = Set<pid_t>()
-                for await pid in group {
-                    if let pid {
-                        pids.insert(pid)
-                    }
-                }
-                return pids
-            }
+            let resolvedPIDs = await MenuBarItemManager.resolveAllSourcePIDs(for: unresolvedWindows)
 
             let precisePIDs = fastPathPIDs.union(resolvedPIDs)
             let result = potentialMenuWindows.contains { window in
@@ -4553,9 +4541,22 @@ extension MenuBarItemManager {
         return result
     }
 
-    private nonisolated func resolveSourcePID(for window: WindowInfo) async -> pid_t? {
+    private static nonisolated func resolveSourcePID(for window: WindowInfo) async -> pid_t? {
         try? await Task<pid_t?, any Error>.withTimeout(.seconds(2)) {
             await MenuBarItemService.Connection.shared.sourcePID(for: window)
+        }
+    }
+
+    private static nonisolated func resolveAllSourcePIDs(for windows: [WindowInfo]) async -> Set<pid_t> {
+        await withTaskGroup(of: pid_t?.self, returning: Set<pid_t>.self) { group in
+            for window in windows {
+                group.addTask { await MenuBarItemManager.resolveSourcePID(for: window) }
+            }
+            var pids = Set<pid_t>()
+            for await pid in group where pid != nil {
+                pids.insert(pid!)
+            }
+            return pids
         }
     }
 }
