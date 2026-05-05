@@ -360,8 +360,8 @@ private struct IceBarContentView: View {
     }
 
     private var itemSpacing: CGFloat {
-        let offset = appState.settings.general.itemSpacingOffset
-        return max(0, offset.rounded())
+        let offset = displaySettings.configuration(for: screen.displayID).itemSpacingOffset
+        return max(0, CGFloat(offset).rounded())
     }
 
     private var horizontalPadding: CGFloat {

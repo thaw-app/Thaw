@@ -75,7 +75,6 @@ struct IceSettingsImporter {
             (.autoRehide, "AutoRehide"),
             (.rehideStrategy, "RehideStrategy"),
             (.rehideInterval, "RehideInterval"),
-            (.itemSpacingOffset, "ItemSpacingOffset"),
         ]
 
         for (key, iceKey) in mappings {

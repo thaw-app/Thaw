@@ -38,7 +38,6 @@ struct GeneralSettingsSnapshot: Codable {
     var showOnDoubleClick: Bool
     var showOnHover: Bool
     var showOnScroll: Bool
-    var itemSpacingOffset: Double
     var autoRehide: Bool
     var rehideStrategyRawValue: Int
     var rehideInterval: TimeInterval
@@ -58,7 +57,6 @@ struct GeneralSettingsSnapshot: Codable {
             showOnDoubleClick: settings.showOnDoubleClick,
             showOnHover: settings.showOnHover,
             showOnScroll: settings.showOnScroll,
-            itemSpacingOffset: settings.itemSpacingOffset,
             autoRehide: settings.autoRehide,
             rehideStrategyRawValue: settings.rehideStrategy.rawValue,
             rehideInterval: settings.rehideInterval
@@ -79,7 +77,6 @@ struct GeneralSettingsSnapshot: Codable {
         settings.showOnDoubleClick = showOnDoubleClick
         settings.showOnHover = showOnHover
         settings.showOnScroll = showOnScroll
-        settings.itemSpacingOffset = itemSpacingOffset
         settings.autoRehide = autoRehide
         if let strategy = RehideStrategy(rawValue: rehideStrategyRawValue) {
             settings.rehideStrategy = strategy
@@ -267,7 +264,6 @@ struct Profile: Codable, Identifiable {
             showOnDoubleClick: Defaults.DefaultValue.showOnDoubleClick,
             showOnHover: Defaults.DefaultValue.showOnHover,
             showOnScroll: Defaults.DefaultValue.showOnScroll,
-            itemSpacingOffset: Defaults.DefaultValue.itemSpacingOffset,
             autoRehide: Defaults.DefaultValue.autoRehide,
             rehideStrategyRawValue: Defaults.DefaultValue.rehideStrategy.rawValue,
             rehideInterval: Defaults.DefaultValue.rehideInterval

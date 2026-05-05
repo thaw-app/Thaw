@@ -154,7 +154,6 @@ extension Defaults {
         static let showOnDoubleClick = true
         static let showOnHover = false
         static let showOnScroll = true
-        static let itemSpacingOffset: Double = 0
         static let autoRehide = true
         static let rehideStrategy: RehideStrategy = .smart
         static let rehideInterval: TimeInterval = 15
@@ -172,7 +171,11 @@ extension Defaults {
         static let tooltipDelay: TimeInterval = 0.5
         static let showMenuBarTooltips = false
         static let iconRefreshInterval: TimeInterval = 0.1
+        #if DEBUG
+        static let enableDiagnosticLogging = true
+        #else
         static let enableDiagnosticLogging = false
+        #endif
         static let useLCSSortingOnNotchedDisplays = false
         static let useOptionClickToShowAlwaysHiddenSection = false
 
@@ -212,8 +215,8 @@ extension Defaults {
         case autoRehide = "AutoRehide"
         case rehideStrategy = "RehideStrategy"
         case rehideInterval = "RehideInterval"
-        case itemSpacingOffset = "ItemSpacingOffset"
         case displayIceBarConfigurations = "DisplayIceBarConfigurations"
+        case knownDisplays = "KnownDisplays"
 
         // MARK: Hotkeys Settings
 

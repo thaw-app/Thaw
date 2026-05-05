@@ -29,18 +29,25 @@ final class MenuBarItemSpacingManager {
     /// An error thrown when an app fails to terminate after force-quitting.
     private struct AppNotTerminatedError: Error {}
 
-    /// An error that groups multiple failed app relaunches.
-    private struct GroupedRelaunchError: LocalizedError {
-        let failedApps: [String]
+    /// Result of a single applyOffset call.
+    struct ApplyOutcome {
+        /// Whether the on-disk values were rewritten and a relaunch wave
+        /// was actually fired. False when the on-disk values already
+        /// matched the requested offset (no-op case).
+        let didRelaunch: Bool
 
-        var errorDescription: String? {
-            "The following applications failed to quit and were not restarted:\n"
-                + failedApps.joined(separator: "\n")
-        }
+        /// Bundle IDs we expect to see re-attach a menu bar item after
+        /// the wave. Excludes apps that failed to relaunch (and Thaw
+        /// itself, which is never killed). Empty when didRelaunch is
+        /// false. Callers can pass this to a settling task to gate
+        /// post-wave layout work on actual reattachment instead of a
+        /// fixed timer.
+        let recoveredBundleIDs: Set<String>
 
-        var recoverySuggestion: String? {
-            "You may need to log out for the changes to take effect."
-        }
+        /// Localized names of apps that failed to relaunch (kill timed
+        /// out, or fallback launch could not bring them back). Empty on
+        /// the happy path.
+        let failedAppNames: [String]
     }
 
     /// Delay before force terminating an app.
@@ -49,6 +56,20 @@ final class MenuBarItemSpacingManager {
     /// The offset to apply to the default spacing and padding.
     /// Does not take effect until ``applyOffset()`` is called.
     var offset = 0
+
+    /// Serializes overlapping applyOffset calls. Without this, two
+    /// concurrent callers (e.g. the screen-change sink and the
+    /// profile-load layoutTask, which can both fire within the same
+    /// frame on a display switch) race against each other: the second
+    /// call's no-op guard sees on-disk already matches the target
+    /// (because the first call wrote defaults) and returns false
+    /// immediately, even though the first call is still mid-relaunch
+    /// wave. With the semaphore the second caller queues behind the
+    /// first; by the time it runs, the first call has completed and
+    /// applyActiveDisplaySpacing has already started a settling
+    /// period, so a subsequent applyProfileLayout correctly waits
+    /// for items to stabilize before moving them.
+    private let applyOffsetSemaphore = SimpleSemaphore(value: 1)
 
     /// Runs a command with the given arguments.
     private func runCommand(_ command: String, with arguments: [String]) async throws {
@@ -179,11 +200,62 @@ final class MenuBarItemSpacingManager {
         try await setOffset(offset, forKey: .padding)
     }
 
+    /// Reads the value for the given key from the byHost global domain.
+    /// Returns the key's default when no value is set.
+    private func currentlyAppliedValue(forKey key: Key) -> Int {
+        let value = CFPreferencesCopyValue(
+            key.rawValue as CFString,
+            kCFPreferencesAnyApplication,
+            kCFPreferencesCurrentUser,
+            kCFPreferencesCurrentHost
+        ) as? Int
+        return value ?? key.defaultValue
+    }
+
     /// Applies the current ``offset``.
     ///
-    /// - Note: Calling this restarts all apps with a menu bar item.
-    func applyOffset() async throws {
-        let previousOffset = offset
+    /// Returns `true` if a relaunch wave was actually fired, or `false` if
+    /// the on-disk values already matched the requested offset and the
+    /// call was a no-op. Callers that need to wait for items to re-attach
+    /// after the wave (e.g. profile-layout application) can use the return
+    /// value to gate a settling period.
+    @discardableResult
+    func applyOffset() async throws -> ApplyOutcome {
+        try await applyOffsetSemaphore.wait()
+        do {
+            let outcome = try await applyOffsetLocked()
+            await applyOffsetSemaphore.signal()
+            MenuBarItemSpacingManager.diagLog.debug(
+                "applyOffset finished: didRelaunch=\(outcome.didRelaunch), recovered=\(outcome.recoveredBundleIDs.count), failed=\(outcome.failedAppNames.count)"
+            )
+            return outcome
+        } catch {
+            await applyOffsetSemaphore.signal()
+            MenuBarItemSpacingManager.diagLog.debug("applyOffset failed: \(error)")
+            throw error
+        }
+    }
+
+    /// Body of applyOffset, run while holding applyOffsetSemaphore.
+    /// Split out so the calling site can await the semaphore signal in
+    /// both success and error paths: defer + Task wasn't reliable under
+    /// MainActor load (the unstructured signal task could be deprioritized
+    /// indefinitely, leaking the semaphore and stranding all subsequent
+    /// callers in wait).
+    private func applyOffsetLocked() async throws -> ApplyOutcome {
+        let targetSpacing = Key.spacing.defaultValue + offset
+        let targetPadding = Key.padding.defaultValue + offset
+        let onDiskSpacing = currentlyAppliedValue(forKey: .spacing)
+        let onDiskPadding = currentlyAppliedValue(forKey: .padding)
+        MenuBarItemSpacingManager.diagLog.debug(
+            "applyOffset entered: offset=\(offset) target=\(targetSpacing)/\(targetPadding) onDisk=\(onDiskSpacing)/\(onDiskPadding)"
+        )
+        if onDiskSpacing == targetSpacing, onDiskPadding == targetPadding {
+            MenuBarItemSpacingManager.diagLog.debug(
+                "applyOffset no-op: on-disk already matches target; skipping relaunch"
+            )
+            return ApplyOutcome(didRelaunch: false, recoveredBundleIDs: [], failedAppNames: [])
+        }
 
         try await writeDefaults(for: offset)
 
@@ -191,50 +263,168 @@ final class MenuBarItemSpacingManager {
 
         let items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
         let pids = Set(items.map { $0.sourcePID ?? $0.ownerPID })
+        MenuBarItemSpacingManager.diagLog.debug(
+            "applyOffset relaunching \(pids.count) unique PIDs from \(items.count) menu bar items"
+        )
 
-        var failedApps = [String]()
+        // Snapshot pre-wave PID -> bundle identifier mapping so the post-wave
+        // verification can tell whether each expected app actually came back.
+        // Stored before signalling so resolution doesn't race with terminate.
+        // Thaw itself is excluded: it's never relaunched (we skip .current
+        // during the wave), so its PID is unchanged post-wave, which would
+        // otherwise be misread as "didn't come back" and trigger a useless
+        // fallback launch of our own bundle.
+        let ownBundleID = NSRunningApplication.current.bundleIdentifier
+        var preWaveBundleIDs: [pid_t: String] = [:]
+        for pid in pids {
+            if let app = NSRunningApplication(processIdentifier: pid),
+               app != .current,
+               let bid = app.bundleIdentifier,
+               bid != ownBundleID
+            {
+                preWaveBundleIDs[pid] = bid
+            }
+        }
 
-        await withTaskGroup(of: String?.self) { group in
+        await withTaskGroup(of: Void.self) { group in
             for pid in pids {
                 guard
                     let app = NSRunningApplication(processIdentifier: pid),
                     app != .current
                 else {
+                    // Skip this PID, don't break: earlier break would abort
+                    // the entire wave on any unresolvable PID, leaving most
+                    // apps un-relaunched depending on Set iteration order.
                     continue
                 }
                 group.addTask {
-                    do {
-                        try await self.relaunchApp(app)
-                    } catch {
-                        guard let name = app.localizedName else { return nil }
-                        if app.bundleIdentifier == "com.apple.Spotlight" {
-                            if let latestSpotlightInstance =
-                                NSRunningApplication.runningApplications(
-                                    withBundleIdentifier: "com.apple.Spotlight"
-                                ).first,
-                                latestSpotlightInstance.processIdentifier == app.processIdentifier
-                            {
-                                return name
-                            }
-                        } else {
-                            return name
-                        }
-                    }
-                    return nil
-                }
-            }
-            for await failure in group {
-                if let name = failure {
-                    failedApps.append(name)
+                    // Errors from relaunchApp are intentionally swallowed.
+                    // The post-wave verification + fallback below is the
+                    // authoritative source of "did this app come back":
+                    // a kill that times out is often still followed by a
+                    // launchd respawn, and the open -gb fallback can also
+                    // recover apps whose relaunchApp threw. Tracking
+                    // wave-time exceptions as failures double-counts those
+                    // cases and stops the settling task from waiting for
+                    // their menu bar items to reattach.
+                    try? await self.relaunchApp(app)
                 }
             }
         }
 
-        if !failedApps.isEmpty {
-            offset = previousOffset
-            try? await writeDefaults(for: previousOffset)
-            throw GroupedRelaunchError(failedApps: failedApps)
+        // Verification + fallback: any pre-wave bundle ID that does not have
+        // a fresh process running is treated as un-relaunched and gets a
+        // second chance via Launch Services (open -gb <bundleID>), which
+        // is more permissive than NSWorkspace.openApplication for sandboxed
+        // and login-item apps that respawned via launchd before our launch
+        // call ran (and were therefore skipped as "already open").
+        try? await Task.sleep(for: .seconds(2))
+        let stillMissingBundleIDs = await verifyAndFallbackRelaunch(
+            preWaveBundleIDs: preWaveBundleIDs
+        )
+
+        let failedAppNames = stillMissingBundleIDs.map { bid -> String in
+            NSRunningApplication.runningApplications(
+                withBundleIdentifier: bid
+            ).first?.localizedName ?? bid
         }
+
+        if !failedAppNames.isEmpty {
+            // Don't roll back the on-disk defaults: the wave already ran,
+            // the apps that DID relaunch have already started with the new
+            // spacing, and rewriting the old value just causes the next
+            // applyOffset to mismatch on-disk and trigger another wave.
+            // Just log and surface the failures via the outcome.
+            MenuBarItemSpacingManager.diagLog.warning(
+                "applyOffset: \(failedAppNames.count) app(s) failed to relaunch: \(failedAppNames.joined(separator: ", "))"
+            )
+        }
+
+        let recoveredBundleIDs = Set(preWaveBundleIDs.values).subtracting(stillMissingBundleIDs)
+        return ApplyOutcome(
+            didRelaunch: true,
+            recoveredBundleIDs: recoveredBundleIDs,
+            failedAppNames: failedAppNames
+        )
+    }
+
+    /// For every pre-wave (pid, bundleID) pair, checks whether a process with
+    /// that bundle ID is currently running with a PID different from the
+    /// pre-wave one. Apps that have not been replaced run through a fallback
+    /// launch via /usr/bin/open -gb <bundleID>. Returns the bundle IDs of
+    /// apps that are still missing after the fallback.
+    private func verifyAndFallbackRelaunch(
+        preWaveBundleIDs: [pid_t: String]
+    ) async -> Set<String> {
+        let missing = preWaveBundleIDs.compactMap { oldPID, bundleID -> String? in
+            let current = NSRunningApplication.runningApplications(
+                withBundleIdentifier: bundleID
+            )
+            // Came back if any current instance is a fresh PID.
+            let isBack = current.contains { $0.processIdentifier != oldPID }
+            return isBack ? nil : bundleID
+        }
+        guard !missing.isEmpty else {
+            MenuBarItemSpacingManager.diagLog.debug(
+                "applyOffset verification: all \(preWaveBundleIDs.count) apps came back"
+            )
+            return []
+        }
+
+        MenuBarItemSpacingManager.diagLog.warning(
+            "applyOffset verification: \(missing.count) app(s) missing post-wave: \(missing.joined(separator: ", ")) — running fallback"
+        )
+
+        // Fire all open -gb invocations in parallel via TaskGroup. The
+        // existing runCommand blocks on process.waitUntilExit, so a
+        // sequential loop adds (per-app launch latency) × N seconds; in
+        // parallel the wall time is dominated by the slowest invocation.
+        await withTaskGroup(of: Void.self) { group in
+            for bundleID in missing {
+                group.addTask {
+                    do {
+                        try await self.runCommand("open", with: ["-gb", bundleID])
+                    } catch {
+                        MenuBarItemSpacingManager.diagLog.error(
+                            "applyOffset fallback `open -gb \(bundleID)` failed: \(error)"
+                        )
+                    }
+                }
+            }
+        }
+
+        // Poll for recovery instead of a fixed 2-second sleep. Exit early
+        // as soon as every fallback target has produced a running process,
+        // capped at ~2 s so a genuinely-failed launch doesn't strand the
+        // caller. 100 ms cadence is responsive without burning CPU.
+        let pollDeadline = ContinuousClock.now.advanced(by: .seconds(2))
+        while ContinuousClock.now < pollDeadline {
+            let allBack = missing.allSatisfy { bundleID in
+                !NSRunningApplication.runningApplications(
+                    withBundleIdentifier: bundleID
+                ).isEmpty
+            }
+            if allBack { break }
+            try? await Task.sleep(for: .milliseconds(100))
+        }
+
+        var stillMissing = Set<String>()
+        for bundleID in missing {
+            let current = NSRunningApplication.runningApplications(
+                withBundleIdentifier: bundleID
+            )
+            if current.isEmpty {
+                stillMissing.insert(bundleID)
+                MenuBarItemSpacingManager.diagLog.warning(
+                    "applyOffset fallback verification: \(bundleID) still missing"
+                )
+            } else {
+                MenuBarItemSpacingManager.diagLog.debug(
+                    "applyOffset fallback verification: \(bundleID) recovered"
+                )
+            }
+        }
+        return stillMissing
     }
 }
 

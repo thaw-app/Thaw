@@ -41,7 +41,6 @@ final class GeneralSettingsSnapshotTests: XCTestCase {
             showOnDoubleClick: false,
             showOnHover: false,
             showOnScroll: false,
-            itemSpacingOffset: 0,
             autoRehide: true,
             rehideStrategyRawValue: 0,
             rehideInterval: 15
@@ -66,7 +65,6 @@ final class GeneralSettingsSnapshotTests: XCTestCase {
             showOnDoubleClick: true,
             showOnHover: true,
             showOnScroll: true,
-            itemSpacingOffset: 5.0,
             autoRehide: false,
             rehideStrategyRawValue: 2,
             rehideInterval: 30
@@ -89,7 +87,6 @@ final class GeneralSettingsSnapshotTests: XCTestCase {
         XCTAssertFalse(snapshot.showOnDoubleClick)
         XCTAssertFalse(snapshot.showOnHover)
         XCTAssertFalse(snapshot.showOnScroll)
-        XCTAssertEqual(snapshot.itemSpacingOffset, 0)
         XCTAssertTrue(snapshot.autoRehide)
         XCTAssertEqual(snapshot.rehideStrategyRawValue, 0)
         XCTAssertEqual(snapshot.rehideInterval, 15)
@@ -109,7 +106,6 @@ final class GeneralSettingsSnapshotTests: XCTestCase {
         XCTAssertTrue(snapshot.showOnDoubleClick)
         XCTAssertTrue(snapshot.showOnHover)
         XCTAssertTrue(snapshot.showOnScroll)
-        XCTAssertEqual(snapshot.itemSpacingOffset, 5.0)
         XCTAssertFalse(snapshot.autoRehide)
         XCTAssertEqual(snapshot.rehideStrategyRawValue, 2)
         XCTAssertEqual(snapshot.rehideInterval, 30)
@@ -149,7 +145,6 @@ final class GeneralSettingsSnapshotTests: XCTestCase {
         XCTAssertEqual(decoded.showOnDoubleClick, true)
         XCTAssertEqual(decoded.showOnHover, true)
         XCTAssertEqual(decoded.showOnScroll, true)
-        XCTAssertEqual(decoded.itemSpacingOffset, 5.0)
         XCTAssertEqual(decoded.autoRehide, false)
         XCTAssertEqual(decoded.rehideStrategyRawValue, 2)
         XCTAssertEqual(decoded.rehideInterval, 30)
@@ -205,16 +200,6 @@ final class GeneralSettingsSnapshotTests: XCTestCase {
 
     // MARK: - Edge Cases
 
-    func testNegativeItemSpacingOffset() throws {
-        var snapshot = makeDefaultSnapshot()
-        snapshot.itemSpacingOffset = -10.0
-
-        let data = try encoder.encode(snapshot)
-        let decoded = try decoder.decode(GeneralSettingsSnapshot.self, from: data)
-
-        XCTAssertEqual(decoded.itemSpacingOffset, -10.0)
-    }
-
     func testLargeRehideInterval() throws {
         var snapshot = makeDefaultSnapshot()
         snapshot.rehideInterval = 3600 // 1 hour
@@ -233,16 +218,6 @@ final class GeneralSettingsSnapshotTests: XCTestCase {
         let decoded = try decoder.decode(GeneralSettingsSnapshot.self, from: data)
 
         XCTAssertEqual(decoded.rehideInterval, 0)
-    }
-
-    func testFractionalItemSpacingOffset() throws {
-        var snapshot = makeDefaultSnapshot()
-        snapshot.itemSpacingOffset = 2.5
-
-        let data = try encoder.encode(snapshot)
-        let decoded = try decoder.decode(GeneralSettingsSnapshot.self, from: data)
-
-        XCTAssertEqual(decoded.itemSpacingOffset, 2.5, accuracy: 0.001)
     }
 
     func testFractionalShowOnHoverDelay() throws {

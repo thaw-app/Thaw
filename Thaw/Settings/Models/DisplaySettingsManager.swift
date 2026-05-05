@@ -21,6 +21,12 @@ final class DisplaySettingsManager: ObservableObject {
     /// Per-display configurations, keyed by display UUID string.
     @Published var configurations: [String: DisplayIceBarConfiguration] = [:]
 
+    /// Cache of previously-seen displays (name + notch state), keyed by
+    /// display UUID. Lets the Displays pane show settings rows for
+    /// disconnected displays so users can edit them without having to
+    /// re-connect the display first.
+    @Published var knownDisplays: [String: KnownDisplay] = [:]
+
     /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
 
@@ -30,24 +36,76 @@ final class DisplaySettingsManager: ObservableObject {
     /// JSON decoder for persistence.
     private let decoder = JSONDecoder()
 
+    /// Reference to AppState for driving spacingManager and itemManager from
+    /// active-display configuration changes. Held weakly to avoid retain cycles.
+    private weak var appState: AppState?
+
     /// Performs the initial setup of the manager.
-    func performSetup(with _: AppState) {
+    func performSetup(with appState: AppState) {
+        self.appState = appState
         loadInitialState()
+        captureCurrentlyConnectedDisplays()
         configureCancellables()
+    }
+
+    /// Merges info for currently-connected displays into the knownDisplays
+    /// cache. Idempotent and cheap; called on launch and on every
+    /// screen-parameters-changed notification so the cache always reflects
+    /// the latest known names.
+    ///
+    /// Skips screens whose localizedName is empty: that can happen for
+    /// mirrored slave displays or briefly during GPU/sleep transitions, and
+    /// caching such entries pollutes the Displays pane with anonymous rows.
+    private func captureCurrentlyConnectedDisplays() {
+        var updated = knownDisplays
+        var changed = false
+        for screen in NSScreen.screens {
+            guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else {
+                continue
+            }
+            let trimmed = screen.localizedName.trimmingCharacters(in: .whitespaces)
+            guard !trimmed.isEmpty else { continue }
+            let entry = KnownDisplay(name: trimmed, hasNotch: screen.hasNotch)
+            if updated[uuid] != entry {
+                updated[uuid] = entry
+                changed = true
+            }
+        }
+        if changed {
+            knownDisplays = updated
+        }
     }
 
     // MARK: - Loading
 
     /// Loads saved configurations from Defaults.
     private func loadInitialState() {
-        guard let data = Defaults.data(forKey: .displayIceBarConfigurations) else {
-            return
+        if let data = Defaults.data(forKey: .displayIceBarConfigurations) {
+            do {
+                configurations = try decoder.decode([String: DisplayIceBarConfiguration].self, from: data)
+                diagLog.info("Loaded per-display configurations for \(configurations.count) display(s)")
+            } catch {
+                diagLog.error("Failed to decode per-display configurations: \(error)")
+            }
         }
-        do {
-            configurations = try decoder.decode([String: DisplayIceBarConfiguration].self, from: data)
-            diagLog.info("Loaded per-display configurations for \(configurations.count) display(s)")
-        } catch {
-            diagLog.error("Failed to decode per-display configurations: \(error)")
+        if let data = Defaults.data(forKey: .knownDisplays) {
+            do {
+                let decoded = try decoder.decode([String: KnownDisplay].self, from: data)
+                // Drop entries whose name is empty/whitespace — they can be
+                // captured transiently (mirrored slave, GPU sleep) and would
+                // otherwise show up as anonymous rows in the Displays pane.
+                knownDisplays = decoded.filter {
+                    !$0.value.name.trimmingCharacters(in: .whitespaces).isEmpty
+                }
+                let dropped = decoded.count - knownDisplays.count
+                if dropped > 0 {
+                    diagLog.info("Loaded known display cache for \(knownDisplays.count) display(s); dropped \(dropped) empty-name entr(ies)")
+                } else {
+                    diagLog.info("Loaded known display cache for \(knownDisplays.count) display(s)")
+                }
+            } catch {
+                diagLog.error("Failed to decode known display cache: \(error)")
+            }
         }
     }
 
@@ -71,13 +129,43 @@ final class DisplaySettingsManager: ObservableObject {
             }
             .store(in: &c)
 
-        // Listen for display connect/disconnect to log changes.
+        $knownDisplays
+            .dropFirst()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] cache in
+                guard let self else { return }
+                do {
+                    let data = try encoder.encode(cache)
+                    Defaults.set(data, forKey: .knownDisplays)
+                } catch {
+                    diagLog.error("Failed to encode known display cache: \(error)")
+                }
+            }
+            .store(in: &c)
+
+        // Listen for display connect/disconnect to log changes, refresh the
+        // known-display cache, and re-derive the active display's spacing.
         NotificationCenter.default
             .publisher(for: NSApplication.didChangeScreenParametersNotification)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 guard let self else { return }
                 diagLog.info("Screen parameters changed — \(NSScreen.screens.count) screen(s) connected")
+                captureCurrentlyConnectedDisplays()
+                applyActiveDisplaySpacing(reason: "screenParametersChanged")
+            }
+            .store(in: &c)
+
+        // Whenever per-display configurations change (user edit, profile
+        // load), re-derive what the active display's spacing should be and
+        // apply it. The no-op guard inside applyOffset() makes this free
+        // when on-disk already matches.
+        $configurations
+            .dropFirst()
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.applyActiveDisplaySpacing(reason: "configurationsChanged")
             }
             .store(in: &c)
 
@@ -91,6 +179,44 @@ final class DisplaySettingsManager: ObservableObject {
             .store(in: &c)
 
         cancellables = c
+    }
+
+    /// Reads the active display's spacing offset, syncs it into
+    /// spacingManager.offset, and triggers applyOffset. The no-op guard
+    /// inside applyOffset skips when on-disk values already match, so this
+    /// is safe to call on every configurations change. On a real relaunch
+    /// wave, kicks off a settling period so a subsequent applyProfileLayout
+    /// (e.g. from a profile switch) waits for items to re-attach before
+    /// moving them.
+    private func applyActiveDisplaySpacing(reason: String) {
+        guard let appState else { return }
+        let desired = Int(configurationForActiveDisplay().itemSpacingOffset.rounded())
+        appState.spacingManager.offset = desired
+        Task { [weak self] in
+            guard let self else { return }
+            // Preflight settling so intermediate late-arriver re-sorts and
+            // restore logic are suppressed while the wave runs. Cancelled
+            // below if applyOffset turns out to be a no-op.
+            appState.itemManager.startSettlingPeriod(reason: "spacingRelaunch:\(reason):preflight")
+            do {
+                let outcome = try await appState.spacingManager.applyOffset()
+                if outcome.didRelaunch {
+                    appState.itemManager.startSettlingPeriod(
+                        reason: "spacingRelaunch:\(reason)",
+                        expectedBundleIDs: outcome.recoveredBundleIDs
+                    )
+                } else {
+                    appState.itemManager.cancelSettlingPeriod(
+                        reason: "spacingRelaunch:\(reason):noOp"
+                    )
+                }
+            } catch {
+                appState.itemManager.cancelSettlingPeriod(
+                    reason: "spacingRelaunch:\(reason):error"
+                )
+                diagLog.error("applyActiveDisplaySpacing(\(reason)) failed: \(error)")
+            }
+        }
     }
 
     /// Handles per-display settings changed externally via Settings URI scheme.
@@ -427,12 +553,16 @@ final class DisplaySettingsManager: ObservableObject {
 
     // MARK: - Display Info
 
-    /// Information about a connected display for use in the settings UI.
+    /// Information about a display for use in the settings UI. May represent
+    /// either a currently-connected display (in which case displayID is set)
+    /// or a previously-connected one whose name was cached in knownDisplays
+    /// (in which case displayID is nil).
     struct DisplayInfo: Identifiable {
         let id: String // UUID string
-        let displayID: CGDirectDisplayID
+        let displayID: CGDirectDisplayID?
         let name: String
         let hasNotch: Bool
+        let isConnected: Bool
     }
 
     /// Returns info about all currently connected displays.
@@ -445,8 +575,55 @@ final class DisplaySettingsManager: ObservableObject {
                 id: uuid,
                 displayID: screen.displayID,
                 name: screen.localizedName,
-                hasNotch: screen.hasNotch
+                hasNotch: screen.hasNotch,
+                isConnected: true
             )
         }
     }
+
+    /// Returns info about all known displays — currently connected ones plus
+    /// previously-seen ones whose name/notch state was cached. Connected
+    /// displays come first (alphabetical within each group), then
+    /// disconnected ones (alphabetical).
+    ///
+    /// UUIDs that have a saved configuration but no cached name (e.g. a
+    /// stray entry from an older build) are deliberately not surfaced:
+    /// rendering them with a placeholder name would clutter the pane with
+    /// rows the user can't meaningfully identify. Their configuration data
+    /// is retained in storage; if such a display reconnects, its name is
+    /// captured into knownDisplays and it appears normally on subsequent
+    /// renders.
+    func allDisplays() -> [DisplayInfo] {
+        let connected = connectedDisplays()
+        let connectedIDs = Set(connected.map { $0.id })
+
+        let disconnected: [DisplayInfo] = knownDisplays
+            .filter { !connectedIDs.contains($0.key) }
+            .filter { !$0.value.name.trimmingCharacters(in: .whitespaces).isEmpty }
+            .map { uuid, known in
+                DisplayInfo(
+                    id: uuid,
+                    displayID: nil,
+                    name: known.name,
+                    hasNotch: known.hasNotch,
+                    isConnected: false
+                )
+            }
+
+        return connected.sorted { $0.name < $1.name }
+            + disconnected.sorted { $0.name < $1.name }
+    }
+
+    /// Returns the configuration for a given display UUID, falling back to
+    /// the default when no explicit configuration exists.
+    func configuration(forUUID uuid: String) -> DisplayIceBarConfiguration {
+        configurations[uuid] ?? .defaultConfiguration
+    }
+}
+
+/// Cached metadata for a previously-connected display so its settings
+/// remain visible and editable in the Displays pane after disconnect.
+struct KnownDisplay: Codable, Equatable {
+    let name: String
+    let hasNotch: Bool
 }

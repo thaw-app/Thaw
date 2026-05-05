@@ -71,7 +71,6 @@ final class GeneralSettings: ObservableObject {
     @Published var showOnScroll = Defaults.DefaultValue.showOnScroll
 
     /// The offset to apply to the menu bar item spacing and padding.
-    @Published var itemSpacingOffset = Defaults.DefaultValue.itemSpacingOffset
 
     /// A Boolean value that indicates whether the hidden section
     /// should automatically rehide.
@@ -114,7 +113,6 @@ final class GeneralSettings: ObservableObject {
         Defaults.ifPresent(key: .showOnDoubleClick, assign: &showOnDoubleClick)
         Defaults.ifPresent(key: .showOnHover, assign: &showOnHover)
         Defaults.ifPresent(key: .showOnScroll, assign: &showOnScroll)
-        Defaults.ifPresent(key: .itemSpacingOffset, assign: &itemSpacingOffset)
         Defaults.ifPresent(key: .autoRehide, assign: &autoRehide)
         Defaults.ifPresent(key: .rehideInterval, assign: &rehideInterval)
 
@@ -176,21 +174,6 @@ final class GeneralSettings: ObservableObject {
         $showOnDoubleClick.persistToDefaults(key: .showOnDoubleClick, in: &c)
         $showOnHover.persistToDefaults(key: .showOnHover, in: &c)
         $showOnScroll.persistToDefaults(key: .showOnScroll, in: &c)
-
-        // itemSpacingOffset has side effect on appState - keep manual
-        $itemSpacingOffset
-            .removeDuplicates()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak appState, weak self] offset in
-                let clamped = max(-16, min(16, offset))
-                if clamped != offset {
-                    self?.diagLog.warning("itemSpacingOffset \(offset) clamped to \(clamped)")
-                }
-                Defaults.set(clamped, forKey: .itemSpacingOffset)
-                appState?.spacingManager.offset = Int(clamped.rounded())
-            }
-            .store(in: &c)
-
         $autoRehide.persistToDefaults(key: .autoRehide, in: &c)
         $rehideStrategy.persistToDefaults(key: .rehideStrategy, transform: \.rawValue, in: &c)
         $rehideInterval.persistToDefaults(key: .rehideInterval, in: &c)

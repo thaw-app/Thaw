@@ -29,13 +29,21 @@ struct DisplayIceBarConfiguration: Codable, Equatable {
     /// Valid range is 2 through 10.
     let gridColumns: Int
 
+    /// The menu bar item spacing offset to apply when this display is the
+    /// active menu bar display. Range is -16 to +16. The OS reads
+    /// NSStatusItemSpacing as a single system-wide value, so this is the
+    /// value that gets written + relaunched whenever this display becomes
+    /// (or remains) the active menu bar display.
+    let itemSpacingOffset: Double
+
     /// Default configuration (disabled, dynamic location, horizontal layout).
     static let defaultConfiguration = DisplayIceBarConfiguration(
         useIceBar: false,
         iceBarLocation: .dynamic,
         alwaysShowHiddenItems: false,
         iceBarLayout: .horizontal,
-        gridColumns: 4
+        gridColumns: 4,
+        itemSpacingOffset: 0
     )
 
     /// Returns a new configuration with the `useIceBar` flag replaced.
@@ -45,7 +53,8 @@ struct DisplayIceBarConfiguration: Codable, Equatable {
             iceBarLocation: iceBarLocation,
             alwaysShowHiddenItems: alwaysShowHiddenItems,
             iceBarLayout: iceBarLayout,
-            gridColumns: gridColumns
+            gridColumns: gridColumns,
+            itemSpacingOffset: itemSpacingOffset
         )
     }
 
@@ -56,7 +65,8 @@ struct DisplayIceBarConfiguration: Codable, Equatable {
             iceBarLocation: value,
             alwaysShowHiddenItems: alwaysShowHiddenItems,
             iceBarLayout: iceBarLayout,
-            gridColumns: gridColumns
+            gridColumns: gridColumns,
+            itemSpacingOffset: itemSpacingOffset
         )
     }
 
@@ -67,7 +77,8 @@ struct DisplayIceBarConfiguration: Codable, Equatable {
             iceBarLocation: iceBarLocation,
             alwaysShowHiddenItems: value,
             iceBarLayout: iceBarLayout,
-            gridColumns: gridColumns
+            gridColumns: gridColumns,
+            itemSpacingOffset: itemSpacingOffset
         )
     }
 
@@ -78,7 +89,8 @@ struct DisplayIceBarConfiguration: Codable, Equatable {
             iceBarLocation: iceBarLocation,
             alwaysShowHiddenItems: alwaysShowHiddenItems,
             iceBarLayout: value,
-            gridColumns: gridColumns
+            gridColumns: gridColumns,
+            itemSpacingOffset: itemSpacingOffset
         )
     }
 
@@ -91,7 +103,22 @@ struct DisplayIceBarConfiguration: Codable, Equatable {
             iceBarLocation: iceBarLocation,
             alwaysShowHiddenItems: alwaysShowHiddenItems,
             iceBarLayout: iceBarLayout,
-            gridColumns: Swift.max(2, Swift.min(value, 10))
+            gridColumns: Swift.max(2, Swift.min(value, 10)),
+            itemSpacingOffset: itemSpacingOffset
+        )
+    }
+
+    /// Returns a new configuration with the itemSpacingOffset replaced.
+    ///
+    /// Values are clamped to the range -16 through 16.
+    func withItemSpacingOffset(_ value: Double) -> DisplayIceBarConfiguration {
+        DisplayIceBarConfiguration(
+            useIceBar: useIceBar,
+            iceBarLocation: iceBarLocation,
+            alwaysShowHiddenItems: alwaysShowHiddenItems,
+            iceBarLayout: iceBarLayout,
+            gridColumns: gridColumns,
+            itemSpacingOffset: Swift.max(-16, Swift.min(value, 16))
         )
     }
 
@@ -112,7 +139,8 @@ struct DisplayIceBarConfiguration: Codable, Equatable {
                 iceBarLocation: location,
                 alwaysShowHiddenItems: false,
                 iceBarLayout: .horizontal,
-                gridColumns: 4
+                gridColumns: 4,
+                itemSpacingOffset: 0
             )
         }
         return configs
@@ -128,6 +156,7 @@ extension DisplayIceBarConfiguration {
         case alwaysShowHiddenItems
         case iceBarLayout
         case gridColumns
+        case itemSpacingOffset
     }
 
     init(from decoder: Decoder) throws {
@@ -138,5 +167,7 @@ extension DisplayIceBarConfiguration {
         self.iceBarLayout = try container.decodeIfPresent(IceBarLayout.self, forKey: .iceBarLayout) ?? .horizontal
         let decodedGridColumns = try container.decodeIfPresent(Int.self, forKey: .gridColumns) ?? 4
         self.gridColumns = Swift.max(2, Swift.min(decodedGridColumns, 10))
+        let decodedSpacing = try container.decodeIfPresent(Double.self, forKey: .itemSpacingOffset) ?? 0
+        self.itemSpacingOffset = Swift.max(-16, Swift.min(decodedSpacing, 16))
     }
 }

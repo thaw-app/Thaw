@@ -104,7 +104,15 @@ final class AdvancedSettings: ObservableObject {
         $iconRefreshInterval.persistToDefaults(key: .iconRefreshInterval, in: &c)
         $enableDiagnosticLogging.persistToDefaults(
             key: .enableDiagnosticLogging,
-            sideEffect: { DiagnosticLogger.shared.isEnabled = $0 },
+            sideEffect: { enabled in
+                #if DEBUG
+                // Debug builds keep logging on regardless of profile swaps
+                // or user toggles so we never miss capture during dev.
+                DiagnosticLogger.shared.isEnabled = true
+                #else
+                DiagnosticLogger.shared.isEnabled = enabled
+                #endif
+            },
             in: &c
         )
         $useLCSSortingOnNotchedDisplays.persistToDefaults(key: .useLCSSortingOnNotchedDisplays, in: &c)

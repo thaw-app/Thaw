@@ -250,7 +250,6 @@ final class ProfileFullTests: XCTestCase {
                 showOnDoubleClick: false,
                 showOnHover: false,
                 showOnScroll: false,
-                itemSpacingOffset: 0,
                 autoRehide: true,
                 rehideStrategyRawValue: 0,
                 rehideInterval: 15
@@ -458,7 +457,6 @@ final class ProfileContentTests: XCTestCase {
             showOnDoubleClick: false,
             showOnHover: false,
             showOnScroll: false,
-            itemSpacingOffset: 0,
             autoRehide: true,
             rehideStrategyRawValue: 0,
             rehideInterval: 15
@@ -512,7 +510,6 @@ final class ProfileContentTests: XCTestCase {
                 showOnDoubleClick: false,
                 showOnHover: false,
                 showOnScroll: false,
-                itemSpacingOffset: 0,
                 autoRehide: true,
                 rehideStrategyRawValue: 0,
                 rehideInterval: 15
