@@ -38,7 +38,11 @@ final class MenuBarSection {
 
         /// Localized string key representation.
         var localized: LocalizedStringKey {
-            LocalizedStringKey(displayString)
+            switch self {
+            case .visible: "Visible"
+            case .hidden: "Hidden"
+            case .alwaysHidden: "Always-Hidden"
+            }
         }
     }
 
