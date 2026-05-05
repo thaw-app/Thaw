@@ -190,8 +190,9 @@ extension MenuBarItemService {
             // Store the continuation so the cancellation handler can reach it.
             box.withLock { $0 = continuation }
 
-            // Fast path: task was cancelled before we stored the continuation,
-            // so the onCancel handler already fired and saw nil. Claim & resume.
+            // Fast path: task was cancelled after we stored the continuation.
+            // The onCancel handler may have already claimed it, so try to claim
+            // here; if we succeed, resume immediately to avoid starting the XPC send.
             if Task.isCancelled {
                 if let cont = box.withLock({ $0.take() }) {
                     cont.resume(returning: nil)
