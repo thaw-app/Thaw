@@ -46,10 +46,44 @@ jobs:
   build:
     runs-on: macos-26
     needs: static_analysis
+    env:
+      PROJECT_NAME: "Thaw.xcodeproj"
+      SCHEME_NAME: "Thaw"
+      APP_NAME: "Thaw.app"
+      DMG_NAME: "Thaw.dmg"
+      MACOSX_DEPLOYMENT_TARGET: "26.0"
     steps:
       - uses: actions/checkout@v6
       # Issues with other Xcode versions, so we need to specify the version explicitly
       - run: sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer
+
+      - name: Configure signing
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          APPLE_APPLICATION_CERT: ${{ secrets.APPLE_APPLICATION_CERT }}
+          APPLE_APPLICATION_CERT_PASSWORD: ${{ secrets.APPLE_APPLICATION_CERT_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          keychain="$RUNNER_TEMP/buildagent.keychain"
+          keychain_password="$(openssl rand -base64 32)"
+          security create-keychain -p "$keychain_password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$keychain_password" "$keychain"
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | xargs)
+          base64 -D <<<"$APPLE_APPLICATION_CERT" > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -k "$keychain" \
+            -P "$APPLE_APPLICATION_CERT_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S "apple-tool:,apple:,codesign:" \
+            -s -k "$keychain_password" "$keychain"
+          rm "$RUNNER_TEMP/cert.p12"
+          xcrun notarytool store-credentials "notarytool-profile" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_ID_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --keychain "$keychain"
+
       - name: Build and Test
         run: |
           xcodebuild test \
@@ -69,6 +103,92 @@ jobs:
           path: Build/Logs/Test/*.xcresult
           retention-days: 1
           if-no-files-found: error
+
+      - name: Archive
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          xcodebuild archive \
+            -project "${{ env.PROJECT_NAME }}" \
+            -scheme "${{ env.SCHEME_NAME }}" \
+            -destination platform=macOS \
+            -configuration Release \
+            -archivePath build/Archive.xcarchive \
+            MACOSX_DEPLOYMENT_TARGET=${{ env.MACOSX_DEPLOYMENT_TARGET }} \
+            DEVELOPMENT_TEAM=${{ secrets.APPLE_TEAM_ID }} \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Developer ID Application"
+
+      - name: Export Archive
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          export_plist="$RUNNER_TEMP/ExportOptions.plist"
+          rm -f "$export_plist"
+          /usr/libexec/PlistBuddy \
+            -c "Add :method string developer-id" \
+            -c "Add :teamID string $APPLE_TEAM_ID" \
+            -c "Add :signingStyle string manual" \
+            -c "Add :destination string export" \
+            "$export_plist"
+
+          xcodebuild -exportArchive \
+            -archivePath build/Archive.xcarchive \
+            -exportPath build/Export \
+            -exportOptionsPlist "$export_plist"
+
+          codesign -vvv --deep --strict "build/Export/${{ env.APP_NAME }}"
+
+          dmg_staging="$RUNNER_TEMP/dmg-staging"
+          mkdir -p "$dmg_staging"
+          ditto "build/Export/${{ env.APP_NAME }}" "$dmg_staging/${{ env.APP_NAME }}"
+          ln -s /Applications "$dmg_staging/Applications"
+          hdiutil create \
+            -volname "Thaw" \
+            -srcfolder "$dmg_staging" \
+            -ov -format UDZO \
+            "build/${{ env.DMG_NAME }}"
+          codesign --sign "Developer ID Application" \
+            --timestamp \
+            --team-id "$APPLE_TEAM_ID" \
+            "build/${{ env.DMG_NAME }}"
+
+      - name: Notarize
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          submission=$(xcrun notarytool submit "build/${{ env.DMG_NAME }}" \
+            --keychain-profile "notarytool-profile" \
+            --keychain "$RUNNER_TEMP/buildagent.keychain" \
+            --wait \
+            --output-format json)
+          echo "$submission"
+
+          submission_id=$(echo "$submission" | jq -r '.id')
+          xcrun notarytool log "$submission_id" \
+            --keychain-profile "notarytool-profile" \
+            --keychain "$RUNNER_TEMP/buildagent.keychain"
+
+          status=$(echo "$submission" | jq -r '.status')
+          if [[ "$status" != "Accepted" ]]; then
+            echo "Notarization failed with status: $status"
+            exit 1
+          fi
+
+          xcrun stapler staple "build/${{ env.DMG_NAME }}"
+          xcrun stapler validate "build/${{ env.DMG_NAME }}"
+          spctl --assess --type execute --verbose "build/Export/${{ env.APP_NAME }}"
+
+      - name: Upload notarized DMG
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Thaw-notarized-dmg
+          path: build/${{ env.DMG_NAME }}
+          retention-days: 3
+
+      - name: Cleanup keychain
+        if: always() && github.event_name == 'workflow_dispatch'
+        run: security delete-keychain "$RUNNER_TEMP/buildagent.keychain" || true
 
   sonarqube:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
