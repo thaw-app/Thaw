@@ -145,9 +145,19 @@ final class DisplaySettingsManager: ObservableObject {
 
         // Listen for display connect/disconnect to log changes, refresh the
         // known-display cache, and re-derive the active display's spacing.
+        //
+        // Debounced because didChangeScreenParametersNotification fires
+        // repeatedly during a single user action: docking, lid close,
+        // monitor sleep/wake, KVM switch, Sidecar handshake, and external
+        // display flicker can each post several notifications within a
+        // few hundred milliseconds. Without the debounce, every flap
+        // could trigger a relaunch wave (the no-op guard catches the
+        // common case but does not cover oscillating values during the
+        // flap window). One second coalesces a single docking event into
+        // one apply.
         NotificationCenter.default
             .publisher(for: NSApplication.didChangeScreenParametersNotification)
-            .receive(on: DispatchQueue.main)
+            .debounce(for: .seconds(1), scheduler: DispatchQueue.main)
             .sink { [weak self] _ in
                 guard let self else { return }
                 diagLog.info("Screen parameters changed — \(NSScreen.screens.count) screen(s) connected")
