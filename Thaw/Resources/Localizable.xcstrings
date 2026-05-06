@@ -18,7 +18,7 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "("
           }
         },
@@ -108,7 +108,7 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "("
           }
         },
@@ -137,7 +137,7 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : ")"
           }
         },
@@ -227,7 +227,7 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : ")"
           }
         },
@@ -381,7 +381,7 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%1$@ (%2$@)"
           }
         },
@@ -471,8 +471,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ (%2$@)"
+            "state" : "translated",
+            "value" : "%1$@（%2$@）"
           }
         },
         "zh-Hant" : {
@@ -1202,8 +1202,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ is currently running. Running multiple menu bar managers at the same time can cause display issues and unexpected behavior. Consider quitting %2$@ before using %3$@."
+            "state" : "translated",
+            "value" : "%1$@ právě běží. Používáte-li současně více správců řádku nabídek, může docházet k chybám zobrazení a dalším neočekávaným problémům. Před aktivací %3$@ doporučujeme vypnout %2$@."
           }
         },
         "de" : {
@@ -1220,8 +1220,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ is currently running. Running multiple menu bar managers at the same time can cause display issues and unexpected behavior. Consider quitting %2$@ before using %3$@."
+            "state" : "translated",
+            "value" : "%1$@ está ejecutándose actualmente. Tener varios administradores de barra de menús activos al mismo tiempo puede causar problemas de visualización y comportamientos inesperados. Considera cerrar %2$@ antes de usar %3$@."
           }
         },
         "fr" : {
@@ -1304,14 +1304,14 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ is currently running. Running multiple menu bar managers at the same time can cause display issues and unexpected behavior. Consider quitting %2$@ before using %3$@."
+            "state" : "translated",
+            "value" : "%1$@ hiện đang chạy. Chạy nhiều trình quản lý thanh menu cùng lúc có thể gây ra sự cố hiển thị và hành vi không mong muốn. Hãy cân nhắc thoát %2$@ trước khi sử dụng %3$@."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ is currently running. Running multiple menu bar managers at the same time can cause display issues and unexpected behavior. Consider quitting %2$@ before using %3$@."
+            "state" : "translated",
+            "value" : "%1$@ 正在运行。同时运行多个菜单栏管理器可能会导致显示问题和意外行为。建议在使用 %3$@ 前退出 %2$@。"
           }
         },
         "zh-Hant" : {
@@ -2276,7 +2276,7 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%lld"
           }
         },
@@ -4450,7 +4450,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Přístupnost"
+            "value" : "Zpřístupnění"
           }
         },
         "de" : {
@@ -5181,8 +5181,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow \"%1$@\" to control %2$@ settings?"
+            "state" : "translated",
+            "value" : "¿Permitir que \"%1$@\" controle los ajustes de %2$@?"
           }
         },
         "fr" : {
@@ -5271,8 +5271,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow \"%1$@\" to control %2$@ settings?"
+            "state" : "translated",
+            "value" : "允许“%1$@”控制 %2$@ 设置吗？"
           }
         },
         "zh-Hant" : {
@@ -5283,121 +5283,121 @@
         }
       }
     },
-    "Allow external applications to read and modify Thaw settings via thaw:// URLs." : {
-      "comment" : "Toggle label for the settings URI scheme.",
+    "Allow external applications to read and modify %@ settings via thaw:// URLs." : {
+      "comment" : "A toggle that enables or disables the ability for external applications to read and modify \\(Constants.displayName) settings via thaw:// URLs.",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Povolit jiným aplikacím, aby četly a měnily nastavení Thaw pomocí URL thaw://."
+            "state" : "new",
+            "value" : "Allow external applications to read and modify %@ settings via thaw:// URLs."
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Externen Anwendungen erlauben Thaw-Einstellungen über thaw:// URLs zu lesen und zu ändern."
+            "state" : "new",
+            "value" : "Allow external applications to read and modify %@ settings via thaw:// URLs."
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Permitir a las aplicaciones externas leer y modificar la configuración de Thaw a través de thaw:// URLs."
+            "state" : "new",
+            "value" : "Allow external applications to read and modify %@ settings via thaw:// URLs."
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Permettre aux applications externes de lire et de modifier les paramètres de Thaw via les URLs thaw://."
+            "state" : "new",
+            "value" : "Allow external applications to read and modify %@ settings via thaw:// URLs."
           }
         },
         "hu" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Allow external applications to read and modify Thaw settings via thaw:// URLs."
+            "value" : "Allow external applications to read and modify %@ settings via thaw:// URLs."
           }
         },
         "id" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Izinkan aplikasi eksternal untuk membaca dan mengubah pengaturan Thaw via thaw://URL."
+            "state" : "new",
+            "value" : "Allow external applications to read and modify %@ settings via thaw:// URLs."
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Consenti alle applicazioni esterne di leggere e modificare le impostazioni di Thaw tramite l'url thaw://."
+            "state" : "new",
+            "value" : "Allow external applications to read and modify %@ settings via thaw:// URLs."
           }
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "外部アプリが thaw:// URL を通じて Thaw の設定を読み取りおよび変更できるようにします。"
+            "state" : "new",
+            "value" : "Allow external applications to read and modify %@ settings via thaw:// URLs."
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Allow external applications to read and modify Thaw settings via thaw:// URLs."
+            "value" : "Allow external applications to read and modify %@ settings via thaw:// URLs."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Allow external applications to read and modify Thaw settings via thaw:// URLs."
+            "value" : "Allow external applications to read and modify %@ settings via thaw:// URLs."
           }
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pozwalaj zewnętrznym aplikacjom na odczytywanie i modyfikowanie ustawień Thaw za pomocą adresów URL typu thaw://."
+            "state" : "new",
+            "value" : "Allow external applications to read and modify %@ settings via thaw:// URLs."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Allow external applications to read and modify Thaw settings via thaw:// URLs."
+            "value" : "Allow external applications to read and modify %@ settings via thaw:// URLs."
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Разрешить внешним приложениям считывать и изменять настройки Thaw через URL-адреса thaw:// ."
+            "state" : "new",
+            "value" : "Allow external applications to read and modify %@ settings via thaw:// URLs."
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "อนุญาตให้แอปพลิเคชันภายนอกอ่านและแก้ไขการตั้งค่า Thaw ผ่าน thaw:// URLs"
+            "state" : "new",
+            "value" : "Allow external applications to read and modify %@ settings via thaw:// URLs."
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Allow external applications to read and modify Thaw settings via thaw:// URLs."
+            "value" : "Allow external applications to read and modify %@ settings via thaw:// URLs."
           }
         },
         "uk" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Дозволити зовнішнім додаткам читати та змінювати налаштування через thaw:// URL-адресу."
+            "state" : "new",
+            "value" : "Allow external applications to read and modify %@ settings via thaw:// URLs."
           }
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cho phép các ứng dụng bên ngoài đọc và sửa đổi cài đặt Thaw thông qua URL thaw://."
+            "state" : "new",
+            "value" : "Allow external applications to read and modify %@ settings via thaw:// URLs."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "允许外部应用程序通过 thaw:// URL 读取和修改 Thaw 设置。"
+            "state" : "new",
+            "value" : "Allow external applications to read and modify %@ settings via thaw:// URLs."
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Allow external applications to read and modify Thaw settings via thaw:// URLs."
+            "value" : "Allow external applications to read and modify %@ settings via thaw:// URLs."
           }
         }
       }
@@ -8393,15 +8393,360 @@
     },
     "Background" : {
       "comment" : "Section in the menu bar appearance editor for changing the background of the menu bar.",
-      "isCommentAutoGenerated" : true
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pozadí"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hintergrund"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Background"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Background"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Background"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Background"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Background"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Background"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Background"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Background"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tło"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Background"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Background"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "พื้นหลัง"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Background"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Background"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nền"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "背景"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Background"
+          }
+        }
+      }
     },
     "Background - Dark Appearance" : {
       "comment" : "Title of a section in the menu bar appearance editor for the dark appearance.",
-      "isCommentAutoGenerated" : true
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pozadí - tmavý vzhled"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hintergrund - Dunkle Darstellung"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Background - Dark Appearance"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Background - Dark Appearance"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Background - Dark Appearance"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Background - Dark Appearance"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Background - Dark Appearance"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Background - Dark Appearance"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Background - Dark Appearance"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Background - Dark Appearance"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tło - ciemny wygląd"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Background - Dark Appearance"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Background - Dark Appearance"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Background - Dark Appearance"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Background - Dark Appearance"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Background - Dark Appearance"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nền - Giao diện tối"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "背景 - 深色外观"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Background - Dark Appearance"
+          }
+        }
+      }
     },
     "Background - Light Appearance" : {
       "comment" : "Title of a section in the menu bar appearance editor for the light appearance.",
-      "isCommentAutoGenerated" : true
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pozadí - světlý vzhled"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hintergrund - Helle Darstellung"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Background - Light Appearance"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Background - Light Appearance"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Background - Light Appearance"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Background - Light Appearance"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Background - Light Appearance"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Background - Light Appearance"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Background - Light Appearance"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Background - Light Appearance"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tło - jasny wygląd"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Background - Light Appearance"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Background - Light Appearance"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Background - Light Appearance"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Background - Light Appearance"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Background - Light Appearance"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nền - Giao diện sáng"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "背景 - 浅色外观"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Background - Light Appearance"
+          }
+        }
+      }
     },
     "BETA" : {
       "comment" : "The text displayed in the badge.",
@@ -10785,7 +11130,122 @@
     },
     "Clear" : {
       "comment" : "A glass style that is clear.",
-      "isCommentAutoGenerated" : true
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Clear"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Clear"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Clear"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Clear"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Clear"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Clear"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Clear"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Clear"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Clear"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Clear"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Clear"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Clear"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Clear"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Clear"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Clear"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Clear"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Clear"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Clear"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Clear"
+          }
+        }
+      }
     },
     "Click an empty area of the menu bar to show hidden menu bar items." : {
       "comment" : "Toggle that allows the user to enable or disable the feature of showing hidden menu bar items by clicking on an empty area of the menu bar.",
@@ -11863,8 +12323,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Copy"
+            "state" : "translated",
+            "value" : "Kopírovat"
           }
         },
         "de" : {
@@ -11875,8 +12335,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Copy"
+            "state" : "translated",
+            "value" : "Copiar"
           }
         },
         "fr" : {
@@ -11959,14 +12419,14 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Copy"
+            "state" : "translated",
+            "value" : "Sao chép"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Copy"
+            "state" : "translated",
+            "value" : "拷贝"
           }
         },
         "zh-Hant" : {
@@ -13422,8 +13882,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "disconnected"
+            "state" : "translated",
+            "value" : "desconectado"
           }
         },
         "fr" : {
@@ -13512,8 +13972,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "disconnected"
+            "state" : "translated",
+            "value" : "已断开连接"
           }
         },
         "zh-Hant" : {
@@ -15549,7 +16009,122 @@
     },
     "Effect" : {
       "comment" : "A label that describes the style of the glass background.",
-      "isCommentAutoGenerated" : true
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Effect"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Effect"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Effect"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Effect"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Effect"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Effect"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Effect"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Effect"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Effect"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Effect"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Effect"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Effect"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Effect"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Effect"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Effect"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Effect"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Effect"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Effect"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Effect"
+          }
+        }
+      }
     },
     "Ellipsis" : {
       "comment" : "Description of an ellipsis icon.",
@@ -16848,8 +17423,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Failed to encode profiles for export."
+            "state" : "translated",
+            "value" : "无法编码导出配置文件。"
           }
         },
         "zh-Hant" : {
@@ -16967,8 +17542,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Failed to update configuration on %lld profile(s)."
+            "state" : "translated",
+            "value" : "更新 %lld 个配置文件失败。"
           }
         },
         "zh-Hant" : {
@@ -17576,11 +18151,241 @@
     },
     "Glass" : {
       "comment" : "Localized string key for the glass-material background.",
-      "isCommentAutoGenerated" : true
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Glass"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Glass"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Glass"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Glass"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Glass"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Glass"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Glass"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Glass"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Glass"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Glass"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Glass"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Glass"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Glass"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Glass"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Glass"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Glass"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Glass"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Glass"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Glass"
+          }
+        }
+      }
     },
     "Glass Style" : {
       "comment" : "Label for the glass style picker.",
-      "isCommentAutoGenerated" : true
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Glass Style"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Glass Style"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Glass Style"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Glass Style"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Glass Style"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Glass Style"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Glass Style"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Glass Style"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Glass Style"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Glass Style"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Glass Style"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Glass Style"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Glass Style"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Glass Style"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Glass Style"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Glass Style"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Glass Style"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Glass Style"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Glass Style"
+          }
+        }
+      }
     },
     "Go to Advanced Settings" : {
       "comment" : "A link that takes the user to the advanced settings screen.",
@@ -19729,14 +20534,14 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If effects are not visible, disable \"Show menu bar background\" in System Settings %@ Menu Bar"
+            "state" : "translated",
+            "value" : "Pokud se efekty nezobrazují, vypněte volbu „Zobrazit pozadí řádku nabídek“ v Nastavení systému %@ Řádek nabídek"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If effects are not visible, disable \"Show menu bar background\" in System Settings %@ Menu Bar"
+            "state" : "translated",
+            "value" : "Wenn Effekte nicht sichtbar sind, \"Menüleistenhintergrund anzeigen\" unter Systemeinstellungen %@ Menüleiste deaktivieren."
           }
         },
         "es" : {
@@ -19789,8 +20594,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If effects are not visible, disable \"Show menu bar background\" in System Settings %@ Menu Bar"
+            "state" : "translated",
+            "value" : "Jeśli efekty nie są widoczne, wyłącz opcję „Pokazuj tło paska menu” w Ustawieniach systemowych %@ Pasek menu"
           }
         },
         "pt-BR" : {
@@ -19825,14 +20630,14 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If effects are not visible, disable \"Show menu bar background\" in System Settings %@ Menu Bar"
+            "state" : "translated",
+            "value" : "Nếu các hiệu ứng không hiển thị, hãy tắt \"Hiển thị nền thanh menu\" trong Cài đặt Hệ thống %@ Thanh Menu"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If effects are not visible, disable \"Show menu bar background\" in System Settings %@ Menu Bar"
+            "state" : "translated",
+            "value" : "若效果未显示，请在“系统设置 %@ 菜单栏”中禁用“显示菜单栏背景”"
           }
         },
         "zh-Hant" : {
@@ -19956,8 +20761,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If granted, this app will be able to:\n\n• Read current settings and configurations\n• Turn features and options on or off\n• Adjust timing values (delays, intervals, timers)\n• Change how %1$@ Bar behaves\n• Customize settings for each display\n\nThis permission stays active until removed in %2$@'s Automation settings."
+            "state" : "translated",
+            "value" : "如果授予权限，此应用将能够：\n\n• 读取当前设置和配置\n• 开启或关闭功能和选项\n• 调整时间值（延迟、间隔、计时器）\n• 更改 %1$@ Bar 的行为方式\n• 自定义每个显示器的设置\n\n此权限将保持有效，直到在 %2$@ 的“自动化”设置中将其移除。"
           }
         },
         "zh-Hant" : {
@@ -21877,20 +22682,20 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Left aligned"
+            "state" : "translated",
+            "value" : "Zarovnat vlevo"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Left aligned"
+            "state" : "translated",
+            "value" : "Links ausgerichtet"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Left aligned"
+            "state" : "translated",
+            "value" : "Alineado a la izquierda"
           }
         },
         "fr" : {
@@ -21937,8 +22742,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Left aligned"
+            "state" : "translated",
+            "value" : "Wyrównaj do lewej"
           }
         },
         "pt-BR" : {
@@ -21955,8 +22760,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Left aligned"
+            "state" : "translated",
+            "value" : "ชิดซ้าย"
           }
         },
         "tr" : {
@@ -21973,14 +22778,14 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Left aligned"
+            "state" : "translated",
+            "value" : "Canh trái"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Left aligned"
+            "state" : "translated",
+            "value" : "左对齐"
           }
         },
         "zh-Hant" : {
@@ -24734,7 +25539,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Přesuňte odznáček „Nové položky“, abyste určili, kde se budou nově zjištěné ikony zobrazovat."
+            "value" : "Nově zjištěné ikony se budou zobrazovat tam, kam přesunete odznáček „Nové položky“."
           }
         },
         "de" : {
@@ -26281,7 +27086,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Výřez"
+            "value" : "Zohlednit výřez"
           }
         },
         "de" : {
@@ -26399,14 +27204,14 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Notch margin"
+            "state" : "translated",
+            "value" : "Mezera od výřezu"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Notch margin"
+            "state" : "translated",
+            "value" : "Notch-Abstand"
           }
         },
         "es" : {
@@ -26459,8 +27264,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Notch margin"
+            "state" : "translated",
+            "value" : "Margines notcha"
           }
         },
         "pt-BR" : {
@@ -26477,8 +27282,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Notch margin"
+            "state" : "translated",
+            "value" : "ระยะขอบ Notch"
           }
         },
         "tr" : {
@@ -26495,14 +27300,14 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Notch margin"
+            "state" : "translated",
+            "value" : "Lề tai thỏ"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Notch margin"
+            "state" : "translated",
+            "value" : "刘海边距"
           }
         },
         "zh-Hant" : {
@@ -26994,20 +27799,20 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Opacity"
+            "state" : "translated",
+            "value" : "Průhlednost"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Opacity"
+            "state" : "translated",
+            "value" : "Deckkraft"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Opacity"
+            "state" : "translated",
+            "value" : "Opacidad"
           }
         },
         "fr" : {
@@ -27054,8 +27859,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Opacity"
+            "state" : "translated",
+            "value" : "Przezroczystość"
           }
         },
         "pt-BR" : {
@@ -27090,14 +27895,14 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Opacity"
+            "state" : "translated",
+            "value" : "Độ trong suốt"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Opacity"
+            "state" : "translated",
+            "value" : "不透明度"
           }
         },
         "zh-Hant" : {
@@ -28538,7 +29343,122 @@
     },
     "Regular" : {
       "comment" : "A description of a glass style.",
-      "isCommentAutoGenerated" : true
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Regular"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Regular"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Regular"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Regular"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Regular"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Regular"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Regular"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Regular"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Regular"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Regular"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Regular"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Regular"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Regular"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Regular"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Regular"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Regular"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Regular"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Regular"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Regular"
+          }
+        }
+      }
     },
     "Remove %@ from whitelist" : {
       "comment" : "A label for a button that removes an app from the whitelist. The argument is the name of the app.",
@@ -30687,20 +31607,20 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Right aligned"
+            "state" : "translated",
+            "value" : "Zarovnat vpravo"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Right aligned"
+            "state" : "translated",
+            "value" : "Rechts ausgerichtet"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Right aligned"
+            "state" : "translated",
+            "value" : "Alineado a la derecha"
           }
         },
         "fr" : {
@@ -30747,8 +31667,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Right aligned"
+            "state" : "translated",
+            "value" : "Wyrównaj do prawej"
           }
         },
         "pt-BR" : {
@@ -30765,8 +31685,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Right aligned"
+            "state" : "translated",
+            "value" : "จัดชิดขวา"
           }
         },
         "tr" : {
@@ -30783,14 +31703,14 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Right aligned"
+            "state" : "translated",
+            "value" : "Canh phải"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Right aligned"
+            "state" : "translated",
+            "value" : "右对齐"
           }
         },
         "zh-Hant" : {
@@ -32472,8 +33392,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Settings URI is disabled. External apps cannot read or modify %@ settings."
+            "state" : "translated",
+            "value" : "URI nastavení je deaktivováno. Externí aplikace nemohou číst ani měnit nastavení aplikace %@."
           }
         },
         "de" : {
@@ -32568,14 +33488,14 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Settings URI is disabled. External apps cannot read or modify %@ settings."
+            "state" : "translated",
+            "value" : "URI cài đặt bị tắt. Các ứng dụng bên ngoài không thể đọc hoặc sửa đổi cài đặt %@."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Settings URI is disabled. External apps cannot read or modify %@ settings."
+            "state" : "translated",
+            "value" : "设置 URI 已禁用。外部应用无法读取或修改 %@ 设置。"
           }
         },
         "zh-Hant" : {
@@ -32937,8 +33857,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Should %1$@ automatically check for updates? You can always check manually from the %2$@ menu bar icon or Settings %3$@ About."
+            "state" : "translated",
+            "value" : "是否允许 %1$@ 自动检查更新？您随时可以通过 %2$@ 菜单栏图标或“设置 %3$@ 关于”手动检查。"
           }
         },
         "zh-Hant" : {
@@ -34751,8 +35671,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Signed by: %@"
+            "state" : "translated",
+            "value" : "Firmado por: %@"
           }
         },
         "fr" : {
@@ -34841,8 +35761,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Signed by: %@"
+            "state" : "translated",
+            "value" : "由 %@ 签署"
           }
         },
         "zh-Hant" : {
@@ -35569,7 +36489,122 @@
     },
     "Style" : {
       "comment" : "A label for the menu bar background style.",
-      "isCommentAutoGenerated" : true
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Styl"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stil"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Estilo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Style"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Style"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Style"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Style"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Style"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Style"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Style"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Styl"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Style"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Style"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "รูปแบบ"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Style"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Style"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Phong cách"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "样式"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Style"
+          }
+        }
+      }
     },
     "Successfully imported %lld settings!" : {
       "comment" : "A success message displayed when the user successfully imports settings from the original app. The argument is the number of settings that were successfully imported.",
@@ -36052,14 +37087,14 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "The %@ Bar is aligned to the left edge of the display."
+            "state" : "translated",
+            "value" : "Lišta %@ je zarovnaná k levému okraji monitoru."
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "The %@ Bar is aligned to the left edge of the display."
+            "state" : "translated",
+            "value" : "Die %@-Leiste ist am linken Rand des Bildschirms ausgerichtet."
           }
         },
         "es" : {
@@ -36112,8 +37147,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "The %@ Bar is aligned to the left edge of the display."
+            "state" : "translated",
+            "value" : "Pasek %@ jest wyrównany do lewej krawędzi wyświetlacza."
           }
         },
         "pt-BR" : {
@@ -36130,8 +37165,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "The %@ Bar is aligned to the left edge of the display."
+            "state" : "translated",
+            "value" : "แถบ %@ จะอยู่ชิดขอบด้านซ้ายของหน้าจอแสดงผล"
           }
         },
         "tr" : {
@@ -36148,14 +37183,14 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "The %@ Bar is aligned to the left edge of the display."
+            "state" : "translated",
+            "value" : "Thanh %@ được căn chỉnh về cạnh trái của màn hình."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "The %@ Bar is aligned to the left edge of the display."
+            "state" : "translated",
+            "value" : "%@ 栏与显示屏左边缘对齐。"
           }
         },
         "zh-Hant" : {
@@ -36171,14 +37206,14 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "The %@ Bar is aligned to the right edge of the display."
+            "state" : "translated",
+            "value" : "Lišta %@ je zarovnaná k pravému okraji monitoru."
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "The %@ Bar is aligned to the right edge of the display."
+            "state" : "translated",
+            "value" : "Die %@-Leiste ist am rechten Rand des Bildschirms ausgerichtet."
           }
         },
         "es" : {
@@ -36231,8 +37266,8 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "The %@ Bar is aligned to the right edge of the display."
+            "state" : "translated",
+            "value" : "Pasek %@ jest wyrównany do prawej krawędzi wyświetlacza."
           }
         },
         "pt-BR" : {
@@ -36249,8 +37284,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "The %@ Bar is aligned to the right edge of the display."
+            "state" : "translated",
+            "value" : "แถบ %@ จะอยู่ชิดขอบด้านขวาของหน้าจอแสดงผล"
           }
         },
         "tr" : {
@@ -36267,14 +37302,14 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "The %@ Bar is aligned to the right edge of the display."
+            "state" : "translated",
+            "value" : "Thanh %@ được căn chỉnh theo cạnh phải của màn hình."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "The %@ Bar is aligned to the right edge of the display."
+            "state" : "translated",
+            "value" : "%@ 栏与显示屏右边缘对齐。"
           }
         },
         "zh-Hant" : {
@@ -37718,8 +38753,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "To switch profiles with Focus modes, add %1$@ as a Focus Filter in System Settings %2$@ Focus %3$@ [Mode] %4$@ Focus Filters. When a Focus mode deactivates, the display profile is automatically restored."
+            "state" : "translated",
+            "value" : "Chcete-li přepínat profily s režimy soustředění, přidejte filtr „%1$@“ jako filtr soustředění v Nastavení systému %2$@ Soustředění %3$@ [Režim soustředění] %4$@ Filtry režimu soustředění. Poté, co se Režim soustředění vypne, obnoví se automaticky i profil."
           }
         },
         "de" : {
@@ -37820,14 +38855,14 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "To switch profiles with Focus modes, add %1$@ as a Focus Filter in System Settings %2$@ Focus %3$@ [Mode] %4$@ Focus Filters. When a Focus mode deactivates, the display profile is automatically restored."
+            "state" : "translated",
+            "value" : "Để chuyển đổi cấu hình với Chế độ Tập trung, hãy thêm %1$@ làm Bộ lọc lấy nét trong Cài đặt hệ thống %2$@ Tập trung %3$@ [Chế độ] %4$@ Lọc Tập trung. Khi chế độ Tập trung tắt, cấu hình hiển thị sẽ tự động được khôi phục."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "To switch profiles with Focus modes, add %1$@ as a Focus Filter in System Settings %2$@ Focus %3$@ [Mode] %4$@ Focus Filters. When a Focus mode deactivates, the display profile is automatically restored."
+            "state" : "translated",
+            "value" : "若要通过专注模式切换配置，请在“系统设置 %2$@ 专注 %3$@ [模式] %4$@ 专注模式过滤器”中将 %1$@ 添加为专注模式过滤器。当专注模式停用时，显示配置将自动恢复。"
           }
         },
         "zh-Hant" : {
@@ -38926,8 +39961,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Untitled"
+            "state" : "translated",
+            "value" : "Sin título"
           }
         },
         "fr" : {
@@ -39016,8 +40051,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Untitled"
+            "state" : "translated",
+            "value" : "无标题"
           }
         },
         "zh-Hant" : {
@@ -41158,8 +42193,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Warning: This app is not code-signed."
+            "state" : "translated",
+            "value" : "警告：此应用未经过代码签名。"
           }
         },
         "zh-Hant" : {
@@ -41532,8 +42567,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Whitelisted apps can read settings, toggle boolean options, set numeric values (timers, delays), change enum settings (rehide strategy, %1$@ Bar location), and modify per-display configurations. This includes auto-rehide, show on click/hover/scroll/double-click, %2$@ Bar, hide application menus, enable always-hidden section, show tooltips, and diagnostic logging."
+            "state" : "translated",
+            "value" : "Aplikace na seznamu povolených mohou číst nastavení, přepínat logické volby, nastavovat číselné hodnoty (časovače, zpoždění), měnit nastavení výběrových typů (způsoby opětovného skrytí, umístění lišty %1$@) a upravovat konfigurace jednotlivých monitorů. Patří sem automatické opětovné skrytí, zobrazení při kliknutí/najetí myší/rolování/dvojitém kliknutí, řádek %2$@, skrytí nabídek aplikací, povolení sekce „vždy skryté“, zobrazení popisků a diagnostické protokolování."
           }
         },
         "de" : {
@@ -41634,14 +42669,14 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Whitelisted apps can read settings, toggle boolean options, set numeric values (timers, delays), change enum settings (rehide strategy, %1$@ Bar location), and modify per-display configurations. This includes auto-rehide, show on click/hover/scroll/double-click, %2$@ Bar, hide application menus, enable always-hidden section, show tooltips, and diagnostic logging."
+            "state" : "translated",
+            "value" : "Các ứng dụng được đưa vào danh sách cho phép có thể đọc cài đặt, chuyển đổi các tùy chọn boolean, đặt giá trị số (bộ hẹn giờ, độ trễ), thay đổi cài đặt enum (ẩn lại chiến lược, vị trí thanh %1$@) và sửa đổi cấu hình trên mỗi màn hình. Điều này bao gồm tự động ẩn lại, hiển thị khi nhấp/di chuột/cuộn/nhấp đúp, thanh %2$@, ẩn menu ứng dụng, bật phần luôn ẩn, hiển thị chú giải công cụ và ghi nhật ký chẩn đoán."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Whitelisted apps can read settings, toggle boolean options, set numeric values (timers, delays), change enum settings (rehide strategy, %1$@ Bar location), and modify per-display configurations. This includes auto-rehide, show on click/hover/scroll/double-click, %2$@ Bar, hide application menus, enable always-hidden section, show tooltips, and diagnostic logging."
+            "state" : "translated",
+            "value" : "白名单应用可以读取设置、切换布尔选项、设置数值（定时器、延迟）、更改枚举设置（重新隐藏策略、%1$@ 栏位置），并修改分显示器配置。这包括自动重新隐藏、通过点击/悬停/滚动/双击显示、%2$@ 栏、隐藏应用程序菜单、启用“始终隐藏”部分、显示工具提示以及诊断日志记录。"
           }
         },
         "zh-Hant" : {
