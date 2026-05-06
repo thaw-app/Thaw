@@ -1,0 +1,50 @@
+name: "Block Translation (PRs)"
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "**/*.xcstrings"
+
+jobs:
+  block-manual-translations:
+    runs-on: ubuntu-slim
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Close PR and Comment
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+            });
+
+            const onlyTranslations = files.every(f => f.filename.endsWith('.xcstrings'));
+            if (!onlyTranslations) return;
+
+            const message = `### 🛑 Manual Translation Detected
+
+            Thank you very much for your contribution. We have moved translations over to Crowdin: https://crowdin.com/project/thaw
+
+            Please contribute your translations there. We do not accept translations here anymore since it results in merge conflicts and translations for other languages being overwritten.
+
+            Thank you for your understanding.
+
+            This PR is being automatically closed to keep the localization sync intact.`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: message
+            });
+
+            await github.rest.pulls.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              state: 'closed'
+            });
