@@ -54,6 +54,11 @@ final class AdvancedSettings: ObservableObject {
     /// full sorting on notched displays.
     @Published var useLCSSortingOnNotchedDisplays = Defaults.DefaultValue.useLCSSortingOnNotchedDisplays
 
+    /// A Boolean value that controls whether profile-apply overflows menu bar
+    /// items from visible to hidden when they don't fit on a notched display.
+    /// Only affects notched displays; non-notched displays never use this path.
+    @Published var enableMenuBarItemOverflow = Defaults.DefaultValue.enableMenuBarItemOverflow
+
     /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
 
@@ -80,6 +85,7 @@ final class AdvancedSettings: ObservableObject {
         Defaults.ifPresent(key: .iconRefreshInterval, assign: &iconRefreshInterval)
         Defaults.ifPresent(key: .enableDiagnosticLogging, assign: &enableDiagnosticLogging)
         Defaults.ifPresent(key: .useLCSSortingOnNotchedDisplays, assign: &useLCSSortingOnNotchedDisplays)
+        Defaults.ifPresent(key: .enableMenuBarItemOverflow, assign: &enableMenuBarItemOverflow)
 
         Defaults.ifPresent(key: .sectionDividerStyle) { rawValue in
             if let style = SectionDividerStyle(rawValue: rawValue) {
@@ -116,6 +122,7 @@ final class AdvancedSettings: ObservableObject {
             in: &c
         )
         $useLCSSortingOnNotchedDisplays.persistToDefaults(key: .useLCSSortingOnNotchedDisplays, in: &c)
+        $enableMenuBarItemOverflow.persistToDefaults(key: .enableMenuBarItemOverflow, in: &c)
 
         // Observe external settings changes via Settings URI
         NotificationCenter.default
@@ -154,6 +161,8 @@ final class AdvancedSettings: ObservableObject {
                 enableDiagnosticLogging = boolValue
             case "useLCSSortingOnNotchedDisplays":
                 useLCSSortingOnNotchedDisplays = boolValue
+            case "enableMenuBarItemOverflow":
+                enableMenuBarItemOverflow = boolValue
             default:
                 // Key not handled by AdvancedSettings
                 break

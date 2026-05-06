@@ -35,6 +35,7 @@ enum SettingsURIHandler {
         "showIceIcon",
         "iceBarLocationOnHotkey",
         "useLCSSortingOnNotchedDisplays",
+        "enableMenuBarItemOverflow",
     ]
 
     /// Double/numeric settings with ranges
@@ -78,6 +79,7 @@ enum SettingsURIHandler {
         "showIceIcon": .showIceIcon,
         "iceBarLocationOnHotkey": .iceBarLocationOnHotkey,
         "useLCSSortingOnNotchedDisplays": .useLCSSortingOnNotchedDisplays,
+        "enableMenuBarItemOverflow": .enableMenuBarItemOverflow,
         "rehideInterval": .rehideInterval,
         "showOnHoverDelay": .showOnHoverDelay,
         "tooltipDelay": .tooltipDelay,

@@ -58,6 +58,7 @@ struct AdvancedSettingsPane: View {
                 }
             }
             IceSection("Other") {
+                enableMenuBarItemOverflow
                 useLCSSortingOnNotchedDisplays
                 hideApplicationMenus
                 enableSecondaryContextMenu
@@ -132,6 +133,25 @@ struct AdvancedSettingsPane: View {
             ForEach(SectionDividerStyle.allCases) { style in
                 Text(style.localized).tag(style)
             }
+        }
+    }
+
+    private var enableMenuBarItemOverflow: some View {
+        Toggle(
+            "Enable menu bar item overflow",
+            isOn: $settings.enableMenuBarItemOverflow
+        )
+        .annotation {
+            Text(
+                """
+                Move menu bar items from the visible section into the hidden \
+                section when they don't fit beside the notch on a notched \
+                display. Disable to keep the saved profile layout exactly as \
+                authored even when items would otherwise be pushed under the \
+                notch.
+                """
+            )
+            .padding(.trailing, 75)
         }
     }
 

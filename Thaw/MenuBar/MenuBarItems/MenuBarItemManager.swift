@@ -5492,8 +5492,15 @@ extension MenuBarItemManager {
         // On notched displays, calculate available visible space and overflow
         // items that won't fit into the hidden section. The Thaw visible
         // control icon stays as the last visible item (nearest the hidden divider).
+        // Gated by the user-facing "Enable menu bar item overflow" toggle in
+        // Advanced Settings — when off, the saved profile layout is honoured
+        // verbatim and items the notch would otherwise eject stay in visible.
         let activeScreen = NSScreen.screenWithActiveMenuBar ?? NSScreen.main
-        if let screen = activeScreen, screen.hasNotch, let notch = screen.frameOfNotch {
+        if appState.settings.advanced.enableMenuBarItemOverflow,
+           let screen = activeScreen,
+           screen.hasNotch,
+           let notch = screen.frameOfNotch
+        {
             let notchGap = MenuBarSection.notchGap
             // Available space: from notch gap to Control Center's left edge.
             let ccItem = items.first(where: { $0.tag == .controlCenter })
