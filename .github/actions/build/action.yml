@@ -1,0 +1,38 @@
+name: Build
+description: Build and archive the app for distribution
+
+inputs:
+  apple-team-id:
+    description: Apple Developer Team ID
+    required: true
+  project-name:
+    description: Xcode project file name
+    required: false
+    default: Thaw.xcodeproj
+  scheme-name:
+    description: Xcode scheme name
+    required: false
+    default: Thaw
+  deployment-target:
+    description: Minimum macOS deployment target
+    required: false
+    default: "26.0"
+
+runs:
+  using: composite
+  steps:
+    - name: xcodebuild archive
+      shell: bash
+      env:
+        APPLE_TEAM_ID: ${{ inputs.apple-team-id }}
+      run: |
+        xcodebuild archive \
+          -project "${{ inputs.project-name }}" \
+          -scheme "${{ inputs.scheme-name }}" \
+          -destination platform=macOS \
+          -configuration Release \
+          -archivePath build/Archive.xcarchive \
+          MACOSX_DEPLOYMENT_TARGET=${{ inputs.deployment-target }} \
+          DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+          CODE_SIGN_STYLE=Manual \
+          CODE_SIGN_IDENTITY="Developer ID Application"
