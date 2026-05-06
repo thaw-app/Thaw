@@ -23,8 +23,9 @@ runs:
         submission=$(xcrun notarytool submit "build/$DMG_NAME" \
           --keychain-profile "notarytool-profile" \
           --keychain "$RUNNER_TEMP/buildagent.keychain" \
-          --wait \
           --output-format json)
+          --timeout 20m \
+          --wait \
         echo "$submission"
 
         submission_id=$(echo "$submission" | jq -r '.id')
