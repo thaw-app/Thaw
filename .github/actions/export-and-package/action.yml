@@ -1,0 +1,55 @@
+name: Export Archive and Package DMG
+description: Export Xcode archive, verify signature, and create a signed DMG
+
+inputs:
+  apple-team-id:
+    description: Apple Developer Team ID
+    required: true
+  app-name:
+    description: Name of the .app bundle
+    required: false
+    default: Thaw.app
+  dmg-name:
+    description: Name of the output DMG file
+    required: false
+    default: Thaw.dmg
+
+runs:
+  using: composite
+  steps:
+    - name: Export archive and create signed DMG
+      shell: bash
+      env:
+        APPLE_TEAM_ID: ${{ inputs.apple-team-id }}
+        APP_NAME: ${{ inputs.app-name }}
+        DMG_NAME: ${{ inputs.dmg-name }}
+      run: |
+        export_plist="$RUNNER_TEMP/ExportOptions.plist"
+        rm -f "$export_plist"
+        /usr/libexec/PlistBuddy \
+          -c "Add :method string developer-id" \
+          -c "Add :teamID string $APPLE_TEAM_ID" \
+          -c "Add :signingStyle string manual" \
+          -c "Add :destination string export" \
+          "$export_plist"
+
+        xcodebuild -exportArchive \
+          -archivePath build/Archive.xcarchive \
+          -exportPath build/Export \
+          -exportOptionsPlist "$export_plist"
+
+        codesign -vvv --deep --strict "build/Export/$APP_NAME"
+
+        dmg_staging="$RUNNER_TEMP/dmg-staging"
+        mkdir -p "$dmg_staging"
+        ditto "build/Export/$APP_NAME" "$dmg_staging/$APP_NAME"
+        ln -s /Applications "$dmg_staging/Applications"
+        hdiutil create \
+          -volname "Thaw" \
+          -srcfolder "$dmg_staging" \
+          -ov -format UDZO \
+          "build/$DMG_NAME"
+        codesign --sign "Developer ID Application" \
+          --timestamp \
+          --team-id "$APPLE_TEAM_ID" \
+          "build/$DMG_NAME"
