@@ -4536,6 +4536,15 @@ extension MenuBarItemManager {
             }
         }
 
+        if controlItems.alwaysHidden == nil {
+            for baseID in savedCountsByBaseID.keys {
+                if let ahCount = savedCountsByBaseID[baseID]?[.alwaysHidden], ahCount > 0 {
+                    savedCountsByBaseID[baseID]?[.hidden, default: 0] += ahCount
+                    savedCountsByBaseID[baseID]?.removeValue(forKey: .alwaysHidden)
+                }
+            }
+        }
+
         // Compute the first rebalancing move needed: a (surplus item,
         // demand section) pair for any baseID whose current per-section
         // counts diverge from the saved counts. We only need the first

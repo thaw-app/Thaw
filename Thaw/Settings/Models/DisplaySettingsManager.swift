@@ -44,8 +44,8 @@ final class DisplaySettingsManager: ObservableObject {
     func performSetup(with appState: AppState) {
         self.appState = appState
         loadInitialState()
-        captureCurrentlyConnectedDisplays()
         configureCancellables()
+        captureCurrentlyConnectedDisplays()
     }
 
     /// Merges info for currently-connected displays into the knownDisplays

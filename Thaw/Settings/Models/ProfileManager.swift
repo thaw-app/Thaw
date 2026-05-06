@@ -308,9 +308,17 @@ final class ProfileManager: ObservableObject {
             // wave settles produces the correct layout.
             appState.itemManager.startSettlingPeriod(reason: "spacingRelaunch:preflight")
 
-            let outcome = try? await appState.spacingManager.applyOffset()
-            let didRelaunch = outcome?.didRelaunch ?? false
-            let recovered = outcome?.recoveredBundleIDs ?? []
+            let didRelaunch: Bool
+            let recovered: Set<String>
+            do {
+                let outcome = try await appState.spacingManager.applyOffset()
+                didRelaunch = outcome.didRelaunch
+                recovered = outcome.recoveredBundleIDs
+            } catch {
+                self?.diagLog.error("spacingRelaunch: applyOffset failed: \(error)")
+                didRelaunch = false
+                recovered = []
+            }
             if didRelaunch {
                 appState.itemManager.startSettlingPeriod(
                     reason: "spacingRelaunch",

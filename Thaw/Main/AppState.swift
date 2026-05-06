@@ -81,7 +81,6 @@ final class AppState: ObservableObject {
         #if DEBUG
         // Debug builds always have diagnostic logging on so logs are
         // captured during development without depending on the toggle.
-        Defaults.set(true, forKey: .enableDiagnosticLogging)
         DiagnosticLogger.shared.isEnabled = true
         #else
         if Defaults.bool(forKey: .enableDiagnosticLogging) {
