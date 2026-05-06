@@ -27,7 +27,6 @@ runs:
         set -euo pipefail
 
         export_plist="$RUNNER_TEMP/ExportOptions.plist"
-        export_plist="$RUNNER_TEMP/ExportOptions.plist"
         rm -f "$export_plist"
         /usr/libexec/PlistBuddy \
           -c "Add :method string developer-id" \
