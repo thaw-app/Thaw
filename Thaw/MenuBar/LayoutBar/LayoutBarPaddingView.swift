@@ -425,7 +425,22 @@ final class LayoutBarPaddingView: NSView {
 
         let widthConstraint = view.widthAnchor.constraint(equalToConstant: notchIndicatorWidth)
         let trailingConstraint = view.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -notchTrailingOffset)
+        // Lower priority so the bar can grow leftward when the user has
+        // more items than fit between the notch and the bar's trailing
+        // edge. With this at .required, container.leading is hard-pinned
+        // at notchView.trailing, the container's slot is fixed in width,
+        // and overflowing items get clipped without ever pushing the
+        // documentView wider than the scroll view's visible area, so no
+        // horizontal scrollbar appears. Dropping to .defaultHigh keeps
+        // the notch as the preferred boundary while letting AutoLayout
+        // break it when items need more room — paddingView then extends
+        // further left (via the existing leading inset constraint),
+        // NSScrollView observes documentView wider than visible and
+        // surfaces the horizontal scroller. The container is z-above
+        // notchView, so items rendered over the notch indicator stay
+        // draggable.
         let containerLeading = container.leadingAnchor.constraint(greaterThanOrEqualTo: view.trailingAnchor)
+        containerLeading.priority = .defaultHigh
         let minWidth = widthAnchor.constraint(greaterThanOrEqualToConstant: barMinWidth)
 
         NSLayoutConstraint.activate([
