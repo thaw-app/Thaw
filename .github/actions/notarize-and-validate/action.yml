@@ -1,0 +1,43 @@
+name: Notarize and Validate
+description: Submit DMG to Apple notarytool, wait for acceptance, staple, and run Gatekeeper validation
+
+inputs:
+  dmg-name:
+    description: Name of the DMG file to notarize
+    required: false
+    default: Thaw.dmg
+  app-name:
+    description: Name of the .app bundle for Gatekeeper validation
+    required: false
+    default: Thaw.app
+
+runs:
+  using: composite
+  steps:
+    - name: Submit, staple, and validate
+      shell: bash
+      env:
+        DMG_NAME: ${{ inputs.dmg-name }}
+        APP_NAME: ${{ inputs.app-name }}
+      run: |
+        submission=$(xcrun notarytool submit "build/$DMG_NAME" \
+          --keychain-profile "notarytool-profile" \
+          --keychain "$RUNNER_TEMP/buildagent.keychain" \
+          --wait \
+          --output-format json)
+        echo "$submission"
+
+        submission_id=$(echo "$submission" | jq -r '.id')
+        xcrun notarytool log "$submission_id" \
+          --keychain-profile "notarytool-profile" \
+          --keychain "$RUNNER_TEMP/buildagent.keychain"
+
+        status=$(echo "$submission" | jq -r '.status')
+        if [[ "$status" != "Accepted" ]]; then
+          echo "Notarization failed with status: $status"
+          exit 1
+        fi
+
+        xcrun stapler staple "build/$DMG_NAME"
+        xcrun stapler validate "build/$DMG_NAME"
+        spctl --assess --type execute --verbose "build/Export/$APP_NAME"
