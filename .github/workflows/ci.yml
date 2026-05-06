@@ -81,7 +81,7 @@ jobs:
           fetch-depth: 0
 
       - name: Download Coverage Only
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: coverage-data
           path: Build/Logs/Test/
