@@ -521,7 +521,75 @@ final class MenuBarItemManager: ObservableObject {
             }
         }
 
+        // Anchor missing from this section (e.g. the notch-overflow
+        // relocated the anchor item to hidden). Walk the active
+        // profile's saved order outward from the missing anchor's
+        // saved position to find its nearest sibling that IS still
+        // present in this section, and place the badge against that
+        // sibling. This preserves the badge's saved relative position
+        // when its primary anchor is unavailable, instead of dropping
+        // it to the section's default index.
+        if let nearestIndex = badgeIndexFromNearestProfileSibling(
+            in: section,
+            itemIdentifiers: itemIdentifiers
+        ) {
+            return nearestIndex
+        }
+
         return defaultNewItemsBadgeIndex(in: section, itemCount: itemIdentifiers.count)
+    }
+
+    /// Walks the active profile's saved item order outward from the
+    /// badge's missing anchor and returns an insertion index against
+    /// the first sibling that's still present in `itemIdentifiers`.
+    /// Walks in the direction implied by the saved relation first
+    /// (leftOfAnchor → walk left toward earlier siblings; rightOfAnchor
+    /// → walk right toward later siblings), then the opposite direction
+    /// if the first walk doesn't find a survivor. Returns nil when no
+    /// active profile is loaded, no profile order exists for this
+    /// section, or no sibling survives.
+    private func badgeIndexFromNearestProfileSibling(
+        in section: MenuBarSection.Name,
+        itemIdentifiers: [String]
+    ) -> Int? {
+        guard let anchorIdentifier = newItemsPlacement.anchorIdentifier,
+              newItemsPlacement.relation != .sectionDefault,
+              sectionName(for: newItemsPlacement.sectionKey) == section,
+              let profileOrder = activeProfileLayout?.itemOrder[sectionKey(for: section)],
+              let anchorPos = profileOrder.firstIndex(of: anchorIdentifier)
+        else {
+            return nil
+        }
+        let walkLeftFirst = newItemsPlacement.relation == .leftOfAnchor
+        // First pass: walk in the direction the badge was relative to
+        // the anchor. If badge was leftOfAnchor, the badge sat between
+        // some left-side sibling and the anchor; finding that left
+        // sibling and placing rightOfThatSibling reproduces the saved
+        // position. Symmetric for rightOfAnchor.
+        if walkLeftFirst {
+            for i in stride(from: anchorPos - 1, through: 0, by: -1) {
+                if let idx = itemIdentifiers.firstIndex(of: profileOrder[i]) {
+                    return idx + 1
+                }
+            }
+            for i in (anchorPos + 1)..<profileOrder.count {
+                if let idx = itemIdentifiers.firstIndex(of: profileOrder[i]) {
+                    return idx
+                }
+            }
+        } else {
+            for i in (anchorPos + 1)..<profileOrder.count {
+                if let idx = itemIdentifiers.firstIndex(of: profileOrder[i]) {
+                    return idx
+                }
+            }
+            for i in stride(from: anchorPos - 1, through: 0, by: -1) {
+                if let idx = itemIdentifiers.firstIndex(of: profileOrder[i]) {
+                    return idx + 1
+                }
+            }
+        }
+        return nil
     }
 
     /// Updates the preferred destination for newly detected menu bar items using the
@@ -2778,6 +2846,27 @@ extension MenuBarItemManager {
         if warpIsOnScreen {
             await eventSleep(for: .milliseconds(20))
         }
+        // For notched displays, when the target is offscreen, redirect
+        // mouseDown's hit-test location into the notch itself. The
+        // notch is hardware with no clickable UI, so the OS hit-test
+        // there has nothing to dismiss, no menu to open, and no app
+        // window to surface a click against. mouseUp keeps its
+        // original location (the drop position the receiving app
+        // uses to place the item). For non-notched displays the
+        // original behaviour is preserved (no override).
+        if !warpIsOnScreen {
+            let activeScreen = NSScreen.screens.first(where: { $0.displayID == displayID })
+                ?? NSScreen.main
+            if let activeScreen,
+               activeScreen.hasNotch,
+               let notch = activeScreen.frameOfNotch
+            {
+                mouseDown.location = CGPoint(
+                    x: notch.midX,
+                    y: notch.midY
+                )
+            }
+        }
         defer {
             if let mouseLocation {
                 MouseHelpers.warpCursor(to: mouseLocation)
@@ -2949,7 +3038,16 @@ extension MenuBarItemManager {
         // individual attempt (which caused the cursor to oscillate many times
         // during a layout reset when items required multiple attempts).
         let mouseLocation = try getMouseLocation()
-        MouseHelpers.hideCursor(watchdogTimeout: watchdogTimeout)
+        // The default 1 s cursor-hide watchdog is too short for menu
+        // bar item moves: each item can take up to ~4 s across retries
+        // (8 attempts × ~500 ms timeout), and during a full layout pass
+        // many items move sequentially. When the watchdog fires partway
+        // through, the cursor is force-shown at the synthetic event's
+        // last cursorPosition (mid-display, per the offscreen-target
+        // override below in postMoveEvents) and the user sees a brief
+        // cursor flash. 10 s is long enough to cover any single move
+        // without giving up the safety net for genuinely stuck states.
+        MouseHelpers.hideCursor(watchdogTimeout: watchdogTimeout ?? .seconds(10))
         defer {
             MouseHelpers.warpCursor(to: mouseLocation)
             MouseHelpers.showCursor()
@@ -5391,7 +5489,58 @@ extension MenuBarItemManager {
             // Available space: from notch gap to Control Center's left edge.
             let ccItem = items.first(where: { $0.tag == .controlCenter })
             let rightBoundary = ccItem.map(\.bounds.minX) ?? screen.frame.maxX
-            let availableWidth = rightBoundary - (notch.maxX + notchGap)
+            var availableWidth = rightBoundary - (notch.maxX + notchGap)
+
+            // Read the actual NSStatusItemSpacing applied to the system.
+            // This is the inter-item gap at render time. The width sum
+            // below uses item.bounds.width, which is the button's
+            // clickable rectangle and does NOT include the gap. Without
+            // adding it, the budget under-counts total layout cost by
+            // (count - 1) × spacing px and overflow can be silently
+            // missed once the user has enough items in the menu bar —
+            // most visibly when the spacing has been customised away
+            // from the default 16, since the per-item miscount stops
+            // matching the historical buffer the check happened to
+            // have.
+            let userSpacing = CGFloat(max(0, 16 + appState.spacingManager.offset))
+
+            // Subtract the layout footprint of items that occupy the
+            // visible area but are not profile items: the Clock /
+            // date-time display, BentoBox tray on systems that have
+            // it, and any immovable accessibility extras. They take
+            // real estate in the same way profile items do but are
+            // filtered out of visibleUIDs below and would otherwise be
+            // invisible to the budget check.
+            // Transient system indicators (screen-recording AudioVideoModule,
+            // FaceTime call indicator, ScreenCaptureUI overlay) appear and
+            // disappear based on system events. Excluding them from the
+            // budget keeps the overflow decision tied to the user's
+            // permanent layout — otherwise, applying a profile while a
+            // recording or call indicator is showing temporarily forces
+            // a profile item out of visible, and that item won't come
+            // back when the indicator goes away.
+            let transientTags: [MenuBarItemTag] = [
+                .audioVideoModule,
+                .faceTime,
+                .screenCaptureUI,
+            ]
+            var nonProfileFootprint: CGFloat = 0
+            var nonProfileCount = 0
+            var nonProfileBreakdown = [String]()
+            for item in items where !isProfileItem(item) {
+                guard item.bounds.minX >= notch.maxX,
+                      item.bounds.maxX <= rightBoundary
+                else { continue }
+                if transientTags.contains(where: {
+                    $0.namespace == item.tag.namespace && $0.title == item.tag.title
+                }) {
+                    continue
+                }
+                nonProfileFootprint += item.bounds.width
+                nonProfileCount += 1
+                nonProfileBreakdown.append("\(item.uniqueIdentifier)=\(item.bounds.width)")
+            }
+            availableWidth -= nonProfileFootprint
 
             // Measure visible item widths from current bounds.
             let visibleUIDs = Array(desiredFiltered.prefix(while: { $0 != hiddenCtrlUID }))
@@ -5402,27 +5551,97 @@ extension MenuBarItemManager {
                 }
             }
 
+            // Account for the (count - 1) inter-item gaps across all
+            // items in the visible area, profile and non-profile
+            // combined. Slightly conservative: when items overflow,
+            // the gap count drops by 1 per overflowed item, but using
+            // the pre-overflow total is the right starting point and
+            // the loop below removes overflow items one at a time
+            // until the remaining footprint fits.
+            let totalItemCount = visibleUIDs.count + nonProfileCount
+            if totalItemCount > 1 {
+                availableWidth -= CGFloat(totalItemCount - 1) * userSpacing
+            }
+
             // Find the Thaw visible control icon — it must always stay visible.
             let visibleCtrlUID = items.first(where: { $0.tag == .visibleControlItem })?.uniqueIdentifier
             let chevronWidth = visibleCtrlUID.flatMap { uidWidths[$0] } ?? 0
 
-            // Fill from the Thaw visible control icon side (end of array =
-            // leftmost on screen, nearest hidden divider) towards CC.
-            // Items at the CC end that don't fit overflow to hidden.
-            var usedWidth = chevronWidth
-            var fittingUIDs = [String]()
+            // Tiered overflow priority: unmanaged items (newly-detected,
+            // not in any profile section) are the first candidates to
+            // overflow because the profile has no saved position for
+            // them. Profile-saved items only overflow if removing all
+            // unmanaged items still leaves the layout exceeding the
+            // budget. Within each tier, the leftmost (chevron-side)
+            // items overflow first, matching the macOS layout behaviour
+            // of pushing leftmost items under the notch when full.
+            let unmanagedSet = Set(unmanagedUIDs)
             let nonChevronUIDs = visibleUIDs.filter { $0 != visibleCtrlUID }
-            for uid in nonChevronUIDs.reversed() {
-                let width = uidWidths[uid] ?? 0
-                if usedWidth + width <= availableWidth {
-                    usedWidth += width
-                    fittingUIDs.insert(uid, at: 0)
-                } else {
-                    break
-                }
+            let unmanagedNonChevron = nonChevronUIDs.filter { unmanagedSet.contains($0) }
+            let profileNonChevron = nonChevronUIDs.filter { !unmanagedSet.contains($0) }
+
+            // Profile baseline: chevron + all profile-saved visible
+            // items. This is the cost we cannot reduce by overflowing
+            // unmanaged items alone.
+            var profileBaseline: CGFloat = chevronWidth
+            for uid in profileNonChevron {
+                profileBaseline += uidWidths[uid] ?? 0
             }
 
-            let overflowUIDs = Array(nonChevronUIDs.prefix(nonChevronUIDs.count - fittingUIDs.count))
+            MenuBarItemManager.diagLog.debug(
+                """
+                Notch overflow budget: screen.maxX=\(screen.frame.maxX) notch=[\(notch.minX)…\(notch.maxX)] \
+                rightBoundary=\(rightBoundary) availableWidth=\(availableWidth) userSpacing=\(userSpacing) \
+                chevronWidth=\(chevronWidth) profileBaseline=\(profileBaseline) \
+                visibleUIDs.count=\(visibleUIDs.count) profileNonChevron.count=\(profileNonChevron.count) \
+                unmanagedNonChevron.count=\(unmanagedNonChevron.count) \
+                nonProfileCount=\(nonProfileCount) nonProfileFootprint=\(nonProfileFootprint) \
+                nonProfileBreakdown=[\(nonProfileBreakdown.joined(separator: ", "))]
+                """
+            )
+
+            var overflowUIDs: [String] = []
+
+            if profileBaseline > availableWidth {
+                // Even profile items alone exceed budget. All unmanaged
+                // overflow plus enough profile items (leftmost first)
+                // to fit. Iterate profile items from CC end; whatever
+                // doesn't fit overflows.
+                overflowUIDs.append(contentsOf: unmanagedNonChevron)
+                var profileFitting = [String]()
+                var usedWidth = chevronWidth
+                for uid in profileNonChevron.reversed() {
+                    let width = uidWidths[uid] ?? 0
+                    if usedWidth + width <= availableWidth {
+                        usedWidth += width
+                        profileFitting.insert(uid, at: 0)
+                    } else {
+                        break
+                    }
+                }
+                let profileOverflow = Array(
+                    profileNonChevron.prefix(profileNonChevron.count - profileFitting.count)
+                )
+                overflowUIDs.append(contentsOf: profileOverflow)
+            } else {
+                // Profile fits. Try to also fit unmanaged items at the
+                // CC end of the unmanaged range. Whatever doesn't fit
+                // overflows; profile items stay put.
+                var usedWidth = profileBaseline
+                var unmanagedFitting = [String]()
+                for uid in unmanagedNonChevron.reversed() {
+                    let width = uidWidths[uid] ?? 0
+                    if usedWidth + width <= availableWidth {
+                        usedWidth += width
+                        unmanagedFitting.insert(uid, at: 0)
+                    } else {
+                        break
+                    }
+                }
+                overflowUIDs = Array(
+                    unmanagedNonChevron.prefix(unmanagedNonChevron.count - unmanagedFitting.count)
+                )
+            }
 
             if !overflowUIDs.isEmpty {
                 // Extract existing hidden/always-hidden items.
@@ -5441,15 +5660,22 @@ extension MenuBarItemManager {
                 let existingAH = desiredFiltered[ahStart...]
                     .filter { !controlSet.contains($0) }
 
-                // Rebuild: visible (Thaw visible control icon first) + hidden (existing then overflow) + AH.
+                // Rebuild: chevron + remaining visible items + hidden
+                // section. Overflowed items append after existingHidden
+                // in their original visible order (no .reversed()) so
+                // the leftmost-from-visible item ends up at the deepest
+                // end of hidden and the rightmost-from-visible ends up
+                // closest to the existing hidden tail.
+                let overflowSet = Set(overflowUIDs)
+                let remainingNonChevron = nonChevronUIDs.filter { !overflowSet.contains($0) }
                 var rebuilt = [String]()
                 if let chevron = visibleCtrlUID {
                     rebuilt.append(chevron)
                 }
-                rebuilt.append(contentsOf: fittingUIDs)
+                rebuilt.append(contentsOf: remainingNonChevron)
                 rebuilt.append(hiddenCtrlUID)
                 rebuilt.append(contentsOf: existingHidden)
-                rebuilt.append(contentsOf: overflowUIDs.reversed())
+                rebuilt.append(contentsOf: overflowUIDs)
                 if let ahUID = ahCtrlUID {
                     rebuilt.append(ahUID)
                     rebuilt.append(contentsOf: existingAH)
@@ -5744,8 +5970,16 @@ extension MenuBarItemManager {
             // Remove control items from sequences for LCS — they've been
             // handled in Phase 1. If Phase 1 moved a control item,
             // currentFlat was rebuilt so re-filter it.
+            //
+            // Source desiredFiltered (not desiredFlat): desiredFiltered
+            // is the post-unmanaged-insert and post-notch-overflow
+            // sequence. Using it lets the LCS planner consider
+            // newly-detected items at their saved badge position
+            // (so applying a profile relocates them to that spot
+            // instead of leaving them wherever macOS detected them)
+            // and respect notch-overflow's section reassignments.
             let currentNoControls = currentFlat.filter { $0 != hiddenCtrlUID && $0 != ahCtrlUID }
-            let desiredNoControls = desiredFlat.filter { $0 != hiddenCtrlUID && $0 != ahCtrlUID }
+            let desiredNoControls = desiredFiltered.filter { $0 != hiddenCtrlUID && $0 != ahCtrlUID }
             let currentSetNow = Set(currentNoControls)
             let desiredSetNow = Set(desiredNoControls)
             let lcsCurrent = currentNoControls.filter { desiredSetNow.contains($0) }

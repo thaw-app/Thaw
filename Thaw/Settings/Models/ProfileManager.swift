@@ -299,17 +299,6 @@ final class ProfileManager: ObservableObject {
         // applyProfileLayout positions items that haven't come back yet,
         // leaving them at OS-default positions.
         layoutTask = Task { [weak self] in
-            // Drop foreground state so the Apple-menu region reflects the
-            // previously frontmost app (matching the right-click profile
-            // picker's behaviour). When this path runs from the Settings
-            // pane's Apply button, Thaw is active and clamped move events
-            // for offscreen items would otherwise land on Thaw's own app
-            // menu.
-            await MainActor.run {
-                if NSApp.isActive {
-                    NSApp.deactivate()
-                }
-            }
             // Preflight settling: flip isInStartupSettling on BEFORE the
             // wave so cacheItemsRegardless skips late-arriver detection
             // and scheduleProfileResort short-circuits while apps are
