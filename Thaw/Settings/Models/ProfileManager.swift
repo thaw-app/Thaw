@@ -314,6 +314,13 @@ final class ProfileManager: ObservableObject {
                 let outcome = try await appState.spacingManager.applyOffset()
                 didRelaunch = outcome.didRelaunch
                 recovered = outcome.recoveredBundleIDs
+            } catch is CancellationError {
+                // The task was cancelled, typically because a newer
+                // layoutTask is taking over. Drop the preflight settling
+                // and bail out so we don't apply a stale layout pass on
+                // top of the new task's work.
+                appState.itemManager.cancelSettlingPeriod(reason: "spacingRelaunch:cancelled")
+                return
             } catch {
                 self?.diagLog.error("spacingRelaunch: applyOffset failed: \(error)")
                 didRelaunch = false

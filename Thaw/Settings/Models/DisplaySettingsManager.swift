@@ -588,10 +588,16 @@ final class DisplaySettingsManager: ObservableObject {
             guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else {
                 return nil
             }
+            // Skip transient blank-name screens (mirrored slave, GPU
+            // sleep transition) so connectedDisplays stays consistent
+            // with captureCurrentlyConnectedDisplays, the persistence
+            // loader, and allDisplays' disconnected branch.
+            let trimmed = screen.localizedName.trimmingCharacters(in: .whitespaces)
+            guard !trimmed.isEmpty else { return nil }
             return DisplayInfo(
                 id: uuid,
                 displayID: screen.displayID,
-                name: screen.localizedName,
+                name: trimmed,
                 hasNotch: screen.hasNotch,
                 isConnected: true
             )
