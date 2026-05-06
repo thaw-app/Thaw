@@ -214,7 +214,7 @@ final class MenuBarItemSpacingManager {
 
     /// Applies the current ``offset``.
     ///
-    /// Returns `true` if a relaunch wave was actually fired, or `false` if
+    /// Returns true if a relaunch wave was actually fired, or false if
     /// the on-disk values already matched the requested offset and the
     /// call was a no-op. Callers that need to wait for items to re-attach
     /// after the wave (e.g. profile-layout application) can use the return

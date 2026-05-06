@@ -205,6 +205,13 @@ final class DisplaySettingsManager: ObservableObject {
                         reason: "spacingRelaunch:\(reason)",
                         expectedBundleIDs: outcome.recoveredBundleIDs
                     )
+                    // The relaunched apps reattach at OS-default positions.
+                    // Drive the active profile's layout pass so they end up
+                    // in the saved order. Auto-switch doesn't fire when the
+                    // associated profile is unchanged, so without this call
+                    // the post-settle path would only run cross-section
+                    // restore and leave within-section ordering untouched.
+                    appState.profileManager.reapplyActiveProfile()
                 } else {
                     appState.itemManager.cancelSettlingPeriod(
                         reason: "spacingRelaunch:\(reason):noOp"

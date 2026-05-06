@@ -724,6 +724,28 @@ final class ProfileManager: ObservableObject {
         }
     }
 
+    /// Re-applies the currently active profile, driving its layout pass
+    /// without changing which profile is active.
+    ///
+    /// Used by DisplaySettingsManager.applyActiveDisplaySpacing after it
+    /// fires a relaunch wave whose menu bar items reattach at OS-default
+    /// positions: the auto-switch path doesn't fire when the active display
+    /// keeps the same associated profile, so without an explicit re-apply
+    /// the layout would never run and the items would stay where macOS put
+    /// them. The applyOffset inside layoutTask no-ops (the on-disk values
+    /// were just written), and the subsequent applyProfileLayout awaits
+    /// the in-flight expected-set settling before running.
+    func reapplyActiveProfile() {
+        guard let appState else { return }
+        guard let activeID = activeProfileID else { return }
+        do {
+            let profile = try loadProfile(id: activeID)
+            applyProfile(profile, to: appState)
+        } catch {
+            diagLog.error("reapplyActiveProfile failed: \(error)")
+        }
+    }
+
     /// Applies the profile associated with the given display UUID, if any.
     private func applyProfileForDisplay(uuid: String) async {
         guard let meta = profiles.first(where: { $0.associatedDisplayUUID == uuid }) else {

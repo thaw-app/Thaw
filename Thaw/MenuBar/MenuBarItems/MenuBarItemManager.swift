@@ -202,6 +202,26 @@ final class MenuBarItemManager: ObservableObject {
     /// settling so a concurrent no-op apply cannot clobber an in-flight
     /// wait for relaunched apps to reattach.
     private var settlingExpectedBundleIDs = Set<String>()
+
+    /// Authority class of the current settling period. Used so that a
+    /// less-authoritative preflight cannot tear down or replace a
+    /// more-authoritative settling already in flight.
+    ///
+    /// - cold: started by performSetup; the cold-boot wait while menu
+    ///   bar items are still loading. Cannot be cancelled or replaced
+    ///   by a preflight, only by another cold (re-entry) or a real
+    ///   expected-set relaunch.
+    /// - preflight: started before applyOffset to suppress restore
+    ///   while the wave runs. Cancellable by the matching no-op path.
+    /// - expectedSet: post-relaunch wave waiting on specific bundle IDs
+    ///   to reattach. Cancellation is already gated by the non-empty
+    ///   settlingExpectedBundleIDs; tracked here for parity.
+    private enum SettlingKind {
+        case cold
+        case preflight
+        case expectedSet
+    }
+    private var settlingKind: SettlingKind?
     /// Persisted bundle identifiers explicitly placed in hidden section.
     private var pinnedHiddenBundleIDs = Set<String>()
     /// Persisted bundle identifiers explicitly placed in always-hidden section.
@@ -822,16 +842,38 @@ final class MenuBarItemManager: ObservableObject {
         expectedBundleIDs: Set<String> = [],
         maxDuration: Duration = .seconds(60)
     ) {
+        // Classify the incoming call so we can refuse to demote a more
+        // authoritative settling that's already in flight.
+        let mergedExpected = settlingExpectedBundleIDs.union(expectedBundleIDs)
+        let incomingKind: SettlingKind = if !mergedExpected.isEmpty {
+            .expectedSet
+        } else if reason == "performSetup" {
+            .cold
+        } else {
+            .preflight
+        }
+
+        // Boot race: a cold (performSetup) or expected-set settling must
+        // not be torn down by a transient preflight that the boot path
+        // also kicks off (DisplaySettingsManager.applyActiveDisplaySpacing,
+        // ProfileManager.layoutTask). Preserve the merged expected set so
+        // a later non-preflight call still has it; otherwise return.
+        if let existing = settlingKind,
+           incomingKind == .preflight,
+           existing == .cold || existing == .expectedSet
+        {
+            settlingExpectedBundleIDs = mergedExpected
+            MenuBarItemManager.diagLog.debug(
+                "\(reason): settling start ignored — \(existing) settling already in flight"
+            )
+            return
+        }
+
         let newMaxDeadline = ContinuousClock.now.advanced(by: maxDuration)
         let maxDeadline = max(settlingDeadline ?? newMaxDeadline, newMaxDeadline)
         settlingDeadline = maxDeadline
-        // Promote and preserve the expected-set across re-entries: once a
-        // real relaunch wave has registered its expected bundle IDs, any
-        // later preflight call (empty expectedBundleIDs) must still wait
-        // for those apps to reattach. The merged set is what the new task
-        // body actually polls against.
-        let mergedExpected = settlingExpectedBundleIDs.union(expectedBundleIDs)
         settlingExpectedBundleIDs = mergedExpected
+        settlingKind = incomingKind
         // Cancel any in-flight settling task before starting a new one.
         // The cancelled task exits without touching shared state; this call
         // manages isInStartupSettling for the new period.
@@ -941,6 +983,7 @@ final class MenuBarItemManager: ObservableObject {
             isInStartupSettling = false
             settlingDeadline = nil
             settlingExpectedBundleIDs.removeAll()
+            settlingKind = nil
             MenuBarItemManager.diagLog.debug(
                 "\(reason): settling period ended, running fast restore without sourcePID resolution"
             )
@@ -4839,6 +4882,7 @@ extension MenuBarItemManager {
         isInStartupSettling = false
         settlingDeadline = nil
         settlingExpectedBundleIDs.removeAll()
+        settlingKind = nil
         isResettingLayout = true
         defer { isResettingLayout = false }
 
@@ -5076,10 +5120,22 @@ extension MenuBarItemManager {
             )
             return
         }
+        // Cold-boot settling is authoritative. A noOp from a boot-time
+        // applyOffset that found on-disk values already correct must not
+        // tear it down — many menu bar apps haven't reattached yet, and
+        // applyProfileLayout would then run against a half-populated cache
+        // and silently report "all items already in correct positions".
+        if settlingKind == .cold {
+            MenuBarItemManager.diagLog.debug(
+                "\(reason): settling cancel ignored — performSetup settling in flight"
+            )
+            return
+        }
         startupSettlingTask?.cancel()
         startupSettlingTask = nil
         isInStartupSettling = false
         settlingDeadline = nil
+        settlingKind = nil
         MenuBarItemManager.diagLog.debug("\(reason): settling period cancelled")
     }
 
