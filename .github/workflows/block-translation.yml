@@ -25,15 +25,17 @@ jobs:
             const onlyTranslations = files.every(f => f.filename.endsWith('.xcstrings'));
             if (!onlyTranslations) return;
 
-            const message = `### 🛑 Manual Translation Detected
-
-            Thank you very much for your contribution. We have moved translations over to Crowdin: https://crowdin.com/project/thaw
-
-            Please contribute your translations there. We do not accept translations here anymore since it results in merge conflicts and translations for other languages being overwritten.
-
-            Thank you for your understanding.
-
-            This PR is being automatically closed to keep the localization sync intact.`;
+            const message = [
+              '### 🛑 Manual Translation Detected',
+              '',
+              'Thank you very much for your contribution. We have moved translations over to Crowdin: https://crowdin.com/project/thaw',
+              '',
+              'Please contribute your translations there. We do not accept translations here anymore since it results in merge conflicts and translations for other languages being overwritten.',
+              '',
+              'Thank you for your understanding.',
+              '',
+              'This PR is being automatically closed to keep the localization sync intact.',
+            ].join('\n');
 
             await github.rest.issues.createComment({
               owner: context.repo.owner,
