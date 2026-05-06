@@ -1,6 +1,7 @@
 .DS_Store
-build/
 xcuserdata/
+!github/actions/build/
+build/
 .build/
 DerivedData/
 *.ipa
