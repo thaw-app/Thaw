@@ -1,0 +1,51 @@
+name: Build DMG
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-dmg:
+    runs-on: macos-26
+    env:
+      APP_NAME: "Thaw.app"
+      DMG_NAME: "Thaw-dev.dmg"
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Configure signing
+        uses: ./.github/actions/configure-signing
+        with:
+          apple-application-cert: ${{ secrets.APPLE_APPLICATION_CERT }}
+          apple-application-cert-password: ${{ secrets.APPLE_APPLICATION_CERT_PASSWORD }}
+          apple-id: ${{ secrets.APPLE_ID }}
+          apple-id-password: ${{ secrets.APPLE_ID_PASSWORD }}
+          apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Build
+        uses: ./.github/actions/build
+        with:
+          apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Export Archive
+        uses: ./.github/actions/export-and-package
+        with:
+          apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
+          app-name: ${{ env.APP_NAME }}
+          dmg-name: ${{ env.DMG_NAME }}
+
+      - name: Notarize
+        uses: ./.github/actions/notarize-and-validate
+        with:
+          dmg-name: ${{ env.DMG_NAME }}
+          app-name: ${{ env.APP_NAME }}
+
+      - name: Upload DMG
+        uses: actions/upload-artifact@v7
+        with:
+          name: Thaw-dmg
+          path: build/${{ env.DMG_NAME }}
+          retention-days: 3
+
+      - name: Cleanup keychain
+        if: always()
+        run: security delete-keychain "$RUNNER_TEMP/buildagent.keychain" || true
