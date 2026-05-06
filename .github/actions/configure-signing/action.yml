@@ -30,6 +30,7 @@ runs:
         APPLE_ID_PASSWORD: ${{ inputs.apple-id-password }}
         APPLE_TEAM_ID: ${{ inputs.apple-team-id }}
       run: |
+        set -euo pipefail
         keychain="$RUNNER_TEMP/buildagent.keychain"
         keychain_password="$(openssl rand -base64 32)"
         security create-keychain -p "$keychain_password" "$keychain"
