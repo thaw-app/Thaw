@@ -24,6 +24,9 @@ runs:
         APP_NAME: ${{ inputs.app-name }}
         DMG_NAME: ${{ inputs.dmg-name }}
       run: |
+        set -euo pipefail
+
+        export_plist="$RUNNER_TEMP/ExportOptions.plist"
         export_plist="$RUNNER_TEMP/ExportOptions.plist"
         rm -f "$export_plist"
         /usr/libexec/PlistBuddy \
@@ -44,8 +47,9 @@ runs:
         mkdir -p "$dmg_staging"
         ditto "build/Export/$APP_NAME" "$dmg_staging/$APP_NAME"
         ln -s /Applications "$dmg_staging/Applications"
+        vol_name="${APP_NAME%.app}"
         hdiutil create \
-          -volname "Thaw" \
+          -volname "$vol_name" \
           -srcfolder "$dmg_staging" \
           -ov -format UDZO \
           "build/$DMG_NAME"
