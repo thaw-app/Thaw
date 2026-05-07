@@ -4801,6 +4801,125 @@
         }
       }
     },
+    "Add a Quit %@ item to the bottom of the secondary context menu." : {
+      "comment" : "A description of a menu item that quits the app.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add a Quit %@ item to the bottom of the secondary context menu."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add a Quit %@ item to the bottom of the secondary context menu."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add a Quit %@ item to the bottom of the secondary context menu."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add a Quit %@ item to the bottom of the secondary context menu."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add a Quit %@ item to the bottom of the secondary context menu."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add a Quit %@ item to the bottom of the secondary context menu."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add a Quit %@ item to the bottom of the secondary context menu."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add a Quit %@ item to the bottom of the secondary context menu."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add a Quit %@ item to the bottom of the secondary context menu."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add a Quit %@ item to the bottom of the secondary context menu."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add a Quit %@ item to the bottom of the secondary context menu."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add a Quit %@ item to the bottom of the secondary context menu."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add a Quit %@ item to the bottom of the secondary context menu."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add a Quit %@ item to the bottom of the secondary context menu."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add a Quit %@ item to the bottom of the secondary context menu."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add a Quit %@ item to the bottom of the secondary context menu."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add a Quit %@ item to the bottom of the secondary context menu."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add a Quit %@ item to the bottom of the secondary context menu."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add a Quit %@ item to the bottom of the secondary context menu."
+          }
+        }
+      }
+    },
     "Add Application Manually" : {
       "comment" : "A heading for the section where users can add apps manually.",
       "localizations" : {
@@ -5384,8 +5503,8 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow external applications to read and modify %@ settings via thaw:// URLs."
+            "state" : "translated",
+            "value" : "Cho phép các ứng dụng bên ngoài đọc và sửa đổi cài đặt %@ thông qua URL thaw://."
           }
         },
         "zh-Hans" : {
@@ -11229,8 +11348,8 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Clear"
+            "state" : "translated",
+            "value" : "Làm sạch"
           }
         },
         "zh-Hans" : {
@@ -14085,8 +14204,8 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Disconnected"
+            "state" : "translated",
+            "value" : "Bị ngắt kết nối"
           }
         },
         "zh-Hans" : {
@@ -14932,6 +15051,125 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "圓點"
+          }
+        }
+      }
+    },
+    "Double-click %@ icon to open always-hidden section" : {
+      "comment" : "A toggle that lets the user enable or disable the option of using double-clicking the app icon to open the always-hidden section.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Double-click %@ icon to open always-hidden section"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Double-click %@ icon to open always-hidden section"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Double-click %@ icon to open always-hidden section"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Double-click %@ icon to open always-hidden section"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Double-click %@ icon to open always-hidden section"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Double-click %@ icon to open always-hidden section"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Double-click %@ icon to open always-hidden section"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Double-click %@ icon to open always-hidden section"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Double-click %@ icon to open always-hidden section"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Double-click %@ icon to open always-hidden section"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Double-click %@ icon to open always-hidden section"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Double-click %@ icon to open always-hidden section"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Double-click %@ icon to open always-hidden section"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Double-click %@ icon to open always-hidden section"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Double-click %@ icon to open always-hidden section"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Double-click %@ icon to open always-hidden section"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Double-click %@ icon to open always-hidden section"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Double-click %@ icon to open always-hidden section"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Double-click %@ icon to open always-hidden section"
           }
         }
       }
@@ -16227,8 +16465,8 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Effect"
+            "state" : "translated",
+            "value" : "Hiệu ứng"
           }
         },
         "zh-Hans" : {
@@ -16717,6 +16955,125 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "啟用次要右鍵選單"
+          }
+        }
+      }
+    },
+    "Enable secondary context menu quit" : {
+      "comment" : "A toggle to enable or disable the secondary context menu quit.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable secondary context menu quit"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable secondary context menu quit"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable secondary context menu quit"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable secondary context menu quit"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable secondary context menu quit"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable secondary context menu quit"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable secondary context menu quit"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable secondary context menu quit"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable secondary context menu quit"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable secondary context menu quit"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable secondary context menu quit"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable secondary context menu quit"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable secondary context menu quit"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable secondary context menu quit"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable secondary context menu quit"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable secondary context menu quit"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable secondary context menu quit"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable secondary context menu quit"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable secondary context menu quit"
           }
         }
       }
