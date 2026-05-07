@@ -474,7 +474,33 @@ final class MenuBarManager: ObservableObject {
         settingsItem.image = NSImage(systemSymbolName: "gear", accessibilityDescription: "Settings")
         menu.addItem(settingsItem)
 
+        if appState?.settings.advanced.enableSecondaryContextMenuQuit == true {
+            menu.addItem(.separator())
+
+            let quitItem = NSMenuItem(
+                title: String(localized: "Quit \(Constants.displayName)"),
+                action: #selector(quitFromSecondaryContextMenu),
+                keyEquivalent: "q"
+            )
+            quitItem.keyEquivalentModifierMask = .command
+            quitItem.target = self
+            quitItem.image = NSImage(systemSymbolName: "power", accessibilityDescription: "Quit")
+            menu.addItem(quitItem)
+        }
+
         menu.popUp(positioning: nil, at: point, in: nil)
+    }
+
+    @objc private func quitFromSecondaryContextMenu() {
+        // Defer NSApp.terminate until the main run loop is back in default mode.
+        // The action fires inside popUp's eventTracking-mode nested run loop, and
+        // popUp itself was invoked from a Task that is occupying the main actor.
+        // Scheduling in .default only ensures the block runs after popUp tracking
+        // unwinds and the enclosing Task completes, so terminate's wait loop can
+        // drain the restore and timeout Tasks scheduled by applicationShouldTerminate.
+        RunLoop.main.perform(inModes: [.default]) {
+            NSApp.terminate(nil)
+        }
     }
 
     @objc private func applyProfileFromMenu(_ menuItem: NSMenuItem) {

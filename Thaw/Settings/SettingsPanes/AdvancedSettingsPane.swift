@@ -62,6 +62,9 @@ struct AdvancedSettingsPane: View {
                 useLCSSortingOnNotchedDisplays
                 hideApplicationMenus
                 enableSecondaryContextMenu
+                if settings.enableSecondaryContextMenu {
+                    enableSecondaryContextMenuQuit
+                }
                 showIceBarAtMouseLocationOnHotkey
                 showOnHoverDelay
                 iconRefreshInterval
@@ -201,6 +204,21 @@ struct AdvancedSettingsPane: View {
                 Right-click in an empty area of the menu bar to display a minimal \
                 version of \(Constants.displayName)'s menu. Disable this setting if you encounter conflicts \
                 with other apps.
+                """
+            )
+            .padding(.trailing, 75)
+        }
+    }
+
+    private var enableSecondaryContextMenuQuit: some View {
+        Toggle(
+            "Enable secondary context menu quit",
+            isOn: $settings.enableSecondaryContextMenuQuit
+        )
+        .annotation {
+            Text(
+                """
+                Add a Quit \(Constants.displayName) item to the bottom of the secondary context menu.
                 """
             )
             .padding(.trailing, 75)

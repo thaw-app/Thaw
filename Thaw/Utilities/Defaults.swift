@@ -167,6 +167,7 @@ extension Defaults {
         static let sectionDividerStyle: SectionDividerStyle = .noDivider
         static let hideApplicationMenus = true
         static let enableSecondaryContextMenu = true
+        static let enableSecondaryContextMenuQuit = false
         static let showOnHoverDelay: TimeInterval = 0.2
         static let tooltipDelay: TimeInterval = 0.5
         static let showMenuBarTooltips = false
@@ -233,6 +234,7 @@ extension Defaults {
         case sectionDividerStyle = "SectionDividerStyle"
         case hideApplicationMenus = "HideApplicationMenus"
         case enableSecondaryContextMenu = "EnableSecondaryContextMenu"
+        case enableSecondaryContextMenuQuit = "EnableSecondaryContextMenuQuit"
         case showOnHoverDelay = "ShowOnHoverDelay"
         case tooltipDelay = "TooltipDelay"
         case iconRefreshInterval = "IconRefreshInterval"

@@ -34,6 +34,10 @@ final class AdvancedSettings: ObservableObject {
     /// when the user right-clicks the menu bar.
     @Published var enableSecondaryContextMenu = Defaults.DefaultValue.enableSecondaryContextMenu
 
+    /// A Boolean value that indicates whether the secondary context menu
+    /// includes a Quit item.
+    @Published var enableSecondaryContextMenuQuit = Defaults.DefaultValue.enableSecondaryContextMenuQuit
+
     /// The delay before showing on hover.
     @Published var showOnHoverDelay = Defaults.DefaultValue.showOnHoverDelay
 
@@ -79,6 +83,7 @@ final class AdvancedSettings: ObservableObject {
         Defaults.ifPresent(key: .showAllSectionsOnUserDrag, assign: &showAllSectionsOnUserDrag)
         Defaults.ifPresent(key: .hideApplicationMenus, assign: &hideApplicationMenus)
         Defaults.ifPresent(key: .enableSecondaryContextMenu, assign: &enableSecondaryContextMenu)
+        Defaults.ifPresent(key: .enableSecondaryContextMenuQuit, assign: &enableSecondaryContextMenuQuit)
         Defaults.ifPresent(key: .showOnHoverDelay, assign: &showOnHoverDelay)
         Defaults.ifPresent(key: .tooltipDelay, assign: &tooltipDelay)
         Defaults.ifPresent(key: .showMenuBarTooltips, assign: &showMenuBarTooltips)
@@ -104,6 +109,7 @@ final class AdvancedSettings: ObservableObject {
         $sectionDividerStyle.persistToDefaults(key: .sectionDividerStyle, transform: \.rawValue, in: &c)
         $hideApplicationMenus.persistToDefaults(key: .hideApplicationMenus, in: &c)
         $enableSecondaryContextMenu.persistToDefaults(key: .enableSecondaryContextMenu, in: &c)
+        $enableSecondaryContextMenuQuit.persistToDefaults(key: .enableSecondaryContextMenuQuit, in: &c)
         $showOnHoverDelay.persistToDefaults(key: .showOnHoverDelay, in: &c)
         $tooltipDelay.persistToDefaults(key: .tooltipDelay, in: &c)
         $showMenuBarTooltips.persistToDefaults(key: .showMenuBarTooltips, in: &c)
@@ -155,6 +161,8 @@ final class AdvancedSettings: ObservableObject {
                 hideApplicationMenus = boolValue
             case "enableSecondaryContextMenu":
                 enableSecondaryContextMenu = boolValue
+            case "enableSecondaryContextMenuQuit":
+                enableSecondaryContextMenuQuit = boolValue
             case "showMenuBarTooltips":
                 showMenuBarTooltips = boolValue
             case "enableDiagnosticLogging":
