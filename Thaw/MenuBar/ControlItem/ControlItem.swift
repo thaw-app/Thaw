@@ -567,7 +567,6 @@ final class ControlItem {
             // responsiveness of the status item's button.
             Task { [appState] in
                 if
-                    !appState.settings.advanced.useOptionClickToShowAlwaysHiddenSection,
                     event.clickCount > 1,
                     identifier == .visible,
                     let alwaysHidden = menuBarManager.section(withName: .alwaysHidden),
