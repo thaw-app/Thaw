@@ -31733,6 +31733,9 @@
         }
       }
     },
+    "Restart %@" : {
+
+    },
     "Restores divider defaults and moves every movable item except the %@ icon to Hidden. Use this if the layout looks broken or items won’t load." : {
       "comment" : "A message displayed in an alert when the user confirms resetting the menu bar layout.",
       "localizations" : {
