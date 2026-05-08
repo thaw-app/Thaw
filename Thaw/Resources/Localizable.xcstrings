@@ -5543,7 +5543,7 @@
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mostrar siempre los elementos ocultos de la barra de menús en esta pantalla."
+            "value" : "Siempre mostar los elementos ocultos de la barra de menús en esta pantalla."
           }
         },
         "fr" : {
