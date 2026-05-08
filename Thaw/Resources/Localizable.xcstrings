@@ -5305,7 +5305,7 @@
         "es" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Allow external applications to read and modify %@ settings via thaw:// URLs."
+            "value" : "Permtir que aplicaciones externas lean y modifiquen ajustes de %@ via thaw:// URLs."
           }
         },
         "fr" : {
