@@ -398,19 +398,23 @@ final class MenuBarItemManager: ObservableObject {
         var allCurrentBaseIdentifiers = Set<String>()
         for section in MenuBarSection.Name.allCases {
             for item in cache[section] where !item.isControlItem && item.sourcePID != nil {
-                let uniqueID = item.uniqueIdentifier
-                allCurrentIdentifiers.insert(uniqueID)
-                // Also track base identifier (without instanceIndex) to handle
-                // apps that change instanceIndex after restart
+                // Always track base identifier so stale saved entries for
+                // transient items (Live Activities) get pruned by the
+                // isStaleInstanceIndex guard below and not re-injected.
                 let baseID = "\(item.tag.namespace):\(item.tag.title)"
                 allCurrentBaseIdentifiers.insert(baseID)
+                // Exclude transient Control Center items (Live Activities,
+                // iPhone Mirroring icons) from the identifier set so their
+                // ephemeral UIDs are never written to savedSectionOrder.
+                guard !item.isTransientControlCenterItem else { continue }
+                allCurrentIdentifiers.insert(item.uniqueIdentifier)
             }
         }
 
         for section in MenuBarSection.Name.allCases {
             // Start with current identifiers for this section.
             var identifiers = cache[section]
-                .filter { !$0.isControlItem && $0.sourcePID != nil }
+                .filter { !$0.isControlItem && $0.sourcePID != nil && !$0.isTransientControlCenterItem }
                 .map(\.uniqueIdentifier)
 
             // Add identifiers from saved sections that are NOT currently in the cache
@@ -2939,8 +2943,11 @@ extension MenuBarItemManager {
         destination: MoveDestination,
         on displayID: CGDirectDisplayID
     ) async {
-        // Only check when moving to hidden sections (left of control items)
-        guard case .leftOfItem = destination else { return }
+        // Only recover items that got stuck when targeting the hidden section.
+        // Items placed left of the always-hidden control item are intentionally
+        // off-screen; recovering them to visible would undo a correct move.
+        guard case .leftOfItem(let anchor) = destination,
+              anchor.tag != .alwaysHiddenControlItem else { return }
 
         // Check if item got stuck at x=-1
         if await isItemBlocked(item) {
@@ -2996,11 +3003,16 @@ extension MenuBarItemManager {
             throw EventError.cannotComplete
         }
 
-        // Check if item is already in a blocked state before attempting to move
-        // This prevents trying to move items that are already stuck
+        // Allow right-of-item moves to proceed even when the item is at x=-1.
+        // validateItemPositionAfterMove uses exactly this path to rescue stuck
+        // items. Block all other moves: dragging a stuck item deeper into a
+        // hidden section could leave it in an unknown position.
         if await isItemBlocked(item) {
-            MenuBarItemManager.diagLog.warning("Skipping move for \(item.logString) - item is already blocked (x=-1)")
-            throw EventError.cannotComplete
+            guard case .rightOfItem = destination else {
+                MenuBarItemManager.diagLog.warning("Skipping move for \(item.logString) - item is blocked (x=-1)")
+                throw EventError.cannotComplete
+            }
+            MenuBarItemManager.diagLog.debug("Proceeding with move of blocked \(item.logString) — recovery to visible")
         }
 
         // Determine display ID early.
@@ -4216,7 +4228,11 @@ extension MenuBarItemManager {
         // left of our hidden control item, move it back immediately — no
         // newness check needed since these items should never be in a hidden
         // section.
-        if let systemItem = leftmostItems.first(where: { !$0.canBeHidden }) {
+        // Exclude transient Control Center items (Live Activities, iPhone
+        // Mirroring icons): they appear with !canBeHidden but live in a
+        // deeply off-screen position macOS won't let us drag, so retrying
+        // every cache cycle just burns the eventSemaphore for ~4 s.
+        if let systemItem = leftmostItems.first(where: { !$0.canBeHidden && !$0.isTransientControlCenterItem }) {
             MenuBarItemManager.diagLog.info("Relocating non-hideable system item \(systemItem.logString) to visible section")
             do {
                 try await move(
@@ -4638,7 +4654,10 @@ extension MenuBarItemManager {
 
             do {
                 MenuBarItemManager.diagLog.debug("Starting move for restore: item=\(item.logString), destination=\(destination.logString)")
-                try await move(item: item, to: destination, skipInputPause: true)
+                // Background restore: shorter cursor-hide window so failed
+                // moves during a Live Activity don't kidnap the cursor for
+                // the full default 10 s.
+                try await move(item: item, to: destination, skipInputPause: true, watchdogTimeout: .seconds(4))
                 MenuBarItemManager.diagLog.debug("Move completed successfully for restore")
             } catch let error as EventError {
                 MenuBarItemManager.diagLog.error(
