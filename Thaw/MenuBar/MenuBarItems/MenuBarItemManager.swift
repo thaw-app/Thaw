@@ -2943,11 +2943,13 @@ extension MenuBarItemManager {
         destination: MoveDestination,
         on displayID: CGDirectDisplayID
     ) async {
-        // Only recover items that got stuck when targeting the hidden section.
-        // Items placed left of the always-hidden control item are intentionally
-        // off-screen; recovering them to visible would undo a correct move.
-        guard case .leftOfItem(let anchor) = destination,
-              anchor.tag != .alwaysHiddenControlItem else { return }
+        // Only recover items that got stuck when targeting the hidden divider.
+        // Items placed adjacent to any other anchor are intentionally positioned;
+        // recovering them to visible would undo a correct move.
+        switch destination {
+        case .leftOfItem(let anchor), .rightOfItem(let anchor):
+            guard anchor.tag == .alwaysHiddenControlItem else { return }
+        }
 
         // Check if item got stuck at x=-1
         if await isItemBlocked(item) {
