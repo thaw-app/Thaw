@@ -9232,121 +9232,121 @@
         }
       }
     },
-    "Bundle Identifier (e.g., com.droppy)" : {
+    "Bundle Identifier (e.g., iordv.Droppy)" : {
       "comment" : "A label for a text field where the user can enter a bundle identifier.",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Identifikátor balíčku (např. com.droppy)"
+            "value" : "Identifikátor balíčku (např. iordv.Droppy)"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bundle Identifier (z.B. com.droppy)"
+            "value" : "Bundle Identifier (z.B. iordv.Droppy)"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Identificador del paquete (por ej., com.droppy)"
+            "value" : "Identificador del paquete (por ej., iordv.Droppy)"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Identifiant du paquet (par exemple \"com.droppy\")"
+            "value" : "Identifiant du paquet (par exemple \"iordv.Droppy\")"
           }
         },
         "hu" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Bundle Identifier (e.g., com.droppy)"
+            "value" : "Bundle Identifier (e.g., iordv.Droppy)"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bundle Identifier (mis. com.droppy)"
+            "value" : "Bundle Identifier (mis. iordv.Droppy)"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Identificativo Bundle (es. com.droppy)"
+            "value" : "Identificativo Bundle (es. iordv.Droppy)"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "バンドルID（例：com.droppy）"
+            "value" : "バンドルID（例：iordv.Droppy）"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Bundle Identifier (e.g., com.droppy)"
+            "value" : "Bundle Identifier (e.g., iordv.Droppy)"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Bundle Identifier (e.g., com.droppy)"
+            "value" : "Bundle Identifier (e.g., iordv.Droppy)"
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Identyfikator pakietu (np. com.droppy)"
+            "value" : "Identyfikator pakietu (np. iordv.Droppy)"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Bundle Identifier (e.g., com.droppy)"
+            "value" : "Bundle Identifier (e.g., iordv.Droppy)"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Идентификатор пакета (например, com.droppy)"
+            "value" : "Идентификатор пакета (например, iordv.Droppy)"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bundle Identifier (เช่น com.droppy)"
+            "value" : "Bundle Identifier (เช่น iordv.Droppy)"
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Bundle Identifier (e.g., com.droppy)"
+            "value" : "Bundle Identifier (e.g., iordv.Droppy)"
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ідентифікатор набору (напр., com.droppy)"
+            "value" : "Ідентифікатор набору (напр., iordv.Droppy)"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mã nhận dạng gói (ví dụ: com.droppy)"
+            "value" : "Mã nhận dạng gói (ví dụ: iordv.Droppy)"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bundle ID（如：com.droppy）"
+            "value" : "Bundle ID（如：iordv.Droppy）"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bundle Id（如：com.droppy）"
+            "value" : "Bundle Id（如：iordv.Droppy）"
           }
         }
       }
