@@ -24,13 +24,13 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "("
           }
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "("
           }
         },
@@ -42,7 +42,7 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "("
           }
         },
@@ -60,7 +60,7 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "("
           }
         },
@@ -72,7 +72,7 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "("
           }
         },
@@ -90,7 +90,7 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "("
           }
         },
@@ -149,7 +149,7 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : ")"
           }
         },
@@ -161,7 +161,7 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : ")"
           }
         },
@@ -179,7 +179,7 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : ")"
           }
         },
@@ -191,7 +191,7 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : ")"
           }
         },
@@ -209,7 +209,7 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : ")"
           }
         },
@@ -268,7 +268,7 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%@"
           }
         },
@@ -298,7 +298,7 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%@"
           }
         },
@@ -310,7 +310,7 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%@"
           }
         },
@@ -328,7 +328,7 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%@"
           }
         },
@@ -393,8 +393,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ (%2$@)"
+            "state" : "translated",
+            "value" : "%1$@(%2$@)"
           }
         },
         "id" : {
@@ -405,7 +405,7 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%1$@ (%2$@)"
           }
         },
@@ -423,7 +423,7 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%1$@ (%2$@)"
           }
         },
@@ -435,7 +435,7 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%1$@ (%2$@)"
           }
         },
@@ -453,7 +453,7 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%1$@ (%2$@)"
           }
         },
@@ -1238,14 +1238,14 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ is currently running. Running multiple menu bar managers at the same time can cause display issues and unexpected behavior. Consider quitting %2$@ before using %3$@."
+            "state" : "translated",
+            "value" : "%1$@ sedang berjalan. Menjalankan beberapa pengelola bar menu secara bersamaan dapat menyebabkan masalah tampilan dan perilaku yang tidak terduga. Sebaiknya keluar dari %2$@ sebelum menggunakan %3$@."
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ is currently running. Running multiple menu bar managers at the same time can cause display issues and unexpected behavior. Consider quitting %2$@ before using %3$@."
+            "state" : "translated",
+            "value" : "%1$@ è attualmente in esecuzione. L'esecuzione simultanea di più gestori della barra dei menu può causare problemi di visualizzazione e comportamenti imprevisti. Si consiglia di uscire da %2$@ prima di utilizzare %3$@."
           }
         },
         "ja" : {
@@ -1280,8 +1280,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ is currently running. Running multiple menu bar managers at the same time can cause display issues and unexpected behavior. Consider quitting %2$@ before using %3$@."
+            "state" : "translated",
+            "value" : "%1$@ в данный момент запущен. Одновременная работа нескольких менеджеров строки меню может вызвать проблемы с отображением и непредвиденное поведение. Рекомендуется закрыть %2$@ перед использованием %3$@."
           }
         },
         "th" : {
@@ -2198,7 +2198,7 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%lld"
           }
         },
@@ -2228,7 +2228,7 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%lld"
           }
         },
@@ -2240,7 +2240,7 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%lld"
           }
         },
@@ -2258,7 +2258,7 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%lld"
           }
         },
@@ -2317,7 +2317,7 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%lld fps"
           }
         },
@@ -2359,7 +2359,7 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%lld fps"
           }
         },
@@ -2807,7 +2807,7 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "•"
           }
         },
@@ -2837,7 +2837,7 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "•"
           }
         },
@@ -2849,7 +2849,7 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "•"
           }
         },
@@ -2867,7 +2867,7 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "•"
           }
         },
@@ -2926,7 +2926,7 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "+"
           }
         },
@@ -2956,7 +2956,7 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "+"
           }
         },
@@ -2968,7 +2968,7 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "+"
           }
         },
@@ -2986,7 +2986,7 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "+"
           }
         },
@@ -3045,7 +3045,7 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "⌘"
           }
         },
@@ -3075,7 +3075,7 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "⌘"
           }
         },
@@ -3087,7 +3087,7 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "⌘"
           }
         },
@@ -3105,7 +3105,7 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "⌘"
           }
         },
@@ -3164,7 +3164,7 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "⎋"
           }
         },
@@ -3194,7 +3194,7 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "⎋"
           }
         },
@@ -3206,7 +3206,7 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "⎋"
           }
         },
@@ -3224,7 +3224,7 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "⎋"
           }
         },
@@ -3283,7 +3283,7 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "1"
           }
         },
@@ -3313,7 +3313,7 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "1"
           }
         },
@@ -3325,7 +3325,7 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "1"
           }
         },
@@ -3343,7 +3343,7 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "1"
           }
         },
@@ -3402,7 +3402,7 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "1."
           }
         },
@@ -3432,7 +3432,7 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "1."
           }
         },
@@ -3444,7 +3444,7 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "1."
           }
         },
@@ -3462,7 +3462,7 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "1."
           }
         },
@@ -3521,7 +3521,7 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "2"
           }
         },
@@ -3551,7 +3551,7 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "2"
           }
         },
@@ -3563,7 +3563,7 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "2"
           }
         },
@@ -3581,7 +3581,7 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "2"
           }
         },
@@ -3640,7 +3640,7 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "2."
           }
         },
@@ -3670,7 +3670,7 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "2."
           }
         },
@@ -3682,7 +3682,7 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "2."
           }
         },
@@ -3700,7 +3700,7 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "2."
           }
         },
@@ -3759,7 +3759,7 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "3"
           }
         },
@@ -3789,7 +3789,7 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "3"
           }
         },
@@ -3801,7 +3801,7 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "3"
           }
         },
@@ -3819,7 +3819,7 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "3"
           }
         },
@@ -3878,7 +3878,7 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "3."
           }
         },
@@ -3908,7 +3908,7 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "3."
           }
         },
@@ -3920,7 +3920,7 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "3."
           }
         },
@@ -3938,7 +3938,7 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "3."
           }
         },
@@ -3997,7 +3997,7 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "4."
           }
         },
@@ -4027,7 +4027,7 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "4."
           }
         },
@@ -4039,7 +4039,7 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "4."
           }
         },
@@ -4057,7 +4057,7 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "4."
           }
         },
@@ -4684,7 +4684,122 @@
     },
     "Adaptive" : {
       "comment" : "Text for the adaptive background option in the menu bar.",
-      "isCommentAutoGenerated" : true
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adaptivní"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adaptiv"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adaptativo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Adaptive"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Adaptive"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adaptif"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Adaptive"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Adaptive"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Adaptive"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Adaptive"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adaptacyjne"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adaptativo"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Адаптивный"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ปรับเปลี่ยนได้"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Adaptive"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Adaptive"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Adaptive"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Adaptive"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Adaptive"
+          }
+        }
+      }
     },
     "Add" : {
       "comment" : "A button that adds an app to the whitelist.",
@@ -4757,8 +4872,8 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Add"
+            "state" : "translated",
+            "value" : "Adicionar"
           }
         },
         "ru" : {
@@ -4807,7 +4922,122 @@
     },
     "Add a Quit %@ item to the bottom of the secondary context menu." : {
       "comment" : "A description of a menu item that quits the app.",
-      "isCommentAutoGenerated" : true
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Přidat možnost „ukončit %@“ na konec sekundární kontextové nabídky."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einen Eintrag zum Schließen von %@ unten im zweiten Kontextmenü hinzufügen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Añade la opción «Salir %@» al final del menú contextual secundario."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add a Quit %@ item to the bottom of the secondary context menu."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add a Quit %@ item to the bottom of the secondary context menu."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tambahkan item \"Keluar %@\" ke bagian bawah menu konteks sekunder."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add a Quit %@ item to the bottom of the secondary context menu."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add a Quit %@ item to the bottom of the secondary context menu."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add a Quit %@ item to the bottom of the secondary context menu."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add a Quit %@ item to the bottom of the secondary context menu."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dodaj pozycję Zakończ %@ na dole dodatkowego menu kontekstowego."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add a Quit %@ item to the bottom of the secondary context menu."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Добавить пункт «Выйти из %@» в нижнюю часть дополнительного контекстного меню."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add a Quit %@ item to the bottom of the secondary context menu."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add a Quit %@ item to the bottom of the secondary context menu."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add a Quit %@ item to the bottom of the secondary context menu."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add a Quit %@ item to the bottom of the secondary context menu."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在二级右键菜单底部添加退出 %@ 选项。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Add a Quit %@ item to the bottom of the secondary context menu."
+          }
+        }
+      }
     },
     "Add Application Manually" : {
       "comment" : "A heading for the section where users can add apps manually.",
@@ -4880,8 +5110,8 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Add Application Manually"
+            "state" : "translated",
+            "value" : "Adicionar Aplicativo Manualmente"
           }
         },
         "ru" : {
@@ -5118,8 +5348,8 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow"
+            "state" : "translated",
+            "value" : "Permitir"
           }
         },
         "ru" : {
@@ -5213,8 +5443,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow \"%1$@\" to control %2$@ settings?"
+            "state" : "translated",
+            "value" : "Permetti a \"%1$@\" di controllare le impostazioni di %2$@?"
           }
         },
         "ja" : {
@@ -5243,8 +5473,8 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow \"%1$@\" to control %2$@ settings?"
+            "state" : "translated",
+            "value" : "Permitir que “%1$@” controle as definições de %2$@?"
           }
         },
         "ru" : {
@@ -5308,8 +5538,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow external applications to read and modify %@ settings via thaw:// URLs."
+            "state" : "translated",
+            "value" : "Permitir a las aplicaciones externas leer y modificar la configuración de %@ a través de thaw:// URLs."
           }
         },
         "fr" : {
@@ -5326,14 +5556,14 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow external applications to read and modify %@ settings via thaw:// URLs."
+            "state" : "translated",
+            "value" : "Izinkan aplikasi eksternal untuk membaca dan mengubah pengaturan %@ via thaw://URL."
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow external applications to read and modify %@ settings via thaw:// URLs."
+            "state" : "translated",
+            "value" : "Permetti ad applicazioni esterne di leggere e modificare le impostazioni di %@ tramite thaw://URLs."
           }
         },
         "ja" : {
@@ -5368,8 +5598,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow external applications to read and modify %@ settings via thaw:// URLs."
+            "state" : "translated",
+            "value" : "Разрешить внешним приложениям считывать и изменять настройки %@ через thaw:// URL-адреса."
           }
         },
         "th" : {
@@ -5392,8 +5622,8 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow external applications to read and modify %@ settings via thaw:// URLs."
+            "state" : "translated",
+            "value" : "Cho phép các ứng dụng bên ngoài đọc và sửa đổi cài đặt %@ thông qua URL thaw://."
           }
         },
         "zh-Hans" : {
@@ -5660,7 +5890,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Die %@-Leiste immer an der Position des Mauszeigers anzeigen, wenn ein Hotkey benutzt wird."
+            "value" : "Die %@-Leiste immer an der Position des Mauszeigers anzeigen, wenn ein Tastaturkürzel benutzt wird."
           }
         },
         "es" : {
@@ -5957,8 +6187,8 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Appearance"
+            "state" : "translated",
+            "value" : "Aparência"
           }
         },
         "ru" : {
@@ -6260,8 +6490,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply briefly relaunches apps with menu bar items so they pick up the new spacing. Setting takes effect when this display is the active menu bar display."
+            "state" : "translated",
+            "value" : "Aplicar reinicia brevemente las aplicaciones con elementos en la barra de menús para que adopten el nuevo espaciado. El ajuste se aplica cuando esta vista es la vista activa de la barra de menús."
           }
         },
         "fr" : {
@@ -6278,8 +6508,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply briefly relaunches apps with menu bar items so they pick up the new spacing. Setting takes effect when this display is the active menu bar display."
+            "state" : "translated",
+            "value" : "Terapkan akan memulai ulang aplikasi dengan item bar menu secara singkat agar menerapkan jarak baru. Pengaturan ini berlaku saat layar ini menjadi layar bar menu aktif."
           }
         },
         "it" : {
@@ -6320,8 +6550,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply briefly relaunches apps with menu bar items so they pick up the new spacing. Setting takes effect when this display is the active menu bar display."
+            "state" : "translated",
+            "value" : "\"Применить\" кратковременно перезапускает приложения с элементами в строке меню, чтобы в них были применены новые интервалы. Настройка вступает в силу, когда этот вид отображения является активным в строке меню."
           }
         },
         "th" : {
@@ -6498,8 +6728,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply the spacing for this display"
+            "state" : "translated",
+            "value" : "Aplica el espaciado a esta pantalla"
           }
         },
         "fr" : {
@@ -6516,14 +6746,14 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply the spacing for this display"
+            "state" : "translated",
+            "value" : "Terapkan jarak untuk layar ini"
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply the spacing for this display"
+            "state" : "translated",
+            "value" : "Applica spaziature per questo schermo"
           }
         },
         "ja" : {
@@ -6558,8 +6788,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply the spacing for this display"
+            "state" : "translated",
+            "value" : "Применить интервалы для этого экрана"
           }
         },
         "th" : {
@@ -6710,13 +6940,13 @@
             "plural" : {
               "one" : {
                 "stringUnit" : {
-                  "state" : "new",
+                  "state" : "translated",
                   "value" : "%lld app"
                 }
               },
               "other" : {
                 "stringUnit" : {
-                  "state" : "new",
+                  "state" : "translated",
                   "value" : "%lld apps"
                 }
               }
@@ -6830,13 +7060,13 @@
             "plural" : {
               "one" : {
                 "stringUnit" : {
-                  "state" : "new",
+                  "state" : "translated",
                   "value" : "%lld app"
                 }
               },
               "other" : {
                 "stringUnit" : {
-                  "state" : "new",
+                  "state" : "translated",
                   "value" : "%lld apps"
                 }
               }
@@ -8232,8 +8462,8 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Automation"
+            "state" : "translated",
+            "value" : "Automatização"
           }
         },
         "ru" : {
@@ -8351,8 +8581,8 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Back"
+            "state" : "translated",
+            "value" : "Voltar"
           }
         },
         "ru" : {
@@ -8416,8 +8646,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Background"
+            "state" : "translated",
+            "value" : "Color de fondo"
           }
         },
         "fr" : {
@@ -8434,14 +8664,14 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Background"
+            "state" : "translated",
+            "value" : "Latar Belakang"
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Background"
+            "state" : "translated",
+            "value" : "Sfondo"
           }
         },
         "ja" : {
@@ -8476,8 +8706,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Background"
+            "state" : "translated",
+            "value" : "Фоновый рисунок"
           }
         },
         "th" : {
@@ -8535,8 +8765,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Background - Dark Appearance"
+            "state" : "translated",
+            "value" : "Color de fondo - Modo oscuro"
           }
         },
         "fr" : {
@@ -8553,14 +8783,14 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Background - Dark Appearance"
+            "state" : "translated",
+            "value" : "Tampilan - Mode Gelap"
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Background - Dark Appearance"
+            "state" : "translated",
+            "value" : "Sfondo - Tema Scuro"
           }
         },
         "ja" : {
@@ -8595,8 +8825,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Background - Dark Appearance"
+            "state" : "translated",
+            "value" : "Фоновый рисунок — тёмное оформление"
           }
         },
         "th" : {
@@ -8654,8 +8884,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Background - Light Appearance"
+            "state" : "translated",
+            "value" : "Color de fondo - Modo claro"
           }
         },
         "fr" : {
@@ -8672,14 +8902,14 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Background - Light Appearance"
+            "state" : "translated",
+            "value" : "Latar Belakang - Mode Terang"
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Background - Light Appearance"
+            "state" : "translated",
+            "value" : "Sfondo - Tema Chiaro"
           }
         },
         "ja" : {
@@ -8714,8 +8944,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Background - Light Appearance"
+            "state" : "translated",
+            "value" : "Фоновый рисунок — светлое оформление"
           }
         },
         "th" : {
@@ -8785,8 +9015,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "BETA"
+            "state" : "translated",
+            "value" : "BÉTA"
           }
         },
         "id" : {
@@ -8815,7 +9045,7 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "BETA"
           }
         },
@@ -8827,7 +9057,7 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "BETA"
           }
         },
@@ -9422,14 +9652,14 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Can modify settings"
+            "state" : "translated",
+            "value" : "Pode modificar configurações"
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Can modify settings"
+            "state" : "translated",
+            "value" : "Может изменять настройки"
           }
         },
         "th" : {
@@ -11153,8 +11383,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Clear"
+            "state" : "translated",
+            "value" : "Limpiar"
           }
         },
         "fr" : {
@@ -11171,14 +11401,14 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Clear"
+            "state" : "translated",
+            "value" : "Jernih"
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Clear"
+            "state" : "translated",
+            "value" : "Cancella"
           }
         },
         "ja" : {
@@ -11207,14 +11437,14 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Clear"
+            "state" : "translated",
+            "value" : "Limpar"
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Clear"
+            "state" : "translated",
+            "value" : "Очистить"
           }
         },
         "th" : {
@@ -11237,8 +11467,8 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Clear"
+            "state" : "translated",
+            "value" : "Làm sạch"
           }
         },
         "zh-Hans" : {
@@ -11261,7 +11491,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kliknutím na prázdné místo v řádku nabídek zobrazí skryté ikony."
+            "value" : "Klikněte na prázdnou část řádku nabídek, aby se zobrazily skryté položky."
           }
         },
         "de" : {
@@ -11564,8 +11794,8 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Columns"
+            "state" : "translated",
+            "value" : "Colunas"
           }
         },
         "ru" : {
@@ -12361,14 +12591,14 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Copy"
+            "state" : "translated",
+            "value" : "Salin"
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Copy"
+            "state" : "translated",
+            "value" : "Copia"
           }
         },
         "ja" : {
@@ -12397,14 +12627,14 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Copy"
+            "state" : "translated",
+            "value" : "Copiar"
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Copy"
+            "state" : "translated",
+            "value" : "Копировать"
           }
         },
         "th" : {
@@ -12516,8 +12746,8 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Copy version info"
+            "state" : "translated",
+            "value" : "Copiar informações da versão"
           }
         },
         "ru" : {
@@ -12635,8 +12865,8 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Created: %@"
+            "state" : "translated",
+            "value" : "Criado: %@"
           }
         },
         "ru" : {
@@ -12957,7 +13187,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tampilan gelap"
+            "value" : "Mode Gelap"
           }
         },
         "it" : {
@@ -13230,8 +13460,8 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete"
+            "state" : "translated",
+            "value" : "Eliminar"
           }
         },
         "ru" : {
@@ -13349,8 +13579,8 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete Profile?"
+            "state" : "translated",
+            "value" : "Eliminar Perfil?"
           }
         },
         "ru" : {
@@ -13468,8 +13698,8 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Deny"
+            "state" : "translated",
+            "value" : "Negar"
           }
         },
         "ru" : {
@@ -13914,8 +14144,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "disconnected"
+            "state" : "translated",
+            "value" : "disconnesso"
           }
         },
         "ja" : {
@@ -13944,8 +14174,8 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "disconnected"
+            "state" : "translated",
+            "value" : "desconectado"
           }
         },
         "ru" : {
@@ -14009,8 +14239,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Disconnected"
+            "state" : "translated",
+            "value" : "Desconectado"
           }
         },
         "fr" : {
@@ -14027,14 +14257,14 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Disconnected"
+            "state" : "translated",
+            "value" : "Terputus"
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Disconnected"
+            "state" : "translated",
+            "value" : "Disconnesso"
           }
         },
         "ja" : {
@@ -14063,20 +14293,20 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Disconnected"
+            "state" : "translated",
+            "value" : "Desconectado"
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Disconnected"
+            "state" : "translated",
+            "value" : "Отключено"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Disconnected"
+            "state" : "translated",
+            "value" : "ขาดการเชื่อมต่อ"
           }
         },
         "tr" : {
@@ -14093,8 +14323,8 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Disconnected"
+            "state" : "translated",
+            "value" : "Bị ngắt kết nối"
           }
         },
         "zh-Hans" : {
@@ -14946,7 +15176,122 @@
     },
     "Double-click %@ icon to open always-hidden section" : {
       "comment" : "A toggle that lets the user enable or disable the option of using double-clicking the app icon to open the always-hidden section.",
-      "isCommentAutoGenerated" : true
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Otevřít sekci „Trvale skryté“ dvojitým poklepáním na ikonu %@"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@-Symbol doppelklicken, um den Immer-Versteckt-Bereich anzuzeigen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Haz doble clic en el icono %@ para abrir la sección que siempre está oculta"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Double-click %@ icon to open always-hidden section"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Double-click %@ icon to open always-hidden section"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Klik dua kali ikon %@ untuk membuka bagian selalu-tersembunyi"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Doppio click sull'icona %@ per aprire la sezione sempre nascosto"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Double-click %@ icon to open always-hidden section"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Double-click %@ icon to open always-hidden section"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Double-click %@ icon to open always-hidden section"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kliknij dwukrotnie ikonę %@, aby otworzyć zawsze ukrytą sekcję"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Double-click %@ icon to open always-hidden section"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Дважды щелкните значок %@, чтобы открыть скрытый раздел"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Double-click %@ icon to open always-hidden section"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Double-click %@ icon to open always-hidden section"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Double-click %@ icon to open always-hidden section"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Double-click %@ icon to open always-hidden section"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "双击 %@ 图标以打开始终隐藏区域。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Double-click %@ icon to open always-hidden section"
+          }
+        }
+      }
     },
     "Double-click an empty area of the menu bar to show always-hidden menu bar items." : {
       "comment" : "Toggle that allows users to enable or disable the feature of showing always-hidden menu bar items by double-clicking an empty area of the menu bar.",
@@ -15495,8 +15840,8 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Duplicate"
+            "state" : "translated",
+            "value" : "Duplicado"
           }
         },
         "ru" : {
@@ -15733,7 +16078,7 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "E"
           }
         },
@@ -15971,8 +16316,8 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Edit Menu Bar Layout…"
+            "state" : "translated",
+            "value" : "Editar disposição da barra de menus…"
           }
         },
         "ru" : {
@@ -16155,8 +16500,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Effect"
+            "state" : "translated",
+            "value" : "Efecto"
           }
         },
         "fr" : {
@@ -16173,14 +16518,14 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Effect"
+            "state" : "translated",
+            "value" : "Efek"
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Effect"
+            "state" : "translated",
+            "value" : "Effetto"
           }
         },
         "ja" : {
@@ -16209,20 +16554,20 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Effect"
+            "state" : "translated",
+            "value" : "Efeito"
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Effect"
+            "state" : "translated",
+            "value" : "Эффект"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Effect"
+            "state" : "translated",
+            "value" : "เอฟเฟค"
           }
         },
         "tr" : {
@@ -16239,8 +16584,8 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Effect"
+            "state" : "translated",
+            "value" : "Hiệu ứng"
           }
         },
         "zh-Hans" : {
@@ -16298,8 +16643,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Ellipsis"
+            "state" : "translated",
+            "value" : "Punti di sospensione"
           }
         },
         "ja" : {
@@ -16501,7 +16846,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Povolit překryv položek v řádku nabídek"
+            "value" : "Skrývat položky řádku nabídek, které se nevejdou"
           }
         },
         "de" : {
@@ -16512,8 +16857,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enable menu bar item overflow"
+            "state" : "translated",
+            "value" : "Habilitar el overflow de la barra de menús"
           }
         },
         "fr" : {
@@ -16530,8 +16875,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enable menu bar item overflow"
+            "state" : "translated",
+            "value" : "Aktifkan overflow item bar menu"
           }
         },
         "it" : {
@@ -16572,8 +16917,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enable menu bar item overflow"
+            "state" : "translated",
+            "value" : "Включить переполнение элементов панели меню"
           }
         },
         "th" : {
@@ -16735,7 +17080,122 @@
     },
     "Enable secondary context menu quit" : {
       "comment" : "A toggle to enable or disable the secondary context menu quit.",
-      "isCommentAutoGenerated" : true
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Povolit možnost „ukončit“ v sekundární kontextové nabídce"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schließen im zweiten Kontextmenü aktivieren"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Habilitar el menú contextual secundario"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable secondary context menu quit"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable secondary context menu quit"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktifkan menu konteks sekunder untuk keluar"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable secondary context menu quit"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable secondary context menu quit"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable secondary context menu quit"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable secondary context menu quit"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zezwalaj na wyjście z dodatkowego menu kontekstowego"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ativar menu de contexto secundário"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Включить «Закрыть» во втором контекстном меню"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable secondary context menu quit"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable secondary context menu quit"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable secondary context menu quit"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable secondary context menu quit"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable secondary context menu quit"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable secondary context menu quit"
+          }
+        }
+      }
     },
     "Enable Settings URI Scheme" : {
       "comment" : "A toggle that enables or disables the ability for external apps to read and modify Thaw settings via thaw:// URLs.",
@@ -16778,8 +17238,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enable Settings URI Scheme"
+            "state" : "translated",
+            "value" : "Abilita impostazione Schema URI"
           }
         },
         "ja" : {
@@ -16808,8 +17268,8 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enable Settings URI Scheme"
+            "state" : "translated",
+            "value" : "Habilitar esquema URI de configurações"
           }
         },
         "ru" : {
@@ -17135,8 +17595,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Error"
+            "state" : "translated",
+            "value" : "Errore"
           }
         },
         "ja" : {
@@ -17165,8 +17625,8 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Error"
+            "state" : "translated",
+            "value" : "Erro"
           }
         },
         "ru" : {
@@ -17373,8 +17833,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Export"
+            "state" : "translated",
+            "value" : "Esporta"
           }
         },
         "ja" : {
@@ -17403,8 +17863,8 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Export"
+            "state" : "translated",
+            "value" : "Exportar"
           }
         },
         "ru" : {
@@ -17492,8 +17952,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Export Profile(s)"
+            "state" : "translated",
+            "value" : "Esporta Profilo(i)"
           }
         },
         "ja" : {
@@ -17587,8 +18047,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Failed to encode profiles for export."
+            "state" : "translated",
+            "value" : "No se han podido codificar los perfiles para la exportación."
           }
         },
         "fr" : {
@@ -17611,8 +18071,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Failed to encode profiles for export."
+            "state" : "translated",
+            "value" : "Fallita la codifica del profilo per l'esportazione."
           }
         },
         "ja" : {
@@ -17706,8 +18166,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Failed to update configuration on %lld profile(s)."
+            "state" : "translated",
+            "value" : "No se ha podido actualizar la configuración en %lld perfil(es)."
           }
         },
         "fr" : {
@@ -17730,8 +18190,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Failed to update configuration on %lld profile(s)."
+            "state" : "translated",
+            "value" : "Fallito l'aggiornamento della configurazione su profilo(i) %lld."
           }
         },
         "ja" : {
@@ -17849,7 +18309,7 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "Focus"
           }
         },
@@ -17968,8 +18428,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Forward"
+            "state" : "translated",
+            "value" : "Avanti"
           }
         },
         "ja" : {
@@ -17998,8 +18458,8 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Forward"
+            "state" : "translated",
+            "value" : "Avançar"
           }
         },
         "ru" : {
@@ -18420,8 +18880,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Glass"
+            "state" : "translated",
+            "value" : "Vidrio"
           }
         },
         "fr" : {
@@ -18438,14 +18898,14 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Glass"
+            "state" : "translated",
+            "value" : "Kaca"
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Glass"
+            "state" : "translated",
+            "value" : "Vetro"
           }
         },
         "ja" : {
@@ -18474,13 +18934,13 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Glass"
+            "state" : "translated",
+            "value" : "Vidro"
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "Glass"
           }
         },
@@ -18539,8 +18999,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Glass Style"
+            "state" : "translated",
+            "value" : "Estilo del vidrio"
           }
         },
         "fr" : {
@@ -18557,14 +19017,14 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Glass Style"
+            "state" : "translated",
+            "value" : "Gaya Kaca"
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Glass Style"
+            "state" : "translated",
+            "value" : "Stile Vetro"
           }
         },
         "ja" : {
@@ -18593,14 +19053,14 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Glass Style"
+            "state" : "translated",
+            "value" : "Estilo do vidro"
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Glass Style"
+            "state" : "translated",
+            "value" : "Стиль Glass"
           }
         },
         "th" : {
@@ -19039,8 +19499,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Grid"
+            "state" : "translated",
+            "value" : "Griglia"
           }
         },
         "ja" : {
@@ -19069,8 +19529,8 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Grid"
+            "state" : "translated",
+            "value" : "Grelha"
           }
         },
         "ru" : {
@@ -19361,7 +19821,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Skrýt nabídky aplikací při zobrazení položek v řádku nabídek"
+            "value" : "V řádku nabídek upřednostňovat ikony před nabídkami aplikací"
           }
         },
         "de" : {
@@ -19480,7 +19940,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Skrýt skrytou část"
+            "value" : "Skrýt sekci „Skryté“"
           }
         },
         "de" : {
@@ -19753,8 +20213,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Horizontal"
+            "state" : "translated",
+            "value" : "Orizzontale"
           }
         },
         "ja" : {
@@ -19783,7 +20243,7 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "Horizontal"
           }
         },
@@ -19843,7 +20303,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hotkey ist von macOS reserviert."
+            "value" : "Tastaturkürzel ist von macOS reserviert"
           }
         },
         "es" : {
@@ -19991,8 +20451,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Hotkeys"
+            "state" : "translated",
+            "value" : "Scorciatoie"
           }
         },
         "ja" : {
@@ -20229,8 +20689,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "How It Works"
+            "state" : "translated",
+            "value" : "Come funziona"
           }
         },
         "ja" : {
@@ -20259,8 +20719,8 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "How It Works"
+            "state" : "translated",
+            "value" : "Como funciona"
           }
         },
         "ru" : {
@@ -20467,8 +20927,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Ice Cube"
+            "state" : "translated",
+            "value" : "Cubetti di Ghiaccio"
           }
         },
         "ja" : {
@@ -20800,8 +21260,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If effects are not visible, disable \"Show menu bar background\" in System Settings %@ Menu Bar"
+            "state" : "translated",
+            "value" : "Si los efectos no se ven, desactiva la opción Mostrar fondo de la barra de menús en Ajustes del sistema %@ Barra de menús"
           }
         },
         "fr" : {
@@ -20818,14 +21278,14 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If effects are not visible, disable \"Show menu bar background\" in System Settings %@ Menu Bar"
+            "state" : "translated",
+            "value" : "Jika efek tidak terlihat, nonaktifkan \"Tampilkan latar belakang bar menu\" di Pengaturan System Bar Menu %@"
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If effects are not visible, disable \"Show menu bar background\" in System Settings %@ Menu Bar"
+            "state" : "translated",
+            "value" : "Se gli effetti non sono visibili, disabilita \"Mostra barra menu sfondo\" nella Barra Menu Impostazioni di Sistema di %@"
           }
         },
         "ja" : {
@@ -20860,8 +21320,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If effects are not visible, disable \"Show menu bar background\" in System Settings %@ Menu Bar"
+            "state" : "translated",
+            "value" : "Если эффекты не отображаются, отключите параметр «Показывать фон панели меню» в «Настройках системы» %@ «Меню»"
           }
         },
         "th" : {
@@ -20925,8 +21385,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If granted, this app will be able to:\n\n• Read current settings and configurations\n• Turn features and options on or off\n• Adjust timing values (delays, intervals, timers)\n• Change how %1$@ Bar behaves\n• Customize settings for each display\n\nThis permission stays active until removed in %2$@'s Automation settings."
+            "state" : "translated",
+            "value" : "Si se concede, esta aplicación podrá:\n\n• Leer los ajustes y configuraciones actuales\n• Activar o desactivar funciones y opciones\n• Ajustar los valores de temporización (retrasos, intervalos, temporizadores)\n• Modificar el comportamiento de %1$@ Bar\n• Personalizar los ajustes de cada pantalla\n\nEste permiso permanecerá activo hasta que se elimine en los ajustes de automatización de %2$@."
           }
         },
         "fr" : {
@@ -20949,8 +21409,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If granted, this app will be able to:\n\n• Read current settings and configurations\n• Turn features and options on or off\n• Adjust timing values (delays, intervals, timers)\n• Change how %1$@ Bar behaves\n• Customize settings for each display\n\nThis permission stays active until removed in %2$@'s Automation settings."
+            "state" : "translated",
+            "value" : "Se concesso, questa applicazione potrà:\n\n• Leggere le attuali impostazioni e configurazioni\n• Attivare o disattivare funzionalità e impostazioni\n• Modificare valori di tempistiche (ritardi, intervalli, timer)\n• Cambiare il comportamento della Barra di %1$@\n• Personalizzare le impostazioni per ogni schermo\n\nQuesto permesso rimane attivo finché non viene rimosso l'Impostazione automatica di %2$@."
           }
         },
         "ja" : {
@@ -20985,8 +21445,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If granted, this app will be able to:\n\n• Read current settings and configurations\n• Turn features and options on or off\n• Adjust timing values (delays, intervals, timers)\n• Change how %1$@ Bar behaves\n• Customize settings for each display\n\nThis permission stays active until removed in %2$@'s Automation settings."
+            "state" : "translated",
+            "value" : "В случае предоставления этого разрешения приложение сможет:\n\n• Считывать текущие настройки и конфигурации\n• Включать и отключать функции и параметры\n• Настраивать временные параметры (задержки, интервалы, таймеры)\n• Изменять поведение панели %1$@\n• Настраивать параметры для каждого дисплея\n\nЭто разрешение остается активным до тех пор, пока его не будет удалено в настройках автоматизации %2$@."
           }
         },
         "th" : {
@@ -21068,8 +21528,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If not whitelisted, you'll see a confirmation dialog showing the app name and what it wants to do."
+            "state" : "translated",
+            "value" : "Se non concesso, vedrai una finestra di conferma che mostra il nome dell'app e ciò che vuole fare."
           }
         },
         "ja" : {
@@ -21187,8 +21647,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If you approve, the app is permanently whitelisted and can modify settings anytime without asking again."
+            "state" : "translated",
+            "value" : "Se approvi, l'applicazione viene permanentemente aggiunta nella whitelist e può modificare le impostazioni in qualsiasi momento senza richiederlo."
           }
         },
         "ja" : {
@@ -21425,8 +21885,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Import Profile(s)"
+            "state" : "translated",
+            "value" : "Importa Profilo(i)"
           }
         },
         "ja" : {
@@ -21455,8 +21915,8 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Import Profile(s)"
+            "state" : "translated",
+            "value" : "Importar perfis"
           }
         },
         "ru" : {
@@ -21782,8 +22242,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Items are arranged in a grid with multiple columns."
+            "state" : "translated",
+            "value" : "Gli elementi sono sistemati in una griglia con più colonne."
           }
         },
         "ja" : {
@@ -21901,8 +22361,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Items are arranged in a single horizontal row."
+            "state" : "translated",
+            "value" : "Gli elementi sono sistemati in una sola riga orizzontale."
           }
         },
         "ja" : {
@@ -22020,8 +22480,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Items are stacked vertically in a single column."
+            "state" : "translated",
+            "value" : "Gli elementi sono sistemati verticalmente in una sola colonna."
           }
         },
         "ja" : {
@@ -22258,8 +22718,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Keep search"
+            "state" : "translated",
+            "value" : "Continua la ricerca"
           }
         },
         "ja" : {
@@ -22615,8 +23075,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Layout"
+            "state" : "translated",
+            "value" : "Disposizione"
           }
         },
         "ja" : {
@@ -22645,14 +23105,14 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Layout"
+            "state" : "translated",
+            "value" : "Disposição"
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Layout"
+            "state" : "translated",
+            "value" : "Размещение"
           }
         },
         "th" : {
@@ -22966,14 +23426,14 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Left aligned"
+            "state" : "translated",
+            "value" : "Rata kiri"
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Left aligned"
+            "state" : "translated",
+            "value" : "Allineato a sinistra"
           }
         },
         "ja" : {
@@ -23002,14 +23462,14 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Left aligned"
+            "state" : "translated",
+            "value" : "Alinhado à esquerda"
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Left aligned"
+            "state" : "translated",
+            "value" : "Выравнивание по левому краю"
           }
         },
         "th" : {
@@ -23324,7 +23784,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tampilan Terang"
+            "value" : "Mode Terang"
           }
         },
         "it" : {
@@ -23924,7 +24384,7 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "max"
           }
         },
@@ -24043,8 +24503,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Maximum number of items per row in the grid layout."
+            "state" : "translated",
+            "value" : "Massimo numero di elementi per riga nel formato griglia."
           }
         },
         "ja" : {
@@ -25233,8 +25693,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu Bar Profile"
+            "state" : "translated",
+            "value" : "Menu Barra Profilo"
           }
         },
         "ja" : {
@@ -25590,8 +26050,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Modified: %@"
+            "state" : "translated",
+            "value" : "Modificato: %@"
           }
         },
         "ja" : {
@@ -25620,8 +26080,8 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Modified: %@"
+            "state" : "translated",
+            "value" : "Modificado: %@"
           }
         },
         "ru" : {
@@ -25804,8 +26264,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move menu bar items from the visible section into the hidden section when they don't fit beside the notch on a notched display. Disable to keep the saved profile layout exactly as authored even when items would otherwise be pushed under the notch."
+            "state" : "translated",
+            "value" : "Mueve los elementos de la barra de menús de la sección visible a la sección oculta cuando no quepan junto al notch en pantallas que lo incorporan. Désactívalo para mantener la disposición del perfil guardado exactamente tal y como se ha diseñado, incluso cuando los elementos quedarían ocultos bajo el notch."
           }
         },
         "fr" : {
@@ -25822,8 +26282,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move menu bar items from the visible section into the hidden section when they don't fit beside the notch on a notched display. Disable to keep the saved profile layout exactly as authored even when items would otherwise be pushed under the notch."
+            "state" : "translated",
+            "value" : "Pindahkan item bar menu dari bagian terlihat ke bagian tersembunyi saat item tidak muat di samping notch di layar notch. Nonaktifkan untuk mempertahankan tata letak profil tersimpan persis seperti yang diatur, meskipun item terdorong ke bawah notch."
           }
         },
         "it" : {
@@ -25864,8 +26324,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move menu bar items from the visible section into the hidden section when they don't fit beside the notch on a notched display. Disable to keep the saved profile layout exactly as authored even when items would otherwise be pushed under the notch."
+            "state" : "translated",
+            "value" : "Перемещать элементы панели меню из видимой области в скрытую, если они не помещаются рядом с выемкой на дисплее с выемкой. Отключите эту функцию, чтобы сохранить макет профиля в точности так, как он был создан, даже если в противном случае элементы были бы сдвинуты под выемку."
           }
         },
         "th" : {
@@ -26185,8 +26645,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "New Items"
+            "state" : "translated",
+            "value" : "Nuovi oggetti"
           }
         },
         "ja" : {
@@ -26304,8 +26764,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "New profile name"
+            "state" : "translated",
+            "value" : "Nuovo nome del profilo"
           }
         },
         "ja" : {
@@ -26334,8 +26794,8 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "New profile name"
+            "state" : "translated",
+            "value" : "Novo nome do perfil"
           }
         },
         "ru" : {
@@ -26542,8 +27002,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No profile selected"
+            "state" : "translated",
+            "value" : "Nessun profilo selezionato"
           }
         },
         "ja" : {
@@ -26572,8 +27032,8 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No profile selected"
+            "state" : "translated",
+            "value" : "Nenhum perfil selecionado"
           }
         },
         "ru" : {
@@ -26661,8 +27121,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No profiles saved. Save your current configuration to create one."
+            "state" : "translated",
+            "value" : "Nessun profilo salvato. Salva l'attuale configurazione per crearne uno."
           }
         },
         "ja" : {
@@ -26899,8 +27359,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No whitelisted apps"
+            "state" : "translated",
+            "value" : "Nessuna applicazione consentita"
           }
         },
         "ja" : {
@@ -27459,7 +27919,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zohlednit výřez"
+            "value" : "S výřezem"
           }
         },
         "de" : {
@@ -27494,7 +27954,7 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "Notch"
           }
         },
@@ -27524,7 +27984,7 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "Notch"
           }
         },
@@ -27589,8 +28049,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Notch margin"
+            "state" : "translated",
+            "value" : "Margen del notch"
           }
         },
         "fr" : {
@@ -27607,14 +28067,14 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Notch margin"
+            "state" : "translated",
+            "value" : "Margin Notch"
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Notch margin"
+            "state" : "translated",
+            "value" : "Margine del Notch"
           }
         },
         "ja" : {
@@ -27649,8 +28109,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Notch margin"
+            "state" : "translated",
+            "value" : "Пределы выемки"
           }
         },
         "th" : {
@@ -27732,8 +28192,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Off"
+            "state" : "translated",
+            "value" : "Spento"
           }
         },
         "ja" : {
@@ -27762,8 +28222,8 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Off"
+            "state" : "translated",
+            "value" : "Desativado"
           }
         },
         "ru" : {
@@ -27851,7 +28311,7 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "OK"
           }
         },
@@ -27881,7 +28341,7 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "OK"
           }
         },
@@ -28083,14 +28543,14 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Opacity"
+            "state" : "translated",
+            "value" : "Opasitas"
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Opacity"
+            "state" : "translated",
+            "value" : "Opacità"
           }
         },
         "ja" : {
@@ -28119,14 +28579,14 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Opacity"
+            "state" : "translated",
+            "value" : "Transparência"
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Opacity"
+            "state" : "translated",
+            "value" : "Непрозрачность"
           }
         },
         "th" : {
@@ -28327,8 +28787,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Open Focus Settings"
+            "state" : "translated",
+            "value" : "Apri impostazioni Focus"
           }
         },
         "ja" : {
@@ -28357,8 +28817,8 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Open Focus Settings"
+            "state" : "translated",
+            "value" : "Abrir configurações de foco"
           }
         },
         "ru" : {
@@ -28803,8 +29263,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Profile"
+            "state" : "translated",
+            "value" : "Profilo"
           }
         },
         "ja" : {
@@ -28833,8 +29293,8 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Profile"
+            "state" : "translated",
+            "value" : "Perfil"
           }
         },
         "ru" : {
@@ -28922,8 +29382,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Profile name"
+            "state" : "translated",
+            "value" : "Nome profilo"
           }
         },
         "ja" : {
@@ -28952,8 +29412,8 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Profile name"
+            "state" : "translated",
+            "value" : "Nome do Perfil"
           }
         },
         "ru" : {
@@ -29041,8 +29501,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Profile: %@"
+            "state" : "translated",
+            "value" : "Profilo: %@"
           }
         },
         "ja" : {
@@ -29071,8 +29531,8 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Profile: %@"
+            "state" : "translated",
+            "value" : "Perfil: %@"
           }
         },
         "ru" : {
@@ -29160,8 +29620,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Profiles"
+            "state" : "translated",
+            "value" : "Profili"
           }
         },
         "ja" : {
@@ -29190,8 +29650,8 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Profiles"
+            "state" : "translated",
+            "value" : "Perfis"
           }
         },
         "ru" : {
@@ -29488,7 +29948,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hotkey aufnehmen"
+            "value" : "Aufnehmen"
           }
         },
         "es" : {
@@ -29612,7 +30072,7 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "Regular"
           }
         },
@@ -29630,14 +30090,14 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Regular"
+            "state" : "translated",
+            "value" : "Reguler"
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Regular"
+            "state" : "translated",
+            "value" : "Regolare"
           }
         },
         "ja" : {
@@ -29672,8 +30132,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Regular"
+            "state" : "translated",
+            "value" : "Стандартный"
           }
         },
         "th" : {
@@ -29755,8 +30215,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Remove %@ from whitelist"
+            "state" : "translated",
+            "value" : "Rimuovi %@ dalla whitelist"
           }
         },
         "ja" : {
@@ -29874,8 +30334,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Remove from whitelist"
+            "state" : "translated",
+            "value" : "Rimuovi dalla whitelist"
           }
         },
         "ja" : {
@@ -29993,8 +30453,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Rename"
+            "state" : "translated",
+            "value" : "Rinomina"
           }
         },
         "ja" : {
@@ -30023,8 +30483,8 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Rename"
+            "state" : "translated",
+            "value" : "Renomear"
           }
         },
         "ru" : {
@@ -31738,7 +32198,123 @@
       }
     },
     "Restart %@" : {
-      "comment" : "A button that restarts the app."
+      "comment" : "A button that restarts the app.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restartovat %@"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ neu starten"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reiniciar %@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Restart %@"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Restart %@"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Muat ulang %@"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Riavvia %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Restart %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Restart %@"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Restart %@"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uruchom ponownie %@"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Restart %@"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Перезапустить %@"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Restart %@"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Restart %@"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Restart %@"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Restart %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重启 %@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Restart %@"
+          }
+        }
+      }
     },
     "Restores divider defaults and moves every movable item except the %@ icon to Hidden. Use this if the layout looks broken or items won’t load." : {
       "comment" : "A message displayed in an alert when the user confirms resetting the menu bar layout.",
@@ -31894,14 +32470,14 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Right aligned"
+            "state" : "translated",
+            "value" : "Rata kanan"
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Right aligned"
+            "state" : "translated",
+            "value" : "Allineato a destra"
           }
         },
         "ja" : {
@@ -31930,14 +32506,14 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Right aligned"
+            "state" : "translated",
+            "value" : "Alinhado à direita"
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Right aligned"
+            "state" : "translated",
+            "value" : "Выравнивание по правому краю"
           }
         },
         "th" : {
@@ -32495,8 +33071,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Save Current"
+            "state" : "translated",
+            "value" : "Salva Corrente"
           }
         },
         "ja" : {
@@ -33566,8 +34142,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Set Menu Bar Profile"
+            "state" : "translated",
+            "value" : "Imposta Barra Menu Profilo"
           }
         },
         "ja" : {
@@ -33661,8 +34237,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Settings URI is disabled. External apps cannot read or modify %@ settings."
+            "state" : "translated",
+            "value" : "El URI de configuración está desactivado. Las aplicaciones externas no pueden leer ni modificar la configuración de %@."
           }
         },
         "fr" : {
@@ -33679,8 +34255,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Settings URI is disabled. External apps cannot read or modify %@ settings."
+            "state" : "translated",
+            "value" : "Pengaturan URL saat ini tidak aktif. Aplikasi eksternal tidak dapat membaca atau mengubah pengaturan %@."
           }
         },
         "it" : {
@@ -33721,8 +34297,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Settings URI is disabled. External apps cannot read or modify %@ settings."
+            "state" : "translated",
+            "value" : "URI настроек отключен. Внешние приложения не могут читать или изменять настройки %@."
           }
         },
         "th" : {
@@ -34024,8 +34600,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Should %1$@ automatically check for updates? You can always check manually from the %2$@ menu bar icon or Settings %3$@ About."
+            "state" : "translated",
+            "value" : "¿Quieres que %1$@ compruebe automáticamente si hay actualizaciones? Siempre puedes hacerlo manualmente desde el icono de la barra de menú de %2$@ o en Ajustes %3$@ Acerca de."
           }
         },
         "fr" : {
@@ -34084,8 +34660,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Should %1$@ automatically check for updates? You can always check manually from the %2$@ menu bar icon or Settings %3$@ About."
+            "state" : "translated",
+            "value" : "Должен ли %1$@ автоматически проверять обновления? Вы всегда можете проверить вручную через значок %2$@ в строке меню или Настройки %3$@ → О программе."
           }
         },
         "th" : {
@@ -35952,8 +36528,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Signed by: %@"
+            "state" : "translated",
+            "value" : "Firmato da: %@"
           }
         },
         "ja" : {
@@ -36071,8 +36647,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Smart"
+            "state" : "translated",
+            "value" : "Intelligente"
           }
         },
         "ja" : {
@@ -36779,14 +37355,14 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Style"
+            "state" : "translated",
+            "value" : "Gaya"
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Style"
+            "state" : "translated",
+            "value" : "Stile"
           }
         },
         "ja" : {
@@ -36815,14 +37391,14 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Style"
+            "state" : "translated",
+            "value" : "Estilo"
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Style"
+            "state" : "translated",
+            "value" : "Стиль"
           }
         },
         "th" : {
@@ -37380,8 +37956,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Supported Settings"
+            "state" : "translated",
+            "value" : "Impostazioni Supportate"
           }
         },
         "ja" : {
@@ -37410,8 +37986,8 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Supported Settings"
+            "state" : "translated",
+            "value" : "Configurações compatíveis"
           }
         },
         "ru" : {
@@ -37475,8 +38051,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "The %@ Bar is aligned to the left edge of the display."
+            "state" : "translated",
+            "value" : "La barra %@ está alineada con el borde izquierdo de la pantalla."
           }
         },
         "fr" : {
@@ -37493,14 +38069,14 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "The %@ Bar is aligned to the left edge of the display."
+            "state" : "translated",
+            "value" : "Bar %@ disejajarkan ke tepi kiri layar."
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "The %@ Bar is aligned to the left edge of the display."
+            "state" : "translated",
+            "value" : "La Barra %@ è allineata nel lato sinistro dello schermo."
           }
         },
         "ja" : {
@@ -37529,14 +38105,14 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "The %@ Bar is aligned to the left edge of the display."
+            "state" : "translated",
+            "value" : "A barra %@ está alinhada à margem esquerda da tela."
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "The %@ Bar is aligned to the left edge of the display."
+            "state" : "translated",
+            "value" : "Панель %@ выровнена по левому краю экрана."
           }
         },
         "th" : {
@@ -37594,8 +38170,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "The %@ Bar is aligned to the right edge of the display."
+            "state" : "translated",
+            "value" : "La barra %@ está alineada con el borde derecho de la pantalla."
           }
         },
         "fr" : {
@@ -37612,14 +38188,14 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "The %@ Bar is aligned to the right edge of the display."
+            "state" : "translated",
+            "value" : "Bar %@ disejajarkan ke tepi kanan layar."
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "The %@ Bar is aligned to the right edge of the display."
+            "state" : "translated",
+            "value" : "La Barra %@ è allineata nel lato destro dello schermo."
           }
         },
         "ja" : {
@@ -37648,14 +38224,14 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "The %@ Bar is aligned to the right edge of the display."
+            "state" : "translated",
+            "value" : "A barra %@ está alinhada à margem direita da tela."
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "The %@ Bar is aligned to the right edge of the display."
+            "state" : "translated",
+            "value" : "Панель %@ выровнена по правому краю экрана."
           }
         },
         "th" : {
@@ -39147,8 +39723,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "To switch profiles with Focus modes, add %1$@ as a Focus Filter in System Settings %2$@ Focus %3$@ [Mode] %4$@ Focus Filters. When a Focus mode deactivates, the display profile is automatically restored."
+            "state" : "translated",
+            "value" : "Para cambiar de perfil con los modos de enfoque, añade %1$@ como filtro de enfoque en Ajustes del sistema %2$@ Enfoque %3$@ [Modo] %4$@ Filtros de enfoque. Cuando se desactiva un modo de enfoque, el perfil de pantalla se restablece automáticamente."
           }
         },
         "fr" : {
@@ -39165,8 +39741,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "To switch profiles with Focus modes, add %1$@ as a Focus Filter in System Settings %2$@ Focus %3$@ [Mode] %4$@ Focus Filters. When a Focus mode deactivates, the display profile is automatically restored."
+            "state" : "translated",
+            "value" : "Untuk berpindah profil dengan mode Fokus, tambahkan %1$@ sebagai Filter Fokus di Pengaturan Sistem %2$@ [Mode] Fokus %3$@ %4$@ Filter Fokus. Ketika mode Fokus dinonaktifkan, profil tampilan akan dipulihkan otomatis."
           }
         },
         "it" : {
@@ -39207,8 +39783,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "To switch profiles with Focus modes, add %1$@ as a Focus Filter in System Settings %2$@ Focus %3$@ [Mode] %4$@ Focus Filters. When a Focus mode deactivates, the display profile is automatically restored."
+            "state" : "translated",
+            "value" : "Чтобы переключаться между профилями с помощью режимов фокусировки, добавьте %1$@ в качестве фильтра фокусировки в «Настройки системы» %2$@ «Фокусировка» %3$@ [Режим] %4$@ «Фильтры фокусировки». При отключении режима фокусировки профиль дисплея восстанавливается автоматически."
           }
         },
         "th" : {
@@ -39975,7 +40551,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hotkey eingeben"
+            "value" : "Eingeben"
           }
         },
         "es" : {
@@ -40361,8 +40937,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Untitled"
+            "state" : "translated",
+            "value" : "Senza titolo"
           }
         },
         "ja" : {
@@ -40391,14 +40967,14 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Untitled"
+            "state" : "translated",
+            "value" : "Sem título"
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Untitled"
+            "state" : "translated",
+            "value" : "Без названия"
           }
         },
         "th" : {
@@ -40480,8 +41056,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update"
+            "state" : "translated",
+            "value" : "Aggiorna"
           }
         },
         "ja" : {
@@ -40510,8 +41086,8 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update"
+            "state" : "translated",
+            "value" : "Atualizar"
           }
         },
         "ru" : {
@@ -40599,8 +41175,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update All"
+            "state" : "translated",
+            "value" : "Aggiorna Tutti"
           }
         },
         "ja" : {
@@ -40629,8 +41205,8 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update All"
+            "state" : "translated",
+            "value" : "Atualizar tudo"
           }
         },
         "ru" : {
@@ -40837,8 +41413,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update Configuration on All Profiles"
+            "state" : "translated",
+            "value" : "Aggiorna Configurazione su Tutti i Profili"
           }
         },
         "ja" : {
@@ -40956,8 +41532,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update Configuration Only"
+            "state" : "translated",
+            "value" : "Aggiorna Solo Configurazione"
           }
         },
         "ja" : {
@@ -41075,8 +41651,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update Layout Only"
+            "state" : "translated",
+            "value" : "Aggiorna Solo Layout"
           }
         },
         "ja" : {
@@ -41194,8 +41770,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update this profile with the current state"
+            "state" : "translated",
+            "value" : "Aggiorna questo profilo con lo stato corrente"
           }
         },
         "ja" : {
@@ -41670,8 +42246,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Use LCS sorting on notched displays"
+            "state" : "translated",
+            "value" : "Usa ordinamento LCS sugli schermi con notch"
           }
         },
         "ja" : {
@@ -42265,8 +42841,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Vertical"
+            "state" : "translated",
+            "value" : "Verticale"
           }
         },
         "ja" : {
@@ -42295,14 +42871,14 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "Vertical"
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Vertical"
+            "state" : "translated",
+            "value" : "Вертикальный"
           }
         },
         "th" : {
@@ -42479,8 +43055,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Warning: This app is not code-signed."
+            "state" : "translated",
+            "value" : "Advertencia: esta aplicación no tiene firma de código."
           }
         },
         "fr" : {
@@ -42503,8 +43079,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Warning: This app is not code-signed."
+            "state" : "translated",
+            "value" : "Attenzione: Questa app non ha la firma del codice."
           }
         },
         "ja" : {
@@ -42539,8 +43115,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Warning: This app is not code-signed."
+            "state" : "translated",
+            "value" : "Предупреждение: это приложение не имеет цифровой подписи."
           }
         },
         "th" : {
@@ -42741,8 +43317,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "When an app sends a thaw:// URL to change settings, Thaw checks if that app is whitelisted."
+            "state" : "translated",
+            "value" : "Quanto un'applicazione invia un URL thaw:// per modificare le impostazioni, Thaw verifica se tale applicazione è nella whitelist."
           }
         },
         "ja" : {
@@ -42777,8 +43353,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "When an app sends a thaw:// URL to change settings, Thaw checks if that app is whitelisted."
+            "state" : "translated",
+            "value" : "Когда приложение отправляет URL-адрес thaw:// для изменения настроек, Thaw проверяет, включено ли это приложение в белый список."
           }
         },
         "th" : {
@@ -42860,8 +43436,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Whitelisted Applications"
+            "state" : "translated",
+            "value" : "Applicazioni nella whitelist"
           }
         },
         "ja" : {
@@ -42896,8 +43472,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Whitelisted Applications"
+            "state" : "translated",
+            "value" : "Приложения из белого списка"
           }
         },
         "th" : {
@@ -42979,14 +43555,14 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Whitelisted apps can read settings, toggle boolean options, set numeric values (timers, delays), change enum settings (rehide strategy, %1$@ Bar location), and modify per-display configurations. This includes auto-rehide, show on click/hover/scroll/double-click, %2$@ Bar, hide application menus, enable always-hidden section, show tooltips, and diagnostic logging."
+            "state" : "translated",
+            "value" : "Aplikasi dalam daftar izin dapat menbaca pengaturan, mengaktifkan atau menonaktifkan opsi boolean, mengubah nilai numberik (waktu, jeda), mengubah pengaturan enum (strategi sembunyi ulang, lokasi Bar %1$@), serta mengubah konfigurasi per layar. Ini mencakup sembunyi-ulang otomatis, tampil saat klik/arah kursor/gulir/klik dua kali, Bar %2$@, menyembunyikan menu aplikasi, mengaktifkan bagian selalu-tersembunyi, tip alat, dan pencatatan diagnostik."
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Whitelisted apps can read settings, toggle boolean options, set numeric values (timers, delays), change enum settings (rehide strategy, %1$@ Bar location), and modify per-display configurations. This includes auto-rehide, show on click/hover/scroll/double-click, %2$@ Bar, hide application menus, enable always-hidden section, show tooltips, and diagnostic logging."
+            "state" : "translated",
+            "value" : "Applicazioni nella whitelist possono leggere le impostazioni, cambiare l'opzione booleana, impostare valori numerici (timer o ritardi), modificare impostazioni enumerati (strategia di rinascondi, posizione della Barra %1$@), e modificare le configurazioni per ogni schermo. Questo include l'auto-rinascondi, mostrare sul click/portare sopra/scorrimento/doppio click, Barra di %2$@, nascondere i menu delle applicazioni, abilitare la sezione \"sempre nascosta\", mostrare tooltip, e log di diagnostica."
           }
         },
         "ja" : {
@@ -43021,8 +43597,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Whitelisted apps can read settings, toggle boolean options, set numeric values (timers, delays), change enum settings (rehide strategy, %1$@ Bar location), and modify per-display configurations. This includes auto-rehide, show on click/hover/scroll/double-click, %2$@ Bar, hide application menus, enable always-hidden section, show tooltips, and diagnostic logging."
+            "state" : "translated",
+            "value" : "Приложения из белого списка могут считывать настройки, переключать булевы параметры, устанавливать числовые значения (таймеры, задержки), изменять настройки перечислений (стратегия повторного скрытия, расположение панели %1$@) и корректировать конфигурации для отдельных экранов. Сюда входят: автоматическое повторное скрытие, отображение при нажатии/наведении курсора/прокрутке/двойном щелчке, панель %2$@, скрытие меню приложений, включение раздела «Всегда скрыто», отображение всплывающих подсказок и ведение диагностического журнала."
           }
         },
         "th" : {
@@ -43342,8 +43918,8 @@
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "You can remove apps from this list at any time to revoke their access."
+            "state" : "translated",
+            "value" : "Puoi rimuovere le applicazioni da questa lista in qualsiasi momento e revocare i loro accessi."
           }
         },
         "ja" : {
