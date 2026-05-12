@@ -5540,17 +5540,14 @@ extension MenuBarItemManager {
             let rightBoundary = ccItem.map(\.bounds.minX) ?? screen.frame.maxX
             var availableWidth = rightBoundary - (notch.maxX + notchGap)
 
-            // Read the actual NSStatusItemSpacing applied to the system.
-            // This is the inter-item gap at render time. The width sum
-            // below uses item.bounds.width, which is the button's
-            // clickable rectangle and does NOT include the gap. Without
-            // adding it, the budget under-counts total layout cost by
-            // (count - 1) × spacing px and overflow can be silently
-            // missed once the user has enough items in the menu bar —
-            // most visibly when the spacing has been customised away
-            // from the default 16, since the per-item miscount stops
-            // matching the historical buffer the check happened to
-            // have.
+            // NSStatusItemSpacing is recorded here for diagnostic logging
+            // only. macOS bakes the spacing into each status item's frame
+            // (verified empirically: item.bounds.width grows 1:1 with the
+            // spacing value), so item.bounds.width and the Control Center
+            // item's bounds.minX already account for it. Subtracting a
+            // separate (count - 1) * spacing gap here used to double-count
+            // the spacing and ejected items into hidden when the bar still
+            // had room, most visibly at the macOS default of 16.
             let userSpacing = CGFloat(max(0, 16 + appState.spacingManager.offset))
 
             // Subtract the layout footprint of items that occupy the
@@ -5601,19 +5598,7 @@ extension MenuBarItemManager {
                 }
             }
 
-            // Account for the (count - 1) inter-item gaps across all
-            // items in the visible area, profile and non-profile
-            // combined. Slightly conservative: when items overflow,
-            // the gap count drops by 1 per overflowed item, but using
-            // the pre-overflow total is the right starting point and
-            // the loop below removes overflow items one at a time
-            // until the remaining footprint fits.
-            let totalItemCount = visibleUIDs.count + nonProfileCount
-            if totalItemCount > 1 {
-                availableWidth -= CGFloat(totalItemCount - 1) * userSpacing
-            }
-
-            // Find the Thaw visible control icon — it must always stay visible.
+            // Find the Thaw visible control icon, which must always stay visible.
             let visibleCtrlUID = items.first(where: { $0.tag == .visibleControlItem })?.uniqueIdentifier
             let chevronWidth = visibleCtrlUID.flatMap { uidWidths[$0] } ?? 0
 
