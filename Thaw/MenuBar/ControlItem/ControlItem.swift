@@ -557,6 +557,18 @@ final class ControlItem {
         }
         let menuBarManager = appState.menuBarManager
 
+        // Suppress phantom clicks delivered to the status item button while
+        // no menu bar items are rendered on-screen for the active space. This
+        // catches fast top-of-screen clicks during the menu bar reveal
+        // sequence under a fullscreen app, which would otherwise expand the
+        // hidden section offscreen. NSApp.currentSystemPresentationOptions is
+        // per-app and does not reflect another app's fullscreen state, so the
+        // items-list signal is used directly.
+        let screenForCheck = window?.screen ?? NSScreen.main
+        if let screen = screenForCheck, !screen.isSystemMenuBarVisible() {
+            return
+        }
+
         switch event.type {
         case .leftMouseDown:
             // Capture modifier flags from the event to ensure we have the state

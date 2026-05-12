@@ -741,6 +741,18 @@ extension HIDEventManager {
             return
         }
 
+        // Suppress show-on-click when no menu bar status items are currently
+        // rendered on-screen for the active space. This catches the case where
+        // a fullscreen app has auto-hidden the menu bar and the click lands in
+        // the top-of-screen trigger zone before the menu bar visually reveals.
+        // NSApp.currentSystemPresentationOptions is per-app and does not
+        // reflect another app's fullscreen state, so the items-list signal is
+        // used directly without a precondition.
+        if !screen.isSystemMenuBarVisible() {
+            Self.diagLog.debug("handleShowOnClick: suppressing, no menu bar items on-screen for active space")
+            return
+        }
+
         guard isMouseInsideEmptyMenuBarSpace(appState: appState, screen: screen) else {
             return
         }

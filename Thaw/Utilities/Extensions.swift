@@ -749,6 +749,19 @@ extension NSScreen {
         return fallback
     }
 
+    /// Returns true when at least one menu bar status item is currently
+    /// rendered on-screen for the active space.
+    ///
+    /// Returns false when the menu bar is auto-hidden behind a fullscreen app
+    /// and not yet visually revealed. The menu bar window itself flips to
+    /// kCGWindowIsOnscreen at the start of the reveal sequence, well before
+    /// the status items become visible to the user; gating on the items list
+    /// more closely matches the perceived reveal state, which is what click
+    /// suppression needs.
+    func isSystemMenuBarVisible() -> Bool {
+        !Bridging.getMenuBarWindowList(option: [.onScreen, .activeSpace, .itemsOnly]).isEmpty
+    }
+
     /// Returns the raw frame of the application menu on this screen, as
     /// reported by the Accessibility API, without any notch-capping applied.
     ///
