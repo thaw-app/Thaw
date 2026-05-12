@@ -40,6 +40,12 @@ final class DisplaySettingsManager: ObservableObject {
     /// active-display configuration changes. Held weakly to avoid retain cycles.
     private weak var appState: AppState?
 
+    /// UUID of the active menu bar display the last time spacing was applied.
+    /// Used to skip didChangeScreenParametersNotification fires that only
+    /// reflect a resolution or other-parameter change on the same display.
+    /// Internal access so unit tests in ThawTests can seed and assert it.
+    var lastAppliedActiveDisplayUUID: String?
+
     /// Performs the initial setup of the manager.
     func performSetup(with appState: AppState) {
         self.appState = appState
@@ -162,6 +168,14 @@ final class DisplaySettingsManager: ObservableObject {
                 guard let self else { return }
                 diagLog.info("Screen parameters changed — \(NSScreen.screens.count) screen(s) connected")
                 captureCurrentlyConnectedDisplays()
+                let currentUUID = Bridging.getActiveMenuBarDisplayUUID()
+                if Self.shouldSkipSpacingApply(
+                    currentActiveDisplayUUID: currentUUID,
+                    lastAppliedActiveDisplayUUID: lastAppliedActiveDisplayUUID
+                ) {
+                    diagLog.info("Active menu bar display unchanged (\(currentUUID ?? "nil")); skipping spacing apply")
+                    return
+                }
                 applyActiveDisplaySpacing(reason: "screenParametersChanged")
             }
             .store(in: &c)
@@ -191,6 +205,22 @@ final class DisplaySettingsManager: ObservableObject {
         cancellables = c
     }
 
+    /// Returns true when a didChangeScreenParametersNotification fire should
+    /// be ignored because the active menu bar display has not changed
+    /// identity since the last spacing apply. A resolution change, lid
+    /// open/close, GPU/sleep transition, or other display-parameter event
+    /// that leaves the active display UUID the same is not a reason to
+    /// re-apply spacing (and risk a relaunch wave when on-disk values drift).
+    ///
+    /// Pure on its inputs, separated from the sink so it can be unit tested
+    /// without spinning up AppState or driving real screen events.
+    static func shouldSkipSpacingApply(
+        currentActiveDisplayUUID currentUUID: String?,
+        lastAppliedActiveDisplayUUID lastUUID: String?
+    ) -> Bool {
+        currentUUID == lastUUID
+    }
+
     /// Reads the active display's spacing offset, syncs it into
     /// spacingManager.offset, and triggers applyOffset. The no-op guard
     /// inside applyOffset skips when on-disk values already match, so this
@@ -200,6 +230,7 @@ final class DisplaySettingsManager: ObservableObject {
     /// moving them.
     private func applyActiveDisplaySpacing(reason: String) {
         guard let appState else { return }
+        lastAppliedActiveDisplayUUID = Bridging.getActiveMenuBarDisplayUUID()
         let desired = Int(configurationForActiveDisplay().itemSpacingOffset.rounded())
         appState.spacingManager.offset = desired
         Task { [weak self] in
