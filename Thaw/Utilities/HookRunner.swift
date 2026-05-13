@@ -17,8 +17,10 @@ import Foundation
 enum HookRunner {
     private static let diagLog = DiagLog(category: "HookRunner")
 
-    /// Path used for the AppleScript runner.
-    private static let osascriptPath = "/usr/bin/osascript"
+    /// Default path to the AppleScript interpreter on macOS. Overridable
+    /// per call via the `osascriptPath` parameter on `run` / `runIfEnabled`
+    /// (used in tests; production callers take the default).
+    static let defaultOSAScriptPath = "/usr/bin/osascript"
 
     /// File extensions routed through osascript.
     private static let appleScriptExtensions: Set<String> = [
@@ -64,14 +66,18 @@ enum HookRunner {
 
     /// Non-throwing wrapper. Logs every outcome (success, failure, skip)
     /// and never propagates errors so the apply pipeline keeps moving.
-    static func runIfEnabled(_ hook: HookScript?, context: Context) async {
+    static func runIfEnabled(
+        _ hook: HookScript?,
+        context: Context,
+        osascriptPath: String = defaultOSAScriptPath
+    ) async {
         guard let hook else { return }
         guard hook.isEnabled else {
             diagLog.debug("\(context.scope.rawValue) \(context.phase.rawValue)-hook disabled, skipping: \(hook.path)")
             return
         }
         do {
-            let outcome = try await run(hook, context: context)
+            let outcome = try await run(hook, context: context, osascriptPath: osascriptPath)
             diagLog.debug(
                 "\(context.scope.rawValue) \(context.phase.rawValue)-hook ok (exit=\(outcome.exitStatus)): \(hook.path)"
             )
@@ -92,7 +98,11 @@ enum HookRunner {
 
     /// Throws on failure. Used by the wrapper above; exposed for callers
     /// that want the outcome (none today, but keeps the API honest).
-    static func run(_ hook: HookScript, context: Context) async throws -> RunOutcome {
+    static func run(
+        _ hook: HookScript,
+        context: Context,
+        osascriptPath: String = defaultOSAScriptPath
+    ) async throws -> RunOutcome {
         let fm = FileManager.default
         let url = URL(fileURLWithPath: hook.path)
         guard fm.fileExists(atPath: url.path) else {
@@ -141,19 +151,62 @@ enum HookRunner {
         }
 
         // Race process termination against a sleep timeout. Whichever wins
-        // tears down the other.
-        let exitStatus: Int32 = try await withThrowingTaskGroup(of: Int32?.self) { group in
-            group.addTask {
-                // Wait for the process to exit.
-                await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-                    process.terminationHandler = { _ in continuation.resume() }
-                }
-                return process.terminationStatus
+        // tears down the other. The whole race is wrapped in a
+        // withTaskCancellationHandler so external cancellation (typically
+        // a newer profile apply replacing the layoutTask) also reaps the
+        // subprocess instead of leaving it running orphaned. The task
+        // group is factored into raceProcessAgainstTimeout so the
+        // closure nesting at this call site stays within two levels.
+        let exitStatus: Int32
+        do {
+            exitStatus = try await withTaskCancellationHandler {
+                try await raceProcessAgainstTimeout(process: process, timeout: clamped)
+            } onCancel: {
+                // Synchronous: send SIGTERM so the polling task in the
+                // helper sees isRunning flip immediately and the group
+                // can unwind without waiting out the remainder of the
+                // timeout. Child tasks observe cancellation through the
+                // parent's propagated state, so an explicit
+                // group.cancelAll here is unnecessary. The matching
+                // async wait and SIGINT escalation run in the catch
+                // branch below, mirroring the timeout cleanup sequence
+                // inside the helper.
+                process.terminate()
             }
-            group.addTask {
-                try await Task.sleep(for: .seconds(clamped))
-                return nil
+        } catch is CancellationError {
+            try? await Task.sleep(for: .seconds(1))
+            if process.isRunning {
+                process.interrupt()
             }
+            throw CancellationError()
+        }
+
+        let stdout = readAvailable(stdoutPipe)
+        let stderr = readAvailable(stderrPipe)
+
+        if exitStatus != 0 {
+            throw HookError.nonZeroExit(exitStatus)
+        }
+        return RunOutcome(exitStatus: exitStatus, stdout: stdout, stderr: stderr)
+    }
+
+    private static func readAvailable(_ pipe: Pipe) -> String {
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        guard !data.isEmpty else { return "" }
+        return String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    }
+
+    /// Awaits whichever wins first: the process exiting, or the timeout
+    /// elapsing. On exit, returns the terminationStatus. On timeout,
+    /// sends SIGTERM, waits a second, escalates to SIGINT if needed, and
+    /// throws HookError.timedOut.
+    private static func raceProcessAgainstTimeout(
+        process: Process,
+        timeout: Double
+    ) async throws -> Int32 {
+        try await withThrowingTaskGroup(of: Int32?.self) { group in
+            group.addTask { try await pollProcessExit(process) }
+            group.addTask { try await timeoutTick(seconds: timeout) }
 
             guard let first = try await group.next() else {
                 group.cancelAll()
@@ -171,21 +224,29 @@ enum HookRunner {
             if process.isRunning {
                 process.interrupt()
             }
-            throw HookError.timedOut(after: clamped)
+            throw HookError.timedOut(after: timeout)
         }
-
-        let stdout = readAvailable(stdoutPipe)
-        let stderr = readAvailable(stderrPipe)
-
-        if exitStatus != 0 {
-            throw HookError.nonZeroExit(exitStatus)
-        }
-        return RunOutcome(exitStatus: exitStatus, stdout: stdout, stderr: stderr)
     }
 
-    private static func readAvailable(_ pipe: Pipe) -> String {
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        guard !data.isEmpty else { return "" }
-        return String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    /// Polls isRunning instead of registering a terminationHandler after
+    /// process.run(). Foundation only invokes the handler on the
+    /// running-to-exited transition, so a hook that exits in the window
+    /// between process.run() returning and the handler being assigned
+    /// would never fire it; the continuation would dangle and the
+    /// timeout would race in as a false positive. Polling reads live
+    /// state, so a process that already terminated returns its status
+    /// on the first probe.
+    private static func pollProcessExit(_ process: Process) async throws -> Int32 {
+        while process.isRunning {
+            try await Task.sleep(for: .milliseconds(50))
+        }
+        return process.terminationStatus
+    }
+
+    /// Sleeps for the given duration then returns nil to signal "timeout
+    /// won the race" inside the task group.
+    private static func timeoutTick(seconds: Double) async throws -> Int32? {
+        try await Task.sleep(for: .seconds(seconds))
+        return nil
     }
 }

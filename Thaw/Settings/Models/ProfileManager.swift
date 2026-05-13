@@ -387,6 +387,16 @@ final class ProfileManager: ObservableObject {
                 previousProfileID: baseContext.previousID,
                 previousProfileName: baseContext.previousName
             ))
+            // A newer apply may have cancelled this task while the
+            // profile post-hook was awaiting (long-running script);
+            // skip the global post-hook in that case so the cancelled
+            // apply doesn't also fire the outer teardown.
+            if Task.isCancelled {
+                if self?.layoutGeneration == generation {
+                    self?.layoutTask = nil
+                }
+                return
+            }
             await HookRunner.runIfEnabled(globalPost, context: HookRunner.Context(
                 phase: .post,
                 scope: .global,
