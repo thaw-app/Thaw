@@ -237,77 +237,94 @@ final class ProfileManager: ObservableObject {
     /// pushed, driving the per-profile spacing behaviour. The no-op guard
     /// inside applyOffset skips the relaunch when the on-disk values
     /// already match, so identical-offset switches cost nothing.
-    func applyProfile(_ profile: Profile, to appState: AppState) {
+    ///
+    /// previousProfileID is the active profile ID before this apply was
+    /// initiated. Callers capture it before they overwrite
+    /// self.activeProfileID, so it can be surfaced to hooks via the
+    /// THAW_PREVIOUS_PROFILE_ID env var.
+    func applyProfile(
+        _ profile: Profile,
+        to appState: AppState,
+        previousProfileID: UUID? = nil
+    ) {
         diagLog.debug(
             "applyProfile entered: name=\(profile.name)"
         )
-        profile.generalSettings.apply(to: appState.settings.general)
-        profile.advancedSettings.apply(to: appState.settings.advanced)
-
-        // Apply hotkeys
-        Defaults.set(profile.hotkeys, forKey: .hotkeys)
-        for hotkey in appState.settings.hotkeys.hotkeys {
-            guard let data = profile.hotkeys[hotkey.action.rawValue] else {
-                hotkey.keyCombination = nil
-                continue
-            }
-            do {
-                let keyCombination = try decoder.decode(
-                    KeyCombination?.self,
-                    from: data
-                )
-                hotkey.keyCombination = keyCombination
-            } catch {
-                diagLog.error(
-                    "Failed to decode hotkey for \(hotkey.action.rawValue): \(error)"
-                )
-            }
-        }
-
-        // Apply display configurations
-        appState.settings.displaySettings.configurations = profile.displayConfigurations
-
-        // Apply appearance configuration
-        appState.appearanceManager.configuration = profile.appearanceConfiguration
-
-        // Apply custom names to UserDefaults.
-        Defaults.set(
-            profile.menuBarLayout.customNames,
-            forKey: .menuBarItemCustomNames
-        )
-
-        // Apply the New Items badge placement before starting the layout
-        // task, so late-arriving items land in the profile-defined spot.
-        if let placement = profile.menuBarLayout.newItemsPlacement {
-            appState.itemManager.applyNewItemsPlacement(placement)
-        }
 
         // Cancel any in-flight layout task before starting a new one.
         // Prevents two profile applies from fighting over item positions.
         layoutTask?.cancel()
+        layoutGeneration &+= 1
+        let generation = layoutGeneration
 
         let pinnedHidden = Set(profile.menuBarLayout.pinnedHiddenBundleIDs)
         let pinnedAlwaysHidden = Set(profile.menuBarLayout.pinnedAlwaysHiddenBundleIDs)
         let sectionOrder = profile.menuBarLayout.savedSectionOrder
         let itemSectionMap = profile.menuBarLayout.itemSectionMap ?? [:]
         let itemOrder = profile.menuBarLayout.itemOrder ?? [:]
-        layoutGeneration &+= 1
-        let generation = layoutGeneration
-        // Run the spacing apply BEFORE the layout pass. Otherwise the two
-        // race: applyOffset() kills and relaunches every menu bar app, so
-        // any positioning the layout task did up to that point is wiped
-        // when items reappear at the OS default insertion point. The
-        // no-op guard inside applyOffset() returns immediately when the
-        // on-disk values already match, so identical-offset switches add
-        // no latency.
-        //
-        // After the relaunch wave, restart a settling period so
-        // applyProfileLayout's wait-for-settling loop blocks until items
-        // have actually re-attached. Without this, the settling flag is
-        // false (no performSetup to set it), the wait passes through, and
-        // applyProfileLayout positions items that haven't come back yet,
-        // leaving them at OS-default positions.
+
+        // Snapshot hook config before entering the task. Resolving
+        // global hooks inside the Task would still work; doing it now
+        // keeps the read on the main actor with the rest of the prep.
+        let globalPre = HookScript.loadGlobal(.pre)
+        let globalPost = HookScript.loadGlobal(.post)
+        let profilePre = profile.automation?.preHook
+        let profilePost = profile.automation?.postHook
+
+        let previousName = previousProfileID.flatMap { id in
+            profiles.first(where: { $0.id == id })?.name
+        }
+        let baseContext = (
+            profileID: profile.id,
+            profileName: profile.name,
+            previousID: previousProfileID,
+            previousName: previousName
+        )
+
         layoutTask = Task { [weak self] in
+            // 1. Pre-hooks. Global runs first so it can do common setup;
+            //    profile-specific runs second so it can override or extend.
+            await HookRunner.runIfEnabled(globalPre, context: HookRunner.Context(
+                phase: .pre,
+                scope: .global,
+                profileID: baseContext.profileID,
+                profileName: baseContext.profileName,
+                previousProfileID: baseContext.previousID,
+                previousProfileName: baseContext.previousName
+            ))
+            if Task.isCancelled { return }
+            await HookRunner.runIfEnabled(profilePre, context: HookRunner.Context(
+                phase: .pre,
+                scope: .profile,
+                profileID: baseContext.profileID,
+                profileName: baseContext.profileName,
+                previousProfileID: baseContext.previousID,
+                previousProfileName: baseContext.previousName
+            ))
+            if Task.isCancelled { return }
+
+            // 2. Snapshot apply: push profile settings into the running
+            //    app state. Hopping to the MainActor is a no-op here
+            //    because ProfileManager is @MainActor and the surrounding
+            //    Task inherits that isolation; the explicit await makes
+            //    the boundary readable.
+            await self?.applySnapshot(profile, to: appState)
+
+            // Run the spacing apply BEFORE the layout pass. Otherwise the
+            // two race: applyOffset() kills and relaunches every menu bar
+            // app, so any positioning the layout task did up to that
+            // point is wiped when items reappear at the OS default
+            // insertion point. The no-op guard inside applyOffset()
+            // returns immediately when the on-disk values already match,
+            // so identical-offset switches add no latency.
+            //
+            // After the relaunch wave, restart a settling period so
+            // applyProfileLayout's wait-for-settling loop blocks until
+            // items have actually re-attached. Without this, the settling
+            // flag is false (no performSetup to set it), the wait passes
+            // through, and applyProfileLayout positions items that
+            // haven't come back yet, leaving them at OS-default positions.
+
             // Preflight settling: flip isInStartupSettling on BEFORE the
             // wave so cacheItemsRegardless skips late-arriver detection
             // and scheduleProfileResort short-circuits while apps are
@@ -352,9 +369,81 @@ final class ProfileManager: ObservableObject {
                 itemSectionMap: itemSectionMap,
                 itemOrder: itemOrder
             )
+
+            // 3. Post-hooks. Profile runs first (mirror of the pre order),
+            //    then global teardown. Cancellation skips both, since a
+            //    newer apply is taking over.
+            if Task.isCancelled {
+                if self?.layoutGeneration == generation {
+                    self?.layoutTask = nil
+                }
+                return
+            }
+            await HookRunner.runIfEnabled(profilePost, context: HookRunner.Context(
+                phase: .post,
+                scope: .profile,
+                profileID: baseContext.profileID,
+                profileName: baseContext.profileName,
+                previousProfileID: baseContext.previousID,
+                previousProfileName: baseContext.previousName
+            ))
+            await HookRunner.runIfEnabled(globalPost, context: HookRunner.Context(
+                phase: .post,
+                scope: .global,
+                profileID: baseContext.profileID,
+                profileName: baseContext.profileName,
+                previousProfileID: baseContext.previousID,
+                previousProfileName: baseContext.previousName
+            ))
+
             if self?.layoutGeneration == generation {
                 self?.layoutTask = nil
             }
+        }
+    }
+
+    /// Pushes the profile snapshot into the live app state. Split out so
+    /// applyProfile's task body stays readable.
+    private func applySnapshot(_ profile: Profile, to appState: AppState) {
+        profile.generalSettings.apply(to: appState.settings.general)
+        profile.advancedSettings.apply(to: appState.settings.advanced)
+
+        // Apply hotkeys
+        Defaults.set(profile.hotkeys, forKey: .hotkeys)
+        for hotkey in appState.settings.hotkeys.hotkeys {
+            guard let data = profile.hotkeys[hotkey.action.rawValue] else {
+                hotkey.keyCombination = nil
+                continue
+            }
+            do {
+                let keyCombination = try decoder.decode(
+                    KeyCombination?.self,
+                    from: data
+                )
+                hotkey.keyCombination = keyCombination
+            } catch {
+                diagLog.error(
+                    "Failed to decode hotkey for \(hotkey.action.rawValue): \(error)"
+                )
+            }
+        }
+
+        // Apply display configurations
+        appState.settings.displaySettings.configurations = profile.displayConfigurations
+
+        // Apply appearance configuration
+        appState.appearanceManager.configuration = profile.appearanceConfiguration
+
+        // Apply custom names to UserDefaults.
+        Defaults.set(
+            profile.menuBarLayout.customNames,
+            forKey: .menuBarItemCustomNames
+        )
+
+        // Apply the New Items badge placement before starting the layout
+        // task, so late-arriving items land in the profile-defined spot.
+        if let placement = profile.menuBarLayout.newItemsPlacement {
+            appState.itemManager.applyNewItemsPlacement(placement)
         }
     }
 
@@ -569,6 +658,33 @@ final class ProfileManager: ObservableObject {
         try saveProfileAndUpdateManifest(profile)
     }
 
+    // MARK: - Profile Hooks
+
+    /// Returns the automation config (pre/post hooks) attached to the
+    /// given profile. Returns an empty container when the profile has
+    /// no hooks or cannot be loaded.
+    func hooks(forProfileID id: UUID) -> ProfileAutomation {
+        guard let profile = try? loadProfile(id: id) else {
+            return ProfileAutomation()
+        }
+        return profile.automation ?? ProfileAutomation()
+    }
+
+    /// Sets the hook for the given phase on the given profile. Passing
+    /// nil clears the hook. The profile JSON is rewritten in place; the
+    /// manifest's modifiedAt is bumped so the UI reflects the change.
+    func setHook(_ hook: HookScript?, phase: HookPhase, forProfileID id: UUID) throws {
+        var profile = try loadProfile(id: id)
+        var automation = profile.automation ?? ProfileAutomation()
+        switch phase {
+        case .pre: automation.preHook = hook
+        case .post: automation.postHook = hook
+        }
+        profile.automation = automation.isEmpty ? nil : automation
+        profile.modifiedAt = Date()
+        try saveProfileAndUpdateManifest(profile)
+    }
+
     /// Exports all profiles as a single JSON file including metadata.
     func exportAllProfiles() -> String? {
         var entries = [ProfileExportEntry]()
@@ -718,9 +834,10 @@ final class ProfileManager: ObservableObject {
         diagLog.info("Focus Filter: applying profile \(idString)")
         do {
             let profile = try loadProfile(id: profileID)
+            let previousID = activeProfileID
             activeProfileID = profileID
             focusFilterActive = true
-            applyProfile(profile, to: appState)
+            applyProfile(profile, to: appState, previousProfileID: previousID)
         } catch {
             diagLog.error("Focus Filter apply failed: \(error)")
         }
@@ -753,7 +870,10 @@ final class ProfileManager: ObservableObject {
         guard let activeID = activeProfileID else { return }
         do {
             let profile = try loadProfile(id: activeID)
-            applyProfile(profile, to: appState)
+            // No previous-vs-new transition here; pass the active id as
+            // both previous and current so a hook can see the apply was a
+            // refresh of the same profile rather than a switch.
+            applyProfile(profile, to: appState, previousProfileID: activeID)
         } catch {
             diagLog.error("reapplyActiveProfile failed: \(error)")
         }
@@ -770,8 +890,9 @@ final class ProfileManager: ObservableObject {
         diagLog.info("Auto-switching to profile \(meta.name) for display \(uuid)")
         do {
             let profile = try loadProfile(id: meta.id)
+            let previousID = activeProfileID
             activeProfileID = meta.id
-            applyProfile(profile, to: appState)
+            applyProfile(profile, to: appState, previousProfileID: previousID)
         } catch {
             diagLog.error("Auto-switch failed: \(error)")
         }

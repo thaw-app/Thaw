@@ -689,8 +689,9 @@ final class MenuBarManager: ObservableObject {
         Task { [weak self] in
             do {
                 let profile = try appState.profileManager.loadProfile(id: profileID)
+                let previousID = appState.profileManager.activeProfileID
                 appState.profileManager.activeProfileID = profileID
-                appState.profileManager.applyProfile(profile, to: appState)
+                appState.profileManager.applyProfile(profile, to: appState, previousProfileID: previousID)
             } catch {
                 self?.diagLog.error("Failed to apply profile \(profileID): \(error)")
             }

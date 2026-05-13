@@ -287,6 +287,11 @@ extension Defaults {
         case settingsURIWhitelist = "SettingsURIWhitelist"
         case settingsURISigningIdentities = "SettingsURISigningIdentities"
 
+        // MARK: Profile Hooks
+
+        case globalPreProfileHook = "GlobalPreProfileHook"
+        case globalPostProfileHook = "GlobalPostProfileHook"
+
         // MARK: Deprecated (Appearance Settings)
 
         case menuBarHasBorder = "MenuBarHasBorder"

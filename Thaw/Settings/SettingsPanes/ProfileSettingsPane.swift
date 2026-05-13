@@ -297,8 +297,9 @@ struct ProfileSettingsPane: View {
         Task {
             do {
                 let profile = try profileManager.loadProfile(id: id)
+                let previousID = profileManager.activeProfileID
                 profileManager.activeProfileID = id
-                profileManager.applyProfile(profile, to: appState)
+                profileManager.applyProfile(profile, to: appState, previousProfileID: previousID)
                 // Wait for the layout task to complete before re-enabling.
                 await profileManager.layoutTask?.value
             } catch {

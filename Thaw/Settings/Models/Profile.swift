@@ -256,6 +256,25 @@ struct ProfileContent {
     var displayConfigurations: [String: DisplayIceBarConfiguration]
     var appearanceConfiguration: MenuBarAppearanceConfigurationV2
     var menuBarLayout: MenuBarLayoutSnapshot
+    var automation: ProfileAutomation?
+
+    init(
+        generalSettings: GeneralSettingsSnapshot,
+        advancedSettings: AdvancedSettingsSnapshot,
+        hotkeys: [String: Data],
+        displayConfigurations: [String: DisplayIceBarConfiguration],
+        appearanceConfiguration: MenuBarAppearanceConfigurationV2,
+        menuBarLayout: MenuBarLayoutSnapshot,
+        automation: ProfileAutomation? = nil
+    ) {
+        self.generalSettings = generalSettings
+        self.advancedSettings = advancedSettings
+        self.hotkeys = hotkeys
+        self.displayConfigurations = displayConfigurations
+        self.appearanceConfiguration = appearanceConfiguration
+        self.menuBarLayout = menuBarLayout
+        self.automation = automation
+    }
 }
 
 // MARK: - Profile
@@ -272,6 +291,7 @@ struct Profile: Codable, Identifiable {
     var displayConfigurations: [String: DisplayIceBarConfiguration]
     var appearanceConfiguration: MenuBarAppearanceConfigurationV2
     var menuBarLayout: MenuBarLayoutSnapshot
+    var automation: ProfileAutomation?
 
     /// Returns lightweight metadata for this profile.
     var metadata: ProfileMetadata {
@@ -291,7 +311,8 @@ struct Profile: Codable, Identifiable {
             hotkeys: hotkeys,
             displayConfigurations: displayConfigurations,
             appearanceConfiguration: appearanceConfiguration,
-            menuBarLayout: menuBarLayout
+            menuBarLayout: menuBarLayout,
+            automation: automation
         )
     }
 
@@ -308,6 +329,7 @@ struct Profile: Codable, Identifiable {
         case displayConfigurations
         case appearanceConfiguration
         case menuBarLayout
+        case automation
     }
 
     init(
@@ -327,6 +349,7 @@ struct Profile: Codable, Identifiable {
         self.displayConfigurations = content.displayConfigurations
         self.appearanceConfiguration = content.appearanceConfiguration
         self.menuBarLayout = content.menuBarLayout
+        self.automation = content.automation
     }
 
     init(from decoder: Decoder) throws {
@@ -399,6 +422,11 @@ struct Profile: Codable, Identifiable {
             pinnedHiddenBundleIDs: [],
             pinnedAlwaysHiddenBundleIDs: [],
             customNames: [:]
+        )
+
+        automation = try container.decodeIfPresent(
+            ProfileAutomation.self,
+            forKey: .automation
         )
     }
 }

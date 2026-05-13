@@ -804,8 +804,9 @@ final class ControlItem {
         let profileManager = appState.profileManager
         Task {
             guard let profile = try? profileManager.loadProfile(id: profileID) else { return }
+            let previousID = profileManager.activeProfileID
             profileManager.activeProfileID = profileID
-            profileManager.applyProfile(profile, to: appState)
+            profileManager.applyProfile(profile, to: appState, previousProfileID: previousID)
         }
     }
 
