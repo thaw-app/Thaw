@@ -5454,6 +5454,25 @@ extension MenuBarItemManager {
         let hiddenCtrlUID = controlItems.hidden.uniqueIdentifier
         let ahCtrlUID = controlItems.alwaysHidden?.uniqueIdentifier
 
+        // Snapshot each item's current section ONCE so the cache-log loop
+        // and Phase 1 below see identical classifications. context.findSection
+        // re-queries the Window Server via Bridging.getWindowBounds on every
+        // call. Between the cache-log iteration (a few lines below) and the
+        // Phase 1 iteration further down, the transient bounds reported
+        // during a section.show()-driven control-item move can flip an
+        // item's classification, producing empty currentHiddenSet and
+        // currentAHSet that let Phase 1 skip the AH_ctrl move when items
+        // legitimately need to cross the hidden↔always-hidden boundary.
+        // Indexed by windowID because items duplicated across displays
+        // share a uniqueIdentifier but have distinct windows; storing per
+        // window preserves each instance's own classification.
+        var sectionByWindowID: [CGWindowID: MenuBarSection.Name] = [:]
+        for item in items where isProfileItem(item) {
+            if let section = context.findSection(for: item) {
+                sectionByWindowID[item.windowID] = section
+            }
+        }
+
         // Rebuild desiredFlat with control items at section boundaries.
         var sectionMap = itemSectionMap
         var desiredFlatWithControls = [String]()
@@ -5479,7 +5498,7 @@ extension MenuBarItemManager {
         for sectionName in [MenuBarSection.Name.visible, .hidden, .alwaysHidden] {
             let sectionItems = items.filter { item in
                 guard isProfileItem(item) else { return false }
-                return context.findSection(for: item) == sectionName
+                return sectionByWindowID[item.windowID] == sectionName
             }
             MenuBarItemManager.diagLog.debug(
                 "applyProfileLayout: current \(sectionName.logString) has \(sectionItems.count) items: \(sectionItems.map(\.uniqueIdentifier))"
@@ -5880,13 +5899,16 @@ extension MenuBarItemManager {
             var movedCount = 0
 
             // Classify items into the two sets Phase 1 actually consults.
-            // A single pass with direct insertion avoids the UID-keyed dict
-            // collapse that previously dropped entries when the same UID
-            // resolved across multiple sections (e.g. multi-display).
+            // Read from the sectionByWindowID snapshot built earlier so the
+            // classification here matches what the cache-log loop reported
+            // above. Calling context.findSection again can return different
+            // values for the same windowID if section.show()'s control-item
+            // moves landed in between, which surfaces as an empty Phase 1
+            // view of currently-occupied hidden / always-hidden sections.
             var currentHiddenSet = Set<String>()
             var currentAHSet = Set<String>()
             for item in items where isProfileItem(item) {
-                switch context.findSection(for: item) {
+                switch sectionByWindowID[item.windowID] {
                 case .hidden:
                     currentHiddenSet.insert(item.uniqueIdentifier)
                 case .alwaysHidden:
@@ -5978,6 +6000,113 @@ extension MenuBarItemManager {
                             try? await Task.sleep(for: .milliseconds(200))
                         } catch {
                             MenuBarItemManager.diagLog.error("Profile layout: failed to move AH_ctrl: \(error)")
+                        }
+                    }
+                }
+
+                // Per-item cross-section fallback. The AH_ctrl move only
+                // re-classifies items implicitly via its X position. When
+                // the items destined for AH are currently RIGHT of items
+                // destined for hidden (and vice versa) — most commonly
+                // after a fresh start where every managed item sits in
+                // the hidden section — no single AH_ctrl placement can
+                // split the two groups correctly. The move() no-op guard
+                // can also cancel the AH_ctrl move outright when AH_ctrl
+                // already sits adjacent to the chosen anchor. Either way,
+                // a re-classification pass after the AH_ctrl attempt
+                // tells us which items still need to cross the boundary,
+                // and dragging them explicitly to .leftOfItem(AH_ctrl)
+                // or .rightOfItem(AH_ctrl) puts them on the correct
+                // side. Phase 2's LCS handles within-section ordering.
+                let freshItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+                var freshItemsCopy = freshItems
+                if let freshControl = ControlItemPair(
+                    items: &freshItemsCopy,
+                    hiddenControlItemWindowID: hiddenWID,
+                    alwaysHiddenControlItemWindowID: alwaysHiddenWID
+                ),
+                    let ahItem = freshItems.first(where: { $0.uniqueIdentifier == ahCtrlUID })
+                {
+                    var verifyContext = CacheContext(
+                        controlItems: freshControl,
+                        displayID: Bridging.getActiveMenuBarDisplayID()
+                    )
+                    // Single classification pass, indexed by windowID so
+                    // multi-display duplicates of the same uniqueIdentifier
+                    // each keep their own section.
+                    var postSectionByWindowID: [CGWindowID: MenuBarSection.Name] = [:]
+                    for item in freshItems where isProfileItem(item) {
+                        if let s = verifyContext.findSection(for: item) {
+                            postSectionByWindowID[item.windowID] = s
+                        }
+                    }
+                    var stillInHidden = Set<String>()
+                    var stillInAH = Set<String>()
+                    for item in freshItems where isProfileItem(item) {
+                        switch postSectionByWindowID[item.windowID] {
+                        case .hidden:
+                            stillInHidden.insert(item.uniqueIdentifier)
+                        case .alwaysHidden:
+                            stillInAH.insert(item.uniqueIdentifier)
+                        case .visible, .none:
+                            break
+                        }
+                    }
+                    let crossToAH = stillInHidden.intersection(desiredAHSet)
+                    let crossToHidden = stillInAH.intersection(desiredHiddenSet)
+
+                    if !crossToAH.isEmpty || !crossToHidden.isEmpty {
+                        MenuBarItemManager.diagLog.debug(
+                            "Profile layout: AH_ctrl placement left \(crossToAH.count) item(s) needing AH and \(crossToHidden.count) item(s) needing hidden, running per-item fallback"
+                        )
+
+                        // Move items destined for AH (currently in hidden)
+                        // to the LEFT of AH_ctrl. Iterate in reverse
+                        // profile order so the first item in
+                        // itemOrder["alwaysHidden"] (rightmost in AH per
+                        // profile convention, index 0) is moved last and
+                        // therefore lands closest to AH_ctrl, matching
+                        // the order LCS will leave it in.
+                        let ahProfileOrder = itemOrder["alwaysHidden"] ?? []
+                        let orderedCrossToAH = ahProfileOrder.reversed().filter { crossToAH.contains($0) }
+                            + crossToAH.subtracting(ahProfileOrder).sorted()
+                        for uid in orderedCrossToAH {
+                            guard
+                                let item = freshItems.first(where: { $0.uniqueIdentifier == uid && isProfileItem($0) })
+                            else { continue }
+                            do {
+                                try await move(item: item, to: .leftOfItem(ahItem), skipInputPause: true)
+                                movedCount += 1
+                                try? await Task.sleep(for: .milliseconds(100))
+                            } catch {
+                                MenuBarItemManager.diagLog.error(
+                                    "Profile layout: per-item move to AH failed for \(uid): \(error)"
+                                )
+                            }
+                        }
+
+                        // Move items destined for hidden (currently in AH)
+                        // to the RIGHT of AH_ctrl. Iterate in profile
+                        // order so itemOrder["hidden"] index 0 (rightmost
+                        // in hidden = furthest from AH_ctrl) is moved
+                        // first and gets pushed furthest right by
+                        // subsequent moves.
+                        let hiddenProfileOrder = itemOrder["hidden"] ?? []
+                        let orderedCrossToHidden = hiddenProfileOrder.filter { crossToHidden.contains($0) }
+                            + crossToHidden.subtracting(hiddenProfileOrder).sorted()
+                        for uid in orderedCrossToHidden {
+                            guard
+                                let item = freshItems.first(where: { $0.uniqueIdentifier == uid && isProfileItem($0) })
+                            else { continue }
+                            do {
+                                try await move(item: item, to: .rightOfItem(ahItem), skipInputPause: true)
+                                movedCount += 1
+                                try? await Task.sleep(for: .milliseconds(100))
+                            } catch {
+                                MenuBarItemManager.diagLog.error(
+                                    "Profile layout: per-item move to hidden failed for \(uid): \(error)"
+                                )
+                            }
                         }
                     }
                 }
