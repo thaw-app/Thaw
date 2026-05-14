@@ -179,6 +179,44 @@ final class MenuBarItemManager: ObservableObject {
 
     /// Continuation to signal when background cache task completes.
     private var backgroundCacheContinuation: CheckedContinuation<Void, Never>?
+
+    // MARK: - Layout coordination state
+    //
+    // The flags below coordinate three overlapping concerns. They are
+    // not collapsed into a single token because the AX-timing and live-
+    // Window-Server interactions each one guards have evolved
+    // independently from production incidents. Any consolidation needs
+    // manual smoke-testing on real hardware to catch regressions that
+    // unit tests cannot.
+    //
+    // 1. In-flight gating of the cache cycle. While one of these is
+    //    set, cacheItemsRegardless suppresses restore, late-arrival
+    //    detection, or section-order saves so an in-flight operation
+    //    isn't fought by the cycle:
+    //      - isResettingLayout
+    //      - isRestoringItemOrder (+ isRestoringItemOrderTimestamp)
+    //      - isApplyingProfileLayout
+    //      - suppressNextNewLeftmostItemRelocation
+    //
+    // 2. Startup settling. Gates restore and saves during the cold-boot
+    //    or post-permission-grant window when many apps appear at once:
+    //      - isInStartupSettling (+ startupSettlingTask)
+    //      - settlingDeadline
+    //      - settlingExpectedBundleIDs
+    //      - settlingKind
+    //
+    // 3. Active-profile re-sort. Caches the last-applied profile spec so
+    //    a late-arriving profile item can be reinserted without a full
+    //    re-apply:
+    //      - activeProfileLayout
+    //      - activeProfileItemIdentifiers
+    //      - profileSortedItemIdentifiers
+    //      - profileResortTask
+    //
+    // isApplyingProfileLayout sits in both group 1 and group 3 because
+    // it both gates the cache cycle and marks an active profile apply
+    // window for the re-sort path.
+
     /// Suppresses image cache updates during layout reset to prevent stale cache during moves.
     var isResettingLayout = false
     /// Suppresses saving section order during an active order-restore pass.
@@ -5258,6 +5296,24 @@ extension MenuBarItemManager {
         isApplyingProfileLayout = false
     }
 
+    /// Awaits the end of the startup settling window before returning.
+    ///
+    /// Loops in case performSetup re-enters mid-await (e.g. a permission
+    /// re-grant during login): re-entry cancels the captured task and
+    /// starts a new settling window, so resuming on a single captured
+    /// task could land back inside an active window. Re-check
+    /// isInStartupSettling after each await and pick up the current
+    /// startupSettlingTask.
+    private func waitForStartupSettlingToEnd() async {
+        while isInStartupSettling {
+            guard let settlingTask = startupSettlingTask else { break }
+            MenuBarItemManager.diagLog.debug(
+                "applyProfileLayout: waiting for startup settling to end"
+            )
+            await settlingTask.value
+        }
+    }
+
     /// Applies a profile's layout by moving items to match the profile's
     /// saved section assignments and within-section ordering.
     ///
@@ -5275,25 +5331,16 @@ extension MenuBarItemManager {
         itemSectionMap: [String: String],
         itemOrder: [String: [String]]
     ) async {
-        // Wait for the startup settling period to end before applying the
-        // profile. During settling, cacheItemsRegardless skips restore
-        // and absorbs every current item into profileSortedItemIdentifiers;
+        // MARK: Phase 0: gate on startup settling
+        //
+        // During settling, cacheItemsRegardless skips restore and
+        // absorbs every current item into profileSortedItemIdentifiers;
         // a layout applied here has its moves silently shadowed and the
         // late-arrival re-sort path is broken for items that appeared
-        // inside the window. Loop in case performSetup re-enters while
-        // we are awaiting (e.g. a permission re-grant during login):
-        // re-entry cancels the captured task and starts a new settling
-        // window, so resuming on a single captured task could land us
-        // back inside an active window. Re-check isInStartupSettling
-        // after each await and pick up the current startupSettlingTask.
-        while isInStartupSettling {
-            guard let settlingTask = startupSettlingTask else { break }
-            MenuBarItemManager.diagLog.debug(
-                "applyProfileLayout: waiting for startup settling to end"
-            )
-            await settlingTask.value
-        }
+        // inside the window.
+        await waitForStartupSettlingToEnd()
 
+        // MARK: Phase 1: persist state and arm in-flight flags
         // Directly set in-memory state (avoids cache cycle race).
         pinnedHiddenBundleIDs = pinnedHidden
         pinnedAlwaysHiddenBundleIDs = pinnedAlwaysHidden
@@ -5331,6 +5378,7 @@ extension MenuBarItemManager {
             return
         }
 
+        // MARK: Phase 2: expose sections for moves
         // Show all sections so items are accessible for moving.
         for section in appState.menuBarManager.sections where section.name != .visible {
             section.show()
@@ -5343,6 +5391,7 @@ extension MenuBarItemManager {
             }
         }
 
+        // MARK: Phase 3: discover items, classify sections, build sequences
         let hiddenWID: CGWindowID? = appState.menuBarManager
             .controlItem(withName: .hidden)?.window
             .flatMap { CGWindowID(exactly: $0.windowNumber) }
@@ -5449,6 +5498,7 @@ extension MenuBarItemManager {
         let currentSet = Set(currentFlat)
         var desiredFiltered = desiredFlat.filter { currentSet.contains($0) }
 
+        // MARK: Phase 4: place unmanaged items via planUnmanagedPlacement
         // Items present in the menu bar but not in the profile are
         // placed via planUnmanagedPlacement. The planner consults the
         // user's saved layout history first (so a previously-seen app
@@ -5477,152 +5527,25 @@ extension MenuBarItemManager {
                 currentUIDs: Set(currentFlat)
             )
 
-            // Helpers for inserting into desiredFiltered at section
-            // boundaries. Section start for .visible respects the
-            // chevron (visibleControlItem) so unmanaged items never
-            // land left of it.
-            func sectionStartIndex(for section: MenuBarSection.Name) -> Int {
-                switch section {
-                case .visible:
-                    if let visibleCtrlUID,
-                       let chevronIdx = desiredFiltered.firstIndex(of: visibleCtrlUID)
-                    {
-                        return chevronIdx + 1
-                    }
-                    return 0
-                case .hidden:
-                    if let hiddenIdx = desiredFiltered.firstIndex(of: hiddenCtrlUID) {
-                        return hiddenIdx + 1
-                    }
-                    return desiredFiltered.endIndex
-                case .alwaysHidden:
-                    if let ahUID = ahCtrlUID,
-                       let ahIdx = desiredFiltered.firstIndex(of: ahUID)
-                    {
-                        return ahIdx + 1
-                    }
-                    return desiredFiltered.endIndex
-                }
-            }
-            func sectionEndIndex(for section: MenuBarSection.Name) -> Int {
-                switch section {
-                case .visible:
-                    return desiredFiltered.firstIndex(of: hiddenCtrlUID) ?? desiredFiltered.endIndex
-                case .hidden:
-                    if let ahUID = ahCtrlUID,
-                       let ahIdx = desiredFiltered.firstIndex(of: ahUID)
-                    {
-                        return ahIdx
-                    }
-                    return desiredFiltered.endIndex
-                case .alwaysHidden:
-                    return desiredFiltered.endIndex
-                }
-            }
-            func sectionKeyString(for section: MenuBarSection.Name) -> String {
-                switch section {
-                case .visible: return "visible"
-                case .hidden: return "hidden"
-                case .alwaysHidden: return "alwaysHidden"
-                }
-            }
-            func sectionOrderIndex(_ s: MenuBarSection.Name) -> Int {
-                switch s {
-                case .visible: return 0
-                case .hidden: return 1
-                case .alwaysHidden: return 2
-                }
-            }
-
-            // Pass 1: .saved placements, sorted by (section, savedIndex)
-            // so left-to-right insertions land in the right relative
-            // order. For each, find a predecessor in saved order that's
-            // already in desiredFiltered and insert after it; else
-            // insert at the section start.
-            var savedTuples: [(String, MenuBarSection.Name, Int)] = []
-            for uid in unmanagedUIDs {
-                if case let .saved(section, index) = placements[uid] {
-                    savedTuples.append((uid, section, index))
-                }
-            }
-            savedTuples.sort { lhs, rhs in
-                if sectionOrderIndex(lhs.1) != sectionOrderIndex(rhs.1) {
-                    return sectionOrderIndex(lhs.1) < sectionOrderIndex(rhs.1)
-                }
-                return lhs.2 < rhs.2
-            }
-            for (uid, section, savedIndex) in savedTuples {
-                let savedSeq = savedSectionOrder[sectionKeyString(for: section)] ?? []
-                // The "currently in target section" set for anchor
-                // resolution is the items already present in
-                // desiredFiltered for that section (profile items plus
-                // any unmanaged items inserted by earlier passes of
-                // this loop).
-                let currentInSection: Set<String> = {
-                    var set = Set<String>()
-                    let start = sectionStartIndex(for: section)
-                    let end = sectionEndIndex(for: section)
-                    if start < end {
-                        for u in desiredFiltered[start ..< end] {
-                            set.insert(u)
-                        }
-                    }
-                    return set
-                }()
-                let destination = LayoutSolver.anchorDestination(
-                    forSavedIndex: savedIndex,
-                    inSection: section,
-                    savedSequence: savedSeq,
-                    currentUIDsInSection: currentInSection
-                )
-                switch destination {
-                case let .leftOfUID(anchorUID):
-                    if let anchorIdx = desiredFiltered.firstIndex(of: anchorUID) {
-                        desiredFiltered.insert(uid, at: anchorIdx)
-                    } else {
-                        desiredFiltered.insert(uid, at: sectionStartIndex(for: section))
-                    }
-                case let .rightOfUID(anchorUID):
-                    if let anchorIdx = desiredFiltered.firstIndex(of: anchorUID) {
-                        desiredFiltered.insert(uid, at: anchorIdx + 1)
-                    } else {
-                        desiredFiltered.insert(uid, at: sectionStartIndex(for: section))
-                    }
-                case .sectionBoundary:
-                    desiredFiltered.insert(uid, at: sectionStartIndex(for: section))
-                }
-                sectionMap[uid] = sectionKeyString(for: section)
-            }
-
-            // Pass 2: .newItemAnchored placements. Insert relative to
-            // the anchor in desiredFiltered (left or right per relation).
-            for uid in unmanagedUIDs {
-                if case let .newItemAnchored(section, anchorUID, relation) = placements[uid] {
-                    if let anchorIdx = desiredFiltered.firstIndex(of: anchorUID) {
-                        let insertIdx = relation == .leftOfAnchor ? anchorIdx : anchorIdx + 1
-                        desiredFiltered.insert(uid, at: insertIdx)
-                    } else {
-                        desiredFiltered.insert(uid, at: sectionEndIndex(for: section))
-                    }
-                    sectionMap[uid] = sectionKeyString(for: section)
-                }
-            }
-
-            // Pass 3: .newItemDefault placements. Insert at the section
-            // end in unmanagedUIDs order so their relative ordering
-            // matches the current menu bar.
-            for uid in unmanagedUIDs {
-                if case let .newItemDefault(section) = placements[uid] {
-                    desiredFiltered.insert(uid, at: sectionEndIndex(for: section))
-                    sectionMap[uid] = sectionKeyString(for: section)
-                }
-            }
+            let applied = LayoutReconciler.applyUnmanagedPlacementsToDesired(
+                placements: placements,
+                unmanagedUIDs: unmanagedUIDs,
+                desiredFiltered: desiredFiltered,
+                sectionMap: sectionMap,
+                savedSectionOrder: savedSectionOrder,
+                visibleCtrlUID: visibleCtrlUID,
+                hiddenCtrlUID: hiddenCtrlUID,
+                ahCtrlUID: ahCtrlUID
+            )
+            desiredFiltered = applied.desiredFiltered
+            sectionMap = applied.sectionMap
 
             MenuBarItemManager.diagLog.debug(
                 "Profile layout: \(unmanagedUIDs.count) unmanaged item(s) placed via planUnmanagedPlacement"
             )
         }
 
+        // MARK: Phase 5: notch overflow rebalance
         // On notched displays, calculate available visible space and overflow
         // items that won't fit into the hidden section. The Thaw visible
         // control icon stays as the last visible item (nearest the hidden divider).
@@ -5732,6 +5655,7 @@ extension MenuBarItemManager {
             }
         }
 
+        // MARK: Phase 6: choose execution strategy (full-sort vs LCS)
         // On notched displays, use a full-section rearrange instead of
         // LCS-based partial moves. LCS leaves "stable" anchors in place,
         // but on notched screens those anchors may sit in or near the
@@ -5757,6 +5681,7 @@ extension MenuBarItemManager {
         }
 
         if isNotchedDisplay {
+            // MARK: Phase 7a: full-sort execution (notched)
             let fullSequence = LayoutSolver.planFullSortSequence(
                 currentFlat: currentFlat,
                 desiredFiltered: desiredFiltered,
@@ -5837,7 +5762,8 @@ extension MenuBarItemManager {
             // Give macOS time to process the control item expansion.
             try? await Task.sleep(for: .milliseconds(200))
         } else {
-            // ── Phase 1: Move control items to optimal boundary positions ──
+            // MARK: Phase 7b: LCS execution (non-notched)
+            // ── Sub-phase 1: Move control items to optimal boundary positions ──
             //
             // Moving a control item reassigns all items on either side to
             // different sections in a single move. Calculate whether moving
@@ -6058,7 +5984,7 @@ extension MenuBarItemManager {
                 }
             }
 
-            // ── Phase 2: LCS for remaining item ordering ──
+            // ── Sub-phase 2: LCS for remaining item ordering ──
             //
             // Re-fetch items and rebuild sequences after control item moves
             // may have changed section assignments.
@@ -6172,6 +6098,7 @@ extension MenuBarItemManager {
             MenuBarItemManager.diagLog.info("Profile layout: completed with \(movedCount) move(s)")
         }
 
+        // MARK: Phase 8: finalize (cursor, snapshot, cache, UI refresh)
         // Restore cursor to its original position.
         let screen = NSScreen.screens.first(where: { $0.frame.contains(savedCursorPosition) })
             ?? NSScreen.main

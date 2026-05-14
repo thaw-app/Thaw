@@ -252,4 +252,167 @@ enum LayoutReconciler {
             currentUIDs: currentUIDs
         )
     }
+
+    /// Inserts unmanaged items into the desired-layout sequence at the
+    /// positions chosen by unmanagedPlacementPlan, returning the updated
+    /// sequence and section assignments.
+    ///
+    /// Three-pass insertion: saved placements first (sorted by section
+    /// then savedIndex so left-to-right inserts land in the right
+    /// relative order), then anchored placements (positioned relative
+    /// to an existing UID), then default placements (appended at the
+    /// section end). The function is pure: it does not consult live
+    /// item state, only the abstract sequence the orchestrator has
+    /// already built.
+    ///
+    /// The visibleCtrlUID parameter is the chevron UID, which marks
+    /// the start of the .visible section so unmanaged items never
+    /// land left of it.
+    static func applyUnmanagedPlacementsToDesired(
+        placements: [String: LayoutSolver.UnmanagedPlacement],
+        unmanagedUIDs: [String],
+        desiredFiltered: [String],
+        sectionMap: [String: String],
+        savedSectionOrder: [String: [String]],
+        visibleCtrlUID: String?,
+        hiddenCtrlUID: String,
+        ahCtrlUID: String?
+    ) -> (desiredFiltered: [String], sectionMap: [String: String]) {
+        var desiredFiltered = desiredFiltered
+        var sectionMap = sectionMap
+
+        func sectionStartIndex(for section: MenuBarSection.Name) -> Int {
+            switch section {
+            case .visible:
+                if let visibleCtrlUID,
+                   let chevronIdx = desiredFiltered.firstIndex(of: visibleCtrlUID)
+                {
+                    return chevronIdx + 1
+                }
+                return 0
+            case .hidden:
+                if let hiddenIdx = desiredFiltered.firstIndex(of: hiddenCtrlUID) {
+                    return hiddenIdx + 1
+                }
+                return desiredFiltered.endIndex
+            case .alwaysHidden:
+                if let ahUID = ahCtrlUID,
+                   let ahIdx = desiredFiltered.firstIndex(of: ahUID)
+                {
+                    return ahIdx + 1
+                }
+                return desiredFiltered.endIndex
+            }
+        }
+        func sectionEndIndex(for section: MenuBarSection.Name) -> Int {
+            switch section {
+            case .visible:
+                return desiredFiltered.firstIndex(of: hiddenCtrlUID) ?? desiredFiltered.endIndex
+            case .hidden:
+                if let ahUID = ahCtrlUID,
+                   let ahIdx = desiredFiltered.firstIndex(of: ahUID)
+                {
+                    return ahIdx
+                }
+                return desiredFiltered.endIndex
+            case .alwaysHidden:
+                return desiredFiltered.endIndex
+            }
+        }
+        func sectionKeyString(for section: MenuBarSection.Name) -> String {
+            switch section {
+            case .visible: return "visible"
+            case .hidden: return "hidden"
+            case .alwaysHidden: return "alwaysHidden"
+            }
+        }
+        func sectionOrderIndex(_ s: MenuBarSection.Name) -> Int {
+            switch s {
+            case .visible: return 0
+            case .hidden: return 1
+            case .alwaysHidden: return 2
+            }
+        }
+
+        // Pass 1: .saved placements, sorted by (section, savedIndex)
+        // so left-to-right insertions land in the right relative
+        // order. For each, find a predecessor in saved order that's
+        // already in desiredFiltered and insert after it; else
+        // insert at the section start.
+        var savedTuples: [(String, MenuBarSection.Name, Int)] = []
+        for uid in unmanagedUIDs {
+            if case let .saved(section, index) = placements[uid] {
+                savedTuples.append((uid, section, index))
+            }
+        }
+        savedTuples.sort { lhs, rhs in
+            if sectionOrderIndex(lhs.1) != sectionOrderIndex(rhs.1) {
+                return sectionOrderIndex(lhs.1) < sectionOrderIndex(rhs.1)
+            }
+            return lhs.2 < rhs.2
+        }
+        for (uid, section, savedIndex) in savedTuples {
+            let savedSeq = savedSectionOrder[sectionKeyString(for: section)] ?? []
+            let currentInSection: Set<String> = {
+                var set = Set<String>()
+                let start = sectionStartIndex(for: section)
+                let end = sectionEndIndex(for: section)
+                if start < end {
+                    for u in desiredFiltered[start ..< end] {
+                        set.insert(u)
+                    }
+                }
+                return set
+            }()
+            let destination = LayoutSolver.anchorDestination(
+                forSavedIndex: savedIndex,
+                inSection: section,
+                savedSequence: savedSeq,
+                currentUIDsInSection: currentInSection
+            )
+            switch destination {
+            case let .leftOfUID(anchorUID):
+                if let anchorIdx = desiredFiltered.firstIndex(of: anchorUID) {
+                    desiredFiltered.insert(uid, at: anchorIdx)
+                } else {
+                    desiredFiltered.insert(uid, at: sectionStartIndex(for: section))
+                }
+            case let .rightOfUID(anchorUID):
+                if let anchorIdx = desiredFiltered.firstIndex(of: anchorUID) {
+                    desiredFiltered.insert(uid, at: anchorIdx + 1)
+                } else {
+                    desiredFiltered.insert(uid, at: sectionStartIndex(for: section))
+                }
+            case .sectionBoundary:
+                desiredFiltered.insert(uid, at: sectionStartIndex(for: section))
+            }
+            sectionMap[uid] = sectionKeyString(for: section)
+        }
+
+        // Pass 2: .newItemAnchored placements. Insert relative to
+        // the anchor in desiredFiltered (left or right per relation).
+        for uid in unmanagedUIDs {
+            if case let .newItemAnchored(section, anchorUID, relation) = placements[uid] {
+                if let anchorIdx = desiredFiltered.firstIndex(of: anchorUID) {
+                    let insertIdx = relation == .leftOfAnchor ? anchorIdx : anchorIdx + 1
+                    desiredFiltered.insert(uid, at: insertIdx)
+                } else {
+                    desiredFiltered.insert(uid, at: sectionEndIndex(for: section))
+                }
+                sectionMap[uid] = sectionKeyString(for: section)
+            }
+        }
+
+        // Pass 3: .newItemDefault placements. Insert at the section
+        // end in unmanagedUIDs order so their relative ordering
+        // matches the current menu bar.
+        for uid in unmanagedUIDs {
+            if case let .newItemDefault(section) = placements[uid] {
+                desiredFiltered.insert(uid, at: sectionEndIndex(for: section))
+                sectionMap[uid] = sectionKeyString(for: section)
+            }
+        }
+
+        return (desiredFiltered, sectionMap)
+    }
 }
