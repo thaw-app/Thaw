@@ -44,6 +44,18 @@ final class SourcePIDCache {
             runningApp.processIdentifier
         }
 
+        /// The app's bundle identifier, if any. Used by diagnostic
+        /// logging to identify which app's AX extras a frame came from.
+        var bundleIdentifier: String? {
+            runningApp.bundleIdentifier
+        }
+
+        /// A localized, human-readable name for the app. Used by
+        /// diagnostic logging when the bundle identifier is absent.
+        var localizedName: String? {
+            runningApp.localizedName
+        }
+
         /// A Boolean value indicating whether the app's extras menu
         /// bar has been successfully created and stored.
         var hasExtrasMenuBar: Bool {
@@ -367,8 +379,172 @@ final class SourcePIDCache {
             }
         }
 
+        // Marker-pair PID resolution.
+        //
+        // On macOS 26 some widgets (Little Snitch's agent observed in
+        // the wild) have their NSStatusItem hosted by Control Center
+        // at the AX layer and do not publish an AXExtrasMenuBar of
+        // their own. The spatial CG-to-AX pass above cannot find a
+        // per-app extras child for them, so the icon stays unresolved
+        // and the namespace falls back to com.apple.controlcenter.
+        //
+        // Structurally, every NSStatusItem-style widget also publishes
+        // a SECOND CG window in the items-only list whose title is
+        // the widget's bundle identifier (verified empirically for
+        // at.obdev.littlesnitch.agent, com.rogueamoeba.soundsource,
+        // com.wireguard.macos, org.eduvpn.app, com.lighting.huesync,
+        // pl.maketheweb.cleanshotx, and others). This marker window
+        // has the same (width, height) as the on-screen icon but
+        // its position is non-deterministic across launches and can
+        // even sit on a different display, which is why this pass
+        // runs here in the XPC where allWindows spans every display
+        // rather than in the main app's per-call list.
+        //
+        // For each unresolved on-screen icon whose title is NOT
+        // bundle-ID-shaped (generic names like "Item-0", or empty),
+        // looks for the unique marker window with matching size and
+        // synthesizes the sourcePID by either using the marker's
+        // CG-layer owning PID (when it is neither Thaw itself nor
+        // Control Center) or by looking up the running app named by
+        // the marker's bundle-ID title. Multi-match cases are skipped
+        // to prevent misattribution. Thaw's own control items and
+        // self-registration windows are excluded so Thaw's PID can
+        // never be attributed to a third-party widget.
+        if !unresolvedWindows.isEmpty {
+            struct MarkerCandidate {
+                let windowID: CGWindowID
+                let size: CGSize
+                let title: String
+                let owningPID: pid_t?
+            }
+            let thawBundleID = "com.stonerl.Thaw"
+            let ccBundleID = "com.apple.controlcenter"
+            let markers: [MarkerCandidate] = allWindows.compactMap { win in
+                guard let title = win.title, title.contains(".") else { return nil }
+                if title.hasPrefix("Thaw.ControlItem.") { return nil }
+                if title == thawBundleID { return nil }
+                return MarkerCandidate(
+                    windowID: win.windowID,
+                    size: win.bounds.size,
+                    title: title,
+                    owningPID: win.owningApplication?.processIdentifier
+                )
+            }
+            let unresolvedInfos = allWindows.filter { unresolvedWindows.contains($0.windowID) }
+            for icon in unresolvedInfos {
+                // Only resolve icons with a non-bundle-ID title; markers
+                // themselves remain in the unresolved set but must not
+                // pair with each other.
+                if let title = icon.title, title.contains(".") { continue }
+                let iconSize = icon.bounds.size
+                let matching = markers.filter {
+                    $0.windowID != icon.windowID && $0.size == iconSize
+                }
+                guard matching.count == 1, let marker = matching.first else { continue }
+                let resolvedPID: pid_t? = {
+                    if let pid = marker.owningPID,
+                       let app = NSRunningApplication(processIdentifier: pid),
+                       let bundleID = app.bundleIdentifier,
+                       bundleID != ccBundleID,
+                       bundleID != thawBundleID
+                    {
+                        return pid
+                    }
+                    if let app = NSRunningApplication
+                        .runningApplications(withBundleIdentifier: marker.title)
+                        .first,
+                       app.bundleIdentifier != thawBundleID
+                    {
+                        return app.processIdentifier
+                    }
+                    return nil
+                }()
+                guard let pid = resolvedPID else { continue }
+                SourcePIDCache.diagLog.info(
+                    "SourcePIDCache marker-pair resolution: windowID=\(icon.windowID) title=\(icon.title ?? "nil") size=\(iconSize) → PID \(pid) via marker windowID=\(marker.windowID) (title=\(marker.title))"
+                )
+                state.withLock { $0.pids[icon.windowID] = pid }
+                unresolvedWindows.remove(icon.windowID)
+            }
+        }
+
         let finalPID = state.withLock { $0.pids[window.windowID] }
         SourcePIDCache.diagLog.debug("SourcePIDCache.pid: batch resolution finished. Found \(totalMatchesFound) matches. Requested windowID \(window.windowID) -> PID \(finalPID.map { "\($0)" } ?? "nil") (checked \(appsChecked) apps, \(appsWithBar) with extras bar, \(totalChildrenChecked) children)")
+
+        // Diagnostic dump for unresolved windows.
+        //
+        // When at least one window remains unresolved after the batch
+        // loop, log enough state to determine which of three failure
+        // modes is hitting: (a) the suspect app is absent from
+        // NSWorkspace runningApplications, (b) the app is present but
+        // does not expose AXExtrasMenuBar (the per-app menu extras
+        // attribute is unset on macOS 26 for some widgets), or (c)
+        // the app exposes extras but their frames are more than 1pt
+        // off-center from the unresolved CG window bounds (a HiDPI,
+        // multi-display, or coord-system mismatch).
+        //
+        // Quiet path on normal cycles where every window resolves.
+        // The diagnostic re-walks AX children, which can be expensive,
+        // so it only fires when there is actual unresolved state.
+        if !unresolvedWindows.isEmpty {
+            SourcePIDCache.diagLog.debug(
+                "SourcePIDCache diag: \(unresolvedWindows.count) window(s) unresolved after batch, dumping details"
+            )
+
+            let probeBundleIDs: Set<String> = [
+                "at.obdev.littlesnitch",
+                "at.obdev.littlesnitch.agent",
+            ]
+            for bundleID in probeBundleIDs {
+                if let app = apps.first(where: { $0.bundleIdentifier == bundleID }) {
+                    SourcePIDCache.diagLog.debug(
+                        "SourcePIDCache diag probe: \(bundleID) PRESENT pid=\(app.processIdentifier) hasExtrasBar=\(app.hasExtrasMenuBar)"
+                    )
+                } else {
+                    SourcePIDCache.diagLog.debug(
+                        "SourcePIDCache diag probe: \(bundleID) ABSENT from runningApplications"
+                    )
+                }
+            }
+
+            let unresolvedWindowInfos = allWindows.filter { unresolvedWindows.contains($0.windowID) }
+            for window in unresolvedWindowInfos {
+                let target = window.bounds.center
+                var bestDistance = CGFloat.greatestFiniteMagnitude
+                var bestLabel = "(none)"
+                var bestFrame: CGRect?
+                for app in apps {
+                    guard let bar = app.getOrCreateExtrasMenuBar() else { continue }
+                    let children = AXHelpers.children(for: bar)
+                    for child in children {
+                        guard let frame = AXHelpers.frame(for: child) else { continue }
+                        let d = frame.center.distance(to: target)
+                        if d < bestDistance {
+                            bestDistance = d
+                            bestLabel = app.bundleIdentifier ?? app.localizedName ?? "pid=\(app.processIdentifier)"
+                            bestFrame = frame
+                        }
+                    }
+                }
+                let cgOwner = window.owningApplication.map { app in
+                    "\(app.bundleIdentifier ?? app.localizedName ?? "?"):pid=\(app.processIdentifier)"
+                } ?? "nil"
+                SourcePIDCache.diagLog.debug(
+                    "SourcePIDCache diag unresolved: windowID=\(window.windowID) title=\(window.title ?? "nil") bounds=\(window.bounds) center=\(target) | cgOwner=\(cgOwner) ownerName=\(window.ownerName ?? "nil") | closestAXFrame=\(bestFrame.map { "\($0)" } ?? "nil") in app=\(bestLabel) distance=\(bestDistance)"
+                )
+            }
+
+            for app in apps {
+                guard let bar = app.getOrCreateExtrasMenuBar() else { continue }
+                let children = AXHelpers.children(for: bar)
+                let frames = children.compactMap { AXHelpers.frame(for: $0) }
+                guard !frames.isEmpty else { continue }
+                let label = app.bundleIdentifier ?? app.localizedName ?? "pid=\(app.processIdentifier)"
+                SourcePIDCache.diagLog.debug(
+                    "SourcePIDCache diag app=\(label) extrasBar children=\(children.count) frames=\(frames.map { "(x=\($0.minX),y=\($0.minY),w=\($0.width),h=\($0.height))" }.joined(separator: " "))"
+                )
+            }
+        }
 
         return finalPID
     }

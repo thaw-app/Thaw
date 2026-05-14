@@ -8,6 +8,10 @@
 
 import Foundation
 
+#if DEBUG
+DiagnosticLogger.shared.isEnabled = true
+#endif
+
 SourcePIDCache.shared.start()
 Listener.shared.activate()
 

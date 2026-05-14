@@ -128,33 +128,47 @@ final class DiagnosticLogger: @unchecked Sendable {
         let fileName = "thaw_\(fileNameFormatter.string(from: Date())).log"
         let fileURL = dir.appendingPathComponent(fileName)
 
-        FileManager.default.createFile(atPath: fileURL.path, contents: nil)
-
-        do {
-            let handle = try FileHandle(forWritingTo: fileURL)
-            handle.seekToEndOfFile()
-            fileHandleLock.withLock { $0 = handle }
-            currentLogFileLock.withLock { $0 = fileURL }
-
-            // Write header
-            let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
-            let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "unknown"
-            let header = """
-            ========================================
-            Thaw Diagnostic Log
-            Started: \(timestampFormatter.string(from: Date()))
-            Version: \(version) (\(build))
-            macOS: \(ProcessInfo.processInfo.operatingSystemVersionString)
-            ========================================\n\n
-            """
-            if let data = header.data(using: .utf8) {
-                handle.write(data)
-            }
-
-            osLog.info("Diagnostic logging started: \(fileURL.path, privacy: .public)")
-        } catch {
-            osLog.error("Failed to open log file at \(fileURL.path): \(error)")
+        // Open with O_APPEND so the main app and the XPC service
+        // can safely write to the same file. Both processes call
+        // openLogFile during startup, often within the same second,
+        // so they land on the same filename. FileManager.createFile
+        // and FileHandle(forWritingTo:) would truncate an existing
+        // file and the two processes' per-fd offsets would race
+        // against each other on the same byte range. POSIX open(2)
+        // with O_APPEND tells the kernel to atomically position
+        // each write at end-of-file, which is atomic between
+        // processes for writes smaller than PIPE_BUF on local
+        // filesystems; O_CREAT creates the file if absent without
+        // touching an existing one. Swift's FileHandle initializers
+        // do not expose these flags, hence the POSIX call.
+        let fd = open(fileURL.path, O_WRONLY | O_APPEND | O_CREAT, 0o644)
+        guard fd >= 0 else {
+            osLog.error("Failed to open log file at \(fileURL.path): errno \(errno)")
+            return
         }
+        let handle = FileHandle(fileDescriptor: fd, closeOnDealloc: true)
+        fileHandleLock.withLock { $0 = handle }
+        currentLogFileLock.withLock { $0 = fileURL }
+
+        // Each process writes its own header into the shared file.
+        // The Process line distinguishes them; chronological order
+        // is preserved by the per-line timestamps.
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "unknown"
+        let header = """
+        ========================================
+        Thaw Diagnostic Log
+        Started: \(timestampFormatter.string(from: Date()))
+        Process: \(ProcessInfo.processInfo.processName)
+        Version: \(version) (\(build))
+        macOS: \(ProcessInfo.processInfo.operatingSystemVersionString)
+        ========================================\n\n
+        """
+        if let data = header.data(using: .utf8) {
+            handle.write(data)
+        }
+
+        osLog.info("Diagnostic logging started: \(fileURL.path, privacy: .public)")
 
         // Clean up old log files (keep last 5)
         cleanupOldLogFiles(in: dir, keepCount: 5)
