@@ -429,11 +429,30 @@ struct ProfileSettingsPane: View {
     private struct DisplayInfo: Identifiable {
         let id: String
         let name: String
+        let hasNotch: Bool
         let isConnected: Bool
 
-        var localizedLabel: Text {
-            if isConnected { Text(name) } else {
-                Text("\(name) (\(String(localized: "disconnected")))")
+        @ViewBuilder
+        var localizedLabel: some View {
+            HStack(spacing: 6) {
+                Text(name)
+                if hasNotch {
+                    Text("Notch")
+                        .font(.caption)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(.quaternary)
+                        .clipShape(Capsule())
+                }
+                if !isConnected {
+                    Text("Disconnected")
+                        .font(.caption)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(.quaternary)
+                        .clipShape(Capsule())
+                        .foregroundStyle(.secondary)
+                }
             }
         }
     }
@@ -441,11 +460,17 @@ struct ProfileSettingsPane: View {
     /// Returns all displays relevant to auto-switch: connected displays plus
     /// any disconnected displays that still have a profile association.
     private func allDisplays() -> [DisplayInfo] {
+        let knownDisplays = appState.settings.displaySettings.knownDisplays
         var displays = NSScreen.screens.compactMap { screen -> DisplayInfo? in
             guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else {
                 return nil
             }
-            return DisplayInfo(id: uuid, name: screen.localizedName, isConnected: true)
+            return DisplayInfo(
+                id: uuid,
+                name: screen.localizedName,
+                hasNotch: screen.hasNotch,
+                isConnected: true
+            )
         }
 
         let connectedIDs = Set(displays.map(\.id))
@@ -457,6 +482,7 @@ struct ProfileSettingsPane: View {
             displays.append(DisplayInfo(
                 id: uuid,
                 name: cachedName,
+                hasNotch: knownDisplays[uuid]?.hasNotch ?? false,
                 isConnected: false
             ))
         }
