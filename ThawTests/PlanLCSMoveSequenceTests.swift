@@ -52,7 +52,7 @@ final class PlanLCSMoveSequenceTests: XCTestCase {
         // The LCS function returns one of the equal-length subsequences
         // deterministically based on the backtrack tie-break. With
         // dp[i-1][j] > dp[i][j-1] preferring i-1, the result is {b,c}.
-        // Therefore `a` is the item to move.
+        // Therefore a is the item to move.
         let result = MenuBarItemManager.planLCSMoveSequence(
             currentNoControls: ["a", "b", "c"],
             desiredNoControls: ["b", "a", "c"],

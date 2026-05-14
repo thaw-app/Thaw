@@ -267,7 +267,7 @@ final class PlanNotchOverflowTests: XCTestCase {
     ///
     /// With chevron(24) + p1(50) + p2(50) = 124 and availableWidth 124,
     /// nothing should overflow. Pre-fix code would have subtracted
-    /// `(count - 1) * 16 = 32` somewhere, making 124 appear too big
+    /// (count - 1) * 16 = 32 somewhere, making 124 appear too big
     /// against the budget.
     func testNoDoubleCountedSpacingRegressionLock() {
         let desired = makeSequence(

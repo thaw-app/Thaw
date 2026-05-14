@@ -169,6 +169,100 @@ final class PlanRebalanceMoveTests: XCTestCase {
                      "an actively-shown item should not be eligible for rebalancing — its rehide path owns it")
     }
 
+    // MARK: - Position-aware destination
+
+    /// The cross-section restore destination is now position-aware: a
+    /// restored item is anchored against its saved-order neighbors in
+    /// the target section, not at the section boundary.
+    ///
+    /// saved visible=[Cursor, Alter, Claude], current visible=[Alter,
+    /// Claude], Cursor is in always-hidden. Restore should plan a move
+    /// from always-hidden to visible, anchored .leftOfUID("Alter")
+    /// because Alter is Cursor's saved successor.
+    func testRebalanceMoveAnchorsLeftOfSuccessor() {
+        let alter = item(bundleID: "com.example.alter", title: "Alter", windowID: 1000)
+        let claude = item(bundleID: "com.example.claude", title: "Claude", windowID: 1001)
+        let cursor = item(bundleID: "com.example.cursor", title: "Cursor", windowID: 1002)
+
+        let saved: [String: [String]] = [
+            "visible": [
+                "com.example.cursor:Cursor",
+                "com.example.alter:Alter",
+                "com.example.claude:Claude",
+            ],
+        ]
+
+        let result = MenuBarItemManager.planRebalanceMove(
+            items: [alter, claude, cursor],
+            sectionByWindowID: [
+                alter.windowID: .visible,
+                claude.windowID: .visible,
+                cursor.windowID: .alwaysHidden,
+            ],
+            hasAlwaysHiddenSection: true,
+            savedSectionOrder: saved,
+            activelyShownTags: []
+        )
+
+        XCTAssertEqual(result?.fromSection, .alwaysHidden)
+        XCTAssertEqual(result?.toSection, .visible)
+        XCTAssertEqual(result?.item.windowID, 1002)
+        XCTAssertEqual(result?.destination, .leftOfUID("com.example.alter:Alter"),
+                       "saved index 0 with successor present in section → .leftOfUID(successor)")
+    }
+
+    /// When the moving item's saved successor is not currently in the
+    /// target section, fall back to the predecessor.
+    /// saved visible=[A, Cursor, Z], current visible=[A]. Restore plans
+    /// .rightOfUID(A) because Z is absent and A is the predecessor.
+    func testRebalanceMoveAnchorsRightOfPredecessorWhenNoForwardAnchor() {
+        let a = item(bundleID: "com.aa.app", title: "AA", windowID: 1100)
+        let cursor = item(bundleID: "com.cursor.app", title: "Cursor", windowID: 1101)
+
+        let saved: [String: [String]] = [
+            "visible": [
+                "com.aa.app:AA",
+                "com.cursor.app:Cursor",
+                "com.zz.app:ZZ",
+            ],
+        ]
+
+        let result = MenuBarItemManager.planRebalanceMove(
+            items: [a, cursor],
+            sectionByWindowID: [
+                a.windowID: .visible,
+                cursor.windowID: .alwaysHidden,
+            ],
+            hasAlwaysHiddenSection: true,
+            savedSectionOrder: saved,
+            activelyShownTags: []
+        )
+
+        XCTAssertEqual(result?.destination, .rightOfUID("com.aa.app:AA"))
+    }
+
+    /// When no anchors are present in the target section, fall back to
+    /// the section boundary.
+    /// saved visible=[X, Cursor], current visible empty, Cursor in
+    /// always-hidden → .sectionBoundary(.visible).
+    func testRebalanceMoveFallsBackToSectionBoundary() {
+        let cursor = item(bundleID: "com.cursor.app", title: "Cursor", windowID: 1200)
+
+        let saved: [String: [String]] = [
+            "visible": ["com.x.app:X", "com.cursor.app:Cursor"],
+        ]
+
+        let result = MenuBarItemManager.planRebalanceMove(
+            items: [cursor],
+            sectionByWindowID: [cursor.windowID: .alwaysHidden],
+            hasAlwaysHiddenSection: true,
+            savedSectionOrder: saved,
+            activelyShownTags: []
+        )
+
+        XCTAssertEqual(result?.destination, .sectionBoundary(.visible))
+    }
+
     /// When a baseID has more current items than saved counts in one
     /// section, surplus is taken from the suffix (rightmost) of the bucket
     /// so the leftmost items stay put. Three instances live in hidden, two

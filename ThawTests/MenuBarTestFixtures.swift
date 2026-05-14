@@ -62,9 +62,9 @@ extension MenuBarItemManager.ControlItemPair {
     /// model both layouts (with and without the always-hidden section).
     ///
     /// Default window IDs are deliberately in the 1_000_000+ range so the
-    /// underlying `Bridging.getWindowBounds` lookup (invoked by
+    /// underlying Bridging.getWindowBounds lookup (invoked by
     /// CacheContext.bestBounds) reliably misses, forcing the fall-back to
-    /// `item.bounds`. Real macOS window IDs are far smaller, so collisions
+    /// item.bounds. Real macOS window IDs are far smaller, so collisions
     /// would only happen on a system with extreme window pressure.
     static func fixture(
         hiddenAt: CGRect,
