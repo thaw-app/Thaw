@@ -4517,12 +4517,53 @@ extension MenuBarItemManager {
             return map
         }
 
-        let hasMisplacedItems = LayoutSolver.planRebalanceMove(
-            items: items,
-            sectionByWindowID: buildSectionByWindowID(),
-            hasAlwaysHiddenSection: hasAlwaysHiddenSection,
-            savedSectionOrder: savedSectionOrder,
-            activelyShownTags: activelyShownTags
+        // Build a DesiredLayout from the persisted savedSectionOrder.
+        // This is the input both planners (cross-section and within-
+        // section) consume, packaged as a single value type that the
+        // reconciler accepts.
+        let desired = DesiredLayout.fromSavedSectionOrder(
+            savedSectionOrder,
+            newItemsPlacement: newItemsPlacement
+        )
+
+        /// Resolves a planner's abstract LCSPlannedDestination to a
+        /// concrete MoveDestination by looking up anchor uids against
+        /// the live items. Falls back to the section boundary if the
+        /// anchor has disappeared mid-cycle.
+        func resolveDestination(
+            _ abstractDestination: LayoutSolver.LCSPlannedDestination,
+            fallbackSection: MenuBarSection.Name
+        ) -> MoveDestination {
+            switch abstractDestination {
+            case let .leftOfUID(anchorUID):
+                if let anchor = items.first(where: {
+                    $0.uniqueIdentifier == anchorUID && $0.isMovable
+                }) {
+                    return .leftOfItem(anchor)
+                }
+                return Self.boundaryDestination(for: fallbackSection, controlItems: controlItems)
+            case let .rightOfUID(anchorUID):
+                if let anchor = items.first(where: {
+                    $0.uniqueIdentifier == anchorUID && $0.isMovable
+                }) {
+                    return .rightOfItem(anchor)
+                }
+                return Self.boundaryDestination(for: fallbackSection, controlItems: controlItems)
+            case let .sectionBoundary(section):
+                return Self.boundaryDestination(for: section, controlItems: controlItems)
+            }
+        }
+
+        // Quick check: is there any reconciliation work to do?
+        let hasMisplacedItems = LayoutReconciler.nextRestoreMove(
+            desired: desired,
+            observed: ObservedLayout(
+                items: items,
+                controlItems: controlItems,
+                sectionByWindowID: buildSectionByWindowID(),
+                activelyShownTags: activelyShownTags
+            ),
+            hasAlwaysHiddenSection: hasAlwaysHiddenSection
         ) != nil
 
         guard windowIDsChanged || hasMisplacedItems else {
@@ -4536,177 +4577,105 @@ extension MenuBarItemManager {
 
         // Re-evaluate after the settle wait — items may have shifted
         // while we were sleeping (relaunched apps continue to attach).
-        let firstMove = LayoutSolver.planRebalanceMove(
+        // The reconciler returns the single next move, preferring
+        // cross-section over within-section. The caller schedules a
+        // recache; the next call picks the next move until the
+        // reconciler returns nil.
+        let observed = ObservedLayout(
             items: items,
+            controlItems: controlItems,
             sectionByWindowID: buildSectionByWindowID(),
-            hasAlwaysHiddenSection: hasAlwaysHiddenSection,
-            savedSectionOrder: savedSectionOrder,
             activelyShownTags: activelyShownTags
         )
+        guard let restoreMove = LayoutReconciler.nextRestoreMove(
+            desired: desired,
+            observed: observed,
+            hasAlwaysHiddenSection: hasAlwaysHiddenSection
+        ) else {
+            MenuBarItemManager.diagLog.debug("restoreItemsToSavedSections: no items needed restoring (checked \(items.count) items)")
+            return false
+        }
 
-        // Iterate just once: move the chosen surplus item to a demand
-        // section. The caller schedules a recache; the next call picks
-        // the next imbalance until counts match.
-        if let pending = firstMove {
-            let item = pending.item
-            let currentSection = pending.fromSection
-            let savedSection = pending.toSection
+        // Unpack the reconciler decision into the inputs the move
+        // execution needs: which item, where, and which section to use
+        // for the anchor-missing fallback. Each case also dictates the
+        // post-move bookkeeping (cross-section updates the saved-order
+        // slot for the moved baseID; within-section does not).
+        let movingItem: MenuBarItem
+        let destination: MoveDestination
+        let logFromSection: MenuBarSection.Name?
+        let logToSection: MenuBarSection.Name
+        let updateSavedOrderSlot: Bool
 
-            // Resolve the planner's abstract destination to a concrete
-            // MoveDestination by looking up anchor uids against the
-            // current items. If the anchor has disappeared mid-cycle,
-            // fall back to the section boundary.
-            let destination: MoveDestination
-            switch pending.destination {
-            case let .leftOfUID(anchorUID):
-                if let anchor = items.first(where: {
-                    $0.uniqueIdentifier == anchorUID && $0.isMovable
-                }) {
-                    destination = .leftOfItem(anchor)
-                } else {
-                    destination = Self.boundaryDestination(
-                        for: savedSection,
-                        controlItems: controlItems
-                    )
-                }
-            case let .rightOfUID(anchorUID):
-                if let anchor = items.first(where: {
-                    $0.uniqueIdentifier == anchorUID && $0.isMovable
-                }) {
-                    destination = .rightOfItem(anchor)
-                } else {
-                    destination = Self.boundaryDestination(
-                        for: savedSection,
-                        controlItems: controlItems
-                    )
-                }
-            case let .sectionBoundary(section):
-                destination = Self.boundaryDestination(
-                    for: section,
-                    controlItems: controlItems
-                )
-            }
+        switch restoreMove {
+        case let .crossSection(cross):
+            movingItem = cross.item
+            destination = resolveDestination(cross.destination, fallbackSection: cross.toSection)
+            logFromSection = cross.fromSection
+            logToSection = cross.toSection
+            updateSavedOrderSlot = true
+        case let .withinSection(within):
+            movingItem = within.item
+            let fallback = observed.sectionByWindowID[within.item.windowID] ?? .visible
+            destination = resolveDestination(within.destination, fallbackSection: fallback)
+            logFromSection = nil
+            logToSection = fallback
+            updateSavedOrderSlot = false
+        }
 
+        if let from = logFromSection {
             MenuBarItemManager.diagLog.info(
-                "Restoring \(item.logString) from \(currentSection.logString) to \(savedSection.logString)"
+                "Restoring \(movingItem.logString) from \(from.logString) to \(logToSection.logString)"
             )
+        } else {
+            MenuBarItemManager.diagLog.info(
+                "Within-section reorder: \(movingItem.logString) → \(destination.logString)"
+            )
+        }
 
-            do {
-                MenuBarItemManager.diagLog.debug("Starting move for restore: item=\(item.logString), destination=\(destination.logString)")
-                // Background restore: shorter cursor-hide window so failed
-                // moves during a Live Activity don't kidnap the cursor for
-                // the full default 10 s.
-                try await move(item: item, to: destination, skipInputPause: true, watchdogTimeout: .seconds(4))
-                MenuBarItemManager.diagLog.debug("Move completed successfully for restore")
-            } catch let error as EventError {
-                MenuBarItemManager.diagLog.error(
-                    "Failed to restore \(item.logString) to \(savedSection.logString): \(error.errorDescription ?? error.description)"
-                )
-                return false
-            } catch {
-                MenuBarItemManager.diagLog.error(
-                    "Failed to restore \(item.logString) to \(savedSection.logString): \(error)"
-                )
-                return false
-            }
+        do {
+            MenuBarItemManager.diagLog.debug("Starting move for restore: item=\(movingItem.logString), destination=\(destination.logString)")
+            // Background restore: shorter cursor-hide window so failed
+            // moves during a Live Activity don't kidnap the cursor for
+            // the full default 10 s.
+            try await move(item: movingItem, to: destination, skipInputPause: true, watchdogTimeout: .seconds(4))
+            MenuBarItemManager.diagLog.debug("Move completed successfully for restore")
+        } catch let error as EventError {
+            MenuBarItemManager.diagLog.error(
+                "Failed to restore \(movingItem.logString) to \(logToSection.logString): \(error.errorDescription ?? error.description)"
+            )
+            return false
+        } catch {
+            MenuBarItemManager.diagLog.error(
+                "Failed to restore \(movingItem.logString) to \(logToSection.logString): \(error)"
+            )
+            return false
+        }
 
-            // Refresh the saved-order entry for this baseID so the
-            // identifier listed for the destination section reflects the
-            // window we actually moved (its instanceIndex may differ from
-            // what was saved). Replaces only one matching slot — multiple
-            // instances of the same baseID that legitimately share a
-            // section keep their separate entries.
-            let sectionKeyString = sectionKey(for: savedSection)
+        // Refresh the saved-order slot for cross-section moves so the
+        // identifier listed for the destination section reflects the
+        // window we actually moved (its instanceIndex may differ from
+        // what was saved). Replaces only one matching slot — multiple
+        // instances of the same baseID that legitimately share a
+        // section keep their separate entries. Within-section moves
+        // don't change saved-section membership, so they skip this.
+        if updateSavedOrderSlot {
+            let sectionKeyString = sectionKey(for: logToSection)
             if var identifiers = savedSectionOrder[sectionKeyString] {
-                let baseID = "\(item.tag.namespace):\(item.tag.title)"
+                let baseID = "\(movingItem.tag.namespace):\(movingItem.tag.title)"
                 if let index = identifiers.firstIndex(where: { id in
                     let idBase = id.split(separator: ":", maxSplits: 2).prefix(2).joined(separator: ":")
-                    return idBase == baseID && id != item.uniqueIdentifier
+                    return idBase == baseID && id != movingItem.uniqueIdentifier
                 }) {
-                    identifiers[index] = item.uniqueIdentifier
+                    identifiers[index] = movingItem.uniqueIdentifier
                     savedSectionOrder[sectionKeyString] = identifiers
                     persistSavedSectionOrder()
-                    MenuBarItemManager.diagLog.debug("Updated savedSectionOrder: replaced with new identifier \(item.uniqueIdentifier)")
+                    MenuBarItemManager.diagLog.debug("Updated savedSectionOrder: replaced with new identifier \(movingItem.uniqueIdentifier)")
                 }
-            }
-
-            return true
-        }
-
-        // Cross-section counts already match. Check whether the
-        // intra-section order has drifted from savedSectionOrder and
-        // emit a single within-section reorder move if so. Same one-
-        // move-per-call contract; the caller recaches and re-enters
-        // until both planners return nil.
-        let reorderSectionMap = buildSectionByWindowID()
-        let reorderMove = LayoutSolver.planWithinSectionReorder(
-            items: items,
-            sectionByWindowID: reorderSectionMap,
-            savedSectionOrder: savedSectionOrder,
-            activelyShownTags: activelyShownTags,
-            hasAlwaysHiddenSection: hasAlwaysHiddenSection
-        )
-
-        if let reorderMove {
-            // Resolve the abstract destination to a real MoveDestination
-            // by looking up the anchor uid against the current items.
-            // If the anchor item has disappeared mid-cycle, fall back
-            // to the section boundary.
-            let resolvedDestination: MoveDestination
-            switch reorderMove.destination {
-            case let .leftOfUID(anchorUID):
-                if let anchor = items.first(where: {
-                    $0.uniqueIdentifier == anchorUID && $0.isMovable
-                }) {
-                    resolvedDestination = .leftOfItem(anchor)
-                } else {
-                    let fallbackSection = reorderSectionMap[reorderMove.item.windowID] ?? .visible
-                    resolvedDestination = Self.boundaryDestination(
-                        for: fallbackSection,
-                        controlItems: controlItems
-                    )
-                }
-            case let .rightOfUID(anchorUID):
-                if let anchor = items.first(where: {
-                    $0.uniqueIdentifier == anchorUID && $0.isMovable
-                }) {
-                    resolvedDestination = .rightOfItem(anchor)
-                } else {
-                    let fallbackSection = reorderSectionMap[reorderMove.item.windowID] ?? .visible
-                    resolvedDestination = Self.boundaryDestination(
-                        for: fallbackSection,
-                        controlItems: controlItems
-                    )
-                }
-            case let .sectionBoundary(section):
-                resolvedDestination = Self.boundaryDestination(
-                    for: section,
-                    controlItems: controlItems
-                )
-            }
-
-            MenuBarItemManager.diagLog.info(
-                "Within-section reorder: \(reorderMove.item.logString) → \(resolvedDestination.logString)"
-            )
-
-            do {
-                try await move(
-                    item: reorderMove.item,
-                    to: resolvedDestination,
-                    skipInputPause: true,
-                    watchdogTimeout: .seconds(4)
-                )
-                return true
-            } catch {
-                MenuBarItemManager.diagLog.error(
-                    "Within-section reorder failed for \(reorderMove.item.logString): \(error)"
-                )
-                return false
             }
         }
 
-        MenuBarItemManager.diagLog.debug("restoreItemsToSavedSections: no items needed restoring (checked \(items.count) items)")
-        return false
+        return true
     }
 
     /// Returns the move destination at the boundary of the given section.
@@ -5534,10 +5503,18 @@ extension MenuBarItemManager {
             !desiredSet.contains(uid) && uid != hiddenCtrlUID && uid != ahCtrlUID
         }
         if !unmanagedUIDs.isEmpty {
-            let placements = LayoutSolver.planUnmanagedPlacement(
+            // Build a DesiredLayout for the profile-apply context: the
+            // saved layout is the source of truth for previously-seen
+            // items; NewItemsPlacement is the fallback for unseen ones.
+            // Pinning is left empty here because this code path only
+            // positions unmanaged items, not the profile spec items.
+            let desiredForUnmanaged = DesiredLayout.fromSavedSectionOrder(
+                savedSectionOrder,
+                newItemsPlacement: newItemsPlacement
+            )
+            let placements = LayoutReconciler.unmanagedPlacementPlan(
+                desired: desiredForUnmanaged,
                 unmanagedUIDs: unmanagedUIDs,
-                savedSectionOrder: savedSectionOrder,
-                newItemsPlacement: newItemsPlacement,
                 currentUIDs: Set(currentFlat)
             )
 
