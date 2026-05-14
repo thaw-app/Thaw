@@ -169,6 +169,68 @@ enum LayoutReconciler {
         return nil
     }
 
+    /// Resolves an abstract LCSPlannedDestination against live items
+    /// to produce a concrete MoveDestination.
+    ///
+    /// Forms the bridge between LayoutSolver's UID-anchored decisions
+    /// and the move primitive's MenuBarItem-anchored inputs. The
+    /// orchestrator that already holds the live items list and control
+    /// item pair calls this just before invoking move(item:to:). If the
+    /// anchor uid named by the planner has disappeared mid-cycle (the
+    /// item quit, the cache reshuffled), falls back to the section
+    /// boundary.
+    static func resolveDestination(
+        _ abstract: LayoutSolver.LCSPlannedDestination,
+        items: [MenuBarItem],
+        controlItems: MenuBarItemManager.ControlItemPair,
+        fallbackSection: MenuBarSection.Name
+    ) -> MenuBarItemManager.MoveDestination {
+        switch abstract {
+        case let .leftOfUID(anchorUID):
+            if let anchor = items.first(where: {
+                $0.uniqueIdentifier == anchorUID && $0.isMovable
+            }) {
+                return .leftOfItem(anchor)
+            }
+            return boundaryDestination(for: fallbackSection, controlItems: controlItems)
+        case let .rightOfUID(anchorUID):
+            if let anchor = items.first(where: {
+                $0.uniqueIdentifier == anchorUID && $0.isMovable
+            }) {
+                return .rightOfItem(anchor)
+            }
+            return boundaryDestination(for: fallbackSection, controlItems: controlItems)
+        case let .sectionBoundary(section):
+            return boundaryDestination(for: section, controlItems: controlItems)
+        }
+    }
+
+    /// Returns the move destination at the boundary of the given
+    /// section.
+    ///
+    /// Always targets the section's own control item: items in each
+    /// section live to one side of that section's control item, so the
+    /// control item is the natural insertion point. Control items have
+    /// a permanent visible width when the divider style is .noDivider,
+    /// ensuring there is always a physical gap between adjacent
+    /// control items.
+    static func boundaryDestination(
+        for section: MenuBarSection.Name,
+        controlItems: MenuBarItemManager.ControlItemPair
+    ) -> MenuBarItemManager.MoveDestination {
+        switch section {
+        case .visible:
+            return .rightOfItem(controlItems.hidden)
+        case .hidden:
+            return .leftOfItem(controlItems.hidden)
+        case .alwaysHidden:
+            if let alwaysHidden = controlItems.alwaysHidden {
+                return .leftOfItem(alwaysHidden)
+            }
+            return .leftOfItem(controlItems.hidden)
+        }
+    }
+
     /// Decides where each unmanaged item should land during a profile
     /// apply, consulting the desired layout's sectionOrder for saved
     /// positions and falling back to the NewItemsPlacement preference.

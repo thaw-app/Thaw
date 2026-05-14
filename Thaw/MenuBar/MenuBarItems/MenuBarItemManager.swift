@@ -4526,34 +4526,6 @@ extension MenuBarItemManager {
             newItemsPlacement: newItemsPlacement
         )
 
-        /// Resolves a planner's abstract LCSPlannedDestination to a
-        /// concrete MoveDestination by looking up anchor uids against
-        /// the live items. Falls back to the section boundary if the
-        /// anchor has disappeared mid-cycle.
-        func resolveDestination(
-            _ abstractDestination: LayoutSolver.LCSPlannedDestination,
-            fallbackSection: MenuBarSection.Name
-        ) -> MoveDestination {
-            switch abstractDestination {
-            case let .leftOfUID(anchorUID):
-                if let anchor = items.first(where: {
-                    $0.uniqueIdentifier == anchorUID && $0.isMovable
-                }) {
-                    return .leftOfItem(anchor)
-                }
-                return Self.boundaryDestination(for: fallbackSection, controlItems: controlItems)
-            case let .rightOfUID(anchorUID):
-                if let anchor = items.first(where: {
-                    $0.uniqueIdentifier == anchorUID && $0.isMovable
-                }) {
-                    return .rightOfItem(anchor)
-                }
-                return Self.boundaryDestination(for: fallbackSection, controlItems: controlItems)
-            case let .sectionBoundary(section):
-                return Self.boundaryDestination(for: section, controlItems: controlItems)
-            }
-        }
-
         // Quick check: is there any reconciliation work to do?
         let hasMisplacedItems = LayoutReconciler.nextRestoreMove(
             desired: desired,
@@ -4610,14 +4582,24 @@ extension MenuBarItemManager {
         switch restoreMove {
         case let .crossSection(cross):
             movingItem = cross.item
-            destination = resolveDestination(cross.destination, fallbackSection: cross.toSection)
+            destination = LayoutReconciler.resolveDestination(
+                cross.destination,
+                items: items,
+                controlItems: controlItems,
+                fallbackSection: cross.toSection
+            )
             logFromSection = cross.fromSection
             logToSection = cross.toSection
             updateSavedOrderSlot = true
         case let .withinSection(within):
             movingItem = within.item
             let fallback = observed.sectionByWindowID[within.item.windowID] ?? .visible
-            destination = resolveDestination(within.destination, fallbackSection: fallback)
+            destination = LayoutReconciler.resolveDestination(
+                within.destination,
+                items: items,
+                controlItems: controlItems,
+                fallbackSection: fallback
+            )
             logFromSection = nil
             logToSection = fallback
             updateSavedOrderSlot = false
@@ -4677,29 +4659,6 @@ extension MenuBarItemManager {
 
         return true
     }
-
-    /// Returns the move destination at the boundary of the given section.
-    /// Static mirror of sectionBoundaryDestination(for:controlItems:) so
-    /// planner-fallback paths can resolve abstract section-boundary
-    /// destinations without an instance reference.
-    nonisolated private static func boundaryDestination(
-        for section: MenuBarSection.Name,
-        controlItems: ControlItemPair
-    ) -> MoveDestination {
-        switch section {
-        case .visible:
-            return .rightOfItem(controlItems.hidden)
-        case .hidden:
-            return .leftOfItem(controlItems.hidden)
-        case .alwaysHidden:
-            if let ah = controlItems.alwaysHidden {
-                return .leftOfItem(ah)
-            } else {
-                return .leftOfItem(controlItems.hidden)
-            }
-        }
-    }
-
     /// Only triggers when the set of window IDs has changed (items were
     /// recreated by an app restart), not when items were merely repositioned
     /// (user drag). This prevents undoing the user's manual reordering.
@@ -6188,30 +6147,16 @@ extension MenuBarItemManager {
 
                 // Resolve the abstract destination against fresh items.
                 // If the anchor item is missing (e.g. it disappeared
-                // mid-sequence), fall back to the section boundary.
-                let dest: MoveDestination
-                switch planned.destination {
-                case let .leftOfUID(anchorUID):
-                    if let anchor = allFreshItems.first(where: {
-                        $0.uniqueIdentifier == anchorUID && $0.isMovable
-                    }) {
-                        dest = .leftOfItem(anchor)
-                    } else {
-                        let targetSection = sectionName(for: sectionMap[planned.uid] ?? "visible") ?? .visible
-                        dest = sectionBoundaryDestination(for: targetSection, controlItems: freshControl)
-                    }
-                case let .rightOfUID(anchorUID):
-                    if let anchor = allFreshItems.first(where: {
-                        $0.uniqueIdentifier == anchorUID && $0.isMovable
-                    }) {
-                        dest = .rightOfItem(anchor)
-                    } else {
-                        let targetSection = sectionName(for: sectionMap[planned.uid] ?? "visible") ?? .visible
-                        dest = sectionBoundaryDestination(for: targetSection, controlItems: freshControl)
-                    }
-                case let .sectionBoundary(targetSection):
-                    dest = sectionBoundaryDestination(for: targetSection, controlItems: freshControl)
-                }
+                // mid-sequence), the reconciler falls back to the
+                // section boundary for the planned uid's target
+                // section.
+                let fallbackSection = sectionName(for: sectionMap[planned.uid] ?? "visible") ?? .visible
+                let dest = LayoutReconciler.resolveDestination(
+                    planned.destination,
+                    items: allFreshItems,
+                    controlItems: freshControl,
+                    fallbackSection: fallbackSection
+                )
 
                 do {
                     try await move(item: item, to: dest, skipInputPause: true)
@@ -6247,32 +6192,6 @@ extension MenuBarItemManager {
         appState.imageCache.performCacheCleanup()
         await appState.imageCache.updateCacheWithoutChecks(sections: MenuBarSection.Name.allCases)
         await MainActor.run { appState.objectWillChange.send() }
-    }
-    /// Returns the move destination at the boundary of the given section.
-    ///
-    /// Always targets the left side of the section's own control item.
-    /// Items in each section live to the left of that section's control item,
-    /// so `.leftOfItem(control)` is the natural insertion point.
-    ///
-    /// Control items have a permanent visible width when the divider
-    /// style is `.noDivider`, ensuring there is always a physical gap
-    /// between adjacent control items.
-    private func sectionBoundaryDestination(
-        for section: MenuBarSection.Name,
-        controlItems: ControlItemPair
-    ) -> MoveDestination {
-        switch section {
-        case .visible:
-            .rightOfItem(controlItems.hidden)
-        case .hidden:
-            .leftOfItem(controlItems.hidden)
-        case .alwaysHidden:
-            if let ah = controlItems.alwaysHidden {
-                .leftOfItem(ah)
-            } else {
-                .leftOfItem(controlItems.hidden)
-            }
-        }
     }
 
     /// Restores items that are stuck in a "blocked" state (positioned at x=-1)
