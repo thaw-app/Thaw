@@ -432,7 +432,7 @@ final class MenuBarItemManager: ObservableObject {
             // merge of current items with closed-app entries. This
             // replaces the old "append closed apps to the end" logic
             // that destroyed user-intended positions on every quit.
-            let identifiers = Self.planSectionOrder(
+            let identifiers = LayoutSolver.planSectionOrder(
                 currentInSection: currentInSection,
                 oldSavedForSection: oldSavedForSection,
                 allCurrentIdentifiers: allCurrentIdentifiers,
@@ -4205,7 +4205,7 @@ extension MenuBarItemManager {
             }
         }
 
-        let decision = Self.planLeftmostMove(
+        let decision = LayoutSolver.planLeftmostMove(
             items: items,
             hiddenBounds: hiddenBounds,
             sectionByWindowID: sectionByWindowID,
@@ -4347,14 +4347,14 @@ extension MenuBarItemManager {
             guard let rawSectionString = pendingRelocations[tagIdentifier] else { continue }
 
             // Parse the raw string into a typed PendingEntry for the planner.
-            let entry: PendingEntry
+            let entry: PendingLedger.PendingEntry
             if let sentinel = parseWaitForRelaunch(rawSectionString) {
-                entry = PendingEntry(
+                entry = PendingLedger.PendingEntry(
                     tagIdentifier: tagIdentifier,
                     kind: .waitForRelaunch(windowID: sentinel.windowID, section: sentinel.section)
                 )
             } else if let parsedSection = sectionName(for: rawSectionString) {
-                entry = PendingEntry(tagIdentifier: tagIdentifier, kind: .section(parsedSection))
+                entry = PendingLedger.PendingEntry(tagIdentifier: tagIdentifier, kind: .section(parsedSection))
             } else {
                 // Malformed entry — drop it.
                 pendingRelocations.removeValue(forKey: tagIdentifier)
@@ -4362,7 +4362,7 @@ extension MenuBarItemManager {
                 continue
             }
 
-            var decision = Self.planPendingMove(
+            var decision = PendingLedger.planPendingMove(
                 entry: entry,
                 items: items,
                 controlItems: controlItems,
@@ -4385,8 +4385,8 @@ extension MenuBarItemManager {
                 pendingRelocations[tagIdentifier] = sectionKey(for: promotedSection)
                 persistPendingRelocations()
 
-                let promotedEntry = PendingEntry(tagIdentifier: tagIdentifier, kind: .section(promotedSection))
-                decision = Self.planPendingMove(
+                let promotedEntry = PendingLedger.PendingEntry(tagIdentifier: tagIdentifier, kind: .section(promotedSection))
+                decision = PendingLedger.planPendingMove(
                     entry: promotedEntry,
                     items: items,
                     controlItems: controlItems,
@@ -4517,7 +4517,7 @@ extension MenuBarItemManager {
             return map
         }
 
-        let hasMisplacedItems = Self.planRebalanceMove(
+        let hasMisplacedItems = LayoutSolver.planRebalanceMove(
             items: items,
             sectionByWindowID: buildSectionByWindowID(),
             hasAlwaysHiddenSection: hasAlwaysHiddenSection,
@@ -4536,7 +4536,7 @@ extension MenuBarItemManager {
 
         // Re-evaluate after the settle wait — items may have shifted
         // while we were sleeping (relaunched apps continue to attach).
-        let firstMove = Self.planRebalanceMove(
+        let firstMove = LayoutSolver.planRebalanceMove(
             items: items,
             sectionByWindowID: buildSectionByWindowID(),
             hasAlwaysHiddenSection: hasAlwaysHiddenSection,
@@ -4639,7 +4639,7 @@ extension MenuBarItemManager {
         // move-per-call contract; the caller recaches and re-enters
         // until both planners return nil.
         let reorderSectionMap = buildSectionByWindowID()
-        let reorderMove = Self.planWithinSectionReorder(
+        let reorderMove = LayoutSolver.planWithinSectionReorder(
             items: items,
             sectionByWindowID: reorderSectionMap,
             savedSectionOrder: savedSectionOrder,
@@ -5534,7 +5534,7 @@ extension MenuBarItemManager {
             !desiredSet.contains(uid) && uid != hiddenCtrlUID && uid != ahCtrlUID
         }
         if !unmanagedUIDs.isEmpty {
-            let placements = Self.planUnmanagedPlacement(
+            let placements = LayoutSolver.planUnmanagedPlacement(
                 unmanagedUIDs: unmanagedUIDs,
                 savedSectionOrder: savedSectionOrder,
                 newItemsPlacement: newItemsPlacement,
@@ -5633,7 +5633,7 @@ extension MenuBarItemManager {
                     }
                     return set
                 }()
-                let destination = Self.anchorDestination(
+                let destination = LayoutSolver.anchorDestination(
                     forSavedIndex: savedIndex,
                     inSection: section,
                     savedSequence: savedSeq,
@@ -5776,7 +5776,7 @@ extension MenuBarItemManager {
                 """
             )
 
-            let overflowResult = Self.planNotchOverflow(
+            let overflowResult = LayoutSolver.planNotchOverflow(
                 desiredFiltered: desiredFiltered,
                 unmanagedUIDs: unmanagedUIDs,
                 visibleCtrlUID: visibleCtrlUID,
@@ -5821,7 +5821,7 @@ extension MenuBarItemManager {
         }
 
         if isNotchedDisplay {
-            let fullSequence = Self.planFullSortSequence(
+            let fullSequence = LayoutSolver.planFullSortSequence(
                 currentFlat: currentFlat,
                 desiredFiltered: desiredFiltered,
                 sectionMap: sectionMap,
@@ -6169,7 +6169,7 @@ extension MenuBarItemManager {
             // and respect notch-overflow's section reassignments.
             let currentNoControls = currentFlat.filter { $0 != hiddenCtrlUID && $0 != ahCtrlUID }
             let desiredNoControls = desiredFiltered.filter { $0 != hiddenCtrlUID && $0 != ahCtrlUID }
-            let plannedMoves = Self.planLCSMoveSequence(
+            let plannedMoves = LayoutSolver.planLCSMoveSequence(
                 currentNoControls: currentNoControls,
                 desiredNoControls: desiredNoControls,
                 sectionMap: sectionMap
@@ -6220,7 +6220,7 @@ extension MenuBarItemManager {
                     }) {
                         dest = .leftOfItem(anchor)
                     } else {
-                        let targetSection = Self.sectionName(forPersistedKey: sectionMap[planned.uid] ?? "visible") ?? .visible
+                        let targetSection = sectionName(for: sectionMap[planned.uid] ?? "visible") ?? .visible
                         dest = sectionBoundaryDestination(for: targetSection, controlItems: freshControl)
                     }
                 case let .rightOfUID(anchorUID):
@@ -6229,7 +6229,7 @@ extension MenuBarItemManager {
                     }) {
                         dest = .rightOfItem(anchor)
                     } else {
-                        let targetSection = Self.sectionName(forPersistedKey: sectionMap[planned.uid] ?? "visible") ?? .visible
+                        let targetSection = sectionName(for: sectionMap[planned.uid] ?? "visible") ?? .visible
                         dest = sectionBoundaryDestination(for: targetSection, controlItems: freshControl)
                     }
                 case let .sectionBoundary(targetSection):
@@ -6271,44 +6271,6 @@ extension MenuBarItemManager {
         await appState.imageCache.updateCacheWithoutChecks(sections: MenuBarSection.Name.allCases)
         await MainActor.run { appState.objectWillChange.send() }
     }
-
-    /// Computes the Longest Common Subsequence of two string arrays.
-    /// Returns the set of items that appear in both arrays in the same
-    /// relative order — these items don't need to be moved.
-    nonisolated private static func longestCommonSubsequence(_ a: [String], _ b: [String]) -> Set<String> {
-        let m = a.count
-        let n = b.count
-        guard m > 0, n > 0 else { return [] }
-
-        // DP table.
-        var dp = Array(repeating: Array(repeating: 0, count: n + 1), count: m + 1)
-        for i in 1 ... m {
-            for j in 1 ... n {
-                if a[i - 1] == b[j - 1] {
-                    dp[i][j] = dp[i - 1][j - 1] + 1
-                } else {
-                    dp[i][j] = max(dp[i - 1][j], dp[i][j - 1])
-                }
-            }
-        }
-
-        // Backtrack to find the LCS items.
-        var result = Set<String>()
-        var i = m
-        var j = n
-        while i > 0, j > 0 {
-            if a[i - 1] == b[j - 1] {
-                result.insert(a[i - 1])
-                i -= 1; j -= 1
-            } else if dp[i - 1][j] > dp[i][j - 1] {
-                i -= 1
-            } else {
-                j -= 1
-            }
-        }
-        return result
-    }
-
     /// Returns the move destination at the boundary of the given section.
     ///
     /// Always targets the left side of the section's own control item.
@@ -6415,1172 +6377,6 @@ extension MenuBarItemManager {
         try? await Task.sleep(for: .milliseconds(200))
 
         return failedMoves
-    }
-}
-
-// MARK: - Restore Path Planners
-
-extension MenuBarItemManager {
-    /// A planned cross-section move emitted by the rebalance planner.
-    ///
-    /// The planner only reports the next single move; the caller is
-    /// responsible for executing it, persisting the new layout, and
-    /// re-running the planner until it returns nil.
-    ///
-    /// The destination is position-aware: it reflects the item's
-    /// saved position in toSection, anchored against the items
-    /// currently present in that section. The orchestrator resolves
-    /// the abstract destination to a concrete MoveDestination at
-    /// execution time (looking up anchor uids against fresh items,
-    /// falling back to the section boundary if the anchor has
-    /// disappeared mid-cycle).
-    struct RebalanceMove: Equatable {
-        let item: MenuBarItem
-        let fromSection: MenuBarSection.Name
-        let toSection: MenuBarSection.Name
-        let destination: LCSPlannedDestination
-    }
-
-    /// Computes the first cross-section rebalance move needed to bring the
-    /// menu bar layout back in line with the saved section order.
-    ///
-    /// Matching is count-based per baseID (namespace:title with the
-    /// instanceIndex stripped) so multi-instance apps remain fungible: any
-    /// window of the app can fill any slot for that app. A section is
-    /// considered wrong only when the count of items for that baseID in it
-    /// disagrees with the saved count.
-    ///
-    /// When the always-hidden section is disabled (no always-hidden control
-    /// item), the saved always-hidden counts collapse into the hidden
-    /// section so items destined for AH are not perpetually marked
-    /// "missing".
-    ///
-    /// Surplus items are taken from the rightmost (suffix) of the current
-    /// bucket to match the convention used by the rest of the restore path.
-    /// The returned move is the first one discovered; iteration order over
-    /// baseIDs and demand/surplus dictionaries is intentionally unspecified
-    /// because every imbalance must converge by repeated calls anyway.
-    ///
-    /// This is a pure function over its inputs. The caller drives
-    /// classification (passed in via sectionByWindowID), persistence,
-    /// cooldowns, and execution. Decoupling classification from this
-    /// planner keeps it testable: the production caller builds the map
-    /// via CacheContext (which queries the live Window Server), while
-    /// tests construct the map directly.
-    nonisolated static func planRebalanceMove(
-        items: [MenuBarItem],
-        sectionByWindowID: [CGWindowID: MenuBarSection.Name],
-        hasAlwaysHiddenSection: Bool,
-        savedSectionOrder: [String: [String]],
-        activelyShownTags: Set<String>
-    ) -> RebalanceMove? {
-        // Build per-section saved counts per baseID.
-        var savedCountsByBaseID = [String: [MenuBarSection.Name: Int]]()
-        for (sectionKeyString, identifiers) in savedSectionOrder {
-            guard let section = sectionName(forPersistedKey: sectionKeyString) else { continue }
-            for identifier in identifiers {
-                let baseID = identifier.split(separator: ":", maxSplits: 2).prefix(2).joined(separator: ":")
-                savedCountsByBaseID[baseID, default: [:]][section, default: 0] += 1
-            }
-        }
-
-        // Collapse alwaysHidden counts into hidden when the always-hidden
-        // section is disabled, so saved AH items aren't perpetually missing.
-        if !hasAlwaysHiddenSection {
-            for baseID in savedCountsByBaseID.keys {
-                if let ahCount = savedCountsByBaseID[baseID]?[.alwaysHidden], ahCount > 0 {
-                    savedCountsByBaseID[baseID]?[.hidden, default: 0] += ahCount
-                    savedCountsByBaseID[baseID]?.removeValue(forKey: .alwaysHidden)
-                }
-            }
-        }
-
-        let allSections: [MenuBarSection.Name] = [.visible, .hidden, .alwaysHidden]
-
-        // Group current items by baseID and section, excluding controls,
-        // non-movable, non-hideable, and actively-shown items.
-        var currentItemsByBaseID = [String: [MenuBarSection.Name: [MenuBarItem]]]()
-        for item in items where !item.isControlItem && item.isMovable && item.canBeHidden {
-            guard !activelyShownTags.contains(item.tag.tagIdentifier) else { continue }
-            guard let currentSection = sectionByWindowID[item.windowID] else { continue }
-            let baseID = "\(item.tag.namespace):\(item.tag.title)"
-            currentItemsByBaseID[baseID, default: [:]][currentSection, default: []].append(item)
-        }
-
-        // For each baseID, compute demand and surplus per section, then
-        // return the first (surplus, demand) pair found.
-        for (baseID, savedCounts) in savedCountsByBaseID {
-            let currentBuckets = currentItemsByBaseID[baseID] ?? [:]
-            var demand = [MenuBarSection.Name: Int]()
-            var surplusItems = [MenuBarSection.Name: [MenuBarItem]]()
-            for section in allSections {
-                let saved = savedCounts[section] ?? 0
-                let current = currentBuckets[section]?.count ?? 0
-                if saved > current {
-                    demand[section] = saved - current
-                } else if current > saved, let bucket = currentBuckets[section] {
-                    surplusItems[section] = Array(bucket.suffix(current - saved))
-                }
-            }
-            if demand.isEmpty || surplusItems.isEmpty { continue }
-            for (toSection, _) in demand {
-                for (fromSection, surplus) in surplusItems where !surplus.isEmpty {
-                    let movingItem = surplus[0]
-                    // Compute the position-aware destination by looking
-                    // up the moving item's saved index in toSection and
-                    // anchoring against the items currently in toSection.
-                    let savedSequence = savedSectionOrder[sectionKeyFor(toSection)] ?? []
-                    let savedIdx = savedSequence.firstIndex(of: movingItem.uniqueIdentifier)
-                        ?? savedSequence.firstIndex(where: { savedID in
-                            let savedBase = savedID.split(separator: ":", maxSplits: 2)
-                                .prefix(2).joined(separator: ":")
-                            return savedBase == baseID
-                        })
-                        ?? 0
-                    let currentInToSection: Set<String> = {
-                        var set = Set<String>()
-                        for (_, buckets) in currentItemsByBaseID {
-                            if let items = buckets[toSection] {
-                                for item in items {
-                                    set.insert(item.uniqueIdentifier)
-                                }
-                            }
-                        }
-                        return set
-                    }()
-                    let destination = anchorDestination(
-                        forSavedIndex: savedIdx,
-                        inSection: toSection,
-                        savedSequence: savedSequence,
-                        currentUIDsInSection: currentInToSection
-                    )
-                    return RebalanceMove(
-                        item: movingItem,
-                        fromSection: fromSection,
-                        toSection: toSection,
-                        destination: destination
-                    )
-                }
-            }
-        }
-        return nil
-    }
-
-    /// Maps a section to its persisted key string. Mirror of the
-    /// instance sectionKey(for:) for use in nonisolated planners.
-    nonisolated private static func sectionKeyFor(_ section: MenuBarSection.Name) -> String {
-        switch section {
-        case .visible: return "visible"
-        case .hidden: return "hidden"
-        case .alwaysHidden: return "alwaysHidden"
-        }
-    }
-
-    /// A decision emitted by the leftmost-item relocation planner.
-    ///
-    /// Only describes WHICH item should move and what kind of move it is.
-    /// The orchestrator owns destination computation (which depends on
-    /// instance state like newItemsPlacement) and state mutation
-    /// (knownItemIdentifiers).
-    enum LeftmostMove: Equatable {
-        /// The Thaw visible-control icon is sitting left of the hidden
-        /// divider; restore it to the visible section.
-        case thawIcon(MenuBarItem)
-        /// A non-hideable system item (screen recording / mic / camera
-        /// indicator) is left of the hidden divider; restore it to
-        /// visible.
-        case systemItem(MenuBarItem)
-        /// A genuinely new hideable item is left of the hidden divider;
-        /// relocate it to the user's new-items section and persist its
-        /// identifier so future cache cycles do not treat it as "new"
-        /// again.
-        case newHideableItem(MenuBarItem, identifierToMark: String)
-        /// No relocation is warranted on this pass.
-        case noop(reason: NoopReason)
-
-        enum NoopReason: Equatable {
-            /// No movable items currently sit left of the hidden divider.
-            case noLeftmostItems
-            /// One or more hideable candidates have unresolved sourcePID;
-            /// defer until the next cache cycle resolves them.
-            case unresolvedSourcePID
-            /// No hideable candidate passes the newness test (either the
-            /// item has a saved section, has been seen before, or appears
-            /// to be an identifier migration of an existing window).
-            case noNewCandidate
-            /// The chosen candidate is already in the configured new-items
-            /// section; moving would be a no-op.
-            case alreadyInTarget
-        }
-    }
-
-    /// Computes the next leftmost-relocation decision.
-    ///
-    /// Walks the cascade implemented by relocateNewLeftmostItems:
-    /// (1) Thaw visible-control icon recovery, (2) non-hideable system
-    /// item recovery, (3) genuinely new hideable item placement under the
-    /// user's new-items section. The fourth path is "no action" with a
-    /// typed reason so tests can pin down which branch fired.
-    ///
-    /// Pure over its inputs. The orchestrator computes hiddenBounds,
-    /// sectionByWindowID, and the cached hidden / always-hidden tag sets
-    /// (all of which depend on live state) and passes them in. State
-    /// mutation (knownItemIdentifiers, persistence) and execution
-    /// (move()) stay with the orchestrator.
-    nonisolated static func planLeftmostMove(
-        items: [MenuBarItem],
-        hiddenBounds: CGRect,
-        sectionByWindowID: [CGWindowID: MenuBarSection.Name],
-        previousWindowIDs: [CGWindowID],
-        savedSectionOrder: [String: [String]],
-        knownItemIdentifiers: Set<String>,
-        hiddenTags: Set<MenuBarItemTag>,
-        alwaysHiddenTags: Set<MenuBarItemTag>,
-        effectiveNewItemsSection: MenuBarSection.Name
-    ) -> LeftmostMove {
-        // Items sitting left of the hidden divider. The Thaw icon is a
-        // control item but must always be visible, so we admit it here.
-        let leftmostItems = items
-            .filter {
-                $0.bounds.maxX <= hiddenBounds.minX &&
-                    $0.isMovable &&
-                    (!$0.isControlItem || $0.tag == .visibleControlItem)
-            }
-            .sorted { $0.bounds.minX < $1.bounds.minX }
-
-        guard !leftmostItems.isEmpty else {
-            return .noop(reason: .noLeftmostItems)
-        }
-
-        // Path 1: Thaw icon.
-        if let thawIcon = leftmostItems.first(where: { $0.tag == .visibleControlItem }) {
-            return .thawIcon(thawIcon)
-        }
-
-        // Path 2: non-hideable system item (camera / mic / screen recording).
-        // Excludes transient Control Center items (Live Activities,
-        // iPhone Mirroring) — those live deeply off-screen and cannot be
-        // dragged successfully, so retrying every cache cycle would
-        // burn the eventSemaphore for ~4 s per attempt.
-        if let systemItem = leftmostItems.first(where: { !$0.canBeHidden && !$0.isTransientControlCenterItem }) {
-            return .systemItem(systemItem)
-        }
-
-        // Path 3: hideable candidate selection.
-        let hideableLeftmost = leftmostItems.filter(\.canBeHidden)
-        let previousIDs = Set(previousWindowIDs)
-
-        // Unresolved sourcePID short-circuit. Without sourcePID
-        // resolution, third-party items hosted by Control Center fall
-        // back to namespace com.apple.controlcenter, which prevents
-        // matching against savedSectionOrder (real bundle IDs). The
-        // next cache pass with resolved sourcePIDs will handle
-        // relocation safely.
-        if hideableLeftmost.contains(where: { $0.sourcePID == nil }) {
-            return .noop(reason: .unresolvedSourcePID)
-        }
-
-        // Build identifier → section lookup over savedSectionOrder.
-        var savedSectionForIdentifier = [String: MenuBarSection.Name]()
-        for (sectionKeyString, identifiers) in savedSectionOrder {
-            guard let section = sectionName(forPersistedKey: sectionKeyString) else { continue }
-            for identifier in identifiers {
-                savedSectionForIdentifier[identifier] = section
-            }
-        }
-
-        let candidate = hideableLeftmost.first { item in
-            let identifier = "\(item.tag.namespace):\(item.tag.title)"
-
-            // Items with a saved section belong to restoreItemsToSaved-
-            // Sections, not to the new-item relocation path.
-            let hasSavedSection = savedSectionForIdentifier[identifier] != nil ||
-                savedSectionForIdentifier[item.uniqueIdentifier] != nil
-            guard !hasSavedSection else { return false }
-
-            let isNewIdentity = !knownItemIdentifiers.contains(identifier)
-            let notPlacedHidden = !hiddenTags.contains(item.tag) && !alwaysHiddenTags.contains(item.tag)
-
-            // When isNewIdentity is true but the windowID has been seen
-            // before, the item's identifier migrated (e.g. sourcePID
-            // resolution succeeded). Treat that as not-new.
-            let isNewID = previousIDs.isEmpty ? isNewIdentity : !previousIDs.contains(item.windowID)
-            if isNewIdentity, !isNewID {
-                return false
-            }
-            return notPlacedHidden && (isNewIdentity || isNewID)
-        }
-        guard let candidate else {
-            return .noop(reason: .noNewCandidate)
-        }
-
-        // "Already in target" check.
-        if sectionByWindowID[candidate.windowID] == effectiveNewItemsSection {
-            return .noop(reason: .alreadyInTarget)
-        }
-
-        let identifierToMark = "\(candidate.tag.namespace):\(candidate.tag.title)"
-        return .newHideableItem(candidate, identifierToMark: identifierToMark)
-    }
-
-    /// A pending-relocation entry, parsed into a typed shape so the
-    /// planner does not have to handle raw string sentinel formats.
-    struct PendingEntry: Equatable {
-        let tagIdentifier: String
-        let kind: Kind
-
-        enum Kind: Equatable {
-            /// A normal pending relocation targeting a specific section.
-            case section(MenuBarSection.Name)
-            /// A wait-for-relaunch sentinel: the rehide hit its retry cap
-            /// in this session; suppress moves until the windowID changes
-            /// (app relaunch).
-            case waitForRelaunch(windowID: CGWindowID, section: MenuBarSection.Name)
-        }
-    }
-
-    /// A decision emitted by the pending-relocation planner.
-    enum PendingMove: Equatable {
-        /// Move the item to the destination; orchestrator clears the
-        /// pending entry on success.
-        case move(item: MenuBarItem, destination: MoveDestination)
-        /// Clear the pending entry without moving (e.g. item is already
-        /// in its target hidden section, or the recorded section was
-        /// .visible).
-        case clearEntry
-        /// The wait-for-relaunch sentinel's windowID has changed (app
-        /// relaunched); promote the sentinel to a regular section entry
-        /// so the next planner call computes a normal move.
-        case promoteWaitForRelaunch(section: MenuBarSection.Name)
-        /// Skip this entry on this pass without state changes.
-        case skip(reason: SkipReason)
-
-        enum SkipReason: Equatable {
-            /// Currently temporarily-shown; the rehide flow owns this item.
-            case activelyShown
-            /// The item is not present in the live menu bar (app not yet
-            /// relaunched).
-            case itemNotPresent
-            /// Sentinel is active and the windowID hasn't changed; skip
-            /// to avoid re-saturating the event semaphore.
-            case waitForRelaunchActive
-        }
-    }
-
-    /// Computes the next pending-relocation decision for a single entry.
-    ///
-    /// Walks the per-entry logic of relocatePendingItems: actively-shown
-    /// short-circuit, waitForRelaunch sentinel handling, target-section
-    /// validation, item-presence and item-already-hidden checks, then
-    /// destination resolution (stored neighbor → fallback neighbor →
-    /// section boundary).
-    ///
-    /// Pure over its inputs. The orchestrator parses the raw string
-    /// sentinel format into PendingEntry and supplies live bounds via
-    /// hiddenBounds and per-item bounds via boundsForWindowID. State
-    /// mutation (pendingRelocations, pendingReturnDestinations) and
-    /// execution (move()) stay with the orchestrator.
-    nonisolated static func planPendingMove(
-        entry: PendingEntry,
-        items: [MenuBarItem],
-        controlItems: ControlItemPair,
-        hiddenBounds: CGRect,
-        boundsForWindowID: [CGWindowID: CGRect],
-        activelyShownTags: Set<String>,
-        pendingReturnDestinations: [String: [String: String]],
-        fallbackNeighborByTagIdentifier: [String: MenuBarItemTag]
-    ) -> PendingMove {
-        if activelyShownTags.contains(entry.tagIdentifier) {
-            return .skip(reason: .activelyShown)
-        }
-
-        let item = items.first { entry.tagIdentifier == $0.tag.tagIdentifier }
-
-        // waitForRelaunch sentinel handling. If the windowID has changed
-        // (app relaunched), we promote and let the orchestrator re-run.
-        // If unchanged, skip. If item is not present at all, skip and
-        // keep the entry for next launch.
-        if case let .waitForRelaunch(sentinelWindowID, sentinelSection) = entry.kind {
-            guard let item else {
-                return .skip(reason: .itemNotPresent)
-            }
-            if item.windowID == sentinelWindowID {
-                return .skip(reason: .waitForRelaunchActive)
-            }
-            return .promoteWaitForRelaunch(section: sentinelSection)
-        }
-
-        // Regular section entry from here on.
-        guard case let .section(targetSection) = entry.kind else {
-            return .skip(reason: .itemNotPresent)
-        }
-
-        // If the recorded section was .visible there is nothing to do.
-        guard targetSection != .visible else {
-            return .clearEntry
-        }
-
-        // Item must be present in the live menu bar.
-        guard let item else {
-            return .skip(reason: .itemNotPresent)
-        }
-
-        // If the item is already in a hidden section, clean up the
-        // pending entry. The original code uses bestBounds for this
-        // comparison; the orchestrator provides those bounds via
-        // boundsForWindowID and the planner falls back to item.bounds
-        // when no live bounds were supplied.
-        let itemBounds = boundsForWindowID[item.windowID] ?? item.bounds
-        guard itemBounds.minX >= hiddenBounds.maxX else {
-            return .clearEntry
-        }
-
-        // Resolve destination: stored neighbor → fallback neighbor →
-        // section boundary. We use exactly the same precedence the
-        // original loop used.
-        if let destInfo = pendingReturnDestinations[entry.tagIdentifier],
-           let neighborTagString = destInfo["neighbor"],
-           let neighborItem = items.first(where: { neighborTagString == $0.tag.tagIdentifier })
-        {
-            let destination: MoveDestination = destInfo["position"] == "left"
-                ? .leftOfItem(neighborItem)
-                : .rightOfItem(neighborItem)
-            return .move(item: item, destination: destination)
-        }
-
-        if let fallbackTag = fallbackNeighborByTagIdentifier[entry.tagIdentifier],
-           let fallbackItem = items.first(where: { $0.tag.tagIdentifier == fallbackTag.tagIdentifier })
-        {
-            return .move(item: item, destination: .rightOfItem(fallbackItem))
-        }
-
-        // Section-boundary fallback.
-        switch targetSection {
-        case .hidden:
-            return .move(item: item, destination: .leftOfItem(controlItems.hidden))
-        case .alwaysHidden:
-            if let alwaysHidden = controlItems.alwaysHidden {
-                return .move(item: item, destination: .leftOfItem(alwaysHidden))
-            } else {
-                return .move(item: item, destination: .leftOfItem(controlItems.hidden))
-            }
-        case .visible:
-            return .clearEntry
-        }
-    }
-
-    /// The result of the notch-overflow planner.
-    struct NotchOverflowResult: Equatable {
-        /// UIDs of items that should overflow from visible to hidden.
-        let overflowUIDs: [String]
-        /// The desiredFiltered sequence after the overflow has been applied
-        /// (overflowed items repositioned into the hidden section).
-        let updatedDesiredFiltered: [String]
-        /// Updated section assignments. Overflowed UIDs are remapped to
-        /// "hidden". Keys are uniqueIdentifiers, values are persisted
-        /// section keys ("visible"/"hidden"/"alwaysHidden").
-        let updatedSectionMap: [String: String]
-    }
-
-    /// Decides which visible items must overflow into hidden to fit the
-    /// available width under the notch.
-    ///
-    /// Implements the tiered priority algorithm: unmanaged items
-    /// (newly-detected, not in any profile section) are the first
-    /// candidates to overflow because the profile has no saved position
-    /// for them. Profile-saved items only overflow if even removing all
-    /// unmanaged items still leaves the layout exceeding the budget.
-    /// Within each tier, leftmost items overflow first.
-    ///
-    /// The planner does not call Bridging or NSScreen. Callers compute
-    /// availableWidth from notch geometry and Control Center position,
-    /// and supply per-uid widths derived from live item bounds. This
-    /// keeps the planner pure for testing and pins down the algorithm
-    /// for regression-locking.
-    nonisolated static func planNotchOverflow(
-        desiredFiltered: [String],
-        unmanagedUIDs: [String],
-        visibleCtrlUID: String?,
-        hiddenCtrlUID: String,
-        ahCtrlUID: String?,
-        sectionMap: [String: String],
-        uidWidths: [String: CGFloat],
-        availableWidth: CGFloat
-    ) -> NotchOverflowResult {
-        // Visible-section UIDs in profile order (left-to-right).
-        let visibleUIDs = Array(desiredFiltered.prefix(while: { $0 != hiddenCtrlUID }))
-        let chevronWidth = visibleCtrlUID.flatMap { uidWidths[$0] } ?? 0
-
-        let unmanagedSet = Set(unmanagedUIDs)
-        let nonChevronUIDs = visibleUIDs.filter { $0 != visibleCtrlUID }
-        let unmanagedNonChevron = nonChevronUIDs.filter { unmanagedSet.contains($0) }
-        let profileNonChevron = nonChevronUIDs.filter { !unmanagedSet.contains($0) }
-
-        // Profile baseline: chevron + all profile-saved visible items.
-        var profileBaseline: CGFloat = chevronWidth
-        for uid in profileNonChevron {
-            profileBaseline += uidWidths[uid] ?? 0
-        }
-
-        var overflowUIDs: [String] = []
-
-        if profileBaseline > availableWidth {
-            // Profile alone exceeds budget. All unmanaged overflow plus
-            // enough profile items (leftmost first) to fit. Iterate
-            // profile items from the CC end inward; whatever doesn't fit
-            // overflows.
-            overflowUIDs.append(contentsOf: unmanagedNonChevron)
-            var profileFitting = [String]()
-            var usedWidth = chevronWidth
-            for uid in profileNonChevron.reversed() {
-                let width = uidWidths[uid] ?? 0
-                if usedWidth + width <= availableWidth {
-                    usedWidth += width
-                    profileFitting.insert(uid, at: 0)
-                } else {
-                    break
-                }
-            }
-            let profileOverflow = Array(
-                profileNonChevron.prefix(profileNonChevron.count - profileFitting.count)
-            )
-            overflowUIDs.append(contentsOf: profileOverflow)
-        } else {
-            // Profile fits. Try to fit unmanaged items from the CC end;
-            // whatever doesn't fit overflows. Profile items stay put.
-            var usedWidth = profileBaseline
-            var unmanagedFitting = [String]()
-            for uid in unmanagedNonChevron.reversed() {
-                let width = uidWidths[uid] ?? 0
-                if usedWidth + width <= availableWidth {
-                    usedWidth += width
-                    unmanagedFitting.insert(uid, at: 0)
-                } else {
-                    break
-                }
-            }
-            overflowUIDs = Array(
-                unmanagedNonChevron.prefix(unmanagedNonChevron.count - unmanagedFitting.count)
-            )
-        }
-
-        // No overflow → return inputs unchanged.
-        if overflowUIDs.isEmpty {
-            return NotchOverflowResult(
-                overflowUIDs: [],
-                updatedDesiredFiltered: desiredFiltered,
-                updatedSectionMap: sectionMap
-            )
-        }
-
-        // Rebuild desiredFiltered: chevron + remaining visible items +
-        // hiddenCtrl + existingHidden + overflowUIDs + ahCtrl +
-        // existingAH. Overflowed items append in their original visible
-        // order so leftmost-from-visible lands at the deepest end of
-        // hidden.
-        var controlSet: Set<String> = [hiddenCtrlUID]
-        if let ahUID = ahCtrlUID { controlSet.insert(ahUID) }
-
-        let hiddenStart = desiredFiltered.firstIndex(of: hiddenCtrlUID)
-            .map { $0 + 1 } ?? desiredFiltered.endIndex
-        let hiddenEnd = ahCtrlUID.flatMap { desiredFiltered.firstIndex(of: $0) }
-            ?? desiredFiltered.endIndex
-        let existingHidden = desiredFiltered[hiddenStart ..< hiddenEnd]
-            .filter { !controlSet.contains($0) }
-
-        let ahStart = ahCtrlUID.flatMap { desiredFiltered.firstIndex(of: $0) }
-            .map { $0 + 1 } ?? desiredFiltered.endIndex
-        let existingAH = desiredFiltered[ahStart...]
-            .filter { !controlSet.contains($0) }
-
-        let overflowSet = Set(overflowUIDs)
-        let remainingNonChevron = nonChevronUIDs.filter { !overflowSet.contains($0) }
-
-        var rebuilt = [String]()
-        if let chevron = visibleCtrlUID {
-            rebuilt.append(chevron)
-        }
-        rebuilt.append(contentsOf: remainingNonChevron)
-        rebuilt.append(hiddenCtrlUID)
-        rebuilt.append(contentsOf: existingHidden)
-        rebuilt.append(contentsOf: overflowUIDs)
-        if let ahUID = ahCtrlUID {
-            rebuilt.append(ahUID)
-            rebuilt.append(contentsOf: existingAH)
-        }
-
-        var updatedSectionMap = sectionMap
-        for uid in overflowUIDs {
-            updatedSectionMap[uid] = "hidden"
-        }
-
-        return NotchOverflowResult(
-            overflowUIDs: overflowUIDs,
-            updatedDesiredFiltered: rebuilt,
-            updatedSectionMap: updatedSectionMap
-        )
-    }
-
-    /// An abstract destination emitted by the LCS planner.
-    ///
-    /// References anchor items by UID rather than by MenuBarItem because
-    /// the orchestrator re-fetches the live items between each move
-    /// (positions shift mid-sequence) and resolves the UID back to a
-    /// MenuBarItem at execution time.
-    enum LCSPlannedDestination: Equatable {
-        case leftOfUID(String)
-        case rightOfUID(String)
-        case sectionBoundary(MenuBarSection.Name)
-    }
-
-    /// A single planned move emitted by the LCS planner.
-    struct LCSPlannedMove: Equatable {
-        let uid: String
-        let destination: LCSPlannedDestination
-    }
-
-    /// Plans the LCS-anchored move sequence for items that need to move
-    /// to reach the desired order.
-    ///
-    /// Computes LCS over current and desired (filtered to overlap), then
-    /// for each item that must move scans forward for a stable anchor in
-    /// the same section, falls back to a backward scan, falls back to a
-    /// section boundary. "Stable anchors" are LCS items plus items
-    /// already planned by the sequence — so the destination of move N+1
-    /// can reference an anchor that move N just established.
-    ///
-    /// Pure over its inputs. Returns destinations as anchor UIDs so the
-    /// orchestrator can resolve them against fresh items between moves.
-    nonisolated static func planLCSMoveSequence(
-        currentNoControls: [String],
-        desiredNoControls: [String],
-        sectionMap: [String: String]
-    ) -> [LCSPlannedMove] {
-        let currentSetNow = Set(currentNoControls)
-        let desiredSetNow = Set(desiredNoControls)
-        let lcsCurrent = currentNoControls.filter { desiredSetNow.contains($0) }
-        let lcsDesired = desiredNoControls.filter { currentSetNow.contains($0) }
-
-        let lcsItems = longestCommonSubsequence(lcsCurrent, lcsDesired)
-        let itemsToMove = lcsDesired.filter { !lcsItems.contains($0) }
-
-        if itemsToMove.isEmpty {
-            return []
-        }
-
-        var movedItems = Set<String>()
-        var result = [LCSPlannedMove]()
-
-        for uid in itemsToMove {
-            guard let desiredIdx = lcsDesired.firstIndex(of: uid) else {
-                continue
-            }
-            let targetKey = sectionMap[uid] ?? "visible"
-
-            var destination: LCSPlannedDestination?
-
-            // Scan forward for a stable anchor in the same section.
-            for scanIdx in (desiredIdx + 1) ..< lcsDesired.count {
-                let candidateUID = lcsDesired[scanIdx]
-                let candidateKey = sectionMap[candidateUID] ?? "visible"
-                guard candidateKey == targetKey else { break }
-                if lcsItems.contains(candidateUID) || movedItems.contains(candidateUID) {
-                    destination = .leftOfUID(candidateUID)
-                    break
-                }
-            }
-
-            // Scan backward for a stable anchor.
-            if destination == nil, desiredIdx > 0 {
-                for scanIdx in stride(from: desiredIdx - 1, through: 0, by: -1) {
-                    let candidateUID = lcsDesired[scanIdx]
-                    let candidateKey = sectionMap[candidateUID] ?? "visible"
-                    guard candidateKey == targetKey else { break }
-                    if lcsItems.contains(candidateUID) || movedItems.contains(candidateUID) {
-                        destination = .rightOfUID(candidateUID)
-                        break
-                    }
-                }
-            }
-
-            // Fallback to section boundary.
-            if destination == nil {
-                let targetSection: MenuBarSection.Name
-                switch targetKey {
-                case "hidden": targetSection = .hidden
-                case "alwaysHidden": targetSection = .alwaysHidden
-                default: targetSection = .visible
-                }
-                destination = .sectionBoundary(targetSection)
-            }
-
-            if let destination {
-                result.append(LCSPlannedMove(uid: uid, destination: destination))
-                movedItems.insert(uid)
-            }
-        }
-        return result
-    }
-
-    /// Plans the full-sort sequence used on notched displays.
-    ///
-    /// Each item in the returned sequence is placed left of the
-    /// Control Center item by the orchestrator; subsequent insertions push earlier items
-    /// further left. Result is:
-    ///   [alwaysHidden items] [AH ctrl] [hidden items] [hidden ctrl] [visible items]
-    /// in left-to-right order.
-    ///
-    /// Returns an empty array when the current order already matches the
-    /// desired order (no moves needed) or when desired is empty.
-    ///
-    /// Pure over its inputs. The orchestrator handles per-item live
-    /// fetching, the move() loop, and control-item state restoration.
-    nonisolated static func planFullSortSequence(
-        currentFlat: [String],
-        desiredFiltered: [String],
-        sectionMap: [String: String],
-        hiddenCtrlUID: String,
-        ahCtrlUID: String?
-    ) -> [String] {
-        // Skip if current order already matches the desired order.
-        let desiredSet = Set(desiredFiltered)
-        let currentFiltered = currentFlat.filter { desiredSet.contains($0) }
-        if currentFiltered == desiredFiltered {
-            return []
-        }
-
-        var controlSet: Set<String> = [hiddenCtrlUID]
-        if let ahUID = ahCtrlUID { controlSet.insert(ahUID) }
-
-        let ahUIDs = desiredFiltered.filter {
-            !controlSet.contains($0) && (sectionMap[$0] ?? "visible") == "alwaysHidden"
-        }
-        let hiddenUIDs = desiredFiltered.filter {
-            !controlSet.contains($0) && (sectionMap[$0] ?? "visible") == "hidden"
-        }
-        let visibleUIDs = desiredFiltered.filter {
-            !controlSet.contains($0) && (sectionMap[$0] ?? "visible") == "visible"
-        }
-
-        var fullSequence = [String]()
-        fullSequence.append(contentsOf: ahUIDs)
-        if let ahCtrlUID { fullSequence.append(ahCtrlUID) }
-        fullSequence.append(contentsOf: hiddenUIDs)
-        fullSequence.append(hiddenCtrlUID)
-        fullSequence.append(contentsOf: visibleUIDs)
-        return fullSequence
-    }
-
-    /// A position within the saved section order: a section and the
-    /// zero-based index of the item within that section's saved array.
-    struct SavedPosition: Equatable {
-        let section: MenuBarSection.Name
-        let index: Int
-    }
-
-    /// Looks up the saved position for the given identifier by exact match.
-    ///
-    /// Returns the section and index in that section's saved array if the
-    /// identifier matches an entry. Returns nil if not found.
-    nonisolated static func savedPosition(
-        for uid: String,
-        in savedSectionOrder: [String: [String]]
-    ) -> SavedPosition? {
-        for (sectionKeyString, identifiers) in savedSectionOrder {
-            guard let section = sectionName(forPersistedKey: sectionKeyString) else { continue }
-            if let index = identifiers.firstIndex(of: uid) {
-                return SavedPosition(section: section, index: index)
-            }
-        }
-        return nil
-    }
-
-    /// Looks up the saved position for the given identifier, falling back
-    /// to baseID matching when the exact instanceIndex differs.
-    ///
-    /// Multi-instance apps may receive a different :N suffix on relaunch
-    /// (instance indices are reassigned by windowID sort order after each
-    /// assignStableInstanceIndices pass). This variant first tries an
-    /// exact-identifier match, then a baseID-prefix match against any
-    /// instance saved for the same namespace:title. Returns the first
-    /// baseID match found.
-    nonisolated static func savedPositionByBaseID(
-        for uid: String,
-        in savedSectionOrder: [String: [String]]
-    ) -> SavedPosition? {
-        if let exact = savedPosition(for: uid, in: savedSectionOrder) {
-            return exact
-        }
-        let baseID = uid.split(separator: ":", maxSplits: 2).prefix(2).joined(separator: ":")
-        guard baseID.contains(":") else { return nil }
-        for (sectionKeyString, identifiers) in savedSectionOrder {
-            guard let section = sectionName(forPersistedKey: sectionKeyString) else { continue }
-            for (index, identifier) in identifiers.enumerated() {
-                let savedBaseID = identifier.split(separator: ":", maxSplits: 2).prefix(2).joined(separator: ":")
-                if savedBaseID == baseID {
-                    return SavedPosition(section: section, index: index)
-                }
-            }
-        }
-        return nil
-    }
-
-    /// A within-section reorder move emitted by planWithinSectionReorder.
-    ///
-    /// The destination references anchor items by uid so the orchestrator
-    /// can resolve them against fresh items at execution time.
-    struct WithinSectionMove: Equatable {
-        let item: MenuBarItem
-        let destination: LCSPlannedDestination
-    }
-
-    /// Plans a single within-section reorder to bring the current item
-    /// order in line with savedSectionOrder.
-    ///
-    /// This planner does NOT handle cross-section mismatches. Those
-    /// belong to planRebalanceMove, which the orchestrator should call
-    /// first. This planner only fires when every section's count of
-    /// items per baseID already matches its saved count, but the
-    /// intra-section order has drifted (manual drags, app reorderings,
-    /// macOS placing items in different relative positions on relaunch).
-    ///
-    /// Multi-instance baseIDs (those appearing more than once in either
-    /// the saved sequence or the current sequence for a section) are
-    /// excluded from the reorder comparison. Their order within the
-    /// section is treated as fungible because the instance index is not
-    /// stable across cache cycles in the way a saved positional intent
-    /// expects.
-    ///
-    /// Per-call output is one move (the first misplacement found in
-    /// section priority order: visible > hidden > alwaysHidden). The
-    /// orchestrator iterates with recache between calls, same contract as
-    /// planRebalanceMove.
-    ///
-    /// Pure over its inputs.
-    nonisolated static func planWithinSectionReorder(
-        items: [MenuBarItem],
-        sectionByWindowID: [CGWindowID: MenuBarSection.Name],
-        savedSectionOrder: [String: [String]],
-        activelyShownTags: Set<String>,
-        hasAlwaysHiddenSection: Bool
-    ) -> WithinSectionMove? {
-        let sectionPriority: [MenuBarSection.Name] = hasAlwaysHiddenSection
-            ? [.visible, .hidden, .alwaysHidden]
-            : [.visible, .hidden]
-
-        for section in sectionPriority {
-            let key: String
-            switch section {
-            case .visible: key = "visible"
-            case .hidden: key = "hidden"
-            case .alwaysHidden: key = "alwaysHidden"
-            }
-            guard let savedSequence = savedSectionOrder[key], !savedSequence.isEmpty else {
-                continue
-            }
-
-            // Identify the baseIDs that have more than one occurrence in
-            // saved OR in the current section. These are multi-instance
-            // and excluded from the reorder comparison.
-            var savedBaseIDCounts = [String: Int]()
-            for uid in savedSequence {
-                let base = baseID(forIdentifier: uid)
-                savedBaseIDCounts[base, default: 0] += 1
-            }
-
-            let currentInSection = items
-                .filter {
-                    !$0.isControlItem &&
-                        $0.isMovable &&
-                        sectionByWindowID[$0.windowID] == section &&
-                        !activelyShownTags.contains($0.tag.tagIdentifier)
-                }
-                .sorted { $0.bounds.minX < $1.bounds.minX }
-
-            var currentBaseIDCounts = [String: Int]()
-            for item in currentInSection {
-                let base = baseID(forIdentifier: item.uniqueIdentifier)
-                currentBaseIDCounts[base, default: 0] += 1
-            }
-
-            let multiInstanceBaseIDs: Set<String> = Set(
-                savedBaseIDCounts.compactMap { $0.value > 1 ? $0.key : nil } +
-                    currentBaseIDCounts.compactMap { $0.value > 1 ? $0.key : nil }
-            )
-
-            // Filter both sequences to single-instance items. The
-            // intersection of identifiers between saved and current is
-            // what LCS will operate on.
-            let savedSingles = savedSequence.filter { uid in
-                !multiInstanceBaseIDs.contains(baseID(forIdentifier: uid))
-            }
-            let currentSingles = currentInSection.filter { item in
-                !multiInstanceBaseIDs.contains(baseID(forIdentifier: item.uniqueIdentifier))
-            }
-
-            // Build the lookup from uid → MenuBarItem for the current
-            // sequence, so the planner can produce a move with the
-            // actual item.
-            var currentByUID = [String: MenuBarItem]()
-            for item in currentSingles {
-                currentByUID[item.uniqueIdentifier] = item
-            }
-
-            // Filter to the items present in BOTH sequences. LCS only
-            // makes sense over the overlap.
-            let savedUIDs = Set(savedSingles)
-            let currentSet = Set(currentByUID.keys)
-            let overlap = savedUIDs.intersection(currentSet)
-            guard !overlap.isEmpty else { continue }
-
-            let lcsSavedFiltered = savedSingles.filter { overlap.contains($0) }
-            let lcsCurrentFiltered = currentSingles
-                .map(\.uniqueIdentifier)
-                .filter { overlap.contains($0) }
-
-            let lcsItems = longestCommonSubsequence(lcsCurrentFiltered, lcsSavedFiltered)
-            let itemsToMove = lcsSavedFiltered.filter { !lcsItems.contains($0) }
-
-            guard !itemsToMove.isEmpty else { continue }
-
-            // Move the first misplaced item. Anchor selection is
-            // delegated to the shared anchorDestination helper. Only
-            // LCS-stable items count as valid anchors here (within-
-            // section reorder picks items that are already in the
-            // correct relative position).
-            let firstToMove = itemsToMove[0]
-            guard let movingItem = currentByUID[firstToMove],
-                  let desiredIdx = lcsSavedFiltered.firstIndex(of: firstToMove)
-            else { continue }
-
-            let destination = anchorDestination(
-                forSavedIndex: desiredIdx,
-                inSection: section,
-                savedSequence: lcsSavedFiltered,
-                currentUIDsInSection: lcsItems
-            )
-
-            return WithinSectionMove(item: movingItem, destination: destination)
-        }
-
-        return nil
-    }
-
-    /// A placement decision for an unmanaged item during profile apply.
-    ///
-    /// Encodes intent (saved vs new-item-default vs new-item-anchored)
-    /// without committing to a concrete MoveDestination. The
-    /// orchestrator resolves anchor uids and section boundaries against
-    /// the live items.
-    enum UnmanagedPlacement: Equatable {
-        /// Item was seen in a prior session and has a saved position.
-        case saved(section: MenuBarSection.Name, index: Int)
-        /// Item is new; place it at the default position within the
-        /// user's configured new-items section.
-        case newItemDefault(section: MenuBarSection.Name)
-        /// Item is new and the user's anchor preference resolves
-        /// against a currently-present item.
-        case newItemAnchored(
-            section: MenuBarSection.Name,
-            anchorUID: String,
-            relation: NewItemsPlacement.Relation
-        )
-    }
-
-    /// Decides where each unmanaged item should land during a profile
-    /// apply, consulting saved positions first and falling back to the
-    /// user's NewItemsPlacement preference.
-    ///
-    /// Unmanaged items are items present in the live menu bar but not
-    /// covered by the profile spec. Today's behavior parks them all at
-    /// visible-leftmost; this planner replaces that hardcoded choice
-    /// with the user's actual layout history.
-    ///
-    /// Pure over its inputs.
-    nonisolated static func planUnmanagedPlacement(
-        unmanagedUIDs: [String],
-        savedSectionOrder: [String: [String]],
-        newItemsPlacement: NewItemsPlacement,
-        currentUIDs: Set<String>
-    ) -> [String: UnmanagedPlacement] {
-        var result = [String: UnmanagedPlacement]()
-        let newItemsSection = sectionName(forPersistedKey: newItemsPlacement.sectionKey) ?? .hidden
-
-        for uid in unmanagedUIDs {
-            // 1. Saved-position lookup (exact then baseID).
-            if let position = savedPositionByBaseID(for: uid, in: savedSectionOrder) {
-                result[uid] = .saved(section: position.section, index: position.index)
-                continue
-            }
-
-            // 2. NewItemsPlacement anchor (if configured and present in
-            //    the current menu bar).
-            if newItemsPlacement.relation != .sectionDefault,
-               let anchor = newItemsPlacement.anchorIdentifier,
-               currentUIDs.contains(anchor)
-            {
-                result[uid] = .newItemAnchored(
-                    section: newItemsSection,
-                    anchorUID: anchor,
-                    relation: newItemsPlacement.relation
-                )
-                continue
-            }
-
-            // 3. Fallback: place at the new-items section's default
-            //    boundary.
-            result[uid] = .newItemDefault(section: newItemsSection)
-        }
-        return result
-    }
-
-    /// Extracts the baseID (namespace:title) prefix from a uniqueIdentifier.
-    nonisolated private static func baseID(forIdentifier id: String) -> String {
-        id.split(separator: ":", maxSplits: 2).prefix(2).joined(separator: ":")
-    }
-
-    /// Computes the abstract destination that positions an item at the
-    /// given saved index within its section.
-    ///
-    /// Shared by all three position-aware paths: cross-section restore
-    /// (planRebalanceMove), within-section reorder
-    /// (planWithinSectionReorder), and profile-route unmanaged
-    /// placement (applyProfileLayout's unmanaged-items block via
-    /// planUnmanagedPlacement). Forward-first scan finds a successor
-    /// anchor (the next uid in saved order that is currently in the
-    /// section); backward scan finds a predecessor anchor. Falls back
-    /// to the section boundary when no anchors are present.
-    ///
-    /// Forward-first matches user intent: when restoring an item at
-    /// saved index N, prefer to anchor against the item that follows
-    /// it in saved order rather than the one before, because the
-    /// follower's current position is the more reliable signal of
-    /// "this is where the section ends".
-    ///
-    /// Pure over its inputs.
-    nonisolated static func anchorDestination(
-        forSavedIndex savedIndex: Int,
-        inSection section: MenuBarSection.Name,
-        savedSequence: [String],
-        currentUIDsInSection: Set<String>
-    ) -> LCSPlannedDestination {
-        // Forward scan: closest successor anchor.
-        if savedIndex + 1 < savedSequence.count {
-            for i in (savedIndex + 1) ..< savedSequence.count {
-                let candidate = savedSequence[i]
-                if currentUIDsInSection.contains(candidate) {
-                    return .leftOfUID(candidate)
-                }
-            }
-        }
-        // Backward scan: closest predecessor anchor.
-        if savedIndex > 0 {
-            let start = min(savedIndex - 1, savedSequence.count - 1)
-            if start >= 0 {
-                for i in stride(from: start, through: 0, by: -1) {
-                    let candidate = savedSequence[i]
-                    if currentUIDsInSection.contains(candidate) {
-                        return .rightOfUID(candidate)
-                    }
-                }
-            }
-        }
-        // No anchors → section boundary.
-        return .sectionBoundary(section)
-    }
-
-    /// Computes the new saved-section identifiers array for one section,
-    /// preserving closed-app positions relative to their old neighbors.
-    ///
-    /// Replaces the buggy "append closed apps to the end" logic that
-    /// destroyed positional intent every time the user quit an app.
-    /// The new algorithm:
-    ///
-    /// 1. Start with the items currently in the section (cache order).
-    /// 2. Walk the old saved order. For each entry that is no longer
-    ///    present in the cache (closed app) and is not a stale instance
-    ///    index, splice it into the new list at a position anchored
-    ///    against its old neighbors that are still present. Forward-
-    ///    first scan (insert before the closest still-present successor)
-    ///    then backward (after the closest still-present predecessor)
-    ///    then append as last resort.
-    ///
-    /// Pure over its inputs.
-    nonisolated static func planSectionOrder(
-        currentInSection: [String],
-        oldSavedForSection: [String],
-        allCurrentIdentifiers: Set<String>,
-        allCurrentBaseIdentifiers: Set<String>
-    ) -> [String] {
-        var identifiers = currentInSection
-
-        for (oldIdx, savedUID) in oldSavedForSection.enumerated() {
-            // Already in the new list (currently present) or already
-            // inserted by an earlier iteration: skip.
-            if identifiers.contains(savedUID) {
-                continue
-            }
-            // Present somewhere in the cache (other section): drop the
-            // saved entry — the item moved, do not re-preserve it here.
-            if allCurrentIdentifiers.contains(savedUID) {
-                continue
-            }
-            // Stale instance index: the app is back with a different
-            // :N suffix. The cache already has it under its new uid;
-            // drop the stale saved entry.
-            let base = savedUID.split(separator: ":", maxSplits: 2)
-                .prefix(2).joined(separator: ":")
-            if allCurrentBaseIdentifiers.contains(base) {
-                continue
-            }
-
-            // Find an anchor in oldSavedForSection that's also in the
-            // new identifiers list. Forward-first (closest successor),
-            // then backward (closest predecessor), then append.
-            var insertAt: Int = identifiers.count
-
-            // Forward scan from oldIdx+1.
-            var foundForward = false
-            if oldIdx + 1 < oldSavedForSection.count {
-                for i in (oldIdx + 1) ..< oldSavedForSection.count {
-                    let candidate = oldSavedForSection[i]
-                    if let anchorIdx = identifiers.firstIndex(of: candidate) {
-                        insertAt = anchorIdx
-                        foundForward = true
-                        break
-                    }
-                }
-            }
-
-            // Backward scan from oldIdx-1 (only if forward didn't find one).
-            if !foundForward, oldIdx > 0 {
-                for i in stride(from: oldIdx - 1, through: 0, by: -1) {
-                    let candidate = oldSavedForSection[i]
-                    if let anchorIdx = identifiers.firstIndex(of: candidate) {
-                        insertAt = anchorIdx + 1
-                        break
-                    }
-                }
-            }
-
-            identifiers.insert(savedUID, at: insertAt)
-        }
-
-        return identifiers
-    }
-
-    /// Maps a persisted section key string to its enum value.
-    ///
-    /// Defined alongside the planners (rather than calling the instance
-    /// method on MenuBarItemManager) so the planners remain pure static
-    /// functions usable without an instance.
-    nonisolated private static func sectionName(forPersistedKey key: String) -> MenuBarSection.Name? {
-        switch key {
-        case "visible": .visible
-        case "hidden": .hidden
-        case "alwaysHidden": .alwaysHidden
-        default: nil
-        }
     }
 }
 

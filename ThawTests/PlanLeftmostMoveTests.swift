@@ -10,7 +10,7 @@ import CoreGraphics
 @testable import Thaw
 import XCTest
 
-/// Characterization tests for MenuBarItemManager.planLeftmostMove.
+/// Characterization tests for LayoutSolver.planLeftmostMove.
 ///
 /// Pins down the four-branch cascade used by relocateNewLeftmostItems:
 /// (1) Thaw icon, (2) non-hideable system item, (3) new hideable item,
@@ -54,7 +54,7 @@ final class PlanLeftmostMoveTests: XCTestCase {
             windowID: 700
         )
 
-        let decision = MenuBarItemManager.planLeftmostMove(
+        let decision = LayoutSolver.planLeftmostMove(
             items: [thaw],
             hiddenBounds: hiddenBounds,
             sectionByWindowID: [thaw.windowID: .hidden],
@@ -82,7 +82,7 @@ final class PlanLeftmostMoveTests: XCTestCase {
             windowID: 701
         )
 
-        let decision = MenuBarItemManager.planLeftmostMove(
+        let decision = LayoutSolver.planLeftmostMove(
             items: [screenCap],
             hiddenBounds: hiddenBounds,
             sectionByWindowID: [screenCap.windowID: .hidden],
@@ -111,7 +111,7 @@ final class PlanLeftmostMoveTests: XCTestCase {
             windowID: 702
         )
 
-        let decision = MenuBarItemManager.planLeftmostMove(
+        let decision = LayoutSolver.planLeftmostMove(
             items: [app],
             hiddenBounds: hiddenBounds,
             sectionByWindowID: [app.windowID: .visible],
@@ -137,7 +137,7 @@ final class PlanLeftmostMoveTests: XCTestCase {
             sourcePID: nil
         )
 
-        let decision = MenuBarItemManager.planLeftmostMove(
+        let decision = LayoutSolver.planLeftmostMove(
             items: [app],
             hiddenBounds: hiddenBounds,
             sectionByWindowID: [app.windowID: .visible],
@@ -162,7 +162,7 @@ final class PlanLeftmostMoveTests: XCTestCase {
             windowID: 704
         )
 
-        let decision = MenuBarItemManager.planLeftmostMove(
+        let decision = LayoutSolver.planLeftmostMove(
             items: [app],
             hiddenBounds: hiddenBounds,
             sectionByWindowID: [app.windowID: .visible],
@@ -193,7 +193,7 @@ final class PlanLeftmostMoveTests: XCTestCase {
             windowID: 705
         )
 
-        let decision = MenuBarItemManager.planLeftmostMove(
+        let decision = LayoutSolver.planLeftmostMove(
             items: [app],
             hiddenBounds: hiddenBounds,
             sectionByWindowID: [app.windowID: .visible],
@@ -218,7 +218,7 @@ final class PlanLeftmostMoveTests: XCTestCase {
             windowID: 706
         )
 
-        let decision = MenuBarItemManager.planLeftmostMove(
+        let decision = LayoutSolver.planLeftmostMove(
             items: [app],
             hiddenBounds: hiddenBounds,
             // sectionByWindowID claims the item is already in .hidden,
@@ -246,7 +246,7 @@ final class PlanLeftmostMoveTests: XCTestCase {
             bounds: CGRect(x: 500, y: 0, width: 24, height: 22)
         )
 
-        let decision = MenuBarItemManager.planLeftmostMove(
+        let decision = LayoutSolver.planLeftmostMove(
             items: [visibleApp],
             hiddenBounds: hiddenBounds,
             sectionByWindowID: [visibleApp.windowID: .visible],

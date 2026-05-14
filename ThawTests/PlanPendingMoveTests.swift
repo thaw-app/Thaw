@@ -10,7 +10,7 @@ import CoreGraphics
 @testable import Thaw
 import XCTest
 
-/// Characterization tests for MenuBarItemManager.planPendingMove.
+/// Characterization tests for PendingLedger.planPendingMove.
 ///
 /// Pins down the per-entry decision logic used by relocatePendingItems:
 /// actively-shown short-circuit, waitForRelaunch sentinel handling,
@@ -67,12 +67,12 @@ final class PlanPendingMoveTests: XCTestCase {
     /// section boundary (no stored neighbor, no fallback).
     func testStandardEntryVisibleItemFallsBackToSectionBoundary() {
         let item = visibleItem(bundleID: "com.example.app", title: "Status", windowID: 800)
-        let entry = MenuBarItemManager.PendingEntry(
+        let entry = PendingLedger.PendingEntry(
             tagIdentifier: item.tag.tagIdentifier,
             kind: .section(.hidden)
         )
 
-        let decision = MenuBarItemManager.planPendingMove(
+        let decision = PendingLedger.planPendingMove(
             entry: entry,
             items: [item],
             controlItems: pair(),
@@ -100,12 +100,12 @@ final class PlanPendingMoveTests: XCTestCase {
     /// produces .clearEntry — no move needed.
     func testStandardEntryAlreadyHiddenClearsEntry() {
         let item = hiddenItem(bundleID: "com.example.app", title: "Status", windowID: 801)
-        let entry = MenuBarItemManager.PendingEntry(
+        let entry = PendingLedger.PendingEntry(
             tagIdentifier: item.tag.tagIdentifier,
             kind: .section(.hidden)
         )
 
-        let decision = MenuBarItemManager.planPendingMove(
+        let decision = PendingLedger.planPendingMove(
             entry: entry,
             items: [item],
             controlItems: pair(),
@@ -127,12 +127,12 @@ final class PlanPendingMoveTests: XCTestCase {
     /// items list, the planner emits .skip(.itemNotPresent) — the entry
     /// stays in the dict for the next launch.
     func testItemNotPresentSkips() {
-        let entry = MenuBarItemManager.PendingEntry(
+        let entry = PendingLedger.PendingEntry(
             tagIdentifier: "com.gone.app:Status",
             kind: .section(.hidden)
         )
 
-        let decision = MenuBarItemManager.planPendingMove(
+        let decision = PendingLedger.planPendingMove(
             entry: entry,
             items: [],
             controlItems: pair(),
@@ -150,12 +150,12 @@ final class PlanPendingMoveTests: XCTestCase {
     /// .waitForRelaunchActive.
     func testWaitForRelaunchSameWindowIDSkips() {
         let item = visibleItem(bundleID: "com.example.app", title: "Status", windowID: 802)
-        let entry = MenuBarItemManager.PendingEntry(
+        let entry = PendingLedger.PendingEntry(
             tagIdentifier: item.tag.tagIdentifier,
             kind: .waitForRelaunch(windowID: 802, section: .hidden)
         )
 
-        let decision = MenuBarItemManager.planPendingMove(
+        let decision = PendingLedger.planPendingMove(
             entry: entry,
             items: [item],
             controlItems: pair(),
@@ -174,12 +174,12 @@ final class PlanPendingMoveTests: XCTestCase {
     /// re-runs the planner.
     func testWaitForRelaunchNewWindowIDPromotes() {
         let item = visibleItem(bundleID: "com.example.app", title: "Status", windowID: 803)
-        let entry = MenuBarItemManager.PendingEntry(
+        let entry = PendingLedger.PendingEntry(
             tagIdentifier: item.tag.tagIdentifier,
             kind: .waitForRelaunch(windowID: 999, section: .hidden)
         )
 
-        let decision = MenuBarItemManager.planPendingMove(
+        let decision = PendingLedger.planPendingMove(
             entry: entry,
             items: [item],
             controlItems: pair(),
@@ -201,12 +201,12 @@ final class PlanPendingMoveTests: XCTestCase {
     /// .activelyShown — the rehide flow owns this item.
     func testActivelyShownExclusion() {
         let item = visibleItem(bundleID: "com.example.app", title: "Status", windowID: 804)
-        let entry = MenuBarItemManager.PendingEntry(
+        let entry = PendingLedger.PendingEntry(
             tagIdentifier: item.tag.tagIdentifier,
             kind: .section(.hidden)
         )
 
-        let decision = MenuBarItemManager.planPendingMove(
+        let decision = PendingLedger.planPendingMove(
             entry: entry,
             items: [item],
             controlItems: pair(),
@@ -224,12 +224,12 @@ final class PlanPendingMoveTests: XCTestCase {
     /// there's no hidden destination to restore to.
     func testVisibleSectionShortCircuitsToClear() {
         let item = visibleItem(bundleID: "com.example.app", title: "Status", windowID: 805)
-        let entry = MenuBarItemManager.PendingEntry(
+        let entry = PendingLedger.PendingEntry(
             tagIdentifier: item.tag.tagIdentifier,
             kind: .section(.visible)
         )
 
-        let decision = MenuBarItemManager.planPendingMove(
+        let decision = PendingLedger.planPendingMove(
             entry: entry,
             items: [item],
             controlItems: pair(),
@@ -252,12 +252,12 @@ final class PlanPendingMoveTests: XCTestCase {
     func testStoredNeighborTakesPrecedence() {
         let item = visibleItem(bundleID: "com.example.app", title: "Status", windowID: 806, x: 500)
         let neighbor = visibleItem(bundleID: "com.example.app", title: "Other", windowID: 807, x: 600)
-        let entry = MenuBarItemManager.PendingEntry(
+        let entry = PendingLedger.PendingEntry(
             tagIdentifier: item.tag.tagIdentifier,
             kind: .section(.hidden)
         )
 
-        let decision = MenuBarItemManager.planPendingMove(
+        let decision = PendingLedger.planPendingMove(
             entry: entry,
             items: [item, neighbor],
             controlItems: pair(),

@@ -9,7 +9,7 @@
 @testable import Thaw
 import XCTest
 
-/// Characterization tests for MenuBarItemManager.planUnmanagedPlacement.
+/// Characterization tests for LayoutSolver.planUnmanagedPlacement.
 ///
 /// Pins down the placement decision for items present in the live menu
 /// bar but not covered by a profile spec. Saved positions win; otherwise
@@ -28,7 +28,7 @@ final class PlanUnmanagedPlacementTests: XCTestCase {
             relation: .sectionDefault
         )
 
-        let result = MenuBarItemManager.planUnmanagedPlacement(
+        let result = LayoutSolver.planUnmanagedPlacement(
             unmanagedUIDs: ["com.a.app:A", "com.c.app:C"],
             savedSectionOrder: saved,
             newItemsPlacement: placement,
@@ -48,7 +48,7 @@ final class PlanUnmanagedPlacementTests: XCTestCase {
             relation: .sectionDefault
         )
 
-        let result = MenuBarItemManager.planUnmanagedPlacement(
+        let result = LayoutSolver.planUnmanagedPlacement(
             unmanagedUIDs: ["com.new.app:Status"],
             savedSectionOrder: [:],
             newItemsPlacement: placement,
@@ -69,7 +69,7 @@ final class PlanUnmanagedPlacementTests: XCTestCase {
             relation: .sectionDefault
         )
 
-        let result = MenuBarItemManager.planUnmanagedPlacement(
+        let result = LayoutSolver.planUnmanagedPlacement(
             unmanagedUIDs: ["com.known.app:Status", "com.new.app:Status"],
             savedSectionOrder: saved,
             newItemsPlacement: placement,
@@ -95,7 +95,7 @@ final class PlanUnmanagedPlacementTests: XCTestCase {
 
         // A different instance index appears. Exact match fails, baseID
         // match succeeds → .saved.
-        let result = MenuBarItemManager.planUnmanagedPlacement(
+        let result = LayoutSolver.planUnmanagedPlacement(
             unmanagedUIDs: ["com.example.app:Status:7"],
             savedSectionOrder: saved,
             newItemsPlacement: placement,
@@ -115,7 +115,7 @@ final class PlanUnmanagedPlacementTests: XCTestCase {
             relation: .leftOfAnchor
         )
 
-        let result = MenuBarItemManager.planUnmanagedPlacement(
+        let result = LayoutSolver.planUnmanagedPlacement(
             unmanagedUIDs: ["com.new.app:Status"],
             savedSectionOrder: [:],
             newItemsPlacement: placement,
@@ -141,7 +141,7 @@ final class PlanUnmanagedPlacementTests: XCTestCase {
             relation: .leftOfAnchor
         )
 
-        let result = MenuBarItemManager.planUnmanagedPlacement(
+        let result = LayoutSolver.planUnmanagedPlacement(
             unmanagedUIDs: ["com.new.app:Status"],
             savedSectionOrder: [:],
             newItemsPlacement: placement,

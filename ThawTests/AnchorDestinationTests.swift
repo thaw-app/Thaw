@@ -9,7 +9,7 @@
 @testable import Thaw
 import XCTest
 
-/// Characterization tests for MenuBarItemManager.anchorDestination, the
+/// Characterization tests for LayoutSolver.anchorDestination, the
 /// shared helper used by cross-section restore, within-section reorder,
 /// and profile-route unmanaged placement.
 ///
@@ -20,7 +20,7 @@ final class AnchorDestinationTests: XCTestCase {
     /// saved=[A,B,C], moving B at idx 1, current section has A and C.
     /// Forward scan finds C → .leftOfUID(C).
     func testForwardAnchorPreferredOverBackward() {
-        let result = MenuBarItemManager.anchorDestination(
+        let result = LayoutSolver.anchorDestination(
             forSavedIndex: 1,
             inSection: .visible,
             savedSequence: ["A", "B", "C"],
@@ -34,7 +34,7 @@ final class AnchorDestinationTests: XCTestCase {
     /// saved=[A,B,C], moving B at idx 1, current section has A only.
     /// Forward scan misses C; backward scan finds A → .rightOfUID(A).
     func testBackwardAnchorWhenNoForwardAnchor() {
-        let result = MenuBarItemManager.anchorDestination(
+        let result = LayoutSolver.anchorDestination(
             forSavedIndex: 1,
             inSection: .visible,
             savedSequence: ["A", "B", "C"],
@@ -47,7 +47,7 @@ final class AnchorDestinationTests: XCTestCase {
     /// saved=[A,B,C], moving B at idx 1, current section is empty of
     /// these uids → .sectionBoundary.
     func testSectionBoundaryFallback() {
-        let result = MenuBarItemManager.anchorDestination(
+        let result = LayoutSolver.anchorDestination(
             forSavedIndex: 1,
             inSection: .hidden,
             savedSequence: ["A", "B", "C"],
@@ -59,7 +59,7 @@ final class AnchorDestinationTests: XCTestCase {
     /// Saved index 0 with a successor in current → .leftOfUID(successor).
     /// No backward scan (index 0 has nothing before it).
     func testSavedIndexZeroUsesForwardSuccessor() {
-        let result = MenuBarItemManager.anchorDestination(
+        let result = LayoutSolver.anchorDestination(
             forSavedIndex: 0,
             inSection: .visible,
             savedSequence: ["A", "B", "C"],
@@ -72,7 +72,7 @@ final class AnchorDestinationTests: XCTestCase {
     /// the nearest predecessor present in section.
     /// saved=[A,B,C], moving at idx 2 (last), current has A.
     func testSavedIndexAtEndUsesBackwardScan() {
-        let result = MenuBarItemManager.anchorDestination(
+        let result = LayoutSolver.anchorDestination(
             forSavedIndex: 2,
             inSection: .visible,
             savedSequence: ["A", "B", "C"],
@@ -84,7 +84,7 @@ final class AnchorDestinationTests: XCTestCase {
     /// Empty saved sequence falls back to section boundary regardless
     /// of currentUIDsInSection.
     func testEmptySavedSequenceFallsBack() {
-        let result = MenuBarItemManager.anchorDestination(
+        let result = LayoutSolver.anchorDestination(
             forSavedIndex: 0,
             inSection: .alwaysHidden,
             savedSequence: [],

@@ -10,7 +10,7 @@ import CoreGraphics
 @testable import Thaw
 import XCTest
 
-/// Characterization tests for MenuBarItemManager.planNotchOverflow.
+/// Characterization tests for LayoutSolver.planNotchOverflow.
 ///
 /// Pins down the tiered priority overflow algorithm used by
 /// applyProfileLayout: unmanaged items overflow before profile items,
@@ -62,7 +62,7 @@ final class PlanNotchOverflowTests: XCTestCase {
         let widths: [String: CGFloat] = [chevron: 24, "a": 24, "b": 24, "c": 24]
         let sectionMap = ["a": "visible", "b": "visible", "c": "visible"]
 
-        let result = MenuBarItemManager.planNotchOverflow(
+        let result = LayoutSolver.planNotchOverflow(
             desiredFiltered: desired,
             unmanagedUIDs: [],
             visibleCtrlUID: chevron,
@@ -90,7 +90,7 @@ final class PlanNotchOverflowTests: XCTestCase {
         let widths: [String: CGFloat] = [chevron: 24, "a": 24, "b": 24, "u1": 24, "u2": 24]
         let sectionMap = ["a": "visible", "b": "visible", "u1": "visible", "u2": "visible"]
 
-        let result = MenuBarItemManager.planNotchOverflow(
+        let result = LayoutSolver.planNotchOverflow(
             desiredFiltered: desired,
             unmanagedUIDs: ["u1", "u2"],
             visibleCtrlUID: chevron,
@@ -118,7 +118,7 @@ final class PlanNotchOverflowTests: XCTestCase {
         let widths: [String: CGFloat] = [chevron: 24, "a": 24, "u1": 24, "u2": 24]
         let sectionMap = ["a": "visible", "u1": "visible", "u2": "visible"]
 
-        let result = MenuBarItemManager.planNotchOverflow(
+        let result = LayoutSolver.planNotchOverflow(
             desiredFiltered: desired,
             unmanagedUIDs: ["u1", "u2"],
             visibleCtrlUID: chevron,
@@ -155,7 +155,7 @@ final class PlanNotchOverflowTests: XCTestCase {
         ]
         let sectionMap = ["p1": "visible", "p2": "visible", "p3": "visible", "u1": "visible"]
 
-        let result = MenuBarItemManager.planNotchOverflow(
+        let result = LayoutSolver.planNotchOverflow(
             desiredFiltered: desired,
             unmanagedUIDs: ["u1"],
             visibleCtrlUID: chevron,
@@ -185,7 +185,7 @@ final class PlanNotchOverflowTests: XCTestCase {
         let widths: [String: CGFloat] = [chevron: 24, "p1": 24, "u1": 24]
         let sectionMap = ["p1": "visible", "u1": "visible"]
 
-        let result = MenuBarItemManager.planNotchOverflow(
+        let result = LayoutSolver.planNotchOverflow(
             desiredFiltered: desired,
             unmanagedUIDs: ["u1"],
             visibleCtrlUID: chevron,
@@ -211,7 +211,7 @@ final class PlanNotchOverflowTests: XCTestCase {
         let widths: [String: CGFloat] = [chevron: 24, "u1": 24]
         let sectionMap = ["u1": "visible"]
 
-        let result = MenuBarItemManager.planNotchOverflow(
+        let result = LayoutSolver.planNotchOverflow(
             desiredFiltered: desired,
             unmanagedUIDs: ["u1"],
             visibleCtrlUID: chevron,
@@ -245,7 +245,7 @@ final class PlanNotchOverflowTests: XCTestCase {
         let widths: [String: CGFloat] = [chevron: 24, "p1": 24, "p2": 24, "u1": 24]
         let sectionMap = ["p1": "visible", "p2": "visible", "u1": "visible"]
 
-        let result = MenuBarItemManager.planNotchOverflow(
+        let result = LayoutSolver.planNotchOverflow(
             desiredFiltered: desired,
             unmanagedUIDs: ["u1"],
             visibleCtrlUID: chevron,
@@ -280,7 +280,7 @@ final class PlanNotchOverflowTests: XCTestCase {
         let widths: [String: CGFloat] = [chevron: 24, "p1": 50, "p2": 50]
         let sectionMap = ["p1": "visible", "p2": "visible"]
 
-        let result = MenuBarItemManager.planNotchOverflow(
+        let result = LayoutSolver.planNotchOverflow(
             desiredFiltered: desired,
             unmanagedUIDs: [],
             visibleCtrlUID: chevron,

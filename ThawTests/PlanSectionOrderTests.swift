@@ -9,7 +9,7 @@
 @testable import Thaw
 import XCTest
 
-/// Characterization tests for MenuBarItemManager.planSectionOrder, the
+/// Characterization tests for LayoutSolver.planSectionOrder, the
 /// position-preserving rebuild used by saveSectionOrder.
 ///
 /// Pins down the fix for the pre-existing bug where closed-app entries
@@ -20,7 +20,7 @@ final class PlanSectionOrderTests: XCTestCase {
     /// Closed app at mid-index: saved=[A,B,C,D,E], B not present →
     /// new=[A,B,C,D,E] (B's position preserved, anchored against A or C).
     func testClosedAppPreservedAtMidIndex() {
-        let result = MenuBarItemManager.planSectionOrder(
+        let result = LayoutSolver.planSectionOrder(
             currentInSection: ["A", "C", "D", "E"],
             oldSavedForSection: ["A", "B", "C", "D", "E"],
             allCurrentIdentifiers: ["A", "C", "D", "E"],
@@ -37,7 +37,7 @@ final class PlanSectionOrderTests: XCTestCase {
     /// A is preserved at the start because forward scan finds B as
     /// successor, inserts before B.
     func testClosedAppPreservedAtIndexZero() {
-        let result = MenuBarItemManager.planSectionOrder(
+        let result = LayoutSolver.planSectionOrder(
             currentInSection: ["B", "C"],
             oldSavedForSection: ["A", "B", "C"],
             allCurrentIdentifiers: ["B", "C"],
@@ -51,7 +51,7 @@ final class PlanSectionOrderTests: XCTestCase {
     /// Forward scan from C finds nothing; backward finds B → insert
     /// after B.
     func testClosedAppPreservedAtLastIndex() {
-        let result = MenuBarItemManager.planSectionOrder(
+        let result = LayoutSolver.planSectionOrder(
             currentInSection: ["A", "B"],
             oldSavedForSection: ["A", "B", "C"],
             allCurrentIdentifiers: ["A", "B"],
@@ -65,7 +65,7 @@ final class PlanSectionOrderTests: XCTestCase {
     /// new=[A,B,C,D,E]. Both closed entries get their positions
     /// preserved.
     func testMultipleClosedApps() {
-        let result = MenuBarItemManager.planSectionOrder(
+        let result = LayoutSolver.planSectionOrder(
             currentInSection: ["A", "C", "E"],
             oldSavedForSection: ["A", "B", "C", "D", "E"],
             allCurrentIdentifiers: ["A", "C", "E"],
@@ -80,7 +80,7 @@ final class PlanSectionOrderTests: XCTestCase {
     /// from current cache; the saved order's items keep their relative
     /// order through closed-app preservation.
     func testNewItemEnters() {
-        let result = MenuBarItemManager.planSectionOrder(
+        let result = LayoutSolver.planSectionOrder(
             currentInSection: ["A", "X", "B", "C"],
             oldSavedForSection: ["A", "B", "C"],
             allCurrentIdentifiers: ["A", "X", "B", "C"],
@@ -95,7 +95,7 @@ final class PlanSectionOrderTests: XCTestCase {
     /// IS in the cache, just elsewhere). The planner drops B from
     /// this section's saved order.
     func testItemMovedToAnotherSectionIsDropped() {
-        let result = MenuBarItemManager.planSectionOrder(
+        let result = LayoutSolver.planSectionOrder(
             currentInSection: ["A", "C"],
             oldSavedForSection: ["A", "B", "C"],
             allCurrentIdentifiers: ["A", "B", "C"], // B is in cache, just elsewhere
@@ -110,7 +110,7 @@ final class PlanSectionOrderTests: XCTestCase {
     /// contains "com.x:Title". The planner drops the stale :0 entry
     /// because the baseID exists with a different instance.
     func testStaleInstanceIndexIsDropped() {
-        let result = MenuBarItemManager.planSectionOrder(
+        let result = LayoutSolver.planSectionOrder(
             currentInSection: ["com.x:Title:5"],
             oldSavedForSection: ["com.x:Title:0"],
             allCurrentIdentifiers: ["com.x:Title:5"], // :0 not present
@@ -122,7 +122,7 @@ final class PlanSectionOrderTests: XCTestCase {
 
     /// Empty old saved: just returns current.
     func testEmptyOldSavedReturnsCurrent() {
-        let result = MenuBarItemManager.planSectionOrder(
+        let result = LayoutSolver.planSectionOrder(
             currentInSection: ["A", "B"],
             oldSavedForSection: [],
             allCurrentIdentifiers: ["A", "B"],
@@ -160,7 +160,7 @@ final class PlanSectionOrderTests: XCTestCase {
             $0.split(separator: ":", maxSplits: 2).prefix(2).joined(separator: ":")
         })
 
-        let result = MenuBarItemManager.planSectionOrder(
+        let result = LayoutSolver.planSectionOrder(
             currentInSection: current,
             oldSavedForSection: oldSaved,
             allCurrentIdentifiers: allCurrentIdentifiers,

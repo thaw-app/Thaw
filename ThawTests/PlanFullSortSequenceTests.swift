@@ -9,7 +9,7 @@
 @testable import Thaw
 import XCTest
 
-/// Characterization tests for MenuBarItemManager.planFullSortSequence.
+/// Characterization tests for LayoutSolver.planFullSortSequence.
 ///
 /// Pins down the sequence construction used by applyProfileLayout on
 /// notched displays: items grouped AH → hidden → visible, with control
@@ -30,7 +30,7 @@ final class PlanFullSortSequenceTests: XCTestCase {
             "ah1": "alwaysHidden", "ah2": "alwaysHidden",
         ]
 
-        let sequence = MenuBarItemManager.planFullSortSequence(
+        let sequence = LayoutSolver.planFullSortSequence(
             currentFlat: [], // not matching → must sort
             desiredFiltered: desired,
             sectionMap: sectionMap,
@@ -54,7 +54,7 @@ final class PlanFullSortSequenceTests: XCTestCase {
             "h1": "hidden",
         ]
 
-        let sequence = MenuBarItemManager.planFullSortSequence(
+        let sequence = LayoutSolver.planFullSortSequence(
             currentFlat: [],
             desiredFiltered: desired,
             sectionMap: sectionMap,
@@ -73,7 +73,7 @@ final class PlanFullSortSequenceTests: XCTestCase {
         let desired = ["v1", hiddenCtrl, ahCtrl]
         let sectionMap: [String: String] = ["v1": "visible"]
 
-        let sequence = MenuBarItemManager.planFullSortSequence(
+        let sequence = LayoutSolver.planFullSortSequence(
             currentFlat: [],
             desiredFiltered: desired,
             sectionMap: sectionMap,
@@ -99,7 +99,7 @@ final class PlanFullSortSequenceTests: XCTestCase {
         // currentFlat contains the same items in the same relative order
         // (plus possibly extras the filter will drop). Filtered to the
         // desired set, it matches desired.
-        let sequence = MenuBarItemManager.planFullSortSequence(
+        let sequence = LayoutSolver.planFullSortSequence(
             currentFlat: ["unrelated_left", "v1", hiddenCtrl, "h1", ahCtrl, "ah1", "unrelated_right"],
             desiredFiltered: desired,
             sectionMap: sectionMap,

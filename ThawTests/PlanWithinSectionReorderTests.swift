@@ -10,7 +10,7 @@ import CoreGraphics
 @testable import Thaw
 import XCTest
 
-/// Characterization tests for MenuBarItemManager.planWithinSectionReorder.
+/// Characterization tests for LayoutSolver.planWithinSectionReorder.
 ///
 /// Pins down the LCS-based within-section reorder planner. The planner
 /// ignores cross-section mismatches (those belong
@@ -44,7 +44,7 @@ final class PlanWithinSectionReorderTests: XCTestCase {
             "visible": ["com.a.app:A", "com.b.app:B"],
         ]
 
-        let result = MenuBarItemManager.planWithinSectionReorder(
+        let result = LayoutSolver.planWithinSectionReorder(
             items: [a, b],
             sectionByWindowID: [a.windowID: .visible, b.windowID: .visible],
             savedSectionOrder: saved,
@@ -67,7 +67,7 @@ final class PlanWithinSectionReorderTests: XCTestCase {
             "visible": ["com.a.app:A", "com.b.app:B"],
         ]
 
-        let result = MenuBarItemManager.planWithinSectionReorder(
+        let result = LayoutSolver.planWithinSectionReorder(
             items: [a, b],
             sectionByWindowID: [a.windowID: .visible, b.windowID: .visible],
             savedSectionOrder: saved,
@@ -104,7 +104,7 @@ final class PlanWithinSectionReorderTests: XCTestCase {
         // A is currently in hidden (saved to visible), B is currently in
         // visible (saved to hidden). Each section's intersection with
         // saved is empty → planner skips.
-        let result = MenuBarItemManager.planWithinSectionReorder(
+        let result = LayoutSolver.planWithinSectionReorder(
             items: [a, b],
             sectionByWindowID: [a.windowID: .hidden, b.windowID: .visible],
             savedSectionOrder: saved,
@@ -128,7 +128,7 @@ final class PlanWithinSectionReorderTests: XCTestCase {
             "visible": ["com.x.app:Status", "com.x.app:Status:1", "com.y.app:Other"],
         ]
 
-        let result = MenuBarItemManager.planWithinSectionReorder(
+        let result = LayoutSolver.planWithinSectionReorder(
             items: [app0, app1, other],
             sectionByWindowID: [app0.windowID: .visible, app1.windowID: .visible, other.windowID: .visible],
             savedSectionOrder: saved,
@@ -152,7 +152,7 @@ final class PlanWithinSectionReorderTests: XCTestCase {
             "visible": ["com.a.app:A", "com.b.app:B"],
         ]
 
-        let result = MenuBarItemManager.planWithinSectionReorder(
+        let result = LayoutSolver.planWithinSectionReorder(
             items: [a, b, unknown],
             sectionByWindowID: [
                 a.windowID: .visible,
@@ -171,7 +171,7 @@ final class PlanWithinSectionReorderTests: XCTestCase {
     func testEmptySavedSectionSkipped() {
         let a = appItem(bundleID: "com.a.app", title: "A", windowID: 1050, x: 100)
 
-        let result = MenuBarItemManager.planWithinSectionReorder(
+        let result = LayoutSolver.planWithinSectionReorder(
             items: [a],
             sectionByWindowID: [a.windowID: .visible],
             savedSectionOrder: ["hidden": ["com.z.app:Z"]], // no visible saved
@@ -197,7 +197,7 @@ final class PlanWithinSectionReorderTests: XCTestCase {
             "visible": ["com.a.app:A", "com.b.app:B"],
         ]
 
-        let result = MenuBarItemManager.planWithinSectionReorder(
+        let result = LayoutSolver.planWithinSectionReorder(
             items: [a, b],
             sectionByWindowID: [a.windowID: .visible, b.windowID: .visible],
             savedSectionOrder: saved,

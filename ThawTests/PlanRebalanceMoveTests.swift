@@ -10,7 +10,7 @@ import CoreGraphics
 @testable import Thaw
 import XCTest
 
-/// Characterization tests for MenuBarItemManager.planRebalanceMove.
+/// Characterization tests for LayoutSolver.planRebalanceMove.
 ///
 /// Pins down the count-based rebalancing behavior used by
 /// restoreItemsToSavedSections so subsequent refactors (further extraction
@@ -39,7 +39,7 @@ final class PlanRebalanceMoveTests: XCTestCase {
     /// Empty saved-section order produces no plan.
     func testEmptySavedSectionOrderReturnsNil() {
         let only = item(bundleID: "com.example.app", title: "Status", windowID: 100)
-        let result = MenuBarItemManager.planRebalanceMove(
+        let result = LayoutSolver.planRebalanceMove(
             items: [only],
             sectionByWindowID: [only.windowID: .hidden],
             hasAlwaysHiddenSection: true,
@@ -61,7 +61,7 @@ final class PlanRebalanceMoveTests: XCTestCase {
             "alwaysHidden": ["com.example.app:AH"],
         ]
 
-        let result = MenuBarItemManager.planRebalanceMove(
+        let result = LayoutSolver.planRebalanceMove(
             items: [visibleItem, hiddenItem, ahItem],
             sectionByWindowID: [
                 visibleItem.windowID: .visible,
@@ -84,7 +84,7 @@ final class PlanRebalanceMoveTests: XCTestCase {
             "hidden": ["com.example.app:Status"],
         ]
 
-        let result = MenuBarItemManager.planRebalanceMove(
+        let result = LayoutSolver.planRebalanceMove(
             items: [stray],
             sectionByWindowID: [stray.windowID: .visible],
             hasAlwaysHiddenSection: true,
@@ -109,7 +109,7 @@ final class PlanRebalanceMoveTests: XCTestCase {
             "hidden": ["com.example.app:Status:0", "com.example.app:Status:1"],
         ]
 
-        let result = MenuBarItemManager.planRebalanceMove(
+        let result = LayoutSolver.planRebalanceMove(
             items: [inHidden, strayInVisible],
             sectionByWindowID: [
                 inHidden.windowID: .hidden,
@@ -135,7 +135,7 @@ final class PlanRebalanceMoveTests: XCTestCase {
             "alwaysHidden": ["com.example.app:Status"],
         ]
 
-        let result = MenuBarItemManager.planRebalanceMove(
+        let result = LayoutSolver.planRebalanceMove(
             items: [stray],
             sectionByWindowID: [stray.windowID: .visible],
             hasAlwaysHiddenSection: false,
@@ -157,7 +157,7 @@ final class PlanRebalanceMoveTests: XCTestCase {
             "hidden": ["com.example.app:Status"],
         ]
 
-        let result = MenuBarItemManager.planRebalanceMove(
+        let result = LayoutSolver.planRebalanceMove(
             items: [temporarilyShown],
             sectionByWindowID: [temporarilyShown.windowID: .visible],
             hasAlwaysHiddenSection: true,
@@ -192,7 +192,7 @@ final class PlanRebalanceMoveTests: XCTestCase {
             ],
         ]
 
-        let result = MenuBarItemManager.planRebalanceMove(
+        let result = LayoutSolver.planRebalanceMove(
             items: [alter, claude, cursor],
             sectionByWindowID: [
                 alter.windowID: .visible,
@@ -227,7 +227,7 @@ final class PlanRebalanceMoveTests: XCTestCase {
             ],
         ]
 
-        let result = MenuBarItemManager.planRebalanceMove(
+        let result = LayoutSolver.planRebalanceMove(
             items: [a, cursor],
             sectionByWindowID: [
                 a.windowID: .visible,
@@ -252,7 +252,7 @@ final class PlanRebalanceMoveTests: XCTestCase {
             "visible": ["com.x.app:X", "com.cursor.app:Cursor"],
         ]
 
-        let result = MenuBarItemManager.planRebalanceMove(
+        let result = LayoutSolver.planRebalanceMove(
             items: [cursor],
             sectionByWindowID: [cursor.windowID: .alwaysHidden],
             hasAlwaysHiddenSection: true,
@@ -281,7 +281,7 @@ final class PlanRebalanceMoveTests: XCTestCase {
             "visible": ["com.example.app:Status:2"],
         ]
 
-        let result = MenuBarItemManager.planRebalanceMove(
+        let result = LayoutSolver.planRebalanceMove(
             items: [leftmost, middle, rightmost],
             sectionByWindowID: [
                 leftmost.windowID: .hidden,

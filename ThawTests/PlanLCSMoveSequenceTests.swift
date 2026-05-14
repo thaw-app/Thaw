@@ -9,7 +9,7 @@
 @testable import Thaw
 import XCTest
 
-/// Characterization tests for MenuBarItemManager.planLCSMoveSequence.
+/// Characterization tests for LayoutSolver.planLCSMoveSequence.
 ///
 /// Pins down the LCS-anchored move ordering used by applyProfileLayout's
 /// Phase 2: identify items that must move, then for each select a stable
@@ -21,7 +21,7 @@ final class PlanLCSMoveSequenceTests: XCTestCase {
     /// When current is empty, all desired items must move; each gets a
     /// section-boundary destination since there are no anchors.
     func testEmptyCurrentAllItemsToMove() {
-        let result = MenuBarItemManager.planLCSMoveSequence(
+        let result = LayoutSolver.planLCSMoveSequence(
             currentNoControls: [],
             desiredNoControls: ["a", "b", "c"],
             sectionMap: ["a": "visible", "b": "visible", "c": "visible"]
@@ -33,7 +33,7 @@ final class PlanLCSMoveSequenceTests: XCTestCase {
 
     /// Identical current and desired produce zero planned moves.
     func testIdenticalCurrentAndDesiredNoMoves() {
-        let result = MenuBarItemManager.planLCSMoveSequence(
+        let result = LayoutSolver.planLCSMoveSequence(
             currentNoControls: ["a", "b", "c"],
             desiredNoControls: ["a", "b", "c"],
             sectionMap: ["a": "visible", "b": "visible", "c": "visible"]
@@ -53,7 +53,7 @@ final class PlanLCSMoveSequenceTests: XCTestCase {
         // deterministically based on the backtrack tie-break. With
         // dp[i-1][j] > dp[i][j-1] preferring i-1, the result is {b,c}.
         // Therefore a is the item to move.
-        let result = MenuBarItemManager.planLCSMoveSequence(
+        let result = LayoutSolver.planLCSMoveSequence(
             currentNoControls: ["a", "b", "c"],
             desiredNoControls: ["b", "a", "c"],
             sectionMap: ["a": "visible", "b": "visible", "c": "visible"]
@@ -74,7 +74,7 @@ final class PlanLCSMoveSequenceTests: XCTestCase {
     /// so v1 is the item to move; the only same-section anchor (x) sits
     /// to its left, producing .rightOfUID(x).
     func testAnchorScanRespectsSectionBoundary() {
-        let result = MenuBarItemManager.planLCSMoveSequence(
+        let result = LayoutSolver.planLCSMoveSequence(
             currentNoControls: ["v1", "x"],
             desiredNoControls: ["x", "v1", "h1"],
             sectionMap: ["v1": "visible", "x": "visible", "h1": "hidden"]
@@ -92,7 +92,7 @@ final class PlanLCSMoveSequenceTests: XCTestCase {
     /// Position of b in desired is 1; forward scan finds c at 2 (LCS,
     /// same section) → .leftOfUID(c).
     func testForwardScanPreferredOverBackward() {
-        let result = MenuBarItemManager.planLCSMoveSequence(
+        let result = LayoutSolver.planLCSMoveSequence(
             currentNoControls: ["b", "a", "c"],
             desiredNoControls: ["a", "b", "c"],
             sectionMap: ["a": "visible", "b": "visible", "c": "visible"]
@@ -111,7 +111,7 @@ final class PlanLCSMoveSequenceTests: XCTestCase {
     /// stops immediately at the section boundary and no forward anchor
     /// exists. Result: .sectionBoundary(.hidden).
     func testSectionBoundaryFallbackWhenNoAnchorInSection() {
-        let result = MenuBarItemManager.planLCSMoveSequence(
+        let result = LayoutSolver.planLCSMoveSequence(
             currentNoControls: ["h1", "x"],
             desiredNoControls: ["x", "h1"],
             sectionMap: ["h1": "hidden", "x": "visible"]
@@ -136,7 +136,7 @@ final class PlanLCSMoveSequenceTests: XCTestCase {
     /// - a at desired idx 2: backward scan finds b at idx 1 (now in
     ///   movedItems, same section) → .rightOfUID(b).
     func testAlreadyMovedItemBecomesStableAnchor() {
-        let result = MenuBarItemManager.planLCSMoveSequence(
+        let result = LayoutSolver.planLCSMoveSequence(
             currentNoControls: ["a", "b", "c"],
             desiredNoControls: ["c", "b", "a"],
             sectionMap: ["a": "visible", "b": "visible", "c": "visible"]
