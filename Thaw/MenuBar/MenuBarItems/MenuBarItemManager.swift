@@ -1357,9 +1357,19 @@ extension MenuBarItemManager {
 
     /// A pair of control items, taken from a list of menu bar items
     /// during a menu bar item cache operation.
-    private struct ControlItemPair {
+    struct ControlItemPair {
         let hidden: MenuBarItem
         let alwaysHidden: MenuBarItem?
+
+        /// Creates a control item pair from already-known control items.
+        ///
+        /// Used by test fixtures and by callers that have already resolved the
+        /// hidden and always-hidden items themselves. Production discovery from
+        /// a live menu bar uses the failable initializer below.
+        init(hidden: MenuBarItem, alwaysHidden: MenuBarItem?) {
+            self.hidden = hidden
+            self.alwaysHidden = alwaysHidden
+        }
 
         /// Creates a control item pair from a list of menu bar items.
         ///
@@ -2575,7 +2585,7 @@ extension MenuBarItemManager {
 
 extension MenuBarItemManager {
     /// Destinations for menu bar item move operations.
-    enum MoveDestination {
+    enum MoveDestination: Equatable {
         /// The destination to the left of the given target item.
         case leftOfItem(MenuBarItem)
         /// The destination to the right of the given target item.
@@ -4178,50 +4188,41 @@ extension MenuBarItemManager {
             return false
         }
 
-        // Avoid relocating items already assigned to hidden/always-hidden sections.
+        // Cached hidden / always-hidden tags from the prior cache cycle.
+        // The planner uses these to short-circuit re-relocating items
+        // already placed in a hidden section.
         let hiddenTags = Set(itemCache[.hidden].map(\.tag))
         let alwaysHiddenTags = Set(itemCache[.alwaysHidden].map(\.tag))
 
-        // Build a set of bundle IDs that have items with saved sections in hidden/always-hidden.
-        // This protects multi-icon apps that the user has explicitly placed in hidden sections
-        // without preventing auto-relocation of new items from apps not yet seen.
-        //
-        // NOTE: We extract bundle IDs directly from savedSectionOrder without requiring items
-        // to be currently present. This is critical when the always-hidden section is disabled,
-        // because items from always-hidden end up in hidden/visible and would otherwise be
-        // treated as "new" and relocated.
-        var bundleIDsWithSavedHiddenItems = Set<String>()
-        for (sectionKeyString, identifiers) in savedSectionOrder {
-            guard sectionKeyString == "hidden" || sectionKeyString == "alwaysHidden" else { continue }
-            for identifier in identifiers {
-                // Extract namespace from identifier (format: "namespace:title:instanceIndex")
-                // For app items, the namespace IS the bundle ID
-                let ns = identifier.split(separator: ":", maxSplits: 1).first.map(String.init)
-                if let ns, ns.contains(".") {
-                    // Only add if it looks like a bundle ID (contains at least one dot)
-                    bundleIDsWithSavedHiddenItems.insert(ns)
-                }
-            }
-        }
-
-        // Identify items that are to the left of the hidden control item bounds.
+        // Pre-compute live state for the planner. hiddenBounds and the
+        // section classification both require the live Window Server;
+        // computing them here keeps planLeftmostMove pure over its inputs.
         let hiddenBounds = bestBounds(for: controlItems.hidden)
-        let leftmostItems = items
-            .filter {
-                // Must be left of hidden divider, movable.
-                // Include normal items AND the Thaw icon (which is a control item).
-                $0.bounds.maxX <= hiddenBounds.minX &&
-                    $0.isMovable &&
-                    (!$0.isControlItem || $0.tag == .visibleControlItem)
+        var sectionContext = CacheContext(
+            controlItems: controlItems,
+            displayID: Bridging.getActiveMenuBarDisplayID()
+        )
+        var sectionByWindowID = [CGWindowID: MenuBarSection.Name]()
+        for item in items {
+            if let section = sectionContext.findSection(for: item) {
+                sectionByWindowID[item.windowID] = section
             }
-            .sorted { $0.bounds.minX < $1.bounds.minX }
-
-        guard !leftmostItems.isEmpty else {
-            return false
         }
 
-        // The Thaw icon must always appear in the visible section.
-        if let thawIcon = leftmostItems.first(where: { $0.tag == .visibleControlItem }) {
+        let decision = Self.planLeftmostMove(
+            items: items,
+            hiddenBounds: hiddenBounds,
+            sectionByWindowID: sectionByWindowID,
+            previousWindowIDs: previousWindowIDs,
+            savedSectionOrder: savedSectionOrder,
+            knownItemIdentifiers: knownItemIdentifiers,
+            hiddenTags: hiddenTags,
+            alwaysHiddenTags: alwaysHiddenTags,
+            effectiveNewItemsSection: effectiveNewItemsSection
+        )
+
+        switch decision {
+        case let .thawIcon(thawIcon):
             MenuBarItemManager.diagLog.info("Relocating Thaw icon \(thawIcon.logString) to visible section")
             do {
                 try await move(
@@ -4234,18 +4235,8 @@ extension MenuBarItemManager {
                 return false
             }
             return true
-        }
 
-        // Non-hideable system items (screen recording, mic, camera indicators)
-        // must always appear in the visible section. If macOS placed one to the
-        // left of our hidden control item, move it back immediately — no
-        // newness check needed since these items should never be in a hidden
-        // section.
-        // Exclude transient Control Center items (Live Activities, iPhone
-        // Mirroring icons): they appear with !canBeHidden but live in a
-        // deeply off-screen position macOS won't let us drag, so retrying
-        // every cache cycle just burns the eventSemaphore for ~4 s.
-        if let systemItem = leftmostItems.first(where: { !$0.canBeHidden && !$0.isTransientControlCenterItem }) {
+        case let .systemItem(systemItem):
             MenuBarItemManager.diagLog.info("Relocating non-hideable system item \(systemItem.logString) to visible section")
             do {
                 try await move(
@@ -4258,119 +4249,53 @@ extension MenuBarItemManager {
                 return false
             }
             return true
-        }
 
-        // For hideable items, identify a candidate that is new (windowID or
-        // tag/namespace) and not already placed/pinned in hidden areas.
-        let hideableLeftmost = leftmostItems.filter(\.canBeHidden)
-        let previousIDs = Set(previousWindowIDs)
+        case let .newHideableItem(candidate, identifierToMark):
+            // Track this item so future cache cycles don't treat it as new.
+            knownItemIdentifiers.insert(identifierToMark)
+            persistKnownItemIdentifiers()
 
-        // Skip when any hideable item has an unresolved sourcePID. Without
-        // sourcePID resolution, third-party items hosted by Control Center
-        // fall back to namespace "com.apple.controlcenter", which prevents
-        // matching against savedSectionOrder (real bundle IDs) and
-        // bundleIDsWithSavedHiddenItems. In that state, existing items can be
-        // misclassified as "new" and relocated. The next cache pass with
-        // resolved sourcePIDs will handle relocation safely. The Thaw-icon
-        // and non-hideable-system-item branches above use windowID-based
-        // logic and run before this guard so they remain unaffected.
-        if hideableLeftmost.contains(where: { $0.sourcePID == nil }) {
-            MenuBarItemManager.diagLog.debug(
-                "relocateNewLeftmostItems: skipping, hideable items have unresolved sourcePIDs"
+            let destination = newItemsMoveDestination(for: controlItems, among: items)
+
+            MenuBarItemManager.diagLog.info(
+                "Relocating new item \(candidate.logString) to \(effectiveNewItemsSection.logString)"
             )
-            return false
-        }
 
-        // Build lookup for saved sections (same logic as restoreItemsToSavedSections).
-        var savedSectionForIdentifier = [String: MenuBarSection.Name]()
-        for (sectionKeyString, identifiers) in savedSectionOrder {
-            guard let section = sectionName(for: sectionKeyString) else { continue }
-            for identifier in identifiers {
-                savedSectionForIdentifier[identifier] = section
-            }
-        }
-
-        let candidate = hideableLeftmost.first { item in
-            let identifier = "\(item.tag.namespace):\(item.tag.title)"
-
-            // Only treat as "new" if we don't have a saved section for this item.
-            // Items with saved sections should be handled by restoreItemsToSavedSections,
-            // not by the "new item" relocation logic.
-            let hasSavedSection = savedSectionForIdentifier[identifier] != nil ||
-                savedSectionForIdentifier[item.uniqueIdentifier] != nil
-            guard !hasSavedSection else { return false }
-
-            let isNewIdentity = !knownItemIdentifiers.contains(identifier)
-            let notPlacedHidden = !hiddenTags.contains(item.tag) && !alwaysHiddenTags.contains(item.tag)
-
-            // Debug logging to understand why items are being relocated
-            if !hasSavedSection {
-                let isNewID = previousIDs.isEmpty ? isNewIdentity : !previousIDs.contains(item.windowID)
-                MenuBarItemManager.diagLog.debug("relocateNewLeftmostItems candidate: \(item.logString), isNewID=\(isNewID), isNewIdentity=\(isNewIdentity), notPlacedHidden=\(notPlacedHidden), identifier=\(identifier), uniqueID=\(item.uniqueIdentifier)")
-            }
-
-            // Note: We removed the broad bundle ID pinning check because it was
-            // preventing new items from apps like SwiftBar from being auto-relocated when
-            // other items from the same app were in hidden sections. Per-item tracking via
-            // notPlacedHidden and knownItemIdentifiers handles these cases correctly.
-            //
-            // Relocate if the identity is brand new OR if the item has a new
-            // window ID (app quit and relaunched). Items with saved sections
-            // are already filtered out above, so this only affects items that
-            // macOS placed in the hidden zone after an app relaunch.
-            //
-            // When isNewIdentity=true but isNewID=false, the item's identifier
-            // changed (e.g. sourcePID resolution) but the window existed before.
-            // This is an identifier migration, not a genuinely new item.
-            let isNewID = previousIDs.isEmpty ? isNewIdentity : !previousIDs.contains(item.windowID)
-            if isNewIdentity, !isNewID {
+            // Skip items with no valid bounds (transient clone windows
+            // etc.). This live check stays in the orchestrator because
+            // it requires Bridging.
+            guard Bridging.getWindowBounds(for: candidate.windowID) != nil else {
+                MenuBarItemManager.diagLog.warning("Skipping relocation for \(candidate.logString) — no valid bounds, likely transient")
                 return false
             }
-            return notPlacedHidden && (isNewIdentity || isNewID)
-        }
-        guard let candidate else {
-            if !leftmostItems.isEmpty, savedSectionForIdentifier.isEmpty == false {
-                MenuBarItemManager.diagLog.debug("relocateNewLeftmostItems: skipping, items have saved sections (letting restore handle it)")
+
+            do {
+                try await move(
+                    item: candidate,
+                    to: destination,
+                    skipInputPause: true
+                )
+            } catch {
+                MenuBarItemManager.diagLog.error("Failed to relocate \(candidate.logString): \(error)")
+                return false
+            }
+            return true
+
+        case let .noop(reason):
+            switch reason {
+            case .unresolvedSourcePID:
+                MenuBarItemManager.diagLog.debug(
+                    "relocateNewLeftmostItems: skipping, hideable items have unresolved sourcePIDs"
+                )
+            case .alreadyInTarget:
+                MenuBarItemManager.diagLog.debug(
+                    "relocateNewLeftmostItems: candidate already in \(effectiveNewItemsSection.logString), skipping"
+                )
+            case .noNewCandidate, .noLeftmostItems:
+                break
             }
             return false
         }
-
-        // Track this item so we don't move it again unless it truly appears new.
-        let identifier = "\(candidate.tag.namespace):\(candidate.tag.title)"
-        knownItemIdentifiers.insert(identifier)
-        persistKnownItemIdentifiers()
-
-        let destination = newItemsMoveDestination(for: controlItems, among: items)
-
-        // Skip no-op moves: item is already in the target section.
-        var context = CacheContext(controlItems: controlItems, displayID: Bridging.getActiveMenuBarDisplayID())
-        if context.findSection(for: candidate) == effectiveNewItemsSection {
-            MenuBarItemManager.diagLog.debug("Skipping relocation for \(candidate.logString) — already in \(effectiveNewItemsSection.logString)")
-            return false
-        }
-
-        MenuBarItemManager.diagLog.info(
-            "Relocating new item \(candidate.logString) to \(effectiveNewItemsSection.logString)"
-        )
-
-        // Skip items with no valid bounds (transient clone windows etc.)
-        guard Bridging.getWindowBounds(for: candidate.windowID) != nil else {
-            MenuBarItemManager.diagLog.warning("Skipping relocation for \(candidate.logString) — no valid bounds, likely transient")
-            return false
-        }
-
-        do {
-            try await move(
-                item: candidate,
-                to: destination,
-                skipInputPause: true
-            )
-        } catch {
-            MenuBarItemManager.diagLog.error("Failed to relocate \(candidate.logString): \(error)")
-            return false
-        }
-
-        return true
     }
 
     /// Relocates items whose apps quit while they were temporarily shown
@@ -4395,115 +4320,136 @@ extension MenuBarItemManager {
         let activelyShownTags = Set(temporarilyShownItemContexts.map(\.tag.tagIdentifier))
 
         let hiddenBounds = bestBounds(for: controlItems.hidden)
+
+        // Pre-compute live per-item bounds for the planner's "already in
+        // hidden section" comparison. Done here so the planner stays pure
+        // over its inputs (no Bridging calls inside).
+        var boundsForWindowID = [CGWindowID: CGRect]()
+        for item in items {
+            boundsForWindowID[item.windowID] = bestBounds(for: item)
+        }
+
+        // Extract fallback neighbor tags from temporarilyShownItemContexts.
+        // The planner only needs the tag-identifier → neighbor mapping;
+        // exposing the full context type to the planner would tangle its
+        // signature with private state.
+        var fallbackNeighborByTagIdentifier = [String: MenuBarItemTag]()
+        for context in temporarilyShownItemContexts {
+            if let neighbor = context.fallbackNeighborTag {
+                fallbackNeighborByTagIdentifier[context.tag.tagIdentifier] = neighbor
+            }
+        }
+
         var didRelocate = false
 
-        for (tagIdentifier, sectionString) in pendingRelocations {
-            guard !activelyShownTags.contains(tagIdentifier) else {
-                continue
-            }
+        // Iterate a snapshot of the dict keys so promotions of waitForRelaunch
+        // sentinels mid-loop don't disturb iteration. The planner is called
+        // per entry; the orchestrator handles persistence and re-runs after
+        // a promotion so the regular section path executes.
+        let allTagIdentifiers = Array(pendingRelocations.keys)
+        for tagIdentifier in allTagIdentifiers {
+            guard let rawSectionString = pendingRelocations[tagIdentifier] else { continue }
 
-            // Handle waitForRelaunch sentinel — item hit the rehide cap this
-            // session. Skip the move unless the app has relaunched (new windowID).
-            if let sentinel = parseWaitForRelaunch(sectionString) {
-                guard let item = items.first(where: { tagIdentifier == $0.tag.tagIdentifier }) else {
-                    // App not running at all — keep the entry for next launch.
-                    continue
-                }
-                if item.windowID == sentinel.windowID {
-                    // Same session / same window — skip to avoid re-saturating
-                    // the event semaphore with a known-broken move.
-                    MenuBarItemManager.diagLog.debug(
-                        "relocatePendingItems: skipping \(item.logString) — waitForRelaunch sentinel active (same windowID)"
-                    )
-                    continue
-                }
-                // WindowID changed — app relaunched. Promote back to a normal
-                // pending relocation so the regular move path runs below.
-                MenuBarItemManager.diagLog.info(
-                    "relocatePendingItems: \(item.logString) has new windowID — clearing waitForRelaunch sentinel"
+            // Parse the raw string into a typed PendingEntry for the planner.
+            let entry: PendingEntry
+            if let sentinel = parseWaitForRelaunch(rawSectionString) {
+                entry = PendingEntry(
+                    tagIdentifier: tagIdentifier,
+                    kind: .waitForRelaunch(windowID: sentinel.windowID, section: sentinel.section)
                 )
-                pendingRelocations[tagIdentifier] = sectionKey(for: sentinel.section)
-                persistPendingRelocations()
-                // Fall through to the normal relocation logic with the promoted value.
-            }
-
-            guard let targetSection = sectionName(for: pendingRelocations[tagIdentifier] ?? sectionString),
-                  targetSection != .visible
-            else {
-                // Nothing to do if the original section was visible.
-                pendingRelocations.removeValue(forKey: tagIdentifier)
-                pendingReturnDestinations.removeValue(forKey: tagIdentifier)
-                continue
-            }
-
-            // Find the item in the current menu bar items.
-            guard let item = items.first(where: {
-                tagIdentifier == $0.tag.tagIdentifier
-            }) else {
-                // Item not present yet (app hasn't relaunched). Keep the entry.
-                continue
-            }
-
-            // Check if the item is currently in the visible section (to the
-            // right of the hidden control item).
-            let itemBounds = bestBounds(for: item)
-            guard itemBounds.minX >= hiddenBounds.maxX else {
-                // Item is already in a hidden section — clean up.
-                pendingRelocations.removeValue(forKey: tagIdentifier)
-                pendingReturnDestinations.removeValue(forKey: tagIdentifier)
-                continue
-            }
-
-            // Move the item back to its original section.
-            // Try to use the stored destination from the persisted data to preserve ordering.
-            let destination: MoveDestination
-            if let destInfo = pendingReturnDestinations[tagIdentifier],
-               let neighborTagString = destInfo["neighbor"],
-               let neighborItem = items.first(where: { neighborTagString == $0.tag.tagIdentifier })
-            {
-                if destInfo["position"] == "left" {
-                    destination = .leftOfItem(neighborItem)
-                } else {
-                    destination = .rightOfItem(neighborItem)
-                }
-            } else if let fallbackTagString = temporarilyShownItemContexts.first(where: { tagIdentifier == $0.tag.tagIdentifier })?.fallbackNeighborTag,
-                      let fallbackItem = items.first(matching: fallbackTagString)
-            {
-                destination = .rightOfItem(fallbackItem)
+            } else if let parsedSection = sectionName(for: rawSectionString) {
+                entry = PendingEntry(tagIdentifier: tagIdentifier, kind: .section(parsedSection))
             } else {
-                switch targetSection {
-                case .hidden:
-                    destination = .leftOfItem(controlItems.hidden)
-                case .alwaysHidden:
-                    if let alwaysHidden = controlItems.alwaysHidden {
-                        destination = .leftOfItem(alwaysHidden)
-                    } else {
-                        destination = .leftOfItem(controlItems.hidden)
-                    }
-                case .visible:
-                    continue
-                }
+                // Malformed entry — drop it.
+                pendingRelocations.removeValue(forKey: tagIdentifier)
+                pendingReturnDestinations.removeValue(forKey: tagIdentifier)
+                continue
             }
 
-            MenuBarItemManager.diagLog.info(
-                """
-                Relocating \(item.logString) back to \
-                \(targetSection.logString) after app relaunch
-                """
+            var decision = Self.planPendingMove(
+                entry: entry,
+                items: items,
+                controlItems: controlItems,
+                hiddenBounds: hiddenBounds,
+                boundsForWindowID: boundsForWindowID,
+                activelyShownTags: activelyShownTags,
+                pendingReturnDestinations: pendingReturnDestinations,
+                fallbackNeighborByTagIdentifier: fallbackNeighborByTagIdentifier
             )
 
-            do {
-                try await move(item: item, to: destination, skipInputPause: true)
-                pendingRelocations.removeValue(forKey: tagIdentifier)
-                pendingReturnDestinations.removeValue(forKey: tagIdentifier)
-                didRelocate = true
-            } catch {
-                MenuBarItemManager.diagLog.error(
+            // Handle a sentinel promotion in-place: rewrite pendingRelocations
+            // to the regular section key, persist, then re-run the planner
+            // for the same entry so the regular section path executes.
+            if case let .promoteWaitForRelaunch(promotedSection) = decision {
+                if let item = items.first(where: { entry.tagIdentifier == $0.tag.tagIdentifier }) {
+                    MenuBarItemManager.diagLog.info(
+                        "relocatePendingItems: \(item.logString) has new windowID — clearing waitForRelaunch sentinel"
+                    )
+                }
+                pendingRelocations[tagIdentifier] = sectionKey(for: promotedSection)
+                persistPendingRelocations()
+
+                let promotedEntry = PendingEntry(tagIdentifier: tagIdentifier, kind: .section(promotedSection))
+                decision = Self.planPendingMove(
+                    entry: promotedEntry,
+                    items: items,
+                    controlItems: controlItems,
+                    hiddenBounds: hiddenBounds,
+                    boundsForWindowID: boundsForWindowID,
+                    activelyShownTags: activelyShownTags,
+                    pendingReturnDestinations: pendingReturnDestinations,
+                    fallbackNeighborByTagIdentifier: fallbackNeighborByTagIdentifier
+                )
+            }
+
+            switch decision {
+            case let .move(item, destination):
+                let targetSection: MenuBarSection.Name = {
+                    if case let .section(section) = entry.kind { return section }
+                    if case let .waitForRelaunch(_, section) = entry.kind { return section }
+                    return .hidden
+                }()
+                MenuBarItemManager.diagLog.info(
                     """
-                    Failed to relocate \(item.logString) back to \
-                    \(targetSection.logString): \(error)
+                    Relocating \(item.logString) back to \
+                    \(targetSection.logString) after app relaunch
                     """
                 )
+                do {
+                    try await move(item: item, to: destination, skipInputPause: true)
+                    pendingRelocations.removeValue(forKey: tagIdentifier)
+                    pendingReturnDestinations.removeValue(forKey: tagIdentifier)
+                    didRelocate = true
+                } catch {
+                    MenuBarItemManager.diagLog.error(
+                        """
+                        Failed to relocate \(item.logString) back to \
+                        \(targetSection.logString): \(error)
+                        """
+                    )
+                }
+
+            case .clearEntry:
+                pendingRelocations.removeValue(forKey: tagIdentifier)
+                pendingReturnDestinations.removeValue(forKey: tagIdentifier)
+
+            case .promoteWaitForRelaunch:
+                // Unreachable: handled above by re-running the planner with
+                // the promoted entry. If the planner returns promote a
+                // second time we just leave the entry alone for next pass.
+                break
+
+            case let .skip(reason):
+                switch reason {
+                case .waitForRelaunchActive:
+                    if let item = items.first(where: { entry.tagIdentifier == $0.tag.tagIdentifier }) {
+                        MenuBarItemManager.diagLog.debug(
+                            "relocatePendingItems: skipping \(item.logString) — waitForRelaunch sentinel active (same windowID)"
+                        )
+                    }
+                case .activelyShown, .itemNotPresent:
+                    break
+                }
             }
         }
 
@@ -4548,79 +4494,40 @@ extension MenuBarItemManager {
             return false
         }
 
-        // Build per-section saved counts per baseID (namespace:title with
-        // the instanceIndex stripped). Multi-instance apps (e.g. clones on
-        // notch displays) appear under the same baseID with possibly
-        // different :N suffixes — collapsing to a single "expected
-        // section" per baseID silently dropped slots and made the restore
-        // fight whatever the full sort just placed. Counting per section
-        // makes the instances fungible: any window of the app can fill
-        // any slot for that app, and a section is "wrong" only when the
-        // count of that baseID in it disagrees with the saved count.
-        var savedCountsByBaseID = [String: [MenuBarSection.Name: Int]]()
-        for (sectionKeyString, identifiers) in savedSectionOrder {
-            guard let section = sectionName(for: sectionKeyString) else { continue }
-            for identifier in identifiers {
-                let baseID = identifier.split(separator: ":", maxSplits: 2).prefix(2).joined(separator: ":")
-                savedCountsByBaseID[baseID, default: [:]][section, default: 0] += 1
-            }
-        }
-
-        if controlItems.alwaysHidden == nil {
-            for baseID in savedCountsByBaseID.keys {
-                if let ahCount = savedCountsByBaseID[baseID]?[.alwaysHidden], ahCount > 0 {
-                    savedCountsByBaseID[baseID]?[.hidden, default: 0] += ahCount
-                    savedCountsByBaseID[baseID]?.removeValue(forKey: .alwaysHidden)
-                }
-            }
-        }
-
-        // Compute the first rebalancing move needed: a (surplus item,
-        // demand section) pair for any baseID whose current per-section
-        // counts diverge from the saved counts. We only need the first
-        // because the function moves one item per call and the caller
-        // recaches before re-entering — successive calls converge.
-        struct PendingMove {
-            let item: MenuBarItem
-            let fromSection: MenuBarSection.Name
-            let toSection: MenuBarSection.Name
-        }
+        // Determine whether a rebalancing move is needed by consulting the
+        // planner. The planner is a pure function: it derives saved counts
+        // per baseID from savedSectionOrder, collapses alwaysHidden counts
+        // when the AH section is disabled, classifies current items by
+        // baseID and section, and returns the first (surplus, demand)
+        // pair. We only need the first move per call because the caller
+        // recaches and re-enters until counts converge.
         let activelyShownTags = Set(temporarilyShownItemContexts.map(\.tag.tagIdentifier))
-        let allSections: [MenuBarSection.Name] = [.visible, .hidden, .alwaysHidden]
+        let displayID = Bridging.getActiveMenuBarDisplayID()
+        let hasAlwaysHiddenSection = controlItems.alwaysHidden != nil
 
-        func findFirstRebalanceMove() -> PendingMove? {
-            var context = CacheContext(controlItems: controlItems, displayID: Bridging.getActiveMenuBarDisplayID())
-            var currentItemsByBaseID = [String: [MenuBarSection.Name: [MenuBarItem]]]()
+        /// Classifies each candidate item via CacheContext so the planner
+        /// receives a window-server-resolved section map. Building the map
+        /// here (rather than inside the planner) keeps the planner pure
+        /// over its inputs and decouples it from Bridging.
+        func buildSectionByWindowID() -> [CGWindowID: MenuBarSection.Name] {
+            var context = CacheContext(controlItems: controlItems, displayID: displayID)
+            var map = [CGWindowID: MenuBarSection.Name]()
             for item in items where !item.isControlItem && item.isMovable && item.canBeHidden {
                 guard !activelyShownTags.contains(item.tag.tagIdentifier) else { continue }
-                guard let currentSection = context.findSection(for: item) else { continue }
-                let baseID = "\(item.tag.namespace):\(item.tag.title)"
-                currentItemsByBaseID[baseID, default: [:]][currentSection, default: []].append(item)
-            }
-            for (baseID, savedCounts) in savedCountsByBaseID {
-                let currentBuckets = currentItemsByBaseID[baseID] ?? [:]
-                var demand = [MenuBarSection.Name: Int]()
-                var surplusItems = [MenuBarSection.Name: [MenuBarItem]]()
-                for section in allSections {
-                    let saved = savedCounts[section] ?? 0
-                    let current = currentBuckets[section]?.count ?? 0
-                    if saved > current {
-                        demand[section] = saved - current
-                    } else if current > saved, let bucket = currentBuckets[section] {
-                        surplusItems[section] = Array(bucket.suffix(current - saved))
-                    }
-                }
-                if demand.isEmpty || surplusItems.isEmpty { continue }
-                for (toSection, _) in demand {
-                    for (fromSection, surplus) in surplusItems where !surplus.isEmpty {
-                        return PendingMove(item: surplus[0], fromSection: fromSection, toSection: toSection)
-                    }
+                if let section = context.findSection(for: item) {
+                    map[item.windowID] = section
                 }
             }
-            return nil
+            return map
         }
 
-        let hasMisplacedItems = findFirstRebalanceMove() != nil
+        let hasMisplacedItems = Self.planRebalanceMove(
+            items: items,
+            sectionByWindowID: buildSectionByWindowID(),
+            hasAlwaysHiddenSection: hasAlwaysHiddenSection,
+            savedSectionOrder: savedSectionOrder,
+            activelyShownTags: activelyShownTags
+        ) != nil
 
         guard windowIDsChanged || hasMisplacedItems else {
             MenuBarItemManager.diagLog.debug("restoreItemsToSavedSections: no app restart detected and no misplaced items, skipping")
@@ -4633,7 +4540,13 @@ extension MenuBarItemManager {
 
         // Re-evaluate after the settle wait — items may have shifted
         // while we were sleeping (relaunched apps continue to attach).
-        let firstMove = findFirstRebalanceMove()
+        let firstMove = Self.planRebalanceMove(
+            items: items,
+            sectionByWindowID: buildSectionByWindowID(),
+            hasAlwaysHiddenSection: hasAlwaysHiddenSection,
+            savedSectionOrder: savedSectionOrder,
+            activelyShownTags: activelyShownTags
+        )
 
         // Iterate just once: move the chosen surplus item to a demand
         // section. The caller schedules a recache; the next call picks
@@ -5605,130 +5518,34 @@ extension MenuBarItemManager {
 
             // Find the Thaw visible control icon, which must always stay visible.
             let visibleCtrlUID = items.first(where: { $0.tag == .visibleControlItem })?.uniqueIdentifier
-            let chevronWidth = visibleCtrlUID.flatMap { uidWidths[$0] } ?? 0
-
-            // Tiered overflow priority: unmanaged items (newly-detected,
-            // not in any profile section) are the first candidates to
-            // overflow because the profile has no saved position for
-            // them. Profile-saved items only overflow if removing all
-            // unmanaged items still leaves the layout exceeding the
-            // budget. Within each tier, the leftmost (chevron-side)
-            // items overflow first, matching the macOS layout behaviour
-            // of pushing leftmost items under the notch when full.
-            let unmanagedSet = Set(unmanagedUIDs)
-            let nonChevronUIDs = visibleUIDs.filter { $0 != visibleCtrlUID }
-            let unmanagedNonChevron = nonChevronUIDs.filter { unmanagedSet.contains($0) }
-            let profileNonChevron = nonChevronUIDs.filter { !unmanagedSet.contains($0) }
-
-            // Profile baseline: chevron + all profile-saved visible
-            // items. This is the cost we cannot reduce by overflowing
-            // unmanaged items alone.
-            var profileBaseline: CGFloat = chevronWidth
-            for uid in profileNonChevron {
-                profileBaseline += uidWidths[uid] ?? 0
-            }
 
             MenuBarItemManager.diagLog.debug(
                 """
                 Notch overflow budget: screen.maxX=\(screen.frame.maxX) notch=[\(notch.minX)…\(notch.maxX)] \
                 rightBoundary=\(rightBoundary) availableWidth=\(availableWidth) userSpacing=\(userSpacing) \
-                chevronWidth=\(chevronWidth) profileBaseline=\(profileBaseline) \
-                visibleUIDs.count=\(visibleUIDs.count) profileNonChevron.count=\(profileNonChevron.count) \
-                unmanagedNonChevron.count=\(unmanagedNonChevron.count) \
+                visibleUIDs.count=\(visibleUIDs.count) \
                 nonProfileCount=\(nonProfileCount) nonProfileFootprint=\(nonProfileFootprint) \
                 nonProfileBreakdown=[\(nonProfileBreakdown.joined(separator: ", "))]
                 """
             )
 
-            var overflowUIDs: [String] = []
+            let overflowResult = Self.planNotchOverflow(
+                desiredFiltered: desiredFiltered,
+                unmanagedUIDs: unmanagedUIDs,
+                visibleCtrlUID: visibleCtrlUID,
+                hiddenCtrlUID: hiddenCtrlUID,
+                ahCtrlUID: ahCtrlUID,
+                sectionMap: sectionMap,
+                uidWidths: uidWidths,
+                availableWidth: availableWidth
+            )
 
-            if profileBaseline > availableWidth {
-                // Even profile items alone exceed budget. All unmanaged
-                // overflow plus enough profile items (leftmost first)
-                // to fit. Iterate profile items from CC end; whatever
-                // doesn't fit overflows.
-                overflowUIDs.append(contentsOf: unmanagedNonChevron)
-                var profileFitting = [String]()
-                var usedWidth = chevronWidth
-                for uid in profileNonChevron.reversed() {
-                    let width = uidWidths[uid] ?? 0
-                    if usedWidth + width <= availableWidth {
-                        usedWidth += width
-                        profileFitting.insert(uid, at: 0)
-                    } else {
-                        break
-                    }
-                }
-                let profileOverflow = Array(
-                    profileNonChevron.prefix(profileNonChevron.count - profileFitting.count)
-                )
-                overflowUIDs.append(contentsOf: profileOverflow)
-            } else {
-                // Profile fits. Try to also fit unmanaged items at the
-                // CC end of the unmanaged range. Whatever doesn't fit
-                // overflows; profile items stay put.
-                var usedWidth = profileBaseline
-                var unmanagedFitting = [String]()
-                for uid in unmanagedNonChevron.reversed() {
-                    let width = uidWidths[uid] ?? 0
-                    if usedWidth + width <= availableWidth {
-                        usedWidth += width
-                        unmanagedFitting.insert(uid, at: 0)
-                    } else {
-                        break
-                    }
-                }
-                overflowUIDs = Array(
-                    unmanagedNonChevron.prefix(unmanagedNonChevron.count - unmanagedFitting.count)
-                )
-            }
-
-            if !overflowUIDs.isEmpty {
-                // Extract existing hidden/always-hidden items.
-                var controlSet: Set<String> = [hiddenCtrlUID]
-                if let ahUID = ahCtrlUID { controlSet.insert(ahUID) }
-
-                let hiddenStart = desiredFiltered.firstIndex(of: hiddenCtrlUID)
-                    .map { $0 + 1 } ?? desiredFiltered.endIndex
-                let hiddenEnd = ahCtrlUID.flatMap { desiredFiltered.firstIndex(of: $0) }
-                    ?? desiredFiltered.endIndex
-                let existingHidden = desiredFiltered[hiddenStart ..< hiddenEnd]
-                    .filter { !controlSet.contains($0) }
-
-                let ahStart = ahCtrlUID.flatMap { desiredFiltered.firstIndex(of: $0) }
-                    .map { $0 + 1 } ?? desiredFiltered.endIndex
-                let existingAH = desiredFiltered[ahStart...]
-                    .filter { !controlSet.contains($0) }
-
-                // Rebuild: chevron + remaining visible items + hidden
-                // section. Overflowed items append after existingHidden
-                // in their original visible order (no .reversed()) so
-                // the leftmost-from-visible item ends up at the deepest
-                // end of hidden and the rightmost-from-visible ends up
-                // closest to the existing hidden tail.
-                let overflowSet = Set(overflowUIDs)
-                let remainingNonChevron = nonChevronUIDs.filter { !overflowSet.contains($0) }
-                var rebuilt = [String]()
-                if let chevron = visibleCtrlUID {
-                    rebuilt.append(chevron)
-                }
-                rebuilt.append(contentsOf: remainingNonChevron)
-                rebuilt.append(hiddenCtrlUID)
-                rebuilt.append(contentsOf: existingHidden)
-                rebuilt.append(contentsOf: overflowUIDs)
-                if let ahUID = ahCtrlUID {
-                    rebuilt.append(ahUID)
-                    rebuilt.append(contentsOf: existingAH)
-                }
-
-                for uid in overflowUIDs {
-                    sectionMap[uid] = "hidden"
-                }
-
+            if !overflowResult.overflowUIDs.isEmpty {
                 MenuBarItemManager.diagLog.info(
-                    "Profile layout: notch overflow — \(overflowUIDs.count) item(s) moved from visible to hidden"
+                    "Profile layout: notch overflow — \(overflowResult.overflowUIDs.count) item(s) moved from visible to hidden"
                 )
-                desiredFiltered = rebuilt
+                desiredFiltered = overflowResult.updatedDesiredFiltered
+                sectionMap = overflowResult.updatedSectionMap
             }
         }
 
@@ -5757,10 +5574,14 @@ extension MenuBarItemManager {
         }
 
         if isNotchedDisplay {
-            // Skip full sort if current order already matches the desired order.
-            let desiredSet = Set(desiredFiltered)
-            let currentFiltered = currentFlat.filter { desiredSet.contains($0) }
-            if currentFiltered == desiredFiltered {
+            let fullSequence = Self.planFullSortSequence(
+                currentFlat: currentFlat,
+                desiredFiltered: desiredFiltered,
+                sectionMap: sectionMap,
+                hiddenCtrlUID: controlItems.hidden.uniqueIdentifier,
+                ahCtrlUID: controlItems.alwaysHidden?.uniqueIdentifier
+            )
+            if fullSequence.isEmpty {
                 MenuBarItemManager.diagLog.info("Profile layout (full sort): current order matches desired, skipping")
                 updateProfileSortedSnapshot()
                 return
@@ -5768,35 +5589,6 @@ extension MenuBarItemManager {
 
             let hiddenCtrlUID = controlItems.hidden.uniqueIdentifier
             let ahCtrlUID = controlItems.alwaysHidden?.uniqueIdentifier
-
-            // desiredFiltered stores items right-to-left within each section.
-            // Reverse each to get left-to-right, then build the full sequence:
-            //   [AH items (L→R)] [AH ctrl] [H items (L→R)] [H ctrl] [V items (L→R)]
-            var controlSet: Set<String> = [hiddenCtrlUID]
-            if let ahUID = ahCtrlUID { controlSet.insert(ahUID) }
-            let ahUIDs = desiredFiltered.filter { !controlSet.contains($0) && (sectionMap[$0] ?? "visible") == "alwaysHidden" }
-            let hiddenUIDs = desiredFiltered.filter { !controlSet.contains($0) && (sectionMap[$0] ?? "visible") == "hidden" }
-            let visibleUIDs = desiredFiltered.filter { !controlSet.contains($0) && (sectionMap[$0] ?? "visible") == "visible" }
-
-            // Each item is placed `.leftOfItem(CC)`. The first item
-            // placed gets pushed furthest LEFT by subsequent insertions.
-            // The LAST item placed stays nearest CC (rightmost).
-            //
-            // Desired left-to-right: [AH items] [AH_ctrl] [H items] [H_ctrl] [V items] [CC]
-            //
-            // So process AH items first (end up leftmost), then visible
-            // items last (end up rightmost, nearest CC).
-            //
-            // Profile stores items right-to-left (index 0 = rightmost).
-            // Within each section, items placed first end up furthest
-            // from CC, so use profile order directly (rightmost first =
-            // gets pushed furthest left = ends up leftmost in section).
-            var fullSequence = [String]()
-            fullSequence.append(contentsOf: ahUIDs)
-            if let ahCtrlUID { fullSequence.append(ahCtrlUID) }
-            fullSequence.append(contentsOf: hiddenUIDs)
-            fullSequence.append(hiddenCtrlUID)
-            fullSequence.append(contentsOf: visibleUIDs)
 
             MenuBarItemManager.diagLog.info(
                 "Profile layout (full sort): \(fullSequence.count) item(s) including controls"
@@ -6130,15 +5922,13 @@ extension MenuBarItemManager {
             // and respect notch-overflow's section reassignments.
             let currentNoControls = currentFlat.filter { $0 != hiddenCtrlUID && $0 != ahCtrlUID }
             let desiredNoControls = desiredFiltered.filter { $0 != hiddenCtrlUID && $0 != ahCtrlUID }
-            let currentSetNow = Set(currentNoControls)
-            let desiredSetNow = Set(desiredNoControls)
-            let lcsCurrent = currentNoControls.filter { desiredSetNow.contains($0) }
-            let lcsDesired = desiredNoControls.filter { currentSetNow.contains($0) }
+            let plannedMoves = Self.planLCSMoveSequence(
+                currentNoControls: currentNoControls,
+                desiredNoControls: desiredNoControls,
+                sectionMap: sectionMap
+            )
 
-            let lcsItems = longestCommonSubsequence(lcsCurrent, lcsDesired)
-            let itemsToMove = lcsDesired.filter { !lcsItems.contains($0) }
-
-            guard !itemsToMove.isEmpty else {
+            guard !plannedMoves.isEmpty else {
                 if movedCount > 0 {
                     MenuBarItemManager.diagLog.info("Profile layout: completed with \(movedCount) control item move(s), no item reordering needed")
                 } else {
@@ -6150,21 +5940,11 @@ extension MenuBarItemManager {
             }
 
             MenuBarItemManager.diagLog.info(
-                "Profile layout: \(itemsToMove.count) item move(s) needed " +
-                    "(LCS kept \(lcsItems.count) items in place, \(movedCount) control move(s))"
+                "Profile layout: \(plannedMoves.count) item move(s) needed (\(movedCount) control move(s) preceded)"
             )
 
-            var movedItems = Set<String>()
-
-            func isStableAnchor(_ candidateUID: String) -> Bool {
-                lcsItems.contains(candidateUID) || movedItems.contains(candidateUID)
-            }
-
-            for uid in itemsToMove {
+            for planned in plannedMoves {
                 guard !Task.isCancelled else { break }
-                guard let desiredIdx = lcsDesired.firstIndex(of: uid) else {
-                    continue
-                }
 
                 let allFreshItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
                 var freshItemsCopy = allFreshItems
@@ -6177,64 +5957,45 @@ extension MenuBarItemManager {
                 }
 
                 guard let item = allFreshItems.first(where: {
-                    $0.uniqueIdentifier == uid && isProfileItem($0)
+                    $0.uniqueIdentifier == planned.uid && isProfileItem($0)
                 }) else {
                     continue
                 }
 
-                let targetKey = sectionMap[uid] ?? "visible"
-                let targetSection: MenuBarSection.Name = switch targetKey {
-                case "hidden": .hidden
-                case "alwaysHidden": .alwaysHidden
-                default: .visible
-                }
-
-                var dest: MoveDestination?
-
-                // Scan within the same section for stable anchors.
-                for scanIdx in (desiredIdx + 1) ..< lcsDesired.count {
-                    let candidateUID = lcsDesired[scanIdx]
-                    let candidateKey = sectionMap[candidateUID] ?? "visible"
-                    guard candidateKey == targetKey else { break }
-                    if isStableAnchor(candidateUID),
-                       let neighbor = allFreshItems.first(where: {
-                           $0.uniqueIdentifier == candidateUID && $0.isMovable
-                       })
-                    {
-                        dest = .leftOfItem(neighbor)
-                        break
+                // Resolve the abstract destination against fresh items.
+                // If the anchor item is missing (e.g. it disappeared
+                // mid-sequence), fall back to the section boundary.
+                let dest: MoveDestination
+                switch planned.destination {
+                case let .leftOfUID(anchorUID):
+                    if let anchor = allFreshItems.first(where: {
+                        $0.uniqueIdentifier == anchorUID && $0.isMovable
+                    }) {
+                        dest = .leftOfItem(anchor)
+                    } else {
+                        let targetSection = Self.sectionName(forPersistedKey: sectionMap[planned.uid] ?? "visible") ?? .visible
+                        dest = sectionBoundaryDestination(for: targetSection, controlItems: freshControl)
                     }
-                }
-
-                if dest == nil, desiredIdx > 0 {
-                    for scanIdx in stride(from: desiredIdx - 1, through: 0, by: -1) {
-                        let candidateUID = lcsDesired[scanIdx]
-                        let candidateKey = sectionMap[candidateUID] ?? "visible"
-                        guard candidateKey == targetKey else { break }
-                        if isStableAnchor(candidateUID),
-                           let neighbor = allFreshItems.first(where: {
-                               $0.uniqueIdentifier == candidateUID && $0.isMovable
-                           })
-                        {
-                            dest = .rightOfItem(neighbor)
-                            break
-                        }
+                case let .rightOfUID(anchorUID):
+                    if let anchor = allFreshItems.first(where: {
+                        $0.uniqueIdentifier == anchorUID && $0.isMovable
+                    }) {
+                        dest = .rightOfItem(anchor)
+                    } else {
+                        let targetSection = Self.sectionName(forPersistedKey: sectionMap[planned.uid] ?? "visible") ?? .visible
+                        dest = sectionBoundaryDestination(for: targetSection, controlItems: freshControl)
                     }
-                }
-
-                if dest == nil {
+                case let .sectionBoundary(targetSection):
                     dest = sectionBoundaryDestination(for: targetSection, controlItems: freshControl)
                 }
 
                 do {
-                    guard let dest else { continue }
                     try await move(item: item, to: dest, skipInputPause: true)
                     movedCount += 1
-                    movedItems.insert(uid)
                     try? await Task.sleep(for: .milliseconds(200))
                 } catch {
                     MenuBarItemManager.diagLog.error(
-                        "Profile layout: failed to move \(uid): \(error)"
+                        "Profile layout: failed to move \(planned.uid): \(error)"
                     )
                 }
             }
@@ -6267,7 +6028,7 @@ extension MenuBarItemManager {
     /// Computes the Longest Common Subsequence of two string arrays.
     /// Returns the set of items that appear in both arrays in the same
     /// relative order — these items don't need to be moved.
-    private func longestCommonSubsequence(_ a: [String], _ b: [String]) -> Set<String> {
+    nonisolated private static func longestCommonSubsequence(_ a: [String], _ b: [String]) -> Set<String> {
         let m = a.count
         let n = b.count
         guard m > 0, n > 0 else { return [] }
@@ -6407,6 +6168,725 @@ extension MenuBarItemManager {
         try? await Task.sleep(for: .milliseconds(200))
 
         return failedMoves
+    }
+}
+
+// MARK: - Restore Path Planners
+
+extension MenuBarItemManager {
+    /// A planned cross-section move emitted by the rebalance planner.
+    ///
+    /// The planner only reports the next single move; the caller is
+    /// responsible for executing it, persisting the new layout, and
+    /// re-running the planner until it returns nil.
+    struct RebalanceMove: Equatable {
+        let item: MenuBarItem
+        let fromSection: MenuBarSection.Name
+        let toSection: MenuBarSection.Name
+    }
+
+    /// Computes the first cross-section rebalance move needed to bring the
+    /// menu bar layout back in line with the saved section order.
+    ///
+    /// Matching is count-based per baseID (namespace:title with the
+    /// instanceIndex stripped) so multi-instance apps remain fungible: any
+    /// window of the app can fill any slot for that app. A section is
+    /// considered wrong only when the count of items for that baseID in it
+    /// disagrees with the saved count.
+    ///
+    /// When the always-hidden section is disabled (no always-hidden control
+    /// item), the saved always-hidden counts collapse into the hidden
+    /// section so items destined for AH are not perpetually marked
+    /// "missing".
+    ///
+    /// Surplus items are taken from the rightmost (suffix) of the current
+    /// bucket to match the convention used by the rest of the restore path.
+    /// The returned move is the first one discovered; iteration order over
+    /// baseIDs and demand/surplus dictionaries is intentionally unspecified
+    /// because every imbalance must converge by repeated calls anyway.
+    ///
+    /// This is a pure function over its inputs. The caller drives
+    /// classification (passed in via `sectionByWindowID`), persistence,
+    /// cooldowns, and execution. Decoupling classification from this
+    /// planner keeps it testable: the production caller builds the map
+    /// via CacheContext (which queries the live Window Server), while
+    /// tests construct the map directly.
+    nonisolated static func planRebalanceMove(
+        items: [MenuBarItem],
+        sectionByWindowID: [CGWindowID: MenuBarSection.Name],
+        hasAlwaysHiddenSection: Bool,
+        savedSectionOrder: [String: [String]],
+        activelyShownTags: Set<String>
+    ) -> RebalanceMove? {
+        // Build per-section saved counts per baseID.
+        var savedCountsByBaseID = [String: [MenuBarSection.Name: Int]]()
+        for (sectionKeyString, identifiers) in savedSectionOrder {
+            guard let section = sectionName(forPersistedKey: sectionKeyString) else { continue }
+            for identifier in identifiers {
+                let baseID = identifier.split(separator: ":", maxSplits: 2).prefix(2).joined(separator: ":")
+                savedCountsByBaseID[baseID, default: [:]][section, default: 0] += 1
+            }
+        }
+
+        // Collapse alwaysHidden counts into hidden when the always-hidden
+        // section is disabled, so saved AH items aren't perpetually missing.
+        if !hasAlwaysHiddenSection {
+            for baseID in savedCountsByBaseID.keys {
+                if let ahCount = savedCountsByBaseID[baseID]?[.alwaysHidden], ahCount > 0 {
+                    savedCountsByBaseID[baseID]?[.hidden, default: 0] += ahCount
+                    savedCountsByBaseID[baseID]?.removeValue(forKey: .alwaysHidden)
+                }
+            }
+        }
+
+        let allSections: [MenuBarSection.Name] = [.visible, .hidden, .alwaysHidden]
+
+        // Group current items by baseID and section, excluding controls,
+        // non-movable, non-hideable, and actively-shown items.
+        var currentItemsByBaseID = [String: [MenuBarSection.Name: [MenuBarItem]]]()
+        for item in items where !item.isControlItem && item.isMovable && item.canBeHidden {
+            guard !activelyShownTags.contains(item.tag.tagIdentifier) else { continue }
+            guard let currentSection = sectionByWindowID[item.windowID] else { continue }
+            let baseID = "\(item.tag.namespace):\(item.tag.title)"
+            currentItemsByBaseID[baseID, default: [:]][currentSection, default: []].append(item)
+        }
+
+        // For each baseID, compute demand and surplus per section, then
+        // return the first (surplus, demand) pair found.
+        for (baseID, savedCounts) in savedCountsByBaseID {
+            let currentBuckets = currentItemsByBaseID[baseID] ?? [:]
+            var demand = [MenuBarSection.Name: Int]()
+            var surplusItems = [MenuBarSection.Name: [MenuBarItem]]()
+            for section in allSections {
+                let saved = savedCounts[section] ?? 0
+                let current = currentBuckets[section]?.count ?? 0
+                if saved > current {
+                    demand[section] = saved - current
+                } else if current > saved, let bucket = currentBuckets[section] {
+                    surplusItems[section] = Array(bucket.suffix(current - saved))
+                }
+            }
+            if demand.isEmpty || surplusItems.isEmpty { continue }
+            for (toSection, _) in demand {
+                for (fromSection, surplus) in surplusItems where !surplus.isEmpty {
+                    return RebalanceMove(
+                        item: surplus[0],
+                        fromSection: fromSection,
+                        toSection: toSection
+                    )
+                }
+            }
+        }
+        return nil
+    }
+
+    /// A decision emitted by the leftmost-item relocation planner.
+    ///
+    /// Only describes WHICH item should move and what kind of move it is.
+    /// The orchestrator owns destination computation (which depends on
+    /// instance state like `newItemsPlacement`) and state mutation
+    /// (`knownItemIdentifiers`).
+    enum LeftmostMove: Equatable {
+        /// The Thaw visible-control icon is sitting left of the hidden
+        /// divider; restore it to the visible section.
+        case thawIcon(MenuBarItem)
+        /// A non-hideable system item (screen recording / mic / camera
+        /// indicator) is left of the hidden divider; restore it to
+        /// visible.
+        case systemItem(MenuBarItem)
+        /// A genuinely new hideable item is left of the hidden divider;
+        /// relocate it to the user's new-items section and persist its
+        /// identifier so future cache cycles do not treat it as "new"
+        /// again.
+        case newHideableItem(MenuBarItem, identifierToMark: String)
+        /// No relocation is warranted on this pass.
+        case noop(reason: NoopReason)
+
+        enum NoopReason: Equatable {
+            /// No movable items currently sit left of the hidden divider.
+            case noLeftmostItems
+            /// One or more hideable candidates have unresolved sourcePID;
+            /// defer until the next cache cycle resolves them.
+            case unresolvedSourcePID
+            /// No hideable candidate passes the newness test (either the
+            /// item has a saved section, has been seen before, or appears
+            /// to be an identifier migration of an existing window).
+            case noNewCandidate
+            /// The chosen candidate is already in the configured new-items
+            /// section; moving would be a no-op.
+            case alreadyInTarget
+        }
+    }
+
+    /// Computes the next leftmost-relocation decision.
+    ///
+    /// Walks the cascade implemented by relocateNewLeftmostItems:
+    /// (1) Thaw visible-control icon recovery, (2) non-hideable system
+    /// item recovery, (3) genuinely new hideable item placement under the
+    /// user's new-items section. The fourth path is "no action" with a
+    /// typed reason so tests can pin down which branch fired.
+    ///
+    /// Pure over its inputs. The orchestrator computes hiddenBounds,
+    /// sectionByWindowID, and the cached hidden / always-hidden tag sets
+    /// (all of which depend on live state) and passes them in. State
+    /// mutation (knownItemIdentifiers, persistence) and execution
+    /// (move()) stay with the orchestrator.
+    nonisolated static func planLeftmostMove(
+        items: [MenuBarItem],
+        hiddenBounds: CGRect,
+        sectionByWindowID: [CGWindowID: MenuBarSection.Name],
+        previousWindowIDs: [CGWindowID],
+        savedSectionOrder: [String: [String]],
+        knownItemIdentifiers: Set<String>,
+        hiddenTags: Set<MenuBarItemTag>,
+        alwaysHiddenTags: Set<MenuBarItemTag>,
+        effectiveNewItemsSection: MenuBarSection.Name
+    ) -> LeftmostMove {
+        // Items sitting left of the hidden divider. The Thaw icon is a
+        // control item but must always be visible, so we admit it here.
+        let leftmostItems = items
+            .filter {
+                $0.bounds.maxX <= hiddenBounds.minX &&
+                    $0.isMovable &&
+                    (!$0.isControlItem || $0.tag == .visibleControlItem)
+            }
+            .sorted { $0.bounds.minX < $1.bounds.minX }
+
+        guard !leftmostItems.isEmpty else {
+            return .noop(reason: .noLeftmostItems)
+        }
+
+        // Path 1: Thaw icon.
+        if let thawIcon = leftmostItems.first(where: { $0.tag == .visibleControlItem }) {
+            return .thawIcon(thawIcon)
+        }
+
+        // Path 2: non-hideable system item (camera / mic / screen recording).
+        // Excludes transient Control Center items (Live Activities,
+        // iPhone Mirroring) — those live deeply off-screen and cannot be
+        // dragged successfully, so retrying every cache cycle would
+        // burn the eventSemaphore for ~4 s per attempt.
+        if let systemItem = leftmostItems.first(where: { !$0.canBeHidden && !$0.isTransientControlCenterItem }) {
+            return .systemItem(systemItem)
+        }
+
+        // Path 3: hideable candidate selection.
+        let hideableLeftmost = leftmostItems.filter(\.canBeHidden)
+        let previousIDs = Set(previousWindowIDs)
+
+        // Unresolved sourcePID short-circuit. Without sourcePID
+        // resolution, third-party items hosted by Control Center fall
+        // back to namespace com.apple.controlcenter, which prevents
+        // matching against savedSectionOrder (real bundle IDs). The
+        // next cache pass with resolved sourcePIDs will handle
+        // relocation safely.
+        if hideableLeftmost.contains(where: { $0.sourcePID == nil }) {
+            return .noop(reason: .unresolvedSourcePID)
+        }
+
+        // Build identifier → section lookup over savedSectionOrder.
+        var savedSectionForIdentifier = [String: MenuBarSection.Name]()
+        for (sectionKeyString, identifiers) in savedSectionOrder {
+            guard let section = sectionName(forPersistedKey: sectionKeyString) else { continue }
+            for identifier in identifiers {
+                savedSectionForIdentifier[identifier] = section
+            }
+        }
+
+        let candidate = hideableLeftmost.first { item in
+            let identifier = "\(item.tag.namespace):\(item.tag.title)"
+
+            // Items with a saved section belong to restoreItemsToSaved-
+            // Sections, not to the new-item relocation path.
+            let hasSavedSection = savedSectionForIdentifier[identifier] != nil ||
+                savedSectionForIdentifier[item.uniqueIdentifier] != nil
+            guard !hasSavedSection else { return false }
+
+            let isNewIdentity = !knownItemIdentifiers.contains(identifier)
+            let notPlacedHidden = !hiddenTags.contains(item.tag) && !alwaysHiddenTags.contains(item.tag)
+
+            // When isNewIdentity is true but the windowID has been seen
+            // before, the item's identifier migrated (e.g. sourcePID
+            // resolution succeeded). Treat that as not-new.
+            let isNewID = previousIDs.isEmpty ? isNewIdentity : !previousIDs.contains(item.windowID)
+            if isNewIdentity, !isNewID {
+                return false
+            }
+            return notPlacedHidden && (isNewIdentity || isNewID)
+        }
+        guard let candidate else {
+            return .noop(reason: .noNewCandidate)
+        }
+
+        // "Already in target" check.
+        if sectionByWindowID[candidate.windowID] == effectiveNewItemsSection {
+            return .noop(reason: .alreadyInTarget)
+        }
+
+        let identifierToMark = "\(candidate.tag.namespace):\(candidate.tag.title)"
+        return .newHideableItem(candidate, identifierToMark: identifierToMark)
+    }
+
+    /// A pending-relocation entry, parsed into a typed shape so the
+    /// planner does not have to handle raw string sentinel formats.
+    struct PendingEntry: Equatable {
+        let tagIdentifier: String
+        let kind: Kind
+
+        enum Kind: Equatable {
+            /// A normal pending relocation targeting a specific section.
+            case section(MenuBarSection.Name)
+            /// A wait-for-relaunch sentinel: the rehide hit its retry cap
+            /// in this session; suppress moves until the windowID changes
+            /// (app relaunch).
+            case waitForRelaunch(windowID: CGWindowID, section: MenuBarSection.Name)
+        }
+    }
+
+    /// A decision emitted by the pending-relocation planner.
+    enum PendingMove: Equatable {
+        /// Move the item to the destination; orchestrator clears the
+        /// pending entry on success.
+        case move(item: MenuBarItem, destination: MoveDestination)
+        /// Clear the pending entry without moving (e.g. item is already
+        /// in its target hidden section, or the recorded section was
+        /// .visible).
+        case clearEntry
+        /// The wait-for-relaunch sentinel's windowID has changed (app
+        /// relaunched); promote the sentinel to a regular section entry
+        /// so the next planner call computes a normal move.
+        case promoteWaitForRelaunch(section: MenuBarSection.Name)
+        /// Skip this entry on this pass without state changes.
+        case skip(reason: SkipReason)
+
+        enum SkipReason: Equatable {
+            /// Currently temporarily-shown; the rehide flow owns this item.
+            case activelyShown
+            /// The item is not present in the live menu bar (app not yet
+            /// relaunched).
+            case itemNotPresent
+            /// Sentinel is active and the windowID hasn't changed; skip
+            /// to avoid re-saturating the event semaphore.
+            case waitForRelaunchActive
+        }
+    }
+
+    /// Computes the next pending-relocation decision for a single entry.
+    ///
+    /// Walks the per-entry logic of relocatePendingItems: actively-shown
+    /// short-circuit, waitForRelaunch sentinel handling, target-section
+    /// validation, item-presence and item-already-hidden checks, then
+    /// destination resolution (stored neighbor → fallback neighbor →
+    /// section boundary).
+    ///
+    /// Pure over its inputs. The orchestrator parses the raw string
+    /// sentinel format into `PendingEntry` and supplies live bounds via
+    /// `hiddenBounds` and per-item bounds via `boundsForWindowID`. State
+    /// mutation (pendingRelocations, pendingReturnDestinations) and
+    /// execution (move()) stay with the orchestrator.
+    nonisolated static func planPendingMove(
+        entry: PendingEntry,
+        items: [MenuBarItem],
+        controlItems: ControlItemPair,
+        hiddenBounds: CGRect,
+        boundsForWindowID: [CGWindowID: CGRect],
+        activelyShownTags: Set<String>,
+        pendingReturnDestinations: [String: [String: String]],
+        fallbackNeighborByTagIdentifier: [String: MenuBarItemTag]
+    ) -> PendingMove {
+        if activelyShownTags.contains(entry.tagIdentifier) {
+            return .skip(reason: .activelyShown)
+        }
+
+        let item = items.first { entry.tagIdentifier == $0.tag.tagIdentifier }
+
+        // waitForRelaunch sentinel handling. If the windowID has changed
+        // (app relaunched), we promote and let the orchestrator re-run.
+        // If unchanged, skip. If item is not present at all, skip and
+        // keep the entry for next launch.
+        if case let .waitForRelaunch(sentinelWindowID, sentinelSection) = entry.kind {
+            guard let item else {
+                return .skip(reason: .itemNotPresent)
+            }
+            if item.windowID == sentinelWindowID {
+                return .skip(reason: .waitForRelaunchActive)
+            }
+            return .promoteWaitForRelaunch(section: sentinelSection)
+        }
+
+        // Regular section entry from here on.
+        guard case let .section(targetSection) = entry.kind else {
+            return .skip(reason: .itemNotPresent)
+        }
+
+        // If the recorded section was .visible there is nothing to do.
+        guard targetSection != .visible else {
+            return .clearEntry
+        }
+
+        // Item must be present in the live menu bar.
+        guard let item else {
+            return .skip(reason: .itemNotPresent)
+        }
+
+        // If the item is already in a hidden section, clean up the
+        // pending entry. The original code uses bestBounds for this
+        // comparison; the orchestrator provides those bounds via
+        // boundsForWindowID and the planner falls back to item.bounds
+        // when no live bounds were supplied.
+        let itemBounds = boundsForWindowID[item.windowID] ?? item.bounds
+        guard itemBounds.minX >= hiddenBounds.maxX else {
+            return .clearEntry
+        }
+
+        // Resolve destination: stored neighbor → fallback neighbor →
+        // section boundary. We use exactly the same precedence the
+        // original loop used.
+        if let destInfo = pendingReturnDestinations[entry.tagIdentifier],
+           let neighborTagString = destInfo["neighbor"],
+           let neighborItem = items.first(where: { neighborTagString == $0.tag.tagIdentifier })
+        {
+            let destination: MoveDestination = destInfo["position"] == "left"
+                ? .leftOfItem(neighborItem)
+                : .rightOfItem(neighborItem)
+            return .move(item: item, destination: destination)
+        }
+
+        if let fallbackTag = fallbackNeighborByTagIdentifier[entry.tagIdentifier],
+           let fallbackItem = items.first(where: { $0.tag.tagIdentifier == fallbackTag.tagIdentifier })
+        {
+            return .move(item: item, destination: .rightOfItem(fallbackItem))
+        }
+
+        // Section-boundary fallback.
+        switch targetSection {
+        case .hidden:
+            return .move(item: item, destination: .leftOfItem(controlItems.hidden))
+        case .alwaysHidden:
+            if let alwaysHidden = controlItems.alwaysHidden {
+                return .move(item: item, destination: .leftOfItem(alwaysHidden))
+            } else {
+                return .move(item: item, destination: .leftOfItem(controlItems.hidden))
+            }
+        case .visible:
+            return .clearEntry
+        }
+    }
+
+    /// The result of the notch-overflow planner.
+    struct NotchOverflowResult: Equatable {
+        /// UIDs of items that should overflow from visible to hidden.
+        let overflowUIDs: [String]
+        /// The desiredFiltered sequence after the overflow has been applied
+        /// (overflowed items repositioned into the hidden section).
+        let updatedDesiredFiltered: [String]
+        /// Updated section assignments. Overflowed UIDs are remapped to
+        /// "hidden". Keys are uniqueIdentifiers, values are persisted
+        /// section keys ("visible"/"hidden"/"alwaysHidden").
+        let updatedSectionMap: [String: String]
+    }
+
+    /// Decides which visible items must overflow into hidden to fit the
+    /// available width under the notch.
+    ///
+    /// Implements the tiered priority algorithm: unmanaged items
+    /// (newly-detected, not in any profile section) are the first
+    /// candidates to overflow because the profile has no saved position
+    /// for them. Profile-saved items only overflow if even removing all
+    /// unmanaged items still leaves the layout exceeding the budget.
+    /// Within each tier, leftmost items overflow first.
+    ///
+    /// The planner does not call Bridging or NSScreen. Callers compute
+    /// `availableWidth` from notch geometry and Control Center position,
+    /// and supply per-uid widths derived from live item bounds. This
+    /// keeps the planner pure for testing and pins down the algorithm
+    /// for regression-locking.
+    nonisolated static func planNotchOverflow(
+        desiredFiltered: [String],
+        unmanagedUIDs: [String],
+        visibleCtrlUID: String?,
+        hiddenCtrlUID: String,
+        ahCtrlUID: String?,
+        sectionMap: [String: String],
+        uidWidths: [String: CGFloat],
+        availableWidth: CGFloat
+    ) -> NotchOverflowResult {
+        // Visible-section UIDs in profile order (left-to-right).
+        let visibleUIDs = Array(desiredFiltered.prefix(while: { $0 != hiddenCtrlUID }))
+        let chevronWidth = visibleCtrlUID.flatMap { uidWidths[$0] } ?? 0
+
+        let unmanagedSet = Set(unmanagedUIDs)
+        let nonChevronUIDs = visibleUIDs.filter { $0 != visibleCtrlUID }
+        let unmanagedNonChevron = nonChevronUIDs.filter { unmanagedSet.contains($0) }
+        let profileNonChevron = nonChevronUIDs.filter { !unmanagedSet.contains($0) }
+
+        // Profile baseline: chevron + all profile-saved visible items.
+        var profileBaseline: CGFloat = chevronWidth
+        for uid in profileNonChevron {
+            profileBaseline += uidWidths[uid] ?? 0
+        }
+
+        var overflowUIDs: [String] = []
+
+        if profileBaseline > availableWidth {
+            // Profile alone exceeds budget. All unmanaged overflow plus
+            // enough profile items (leftmost first) to fit. Iterate
+            // profile items from the CC end inward; whatever doesn't fit
+            // overflows.
+            overflowUIDs.append(contentsOf: unmanagedNonChevron)
+            var profileFitting = [String]()
+            var usedWidth = chevronWidth
+            for uid in profileNonChevron.reversed() {
+                let width = uidWidths[uid] ?? 0
+                if usedWidth + width <= availableWidth {
+                    usedWidth += width
+                    profileFitting.insert(uid, at: 0)
+                } else {
+                    break
+                }
+            }
+            let profileOverflow = Array(
+                profileNonChevron.prefix(profileNonChevron.count - profileFitting.count)
+            )
+            overflowUIDs.append(contentsOf: profileOverflow)
+        } else {
+            // Profile fits. Try to fit unmanaged items from the CC end;
+            // whatever doesn't fit overflows. Profile items stay put.
+            var usedWidth = profileBaseline
+            var unmanagedFitting = [String]()
+            for uid in unmanagedNonChevron.reversed() {
+                let width = uidWidths[uid] ?? 0
+                if usedWidth + width <= availableWidth {
+                    usedWidth += width
+                    unmanagedFitting.insert(uid, at: 0)
+                } else {
+                    break
+                }
+            }
+            overflowUIDs = Array(
+                unmanagedNonChevron.prefix(unmanagedNonChevron.count - unmanagedFitting.count)
+            )
+        }
+
+        // No overflow → return inputs unchanged.
+        if overflowUIDs.isEmpty {
+            return NotchOverflowResult(
+                overflowUIDs: [],
+                updatedDesiredFiltered: desiredFiltered,
+                updatedSectionMap: sectionMap
+            )
+        }
+
+        // Rebuild desiredFiltered: chevron + remaining visible items +
+        // hiddenCtrl + existingHidden + overflowUIDs + ahCtrl +
+        // existingAH. Overflowed items append in their original visible
+        // order so leftmost-from-visible lands at the deepest end of
+        // hidden.
+        var controlSet: Set<String> = [hiddenCtrlUID]
+        if let ahUID = ahCtrlUID { controlSet.insert(ahUID) }
+
+        let hiddenStart = desiredFiltered.firstIndex(of: hiddenCtrlUID)
+            .map { $0 + 1 } ?? desiredFiltered.endIndex
+        let hiddenEnd = ahCtrlUID.flatMap { desiredFiltered.firstIndex(of: $0) }
+            ?? desiredFiltered.endIndex
+        let existingHidden = desiredFiltered[hiddenStart ..< hiddenEnd]
+            .filter { !controlSet.contains($0) }
+
+        let ahStart = ahCtrlUID.flatMap { desiredFiltered.firstIndex(of: $0) }
+            .map { $0 + 1 } ?? desiredFiltered.endIndex
+        let existingAH = desiredFiltered[ahStart...]
+            .filter { !controlSet.contains($0) }
+
+        let overflowSet = Set(overflowUIDs)
+        let remainingNonChevron = nonChevronUIDs.filter { !overflowSet.contains($0) }
+
+        var rebuilt = [String]()
+        if let chevron = visibleCtrlUID {
+            rebuilt.append(chevron)
+        }
+        rebuilt.append(contentsOf: remainingNonChevron)
+        rebuilt.append(hiddenCtrlUID)
+        rebuilt.append(contentsOf: existingHidden)
+        rebuilt.append(contentsOf: overflowUIDs)
+        if let ahUID = ahCtrlUID {
+            rebuilt.append(ahUID)
+            rebuilt.append(contentsOf: existingAH)
+        }
+
+        var updatedSectionMap = sectionMap
+        for uid in overflowUIDs {
+            updatedSectionMap[uid] = "hidden"
+        }
+
+        return NotchOverflowResult(
+            overflowUIDs: overflowUIDs,
+            updatedDesiredFiltered: rebuilt,
+            updatedSectionMap: updatedSectionMap
+        )
+    }
+
+    /// An abstract destination emitted by the LCS planner.
+    ///
+    /// References anchor items by UID rather than by `MenuBarItem`
+    /// because the orchestrator re-fetches the live items between each
+    /// move (positions shift mid-sequence) and resolves the UID back to
+    /// a MenuBarItem at execution time.
+    enum LCSPlannedDestination: Equatable {
+        case leftOfUID(String)
+        case rightOfUID(String)
+        case sectionBoundary(MenuBarSection.Name)
+    }
+
+    /// A single planned move emitted by the LCS planner.
+    struct LCSPlannedMove: Equatable {
+        let uid: String
+        let destination: LCSPlannedDestination
+    }
+
+    /// Plans the LCS-anchored move sequence for items that need to move
+    /// to reach the desired order.
+    ///
+    /// Computes LCS over current and desired (filtered to overlap), then
+    /// for each item that must move scans forward for a stable anchor in
+    /// the same section, falls back to a backward scan, falls back to a
+    /// section boundary. "Stable anchors" are LCS items plus items
+    /// already planned by the sequence — so the destination of move N+1
+    /// can reference an anchor that move N just established.
+    ///
+    /// Pure over its inputs. Returns destinations as anchor UIDs so the
+    /// orchestrator can resolve them against fresh items between moves.
+    nonisolated static func planLCSMoveSequence(
+        currentNoControls: [String],
+        desiredNoControls: [String],
+        sectionMap: [String: String]
+    ) -> [LCSPlannedMove] {
+        let currentSetNow = Set(currentNoControls)
+        let desiredSetNow = Set(desiredNoControls)
+        let lcsCurrent = currentNoControls.filter { desiredSetNow.contains($0) }
+        let lcsDesired = desiredNoControls.filter { currentSetNow.contains($0) }
+
+        let lcsItems = longestCommonSubsequence(lcsCurrent, lcsDesired)
+        let itemsToMove = lcsDesired.filter { !lcsItems.contains($0) }
+
+        if itemsToMove.isEmpty {
+            return []
+        }
+
+        var movedItems = Set<String>()
+        var result = [LCSPlannedMove]()
+
+        for uid in itemsToMove {
+            guard let desiredIdx = lcsDesired.firstIndex(of: uid) else {
+                continue
+            }
+            let targetKey = sectionMap[uid] ?? "visible"
+
+            var destination: LCSPlannedDestination?
+
+            // Scan forward for a stable anchor in the same section.
+            for scanIdx in (desiredIdx + 1) ..< lcsDesired.count {
+                let candidateUID = lcsDesired[scanIdx]
+                let candidateKey = sectionMap[candidateUID] ?? "visible"
+                guard candidateKey == targetKey else { break }
+                if lcsItems.contains(candidateUID) || movedItems.contains(candidateUID) {
+                    destination = .leftOfUID(candidateUID)
+                    break
+                }
+            }
+
+            // Scan backward for a stable anchor.
+            if destination == nil, desiredIdx > 0 {
+                for scanIdx in stride(from: desiredIdx - 1, through: 0, by: -1) {
+                    let candidateUID = lcsDesired[scanIdx]
+                    let candidateKey = sectionMap[candidateUID] ?? "visible"
+                    guard candidateKey == targetKey else { break }
+                    if lcsItems.contains(candidateUID) || movedItems.contains(candidateUID) {
+                        destination = .rightOfUID(candidateUID)
+                        break
+                    }
+                }
+            }
+
+            // Fallback to section boundary.
+            if destination == nil {
+                let targetSection: MenuBarSection.Name
+                switch targetKey {
+                case "hidden": targetSection = .hidden
+                case "alwaysHidden": targetSection = .alwaysHidden
+                default: targetSection = .visible
+                }
+                destination = .sectionBoundary(targetSection)
+            }
+
+            if let destination {
+                result.append(LCSPlannedMove(uid: uid, destination: destination))
+                movedItems.insert(uid)
+            }
+        }
+        return result
+    }
+
+    /// Plans the full-sort sequence used on notched displays.
+    ///
+    /// Each item in the returned sequence is placed `.leftOfItem(CC)`
+    /// by the orchestrator; subsequent insertions push earlier items
+    /// further left. Result is:
+    ///   [alwaysHidden items] [AH ctrl] [hidden items] [hidden ctrl] [visible items]
+    /// in left-to-right order.
+    ///
+    /// Returns an empty array when the current order already matches the
+    /// desired order (no moves needed) or when desired is empty.
+    ///
+    /// Pure over its inputs. The orchestrator handles per-item live
+    /// fetching, the move() loop, and control-item state restoration.
+    nonisolated static func planFullSortSequence(
+        currentFlat: [String],
+        desiredFiltered: [String],
+        sectionMap: [String: String],
+        hiddenCtrlUID: String,
+        ahCtrlUID: String?
+    ) -> [String] {
+        // Skip if current order already matches the desired order.
+        let desiredSet = Set(desiredFiltered)
+        let currentFiltered = currentFlat.filter { desiredSet.contains($0) }
+        if currentFiltered == desiredFiltered {
+            return []
+        }
+
+        var controlSet: Set<String> = [hiddenCtrlUID]
+        if let ahUID = ahCtrlUID { controlSet.insert(ahUID) }
+
+        let ahUIDs = desiredFiltered.filter {
+            !controlSet.contains($0) && (sectionMap[$0] ?? "visible") == "alwaysHidden"
+        }
+        let hiddenUIDs = desiredFiltered.filter {
+            !controlSet.contains($0) && (sectionMap[$0] ?? "visible") == "hidden"
+        }
+        let visibleUIDs = desiredFiltered.filter {
+            !controlSet.contains($0) && (sectionMap[$0] ?? "visible") == "visible"
+        }
+
+        var fullSequence = [String]()
+        fullSequence.append(contentsOf: ahUIDs)
+        if let ahCtrlUID { fullSequence.append(ahCtrlUID) }
+        fullSequence.append(contentsOf: hiddenUIDs)
+        fullSequence.append(hiddenCtrlUID)
+        fullSequence.append(contentsOf: visibleUIDs)
+        return fullSequence
+    }
+
+    /// Maps a persisted section key string to its enum value.
+    ///
+    /// Defined alongside the planners (rather than calling the instance
+    /// method on MenuBarItemManager) so the planners remain pure static
+    /// functions usable without an instance.
+    nonisolated private static func sectionName(forPersistedKey key: String) -> MenuBarSection.Name? {
+        switch key {
+        case "visible": .visible
+        case "hidden": .hidden
+        case "alwaysHidden": .alwaysHidden
+        default: nil
+        }
     }
 }
 
