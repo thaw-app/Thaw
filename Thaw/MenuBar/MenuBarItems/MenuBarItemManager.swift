@@ -1937,6 +1937,17 @@ extension MenuBarItemManager {
         }
 
         // Cross-section restore: move items back to their saved section.
+        // Capture whether we are the restore loop's own follow-up
+        // recache BEFORE we set isRestoringItemOrder = true below
+        // (which would mask the signal). The restore loop schedules
+        // its next-step recache while its outer call's flag is still
+        // true; other callers that pass skipRecentMoveCheck (notably
+        // the Layout Bar drag-and-drop handler) arrive with the flag
+        // false. Only the loop's own follow-up should be allowed to
+        // bypass the 5s restore cooldown; bypassing it for a manual
+        // drag would let restoreItemsToSavedSections undo the drag
+        // by moving the item back to its saved section.
+        let isRestoreLoopFollowUp = isRestoringItemOrder
         // Set the flag before calling so that any intermediate cache
         // updates during move() don't overwrite the saved section order.
         isRestoringItemOrder = true
@@ -1945,7 +1956,7 @@ extension MenuBarItemManager {
             items,
             controlItems: controlItems,
             previousWindowIDs: previousWindowIDs,
-            skipRecentMoveCheck: skipRecentMoveCheck
+            isRestoreLoopFollowUp: isRestoreLoopFollowUp
         )
         if didRestoreSections {
             MenuBarItemManager.diagLog.debug("Restored item to saved section; scheduling recache")
@@ -4506,7 +4517,7 @@ extension MenuBarItemManager {
         _ items: [MenuBarItem],
         controlItems: ControlItemPair,
         previousWindowIDs: [CGWindowID],
-        skipRecentMoveCheck: Bool
+        isRestoreLoopFollowUp: Bool
     ) async -> Bool {
         guard !savedSectionOrder.isEmpty else { return false }
         guard !suppressNextNewLeftmostItemRelocation else { return false }
@@ -4514,12 +4525,15 @@ extension MenuBarItemManager {
         // 5 s cooldown (up from 2 s) gives more time for the system to settle after a
         // restore before another one can start, preventing cascading icon moves when
         // multiple apps restart in quick succession (e.g. app update checks). The
-        // cooldown is suppressed when the caller is the restore loop's own follow-up
-        // recache: returning early there would abort the loop after the first move
-        // and leave the section assignments only partially restored, after which
-        // saveSectionOrder persists the half-finished state and the next launch sees
-        // it as the new target.
-        guard skipRecentMoveCheck || !lastMoveOperationOccurred(within: .seconds(5)) else { return false }
+        // cooldown is bypassed only for the restore loop's own follow-up recache,
+        // signalled by isRestoreLoopFollowUp: returning early there would abort the
+        // loop after the first move and leave the section assignments only partially
+        // restored, after which saveSectionOrder persists the half-finished state and
+        // the next launch sees it as the new target. Other callers that pass through
+        // a recent move (notably the Layout Bar drag handler, which recaches with
+        // skipRecentMoveCheck=true for the save side) take the cooldown path so the
+        // user's manual drag is not undone by a same-cycle restore.
+        guard isRestoreLoopFollowUp || !lastMoveOperationOccurred(within: .seconds(5)) else { return false }
 
         let currentWindowIDSet = Set(items.map(\.windowID))
         let previousWindowIDSet = Set(previousWindowIDs)
