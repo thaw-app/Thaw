@@ -1653,6 +1653,7 @@ extension MenuBarItemManager {
         }
 
         if !isRestoringItemOrder, !isResettingLayout, !isInStartupSettling,
+           !isApplyingProfileLayout,
            temporarilyShownItemContexts.isEmpty
         {
             // Don't persist if any items are in a transient blocked state (x=-1).
@@ -1943,7 +1944,8 @@ extension MenuBarItemManager {
         let didRestoreSections = await restoreItemsToSavedSections(
             items,
             controlItems: controlItems,
-            previousWindowIDs: previousWindowIDs
+            previousWindowIDs: previousWindowIDs,
+            skipRecentMoveCheck: skipRecentMoveCheck
         )
         if didRestoreSections {
             MenuBarItemManager.diagLog.debug("Restored item to saved section; scheduling recache")
@@ -4503,14 +4505,21 @@ extension MenuBarItemManager {
     private func restoreItemsToSavedSections(
         _ items: [MenuBarItem],
         controlItems: ControlItemPair,
-        previousWindowIDs: [CGWindowID]
+        previousWindowIDs: [CGWindowID],
+        skipRecentMoveCheck: Bool
     ) async -> Bool {
         guard !savedSectionOrder.isEmpty else { return false }
         guard !suppressNextNewLeftmostItemRelocation else { return false }
+        guard !isApplyingProfileLayout else { return false }
         // 5 s cooldown (up from 2 s) gives more time for the system to settle after a
         // restore before another one can start, preventing cascading icon moves when
-        // multiple apps restart in quick succession (e.g. app update checks).
-        guard !lastMoveOperationOccurred(within: .seconds(5)) else { return false }
+        // multiple apps restart in quick succession (e.g. app update checks). The
+        // cooldown is suppressed when the caller is the restore loop's own follow-up
+        // recache: returning early there would abort the loop after the first move
+        // and leave the section assignments only partially restored, after which
+        // saveSectionOrder persists the half-finished state and the next launch sees
+        // it as the new target.
+        guard skipRecentMoveCheck || !lastMoveOperationOccurred(within: .seconds(5)) else { return false }
 
         let currentWindowIDSet = Set(items.map(\.windowID))
         let previousWindowIDSet = Set(previousWindowIDs)
