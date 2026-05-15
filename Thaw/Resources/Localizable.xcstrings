@@ -1,145 +1,25 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "(" : {
-      "comment" : "A left-facing parenthesis.",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "("
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "("
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "("
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "("
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "("
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "("
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "("
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "("
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "("
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "("
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "("
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "("
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "("
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "("
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "("
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "("
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "("
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "("
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "("
-          }
-        }
-      },
-      "shouldTranslate" : false
-    },
     "(no script selected)" : {
       "comment" : "A placeholder displayed in the \"Path\" column of a hook row when no script is selected.",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "(no script selected)"
+            "state" : "translated",
+            "value" : "(skript nevybrán)"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "(no script selected)"
+            "state" : "translated",
+            "value" : "(kein Skript ausgewählt)"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "(no script selected)"
+            "state" : "translated",
+            "value" : "(no hay ningún script seleccionado)"
           }
         },
         "fr" : {
@@ -156,8 +36,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "(no script selected)"
+            "state" : "translated",
+            "value" : "(tidak ada skrip yang dipilih)"
           }
         },
         "it" : {
@@ -174,8 +54,8 @@
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "(no script selected)"
+            "state" : "translated",
+            "value" : "(선택된 스크립트 없음)"
           }
         },
         "nl" : {
@@ -186,14 +66,14 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "(no script selected)"
+            "state" : "translated",
+            "value" : "(nie wybrano skryptu)"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "(no script selected)"
+            "state" : "translated",
+            "value" : "(nenhum script selecionado)"
           }
         },
         "ru" : {
@@ -239,372 +119,6 @@
           }
         }
       }
-    },
-    ")" : {
-      "comment" : "A closing parenthesis.",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : ")"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : ")"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : ")"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : ")"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : ")"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : ")"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : ")"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : ")"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : ")"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : ")"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : ")"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : ")"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : ")"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : ")"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : ")"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : ")"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : ")"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : ")"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : ")"
-          }
-        }
-      },
-      "shouldTranslate" : false
-    },
-    "%@" : {
-      "comment" : "The title and version number of the app, along with the copyright notice.",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%@"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%@"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%@"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%@"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%@"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%@"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%@"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%@"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%@"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%@"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%@"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%@"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%@"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%@"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%@"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%@"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%@"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%@"
-          }
-        }
-      },
-      "shouldTranslate" : false
-    },
-    "%@ (%@)" : {
-      "comment" : "A label displaying a device name and a description of the device as being \"disconnected\". The argument is the value of the localized string key “disconnected”.",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ (%2$@)"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ (%2$@)"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ (%2$@)"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ (%2$@)"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ (%2$@)"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ (%2$@)"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ (%2$@)"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ (%2$@)"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ (%2$@)"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ (%2$@)"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ (%2$@)"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ (%2$@)"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ (%2$@)"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ (%2$@)"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ (%2$@)"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ (%2$@)"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ (%2$@)"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ (%2$@)"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ (%2$@)"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ (%2$@)"
-          }
-        }
-      },
-      "shouldTranslate" : false
     },
     "%@ %@ Section" : {
       "comment" : "A menu item title that toggles the visibility of a section in the menu bar. The argument is the name of the section.",
@@ -2292,126 +1806,6 @@
         }
       }
     },
-    "%lld" : {
-      "comment" : "A label displaying the number of columns in the grid layout. The value is the number of columns in the grid.",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%lld"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%lld"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%lld"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%lld"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%lld"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%lld"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%lld"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%lld"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%lld"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%lld"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%lld"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%lld"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%lld"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%lld"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%lld"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%lld"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%lld"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%lld"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%lld"
-          }
-        }
-      },
-      "shouldTranslate" : false
-    },
     "%lld fps" : {
       "comment" : "A label showing the current frame rate of the icon refresh timer. The argument is the current frame rate, rounded to the nearest whole number.",
       "localizations" : {
@@ -2901,1326 +2295,6 @@
           }
         }
       }
-    },
-    "•" : {
-      "comment" : "A bullet point used in lists.",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "•"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "•"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "•"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "•"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "•"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "•"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "•"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "•"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "•"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "•"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "•"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "•"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "•"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "•"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "•"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "•"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "•"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "•"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "•"
-          }
-        }
-      },
-      "shouldTranslate" : false
-    },
-    "+" : {
-      "comment" : "A plus sign used in a menu bar search panel.",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "+"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "+"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "+"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "+"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "+"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "+"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "+"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "+"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "+"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "+"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "+"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "+"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "+"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "+"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "+"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "+"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "+"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "+"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "+"
-          }
-        }
-      },
-      "shouldTranslate" : false
-    },
-    "⌘" : {
-      "comment" : "A command key character.",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "⌘"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "⌘"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "⌘"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "⌘"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "⌘"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "⌘"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "⌘"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "⌘"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "⌘"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "⌘"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "⌘"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "⌘"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "⌘"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "⌘"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "⌘"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "⌘"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "⌘"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "⌘"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "⌘"
-          }
-        }
-      },
-      "shouldTranslate" : false
-    },
-    "⎋" : {
-      "comment" : "A symbol representing the action of cancelling or discarding something.",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "⎋"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "⎋"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "⎋"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "⎋"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "⎋"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "⎋"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "⎋"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "⎋"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "⎋"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "⎋"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "⎋"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "⎋"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "⎋"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "⎋"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "⎋"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "⎋"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "⎋"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "⎋"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "⎋"
-          }
-        }
-      },
-      "shouldTranslate" : false
-    },
-    "1" : {
-      "comment" : "A label for a menu bar item with a width of 1.",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "1"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "1"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "1"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "1"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "1"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "1"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "1"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "1"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "1"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "1"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "1"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "1"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "1"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "1"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "1"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "1"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "1"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "1"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "1"
-          }
-        }
-      },
-      "shouldTranslate" : false
-    },
-    "1." : {
-      "comment" : "The first step in the process of how Thaw works.",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "1."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "1."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "1."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "1."
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "1."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "1."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "1."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "1."
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "1."
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "1."
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "1."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "1."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "1."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "1."
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "1."
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "1."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "1."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "1."
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "1."
-          }
-        }
-      },
-      "shouldTranslate" : false
-    },
-    "2" : {
-      "comment" : "A description of a menu bar item with a value of 2.",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "2"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "2"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "2"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "2"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "2"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "2"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "2"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "2"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "2"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "2"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "2"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "2"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "2"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "2"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "2"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "2"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "2"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "2"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "2"
-          }
-        }
-      },
-      "shouldTranslate" : false
-    },
-    "2." : {
-      "comment" : "A step in the process of how apps can modify settings.",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "2."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "2."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "2."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "2."
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "2."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "2."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "2."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "2."
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "2."
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "2."
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "2."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "2."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "2."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "2."
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "2."
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "2."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "2."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "2."
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "2."
-          }
-        }
-      },
-      "shouldTranslate" : false
-    },
-    "3" : {
-      "comment" : "A label for a menu item with a value of \"3\".",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "3"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "3"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "3"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "3"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "3"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "3"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "3"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "3"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "3"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "3"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "3"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "3"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "3"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "3"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "3"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "3"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "3"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "3"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "3"
-          }
-        }
-      },
-      "shouldTranslate" : false
-    },
-    "3." : {
-      "comment" : "A step in the process of how to use Thaw.",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "3."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "3."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "3."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "3."
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "3."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "3."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "3."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "3."
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "3."
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "3."
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "3."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "3."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "3."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "3."
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "3."
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "3."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "3."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "3."
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "3."
-          }
-        }
-      },
-      "shouldTranslate" : false
-    },
-    "4." : {
-      "comment" : "A step in the process of using Thaw.",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "4."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "4."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "4."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "4."
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "4."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "4."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "4."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "4."
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "4."
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "4."
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "4."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "4."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "4."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "4."
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "4."
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "4."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "4."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "4."
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "4."
-          }
-        }
-      },
-      "shouldTranslate" : false
     },
     "A new update is available" : {
       "comment" : "Title of a notification when a new update is available.",
@@ -9210,7 +7284,7 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "BETA"
           }
         },
@@ -11506,20 +9580,20 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose Script..."
+            "state" : "translated",
+            "value" : "Vybrat skript..."
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose Script..."
+            "state" : "translated",
+            "value" : "Wähle ein Skript aus ..."
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose Script..."
+            "state" : "translated",
+            "value" : "Seleccionar script..."
           }
         },
         "fr" : {
@@ -11536,8 +9610,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose Script..."
+            "state" : "translated",
+            "value" : "Pilih Skrip..."
           }
         },
         "it" : {
@@ -11554,8 +9628,8 @@
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose Script..."
+            "state" : "translated",
+            "value" : "스크립트 선택..."
           }
         },
         "nl" : {
@@ -11566,14 +9640,14 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose Script..."
+            "state" : "translated",
+            "value" : "Wybierz skrypt..."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose Script..."
+            "state" : "translated",
+            "value" : "Escolher Script..."
           }
         },
         "ru" : {
@@ -11744,20 +9818,20 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Clear hook"
+            "state" : "translated",
+            "value" : "Odebrat hook"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Clear hook"
+            "state" : "translated",
+            "value" : "Hook löschen"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Clear hook"
+            "state" : "translated",
+            "value" : "Quitar hook"
           }
         },
         "fr" : {
@@ -11774,8 +9848,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Clear hook"
+            "state" : "translated",
+            "value" : "Hapus hook"
           }
         },
         "it" : {
@@ -11792,8 +9866,8 @@
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Clear hook"
+            "state" : "translated",
+            "value" : "훅 삭제"
           }
         },
         "nl" : {
@@ -11804,14 +9878,14 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Clear hook"
+            "state" : "translated",
+            "value" : "Wyczyść stan hooka"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Clear hook"
+            "state" : "translated",
+            "value" : "Limpar gancho"
           }
         },
         "ru" : {
@@ -14476,125 +12550,6 @@
         }
       }
     },
-    "disconnected" : {
-      "comment" : "A label displaying a device name and a description of the device being disconnected. The argument is the name of the device.",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "odpojený"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "nicht verbunden"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "desconectado"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "déconnecté"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "disconnected"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "terputus"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "disconnesso"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "切断されました"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "연결 끊김"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Niet verbonden"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "rozłączone"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "desconectado"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "отключено"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ขาดการเชื่อมต่อ"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "disconnected"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "відʼєднано"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "bị ngắt kết nối"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已断开连接"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已斷開連接"
-          }
-        }
-      }
-    },
     "Disconnected" : {
       "comment" : "A label displayed next to a display that is not connected.",
       "localizations" : {
@@ -16380,126 +14335,6 @@
         }
       }
     },
-    "E" : {
-      "comment" : "A letter \"E\" used in the \"Edit Name\" button.",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "E"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "E"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "E"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "E"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "E"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "E"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "E"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "E"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "E"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "E"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "E"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "E"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "E"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "E"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "E"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "E"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "E"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "E"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "E"
-          }
-        }
-      },
-      "shouldTranslate" : false
-    },
     "Edit Menu Bar Appearance…" : {
       "comment" : "Title of a menu item in the secondary context menu that allows the user to edit the appearance of the menu bar.",
       "localizations" : {
@@ -17933,20 +15768,20 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enabled"
+            "state" : "translated",
+            "value" : "Povolen"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enabled"
+            "state" : "translated",
+            "value" : "Eingeschaltet"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enabled"
+            "state" : "translated",
+            "value" : "Habilitado"
           }
         },
         "fr" : {
@@ -17963,8 +15798,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enabled"
+            "state" : "translated",
+            "value" : "Diaktifkan"
           }
         },
         "it" : {
@@ -17981,8 +15816,8 @@
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enabled"
+            "state" : "translated",
+            "value" : "활성화됨"
           }
         },
         "nl" : {
@@ -17993,14 +15828,14 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enabled"
+            "state" : "translated",
+            "value" : "Włączony"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enabled"
+            "state" : "translated",
+            "value" : "Ativado"
           }
         },
         "ru" : {
@@ -18052,20 +15887,20 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Environment variables passed to scripts"
+            "state" : "translated",
+            "value" : "Proměnné prostředí předávané skriptům"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Environment variables passed to scripts"
+            "state" : "translated",
+            "value" : "An Skripts übergebene Umgebungsvariablen"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Environment variables passed to scripts"
+            "state" : "translated",
+            "value" : "Variables de entorno pasadas a los scripts"
           }
         },
         "fr" : {
@@ -18082,8 +15917,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Environment variables passed to scripts"
+            "state" : "translated",
+            "value" : "Variabel lingkungan yang diteruskan di skrip"
           }
         },
         "it" : {
@@ -18100,8 +15935,8 @@
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Environment variables passed to scripts"
+            "state" : "translated",
+            "value" : "스크립트에 전달할 환경 변수"
           }
         },
         "nl" : {
@@ -18112,14 +15947,14 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Environment variables passed to scripts"
+            "state" : "translated",
+            "value" : "Zmienne środowiskowe przekazywane do skryptów"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Environment variables passed to scripts"
+            "state" : "translated",
+            "value" : "Variáveis de ambiente passadas para scripts"
           }
         },
         "ru" : {
@@ -18409,20 +16244,20 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Example: a bash pre-hook could `defaults write com.bjango.istatmenus5 ActiveProfile -string \"$THAW_PROFILE_NAME\"` to keep iStat Menus in sync with Thaw."
+            "state" : "translated",
+            "value" : "Příklad: bashový pre-hook může provést příkaz `defaults write com.bjango.istatmenus5 ActiveProfile -string \"$THAW_PROFILE_NAME\"`, aby se aplikace iStat Menus synchronizovala s Thaw."
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Example: a bash pre-hook could `defaults write com.bjango.istatmenus5 ActiveProfile -string \"$THAW_PROFILE_NAME\"` to keep iStat Menus in sync with Thaw."
+            "state" : "translated",
+            "value" : "Beispiel: Ein Bash-Pre-Hook könnte mit `defaults write com.bjango.istatmenus5 ActiveProfile -string \"$THAW_PROFILE_NAME\"` dafür sorgen, dass iStat Menus mit Thaw synchron bleibt."
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Example: a bash pre-hook could `defaults write com.bjango.istatmenus5 ActiveProfile -string \"$THAW_PROFILE_NAME\"` to keep iStat Menus in sync with Thaw."
+            "state" : "translated",
+            "value" : "Ejemplo: un pre-hook de Bash podría ejecutar `defaults write com.bjango.istatmenus5 ActiveProfile -string «$THAW_PROFILE_NAME»` para mantener iStat Menus sincronizado con Thaw."
           }
         },
         "fr" : {
@@ -18439,8 +16274,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Example: a bash pre-hook could `defaults write com.bjango.istatmenus5 ActiveProfile -string \"$THAW_PROFILE_NAME\"` to keep iStat Menus in sync with Thaw."
+            "state" : "translated",
+            "value" : "Contoh: pre-hook bash bisa menjalankan `defaults write com.bjango.istatmenus5 ActiveProfile -string \"$THAW_PROFILE_NAME\"` supaya iStat Menus tetap sinkron dengan Thaw."
           }
         },
         "it" : {
@@ -18457,8 +16292,8 @@
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Example: a bash pre-hook could `defaults write com.bjango.istatmenus5 ActiveProfile -string \"$THAW_PROFILE_NAME\"` to keep iStat Menus in sync with Thaw."
+            "state" : "translated",
+            "value" : "예시: bash 사전 훅 `defaults write com.bjango.istatmenus5 ActiveProfile -string \"$THAW_PROFILE_NAME\"` 를 통해 iStat Menus와 Thaw를 동기화할 수 있습니다."
           }
         },
         "nl" : {
@@ -18469,14 +16304,14 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Example: a bash pre-hook could `defaults write com.bjango.istatmenus5 ActiveProfile -string \"$THAW_PROFILE_NAME\"` to keep iStat Menus in sync with Thaw."
+            "state" : "translated",
+            "value" : "Przykład: pre-hook w bashu mógłby wykonać `defaults write com.bjango.istatmenus5 ActiveProfile -string \"$THAW_PROFILE_NAME\"`, aby utrzymać synchronizację iStat Menus z Thaw."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Example: a bash pre-hook could `defaults write com.bjango.istatmenus5 ActiveProfile -string \"$THAW_PROFILE_NAME\"` to keep iStat Menus in sync with Thaw."
+            "state" : "translated",
+            "value" : "Exemplo: um pré-hook do Bash poderia executar `defaults write com.bjango.istatmenus5 ActiveProfile -string “$THAW_PROFILE_NAME”` para manter o iStat Menus sincronizado com o Thaw."
           }
         },
         "ru" : {
@@ -19004,20 +16839,20 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "File does not exist."
+            "state" : "translated",
+            "value" : "Soubor neexistuje."
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "File does not exist."
+            "state" : "translated",
+            "value" : "Datei existiert nicht."
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "File does not exist."
+            "state" : "translated",
+            "value" : "El archivo no existe."
           }
         },
         "fr" : {
@@ -19034,8 +16869,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "File does not exist."
+            "state" : "translated",
+            "value" : "Berkas tidak ada."
           }
         },
         "it" : {
@@ -19052,8 +16887,8 @@
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "File does not exist."
+            "state" : "translated",
+            "value" : "파일이 존재하지 않습니다."
           }
         },
         "nl" : {
@@ -19064,14 +16899,14 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "File does not exist."
+            "state" : "translated",
+            "value" : "Plik nie istnieje."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "File does not exist."
+            "state" : "translated",
+            "value" : "O arquivo não existe."
           }
         },
         "ru" : {
@@ -19956,20 +17791,20 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Global Hooks"
+            "state" : "translated",
+            "value" : "Globální hooky"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Global Hooks"
+            "state" : "translated",
+            "value" : "Globale Hooks"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Global Hooks"
+            "state" : "translated",
+            "value" : "Hooks globales"
           }
         },
         "fr" : {
@@ -19986,8 +17821,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Global Hooks"
+            "state" : "translated",
+            "value" : "Hook Global"
           }
         },
         "it" : {
@@ -20004,8 +17839,8 @@
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Global Hooks"
+            "state" : "translated",
+            "value" : "전역 훅"
           }
         },
         "nl" : {
@@ -20016,14 +17851,14 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Global Hooks"
+            "state" : "translated",
+            "value" : "Hooki globalne"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Global Hooks"
+            "state" : "translated",
+            "value" : "Hooks Globais"
           }
         },
         "ru" : {
@@ -21146,19 +18981,19 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Hooks"
+            "state" : "translated",
+            "value" : "Hooky"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "Hooks"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "Hooks"
           }
         },
@@ -21176,8 +19011,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Hooks"
+            "state" : "translated",
+            "value" : "Hook"
           }
         },
         "it" : {
@@ -21194,8 +19029,8 @@
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Hooks"
+            "state" : "translated",
+            "value" : "훅"
           }
         },
         "nl" : {
@@ -21206,13 +19041,13 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Hooks"
+            "state" : "translated",
+            "value" : "Hooki"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "Hooks"
           }
         },
@@ -28173,20 +26008,20 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No profiles saved yet. Create one in the Profiles tab to attach per-profile hooks."
+            "state" : "translated",
+            "value" : "Nejsou uložené žádné profily. Když je vytvoříte v sekci Profily, můžete je zde přiřadit."
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No profiles saved yet. Create one in the Profiles tab to attach per-profile hooks."
+            "state" : "translated",
+            "value" : "Bisher kein Profil gespeichert. Ein Profil im Bereiche Profile erstellen um Hooks anzuhängen."
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No profiles saved yet. Create one in the Profiles tab to attach per-profile hooks."
+            "state" : "translated",
+            "value" : "Aún no hay perfiles guardados. Crea uno en la pestaña Perfiles para añadir ganchos específicos para cada perfil."
           }
         },
         "fr" : {
@@ -28203,8 +26038,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No profiles saved yet. Create one in the Profiles tab to attach per-profile hooks."
+            "state" : "translated",
+            "value" : "Belum ada profil yang tersimpan. Buat di tab Profil untuk memasang hook per profil."
           }
         },
         "it" : {
@@ -28221,8 +26056,8 @@
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No profiles saved yet. Create one in the Profiles tab to attach per-profile hooks."
+            "state" : "translated",
+            "value" : "저장된 프로필이 없습니다. '프로필' 탭에서 새로 만들고 프로필별 훅을 설정하세요."
           }
         },
         "nl" : {
@@ -28233,14 +26068,14 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No profiles saved yet. Create one in the Profiles tab to attach per-profile hooks."
+            "state" : "translated",
+            "value" : "Nie masz jeszcze żadnych zapisanych profili. Stwórz profil w karcie Profile, aby móc przypisywać do nich hooki."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No profiles saved yet. Create one in the Profiles tab to attach per-profile hooks."
+            "state" : "translated",
+            "value" : "Ainda não há perfis salvos. Crie um na guia “Perfis” para associar ganchos específicos a cada perfil."
           }
         },
         "ru" : {
@@ -29125,20 +26960,20 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not executable. Run \"chmod +x\" on the file."
+            "state" : "translated",
+            "value" : "Soubor není spustitelný. Spusťte soubor příkazem „chmod +x“."
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not executable. Run \"chmod +x\" on the file."
+            "state" : "translated",
+            "value" : "Nicht ausführbar. Führe 'chmod +x' für die Datei aus."
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not executable. Run \"chmod +x\" on the file."
+            "state" : "translated",
+            "value" : "No es ejecutable. Ejecuta «chmod +x» en el archivo."
           }
         },
         "fr" : {
@@ -29155,8 +26990,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not executable. Run \"chmod +x\" on the file."
+            "state" : "translated",
+            "value" : "Tidak dapat dijalankan. Jalankan \"chmod +x\" pada berkas ini."
           }
         },
         "it" : {
@@ -29173,8 +27008,8 @@
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not executable. Run \"chmod +x\" on the file."
+            "state" : "translated",
+            "value" : "실행할 수 없습니다. 파일에 \"chmod +x\" 명령을 실행해주세요."
           }
         },
         "nl" : {
@@ -29185,14 +27020,14 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not executable. Run \"chmod +x\" on the file."
+            "state" : "translated",
+            "value" : "Plik nie jest wykonywalny. Uruchom polecenie \"chmod +x\" na tym pliku."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not executable. Run \"chmod +x\" on the file."
+            "state" : "translated",
+            "value" : "Não é executável. Execute o comando “chmod +x” no arquivo."
           }
         },
         "ru" : {
@@ -30315,20 +28150,20 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Per-Profile Hooks"
+            "state" : "translated",
+            "value" : "Hooky jednotlivých profilů"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Per-Profile Hooks"
+            "state" : "translated",
+            "value" : "Profil-Hooks"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Per-Profile Hooks"
+            "state" : "translated",
+            "value" : "Hooks por perfil"
           }
         },
         "fr" : {
@@ -30345,8 +28180,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Per-Profile Hooks"
+            "state" : "translated",
+            "value" : "Hook per Profil"
           }
         },
         "it" : {
@@ -30363,8 +28198,8 @@
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Per-Profile Hooks"
+            "state" : "translated",
+            "value" : "프로필별 훅"
           }
         },
         "nl" : {
@@ -30375,14 +28210,14 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Per-Profile Hooks"
+            "state" : "translated",
+            "value" : "Hooki przypisane do profilu"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Per-Profile Hooks"
+            "state" : "translated",
+            "value" : "Hooks Por Perfil"
           }
         },
         "ru" : {
@@ -30672,20 +28507,20 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Post-apply"
+            "state" : "translated",
+            "value" : "Po aplikaci"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Post-apply"
+            "state" : "translated",
+            "value" : "Nach der Anwendung"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Post-apply"
+            "state" : "translated",
+            "value" : "Después de aplicar"
           }
         },
         "fr" : {
@@ -30702,8 +28537,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Post-apply"
+            "state" : "translated",
+            "value" : "Sesudah"
           }
         },
         "it" : {
@@ -30720,8 +28555,8 @@
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Post-apply"
+            "state" : "translated",
+            "value" : "적용 후"
           }
         },
         "nl" : {
@@ -30732,14 +28567,14 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Post-apply"
+            "state" : "translated",
+            "value" : "Po zastosowaniu"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Post-apply"
+            "state" : "translated",
+            "value" : "Aplicar Depois"
           }
         },
         "ru" : {
@@ -30791,20 +28626,20 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Pre-apply"
+            "state" : "translated",
+            "value" : "Před aplikací"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Pre-apply"
+            "state" : "translated",
+            "value" : "Vor der Anwendung"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Pre-apply"
+            "state" : "translated",
+            "value" : "Aplicar previamente"
           }
         },
         "fr" : {
@@ -30821,8 +28656,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Pre-apply"
+            "state" : "translated",
+            "value" : "Sebelum"
           }
         },
         "it" : {
@@ -30839,8 +28674,8 @@
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Pre-apply"
+            "state" : "translated",
+            "value" : "적용 전"
           }
         },
         "nl" : {
@@ -30851,14 +28686,14 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Pre-apply"
+            "state" : "translated",
+            "value" : "Przed zastosowaniem"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Pre-apply"
+            "state" : "translated",
+            "value" : "Pré-aplicar"
           }
         },
         "ru" : {
@@ -34718,20 +32553,20 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Run a shell or AppleScript file before or after a profile switch. Hooks fire on every apply path: manual button, hotkey, display auto-switch, and Focus Filter."
+            "state" : "translated",
+            "value" : "Spustit shellový skript nebo AppleScript před nebo po přepnutí profilu. Hooky se spouští všemi způsoby: manuálně, klávesovou zkratkou, automatickým přepnutím profilu a skrze filtry režimu soustředění."
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Run a shell or AppleScript file before or after a profile switch. Hooks fire on every apply path: manual button, hotkey, display auto-switch, and Focus Filter."
+            "state" : "translated",
+            "value" : "Führe ein Shell- oder AppleScript-Skript vor oder nach einem Profilwechsel aus. Hooks werden bei jeder Anwendungsart ausgelöst: über die manuelle Schaltfläche, ein Tastaturkürzel, den automatischen Bildschirmwechsel oder den Fokusfilter."
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Run a shell or AppleScript file before or after a profile switch. Hooks fire on every apply path: manual button, hotkey, display auto-switch, and Focus Filter."
+            "state" : "translated",
+            "value" : "Ejecuta un archivo de shell o AppleScript antes o después de cambiar de perfil. Los hooks se activan en todas las formas de aplicar el cambio: botón manual, atajo de teclado, cambio automático de pantalla y filtro de enfoque."
           }
         },
         "fr" : {
@@ -34748,8 +32583,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Run a shell or AppleScript file before or after a profile switch. Hooks fire on every apply path: manual button, hotkey, display auto-switch, and Focus Filter."
+            "state" : "translated",
+            "value" : "Jalankan skrip shell atau berkas AppleScript sebelum atau sesudah mengganti profil. Hook akan berjalan setiap kali profil diaktifkan melalui tombol manual, pintasan, pengalihan tampilan otomatis, atau Filter Fokus."
           }
         },
         "it" : {
@@ -34766,8 +32601,8 @@
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Run a shell or AppleScript file before or after a profile switch. Hooks fire on every apply path: manual button, hotkey, display auto-switch, and Focus Filter."
+            "state" : "translated",
+            "value" : "프로필 전환 전후에 shell 또는 AppleScript 파일을 실행합니다. 훅은 수동 버튼, 단축키, 디스플레이 자동 전환, 집중 모드 필터 등 모든 적용 경로에서 실행됩니다."
           }
         },
         "nl" : {
@@ -34778,14 +32613,14 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Run a shell or AppleScript file before or after a profile switch. Hooks fire on every apply path: manual button, hotkey, display auto-switch, and Focus Filter."
+            "state" : "translated",
+            "value" : "Umożliwia uruchomienie pliku powłoki lub AppleScript przed zmianą profilu lub po niej. Wyzwalacze działają przy każdej metodzie aktywacji: użyciu przycisku, skrótu klawiszowego, automatycznym przełączaniu wyświetlacza oraz filtrze Skupienia."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Run a shell or AppleScript file before or after a profile switch. Hooks fire on every apply path: manual button, hotkey, display auto-switch, and Focus Filter."
+            "state" : "translated",
+            "value" : "Execute um arquivo shell ou AppleScript antes, ou depois de uma troca de perfil. Os ganchos são acionados em todas as formas de aplicação: botão manual, tecla de atalho, troca automática de tela e Filtro de Foco."
           }
         },
         "ru" : {
@@ -34837,19 +32672,19 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "s"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "s"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "s"
           }
         },
@@ -34867,13 +32702,13 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "s"
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "s"
           }
         },
@@ -34885,8 +32720,8 @@
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "s"
+            "state" : "translated",
+            "value" : "초"
           }
         },
         "nl" : {
@@ -34897,13 +32732,13 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "s"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "s"
           }
         },
@@ -34921,7 +32756,7 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "s"
           }
         },
@@ -39955,126 +37790,6 @@
         }
       }
     },
-    "THAW_HOOK_PHASE, THAW_HOOK_SCOPE, THAW_PROFILE_ID, THAW_PROFILE_NAME, THAW_PREVIOUS_PROFILE_ID, THAW_PREVIOUS_PROFILE_NAME" : {
-      "comment" : "A list of environment variables that can be passed to scripts run by Thaw.",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "THAW_HOOK_PHASE, THAW_HOOK_SCOPE, THAW_PROFILE_ID, THAW_PROFILE_NAME, THAW_PREVIOUS_PROFILE_ID, THAW_PREVIOUS_PROFILE_NAME"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "THAW_HOOK_PHASE, THAW_HOOK_SCOPE, THAW_PROFILE_ID, THAW_PROFILE_NAME, THAW_PREVIOUS_PROFILE_ID, THAW_PREVIOUS_PROFILE_NAME"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "THAW_HOOK_PHASE, THAW_HOOK_SCOPE, THAW_PROFILE_ID, THAW_PROFILE_NAME, THAW_PREVIOUS_PROFILE_ID, THAW_PREVIOUS_PROFILE_NAME"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "THAW_HOOK_PHASE, THAW_HOOK_SCOPE, THAW_PROFILE_ID, THAW_PROFILE_NAME, THAW_PREVIOUS_PROFILE_ID, THAW_PREVIOUS_PROFILE_NAME"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "THAW_HOOK_PHASE, THAW_HOOK_SCOPE, THAW_PROFILE_ID, THAW_PROFILE_NAME, THAW_PREVIOUS_PROFILE_ID, THAW_PREVIOUS_PROFILE_NAME"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "THAW_HOOK_PHASE, THAW_HOOK_SCOPE, THAW_PROFILE_ID, THAW_PROFILE_NAME, THAW_PREVIOUS_PROFILE_ID, THAW_PREVIOUS_PROFILE_NAME"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "THAW_HOOK_PHASE, THAW_HOOK_SCOPE, THAW_PROFILE_ID, THAW_PROFILE_NAME, THAW_PREVIOUS_PROFILE_ID, THAW_PREVIOUS_PROFILE_NAME"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "THAW_HOOK_PHASE, THAW_HOOK_SCOPE, THAW_PROFILE_ID, THAW_PROFILE_NAME, THAW_PREVIOUS_PROFILE_ID, THAW_PREVIOUS_PROFILE_NAME"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "THAW_HOOK_PHASE, THAW_HOOK_SCOPE, THAW_PROFILE_ID, THAW_PROFILE_NAME, THAW_PREVIOUS_PROFILE_ID, THAW_PREVIOUS_PROFILE_NAME"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "THAW_HOOK_PHASE, THAW_HOOK_SCOPE, THAW_PROFILE_ID, THAW_PROFILE_NAME, THAW_PREVIOUS_PROFILE_ID, THAW_PREVIOUS_PROFILE_NAME"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "THAW_HOOK_PHASE, THAW_HOOK_SCOPE, THAW_PROFILE_ID, THAW_PROFILE_NAME, THAW_PREVIOUS_PROFILE_ID, THAW_PREVIOUS_PROFILE_NAME"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "THAW_HOOK_PHASE, THAW_HOOK_SCOPE, THAW_PROFILE_ID, THAW_PROFILE_NAME, THAW_PREVIOUS_PROFILE_ID, THAW_PREVIOUS_PROFILE_NAME"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "THAW_HOOK_PHASE, THAW_HOOK_SCOPE, THAW_PROFILE_ID, THAW_PROFILE_NAME, THAW_PREVIOUS_PROFILE_ID, THAW_PREVIOUS_PROFILE_NAME"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "THAW_HOOK_PHASE, THAW_HOOK_SCOPE, THAW_PROFILE_ID, THAW_PROFILE_NAME, THAW_PREVIOUS_PROFILE_ID, THAW_PREVIOUS_PROFILE_NAME"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "THAW_HOOK_PHASE, THAW_HOOK_SCOPE, THAW_PROFILE_ID, THAW_PROFILE_NAME, THAW_PREVIOUS_PROFILE_ID, THAW_PREVIOUS_PROFILE_NAME"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "THAW_HOOK_PHASE, THAW_HOOK_SCOPE, THAW_PROFILE_ID, THAW_PROFILE_NAME, THAW_PREVIOUS_PROFILE_ID, THAW_PREVIOUS_PROFILE_NAME"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "THAW_HOOK_PHASE, THAW_HOOK_SCOPE, THAW_PROFILE_ID, THAW_PROFILE_NAME, THAW_PREVIOUS_PROFILE_ID, THAW_PREVIOUS_PROFILE_NAME"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "THAW_HOOK_PHASE, THAW_HOOK_SCOPE, THAW_PROFILE_ID, THAW_PROFILE_NAME, THAW_PREVIOUS_PROFILE_ID, THAW_PREVIOUS_PROFILE_NAME"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "THAW_HOOK_PHASE, THAW_HOOK_SCOPE, THAW_PROFILE_ID, THAW_PROFILE_NAME, THAW_PREVIOUS_PROFILE_ID, THAW_PREVIOUS_PROFILE_NAME"
-          }
-        }
-      },
-      "shouldTranslate" : false
-    },
     "The %@ Bar is aligned to the left edge of the display." : {
       "comment" : "A label that describes the location of the \\(Constants.displayName) Bar on a display.",
       "localizations" : {
@@ -41151,20 +38866,20 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "These hooks run only when this profile is applied, after the global pre-hook and before the global post-hook."
+            "state" : "translated",
+            "value" : "Tyto hooky se spustí po aktivaci vybraného profilu, po globálním pre-hooku a před globálním post-hookem."
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "These hooks run only when this profile is applied, after the global pre-hook and before the global post-hook."
+            "state" : "translated",
+            "value" : "Diese Hooks werden nur ausgeführt, wenn dieses Profil angewendet wird, nach dem globalen Pre-Hook und vor dem globalen Post-Hook."
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "These hooks run only when this profile is applied, after the global pre-hook and before the global post-hook."
+            "state" : "translated",
+            "value" : "Estos hooks solo se ejecutan cuando se aplica este perfil, después del pre-hook global y antes del post-hook global."
           }
         },
         "fr" : {
@@ -41181,8 +38896,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "These hooks run only when this profile is applied, after the global pre-hook and before the global post-hook."
+            "state" : "translated",
+            "value" : "Hook hanya dapat dijalankan ketika profil ini diterapkan, setelah pre-hook global dan sebelum post-hook global."
           }
         },
         "it" : {
@@ -41199,8 +38914,8 @@
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "These hooks run only when this profile is applied, after the global pre-hook and before the global post-hook."
+            "state" : "translated",
+            "value" : "이 훅은 해당 프로필이 적용되어 있을 때, 전역 사전 훅 이후 그리고 전역 사후 훅 이전에만 실행됩니다."
           }
         },
         "nl" : {
@@ -41211,14 +38926,14 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "These hooks run only when this profile is applied, after the global pre-hook and before the global post-hook."
+            "state" : "translated",
+            "value" : "Te hooki są uruchamiane wyłącznie w przypadku zastosowania tego profilu, po globalnym pre-hooku, a przed globalnym post-hookiem."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "These hooks run only when this profile is applied, after the global pre-hook and before the global post-hook."
+            "state" : "translated",
+            "value" : "Esses hooks são executados apenas quando este perfil é aplicado, após o gancho pré-global e antes do gancho pós-global."
           }
         },
         "ru" : {
@@ -41627,20 +39342,20 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Timeout"
+            "state" : "translated",
+            "value" : "Časový limit"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "Timeout"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Timeout"
+            "state" : "translated",
+            "value" : "Tiempo de espera"
           }
         },
         "fr" : {
@@ -41657,8 +39372,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Timeout"
+            "state" : "translated",
+            "value" : "Batas waktu"
           }
         },
         "it" : {
@@ -41675,8 +39390,8 @@
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Timeout"
+            "state" : "translated",
+            "value" : "타임아웃"
           }
         },
         "nl" : {
@@ -41687,14 +39402,14 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Timeout"
+            "state" : "translated",
+            "value" : "Limit czasu"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Timeout"
+            "state" : "translated",
+            "value" : "Tempo limite"
           }
         },
         "ru" : {
