@@ -126,20 +126,20 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "(no script selected)"
+            "state" : "translated",
+            "value" : "(skript nevybrán)"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "(no script selected)"
+            "state" : "translated",
+            "value" : "(kein Skript ausgewählt)"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "(no script selected)"
+            "state" : "translated",
+            "value" : "(no hay ningún script seleccionado)"
           }
         },
         "fr" : {
@@ -156,8 +156,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "(no script selected)"
+            "state" : "translated",
+            "value" : "(tidak ada skrip yang dipilih)"
           }
         },
         "it" : {
@@ -174,8 +174,8 @@
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "(no script selected)"
+            "state" : "translated",
+            "value" : "(선택된 스크립트 없음)"
           }
         },
         "nl" : {
@@ -186,14 +186,14 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "(no script selected)"
+            "state" : "translated",
+            "value" : "(nie wybrano skryptu)"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "(no script selected)"
+            "state" : "translated",
+            "value" : "(nenhum script selecionado)"
           }
         },
         "ru" : {
@@ -9210,7 +9210,7 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "BETA"
           }
         },
@@ -11506,20 +11506,20 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose Script..."
+            "state" : "translated",
+            "value" : "Vybrat skript..."
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose Script..."
+            "state" : "translated",
+            "value" : "Wähle ein Skript aus ..."
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose Script..."
+            "state" : "translated",
+            "value" : "Seleccionar script..."
           }
         },
         "fr" : {
@@ -11536,8 +11536,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose Script..."
+            "state" : "translated",
+            "value" : "Pilih Skrip..."
           }
         },
         "it" : {
@@ -11554,8 +11554,8 @@
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose Script..."
+            "state" : "translated",
+            "value" : "스크립트 선택..."
           }
         },
         "nl" : {
@@ -11566,14 +11566,14 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose Script..."
+            "state" : "translated",
+            "value" : "Wybierz skrypt..."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose Script..."
+            "state" : "translated",
+            "value" : "Escolher Script..."
           }
         },
         "ru" : {
@@ -11744,20 +11744,20 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Clear hook"
+            "state" : "translated",
+            "value" : "Odebrat hook"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Clear hook"
+            "state" : "translated",
+            "value" : "Hook löschen"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Clear hook"
+            "state" : "translated",
+            "value" : "Quitar hook"
           }
         },
         "fr" : {
@@ -11774,8 +11774,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Clear hook"
+            "state" : "translated",
+            "value" : "Hapus hook"
           }
         },
         "it" : {
@@ -11792,8 +11792,8 @@
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Clear hook"
+            "state" : "translated",
+            "value" : "훅 삭제"
           }
         },
         "nl" : {
@@ -11804,14 +11804,14 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Clear hook"
+            "state" : "translated",
+            "value" : "Wyczyść stan hooka"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Clear hook"
+            "state" : "translated",
+            "value" : "Limpar gancho"
           }
         },
         "ru" : {
@@ -17933,20 +17933,20 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enabled"
+            "state" : "translated",
+            "value" : "Povolen"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enabled"
+            "state" : "translated",
+            "value" : "Eingeschaltet"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enabled"
+            "state" : "translated",
+            "value" : "Habilitado"
           }
         },
         "fr" : {
@@ -17963,8 +17963,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enabled"
+            "state" : "translated",
+            "value" : "Diaktifkan"
           }
         },
         "it" : {
@@ -17981,8 +17981,8 @@
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enabled"
+            "state" : "translated",
+            "value" : "활성화됨"
           }
         },
         "nl" : {
@@ -17993,14 +17993,14 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enabled"
+            "state" : "translated",
+            "value" : "Włączony"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enabled"
+            "state" : "translated",
+            "value" : "Ativado"
           }
         },
         "ru" : {
@@ -18052,20 +18052,20 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Environment variables passed to scripts"
+            "state" : "translated",
+            "value" : "Proměnné prostředí předávané skriptům"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Environment variables passed to scripts"
+            "state" : "translated",
+            "value" : "An Skripts übergebene Umgebungsvariablen"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Environment variables passed to scripts"
+            "state" : "translated",
+            "value" : "Variables de entorno pasadas a los scripts"
           }
         },
         "fr" : {
@@ -18082,8 +18082,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Environment variables passed to scripts"
+            "state" : "translated",
+            "value" : "Variabel lingkungan yang diteruskan di skrip"
           }
         },
         "it" : {
@@ -18100,8 +18100,8 @@
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Environment variables passed to scripts"
+            "state" : "translated",
+            "value" : "스크립트에 전달할 환경 변수"
           }
         },
         "nl" : {
@@ -18112,14 +18112,14 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Environment variables passed to scripts"
+            "state" : "translated",
+            "value" : "Zmienne środowiskowe przekazywane do skryptów"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Environment variables passed to scripts"
+            "state" : "translated",
+            "value" : "Variáveis de ambiente passadas para scripts"
           }
         },
         "ru" : {
@@ -18409,20 +18409,20 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Example: a bash pre-hook could `defaults write com.bjango.istatmenus5 ActiveProfile -string \"$THAW_PROFILE_NAME\"` to keep iStat Menus in sync with Thaw."
+            "state" : "translated",
+            "value" : "Příklad: bashový pre-hook může provést příkaz `defaults write com.bjango.istatmenus5 ActiveProfile -string \"$THAW_PROFILE_NAME\"`, aby se aplikace iStat Menus synchronizovala s Thaw."
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Example: a bash pre-hook could `defaults write com.bjango.istatmenus5 ActiveProfile -string \"$THAW_PROFILE_NAME\"` to keep iStat Menus in sync with Thaw."
+            "state" : "translated",
+            "value" : "Beispiel: Ein Bash-Pre-Hook könnte mit 'defaults write com.bjango.istatmenus5 ActiveProfile -string \"$THAW_PROFILE_NAME\"' dafür sorgen, dass iStat Menus mit Thaw synchron bleibt."
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Example: a bash pre-hook could `defaults write com.bjango.istatmenus5 ActiveProfile -string \"$THAW_PROFILE_NAME\"` to keep iStat Menus in sync with Thaw."
+            "state" : "translated",
+            "value" : "Ejemplo: un pre-hook de Bash podría ejecutar `defaults write com.bjango.istatmenus5 ActiveProfile -string «$THAW_PROFILE_NAME»` para mantener iStat Menus sincronizado con Thaw."
           }
         },
         "fr" : {
@@ -18439,8 +18439,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Example: a bash pre-hook could `defaults write com.bjango.istatmenus5 ActiveProfile -string \"$THAW_PROFILE_NAME\"` to keep iStat Menus in sync with Thaw."
+            "state" : "translated",
+            "value" : "Contoh: pre-hook bash bisa menjalankan `defaults write com.bjango.istatmenus5 ActiveProfile -string \"$THAW_PROFILE_NAME\"` supaya iStat Menus tetap sinkron dengan Thaw."
           }
         },
         "it" : {
@@ -18457,8 +18457,8 @@
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Example: a bash pre-hook could `defaults write com.bjango.istatmenus5 ActiveProfile -string \"$THAW_PROFILE_NAME\"` to keep iStat Menus in sync with Thaw."
+            "state" : "translated",
+            "value" : "예시: bash 사전 훅 `defaults write com.bjango.istatmenus5 ActiveProfile -string \"$THAW_PROFILE_NAME\"` 를 통해 iStat Menus와 Thaw를 동기화할 수 있습니다."
           }
         },
         "nl" : {
@@ -18469,14 +18469,14 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Example: a bash pre-hook could `defaults write com.bjango.istatmenus5 ActiveProfile -string \"$THAW_PROFILE_NAME\"` to keep iStat Menus in sync with Thaw."
+            "state" : "translated",
+            "value" : "Przykład: pre-hook w bashu mógłby wykonać `defaults write com.bjango.istatmenus5 ActiveProfile -string \"$THAW_PROFILE_NAME\"`, aby utrzymać synchronizację iStat Menus z Thaw."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Example: a bash pre-hook could `defaults write com.bjango.istatmenus5 ActiveProfile -string \"$THAW_PROFILE_NAME\"` to keep iStat Menus in sync with Thaw."
+            "state" : "translated",
+            "value" : "Exemplo: um pré-hook do Bash poderia executar `defaults write com.bjango.istatmenus5 ActiveProfile -string “$THAW_PROFILE_NAME”` para manter o iStat Menus sincronizado com o Thaw."
           }
         },
         "ru" : {
@@ -19004,20 +19004,20 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "File does not exist."
+            "state" : "translated",
+            "value" : "Soubor neexistuje."
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "File does not exist."
+            "state" : "translated",
+            "value" : "Datei existiert nicht."
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "File does not exist."
+            "state" : "translated",
+            "value" : "El archivo no existe."
           }
         },
         "fr" : {
@@ -19034,8 +19034,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "File does not exist."
+            "state" : "translated",
+            "value" : "Berkas tidak ada."
           }
         },
         "it" : {
@@ -19052,8 +19052,8 @@
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "File does not exist."
+            "state" : "translated",
+            "value" : "파일이 존재하지 않습니다."
           }
         },
         "nl" : {
@@ -19064,14 +19064,14 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "File does not exist."
+            "state" : "translated",
+            "value" : "Plik nie istnieje."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "File does not exist."
+            "state" : "translated",
+            "value" : "O arquivo não existe."
           }
         },
         "ru" : {
@@ -19956,20 +19956,20 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Global Hooks"
+            "state" : "translated",
+            "value" : "Globální hooky"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Global Hooks"
+            "state" : "translated",
+            "value" : "Globale Hooks"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Global Hooks"
+            "state" : "translated",
+            "value" : "Hooks globales"
           }
         },
         "fr" : {
@@ -19986,8 +19986,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Global Hooks"
+            "state" : "translated",
+            "value" : "Hook Global"
           }
         },
         "it" : {
@@ -20004,8 +20004,8 @@
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Global Hooks"
+            "state" : "translated",
+            "value" : "전역 훅"
           }
         },
         "nl" : {
@@ -20016,14 +20016,14 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Global Hooks"
+            "state" : "translated",
+            "value" : "Hooki globalne"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Global Hooks"
+            "state" : "translated",
+            "value" : "Hooks Globais"
           }
         },
         "ru" : {
@@ -21146,19 +21146,19 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Hooks"
+            "state" : "translated",
+            "value" : "Hooky"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "Hooks"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "Hooks"
           }
         },
@@ -21176,8 +21176,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Hooks"
+            "state" : "translated",
+            "value" : "Hook"
           }
         },
         "it" : {
@@ -21194,8 +21194,8 @@
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Hooks"
+            "state" : "translated",
+            "value" : "훅"
           }
         },
         "nl" : {
@@ -21206,13 +21206,13 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Hooks"
+            "state" : "translated",
+            "value" : "Hooki"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "Hooks"
           }
         },
@@ -28173,20 +28173,20 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No profiles saved yet. Create one in the Profiles tab to attach per-profile hooks."
+            "state" : "translated",
+            "value" : "Nejsou uložené žádné profily. Když je vytvoříte v sekci Profily, můžete je zde přiřadit."
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No profiles saved yet. Create one in the Profiles tab to attach per-profile hooks."
+            "state" : "translated",
+            "value" : "Bisher kein Profil gespeichert. Ein Profil im Bereiche Profile erstellen um Hooks anzuhängen."
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No profiles saved yet. Create one in the Profiles tab to attach per-profile hooks."
+            "state" : "translated",
+            "value" : "Aún no hay perfiles guardados. Crea uno en la pestaña Perfiles para añadir ganchos específicos para cada perfil."
           }
         },
         "fr" : {
@@ -28203,8 +28203,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No profiles saved yet. Create one in the Profiles tab to attach per-profile hooks."
+            "state" : "translated",
+            "value" : "Belum ada profil yang tersimpan. Buat di tab Profil untuk memasang hook per profil."
           }
         },
         "it" : {
@@ -28221,8 +28221,8 @@
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No profiles saved yet. Create one in the Profiles tab to attach per-profile hooks."
+            "state" : "translated",
+            "value" : "저장된 프로필이 없습니다. '프로필' 탭에서 새로 만들고 프로필별 훅을 설정하세요."
           }
         },
         "nl" : {
@@ -28233,14 +28233,14 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No profiles saved yet. Create one in the Profiles tab to attach per-profile hooks."
+            "state" : "translated",
+            "value" : "Nie masz jeszcze żadnych zapisanych profili. Stwórz profil w karcie Profile, aby móc przypisywać do nich hooki."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No profiles saved yet. Create one in the Profiles tab to attach per-profile hooks."
+            "state" : "translated",
+            "value" : "Ainda não há perfis salvos. Crie um na guia “Perfis” para associar ganchos específicos a cada perfil."
           }
         },
         "ru" : {
@@ -29125,20 +29125,20 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not executable. Run \"chmod +x\" on the file."
+            "state" : "translated",
+            "value" : "Soubor není spustitelný. Spusťte soubor příkazem „chmod +x“."
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not executable. Run \"chmod +x\" on the file."
+            "state" : "translated",
+            "value" : "Nicht ausführbar. Führe 'chmod +x' für die Datei aus."
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not executable. Run \"chmod +x\" on the file."
+            "state" : "translated",
+            "value" : "No es ejecutable. Ejecuta «chmod +x» en el archivo."
           }
         },
         "fr" : {
@@ -29155,8 +29155,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not executable. Run \"chmod +x\" on the file."
+            "state" : "translated",
+            "value" : "Tidak dapat dijalankan. Jalankan \"chmod+x\" pada berkas ini."
           }
         },
         "it" : {
@@ -29173,8 +29173,8 @@
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not executable. Run \"chmod +x\" on the file."
+            "state" : "translated",
+            "value" : "실행할 수 없습니다. 파일에 \"chmod +x\" 명령을 실행해주세요."
           }
         },
         "nl" : {
@@ -29185,14 +29185,14 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not executable. Run \"chmod +x\" on the file."
+            "state" : "translated",
+            "value" : "Plik nie jest wykonywalny. Uruchom polecenie \"chmod +x\" na tym pliku."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not executable. Run \"chmod +x\" on the file."
+            "state" : "translated",
+            "value" : "Não é executável. Execute o comando “chmod +x” no arquivo."
           }
         },
         "ru" : {
@@ -30315,20 +30315,20 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Per-Profile Hooks"
+            "state" : "translated",
+            "value" : "Hooky jednotlivých profilů"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Per-Profile Hooks"
+            "state" : "translated",
+            "value" : "Profil-Hooks"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Per-Profile Hooks"
+            "state" : "translated",
+            "value" : "Hooks por perfil"
           }
         },
         "fr" : {
@@ -30345,8 +30345,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Per-Profile Hooks"
+            "state" : "translated",
+            "value" : "Hook per Profil"
           }
         },
         "it" : {
@@ -30363,8 +30363,8 @@
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Per-Profile Hooks"
+            "state" : "translated",
+            "value" : "프로필별 훅"
           }
         },
         "nl" : {
@@ -30375,14 +30375,14 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Per-Profile Hooks"
+            "state" : "translated",
+            "value" : "Hooki przypisane do profilu"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Per-Profile Hooks"
+            "state" : "translated",
+            "value" : "Hooks Por Perfil"
           }
         },
         "ru" : {
@@ -30672,20 +30672,20 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Post-apply"
+            "state" : "translated",
+            "value" : "Po aplikaci"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Post-apply"
+            "state" : "translated",
+            "value" : "Nach der Anwendung"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Post-apply"
+            "state" : "translated",
+            "value" : "Después de aplicar"
           }
         },
         "fr" : {
@@ -30702,8 +30702,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Post-apply"
+            "state" : "translated",
+            "value" : "Sesudah"
           }
         },
         "it" : {
@@ -30720,8 +30720,8 @@
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Post-apply"
+            "state" : "translated",
+            "value" : "적용 후"
           }
         },
         "nl" : {
@@ -30732,14 +30732,14 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Post-apply"
+            "state" : "translated",
+            "value" : "Po zastosowaniu"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Post-apply"
+            "state" : "translated",
+            "value" : "Aplicar Depois"
           }
         },
         "ru" : {
@@ -30791,20 +30791,20 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Pre-apply"
+            "state" : "translated",
+            "value" : "Před aplikací"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Pre-apply"
+            "state" : "translated",
+            "value" : "Vor der Anwendung"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Pre-apply"
+            "state" : "translated",
+            "value" : "Aplicar previamente"
           }
         },
         "fr" : {
@@ -30821,8 +30821,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Pre-apply"
+            "state" : "translated",
+            "value" : "Sebelum"
           }
         },
         "it" : {
@@ -30839,8 +30839,8 @@
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Pre-apply"
+            "state" : "translated",
+            "value" : "적용 전"
           }
         },
         "nl" : {
@@ -30851,14 +30851,14 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Pre-apply"
+            "state" : "translated",
+            "value" : "Przed zastosowaniem"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Pre-apply"
+            "state" : "translated",
+            "value" : "Pré-aplicar"
           }
         },
         "ru" : {
@@ -34718,20 +34718,20 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Run a shell or AppleScript file before or after a profile switch. Hooks fire on every apply path: manual button, hotkey, display auto-switch, and Focus Filter."
+            "state" : "translated",
+            "value" : "Spustit shellový skript nebo AppleScript před nebo po přepnutí profilu. Hooky se spouští všemi způsoby: manuálně, klávesovou zkratkou, automatickým přepnutím profilu a skrze filtry režimu soustředění."
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Run a shell or AppleScript file before or after a profile switch. Hooks fire on every apply path: manual button, hotkey, display auto-switch, and Focus Filter."
+            "state" : "translated",
+            "value" : "Führe ein Shell- oder AppleScript-Skript vor oder nach einem Profilwechsel aus. Hooks werden bei jeder Anwendungsart ausgelöst: über die manuelle Schaltfläche, ein Tastaturkürzel, den automatischen Bildschirmwechsel oder den Fokusfilter."
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Run a shell or AppleScript file before or after a profile switch. Hooks fire on every apply path: manual button, hotkey, display auto-switch, and Focus Filter."
+            "state" : "translated",
+            "value" : "Ejecuta un archivo de shell o AppleScript antes o después de cambiar de perfil. Los hooks se activan en todas las formas de aplicar el cambio: botón manual, atajo de teclado, cambio automático de pantalla y filtro de enfoque."
           }
         },
         "fr" : {
@@ -34748,8 +34748,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Run a shell or AppleScript file before or after a profile switch. Hooks fire on every apply path: manual button, hotkey, display auto-switch, and Focus Filter."
+            "state" : "translated",
+            "value" : "Jalankan skrip shell atau berkas AppleScript sebelum atau sesudah mengganti profil. Hook akan berjalan setiap kali profil diaktifkan melalui tombol manual, pintasan, pengalihan tampilan otomatis, atau Filter Fokus."
           }
         },
         "it" : {
@@ -34766,8 +34766,8 @@
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Run a shell or AppleScript file before or after a profile switch. Hooks fire on every apply path: manual button, hotkey, display auto-switch, and Focus Filter."
+            "state" : "translated",
+            "value" : "프로필 전환 전후에 shell 또는 AppleScript 파일을 실행합니다. 훅은 수동 버튼, 단축키, 디스플레이 자동 전환, 집중 모드 필터 등 모든 적용 경로에서 실행됩니다."
           }
         },
         "nl" : {
@@ -34778,14 +34778,14 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Run a shell or AppleScript file before or after a profile switch. Hooks fire on every apply path: manual button, hotkey, display auto-switch, and Focus Filter."
+            "state" : "translated",
+            "value" : "Umożliwia uruchomienie pliku powłoki lub AppleScript przed zmianą profilu lub po niej. Wyzwalacze działają przy każdej metodzie aktywacji: użyciu przycisku, skrótu klawiszowego, automatycznym przełączaniu wyświetlacza oraz filtrze Skupienia."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Run a shell or AppleScript file before or after a profile switch. Hooks fire on every apply path: manual button, hotkey, display auto-switch, and Focus Filter."
+            "state" : "translated",
+            "value" : "Execute um arquivo shell ou AppleScript antes, ou depois de uma troca de perfil. Os ganchos são acionados em todas as formas de aplicação: botão manual, tecla de atalho, troca automática de tela e Filtro de Foco."
           }
         },
         "ru" : {
@@ -34837,19 +34837,19 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "s"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "s"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "s"
           }
         },
@@ -34867,13 +34867,13 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "s"
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "s"
           }
         },
@@ -34885,8 +34885,8 @@
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "s"
+            "state" : "translated",
+            "value" : "초"
           }
         },
         "nl" : {
@@ -34897,13 +34897,13 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "s"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "s"
           }
         },
@@ -34921,7 +34921,7 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "s"
           }
         },
@@ -41151,20 +41151,20 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "These hooks run only when this profile is applied, after the global pre-hook and before the global post-hook."
+            "state" : "translated",
+            "value" : "Tyto hooky se spustí po aktivaci vybraného profilu, po globálním pre-hooku a před globálním post-hookem."
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "These hooks run only when this profile is applied, after the global pre-hook and before the global post-hook."
+            "state" : "translated",
+            "value" : "Diese Hooks werden nur ausgeführt, wenn dieses Profil angewendet wird, nach dem globalen Pre-Hook und vor dem globalen Post-Hook."
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "These hooks run only when this profile is applied, after the global pre-hook and before the global post-hook."
+            "state" : "translated",
+            "value" : "Estos hooks solo se ejecutan cuando se aplica este perfil, después del pre-hook global y antes del post-hook global."
           }
         },
         "fr" : {
@@ -41181,8 +41181,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "These hooks run only when this profile is applied, after the global pre-hook and before the global post-hook."
+            "state" : "translated",
+            "value" : "Hook hanya dapat dijalankan ketika profil ini diterapkan, setelah pre-hook global dan sebelum post-hook global."
           }
         },
         "it" : {
@@ -41199,8 +41199,8 @@
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "These hooks run only when this profile is applied, after the global pre-hook and before the global post-hook."
+            "state" : "translated",
+            "value" : "이 훅은 해당 프로필이 적용되어 있을 때, 전역 사전 훅 이후 그리고 전역 사후 훅 이전에만 실행됩니다."
           }
         },
         "nl" : {
@@ -41211,14 +41211,14 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "These hooks run only when this profile is applied, after the global pre-hook and before the global post-hook."
+            "state" : "translated",
+            "value" : "Te hooki są uruchamiane wyłącznie w przypadku zastosowania tego profilu, po globalnym pre-hooku, a przed globalnym post-hookiem."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "These hooks run only when this profile is applied, after the global pre-hook and before the global post-hook."
+            "state" : "translated",
+            "value" : "Esses hooks são executados apenas quando este perfil é aplicado, após o gancho pré-global e antes do gancho pós-global."
           }
         },
         "ru" : {
@@ -41627,20 +41627,20 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Timeout"
+            "state" : "translated",
+            "value" : "Časový limit"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "Timeout"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Timeout"
+            "state" : "translated",
+            "value" : "Tiempo de espera"
           }
         },
         "fr" : {
@@ -41657,8 +41657,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Timeout"
+            "state" : "translated",
+            "value" : "Batas waktu"
           }
         },
         "it" : {
@@ -41675,8 +41675,8 @@
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Timeout"
+            "state" : "translated",
+            "value" : "타임아웃"
           }
         },
         "nl" : {
@@ -41687,14 +41687,14 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Timeout"
+            "state" : "translated",
+            "value" : "Limit czasu"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Timeout"
+            "state" : "translated",
+            "value" : "Tempo limite"
           }
         },
         "ru" : {
