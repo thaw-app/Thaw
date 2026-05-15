@@ -8683,7 +8683,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Controleer op updates"
+            "value" : "Controleer op updates…"
           }
         },
         "pl" : {
@@ -14406,8 +14406,8 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aparência"
+            "state" : "new",
+            "value" : "Edit Menu Bar Appearance…"
           }
         },
         "ru" : {
@@ -14514,7 +14514,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Menu balk lay-out"
+            "value" : "Menu balk lay-out…"
           }
         },
         "pl" : {
@@ -22862,7 +22862,7 @@
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Carregando itens da barra de menus…"
+            "value" : "Carregando itens da barra de menus..."
           }
         },
         "ru" : {
