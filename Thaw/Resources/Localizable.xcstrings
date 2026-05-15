@@ -9580,20 +9580,20 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vybrat skript…"
+            "state" : "new",
+            "value" : "Choose Script…"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wähle ein Skript aus …"
+            "state" : "new",
+            "value" : "Choose Script…"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Seleccionar script…"
+            "state" : "new",
+            "value" : "Choose Script…"
           }
         },
         "fr" : {
@@ -9610,8 +9610,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pilih Skrip…"
+            "state" : "new",
+            "value" : "Choose Script…"
           }
         },
         "it" : {
@@ -9628,8 +9628,8 @@
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "스크립트 선택…"
+            "state" : "new",
+            "value" : "Choose Script…"
           }
         },
         "nl" : {
@@ -9640,14 +9640,14 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wybierz skrypt…"
+            "state" : "new",
+            "value" : "Choose Script…"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "Escolher Script…"
+            "state" : "new",
+            "value" : "Choose Script…"
           }
         },
         "ru" : {
@@ -14341,7 +14341,7 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Upravit vzhled řádku nabídek…"
+            "value" : "Upravit vzhled řádku nabídek..."
           }
         },
         "de" : {
@@ -14443,7 +14443,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "编辑菜单栏外观…"
+            "value" : "编辑菜单栏外观..."
           }
         },
         "zh-Hant" : {
@@ -14508,7 +14508,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "메뉴 막대 레이아웃 수정…"
+            "value" : "메뉴 막대 레이아웃 수정..."
           }
         },
         "nl" : {
@@ -22850,7 +22850,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Menu-items worden geladen…"
+            "value" : "Menu-items worden geladen..."
           }
         },
         "pl" : {
@@ -22862,7 +22862,7 @@
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Carregando itens da barra de menus…"
+            "value" : "Carregando itens da barra de menus..."
           }
         },
         "ru" : {
@@ -33679,7 +33679,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zoekmenu-items…"
+            "value" : "Zoekmenu-items..."
           }
         },
         "pl" : {
