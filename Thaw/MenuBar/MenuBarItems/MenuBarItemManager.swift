@@ -439,11 +439,37 @@ final class MenuBarItemManager: ObservableObject {
     private func saveSectionOrder(from cache: ItemCache) {
         var newOrder = [String: [String]]()
 
+        // Items whose true section is elsewhere despite their current
+        // cache position: a temporarily-shown item whose rehide failed
+        // or whose app quit before rehide is physically sitting in
+        // visible but its original section is recorded in
+        // pendingRelocations / pendingReturnDestinations. The in-flight
+        // temporarilyShownItemContexts is the primary protection (it
+        // makes uncheckedCacheItems cache the item at its return
+        // destination instead of its live position and gates this
+        // save entirely), but that context is dropped once the rehide
+        // path gives up; pendingReturnDestinations outlives it and is
+        // the canonical "this item belongs elsewhere" signal until the
+        // app relaunches and relocatePendingItems restores it.
+        //
+        // Treat such items as closed apps from the save's perspective:
+        // omit them from currentInSection and from the
+        // allCurrentIdentifiers / allCurrentBaseIdentifiers sets so
+        // planSectionOrder's closed-app preservation keeps their old
+        // saved-section slot (their original section) instead of
+        // overwriting it with the live visible position.
+        let pendingRehideTagIDs: Set<String> = Set(pendingReturnDestinations.keys).union(
+            pendingRelocations.compactMap { tagID, value in
+                value.hasPrefix(Self.waitForRelaunchPrefix) ? tagID : nil
+            }
+        )
+
         // Build a set of all identifiers currently in the cache.
         var allCurrentIdentifiers = Set<String>()
         var allCurrentBaseIdentifiers = Set<String>()
         for section in MenuBarSection.Name.allCases {
             for item in cache[section] where !item.isControlItem && item.sourcePID != nil {
+                guard !pendingRehideTagIDs.contains(item.tag.tagIdentifier) else { continue }
                 // Always track base identifier so stale saved entries for
                 // transient items (Live Activities) get pruned by the
                 // isStaleInstanceIndex guard below and not re-injected.
@@ -461,7 +487,12 @@ final class MenuBarItemManager: ObservableObject {
             // Current identifiers for this section, in cache iteration
             // order (which approximates left-to-right X order).
             let currentInSection = cache[section]
-                .filter { !$0.isControlItem && $0.sourcePID != nil && !$0.isTransientControlCenterItem }
+                .filter {
+                    !$0.isControlItem &&
+                        $0.sourcePID != nil &&
+                        !$0.isTransientControlCenterItem &&
+                        !pendingRehideTagIDs.contains($0.tag.tagIdentifier)
+                }
                 .map(\.uniqueIdentifier)
 
             let oldSavedForSection = savedSectionOrder[sectionKey(for: section)] ?? []
