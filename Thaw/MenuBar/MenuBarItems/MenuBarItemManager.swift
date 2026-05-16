@@ -1718,10 +1718,11 @@ extension MenuBarItemManager {
     func cacheItemsRegardless(
         _ currentItemWindowIDs: [CGWindowID]? = nil,
         skipRecentMoveCheck: Bool = false,
-        resolveSourcePID: Bool = true
+        resolveSourcePID: Bool = true,
+        skipSavedLayoutApply: Bool = false
     ) async {
         MenuBarItemManager.diagLog.debug(
-            "cacheItemsRegardless: entering (skipRecentMoveCheck=\(skipRecentMoveCheck), hasCurrentItemWindowIDs=\(currentItemWindowIDs != nil), resolveSourcePID=\(resolveSourcePID))"
+            "cacheItemsRegardless: entering (skipRecentMoveCheck=\(skipRecentMoveCheck), hasCurrentItemWindowIDs=\(currentItemWindowIDs != nil), resolveSourcePID=\(resolveSourcePID), skipSavedLayoutApply=\(skipSavedLayoutApply))"
         )
         defer {
             backgroundCacheContinuation?.resume()
@@ -1976,15 +1977,27 @@ extension MenuBarItemManager {
         // body arms isRestoringItemOrder around the moves and drives
         // its own follow-up recache. On rejection the flag is left
         // false so saveSectionOrder can persist the current cache.
-        let didApplySavedLayout = await applySavedLayout(
-            items: items,
-            previousWindowIDs: previousWindowIDs,
-            controlItems: controlItems
-        )
-        if didApplySavedLayout {
-            backgroundCacheContinuation?.resume()
-            backgroundCacheContinuation = nil
-            return
+        //
+        // The skipSavedLayoutApply gate exists so the post-apply
+        // refresh scheduled by scheduleDeferredCacheRefresh does NOT
+        // re-enter applySavedLayout. Without the gate the deferred
+        // refresh runs cacheItemsRegardless → applySavedLayout →
+        // dispatch → schedule another refresh, and because consecutive
+        // getMenuBarItems calls can return slightly different windowID
+        // sets (transient Apple Control Center widgets, Phase 2 chevron
+        // expand/collapse churn), windowIDsChanged fires on every
+        // iteration and the bar enters an infinite no-op apply loop.
+        if !skipSavedLayoutApply {
+            let didApplySavedLayout = await applySavedLayout(
+                items: items,
+                previousWindowIDs: previousWindowIDs,
+                controlItems: controlItems
+            )
+            if didApplySavedLayout {
+                backgroundCacheContinuation?.resume()
+                backgroundCacheContinuation = nil
+                return
+            }
         }
 
         await uncheckedCacheItems(items: items, controlItems: controlItems, displayID: displayID)
@@ -5217,6 +5230,45 @@ extension MenuBarItemManager {
         isApplyingProfileLayout = false
     }
 
+    /// Schedules the post-apply refresh sequence on a detached Task:
+    /// a full cache cycle (which updates itemCache, re-runs the
+    /// relocate paths and persists savedSectionOrder if appropriate),
+    /// then imageCache cleanup and an observer notification.
+    ///
+    /// applyProfileLayout's exit points (Phase 8 normal exit plus the
+    /// Phase 7 early-returns) cannot inline-await cacheItemsRegardless
+    /// because they're inside a body that the outer cacheItemsRegardless
+    /// is awaiting via applySavedLayout. The outer call holds its
+    /// serial cacheGate across that await, so an inline recursive call
+    /// is rejected with "serial cache operation already in progress,
+    /// skipping" and itemCache stays stale (the field-reported symptom:
+    /// quit apps still appear in Settings Layout, ThawBar, and Search
+    /// until something else triggers a non-applySavedLayout cache
+    /// cycle). Spawning a Task defers execution until after the outer
+    /// releases the gate, mirroring the relocate-path recache pattern.
+    /// The uiSettleDelay gives WindowServer a tick to settle the moves
+    /// (or, for early-returns, the windowID churn that triggered the
+    /// apply) before the next snapshot.
+    private func scheduleDeferredCacheRefresh() {
+        Task { [weak self] in
+            try? await Task.sleep(for: MenuBarItemManager.uiSettleDelay)
+            guard let self else { return }
+            // skipSavedLayoutApply=true breaks the dispatch loop: the
+            // apply already ran (we're scheduling a refresh after it);
+            // re-entering applySavedLayout here would re-trigger on
+            // any transient windowID-set churn and live-lock the bar.
+            // Cache update + save still run via uncheckedCacheItems.
+            await self.cacheItemsRegardless(
+                skipRecentMoveCheck: true,
+                skipSavedLayoutApply: true
+            )
+            guard let appState = self.appState else { return }
+            appState.imageCache.performCacheCleanup()
+            await appState.imageCache.updateCacheWithoutChecks(sections: MenuBarSection.Name.allCases)
+            await MainActor.run { appState.objectWillChange.send() }
+        }
+    }
+
     func applyProfileLayout(
         pinnedHidden: Set<String>,
         pinnedAlwaysHidden: Set<String>,
@@ -5605,6 +5657,7 @@ extension MenuBarItemManager {
                 MenuBarItemManager.diagLog.info("Profile layout (full sort): current order matches desired, skipping")
                 updateProfileSortedSnapshot(source: source, items: items)
                 persistProfileStateOnSuccess(source: source)
+                scheduleDeferredCacheRefresh()
                 return
             }
 
@@ -5914,7 +5967,7 @@ extension MenuBarItemManager {
                     alwaysHiddenControlItemWindowID: alwaysHiddenWID
                 ) else {
                     MenuBarItemManager.diagLog.error("applyProfileLayout: lost control items after phase 1")
-                    await cacheItemsRegardless(skipRecentMoveCheck: true)
+                    scheduleDeferredCacheRefresh()
                     return
                 }
 
@@ -5960,7 +6013,7 @@ extension MenuBarItemManager {
                 }
                 updateProfileSortedSnapshot(source: source, items: items)
                 persistProfileStateOnSuccess(source: source)
-                await cacheItemsRegardless(skipRecentMoveCheck: true)
+                scheduleDeferredCacheRefresh()
                 return
             }
 
@@ -6039,12 +6092,7 @@ extension MenuBarItemManager {
         }
         clearProfileState(source: source, items: items)
 
-        await cacheItemsRegardless(skipRecentMoveCheck: true)
-
-        // Refresh image cache so the Layout Bar UI updates immediately.
-        appState.imageCache.performCacheCleanup()
-        await appState.imageCache.updateCacheWithoutChecks(sections: MenuBarSection.Name.allCases)
-        await MainActor.run { appState.objectWillChange.send() }
+        scheduleDeferredCacheRefresh()
     }
 
     /// Re-applies the user's saved menu-bar layout via the unified
