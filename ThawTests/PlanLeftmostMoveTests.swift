@@ -236,6 +236,47 @@ final class PlanLeftmostMoveTests: XCTestCase {
         XCTAssertEqual(decision, .noop(reason: .alreadyInTarget))
     }
 
+    /// A brand-new mid-session app arrival (windowID not in
+    /// previousWindowIDs) whose sourcePID could not be resolved by
+    /// the spatial AX pass nor by the marker-pair fallback still
+    /// short-circuits with .unresolvedSourcePID. The current
+    /// behavior leaves the icon at macOS's default leftmost
+    /// placement rather than relocating an item whose identifier is
+    /// unstable. Any future loosening (e.g. tracking by windowID
+    /// instead of identifier) must replace this assertion
+    /// deliberately so the regression risk is explicit.
+    func testNewWindowIDWithUnresolvedSourcePIDStillShortCircuits() {
+        let newApp = leftmostItem(
+            // Identifier collapses to com.apple.controlcenter:Item-0:N
+            // when sourcePID resolution fails on macOS 26; the test
+            // models the placeholder namespace the orchestrator
+            // actually sees in that case.
+            tag: appTag("com.apple.controlcenter", "Item-0", 1),
+            x: 100,
+            windowID: 999, // fresh windowID
+            sourcePID: nil
+        )
+
+        let decision = LayoutSolver.planLeftmostMove(
+            items: [newApp],
+            hiddenBounds: hiddenBounds,
+            sectionByWindowID: [newApp.windowID: .visible],
+            previousWindowIDs: [101, 102, 103], // windowID 999 is new
+            savedSectionOrder: [
+                // The widget's real bundle ID is saved, but the live
+                // item's placeholder identifier won't match.
+                "hidden": ["com.wireguard.macos:Item-0"],
+            ],
+            knownItemIdentifiers: [],
+            hiddenTags: [],
+            alwaysHiddenTags: [],
+            effectiveNewItemsSection: .hidden
+        )
+
+        XCTAssertEqual(decision, .noop(reason: .unresolvedSourcePID),
+                       "nil-sourcePID hideable items must short-circuit even when their windowID is unambiguously new")
+    }
+
     /// With no items left of the divider, the planner emits
     /// .noop(.noLeftmostItems).
     func testEmptyLeftmostListReturnsNoLeftmostItems() {

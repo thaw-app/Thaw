@@ -458,10 +458,10 @@ final class MenuBarItemManager: ObservableObject {
         // planSectionOrder's closed-app preservation keeps their old
         // saved-section slot (their original section) instead of
         // overwriting it with the live visible position.
-        let pendingRehideTagIDs: Set<String> = Set(pendingReturnDestinations.keys).union(
-            pendingRelocations.compactMap { tagID, value in
-                value.hasPrefix(Self.waitForRelaunchPrefix) ? tagID : nil
-            }
+        let pendingRehideTagIDs = LayoutSolver.pendingRehideTagIdentifiers(
+            pendingReturnDestinations: pendingReturnDestinations,
+            pendingRelocations: pendingRelocations,
+            waitForRelaunchPrefix: Self.waitForRelaunchPrefix
         )
 
         // Build a set of all identifiers currently in the cache.
@@ -1683,10 +1683,13 @@ extension MenuBarItemManager {
             isRestoringItemOrderTimestamp = nil
         }
 
-        if !isRestoringItemOrder, !isResettingLayout, !isInStartupSettling,
-           !isApplyingProfileLayout,
-           temporarilyShownItemContexts.isEmpty
-        {
+        if LayoutSolver.shouldPersistSavedOrder(
+            isRestoringItemOrder: isRestoringItemOrder,
+            isResettingLayout: isResettingLayout,
+            isInStartupSettling: isInStartupSettling,
+            isApplyingProfileLayout: isApplyingProfileLayout,
+            temporarilyShownItemContextsIsEmpty: temporarilyShownItemContexts.isEmpty
+        ) {
             // Don't persist if any items are in a transient blocked state (x=-1).
             // Wait for the next cache cycle when bounds are reliable.
             let hasBlockedItems = MenuBarSection.Name.allCases.contains { section in

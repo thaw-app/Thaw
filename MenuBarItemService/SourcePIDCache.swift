@@ -419,60 +419,49 @@ final class SourcePIDCache {
         // self-registration windows are excluded so Thaw's PID can
         // never be attributed to a third-party widget.
         if !unresolvedWindows.isEmpty {
-            struct MarkerCandidate {
-                let windowID: CGWindowID
-                let size: CGSize
-                let title: String
-                let owningPID: pid_t?
-            }
             let thawBundleID = "com.stonerl.Thaw"
             let ccBundleID = "com.apple.controlcenter"
-            let markers: [MarkerCandidate] = allWindows.compactMap { win in
-                guard let title = win.title, title.contains(".") else { return nil }
-                if title.hasPrefix("Thaw.ControlItem.") { return nil }
-                if title == thawBundleID { return nil }
-                return MarkerCandidate(
+            let markers = MarkerPairResolver.extractMarkers(
+                from: allWindows.map { win in
+                    (
+                        windowID: win.windowID,
+                        title: win.title,
+                        size: win.bounds.size,
+                        owningPID: win.owningApplication?.processIdentifier
+                    )
+                },
+                thawControlItemPrefix: "Thaw.ControlItem.",
+                thawBundleID: thawBundleID
+            )
+            let unresolvedInfos = allWindows.filter { unresolvedWindows.contains($0.windowID) }
+            let icons = unresolvedInfos.map { win in
+                MarkerPairResolver.UnresolvedIcon(
                     windowID: win.windowID,
-                    size: win.bounds.size,
-                    title: title,
-                    owningPID: win.owningApplication?.processIdentifier
+                    title: win.title,
+                    size: win.bounds.size
                 )
             }
-            let unresolvedInfos = allWindows.filter { unresolvedWindows.contains($0.windowID) }
-            for icon in unresolvedInfos {
-                // Only resolve icons with a non-bundle-ID title; markers
-                // themselves remain in the unresolved set but must not
-                // pair with each other.
-                if let title = icon.title, title.contains(".") { continue }
-                let iconSize = icon.bounds.size
-                let matching = markers.filter {
-                    $0.windowID != icon.windowID && $0.size == iconSize
+            let resolutions = MarkerPairResolver.resolve(
+                unresolvedIcons: icons,
+                markers: markers,
+                thawBundleID: thawBundleID,
+                ccBundleID: ccBundleID,
+                pidToBundleID: { pid in
+                    NSRunningApplication(processIdentifier: pid)?.bundleIdentifier
+                },
+                bundleIDToPID: { bundleID in
+                    NSRunningApplication
+                        .runningApplications(withBundleIdentifier: bundleID)
+                        .first?
+                        .processIdentifier
                 }
-                guard matching.count == 1, let marker = matching.first else { continue }
-                let resolvedPID: pid_t? = {
-                    if let pid = marker.owningPID,
-                       let app = NSRunningApplication(processIdentifier: pid),
-                       let bundleID = app.bundleIdentifier,
-                       bundleID != ccBundleID,
-                       bundleID != thawBundleID
-                    {
-                        return pid
-                    }
-                    if let app = NSRunningApplication
-                        .runningApplications(withBundleIdentifier: marker.title)
-                        .first,
-                       app.bundleIdentifier != thawBundleID
-                    {
-                        return app.processIdentifier
-                    }
-                    return nil
-                }()
-                guard let pid = resolvedPID else { continue }
+            )
+            for resolution in resolutions {
                 SourcePIDCache.diagLog.info(
-                    "SourcePIDCache marker-pair resolution: windowID=\(icon.windowID) title=\(icon.title ?? "nil") size=\(iconSize) → PID \(pid) via marker windowID=\(marker.windowID) (title=\(marker.title))"
+                    "SourcePIDCache marker-pair resolution: windowID=\(resolution.iconWindowID) → PID \(resolution.resolvedPID) via marker windowID=\(resolution.markerWindowID) (title=\(resolution.markerTitle))"
                 )
-                state.withLock { $0.pids[icon.windowID] = pid }
-                unresolvedWindows.remove(icon.windowID)
+                state.withLock { $0.pids[resolution.iconWindowID] = resolution.resolvedPID }
+                unresolvedWindows.remove(resolution.iconWindowID)
             }
         }
 

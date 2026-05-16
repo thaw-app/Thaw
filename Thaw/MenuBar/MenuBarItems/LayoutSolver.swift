@@ -1096,4 +1096,86 @@ enum LayoutSolver {
         case .alwaysHidden: return "alwaysHidden"
         }
     }
+
+    // MARK: - State flag gates
+
+    /// Truth table for the saveSectionOrder gate: only persist when no
+    /// in-flight orchestrator owns the menu bar state. Each input maps
+    /// to a class-level flag whose individual semantics are documented
+    /// in MenuBarItemManager's coordination block.
+    ///
+    /// Pure over its inputs so the gate can be characterized without
+    /// instantiating MenuBarItemManager. Any future addition to the
+    /// gate (new in-flight signal) should extend both this function
+    /// and its tests.
+    nonisolated static func shouldPersistSavedOrder(
+        isRestoringItemOrder: Bool,
+        isResettingLayout: Bool,
+        isInStartupSettling: Bool,
+        isApplyingProfileLayout: Bool,
+        temporarilyShownItemContextsIsEmpty: Bool
+    ) -> Bool {
+        !isRestoringItemOrder &&
+            !isResettingLayout &&
+            !isInStartupSettling &&
+            !isApplyingProfileLayout &&
+            temporarilyShownItemContextsIsEmpty
+    }
+
+    // MARK: - Pending rehide identifiers
+
+    /// Returns the set of `tag.tagIdentifier` values whose item is
+    /// known to belong to a section other than its current cache
+    /// position because of a temporarily-shown rehide that has not yet
+    /// completed.
+    ///
+    /// Two sources contribute:
+    /// 1. Active `pendingReturnDestinations` entries: the in-flight
+    ///    context has been dropped (rehide gave up or the user
+    ///    abandoned return) but the return-destination metadata
+    ///    survives until the app relaunches and relocatePendingItems
+    ///    moves the item back.
+    /// 2. `pendingRelocations` entries whose value carries the
+    ///    `waitForRelaunch:` sentinel: the rehide hit the per-session
+    ///    retry cap and was suspended, waiting for the app to
+    ///    relaunch with a fresh windowID.
+    ///
+    /// saveSectionOrder uses the union to exclude these items from
+    /// the cache snapshot, so planSectionOrder treats them as closed
+    /// apps and preserves their original-section saved entry rather
+    /// than overwriting it with the live visible position.
+    nonisolated static func pendingRehideTagIdentifiers(
+        pendingReturnDestinations: [String: [String: String]],
+        pendingRelocations: [String: String],
+        waitForRelaunchPrefix: String
+    ) -> Set<String> {
+        Set(pendingReturnDestinations.keys).union(
+            pendingRelocations.compactMap { tagID, value in
+                value.hasPrefix(waitForRelaunchPrefix) ? tagID : nil
+            }
+        )
+    }
+
+    // MARK: - Batch PID scan window selection
+
+    /// Returns the first window in the batch whose windowID is not
+    /// already cached, or nil when every window is cached.
+    ///
+    /// Drives `SourcePIDCache.pidsBody`'s decision about which window
+    /// to hand to `pidBody` for the AX scan. `pidBody` returns
+    /// immediately on a cache hit at its entry, so passing a cached
+    /// window means the scan body (including the marker-pair
+    /// fallback) never runs. Selecting an unresolved window forces
+    /// the scan path to execute and resolves every other unresolved
+    /// window in the same batch by populating the cache during the
+    /// AX traversal.
+    nonisolated static func selectWindowForBatchScan<W>(
+        windows: [W],
+        windowID: (W) -> CGWindowID,
+        cachedPIDs: [CGWindowID: pid_t]
+    ) -> W? {
+        windows.first(where: { window in
+            cachedPIDs[windowID(window)] == nil
+        })
+    }
 }
