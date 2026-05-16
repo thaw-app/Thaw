@@ -124,6 +124,41 @@ enum LayoutSolver {
         let index: Int
     }
 
+    // MARK: - Unmanaged partition
+
+    /// Returns the subset of currentFlat that should be routed through
+    /// planUnmanagedPlacement: items present in the live menu bar that
+    /// are neither in the desired sequence (savedSectionOrder for the
+    /// .savedOrder path, profile spec for the .profile path) nor any
+    /// of the three Thaw control items.
+    ///
+    /// Control items are uniformly excluded because saveSectionOrder
+    /// omits them from savedSectionOrder by design (they're not
+    /// user-positionable in the same way as third-party items). If any
+    /// control item leaks through, planUnmanagedPlacement will route it
+    /// through NewItemsPlacement and the LCS planner will emit moves
+    /// that drag the Thaw icon to the user's configured anchor on every
+    /// cache cycle. Visible-control-item exclusion was the omission
+    /// that caused the field-reported "Thaw icon keeps moving" bug.
+    ///
+    /// Input order is preserved, since downstream consumers (LCS
+    /// planner) treat the result as the iteration order for placement.
+    /// Pure over its inputs.
+    nonisolated static func partitionUnmanagedUIDs(
+        currentFlat: [String],
+        desiredUIDs: Set<String>,
+        hiddenCtrlUID: String?,
+        ahCtrlUID: String?,
+        visibleCtrlUID: String?
+    ) -> [String] {
+        currentFlat.filter { uid in
+            !desiredUIDs.contains(uid)
+                && uid != hiddenCtrlUID
+                && uid != ahCtrlUID
+                && uid != visibleCtrlUID
+        }
+    }
+
     // MARK: - Leftmost relocation
 
     /// Computes the next leftmost-relocation decision.

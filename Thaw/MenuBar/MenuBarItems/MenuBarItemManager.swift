@@ -5405,9 +5405,13 @@ extension MenuBarItemManager {
         // leftmost" behavior.
         let visibleCtrlUID = items.first(where: { $0.tag == .visibleControlItem })?.uniqueIdentifier
         let desiredSet = Set(desiredFiltered)
-        let unmanagedUIDs = currentFlat.filter { uid in
-            !desiredSet.contains(uid) && uid != hiddenCtrlUID && uid != ahCtrlUID
-        }
+        let unmanagedUIDs = LayoutSolver.partitionUnmanagedUIDs(
+            currentFlat: currentFlat,
+            desiredUIDs: desiredSet,
+            hiddenCtrlUID: hiddenCtrlUID,
+            ahCtrlUID: ahCtrlUID,
+            visibleCtrlUID: visibleCtrlUID
+        )
         if !unmanagedUIDs.isEmpty {
             // Build a DesiredLayout for the profile-apply context: the
             // saved layout is the source of truth for previously-seen
@@ -5423,6 +5427,27 @@ extension MenuBarItemManager {
                 unmanagedUIDs: unmanagedUIDs,
                 currentUIDs: Set(currentFlat)
             )
+
+            // Per-uid decision trace. Shows which item was deemed
+            // unmanaged and which placement strategy fired. Cheap
+            // (only logs when unmanaged items exist) and the most
+            // direct signal for triaging "why did X move?" reports.
+            for uid in unmanagedUIDs {
+                let placementSummary: String
+                switch placements[uid] {
+                case let .saved(section, index)?:
+                    placementSummary = "saved(section=\(section.logString), index=\(index))"
+                case let .newItemAnchored(section, anchorUID, relation)?:
+                    placementSummary = "newItemAnchored(section=\(section.logString), anchor=\(anchorUID), relation=\(String(describing: relation)))"
+                case let .newItemDefault(section)?:
+                    placementSummary = "newItemDefault(section=\(section.logString))"
+                case nil:
+                    placementSummary = "<no placement returned>"
+                }
+                MenuBarItemManager.diagLog.debug(
+                    "Profile layout: planUnmanagedPlacement \(uid) -> \(placementSummary)"
+                )
+            }
 
             let applied = LayoutReconciler.applyUnmanagedPlacementsToDesired(
                 placements: placements,
