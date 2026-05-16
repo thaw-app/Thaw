@@ -289,11 +289,19 @@ final class SourcePIDCache {
     }
 
     private func pidsBody(for windows: [WindowInfo]) -> [pid_t?] {
-        let needsScan = windows.contains { window in
+        // Drive the scan via an unresolved window in the batch, not via
+        // `windows.first`. pidBody returns early on a cache hit (line 292),
+        // so passing a cached window skips the AX traversal entirely.
+        // Once macOS 26 began routing some widgets through the marker-pair
+        // fallback that lives in pidBody's scan body, mid-session arrivals
+        // (new app launches that introduce a fresh nil-PID windowID) were
+        // never getting a scan: the first window in their batch was always
+        // an already-cached resolved one, and the scan only ever ran at
+        // session start.
+        if let unresolved = windows.first(where: { window in
             state.withLock { $0.pids[window.windowID] == nil }
-        }
-        if needsScan, let first = windows.first {
-            _ = pidBody(for: first)
+        }) {
+            _ = pidBody(for: unresolved)
         }
         return windows.map { window in
             state.withLock { $0.pids[window.windowID] }
