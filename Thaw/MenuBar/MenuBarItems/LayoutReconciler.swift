@@ -99,22 +99,6 @@ struct ObservedLayout {
     let activelyShownTags: Set<String>
 }
 
-// MARK: - RestoreMove
-
-/// A single move emitted by the reconciler's restore path.
-///
-/// Composition of the two LayoutSolver planners that the restore
-/// orchestrator was previously calling in sequence. The orchestrator
-/// resolves the abstract destination on either case the same way.
-enum RestoreMove: Equatable {
-    /// A cross-section move from one section to another. The
-    /// destination is position-aware within the target section.
-    case crossSection(LayoutSolver.RebalanceMove)
-    /// A within-section reorder. The item stays in its current
-    /// section but moves to its saved position within it.
-    case withinSection(LayoutSolver.WithinSectionMove)
-}
-
 // MARK: - LayoutReconciler
 
 /// Composes the LayoutSolver planners against a DesiredLayout /
@@ -131,44 +115,6 @@ enum RestoreMove: Equatable {
 /// are not driven by DesiredLayout but by per-entry retry state. The
 /// temporality split from the previous refactor still holds.
 enum LayoutReconciler {
-    /// Returns the next single move needed to make the observed layout
-    /// match the desired layout, or nil when no move is needed.
-    ///
-    /// Cross-section count mismatches are preferred over within-section
-    /// order drift: the cross-section planner runs first and its
-    /// result short-circuits the within-section check. Same one-move-
-    /// per-call contract the underlying planners offer; the caller
-    /// recaches and re-enters until the reconciler returns nil.
-    static func nextRestoreMove(
-        desired: DesiredLayout,
-        observed: ObservedLayout,
-        hasAlwaysHiddenSection: Bool
-    ) -> RestoreMove? {
-        let savedSectionOrder = desired.sectionOrderAsPersistedDict
-
-        if let cross = LayoutSolver.planRebalanceMove(
-            items: observed.items,
-            sectionByWindowID: observed.sectionByWindowID,
-            hasAlwaysHiddenSection: hasAlwaysHiddenSection,
-            savedSectionOrder: savedSectionOrder,
-            activelyShownTags: observed.activelyShownTags
-        ) {
-            return .crossSection(cross)
-        }
-
-        if let within = LayoutSolver.planWithinSectionReorder(
-            items: observed.items,
-            sectionByWindowID: observed.sectionByWindowID,
-            savedSectionOrder: savedSectionOrder,
-            activelyShownTags: observed.activelyShownTags,
-            hasAlwaysHiddenSection: hasAlwaysHiddenSection
-        ) {
-            return .withinSection(within)
-        }
-
-        return nil
-    }
-
     /// Resolves an abstract LCSPlannedDestination against live items
     /// to produce a concrete MoveDestination.
     ///
