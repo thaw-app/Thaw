@@ -1978,7 +1978,8 @@ extension MenuBarItemManager {
         // false so saveSectionOrder can persist the current cache.
         let didApplySavedLayout = await applySavedLayout(
             items: items,
-            previousWindowIDs: previousWindowIDs
+            previousWindowIDs: previousWindowIDs,
+            controlItems: controlItems
         )
         if didApplySavedLayout {
             backgroundCacheContinuation?.resume()
@@ -6036,9 +6037,78 @@ extension MenuBarItemManager {
     /// when an entry guard rejects the call (no saved layout, profile
     /// apply in flight, cooldown active, no detected change to react
     /// to, no saved items currently present).
+    /// Detects whether the current bar layout differs from
+    /// `savedSectionOrder` in section membership. Returns true if any
+    /// movable, hideable item whose baseID appears in the saved order
+    /// is currently in a different section than where it was saved.
+    ///
+    /// Used as a secondary trigger for `applySavedLayout`: the windowID
+    /// gate fires on app quit/relaunch, but ambient drift (third-party
+    /// menu bar tools, Stage Manager toggles, macOS re-spawning the
+    /// bar without churning windowIDs) leaves windowIDs intact while
+    /// the layout drifts. This check catches that case so the bulk
+    /// apply still reasserts the saved order.
+    ///
+    /// Lightweight by design: item bounds are read from the supplied
+    /// items array (already populated by the caller's
+    /// `getMenuBarItems` pass) rather than via per-item AX round-trips
+    /// through `CacheContext`. Items that straddle a control-item
+    /// boundary are ignored to avoid false positives during transient
+    /// section show/hide animations. Multi-instance baseIDs use
+    /// "last write wins" in the expected-section map; this can
+    /// false-positive when a single app has instances split across
+    /// sections in `savedSectionOrder`, but the bulk apply
+    /// early-returns when no moves are needed, so the cost is minor.
+    private func currentLayoutDivergesFromSaved(
+        items: [MenuBarItem],
+        controlItems: ControlItemPair
+    ) -> Bool {
+        var savedSectionByBaseID = [String: MenuBarSection.Name]()
+        for (sectionKey, ids) in savedSectionOrder {
+            guard let section = sectionName(for: sectionKey) else { continue }
+            for id in ids {
+                let parts = id.split(separator: ":", maxSplits: 2)
+                let baseID = parts.prefix(2).joined(separator: ":")
+                savedSectionByBaseID[baseID] = section
+            }
+        }
+        guard !savedSectionByBaseID.isEmpty else { return false }
+
+        let hiddenMinX = controlItems.hidden.bounds.minX
+        let hiddenMaxX = controlItems.hidden.bounds.maxX
+        let ahBounds = controlItems.alwaysHidden?.bounds
+
+        for item in items where !item.isControlItem && item.canBeHidden && item.isMovable {
+            let baseID = "\(item.tag.namespace):\(item.tag.title)"
+            guard let expectedSection = savedSectionByBaseID[baseID] else {
+                continue
+            }
+
+            let currentSection: MenuBarSection.Name?
+            if item.bounds.minX >= hiddenMaxX {
+                currentSection = .visible
+            } else if let ahBounds, item.bounds.maxX <= ahBounds.minX {
+                currentSection = .alwaysHidden
+            } else if let ahBounds, item.bounds.minX >= ahBounds.maxX, item.bounds.maxX <= hiddenMinX {
+                currentSection = .hidden
+            } else if ahBounds == nil, item.bounds.maxX <= hiddenMinX {
+                currentSection = .hidden
+            } else {
+                currentSection = nil
+            }
+
+            guard let currentSection else { continue }
+            if currentSection != expectedSection {
+                return true
+            }
+        }
+        return false
+    }
+
     func applySavedLayout(
         items: [MenuBarItem],
-        previousWindowIDs: [CGWindowID]
+        previousWindowIDs: [CGWindowID],
+        controlItems: ControlItemPair
     ) async -> Bool {
         // Each guard logs a distinct reason so a "Thaw stopped
         // restoring my layout" bug report can be diagnosed from the
@@ -6067,35 +6137,40 @@ extension MenuBarItemManager {
             return false
         }
 
-        // App-relaunch detection. The cache cycle calls this on every
-        // tick; without a change gate we would run a full bulk apply
-        // every ~5 s indefinitely even when nothing needs moving.
+        // Trigger detection. The cache cycle calls this on every tick;
+        // without a change gate we would run a full bulk apply every
+        // ~5 s indefinitely. Two independent signals advance past the
+        // gate:
         //
-        // The four windowID-set transitions to keep in mind:
-        // 1. Pure addition (new app launched, no relaunch): previous
-        //    is a subset of current, windowIDsChanged stays false.
-        //    Late-arrival relocation owns this case via
-        //    relocateNewLeftmostItems, not the saved-order path.
-        // 2. App quit only (windowID disappears, no new one): previous
-        //    is NOT a subset of current, windowIDsChanged is true and
-        //    a bulk apply runs. Remaining items resettle into their
-        //    saved positions, which is the desired behaviour.
-        // 3. App relaunch (old windowID disappears, new one appears):
-        //    same as 2 from this gate's perspective; the bulk apply
-        //    consumes the new windowID and re-files it via the saved
-        //    section order.
-        // 4. WindowID recycling (macOS reassigns the same WID to a
-        //    new item): previous is still a subset of current, this
-        //    gate does NOT fire. Rare in practice; uncovered.
+        // 1. windowIDsChanged: a previous windowID is missing from the
+        //    current set, i.e., an item disappeared. Covers app-quit
+        //    and app-relaunch. Pure additions are owned by
+        //    relocateNewLeftmostItems, not this path. WindowID
+        //    recycling (same WID, different item) is uncovered.
+        //    The previous-set-empty escape handles first-cycle startup
+        //    where there's no prior frame to diff against.
         //
-        // The previous-set-empty escape hatch handles first-cycle
-        // startup, where there's no prior frame to diff against.
+        // 2. layoutDiverged: at least one saved item is currently in a
+        //    different section than savedSectionOrder records. Catches
+        //    ambient drift (third-party tools repositioning icons,
+        //    Stage Manager toggles, screen lock/unlock cycles, macOS
+        //    re-spawning the bar) where windowIDs stay stable while
+        //    sections shift. Also catches cold-boot for non-profile
+        //    users, where the first cycle has previousWindowIDs empty
+        //    but the bar is in macOS-default order rather than saved.
+        //
+        // Divergence is computed lazily: only consulted when
+        // windowIDsChanged didn't already advance the gate, so the
+        // happy path on app quit/relaunch pays nothing.
         let currentWindowIDSet = Set(items.map(\.windowID))
         let previousWindowIDSet = Set(previousWindowIDs)
         let windowIDsChanged = !previousWindowIDSet.isEmpty &&
             !previousWindowIDSet.isSubset(of: currentWindowIDSet)
-        guard windowIDsChanged else {
-            MenuBarItemManager.diagLog.debug("applySavedLayout: skipping, no windowID change since previous cycle")
+        let layoutDiverged = windowIDsChanged
+            ? false
+            : currentLayoutDivergesFromSaved(items: items, controlItems: controlItems)
+        guard windowIDsChanged || layoutDiverged else {
+            MenuBarItemManager.diagLog.debug("applySavedLayout: skipping, no windowID change and saved layout matches current")
             return false
         }
 
@@ -6119,7 +6194,8 @@ extension MenuBarItemManager {
             }
         }
 
-        MenuBarItemManager.diagLog.info("applySavedLayout: dispatching bulk apply for window-ID change")
+        let trigger = windowIDsChanged ? "windowID change" : "layout divergence"
+        MenuBarItemManager.diagLog.info("applySavedLayout: dispatching bulk apply (\(trigger))")
 
         // The shared body uses itemOrder as the per-section ordered
         // identifier list, which is structurally identical to
