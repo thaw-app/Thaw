@@ -1972,31 +1972,19 @@ extension MenuBarItemManager {
 
         // Unified saved-layout restore: dispatch the bulk apply path
         // when window IDs have changed (app relaunch). applySavedLayout
-        // owns its own cooldown, guard checks, and post-apply recache
-        // via the applyProfileLayout body; this caller only needs to
-        // arm isRestoringItemOrder around the call so any intermediate
-        // cache updates during move() don't overwrite the saved order.
-        isRestoringItemOrder = true
-        isRestoringItemOrderTimestamp = Date()
+        // owns its own cooldown and guard checks; applyProfileLayout's
+        // body arms isRestoringItemOrder around the moves and drives
+        // its own follow-up recache. On rejection the flag is left
+        // false so saveSectionOrder can persist the current cache.
         let didApplySavedLayout = await applySavedLayout(
             items: items,
             previousWindowIDs: previousWindowIDs
         )
         if didApplySavedLayout {
-            // applyProfileLayout's body has already driven its own
-            // follow-up cacheItemsRegardless. Drop the outer continuation
-            // and return; the inner cycle will resume the normal
-            // pipeline.
             backgroundCacheContinuation?.resume()
             backgroundCacheContinuation = nil
             return
         }
-        // applySavedLayout's guards rejected the call. Clear the flag
-        // so saveSectionOrder can persist the current cache state
-        // (handles user manual moves via Layout Bar that would
-        // otherwise never be recorded).
-        isRestoringItemOrder = false
-        isRestoringItemOrderTimestamp = nil
 
         await uncheckedCacheItems(items: items, controlItems: controlItems, displayID: displayID)
 
@@ -5160,6 +5148,74 @@ extension MenuBarItemManager {
         case savedOrder
     }
 
+    /// Arms in-memory profile state and the in-flight gate. No-op for
+    /// .savedOrder so the saved-layout path skips profile-specific
+    /// arming. Centralises the field set so adding a profile-scoped
+    /// field touches one place.
+    ///
+    /// Disk persistence is deferred to persistProfileStateOnSuccess,
+    /// which runs only after the bulk apply reaches a success exit
+    /// (Phase 7 finished, an early-return for "already in target", or
+    /// Phase 8 with Task.isCancelled false). If a crash, SIGKILL, or
+    /// mid-apply cancellation aborts before that point, disk reflects
+    /// the previous profile rather than an unexecuted intent.
+    private func armProfileState(
+        source: ApplySource,
+        pinnedHidden: Set<String>,
+        pinnedAlwaysHidden: Set<String>,
+        sectionOrder: [String: [String]],
+        itemSectionMap: [String: String],
+        itemOrder: [String: [String]]
+    ) {
+        guard case .profile = source else { return }
+        pinnedHiddenBundleIDs = pinnedHidden
+        pinnedAlwaysHiddenBundleIDs = pinnedAlwaysHidden
+        savedSectionOrder = sectionOrder
+
+        profileResortTask?.cancel()
+        profileResortTask = nil
+        isApplyingProfileLayout = true
+        activeProfileLayout = (
+            pinnedHidden: pinnedHidden,
+            pinnedAlwaysHidden: pinnedAlwaysHidden,
+            sectionOrder: sectionOrder,
+            itemSectionMap: itemSectionMap,
+            itemOrder: itemOrder
+        )
+        activeProfileItemIdentifiers = Set(itemOrder.values.flatMap(\.self))
+    }
+
+    /// Persists the profile's pinning sets and saved section order to
+    /// disk. Called from each applyProfileLayout success exit so the
+    /// on-disk intent only commits once the bar reflects it. No-op for
+    /// .savedOrder (that path doesn't overwrite either store).
+    private func persistProfileStateOnSuccess(source: ApplySource) {
+        guard case .profile = source else { return }
+        persistPinnedBundleIDs()
+        persistSavedSectionOrder()
+    }
+
+    /// Refreshes profileSortedItemIdentifiers from the supplied item
+    /// set. Called from each apply early-return so late-arrival re-sort
+    /// doesn't keep re-triggering for items already evaluated. No-op
+    /// for .savedOrder (no active profile to track).
+    private func updateProfileSortedSnapshot(source: ApplySource, items: [MenuBarItem]) {
+        guard case .profile = source else { return }
+        profileSortedItemIdentifiers = Set(
+            items
+                .filter { !$0.isControlItem }
+                .map(\.uniqueIdentifier)
+        )
+    }
+
+    /// Profile-only exit cleanup: refresh the sorted snapshot and clear
+    /// the in-flight profile flag. No-op for .savedOrder.
+    private func clearProfileState(source: ApplySource, items: [MenuBarItem]) {
+        updateProfileSortedSnapshot(source: source, items: items)
+        guard case .profile = source else { return }
+        isApplyingProfileLayout = false
+    }
+
     func applyProfileLayout(
         pinnedHidden: Set<String>,
         pinnedAlwaysHidden: Set<String>,
@@ -5177,6 +5233,11 @@ extension MenuBarItemManager {
         // inside the window.
         await waitForStartupSettlingToEnd()
 
+        // Bail before arming any profile state if cancellation arrived
+        // during the settling wait (a newer apply has replaced us via
+        // applyProfile's layoutTask?.cancel()).
+        if Task.isCancelled { return }
+
         // MARK: Phase 1: persist state and arm in-flight flags
         // Profile-only: overwrite the persisted layout state with the
         // profile spec and arm activeProfileLayout / late-arrival
@@ -5184,26 +5245,14 @@ extension MenuBarItemManager {
         // unchanged (it IS the source) and skips activeProfileLayout
         // entirely; the relocateNewLeftmostItems path handles
         // late-arrivals for non-profile restores.
-        if case .profile = source {
-            pinnedHiddenBundleIDs = pinnedHidden
-            pinnedAlwaysHiddenBundleIDs = pinnedAlwaysHidden
-            savedSectionOrder = sectionOrder
-            persistPinnedBundleIDs()
-            persistSavedSectionOrder()
-
-            // Cache profile layout for late-arriving icon re-sort.
-            profileResortTask?.cancel()
-            profileResortTask = nil
-            isApplyingProfileLayout = true
-            activeProfileLayout = (
-                pinnedHidden: pinnedHidden,
-                pinnedAlwaysHidden: pinnedAlwaysHidden,
-                sectionOrder: sectionOrder,
-                itemSectionMap: itemSectionMap,
-                itemOrder: itemOrder
-            )
-            activeProfileItemIdentifiers = Set(itemOrder.values.flatMap(\.self))
-        }
+        armProfileState(
+            source: source,
+            pinnedHidden: pinnedHidden,
+            pinnedAlwaysHidden: pinnedAlwaysHidden,
+            sectionOrder: sectionOrder,
+            itemSectionMap: itemSectionMap,
+            itemOrder: itemOrder
+        )
 
         // Prevent the cache cycle from saving intermediate positions.
         // Shared across both sources: the apply moves items in flight
@@ -5517,20 +5566,6 @@ extension MenuBarItemManager {
         MouseHelpers.hideCursor(watchdogTimeout: .seconds(30))
         defer { MouseHelpers.showCursor() }
 
-        // Helper: update profileSortedItemIdentifiers so re-sort detection
-        // doesn't keep re-triggering for items already evaluated.
-        // The snapshot only exists to support the active-profile late-
-        // arrival path; the savedOrder source has no active profile,
-        // so the helper is a no-op there.
-        func updateProfileSortedSnapshot() {
-            guard case .profile = source else { return }
-            profileSortedItemIdentifiers = Set(
-                items
-                    .filter { !$0.isControlItem }
-                    .map(\.uniqueIdentifier)
-            )
-        }
-
         if isNotchedDisplay {
             // MARK: Phase 7a: full-sort execution (notched)
             let fullSequence = LayoutSolver.planFullSortSequence(
@@ -5542,7 +5577,8 @@ extension MenuBarItemManager {
             )
             if fullSequence.isEmpty {
                 MenuBarItemManager.diagLog.info("Profile layout (full sort): current order matches desired, skipping")
-                updateProfileSortedSnapshot()
+                updateProfileSortedSnapshot(source: source, items: items)
+                persistProfileStateOnSuccess(source: source)
                 return
             }
 
@@ -5715,7 +5751,7 @@ extension MenuBarItemManager {
                         nil
                     }
 
-                    if let dest {
+                    if let dest, !Task.isCancelled {
                         MenuBarItemManager.diagLog.debug("Profile layout: moving AH_ctrl → \(dest.logString)")
                         do {
                             try await move(item: ahItem, to: dest, skipInputPause: true)
@@ -5794,6 +5830,7 @@ extension MenuBarItemManager {
                         let orderedCrossToAH = ahProfileOrder.reversed().filter { crossToAH.contains($0) }
                             + crossToAH.subtracting(ahProfileOrder).sorted()
                         for uid in orderedCrossToAH {
+                            guard !Task.isCancelled else { break }
                             guard
                                 let item = freshItems.first(where: { $0.uniqueIdentifier == uid && isProfileItem($0) })
                             else { continue }
@@ -5818,6 +5855,7 @@ extension MenuBarItemManager {
                         let orderedCrossToHidden = hiddenProfileOrder.filter { crossToHidden.contains($0) }
                             + crossToHidden.subtracting(hiddenProfileOrder).sorted()
                         for uid in orderedCrossToHidden {
+                            guard !Task.isCancelled else { break }
                             guard
                                 let item = freshItems.first(where: { $0.uniqueIdentifier == uid && isProfileItem($0) })
                             else { continue }
@@ -5894,7 +5932,8 @@ extension MenuBarItemManager {
                 } else {
                     MenuBarItemManager.diagLog.info("Profile layout: all items already in correct positions")
                 }
-                updateProfileSortedSnapshot()
+                updateProfileSortedSnapshot(source: source, items: items)
+                persistProfileStateOnSuccess(source: source)
                 await cacheItemsRegardless(skipRecentMoveCheck: true)
                 return
             }
@@ -5964,10 +6003,15 @@ extension MenuBarItemManager {
         // isApplyingProfileLayout flag are only meaningful when a
         // profile is active; the savedOrder source leaves them alone.
         items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
-        if case .profile = source {
-            updateProfileSortedSnapshot()
-            isApplyingProfileLayout = false
+        // Commit profile state to disk only if we weren't cancelled
+        // mid-Phase-7. The in-loop cancellation guards break out of the
+        // move loop but execution still flows into Phase 8; without
+        // this check we'd persist a profile that was only partially
+        // applied to the bar.
+        if !Task.isCancelled {
+            persistProfileStateOnSuccess(source: source)
         }
+        clearProfileState(source: source, items: items)
 
         await cacheItemsRegardless(skipRecentMoveCheck: true)
 
@@ -5996,25 +6040,64 @@ extension MenuBarItemManager {
         items: [MenuBarItem],
         previousWindowIDs: [CGWindowID]
     ) async -> Bool {
-        guard !savedSectionOrder.isEmpty else { return false }
-        guard !suppressNextNewLeftmostItemRelocation else { return false }
+        // Each guard logs a distinct reason so a "Thaw stopped
+        // restoring my layout" bug report can be diagnosed from the
+        // first set of logs. Order is significant: the cheap state
+        // checks run first; window-ID/tag inspection runs last so we
+        // don't compute sets when an earlier guard would reject anyway.
+        guard !savedSectionOrder.isEmpty else {
+            MenuBarItemManager.diagLog.debug("applySavedLayout: skipping, savedSectionOrder is empty")
+            return false
+        }
+        guard !suppressNextNewLeftmostItemRelocation else {
+            MenuBarItemManager.diagLog.debug("applySavedLayout: skipping, suppressNextNewLeftmostItemRelocation armed")
+            return false
+        }
         // applyProfileLayout owns the in-flight layout while it's
         // running; a concurrent savedOrder apply would fight it.
-        guard !isApplyingProfileLayout else { return false }
+        guard !isApplyingProfileLayout else {
+            MenuBarItemManager.diagLog.debug("applySavedLayout: skipping, profile apply in flight")
+            return false
+        }
         // 5 s cooldown after a recent move (same value the legacy
         // restoreItemsToSavedSections used) prevents cascading
         // re-applies when many apps relaunch in quick succession.
-        guard !lastMoveOperationOccurred(within: .seconds(5)) else { return false }
+        guard !lastMoveOperationOccurred(within: .seconds(5)) else {
+            MenuBarItemManager.diagLog.debug("applySavedLayout: skipping, within 5s move cooldown")
+            return false
+        }
 
-        // App-relaunch detection: trigger only when window IDs have
-        // actually changed. The cache cycle calls this on every tick;
-        // without the change gate we would run a full bulk apply
+        // App-relaunch detection. The cache cycle calls this on every
+        // tick; without a change gate we would run a full bulk apply
         // every ~5 s indefinitely even when nothing needs moving.
+        //
+        // The four windowID-set transitions to keep in mind:
+        // 1. Pure addition (new app launched, no relaunch): previous
+        //    is a subset of current, windowIDsChanged stays false.
+        //    Late-arrival relocation owns this case via
+        //    relocateNewLeftmostItems, not the saved-order path.
+        // 2. App quit only (windowID disappears, no new one): previous
+        //    is NOT a subset of current, windowIDsChanged is true and
+        //    a bulk apply runs. Remaining items resettle into their
+        //    saved positions, which is the desired behaviour.
+        // 3. App relaunch (old windowID disappears, new one appears):
+        //    same as 2 from this gate's perspective; the bulk apply
+        //    consumes the new windowID and re-files it via the saved
+        //    section order.
+        // 4. WindowID recycling (macOS reassigns the same WID to a
+        //    new item): previous is still a subset of current, this
+        //    gate does NOT fire. Rare in practice; uncovered.
+        //
+        // The previous-set-empty escape hatch handles first-cycle
+        // startup, where there's no prior frame to diff against.
         let currentWindowIDSet = Set(items.map(\.windowID))
         let previousWindowIDSet = Set(previousWindowIDs)
         let windowIDsChanged = !previousWindowIDSet.isEmpty &&
             !previousWindowIDSet.isSubset(of: currentWindowIDSet)
-        guard windowIDsChanged else { return false }
+        guard windowIDsChanged else {
+            MenuBarItemManager.diagLog.debug("applySavedLayout: skipping, no windowID change since previous cycle")
+            return false
+        }
 
         // Saved-tags intersection: skip if none of the saved items are
         // currently present. Matches the legacy restore's guard;
@@ -6023,7 +6106,7 @@ extension MenuBarItemManager {
         let currentTags = Set(items.map { "\($0.tag.namespace):\($0.tag.title)" })
         let savedTags = Set(savedSectionOrder.values.flatMap(\.self))
         guard !savedTags.isDisjoint(with: currentTags) else {
-            MenuBarItemManager.diagLog.debug("applySavedLayout: no saved items currently present, skipping")
+            MenuBarItemManager.diagLog.debug("applySavedLayout: skipping, no saved items currently present")
             return false
         }
 
