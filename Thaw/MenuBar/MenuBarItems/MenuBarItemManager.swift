@@ -1984,9 +1984,10 @@ extension MenuBarItemManager {
         // refresh runs cacheItemsRegardless → applySavedLayout →
         // dispatch → schedule another refresh, and because consecutive
         // getMenuBarItems calls can return slightly different windowID
-        // sets (transient Apple Control Center widgets, Phase 2 chevron
-        // expand/collapse churn), windowIDsChanged fires on every
-        // iteration and the bar enters an infinite no-op apply loop.
+        // sets (transient Apple Control Center widgets churn windowIDs
+        // even when the visible item count is stable),
+        // windowIDsChanged fires on every iteration and the bar enters
+        // an infinite no-op apply loop.
         if !skipSavedLayoutApply {
             let didApplySavedLayout = await applySavedLayout(
                 items: items,
@@ -5169,8 +5170,8 @@ extension MenuBarItemManager {
     ///
     /// Disk persistence is deferred to persistProfileStateOnSuccess,
     /// which runs only after the bulk apply reaches a success exit
-    /// (Phase 7 finished, an early-return for "already in target", or
-    /// Phase 8 with Task.isCancelled false). If a crash, SIGKILL, or
+    /// (Phase 6 finished, an early-return for "already in target", or
+    /// Phase 7 with Task.isCancelled false). If a crash, SIGKILL, or
     /// mid-apply cancellation aborts before that point, disk reflects
     /// the previous profile rather than an unexecuted intent.
     private func armProfileState(
@@ -5235,8 +5236,8 @@ extension MenuBarItemManager {
     /// relocate paths and persists savedSectionOrder if appropriate),
     /// then imageCache cleanup and an observer notification.
     ///
-    /// applyProfileLayout's exit points (Phase 8 normal exit plus the
-    /// Phase 7 early-returns) cannot inline-await cacheItemsRegardless
+    /// applyProfileLayout's exit points (Phase 7 normal exit plus the
+    /// Phase 6 early-returns) cannot inline-await cacheItemsRegardless
     /// because they're inside a body that the outer cacheItemsRegardless
     /// is awaiting via applySavedLayout. The outer call holds its
     /// serial cacheGate across that await, so an inline recursive call
@@ -5327,20 +5328,7 @@ extension MenuBarItemManager {
             return
         }
 
-        // MARK: Phase 2: expose sections for moves
-        // Show all sections so items are accessible for moving.
-        for section in appState.menuBarManager.sections where section.name != .visible {
-            section.show()
-        }
-        defer {
-            appState.menuBarManager.iceBarPanel.close()
-            for section in appState.menuBarManager.sections {
-                section.desiredState = .hideSection
-                section.controlItem.state = .hideSection
-            }
-        }
-
-        // MARK: Phase 3: discover items, classify sections, build sequences
+        // MARK: Phase 2: discover items, classify sections, build sequences
         let hiddenWID: CGWindowID? = appState.menuBarManager
             .controlItem(withName: .hidden)?.window
             .flatMap { CGWindowID(exactly: $0.windowNumber) }
@@ -5458,7 +5446,7 @@ extension MenuBarItemManager {
         let currentSet = Set(currentFlat)
         var desiredFiltered = desiredFlat.filter { currentSet.contains($0) }
 
-        // MARK: Phase 4: place unmanaged items via planUnmanagedPlacement
+        // MARK: Phase 3: place unmanaged items via planUnmanagedPlacement
         // Items present in the menu bar but not in the profile are
         // placed via planUnmanagedPlacement. The planner consults the
         // user's saved layout history first (so a previously-seen app
@@ -5530,7 +5518,7 @@ extension MenuBarItemManager {
             )
         }
 
-        // MARK: Phase 5: notch overflow rebalance
+        // MARK: Phase 4: notch overflow rebalance
         // On notched displays, calculate available visible space and overflow
         // items that won't fit into the hidden section. The Thaw visible
         // control icon stays as the last visible item (nearest the hidden divider).
@@ -5640,7 +5628,7 @@ extension MenuBarItemManager {
             }
         }
 
-        // MARK: Phase 6: choose execution strategy (full-sort vs LCS)
+        // MARK: Phase 5: choose execution strategy (full-sort vs LCS)
         // On notched displays, use a full-section rearrange instead of
         // LCS-based partial moves. LCS leaves "stable" anchors in place,
         // but on notched screens those anchors may sit in or near the
@@ -5656,7 +5644,7 @@ extension MenuBarItemManager {
         defer { MouseHelpers.showCursor() }
 
         if isNotchedDisplay {
-            // MARK: Phase 7a: full-sort execution (notched)
+            // MARK: Phase 6a: full-sort execution (notched)
             let fullSequence = LayoutSolver.planFullSortSequence(
                 currentFlat: currentFlat,
                 desiredFiltered: desiredFiltered,
@@ -5739,7 +5727,7 @@ extension MenuBarItemManager {
             // Give macOS time to process the control item expansion.
             try? await Task.sleep(for: .milliseconds(200))
         } else {
-            // MARK: Phase 7b: LCS execution (non-notched)
+            // MARK: Phase 6b: LCS execution (non-notched)
             // ── Sub-phase 1: Move control items to optimal boundary positions ──
             //
             // Moving a control item reassigns all items on either side to
@@ -5866,7 +5854,8 @@ extension MenuBarItemManager {
                 // tells us which items still need to cross the boundary,
                 // and dragging them explicitly to .leftOfItem(AH_ctrl)
                 // or .rightOfItem(AH_ctrl) puts them on the correct
-                // side. Phase 2's LCS handles within-section ordering.
+                // side. The LCS within-section reorder pass below
+                // handles intra-section ordering.
                 let freshItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
                 var freshItemsCopy = freshItems
                 if let freshControl = ControlItemPair(
@@ -6078,7 +6067,7 @@ extension MenuBarItemManager {
             MenuBarItemManager.diagLog.info("Profile layout: completed with \(movedCount) move(s)")
         }
 
-        // MARK: Phase 8: finalize (cursor, snapshot, cache, UI refresh)
+        // MARK: Phase 7: finalize (cursor, snapshot, cache, UI refresh)
         // Restore cursor to its original position.
         let screen = NSScreen.screens.first(where: { $0.frame.contains(savedCursorPosition) })
             ?? NSScreen.main
@@ -6094,8 +6083,8 @@ extension MenuBarItemManager {
         // profile is active; the savedOrder source leaves them alone.
         items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
         // Commit profile state to disk only if we weren't cancelled
-        // mid-Phase-7. The in-loop cancellation guards break out of the
-        // move loop but execution still flows into Phase 8; without
+        // mid-Phase-6. The in-loop cancellation guards break out of the
+        // move loop but execution still flows into Phase 7; without
         // this check we'd persist a profile that was only partially
         // applied to the bar.
         if !Task.isCancelled {

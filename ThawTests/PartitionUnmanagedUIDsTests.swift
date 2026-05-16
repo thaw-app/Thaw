@@ -10,7 +10,7 @@
 import XCTest
 
 /// Characterization tests for LayoutSolver.partitionUnmanagedUIDs, the
-/// pure filter Phase 4 of applyProfileLayout uses to decide which UIDs
+/// pure filter Phase 3 of applyProfileLayout uses to decide which UIDs
 /// flow into planUnmanagedPlacement.
 ///
 /// Pins down two invariants the field-reported "Thaw icon keeps moving"
