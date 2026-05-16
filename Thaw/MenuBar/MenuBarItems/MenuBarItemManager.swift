@@ -5425,11 +5425,22 @@ extension MenuBarItemManager {
         }
         desiredFlat = desiredFlatWithControls
 
-        // Build current flat sequence with control items at section boundaries.
+        // Build current flat sequence with control items at section
+        // boundaries. The hidden and always-hidden control items are
+        // filtered out of sectionItems even when findSection classifies
+        // them into a section, because they are appended explicitly
+        // after their respective sections below. Without this filter
+        // each divider would appear twice in currentFlat (once via the
+        // section iteration, once via the explicit append), causing
+        // planFullSortSequence's early-return check to fail against a
+        // single-divider desiredFiltered and the notched full-sort
+        // path to regenerate the entire sequence every cycle.
         var currentFlat = [String]()
         for sectionName in [MenuBarSection.Name.visible, .hidden, .alwaysHidden] {
             let sectionItems = items.filter { item in
                 guard isProfileItem(item) else { return false }
+                let uid = item.uniqueIdentifier
+                guard uid != hiddenCtrlUID && uid != ahCtrlUID else { return false }
                 return sectionByWindowID[item.windowID] == sectionName
             }
             MenuBarItemManager.diagLog.debug(
