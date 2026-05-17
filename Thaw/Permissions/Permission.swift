@@ -97,22 +97,24 @@ class Permission: ObservableObject, Identifiable {
 
     /// Asynchronously waits for the app to be granted this permission.
     func waitForPermission() async {
+        hasPermissionCancellable?.cancel()
         configureCancellables()
         guard !hasPermission else {
             return
         }
-        return await withCheckedContinuation { continuation in
+        await withCheckedContinuation { continuation in
             hasPermissionCancellable = $hasPermission.sink { [weak self] hasPermission in
                 guard let self else {
                     continuation.resume()
                     return
                 }
                 if hasPermission {
-                    hasPermissionCancellable?.cancel()
                     continuation.resume()
                 }
             }
         }
+        hasPermissionCancellable?.cancel()
+        hasPermissionCancellable = nil
     }
 
     /// Stops running the permission check.
