@@ -104,7 +104,7 @@ class Permission: ObservableObject, Identifiable {
         }
         await withCheckedContinuation { continuation in
             hasPermissionCancellable = $hasPermission.sink { [weak self] hasPermission in
-                guard let self else {
+                guard self != nil else {
                     continuation.resume()
                     return
                 }
