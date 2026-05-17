@@ -436,7 +436,43 @@ final class MenuBarItemManager: ObservableObject {
     /// persists it. Skips the write when the order has not changed.
     /// For items currently in the cache, uses their current section.
     /// For items from apps that are closed (not in cache), preserves their saved section.
-    private func saveSectionOrder(from cache: ItemCache) {
+    /// Computes the per-section item order dict from the given cache
+    /// using the same filter and closed-app preservation logic that
+    /// saveSectionOrder applies before persisting. Returns the dict
+    /// without writing it anywhere.
+    ///
+    /// Exposed (rather than inlined inside saveSectionOrder) so the
+    /// profile-capture path in ProfileManager.captureCurrentLayout can
+    /// build its itemOrder field through the same pipeline. Without a
+    /// shared helper, itemOrder was a raw itemCache snapshot that
+    /// drifted from savedSectionOrder: it excluded closed-app entries
+    /// that savedSectionOrder preserves through planSectionOrder's
+    /// merge, and it included transient Control Center items
+    /// (Live Activities, iPhone Mirroring) that savedSectionOrder
+    /// filters out. On profile re-apply that drift caused
+    /// closed-but-saved apps (e.g. jetbrains while the app is quit) to
+    /// be treated as unmanaged and routed through planUnmanagedPlacement
+    /// instead of landing at their saved section.
+    ///
+    /// Filter and merge:
+    ///   - control items are excluded except the visibleControlItem
+    ///     (Thaw chevron); its position within the visible section is
+    ///     persisted so the LCS planner can detect when macOS placed
+    ///     an app item on the wrong side of the chevron;
+    ///   - non-control items without a resolved sourcePID are
+    ///     excluded (their UIDs are unstable and would churn entries
+    ///     every cycle);
+    ///   - transient Control Center items (Live Activities, iPhone
+    ///     Mirroring, generic Apple Item-0 placeholders) are excluded
+    ///     so their ephemeral identifiers never enter the dict;
+    ///   - items whose true section is recorded in
+    ///     pendingReturnDestinations / pendingRelocations are treated
+    ///     as closed-apps (preserves their pre-temporarilyShow section
+    ///     instead of capturing the live visible position);
+    ///   - LayoutSolver.planSectionOrder merges currentInSection with
+    ///     closed-app entries from the previous savedSectionOrder so an
+    ///     app's slot survives a quit / restart cycle.
+    func computeSectionOrder(from cache: ItemCache) -> [String: [String]] {
         var newOrder = [String: [String]]()
 
         let pendingRehideTagIDs = LayoutSolver.pendingRehideTagIdentifiers(
@@ -511,6 +547,17 @@ final class MenuBarItemManager: ObservableObject {
             }
         }
 
+        return newOrder
+    }
+
+    /// Extracts the current per-section item order from the given cache
+    /// and persists it to savedSectionOrder. Skips the write when the
+    /// order has not changed. Delegates the dict construction to
+    /// computeSectionOrder so the "what does the curated section order
+    /// look like?" question has a single answer used by both periodic
+    /// save and profile capture.
+    private func saveSectionOrder(from cache: ItemCache) {
+        let newOrder = computeSectionOrder(from: cache)
         guard newOrder != savedSectionOrder else { return }
         savedSectionOrder = newOrder
         persistSavedSectionOrder()
