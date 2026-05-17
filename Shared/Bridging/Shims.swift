@@ -167,6 +167,24 @@ func getProcessForPID(
     _ psn: inout ProcessSerialNumber
 ) -> OSStatus
 
+// MARK: - Accessibility (Private)
+
+/// Returns the CGWindowID associated with the given AXUIElement.
+///
+/// Apple's public AX API does not expose the underlying CGWindowID
+/// for an element. The private _AXUIElementGetWindow SPI returns it
+/// directly. This is used to pair Control-Center-hosted proxy AX
+/// nodes back to their real status-item CGWindowID without relying
+/// on spatial center-point matching, which otherwise fails when
+/// macOS hosts a third-party widget through Control Center on
+/// macOS 26 (the proxy node is marked isEnabled=false and skipped
+/// by the spatial pass).
+@_silgen_name("_AXUIElementGetWindow")
+func _AXUIElementGetWindow(
+    _ element: AXUIElement,
+    _ outWindowID: UnsafeMutablePointer<CGWindowID>
+) -> AXError
+
 // MARK: - SkyLight (Private)
 
 /// Returns a safe error message from dlerror(), handling NULL returns.

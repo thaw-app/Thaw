@@ -56,4 +56,16 @@ enum AXHelpers {
             return result == .success ? pid : nil
         }
     }
+
+    /// Returns the CGWindowID associated with the given AX element via
+    /// the private _AXUIElementGetWindow SPI. Used to bridge from an
+    /// AX proxy node (e.g. a Control-Center-hosted status item) back to
+    /// the underlying CGWindow without relying on bounds proximity.
+    static func windowID(for element: UIElement) -> CGWindowID? {
+        queue.sync {
+            var wid: CGWindowID = 0
+            let result = _AXUIElementGetWindow(element.element, &wid)
+            return result == .success ? wid : nil
+        }
+    }
 }

@@ -465,6 +465,63 @@ final class SourcePIDCache {
             }
         }
 
+        // AX-windowID fallback for Control-Center-hosted proxy nodes.
+        //
+        // Runs last so the marker-pair pass above (which can attribute
+        // to the real owning app's PID via the marker's bundle-ID
+        // title) gets first crack at unresolved windows. Anything
+        // marker-pair could not resolve falls through to here.
+        //
+        // The primary spatial loop earlier in this method skips AX
+        // children with isEnabled=false. On macOS 26, Control Center
+        // hosts proxy AX nodes for third-party status items whose
+        // owning app does not publish its own AXExtrasMenuBar (Little
+        // Snitch's agent is the observed case: hasExtrasBar=false on
+        // the agent process, Control Center publishes a disabled
+        // proxy at the icon's exact bounds). When the marker window
+        // is not published by macOS (observed taking 50 minutes to
+        // appear in one session, never appearing in another), the
+        // marker-pair pass cannot bridge the icon to its owning app
+        // and the namespace fallback in the orchestrator attributes
+        // it to com.apple.controlcenter.
+        //
+        // For each disabled AX child whose CGWindowID via the private
+        // _AXUIElementGetWindow SPI matches an unresolved CG window,
+        // pair the windowID with the proxy's host PID (Control
+        // Center's, since the AX context is hosted by Control Center).
+        // This is the same PID the namespace fallback would derive
+        // anyway, but having it stored as a concrete resolution
+        // rather than as a nil-PID limbo lets downstream consumers
+        // treat the item like other Control Center widgets without
+        // forcing them through the "unresolved" code path.
+        if !unresolvedWindows.isEmpty {
+            for app in apps {
+                if unresolvedWindows.isEmpty {
+                    break
+                }
+                autoreleasepool {
+                    guard let bar = app.getOrCreateExtrasMenuBar() else { return }
+                    let children = AXHelpers.children(for: bar)
+                    for child in children {
+                        guard !AXHelpers.isEnabled(child),
+                              let proxyWID = AXHelpers.windowID(for: child)
+                        else {
+                            continue
+                        }
+                        guard unresolvedWindows.contains(proxyWID) else {
+                            continue
+                        }
+                        let pid = app.processIdentifier
+                        SourcePIDCache.diagLog.debug(
+                            "SourcePIDCache AX-windowID fallback: windowID=\(proxyWID) → PID \(pid) via disabled AX proxy in app=\(app.bundleIdentifier ?? "pid=\(pid)")"
+                        )
+                        state.withLock { $0.pids[proxyWID] = pid }
+                        unresolvedWindows.remove(proxyWID)
+                    }
+                }
+            }
+        }
+
         let finalPID = state.withLock { $0.pids[window.windowID] }
         SourcePIDCache.diagLog.debug("SourcePIDCache.pid: batch resolution finished. Found \(totalMatchesFound) matches. Requested windowID \(window.windowID) -> PID \(finalPID.map { "\($0)" } ?? "nil") (checked \(appsChecked) apps, \(appsWithBar) with extras bar, \(totalChildrenChecked) children)")
 
