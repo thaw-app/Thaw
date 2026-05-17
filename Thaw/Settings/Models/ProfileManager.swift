@@ -138,7 +138,7 @@ final class ProfileManager: ObservableObject {
             } catch {
                 diagLog.debug("No active Focus Filter on startup: \(error)")
             }
-            // No Focus Filter — fall back to display-based profile.
+            // No Focus Filter; fall back to display-based profile.
             // The spacing apply runs unconditionally; its no-op guard
             // skips the relaunch when on-disk values already match the
             // active profile's offset, but if the user is booting on a
@@ -855,7 +855,7 @@ final class ProfileManager: ObservableObject {
     private func handleFocusFilterDeactivated() async {
         guard focusFilterActive else { return }
         focusFilterActive = false
-        diagLog.info("Focus Filter deactivated — reverting to display profile")
+        diagLog.info("Focus Filter deactivated; reverting to display profile")
         if let uuid = Bridging.getActiveMenuBarDisplayUUID() {
             await applyProfileForDisplay(uuid: uuid)
         }

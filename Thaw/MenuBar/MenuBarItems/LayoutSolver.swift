@@ -206,7 +206,7 @@ enum LayoutSolver {
 
         // Path 2: non-hideable system item (camera / mic / screen recording).
         // Excludes transient Control Center items (Live Activities,
-        // iPhone Mirroring) — those live deeply off-screen and cannot be
+        // iPhone Mirroring); those live deeply off-screen and cannot be
         // dragged successfully, so retrying every cache cycle would
         // burn the eventSemaphore for ~4 s per attempt.
         if let systemItem = leftmostItems.first(where: { !$0.canBeHidden && !$0.isTransientControlCenterItem }) {
@@ -420,7 +420,7 @@ enum LayoutSolver {
     /// for each item that must move scans forward for a stable anchor in
     /// the same section, falls back to a backward scan, falls back to a
     /// section boundary. "Stable anchors" are LCS items plus items
-    /// already planned by the sequence — so the destination of move N+1
+    /// already planned by the sequence; so the destination of move N+1
     /// can reference an anchor that move N just established.
     ///
     /// Pure over its inputs. Returns destinations as anchor UIDs so the
@@ -731,7 +731,7 @@ enum LayoutSolver {
                 continue
             }
             // Present somewhere in the cache (other section): drop the
-            // saved entry — the item moved, do not re-preserve it here.
+            // saved entry; the item moved, do not re-preserve it here.
             if allCurrentIdentifiers.contains(savedUID) {
                 continue
             }
