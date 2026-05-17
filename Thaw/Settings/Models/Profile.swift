@@ -101,6 +101,9 @@ struct AdvancedSettingsSnapshot: Codable {
     var iconRefreshInterval: TimeInterval
     var enableDiagnosticLogging: Bool
     var useDoubleClickToShowAlwaysHiddenSection: Bool
+    var useOptionClickToShowAlwaysHiddenSection: Bool
+    var useLCSSortingOnNotchedDisplays: Bool
+    var enableMenuBarItemOverflow: Bool
 
     @MainActor
     static func capture(from settings: AdvancedSettings) -> AdvancedSettingsSnapshot {
@@ -116,7 +119,10 @@ struct AdvancedSettingsSnapshot: Codable {
             showMenuBarTooltips: settings.showMenuBarTooltips,
             iconRefreshInterval: settings.iconRefreshInterval,
             enableDiagnosticLogging: settings.enableDiagnosticLogging,
-            useDoubleClickToShowAlwaysHiddenSection: settings.useDoubleClickToShowAlwaysHiddenSection
+            useDoubleClickToShowAlwaysHiddenSection: settings.useDoubleClickToShowAlwaysHiddenSection,
+            useOptionClickToShowAlwaysHiddenSection: settings.useOptionClickToShowAlwaysHiddenSection,
+            useLCSSortingOnNotchedDisplays: settings.useLCSSortingOnNotchedDisplays,
+            enableMenuBarItemOverflow: settings.enableMenuBarItemOverflow
         )
     }
 
@@ -136,6 +142,9 @@ struct AdvancedSettingsSnapshot: Codable {
         settings.iconRefreshInterval = iconRefreshInterval
         settings.enableDiagnosticLogging = enableDiagnosticLogging
         settings.useDoubleClickToShowAlwaysHiddenSection = useDoubleClickToShowAlwaysHiddenSection
+        settings.useOptionClickToShowAlwaysHiddenSection = useOptionClickToShowAlwaysHiddenSection
+        settings.useLCSSortingOnNotchedDisplays = useLCSSortingOnNotchedDisplays
+        settings.enableMenuBarItemOverflow = enableMenuBarItemOverflow
     }
 
     enum CodingKeys: String, CodingKey {
@@ -151,6 +160,9 @@ struct AdvancedSettingsSnapshot: Codable {
         case iconRefreshInterval
         case enableDiagnosticLogging
         case useDoubleClickToShowAlwaysHiddenSection
+        case useOptionClickToShowAlwaysHiddenSection
+        case useLCSSortingOnNotchedDisplays
+        case enableMenuBarItemOverflow
     }
 
     init(
@@ -165,7 +177,10 @@ struct AdvancedSettingsSnapshot: Codable {
         showMenuBarTooltips: Bool,
         iconRefreshInterval: TimeInterval,
         enableDiagnosticLogging: Bool,
-        useDoubleClickToShowAlwaysHiddenSection: Bool
+        useDoubleClickToShowAlwaysHiddenSection: Bool,
+        useOptionClickToShowAlwaysHiddenSection: Bool,
+        useLCSSortingOnNotchedDisplays: Bool,
+        enableMenuBarItemOverflow: Bool
     ) {
         self.enableAlwaysHiddenSection = enableAlwaysHiddenSection
         self.showAllSectionsOnUserDrag = showAllSectionsOnUserDrag
@@ -179,6 +194,9 @@ struct AdvancedSettingsSnapshot: Codable {
         self.iconRefreshInterval = iconRefreshInterval
         self.enableDiagnosticLogging = enableDiagnosticLogging
         self.useDoubleClickToShowAlwaysHiddenSection = useDoubleClickToShowAlwaysHiddenSection
+        self.useOptionClickToShowAlwaysHiddenSection = useOptionClickToShowAlwaysHiddenSection
+        self.useLCSSortingOnNotchedDisplays = useLCSSortingOnNotchedDisplays
+        self.enableMenuBarItemOverflow = enableMenuBarItemOverflow
     }
 
     init(from decoder: Decoder) throws {
@@ -219,6 +237,15 @@ struct AdvancedSettingsSnapshot: Codable {
         useDoubleClickToShowAlwaysHiddenSection = try container.decodeIfPresent(
             Bool.self, forKey: .useDoubleClickToShowAlwaysHiddenSection
         ) ?? Defaults.DefaultValue.useDoubleClickToShowAlwaysHiddenSection
+        useOptionClickToShowAlwaysHiddenSection = try container.decodeIfPresent(
+            Bool.self, forKey: .useOptionClickToShowAlwaysHiddenSection
+        ) ?? Defaults.DefaultValue.useOptionClickToShowAlwaysHiddenSection
+        useLCSSortingOnNotchedDisplays = try container.decodeIfPresent(
+            Bool.self, forKey: .useLCSSortingOnNotchedDisplays
+        ) ?? Defaults.DefaultValue.useLCSSortingOnNotchedDisplays
+        enableMenuBarItemOverflow = try container.decodeIfPresent(
+            Bool.self, forKey: .enableMenuBarItemOverflow
+        ) ?? Defaults.DefaultValue.enableMenuBarItemOverflow
     }
 }
 
@@ -396,7 +423,10 @@ struct Profile: Codable, Identifiable {
             showMenuBarTooltips: Defaults.DefaultValue.showMenuBarTooltips,
             iconRefreshInterval: Defaults.DefaultValue.iconRefreshInterval,
             enableDiagnosticLogging: Defaults.DefaultValue.enableDiagnosticLogging,
-            useDoubleClickToShowAlwaysHiddenSection: Defaults.DefaultValue.useDoubleClickToShowAlwaysHiddenSection
+            useDoubleClickToShowAlwaysHiddenSection: Defaults.DefaultValue.useDoubleClickToShowAlwaysHiddenSection,
+            useOptionClickToShowAlwaysHiddenSection: Defaults.DefaultValue.useOptionClickToShowAlwaysHiddenSection,
+            useLCSSortingOnNotchedDisplays: Defaults.DefaultValue.useLCSSortingOnNotchedDisplays,
+            enableMenuBarItemOverflow: Defaults.DefaultValue.enableMenuBarItemOverflow
         )
 
         hotkeys = try container.decodeIfPresent(
