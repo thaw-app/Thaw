@@ -481,19 +481,21 @@ final class SourcePIDCache {
         // proxy at the icon's exact bounds). When the marker window
         // is not published by macOS (observed taking 50 minutes to
         // appear in one session, never appearing in another), the
-        // marker-pair pass cannot bridge the icon to its owning app
-        // and the namespace fallback in the orchestrator attributes
-        // it to com.apple.controlcenter.
+        // marker-pair pass cannot bridge the icon to its owning app.
         //
-        // For each disabled AX child whose CGWindowID via the private
-        // _AXUIElementGetWindow SPI matches an unresolved CG window,
-        // pair the windowID with the proxy's host PID (Control
-        // Center's, since the AX context is hosted by Control Center).
-        // This is the same PID the namespace fallback would derive
-        // anyway, but having it stored as a concrete resolution
-        // rather than as a nil-PID limbo lets downstream consumers
-        // treat the item like other Control Center widgets without
-        // forcing them through the "unresolved" code path.
+        // For each disabled AX child whose _AXUIElementGetWindow-
+        // returned CGWindowID matches an unresolved CG window, pull
+        // identifying AX attributes off the proxy and match them
+        // against running apps to recover the real owning PID. The
+        // AXIdentifier attribute on Control-Center-hosted proxies is
+        // populated with the owning app's bundle identifier
+        // (observed for Little Snitch's agent), so that's the primary
+        // signal. Title and description are tried as fallbacks
+        // (localized app name lookup). Only when none of those match
+        // a running app does the resolution fall back to the proxy's
+        // host PID (Control Center), which is the same attribution
+        // the namespace fallback would derive anyway but stored as
+        // a concrete resolution rather than nil-PID limbo.
         if !unresolvedWindows.isEmpty {
             for app in apps {
                 if unresolvedWindows.isEmpty {
@@ -511,11 +513,47 @@ final class SourcePIDCache {
                         guard unresolvedWindows.contains(proxyWID) else {
                             continue
                         }
-                        let pid = app.processIdentifier
-                        SourcePIDCache.diagLog.debug(
-                            "SourcePIDCache AX-windowID fallback: windowID=\(proxyWID) → PID \(pid) via disabled AX proxy in app=\(app.bundleIdentifier ?? "pid=\(pid)")"
+                        // Look for the real owning app by walking the
+                        // proxy's identifying AX attributes against the
+                        // running apps list. Bundle-ID match (via the
+                        // AXIdentifier attribute) wins over name match
+                        // because it's unambiguous; the title and
+                        // description fallbacks use case-insensitive
+                        // localizedName equality.
+                        let axIdentifier = AXHelpers.identifier(for: child)
+                        let axTitle = AXHelpers.title(for: child)
+                        let axDescription = AXHelpers.description(for: child)
+                        var resolvedPID: pid_t?
+                        var resolvedVia = "host"
+                        if let bundleID = axIdentifier,
+                           let match = NSRunningApplication
+                            .runningApplications(withBundleIdentifier: bundleID)
+                            .first
+                        {
+                            resolvedPID = match.processIdentifier
+                            resolvedVia = "AXIdentifier=\(bundleID)"
+                        } else if let name = axTitle?.lowercased(),
+                                  !name.isEmpty,
+                                  let match = NSWorkspace.shared.runningApplications.first(where: {
+                                      $0.localizedName?.lowercased() == name
+                                  })
+                        {
+                            resolvedPID = match.processIdentifier
+                            resolvedVia = "AXTitle=\(axTitle ?? "")"
+                        } else if let desc = axDescription?.lowercased(),
+                                  !desc.isEmpty,
+                                  let match = NSWorkspace.shared.runningApplications.first(where: {
+                                      $0.localizedName?.lowercased() == desc
+                                  })
+                        {
+                            resolvedPID = match.processIdentifier
+                            resolvedVia = "AXDescription=\(axDescription ?? "")"
+                        }
+                        let finalPID = resolvedPID ?? app.processIdentifier
+                        SourcePIDCache.diagLog.info(
+                            "SourcePIDCache AX-windowID fallback: windowID=\(proxyWID) → PID \(finalPID) via \(resolvedVia) (AXIdentifier=\(axIdentifier ?? "nil") AXTitle=\(axTitle ?? "nil") AXDescription=\(axDescription ?? "nil") host=\(app.bundleIdentifier ?? "pid=\(app.processIdentifier)"))"
                         )
-                        state.withLock { $0.pids[proxyWID] = pid }
+                        state.withLock { $0.pids[proxyWID] = finalPID }
                         unresolvedWindows.remove(proxyWID)
                     }
                 }

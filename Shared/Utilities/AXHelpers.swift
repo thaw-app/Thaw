@@ -68,4 +68,26 @@ enum AXHelpers {
             return result == .success ? wid : nil
         }
     }
+
+    /// Returns the AX title string for the element, or nil if absent or
+    /// the attribute could not be read.
+    static func title(for element: UIElement) -> String? {
+        queue.sync { try? element.attribute(.title) }
+    }
+
+    /// Returns the AX identifier string for the element, or nil if
+    /// absent or the attribute could not be read. For
+    /// Control-Center-hosted status item proxies on macOS 26 this is
+    /// often the owning app's bundle identifier, which lets us recover
+    /// the real owning app even when the spatial AX pass attributes
+    /// the proxy to Control Center.
+    static func identifier(for element: UIElement) -> String? {
+        queue.sync { try? element.attribute(.identifier) }
+    }
+
+    /// Returns the AX description string for the element, or nil if
+    /// absent or the attribute could not be read.
+    static func description(for element: UIElement) -> String? {
+        queue.sync { try? element.attribute(.description) }
+    }
 }
