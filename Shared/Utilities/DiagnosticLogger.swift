@@ -155,12 +155,20 @@ final class DiagnosticLogger: @unchecked Sendable {
         // is preserved by the per-line timestamps.
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
         let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "unknown"
+        // GitCommitSHA is stamped into Info.plist when run as a
+        // build phase. Defaults to "unknown" when the phase has
+        // not been wired up, which is the only signal users need
+        // to tell whether a given binary carries the expected
+        // commit. Format is the short SHA (git rev-parse --short HEAD)
+        // with a "-dirty" suffix when the working tree was not clean
+        // at build time.
+        let sha = Bundle.main.infoDictionary?["GitCommitSHA"] as? String ?? "unknown"
         let header = """
         ========================================
         Thaw Diagnostic Log
         Started: \(timestampFormatter.string(from: Date()))
         Process: \(ProcessInfo.processInfo.processName)
-        Version: \(version) (\(build))
+        Version: \(version) (\(build)) commit \(sha)
         macOS: \(ProcessInfo.processInfo.operatingSystemVersionString)
         ========================================\n\n
         """

@@ -155,6 +155,7 @@
 				716683282A767E6A006ABF84 /* Resources */,
 				1720D48F2BB9B60500A7AC63 /* SwiftLint */,
 				7188A68D2E27F9ED008F131D /* Embed XPC Services */,
+				170AD05A2BB9B60500A7AC63 /* Stamp Git SHA */,
 			);
 			buildRules = (
 			);
@@ -184,6 +185,7 @@
 				7188A67F2E27F9ED008F131D /* Sources */,
 				7188A6802E27F9ED008F131D /* Frameworks */,
 				7188A6812E27F9ED008F131D /* Resources */,
+				170AD05B2BB9B60500A7AC64 /* Stamp Git SHA */,
 			);
 			buildRules = (
 			);
@@ -307,6 +309,64 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
+		170AD05A2BB9B60500A7AC63 /* Stamp Git SHA */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			name = "Stamp Git SHA";
+			shellPath = /bin/sh;
+			shellScript = (
+				"set -eu",
+				"",
+				"if SHA=$(git -C \"${SRCROOT}\" rev-parse --short HEAD 2>/dev/null); then",
+				"    if ! git -C \"${SRCROOT}\" diff --quiet 2>/dev/null \\",
+				"       || ! git -C \"${SRCROOT}\" diff --cached --quiet 2>/dev/null; then",
+				"        SHA=\"${SHA}-dirty\"",
+				"    fi",
+				"else",
+				"    SHA=\"unknown\"",
+				"fi",
+				"",
+				"PLIST=\"${TARGET_BUILD_DIR}/${INFOPLIST_PATH}\"",
+				"if [ ! -f \"$PLIST\" ]; then",
+				"    echo \"warning: stamp-git-sha: plist not found at $PLIST\"",
+				"    exit 0",
+				"fi",
+				"",
+				"/usr/libexec/PlistBuddy -c \"Set :GitCommitSHA ${SHA}\" \"$PLIST\" 2>/dev/null \\",
+				"    || /usr/libexec/PlistBuddy -c \"Add :GitCommitSHA string ${SHA}\" \"$PLIST\"",
+				"",
+				"echo \"stamp-git-sha: stamped ${SHA} into ${PLIST}\"",
+			);
+		};
+		170AD05B2BB9B60500A7AC64 /* Stamp Git SHA */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			name = "Stamp Git SHA";
+			shellPath = /bin/sh;
+			shellScript = (
+				"set -eu",
+				"",
+				"if SHA=$(git -C \"${SRCROOT}\" rev-parse --short HEAD 2>/dev/null); then",
+				"    if ! git -C \"${SRCROOT}\" diff --quiet 2>/dev/null \\",
+				"       || ! git -C \"${SRCROOT}\" diff --cached --quiet 2>/dev/null; then",
+				"        SHA=\"${SHA}-dirty\"",
+				"    fi",
+				"else",
+				"    SHA=\"unknown\"",
+				"fi",
+				"",
+				"PLIST=\"${TARGET_BUILD_DIR}/${INFOPLIST_PATH}\"",
+				"if [ ! -f \"$PLIST\" ]; then",
+				"    echo \"warning: stamp-git-sha: plist not found at $PLIST\"",
+				"    exit 0",
+				"fi",
+				"",
+				"/usr/libexec/PlistBuddy -c \"Set :GitCommitSHA ${SHA}\" \"$PLIST\" 2>/dev/null \\",
+				"    || /usr/libexec/PlistBuddy -c \"Add :GitCommitSHA string ${SHA}\" \"$PLIST\"",
+				"",
+				"echo \"stamp-git-sha: stamped ${SHA} into ${PLIST}\"",
+			);
+		};
 		1720D48F2BB9B60500A7AC63 /* SwiftLint */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
@@ -573,6 +633,7 @@
 				DEVELOPMENT_TEAM = 456BPWQ6U5;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = MenuBarItemService/Resources/Info.plist;
@@ -602,6 +663,7 @@
 				DEVELOPMENT_TEAM = 456BPWQ6U5;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = MenuBarItemService/Resources/Info.plist;
