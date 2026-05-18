@@ -24,10 +24,12 @@ import Foundation
 ///
 /// Structurally, every NSStatusItem-style widget also publishes a
 /// SECOND CG window in the items-only list whose title is the
-/// widget's bundle identifier and whose (width, height) matches the
-/// on-screen icon. This resolver pairs icons with markers by exact
-/// size and synthesizes the sourcePID via injected lookups so the
-/// algorithm stays pure and testable.
+/// widget's bundle identifier and whose width matches the on-screen
+/// icon (heights diverge: the icon takes the active display's menu
+/// bar height while the marker carries a placeholder height). This
+/// resolver pairs icons with markers by width and synthesizes the
+/// sourcePID via injected lookups so the algorithm stays pure and
+/// testable.
 enum MarkerPairResolver {
     /// A marker window candidate distilled from the items-only list.
     /// Markers carry bundle-ID-shaped titles (titles containing a ".")
@@ -95,8 +97,19 @@ enum MarkerPairResolver {
         for icon in unresolvedIcons {
             if let title = icon.title, title.contains(".") { continue }
 
+            // Match by width only, not exact size. The on-screen icon
+            // and its off-screen marker share width (the widget's
+            // intrinsic icon width), but heights differ: the icon
+            // takes the active display's menu bar height (typically
+            // 22-30pt depending on the display and notch state) while
+            // the marker carries a default placeholder height
+            // (33pt observed in field logs). Exact size matching
+            // rejected legitimate pairs whose widths agreed but whose
+            // heights drifted by 3pt. The uniqueness check on
+            // matching.count == 1 still prevents misattribution when
+            // multiple markers happen to share a width.
             let matching = markers.filter {
-                $0.windowID != icon.windowID && $0.size == icon.size
+                $0.windowID != icon.windowID && $0.size.width == icon.size.width
             }
             guard matching.count == 1, let marker = matching.first else { continue }
 
