@@ -56,38 +56,4 @@ enum AXHelpers {
             return result == .success ? pid : nil
         }
     }
-
-    /// Returns the CGWindowID associated with the given AX element via
-    /// the private _AXUIElementGetWindow SPI. Used to bridge from an
-    /// AX proxy node (e.g. a Control-Center-hosted status item) back to
-    /// the underlying CGWindow without relying on bounds proximity.
-    static func windowID(for element: UIElement) -> CGWindowID? {
-        queue.sync {
-            var wid: CGWindowID = 0
-            let result = _AXUIElementGetWindow(element.element, &wid)
-            return result == .success ? wid : nil
-        }
-    }
-
-    /// Returns the AX title string for the element, or nil if absent or
-    /// the attribute could not be read.
-    static func title(for element: UIElement) -> String? {
-        queue.sync { try? element.attribute(.title) }
-    }
-
-    /// Returns the AX identifier string for the element, or nil if
-    /// absent or the attribute could not be read. For
-    /// Control-Center-hosted status item proxies on macOS 26 this is
-    /// often the owning app's bundle identifier, which lets us recover
-    /// the real owning app even when the spatial AX pass attributes
-    /// the proxy to Control Center.
-    static func identifier(for element: UIElement) -> String? {
-        queue.sync { try? element.attribute(.identifier) }
-    }
-
-    /// Returns the AX description string for the element, or nil if
-    /// absent or the attribute could not be read.
-    static func description(for element: UIElement) -> String? {
-        queue.sync { try? element.attribute(.description) }
-    }
 }
