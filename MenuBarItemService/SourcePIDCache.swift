@@ -497,6 +497,14 @@ final class SourcePIDCache {
         // the namespace fallback would derive anyway but stored as
         // a concrete resolution rather than nil-PID limbo.
         if !unresolvedWindows.isEmpty {
+            // Pre-compute unresolved windows' centers so we can do a
+            // spatial backstop match when _AXUIElementGetWindow does
+            // not return a CGWindowID we recognise. Some macOS 26
+            // hosting cases return the parent menu-bar window rather
+            // than the proxy child's window; the backstop catches
+            // those by pairing on bounds-center proximity (same
+            // criterion the primary spatial pass uses).
+            let unresolvedInfos = allWindows.filter { unresolvedWindows.contains($0.windowID) }
             for app in apps {
                 if unresolvedWindows.isEmpty {
                     break
@@ -505,24 +513,63 @@ final class SourcePIDCache {
                     guard let bar = app.getOrCreateExtrasMenuBar() else { return }
                     let children = AXHelpers.children(for: bar)
                     for child in children {
-                        guard !AXHelpers.isEnabled(child),
-                              let proxyWID = AXHelpers.windowID(for: child)
-                        else {
-                            continue
+                        guard !AXHelpers.isEnabled(child) else { continue }
+
+                        let childFrame = AXHelpers.frame(for: child)
+                        let proxyWID = AXHelpers.windowID(for: child)
+                        let axIdentifier = AXHelpers.identifier(for: child)
+                        let axTitle = AXHelpers.title(for: child)
+                        let axDescription = AXHelpers.description(for: child)
+
+                        // Resolve the unresolved windowID this disabled
+                        // child corresponds to. Prefer the SPI's direct
+                        // answer when it's a known unresolved window;
+                        // fall back to a spatial center-point match
+                        // (within 1pt) when the SPI returned a windowID
+                        // we do not have in the unresolved set (parent
+                        // bar, sibling window, etc.). Tracks the source
+                        // for the diag log so we can see in the field
+                        // which path is firing for each item.
+                        var matchedWID: CGWindowID?
+                        var matchSource: String = "none"
+                        if let proxyWID,
+                           unresolvedWindows.contains(proxyWID)
+                        {
+                            matchedWID = proxyWID
+                            matchSource = "SPI"
+                        } else if let frame = childFrame {
+                            let target = frame.center
+                            if let spatial = unresolvedInfos.first(where: {
+                                $0.bounds.center.distance(to: target) <= 1
+                            }) {
+                                if unresolvedWindows.contains(spatial.windowID) {
+                                    matchedWID = spatial.windowID
+                                    matchSource = "spatial"
+                                }
+                            }
                         }
-                        guard unresolvedWindows.contains(proxyWID) else {
-                            continue
-                        }
+
+                        // Unconditional probe log so we can see in the
+                        // field what each disabled child yielded, even
+                        // when neither match path produced an unresolved
+                        // windowID. Critical for diagnosing whether the
+                        // pass is silently passing over a candidate
+                        // (zero matches and zero logs would otherwise be
+                        // indistinguishable from "this build does not
+                        // contain the fallback").
+                        SourcePIDCache.diagLog.debug(
+                            "SourcePIDCache AX-windowID probe: host=\(app.bundleIdentifier ?? "pid=\(app.processIdentifier)") childFrame=\(childFrame.map { "\($0)" } ?? "nil") spiWindowID=\(proxyWID.map { "\($0)" } ?? "nil") spiInUnresolved=\(proxyWID.map { unresolvedWindows.contains($0) } ?? false) matchedWID=\(matchedWID.map { "\($0)" } ?? "nil") matchSource=\(matchSource) AXIdentifier=\(axIdentifier ?? "nil") AXTitle=\(axTitle ?? "nil") AXDescription=\(axDescription ?? "nil")"
+                        )
+
+                        guard let matchedWID else { continue }
+
                         // Look for the real owning app by walking the
                         // proxy's identifying AX attributes against the
                         // running apps list. Bundle-ID match (via the
                         // AXIdentifier attribute) wins over name match
-                        // because it's unambiguous; the title and
-                        // description fallbacks use case-insensitive
+                        // because it's unambiguous; title and
+                        // description fall back to case-insensitive
                         // localizedName equality.
-                        let axIdentifier = AXHelpers.identifier(for: child)
-                        let axTitle = AXHelpers.title(for: child)
-                        let axDescription = AXHelpers.description(for: child)
                         var resolvedPID: pid_t?
                         var resolvedVia = "host"
                         if let bundleID = axIdentifier,
@@ -551,10 +598,10 @@ final class SourcePIDCache {
                         }
                         let finalPID = resolvedPID ?? app.processIdentifier
                         SourcePIDCache.diagLog.info(
-                            "SourcePIDCache AX-windowID fallback: windowID=\(proxyWID) → PID \(finalPID) via \(resolvedVia) (AXIdentifier=\(axIdentifier ?? "nil") AXTitle=\(axTitle ?? "nil") AXDescription=\(axDescription ?? "nil") host=\(app.bundleIdentifier ?? "pid=\(app.processIdentifier)"))"
+                            "SourcePIDCache AX-windowID fallback: windowID=\(matchedWID) → PID \(finalPID) via \(resolvedVia) (match=\(matchSource) host=\(app.bundleIdentifier ?? "pid=\(app.processIdentifier)"))"
                         )
-                        state.withLock { $0.pids[proxyWID] = finalPID }
-                        unresolvedWindows.remove(proxyWID)
+                        state.withLock { $0.pids[matchedWID] = finalPID }
+                        unresolvedWindows.remove(matchedWID)
                     }
                 }
             }
