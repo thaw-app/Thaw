@@ -488,10 +488,12 @@ final class SourcePIDCache {
                 "SourcePIDCache diag: \(unresolvedWindows.count) window(s) unresolved after batch, dumping details"
             )
 
-            let probeBundleIDs: Set<String> = [
-                "at.obdev.littlesnitch",
-                "at.obdev.littlesnitch.agent",
-            ]
+            // Ad-hoc probe for specific bundles under investigation.
+            // Leave empty in normal builds; populate with bundle IDs
+            // when diagnosing a particular widget's resolution failure
+            // to see whether NSWorkspace sees it and whether it claims
+            // an extras menu bar of its own.
+            let probeBundleIDs: Set<String> = []
             for bundleID in probeBundleIDs {
                 if let app = apps.first(where: { $0.bundleIdentifier == bundleID }) {
                     SourcePIDCache.diagLog.debug(
