@@ -266,7 +266,10 @@ final class ProfileFullTests: XCTestCase {
                 showMenuBarTooltips: true,
                 iconRefreshInterval: 3.0,
                 enableDiagnosticLogging: false,
-                useDoubleClickToShowAlwaysHiddenSection: false
+                useDoubleClickToShowAlwaysHiddenSection: false,
+                useOptionClickToShowAlwaysHiddenSection: false,
+                useLCSSortingOnNotchedDisplays: false,
+                enableMenuBarItemOverflow: false
             ),
             hotkeys: [:],
             displayConfigurations: [:],
@@ -476,7 +479,10 @@ final class ProfileContentTests: XCTestCase {
             showMenuBarTooltips: true,
             iconRefreshInterval: 3.0,
             enableDiagnosticLogging: false,
-            useDoubleClickToShowAlwaysHiddenSection: false
+            useDoubleClickToShowAlwaysHiddenSection: false,
+            useOptionClickToShowAlwaysHiddenSection: false,
+            useLCSSortingOnNotchedDisplays: false,
+            enableMenuBarItemOverflow: false
         )
 
         let content = ProfileContent(
@@ -530,7 +536,10 @@ final class ProfileContentTests: XCTestCase {
                 showMenuBarTooltips: true,
                 iconRefreshInterval: 3.0,
                 enableDiagnosticLogging: false,
-                useDoubleClickToShowAlwaysHiddenSection: false
+                useDoubleClickToShowAlwaysHiddenSection: false,
+                useOptionClickToShowAlwaysHiddenSection: false,
+                useLCSSortingOnNotchedDisplays: false,
+                enableMenuBarItemOverflow: false
             ),
             hotkeys: [:],
             displayConfigurations: [:],

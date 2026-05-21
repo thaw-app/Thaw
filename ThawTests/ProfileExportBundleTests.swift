@@ -60,7 +60,10 @@ final class ProfileExportBundleTests: XCTestCase {
                 showMenuBarTooltips: true,
                 iconRefreshInterval: 3.0,
                 enableDiagnosticLogging: false,
-                useDoubleClickToShowAlwaysHiddenSection: false
+                useDoubleClickToShowAlwaysHiddenSection: false,
+                useOptionClickToShowAlwaysHiddenSection: false,
+                useLCSSortingOnNotchedDisplays: false,
+                enableMenuBarItemOverflow: false
             ),
             hotkeys: [:],
             displayConfigurations: [:],

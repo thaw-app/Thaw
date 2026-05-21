@@ -40,7 +40,10 @@ final class AdvancedSettingsSnapshotTests: XCTestCase {
             showMenuBarTooltips: true,
             iconRefreshInterval: 3.0,
             enableDiagnosticLogging: false,
-            useDoubleClickToShowAlwaysHiddenSection: false
+            useDoubleClickToShowAlwaysHiddenSection: false,
+            useOptionClickToShowAlwaysHiddenSection: false,
+            useLCSSortingOnNotchedDisplays: false,
+            enableMenuBarItemOverflow: false
         )
     }
 
@@ -57,7 +60,10 @@ final class AdvancedSettingsSnapshotTests: XCTestCase {
             showMenuBarTooltips: false,
             iconRefreshInterval: 5.0,
             enableDiagnosticLogging: true,
-            useDoubleClickToShowAlwaysHiddenSection: true
+            useDoubleClickToShowAlwaysHiddenSection: true,
+            useOptionClickToShowAlwaysHiddenSection: true,
+            useLCSSortingOnNotchedDisplays: true,
+            enableMenuBarItemOverflow: true
         )
     }
 
@@ -294,7 +300,10 @@ final class AdvancedSettingsSnapshotTests: XCTestCase {
             showMenuBarTooltips: false,
             iconRefreshInterval: 0,
             enableDiagnosticLogging: false,
-            useDoubleClickToShowAlwaysHiddenSection: false
+            useDoubleClickToShowAlwaysHiddenSection: false,
+            useOptionClickToShowAlwaysHiddenSection: false,
+            useLCSSortingOnNotchedDisplays: false,
+            enableMenuBarItemOverflow: false
         )
 
         let data = try encoder.encode(snapshot)
@@ -323,7 +332,10 @@ final class AdvancedSettingsSnapshotTests: XCTestCase {
             showMenuBarTooltips: true,
             iconRefreshInterval: 0,
             enableDiagnosticLogging: true,
-            useDoubleClickToShowAlwaysHiddenSection: true
+            useDoubleClickToShowAlwaysHiddenSection: true,
+            useOptionClickToShowAlwaysHiddenSection: true,
+            useLCSSortingOnNotchedDisplays: true,
+            enableMenuBarItemOverflow: true
         )
 
         let data = try encoder.encode(snapshot)
