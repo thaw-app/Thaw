@@ -4415,9 +4415,11 @@ extension MenuBarItemManager {
 
         let decision = LayoutSolver.planLeftmostMove(
             items: items,
-            hiddenBounds: hiddenBounds,
-            sectionByWindowID: sectionByWindowID,
-            previousWindowIDs: previousWindowIDs,
+            observation: LayoutSolver.LeftmostObservation(
+                hiddenBounds: hiddenBounds,
+                sectionByWindowID: sectionByWindowID,
+                previousWindowIDs: previousWindowIDs
+            ),
             savedSectionOrder: savedSectionOrder,
             knownItemIdentifiers: knownItemIdentifiers,
             hiddenTags: hiddenTags,
@@ -4577,8 +4579,10 @@ extension MenuBarItemManager {
                 hiddenBounds: hiddenBounds,
                 boundsForWindowID: boundsForWindowID,
                 activelyShownTags: activelyShownTags,
-                pendingReturnDestinations: pendingReturnDestinations,
-                fallbackNeighborByTagIdentifier: fallbackNeighborByTagIdentifier
+                returnInfo: PendingLedger.PendingReturnInfo(
+                    destinations: pendingReturnDestinations,
+                    fallbackNeighbors: fallbackNeighborByTagIdentifier
+                )
             )
 
             // Handle a sentinel promotion in-place: rewrite pendingRelocations
@@ -4601,8 +4605,10 @@ extension MenuBarItemManager {
                     hiddenBounds: hiddenBounds,
                     boundsForWindowID: boundsForWindowID,
                     activelyShownTags: activelyShownTags,
-                    pendingReturnDestinations: pendingReturnDestinations,
-                    fallbackNeighborByTagIdentifier: fallbackNeighborByTagIdentifier
+                    returnInfo: PendingLedger.PendingReturnInfo(
+                        destinations: pendingReturnDestinations,
+                        fallbackNeighbors: fallbackNeighborByTagIdentifier
+                    )
                 )
             }
 
@@ -5641,9 +5647,11 @@ extension MenuBarItemManager {
                 desiredFiltered: desiredFiltered,
                 sectionMap: sectionMap,
                 savedSectionOrder: savedSectionOrder,
-                visibleCtrlUID: visibleCtrlUID,
-                hiddenCtrlUID: hiddenCtrlUID,
-                ahCtrlUID: ahCtrlUID
+                controlUIDs: ControlUIDs(
+                    visible: visibleCtrlUID,
+                    hidden: hiddenCtrlUID,
+                    alwaysHidden: ahCtrlUID
+                )
             )
             desiredFiltered = applied.desiredFiltered
             sectionMap = applied.sectionMap
@@ -5757,9 +5765,11 @@ extension MenuBarItemManager {
             let overflowResult = LayoutSolver.planNotchOverflow(
                 desiredFiltered: desiredFiltered,
                 unmanagedUIDs: unmanagedUIDs,
-                visibleCtrlUID: visibleCtrlUID,
-                hiddenCtrlUID: hiddenCtrlUID,
-                ahCtrlUID: ahCtrlUID,
+                controlUIDs: ControlUIDs(
+                    visible: visibleCtrlUID,
+                    hidden: hiddenCtrlUID,
+                    alwaysHidden: ahCtrlUID
+                ),
                 sectionMap: sectionMap,
                 uidWidths: uidWidths,
                 availableWidth: availableWidth

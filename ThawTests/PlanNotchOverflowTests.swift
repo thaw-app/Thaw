@@ -65,9 +65,11 @@ final class PlanNotchOverflowTests: XCTestCase {
         let result = LayoutSolver.planNotchOverflow(
             desiredFiltered: desired,
             unmanagedUIDs: [],
-            visibleCtrlUID: chevron,
-            hiddenCtrlUID: hiddenCtrl,
-            ahCtrlUID: ahCtrl,
+            controlUIDs: ControlUIDs(
+                visible: chevron,
+                hidden: hiddenCtrl,
+                alwaysHidden: ahCtrl
+            ),
             sectionMap: sectionMap,
             uidWidths: widths,
             availableWidth: 200 // plenty of room
@@ -93,9 +95,11 @@ final class PlanNotchOverflowTests: XCTestCase {
         let result = LayoutSolver.planNotchOverflow(
             desiredFiltered: desired,
             unmanagedUIDs: ["u1", "u2"],
-            visibleCtrlUID: chevron,
-            hiddenCtrlUID: hiddenCtrl,
-            ahCtrlUID: ahCtrl,
+            controlUIDs: ControlUIDs(
+                visible: chevron,
+                hidden: hiddenCtrl,
+                alwaysHidden: ahCtrl
+            ),
             sectionMap: sectionMap,
             uidWidths: widths,
             availableWidth: 130 // fits 120
@@ -121,9 +125,11 @@ final class PlanNotchOverflowTests: XCTestCase {
         let result = LayoutSolver.planNotchOverflow(
             desiredFiltered: desired,
             unmanagedUIDs: ["u1", "u2"],
-            visibleCtrlUID: chevron,
-            hiddenCtrlUID: hiddenCtrl,
-            ahCtrlUID: ahCtrl,
+            controlUIDs: ControlUIDs(
+                visible: chevron,
+                hidden: hiddenCtrl,
+                alwaysHidden: ahCtrl
+            ),
             sectionMap: sectionMap,
             uidWidths: widths,
             availableWidth: 90
@@ -158,9 +164,11 @@ final class PlanNotchOverflowTests: XCTestCase {
         let result = LayoutSolver.planNotchOverflow(
             desiredFiltered: desired,
             unmanagedUIDs: ["u1"],
-            visibleCtrlUID: chevron,
-            hiddenCtrlUID: hiddenCtrl,
-            ahCtrlUID: ahCtrl,
+            controlUIDs: ControlUIDs(
+                visible: chevron,
+                hidden: hiddenCtrl,
+                alwaysHidden: ahCtrl
+            ),
             sectionMap: sectionMap,
             uidWidths: widths,
             availableWidth: 70
@@ -188,9 +196,11 @@ final class PlanNotchOverflowTests: XCTestCase {
         let result = LayoutSolver.planNotchOverflow(
             desiredFiltered: desired,
             unmanagedUIDs: ["u1"],
-            visibleCtrlUID: chevron,
-            hiddenCtrlUID: hiddenCtrl,
-            ahCtrlUID: ahCtrl,
+            controlUIDs: ControlUIDs(
+                visible: chevron,
+                hidden: hiddenCtrl,
+                alwaysHidden: ahCtrl
+            ),
             sectionMap: sectionMap,
             uidWidths: widths,
             availableWidth: 24
@@ -214,9 +224,11 @@ final class PlanNotchOverflowTests: XCTestCase {
         let result = LayoutSolver.planNotchOverflow(
             desiredFiltered: desired,
             unmanagedUIDs: ["u1"],
-            visibleCtrlUID: chevron,
-            hiddenCtrlUID: hiddenCtrl,
-            ahCtrlUID: nil,
+            controlUIDs: ControlUIDs(
+                visible: chevron,
+                hidden: hiddenCtrl,
+                alwaysHidden: nil
+            ),
             sectionMap: sectionMap,
             uidWidths: widths,
             availableWidth: 24 // only chevron fits
@@ -248,9 +260,11 @@ final class PlanNotchOverflowTests: XCTestCase {
         let result = LayoutSolver.planNotchOverflow(
             desiredFiltered: desired,
             unmanagedUIDs: ["u1"],
-            visibleCtrlUID: chevron,
-            hiddenCtrlUID: hiddenCtrl,
-            ahCtrlUID: ahCtrl,
+            controlUIDs: ControlUIDs(
+                visible: chevron,
+                hidden: hiddenCtrl,
+                alwaysHidden: ahCtrl
+            ),
             sectionMap: sectionMap,
             uidWidths: widths,
             availableWidth: 80
@@ -283,9 +297,11 @@ final class PlanNotchOverflowTests: XCTestCase {
         let result = LayoutSolver.planNotchOverflow(
             desiredFiltered: desired,
             unmanagedUIDs: [],
-            visibleCtrlUID: chevron,
-            hiddenCtrlUID: hiddenCtrl,
-            ahCtrlUID: ahCtrl,
+            controlUIDs: ControlUIDs(
+                visible: chevron,
+                hidden: hiddenCtrl,
+                alwaysHidden: ahCtrl
+            ),
             sectionMap: sectionMap,
             uidWidths: widths,
             availableWidth: 124 // exactly chevron + p1 + p2, no spacing subtraction

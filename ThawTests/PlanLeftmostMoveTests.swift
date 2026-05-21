@@ -56,9 +56,11 @@ final class PlanLeftmostMoveTests: XCTestCase {
 
         let decision = LayoutSolver.planLeftmostMove(
             items: [thaw],
-            hiddenBounds: hiddenBounds,
-            sectionByWindowID: [thaw.windowID: .hidden],
-            previousWindowIDs: [],
+            observation: LayoutSolver.LeftmostObservation(
+                hiddenBounds: hiddenBounds,
+                sectionByWindowID: [thaw.windowID: .hidden],
+                previousWindowIDs: []
+            ),
             savedSectionOrder: [:],
             knownItemIdentifiers: [],
             hiddenTags: [],
@@ -84,9 +86,11 @@ final class PlanLeftmostMoveTests: XCTestCase {
 
         let decision = LayoutSolver.planLeftmostMove(
             items: [screenCap],
-            hiddenBounds: hiddenBounds,
-            sectionByWindowID: [screenCap.windowID: .hidden],
-            previousWindowIDs: [],
+            observation: LayoutSolver.LeftmostObservation(
+                hiddenBounds: hiddenBounds,
+                sectionByWindowID: [screenCap.windowID: .hidden],
+                previousWindowIDs: []
+            ),
             savedSectionOrder: [:],
             knownItemIdentifiers: [],
             hiddenTags: [],
@@ -113,9 +117,11 @@ final class PlanLeftmostMoveTests: XCTestCase {
 
         let decision = LayoutSolver.planLeftmostMove(
             items: [app],
-            hiddenBounds: hiddenBounds,
-            sectionByWindowID: [app.windowID: .visible],
-            previousWindowIDs: [],
+            observation: LayoutSolver.LeftmostObservation(
+                hiddenBounds: hiddenBounds,
+                sectionByWindowID: [app.windowID: .visible],
+                previousWindowIDs: []
+            ),
             savedSectionOrder: ["hidden": ["com.example.app:Status"]],
             knownItemIdentifiers: [],
             hiddenTags: [],
@@ -139,9 +145,11 @@ final class PlanLeftmostMoveTests: XCTestCase {
 
         let decision = LayoutSolver.planLeftmostMove(
             items: [app],
-            hiddenBounds: hiddenBounds,
-            sectionByWindowID: [app.windowID: .visible],
-            previousWindowIDs: [],
+            observation: LayoutSolver.LeftmostObservation(
+                hiddenBounds: hiddenBounds,
+                sectionByWindowID: [app.windowID: .visible],
+                previousWindowIDs: []
+            ),
             savedSectionOrder: [:],
             knownItemIdentifiers: [],
             hiddenTags: [],
@@ -164,9 +172,11 @@ final class PlanLeftmostMoveTests: XCTestCase {
 
         let decision = LayoutSolver.planLeftmostMove(
             items: [app],
-            hiddenBounds: hiddenBounds,
-            sectionByWindowID: [app.windowID: .visible],
-            previousWindowIDs: [],
+            observation: LayoutSolver.LeftmostObservation(
+                hiddenBounds: hiddenBounds,
+                sectionByWindowID: [app.windowID: .visible],
+                previousWindowIDs: []
+            ),
             savedSectionOrder: [:],
             knownItemIdentifiers: [],
             hiddenTags: [],
@@ -195,9 +205,11 @@ final class PlanLeftmostMoveTests: XCTestCase {
 
         let decision = LayoutSolver.planLeftmostMove(
             items: [app],
-            hiddenBounds: hiddenBounds,
-            sectionByWindowID: [app.windowID: .visible],
-            previousWindowIDs: [705], // windowID was seen before
+            observation: LayoutSolver.LeftmostObservation(
+                hiddenBounds: hiddenBounds,
+                sectionByWindowID: [app.windowID: .visible],
+                previousWindowIDs: [705] // windowID was seen before
+            ),
             savedSectionOrder: [:],
             knownItemIdentifiers: [], // but identifier is "new"
             hiddenTags: [],
@@ -220,12 +232,14 @@ final class PlanLeftmostMoveTests: XCTestCase {
 
         let decision = LayoutSolver.planLeftmostMove(
             items: [app],
-            hiddenBounds: hiddenBounds,
-            // sectionByWindowID claims the item is already in .hidden,
-            // which is also the effectiveNewItemsSection — so moving
-            // would be a no-op.
-            sectionByWindowID: [app.windowID: .hidden],
-            previousWindowIDs: [],
+            observation: LayoutSolver.LeftmostObservation(
+                hiddenBounds: hiddenBounds,
+                // sectionByWindowID claims the item is already in .hidden,
+                // which is also the effectiveNewItemsSection, so moving
+                // would be a no-op.
+                sectionByWindowID: [app.windowID: .hidden],
+                previousWindowIDs: []
+            ),
             savedSectionOrder: [:],
             knownItemIdentifiers: [],
             hiddenTags: [],
@@ -259,9 +273,11 @@ final class PlanLeftmostMoveTests: XCTestCase {
 
         let decision = LayoutSolver.planLeftmostMove(
             items: [newApp],
-            hiddenBounds: hiddenBounds,
-            sectionByWindowID: [newApp.windowID: .visible],
-            previousWindowIDs: [101, 102, 103], // windowID 999 is new
+            observation: LayoutSolver.LeftmostObservation(
+                hiddenBounds: hiddenBounds,
+                sectionByWindowID: [newApp.windowID: .visible],
+                previousWindowIDs: [101, 102, 103] // windowID 999 is new
+            ),
             savedSectionOrder: [
                 // The widget's real bundle ID is saved, but the live
                 // item's placeholder identifier won't match.
@@ -289,9 +305,11 @@ final class PlanLeftmostMoveTests: XCTestCase {
 
         let decision = LayoutSolver.planLeftmostMove(
             items: [visibleApp],
-            hiddenBounds: hiddenBounds,
-            sectionByWindowID: [visibleApp.windowID: .visible],
-            previousWindowIDs: [],
+            observation: LayoutSolver.LeftmostObservation(
+                hiddenBounds: hiddenBounds,
+                sectionByWindowID: [visibleApp.windowID: .visible],
+                previousWindowIDs: []
+            ),
             savedSectionOrder: [:],
             knownItemIdentifiers: [],
             hiddenTags: [],

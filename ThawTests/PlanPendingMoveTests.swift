@@ -79,8 +79,10 @@ final class PlanPendingMoveTests: XCTestCase {
             hiddenBounds: hiddenBounds,
             boundsForWindowID: [:],
             activelyShownTags: [],
-            pendingReturnDestinations: [:],
-            fallbackNeighborByTagIdentifier: [:]
+            returnInfo: PendingLedger.PendingReturnInfo(
+                destinations: [:],
+                fallbackNeighbors: [:]
+            )
         )
 
         if case let .move(movedItem, destination) = decision {
@@ -112,8 +114,10 @@ final class PlanPendingMoveTests: XCTestCase {
             hiddenBounds: hiddenBounds,
             boundsForWindowID: [:],
             activelyShownTags: [],
-            pendingReturnDestinations: [:],
-            fallbackNeighborByTagIdentifier: [:]
+            returnInfo: PendingLedger.PendingReturnInfo(
+                destinations: [:],
+                fallbackNeighbors: [:]
+            )
         )
 
         if case .clearEntry = decision {
@@ -139,8 +143,10 @@ final class PlanPendingMoveTests: XCTestCase {
             hiddenBounds: hiddenBounds,
             boundsForWindowID: [:],
             activelyShownTags: [],
-            pendingReturnDestinations: [:],
-            fallbackNeighborByTagIdentifier: [:]
+            returnInfo: PendingLedger.PendingReturnInfo(
+                destinations: [:],
+                fallbackNeighbors: [:]
+            )
         )
 
         XCTAssertEqual(decision, .skip(reason: .itemNotPresent))
@@ -162,8 +168,10 @@ final class PlanPendingMoveTests: XCTestCase {
             hiddenBounds: hiddenBounds,
             boundsForWindowID: [:],
             activelyShownTags: [],
-            pendingReturnDestinations: [:],
-            fallbackNeighborByTagIdentifier: [:]
+            returnInfo: PendingLedger.PendingReturnInfo(
+                destinations: [:],
+                fallbackNeighbors: [:]
+            )
         )
 
         XCTAssertEqual(decision, .skip(reason: .waitForRelaunchActive))
@@ -186,8 +194,10 @@ final class PlanPendingMoveTests: XCTestCase {
             hiddenBounds: hiddenBounds,
             boundsForWindowID: [:],
             activelyShownTags: [],
-            pendingReturnDestinations: [:],
-            fallbackNeighborByTagIdentifier: [:]
+            returnInfo: PendingLedger.PendingReturnInfo(
+                destinations: [:],
+                fallbackNeighbors: [:]
+            )
         )
 
         if case let .promoteWaitForRelaunch(section) = decision {
@@ -213,8 +223,10 @@ final class PlanPendingMoveTests: XCTestCase {
             hiddenBounds: hiddenBounds,
             boundsForWindowID: [:],
             activelyShownTags: [item.tag.tagIdentifier],
-            pendingReturnDestinations: [:],
-            fallbackNeighborByTagIdentifier: [:]
+            returnInfo: PendingLedger.PendingReturnInfo(
+                destinations: [:],
+                fallbackNeighbors: [:]
+            )
         )
 
         XCTAssertEqual(decision, .skip(reason: .activelyShown))
@@ -236,8 +248,10 @@ final class PlanPendingMoveTests: XCTestCase {
             hiddenBounds: hiddenBounds,
             boundsForWindowID: [:],
             activelyShownTags: [],
-            pendingReturnDestinations: [:],
-            fallbackNeighborByTagIdentifier: [:]
+            returnInfo: PendingLedger.PendingReturnInfo(
+                destinations: [:],
+                fallbackNeighbors: [:]
+            )
         )
 
         if case .clearEntry = decision {
@@ -264,13 +278,15 @@ final class PlanPendingMoveTests: XCTestCase {
             hiddenBounds: hiddenBounds,
             boundsForWindowID: [:],
             activelyShownTags: [],
-            pendingReturnDestinations: [
-                item.tag.tagIdentifier: [
-                    "neighbor": neighbor.tag.tagIdentifier,
-                    "position": "left",
+            returnInfo: PendingLedger.PendingReturnInfo(
+                destinations: [
+                    item.tag.tagIdentifier: [
+                        "neighbor": neighbor.tag.tagIdentifier,
+                        "position": "left",
+                    ],
                 ],
-            ],
-            fallbackNeighborByTagIdentifier: [:]
+                fallbackNeighbors: [:]
+            )
         )
 
         if case let .move(_, destination) = decision,

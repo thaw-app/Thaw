@@ -99,6 +99,23 @@ struct ObservedLayout {
     let activelyShownTags: Set<String>
 }
 
+// MARK: - ControlUIDs
+
+/// The three control item UIDs that mark section boundaries inside a
+/// desired-layout sequence. Planners that insert items relative to a
+/// section start, or compute per-section widths, take this as a single
+/// parameter rather than three loose strings.
+///
+/// visible is the chevron UID and is absent when no chevron exists.
+/// alwaysHidden is absent when the user has disabled the always-hidden
+/// section. hidden is required because a working layout always has the
+/// hidden divider.
+struct ControlUIDs: Equatable {
+    let visible: String?
+    let hidden: String
+    let alwaysHidden: String?
+}
+
 // MARK: - LayoutReconciler
 
 /// Composes the LayoutSolver planners against a DesiredLayout /
@@ -211,18 +228,16 @@ enum LayoutReconciler {
     /// item state, only the abstract sequence the orchestrator has
     /// already built.
     ///
-    /// The visibleCtrlUID parameter is the chevron UID, which marks
-    /// the start of the .visible section so unmanaged items never
-    /// land left of it.
+    /// The controlUIDs.visible field is the chevron UID, which marks
+    /// the start of the .visible section so unmanaged items never land
+    /// left of it.
     static func applyUnmanagedPlacementsToDesired(
         placements: [String: LayoutSolver.UnmanagedPlacement],
         unmanagedUIDs: [String],
         desiredFiltered: [String],
         sectionMap: [String: String],
         savedSectionOrder: [String: [String]],
-        visibleCtrlUID: String?,
-        hiddenCtrlUID: String,
-        ahCtrlUID: String?
+        controlUIDs: ControlUIDs
     ) -> (desiredFiltered: [String], sectionMap: [String: String]) {
         var desiredFiltered = desiredFiltered
         var sectionMap = sectionMap
@@ -230,19 +245,19 @@ enum LayoutReconciler {
         func sectionStartIndex(for section: MenuBarSection.Name) -> Int {
             switch section {
             case .visible:
-                if let visibleCtrlUID,
+                if let visibleCtrlUID = controlUIDs.visible,
                    let chevronIdx = desiredFiltered.firstIndex(of: visibleCtrlUID)
                 {
                     return chevronIdx + 1
                 }
                 return 0
             case .hidden:
-                if let hiddenIdx = desiredFiltered.firstIndex(of: hiddenCtrlUID) {
+                if let hiddenIdx = desiredFiltered.firstIndex(of: controlUIDs.hidden) {
                     return hiddenIdx + 1
                 }
                 return desiredFiltered.endIndex
             case .alwaysHidden:
-                if let ahUID = ahCtrlUID,
+                if let ahUID = controlUIDs.alwaysHidden,
                    let ahIdx = desiredFiltered.firstIndex(of: ahUID)
                 {
                     return ahIdx + 1
@@ -253,9 +268,9 @@ enum LayoutReconciler {
         func sectionEndIndex(for section: MenuBarSection.Name) -> Int {
             switch section {
             case .visible:
-                return desiredFiltered.firstIndex(of: hiddenCtrlUID) ?? desiredFiltered.endIndex
+                return desiredFiltered.firstIndex(of: controlUIDs.hidden) ?? desiredFiltered.endIndex
             case .hidden:
-                if let ahUID = ahCtrlUID,
+                if let ahUID = controlUIDs.alwaysHidden,
                    let ahIdx = desiredFiltered.firstIndex(of: ahUID)
                 {
                     return ahIdx

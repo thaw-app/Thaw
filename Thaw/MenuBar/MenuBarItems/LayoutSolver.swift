@@ -124,6 +124,20 @@ enum LayoutSolver {
         let index: Int
     }
 
+    /// The live observation triple planLeftmostMove needs from the
+    /// orchestrator. hiddenBounds is drawn from the hidden control
+    /// item's frame and marks the right edge of the leftmost zone.
+    /// sectionByWindowID is a per-cycle windowID to section lookup
+    /// rebuilt from cache state. previousWindowIDs is the windowID
+    /// snapshot from the prior cache cycle, used to distinguish a
+    /// genuinely new item from one whose identifier migrated when
+    /// sourcePID resolution succeeded.
+    struct LeftmostObservation {
+        let hiddenBounds: CGRect
+        let sectionByWindowID: [CGWindowID: MenuBarSection.Name]
+        let previousWindowIDs: [CGWindowID]
+    }
+
     // MARK: - Unmanaged partition
 
     /// Returns the subset of currentFlat that should be routed through
@@ -176,9 +190,7 @@ enum LayoutSolver {
     /// (move()) stay with the orchestrator.
     nonisolated static func planLeftmostMove(
         items: [MenuBarItem],
-        hiddenBounds: CGRect,
-        sectionByWindowID: [CGWindowID: MenuBarSection.Name],
-        previousWindowIDs: [CGWindowID],
+        observation: LeftmostObservation,
         savedSectionOrder: [String: [String]],
         knownItemIdentifiers: Set<String>,
         hiddenTags: Set<MenuBarItemTag>,
@@ -189,7 +201,7 @@ enum LayoutSolver {
         // control item but must always be visible, so we admit it here.
         let leftmostItems = items
             .filter {
-                $0.bounds.maxX <= hiddenBounds.minX &&
+                $0.bounds.maxX <= observation.hiddenBounds.minX &&
                     $0.isMovable &&
                     (!$0.isControlItem || $0.tag == .visibleControlItem)
             }
@@ -215,7 +227,7 @@ enum LayoutSolver {
 
         // Path 3: hideable candidate selection.
         let hideableLeftmost = leftmostItems.filter(\.canBeHidden)
-        let previousIDs = Set(previousWindowIDs)
+        let previousIDs = Set(observation.previousWindowIDs)
 
         // Unresolved sourcePID short-circuit. Without sourcePID
         // resolution, third-party items hosted by Control Center fall
@@ -262,7 +274,7 @@ enum LayoutSolver {
         }
 
         // "Already in target" check.
-        if sectionByWindowID[candidate.windowID] == effectiveNewItemsSection {
+        if observation.sectionByWindowID[candidate.windowID] == effectiveNewItemsSection {
             return .noop(reason: .alreadyInTarget)
         }
 
@@ -290,19 +302,17 @@ enum LayoutSolver {
     nonisolated static func planNotchOverflow(
         desiredFiltered: [String],
         unmanagedUIDs: [String],
-        visibleCtrlUID: String?,
-        hiddenCtrlUID: String,
-        ahCtrlUID: String?,
+        controlUIDs: ControlUIDs,
         sectionMap: [String: String],
         uidWidths: [String: CGFloat],
         availableWidth: CGFloat
     ) -> NotchOverflowResult {
         // Visible-section UIDs in profile order (left-to-right).
-        let visibleUIDs = Array(desiredFiltered.prefix(while: { $0 != hiddenCtrlUID }))
-        let chevronWidth = visibleCtrlUID.flatMap { uidWidths[$0] } ?? 0
+        let visibleUIDs = Array(desiredFiltered.prefix(while: { $0 != controlUIDs.hidden }))
+        let chevronWidth = controlUIDs.visible.flatMap { uidWidths[$0] } ?? 0
 
         let unmanagedSet = Set(unmanagedUIDs)
-        let nonChevronUIDs = visibleUIDs.filter { $0 != visibleCtrlUID }
+        let nonChevronUIDs = visibleUIDs.filter { $0 != controlUIDs.visible }
         let unmanagedNonChevron = nonChevronUIDs.filter { unmanagedSet.contains($0) }
         let profileNonChevron = nonChevronUIDs.filter { !unmanagedSet.contains($0) }
 
@@ -368,17 +378,17 @@ enum LayoutSolver {
         // existingAH. Overflowed items append in their original visible
         // order so leftmost-from-visible lands at the deepest end of
         // hidden.
-        var controlSet: Set<String> = [hiddenCtrlUID]
-        if let ahUID = ahCtrlUID { controlSet.insert(ahUID) }
+        var controlSet: Set<String> = [controlUIDs.hidden]
+        if let ahUID = controlUIDs.alwaysHidden { controlSet.insert(ahUID) }
 
-        let hiddenStart = desiredFiltered.firstIndex(of: hiddenCtrlUID)
+        let hiddenStart = desiredFiltered.firstIndex(of: controlUIDs.hidden)
             .map { $0 + 1 } ?? desiredFiltered.endIndex
-        let hiddenEnd = ahCtrlUID.flatMap { desiredFiltered.firstIndex(of: $0) }
+        let hiddenEnd = controlUIDs.alwaysHidden.flatMap { desiredFiltered.firstIndex(of: $0) }
             ?? desiredFiltered.endIndex
         let existingHidden = desiredFiltered[hiddenStart ..< hiddenEnd]
             .filter { !controlSet.contains($0) }
 
-        let ahStart = ahCtrlUID.flatMap { desiredFiltered.firstIndex(of: $0) }
+        let ahStart = controlUIDs.alwaysHidden.flatMap { desiredFiltered.firstIndex(of: $0) }
             .map { $0 + 1 } ?? desiredFiltered.endIndex
         let existingAH = desiredFiltered[ahStart...]
             .filter { !controlSet.contains($0) }
@@ -387,14 +397,14 @@ enum LayoutSolver {
         let remainingNonChevron = nonChevronUIDs.filter { !overflowSet.contains($0) }
 
         var rebuilt = [String]()
-        if let chevron = visibleCtrlUID {
+        if let chevron = controlUIDs.visible {
             rebuilt.append(chevron)
         }
         rebuilt.append(contentsOf: remainingNonChevron)
-        rebuilt.append(hiddenCtrlUID)
+        rebuilt.append(controlUIDs.hidden)
         rebuilt.append(contentsOf: existingHidden)
         rebuilt.append(contentsOf: overflowUIDs)
-        if let ahUID = ahCtrlUID {
+        if let ahUID = controlUIDs.alwaysHidden {
             rebuilt.append(ahUID)
             rebuilt.append(contentsOf: existingAH)
         }

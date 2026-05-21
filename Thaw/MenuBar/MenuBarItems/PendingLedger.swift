@@ -72,6 +72,19 @@ enum PendingLedger {
         }
     }
 
+    /// Per-tag-identifier lookups planPendingMove consults to resolve
+    /// a pending entry's destination. destinations is the dictionary
+    /// persisted by temporarilyShow at the moment of the move; each
+    /// inner entry records a neighbor's tag identifier and whether the
+    /// item sat to the left or right of that neighbor. fallbackNeighbors
+    /// is the live cache of nearest-neighbor tags rebuilt each cycle
+    /// and is used when a stored destination's neighbor is no longer
+    /// present.
+    struct PendingReturnInfo: Equatable {
+        let destinations: [String: [String: String]]
+        let fallbackNeighbors: [String: MenuBarItemTag]
+    }
+
     // MARK: - Planner
 
     /// Computes the next pending-relocation decision for a single entry.
@@ -94,8 +107,7 @@ enum PendingLedger {
         hiddenBounds: CGRect,
         boundsForWindowID: [CGWindowID: CGRect],
         activelyShownTags: Set<String>,
-        pendingReturnDestinations: [String: [String: String]],
-        fallbackNeighborByTagIdentifier: [String: MenuBarItemTag]
+        returnInfo: PendingReturnInfo
     ) -> PendingMove {
         if activelyShownTags.contains(entry.tagIdentifier) {
             return .skip(reason: .activelyShown)
@@ -145,7 +157,7 @@ enum PendingLedger {
         // Resolve destination: stored neighbor → fallback neighbor →
         // section boundary. We use exactly the same precedence the
         // original loop used.
-        if let destInfo = pendingReturnDestinations[entry.tagIdentifier],
+        if let destInfo = returnInfo.destinations[entry.tagIdentifier],
            let neighborTagString = destInfo["neighbor"],
            let neighborItem = items.first(where: { neighborTagString == $0.tag.tagIdentifier })
         {
@@ -155,7 +167,7 @@ enum PendingLedger {
             return .move(item: item, destination: destination)
         }
 
-        if let fallbackTag = fallbackNeighborByTagIdentifier[entry.tagIdentifier],
+        if let fallbackTag = returnInfo.fallbackNeighbors[entry.tagIdentifier],
            let fallbackItem = items.first(where: { $0.tag.tagIdentifier == fallbackTag.tagIdentifier })
         {
             return .move(item: item, destination: .rightOfItem(fallbackItem))
