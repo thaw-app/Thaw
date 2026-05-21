@@ -18,9 +18,12 @@ import XCTest
 final class PlanLCSMoveSequenceTests: XCTestCase {
     // MARK: - Scenarios
 
-    /// When current is empty, all desired items must move; each gets a
-    /// section-boundary destination since there are no anchors.
-    func testEmptyCurrentAllItemsToMove() {
+    /// When currentNoControls is empty, every entry in desiredNoControls
+    /// is filtered out at the overlap step because
+    /// LayoutSolver.planLCSMoveSequence only considers items present in
+    /// both inputs, so the planner returns zero moves rather than
+    /// attempting to place items it has not observed.
+    func testEmptyCurrentProducesNoMovesDueToFilter() {
         let result = LayoutSolver.planLCSMoveSequence(
             currentNoControls: [],
             desiredNoControls: ["a", "b", "c"],
@@ -28,7 +31,7 @@ final class PlanLCSMoveSequenceTests: XCTestCase {
         )
 
         XCTAssertEqual(result.count, 0,
-                       "items not present in current cannot be moved — filter excludes them from LCS work")
+                       "items missing from currentNoControls are filtered out before LCS work, so no moves are produced")
     }
 
     /// Identical current and desired produce zero planned moves.
