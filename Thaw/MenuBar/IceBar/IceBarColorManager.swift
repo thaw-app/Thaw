@@ -163,15 +163,22 @@ final class IceBarColorManager: ObservableObject {
             return
         }
 
-        guard let image = ScreenCapture.captureWindows(
-            with: [menuBarWindow.windowID, wallpaperWindow.windowID],
-            screenBounds: withMutableCopy(of: wallpaperWindow.bounds) { $0.size.height = 1 },
-            option: .nominalResolution
-        ) else {
-            return
-        }
+        let windowIDs = [menuBarWindow.windowID, wallpaperWindow.windowID]
+        let bounds = withMutableCopy(of: wallpaperWindow.bounds) { $0.size.height = 1 }
 
-        windowImage = image
+        // SCK runs off MainActor; the Task body resumes back on @MainActor
+        // (class isolation) so the state mutation is safe.
+        Task { [weak self] in
+            guard let image = await ScreenCapture.captureWindowsAsync(
+                with: windowIDs,
+                screenBounds: bounds,
+                option: .nominalResolution
+            ) else {
+                return
+            }
+            guard let self else { return }
+            self.windowImage = image
+        }
     }
 
     private func updateColorInfo(with frame: CGRect, screen: NSScreen) {

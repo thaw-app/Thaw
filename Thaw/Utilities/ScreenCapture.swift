@@ -74,20 +74,23 @@ enum ScreenCapture {
 
     // MARK: Capture Window(s)
 
-    // NOTE: We intentionally use the deprecated CGWindowList API here instead of
-    // ScreenCaptureKit. SCShareableContent only returns on-screen windows in the
-    // current Space, but we need to capture:
-    //   - Offscreen menu bar items (overflow area)
-    //   - Windows in other Spaces
-    //   - Windows partially clipped by screen edges
+    // NOTE: The synchronous captureWindows / captureWindow below intentionally
+    // route through the deprecated SkyLight private API
+    // (SLWindowListCreateImageFromArray) for the menu-bar refresh path. On
+    // macOS 26 SCShareableContent.excludingDesktopWindows(_: onScreenWindowsOnly:
+    // false) *does* enumerate offscreen menu-bar overflow items, but SCK
+    // capture rejects them: SCContentFilter(display: including:) returns error
+    // -3812 (sourceRect outside display bounds) and SCContentFilter(
+    // desktopIndependentWindow:) returns -3811 (stream start failure). SkyLight
+    // is the only public API on macOS 26 that can capture status-item windows
+    // positioned at large negative x. It leaks one CFMutableDictionary per
+    // call inside SLSWindowListCreateImageFromArrayProxying; that's a system
+    // bug awaiting an Apple fix.
     //
-    // This is an architectural limitation of ScreenCaptureKit (designed for
-    // screen recording/streaming, not arbitrary window capture), not a bug.
-    // Even macOS 15+ does not provide public APIs to enumerate offscreen windows.
-    //
-    // CGWindowList remains the only public API capable of accessing offscreen
-    // and cross-Space window content. We use the hybrid approach:
-    // ScreenCaptureKit for display capture, CGWindowList for window capture.
+    // The async captureWindowsAsync / captureWindowAsync below route through
+    // ScreenCaptureKit and are leak-free. Use those for any capture whose
+    // windows fit within display bounds (the menu-bar item cache paths
+    // pre-filter offscreen items and use the async path).
 
     /// Captures a composite image of an array of windows.
     ///
@@ -116,6 +119,20 @@ enum ScreenCapture {
     ///   - option: Options that specify which parts of the window are captured.
     static func captureWindow(with windowID: CGWindowID, screenBounds: CGRect? = nil, option: CGWindowImageOption = []) -> CGImage? {
         captureWindows(with: [windowID], screenBounds: screenBounds, option: option)
+    }
+
+    // MARK: Capture Window(s) via ScreenCaptureKit
+
+    /// Async, ScreenCaptureKit-backed equivalent of captureWindows. Leak-free,
+    /// but the underlying SCK filter is display-bounded; use captureWindows
+    /// (SkyLight) for windows positioned off-display.
+    static func captureWindowsAsync(with windowIDs: [CGWindowID], screenBounds: CGRect? = nil, option: CGWindowImageOption = []) async -> CGImage? {
+        await Bridging.captureWindowsImageSCK(windowIDs: windowIDs, screenBounds: screenBounds, options: option)
+    }
+
+    /// Async, ScreenCaptureKit-backed equivalent of captureWindow.
+    static func captureWindowAsync(with windowID: CGWindowID, screenBounds: CGRect? = nil, option: CGWindowImageOption = []) async -> CGImage? {
+        await captureWindowsAsync(with: [windowID], screenBounds: screenBounds, option: option)
     }
 
     // MARK: - ScreenCaptureKit Implementation

@@ -79,21 +79,27 @@ final class MenuBarSearchModel: ObservableObject {
             return
         }
 
-        guard
-            let image = ScreenCapture.captureWindows(
-                with: [menuBarWindow.windowID, wallpaperWindow.windowID],
-                screenBounds: withMutableCopy(of: wallpaperWindow.bounds) { $0.size.height = 1 },
-                option: .nominalResolution
-            ),
-            let color = image.averageColor(option: .ignoreAlpha)
-        else {
-            return
-        }
+        let windowIDs = [menuBarWindow.windowID, wallpaperWindow.windowID]
+        let bounds = withMutableCopy(of: wallpaperWindow.bounds) { $0.size.height = 1 }
 
-        let info = MenuBarAverageColorInfo(color: color, source: .menuBarWindow)
-
-        if averageColorInfo != info {
-            averageColorInfo = info
+        // SCK runs off MainActor; the Task body resumes on @MainActor for the
+        // averageColorInfo mutation.
+        Task { [weak self] in
+            guard
+                let image = await ScreenCapture.captureWindowsAsync(
+                    with: windowIDs,
+                    screenBounds: bounds,
+                    option: .nominalResolution
+                ),
+                let color = image.averageColor(option: .ignoreAlpha)
+            else {
+                return
+            }
+            guard let self else { return }
+            let info = MenuBarAverageColorInfo(color: color, source: .menuBarWindow)
+            if self.averageColorInfo != info {
+                self.averageColorInfo = info
+            }
         }
     }
 }

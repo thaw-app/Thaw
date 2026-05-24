@@ -508,25 +508,36 @@ final class MenuBarManager: ObservableObject {
 
             guard
                 let menuBarWindow = WindowInfo.menuBarWindow(from: windows, for: displayID),
-                let wallpaperWindow = WindowInfo.wallpaperWindow(from: windows, for: displayID),
-                let image = ScreenCapture.captureWindows(
-                    with: [menuBarWindow.windowID, wallpaperWindow.windowID],
-                    screenBounds: withMutableCopy(of: wallpaperWindow.bounds) { $0.size.height = 1 },
-                    option: .nominalResolution
-                ),
-                let color = image.averageColor(option: .ignoreAlpha)
+                let wallpaperWindow = WindowInfo.wallpaperWindow(from: windows, for: displayID)
             else {
                 continue
             }
 
-            let info = MenuBarAverageColorInfo(color: color, source: .menuBarWindow)
+            let windowIDs = [menuBarWindow.windowID, wallpaperWindow.windowID]
+            let bounds = withMutableCopy(of: wallpaperWindow.bounds) { $0.size.height = 1 }
 
-            if averageColors[displayID] != info {
-                averageColors[displayID] = info
-            }
-
-            if displayID == activeDisplayID, averageColorInfo != info {
-                averageColorInfo = info
+            // SCK runs off MainActor; the Task body resumes on @MainActor for
+            // the per-display state mutations. Per-screen captures are
+            // independent so they can run concurrently.
+            Task { [weak self] in
+                guard
+                    let image = await ScreenCapture.captureWindowsAsync(
+                        with: windowIDs,
+                        screenBounds: bounds,
+                        option: .nominalResolution
+                    ),
+                    let color = image.averageColor(option: .ignoreAlpha)
+                else {
+                    return
+                }
+                guard let self else { return }
+                let info = MenuBarAverageColorInfo(color: color, source: .menuBarWindow)
+                if self.averageColors[displayID] != info {
+                    self.averageColors[displayID] = info
+                }
+                if displayID == activeDisplayID, self.averageColorInfo != info {
+                    self.averageColorInfo = info
+                }
             }
         }
     }

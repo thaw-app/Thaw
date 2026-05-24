@@ -7,6 +7,7 @@
 //  Licensed under the GNU GPLv3
 
 import Cocoa
+@preconcurrency import ScreenCaptureKit
 
 // MARK: - Bridging
 
@@ -558,5 +559,111 @@ extension Bridging {
 
         diagLog.debug("captureWindowsImage: captured \(windowIDs.count) windows → \(image.width)×\(image.height)px")
         return image
+    }
+}
+
+// MARK: - ScreenCaptureKit Window Capture
+
+extension Bridging {
+    /// Captures a composite image of an array of windows using ScreenCaptureKit.
+    ///
+    /// Async, leak-free replacement for captureWindowsImage. Use this for any
+    /// window set whose union bounds fit within a display. For menu-bar items
+    /// in hidden / always-hidden sections (positioned at large negative x),
+    /// stay on captureWindowsImage: SCK's display+including filter returns
+    /// error -3812 for sourceRects outside display bounds, and the
+    /// desktopIndependentWindow filter returns -3811 for those windows too.
+    ///
+    /// - Parameters:
+    ///   - windowIDs: The identifiers of the windows to capture.
+    ///   - screenBounds: The bounds to capture, specified in screen coordinates.
+    ///     Pass nil (or CGRect.null) to capture the minimum rectangle that
+    ///     encloses the selected windows.
+    ///   - options: Capture options. boundsIgnoreFraming maps to
+    ///     ignoreShadowsDisplay; nominalResolution forces 1x scale.
+    /// - Returns: The captured image, or nil if capture failed.
+    static func captureWindowsImageSCK(
+        windowIDs: [CGWindowID],
+        screenBounds: CGRect? = nil,
+        options: CGWindowImageOption = []
+    ) async -> CGImage? {
+        guard !windowIDs.isEmpty else {
+            diagLog.warning("captureWindowsImageSCK: empty windowIDs")
+            return nil
+        }
+
+        let content: SCShareableContent
+        do {
+            content = try await SCShareableContent.excludingDesktopWindows(
+                false,
+                onScreenWindowsOnly: false
+            )
+        } catch {
+            diagLog.error("captureWindowsImageSCK: SCShareableContent failed: \(error)")
+            return nil
+        }
+
+        let requested = Set(windowIDs)
+        // Preserve caller's z-order so the composite renders correctly.
+        let scWindows = windowIDs.compactMap { id in
+            content.windows.first { $0.windowID == id }
+        }
+
+        guard !scWindows.isEmpty else {
+            diagLog.warning("captureWindowsImageSCK: no SCWindows matched \(requested.count) requested IDs")
+            return nil
+        }
+
+        // Union of selected window frames; used both as default bounds and
+        // to find the host display.
+        let unionBounds = scWindows.reduce(CGRect.null) { $0.union($1.frame) }
+        let effectiveBounds: CGRect = {
+            if let screenBounds, !screenBounds.isNull {
+                return screenBounds
+            }
+            return unionBounds
+        }()
+
+        guard let display = content.displays.first(where: { $0.frame.intersects(effectiveBounds) })
+            ?? content.displays.first(where: { $0.frame.intersects(unionBounds) })
+            ?? content.displays.first
+        else {
+            diagLog.warning("captureWindowsImageSCK: no display matched bounds \(effectiveBounds)")
+            return nil
+        }
+
+        let filter = SCContentFilter(display: display, including: scWindows)
+
+        let configuration = SCStreamConfiguration()
+        configuration.showsCursor = false
+        // boundsIgnoreFraming on the legacy API means "skip the window frame".
+        // For a display+including filter the equivalent is ignoreShadowsDisplay;
+        // no per-window shadow toggle exists on this filter shape.
+        configuration.ignoreShadowsDisplay = options.contains(.boundsIgnoreFraming) || options.isEmpty
+
+        let scale: CGFloat = options.contains(.nominalResolution)
+            ? 1.0
+            : CGFloat(filter.pointPixelScale)
+
+        configuration.sourceRect = CGRect(
+            x: effectiveBounds.origin.x - display.frame.origin.x,
+            y: effectiveBounds.origin.y - display.frame.origin.y,
+            width: effectiveBounds.width,
+            height: effectiveBounds.height
+        )
+        configuration.width = Int((effectiveBounds.width * scale).rounded())
+        configuration.height = Int((effectiveBounds.height * scale).rounded())
+
+        do {
+            let image = try await SCScreenshotManager.captureImage(
+                contentFilter: filter,
+                configuration: configuration
+            )
+            diagLog.debug("captureWindowsImageSCK: captured \(scWindows.count)/\(windowIDs.count) matched windows → \(image.width)×\(image.height)px")
+            return image
+        } catch {
+            diagLog.error("captureWindowsImageSCK: SCScreenshotManager.captureImage failed: \(error)")
+            return nil
+        }
     }
 }

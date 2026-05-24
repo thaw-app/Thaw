@@ -549,18 +549,39 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
                 continue
             }
 
+            // Hoisted: these are tick-global, not per-section.
+            if appState.itemManager.lastMoveOperationOccurred(within: .seconds(2)) {
+                continue
+            }
+            if appState.itemManager.isResettingLayout {
+                continue
+            }
+
+            let scale = screen.backingScaleFactor
+
+            // Partition by capture path: visible items refresh via SCK
+            // (leak-free); hidden + always-hidden items refresh via SkyLight,
+            // batched into a single call per tick to amortize the irreducible
+            // per-call dictionary leak.
+            var offscreenBatch = [MenuBarItem]()
+            var offscreenSectionLabels = [String]()
+
             for section in sections {
-                if appState.itemManager.lastMoveOperationOccurred(within: .seconds(2)) {
-                    continue
-                }
-                if appState.itemManager.isResettingLayout {
-                    continue
-                }
                 let items = appState.itemManager.itemCache.managedItems(for: section)
                 guard !items.isEmpty else { continue }
-                let scale = screen.backingScaleFactor
-                MenuBarItemImageCache.diagLog.debug("liveRefresh: section=\(section.logString) displayID=\(screen.displayID) backingScaleFactor=\(Double(scale)) hasNotch=\(screen.hasNotch) items=\(items.count) menuBarHeight=\(Double(screen.getMenuBarHeightEstimate()))")
-                await refreshImages(of: items, scale: scale)
+
+                if section == .visible {
+                    MenuBarItemImageCache.diagLog.debug("liveRefresh (SCK): section=\(section.logString) displayID=\(screen.displayID) backingScaleFactor=\(Double(scale)) hasNotch=\(screen.hasNotch) items=\(items.count) menuBarHeight=\(Double(screen.getMenuBarHeightEstimate()))")
+                    await refreshImages(of: items, scale: scale, viaSCK: true)
+                } else {
+                    offscreenBatch.append(contentsOf: items)
+                    offscreenSectionLabels.append("\(section.logString)=\(items.count)")
+                }
+            }
+
+            if !offscreenBatch.isEmpty {
+                MenuBarItemImageCache.diagLog.debug("liveRefresh (SkyLight): batched \(offscreenBatch.count) offscreen items [\(offscreenSectionLabels.joined(separator: ", "))]")
+                await refreshImages(of: offscreenBatch, scale: scale)
             }
         }
 
@@ -580,7 +601,7 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
     private nonisolated func compositeCapture(
         _ itemsWithBounds: [(item: MenuBarItem, bounds: CGRect)],
         scale: CGFloat
-    ) -> CaptureResult {
+    ) async -> CaptureResult {
         var result = CaptureResult()
 
         var windowIDs = [CGWindowID]()
@@ -599,7 +620,7 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
             return result
         }
 
-        let compositeImage = ScreenCapture.captureWindows(
+        let compositeImage = await ScreenCapture.captureWindowsAsync(
             with: windowIDs,
             option: captureOption
         )
@@ -688,7 +709,7 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
     private nonisolated func individualCapture(
         _ items: [MenuBarItem],
         scale: CGFloat
-    ) -> CaptureResult {
+    ) async -> CaptureResult {
         var result = CaptureResult()
         var capturedCount = 0
         var nilImageCount = 0
@@ -706,7 +727,7 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
                 continue
             }
 
-            let image = ScreenCapture.captureWindow(
+            let image = await ScreenCapture.captureWindowAsync(
                 with: item.windowID,
                 option: captureOption
             )
@@ -757,15 +778,15 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
             within: .seconds(2)
         ) {
             MenuBarItemImageCache.diagLog.debug("Capturing individually due to recent item movement")
-            return individualCapture(capturable, scale: scale)
+            return await individualCapture(capturable, scale: scale)
         }
 
         // Pre-filter off-screen items: hidden section items are positioned past
-        // the right edge of the screen. Including them in compositeCapture
+        // the left edge of the screen. Including them in compositeCapture
         // inflates boundsUnion → CGWindowListCreateImageFromArray returns an
         // image narrower than expected → width mismatch → the whole composite
-        // fails for ALL items. Off-screen items are captured by the live refresh
-        // loop (refreshImages) instead, so we can safely skip them here.
+        // fails for ALL items. Off-screen items are captured by the live
+        // refresh loop (refreshImages) instead, so we can safely skip them here.
         //
         // Note: isWindowOnScreen() cannot be used for this — macOS incorrectly
         // reports hidden menu bar items as on-screen (known macOS behaviour).
@@ -814,7 +835,7 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
             return CaptureResult()
         }
 
-        let compositeResult = compositeCapture(onScreenItemsWithBounds, scale: scale)
+        let compositeResult = await compositeCapture(onScreenItemsWithBounds, scale: scale)
 
         if compositeResult.excluded.isEmpty {
             return compositeResult // All items captured successfully.
@@ -824,7 +845,7 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
             "\(compositeResult.excluded.count)/\(onScreenItemsWithBounds.count) items excluded from composite, retrying individually"
         )
 
-        var individualResult = individualCapture(
+        var individualResult = await individualCapture(
             compositeResult.excluded,
             scale: scale
         )
@@ -846,7 +867,8 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
     /// Skips `@Published` updates when images haven't changed visually.
     nonisolated func refreshImages(
         of items: [MenuBarItem],
-        scale: CGFloat
+        scale: CGFloat,
+        viaSCK: Bool = false
     ) async {
         var windowIDs = [CGWindowID]()
         var storage = [CGWindowID: (MenuBarItem, CGRect)]()
@@ -866,10 +888,27 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
             return
         }
 
-        guard let compositeImage = ScreenCapture.captureWindows(
-            with: windowIDs,
-            option: captureOption
-        ) else {
+        // Capture path: SCK is leak-free but display-bounded, so only use it
+        // when the caller knows all items are on-screen (visible section).
+        // SkyLight is required for items positioned past the display's left
+        // edge (hidden / always-hidden); both SCK filter shapes fail there
+        // (display+including → -3812, desktopIndependentWindow → -3811). Each
+        // SkyLight call leaks one CFMutableDictionary inside
+        // SLSWindowListCreateImageFromArrayProxying; that floor stays until
+        // Apple fixes SCK or the framework leak.
+        let compositeImage: CGImage?
+        if viaSCK {
+            compositeImage = await ScreenCapture.captureWindowsAsync(
+                with: windowIDs,
+                option: captureOption
+            )
+        } else {
+            compositeImage = ScreenCapture.captureWindows(
+                with: windowIDs,
+                option: captureOption
+            )
+        }
+        guard let compositeImage else {
             MenuBarItemImageCache.diagLog.debug("refreshImages: capture failed, skipping")
             return
         }
