@@ -630,11 +630,16 @@ extension Bridging {
             return unionBounds
         }()
 
-        guard let display = content.displays.first(where: { $0.frame.intersects(effectiveBounds) })
-            ?? content.displays.first(where: { $0.frame.intersects(unionBounds) })
-            ?? content.displays.first
-        else {
-            diagLog.warning("captureWindowsImageSCK: no display matched bounds \(effectiveBounds)")
+        // Require a single display that fully contains BOTH the effective
+        // capture bounds and the union of all selected windows. Using
+        // intersects here would let a display that only partially overlaps
+        // through, producing a silently clipped capture; SCContentFilter
+        // (display:including:) clips at display.frame, so anything outside is
+        // lost without an error. A clean nil lets callers fall back or skip.
+        guard let display = content.displays.first(where: {
+            $0.frame.contains(effectiveBounds) && $0.frame.contains(unionBounds)
+        }) else {
+            diagLog.warning("captureWindowsImageSCK: no display fully contains effectiveBounds=\(effectiveBounds) and unionBounds=\(unionBounds)")
             return nil
         }
 
@@ -644,8 +649,10 @@ extension Bridging {
         configuration.showsCursor = false
         // boundsIgnoreFraming on the legacy API means "skip the window frame".
         // For a display+including filter the equivalent is ignoreShadowsDisplay;
-        // no per-window shadow toggle exists on this filter shape.
-        configuration.ignoreShadowsDisplay = options.contains(.boundsIgnoreFraming) || options.isEmpty
+        // no per-window shadow toggle exists on this filter shape. Empty
+        // options matches the legacy SkyLight default of keeping framing, so
+        // honor only the explicit flag here.
+        configuration.ignoreShadowsDisplay = options.contains(.boundsIgnoreFraming)
 
         let scale: CGFloat = options.contains(.nominalResolution)
             ? 1.0
