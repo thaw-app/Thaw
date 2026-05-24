@@ -630,16 +630,22 @@ extension Bridging {
             return unionBounds
         }()
 
-        // Require a single display that fully contains BOTH the effective
-        // capture bounds and the union of all selected windows. Using
-        // intersects here would let a display that only partially overlaps
-        // through, producing a silently clipped capture; SCContentFilter
-        // (display:including:) clips at display.frame, so anything outside is
-        // lost without an error. A clean nil lets callers fall back or skip.
-        guard let display = content.displays.first(where: {
-            $0.frame.contains(effectiveBounds) && $0.frame.contains(unionBounds)
-        }) else {
-            diagLog.warning("captureWindowsImageSCK: no display fully contains effectiveBounds=\(effectiveBounds) and unionBounds=\(unionBounds)")
+        // Pick the display that holds the largest share of unionBounds. A
+        // strict frame.contains check rejected status-item windows whose
+        // bounds overshoot NSScreen.frame.maxX by a handful of pixels
+        // (observed on the Clock and Thaw items: bounds = (1029, 0, 443, 33)
+        // on a 1470-wide display), so the SCK capture never happened and the
+        // icons disappeared from Settings / Search. Largest-intersection wins
+        // the common edge-overshoot case, picks the majority display for a
+        // cross-display span, and still returns nil when no display overlaps
+        // at all so truly orphan windows fall back / skip cleanly.
+        let displayCandidates = content.displays.compactMap { display -> (SCDisplay, CGFloat)? in
+            let intersection = display.frame.intersection(unionBounds)
+            guard !intersection.isNull else { return nil }
+            return (display, intersection.width * intersection.height)
+        }
+        guard let display = displayCandidates.max(by: { $0.1 < $1.1 })?.0 else {
+            diagLog.warning("captureWindowsImageSCK: no display intersects unionBounds=\(unionBounds) (effectiveBounds=\(effectiveBounds))")
             return nil
         }
 
