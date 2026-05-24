@@ -603,14 +603,20 @@ extension Bridging {
             return nil
         }
 
-        let requested = Set(windowIDs)
         // Preserve caller's z-order so the composite renders correctly.
         let scWindows = windowIDs.compactMap { id in
             content.windows.first { $0.windowID == id }
         }
 
-        guard !scWindows.isEmpty else {
-            diagLog.warning("captureWindowsImageSCK: no SCWindows matched \(requested.count) requested IDs")
+        // Require an exact match. Partial captures are unsafe: cache composites
+        // rely on the result covering every requested window's bounds for the
+        // post-capture crop math, and color samplers rely on every requested
+        // window being included for the averaged color to mean anything.
+        // Fail fast so callers fall back cleanly to SkyLight or skip the tick.
+        guard scWindows.count == windowIDs.count else {
+            let matched = Set(scWindows.map(\.windowID))
+            let missing = windowIDs.filter { !matched.contains($0) }
+            diagLog.warning("captureWindowsImageSCK: SCK resolved \(scWindows.count)/\(windowIDs.count) requested windows; missing IDs: \(missing)")
             return nil
         }
 
@@ -659,7 +665,7 @@ extension Bridging {
                 contentFilter: filter,
                 configuration: configuration
             )
-            diagLog.debug("captureWindowsImageSCK: captured \(scWindows.count)/\(windowIDs.count) matched windows → \(image.width)×\(image.height)px")
+            diagLog.debug("captureWindowsImageSCK: captured \(windowIDs.count) windows → \(image.width)×\(image.height)px")
             return image
         } catch {
             diagLog.error("captureWindowsImageSCK: SCScreenshotManager.captureImage failed: \(error)")

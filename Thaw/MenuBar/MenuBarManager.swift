@@ -299,35 +299,43 @@ final class MenuBarManager: ObservableObject {
                     .autoconnect()
                     .sink { [weak self] _ in
                         guard let self else { return }
-                        let elapsed = wakePollStartTime.map { Date().timeIntervalSince($0) } ?? 0
+                        // Wraps the stabilization logic in a Task that awaits
+                        // updateAverageColorInfoAsync so the post-capture read
+                        // of averageColors sees the fresh values; the original
+                        // sync call returned before the fire-and-forget Tasks
+                        // populated state, defeating stabilization detection.
+                        Task { [weak self] in
+                            guard let self else { return }
+                            let elapsed = wakePollStartTime.map { Date().timeIntervalSince($0) } ?? 0
 
-                        if elapsed >= 10 {
-                            sleepColorCache = nil
-                            wakePollTimer = nil
-                            return
-                        }
-
-                        updateAverageColorInfo()
-                        let after = averageColors
-
-                        if !wakePollDidChange, let cache = sleepColorCache, after != cache {
-                            wakePollDidChange = true
-                        }
-
-                        if wakePollDidChange {
-                            if let prev = wakePollPrevColors, prev == after {
-                                wakePollStableCount += 1
-                                if wakePollStableCount >= 1 {
-                                    sleepColorCache = nil
-                                    wakePollTimer = nil
-                                    return
-                                }
-                            } else {
-                                wakePollStableCount = 0
+                            if elapsed >= 10 {
+                                sleepColorCache = nil
+                                wakePollTimer = nil
+                                return
                             }
-                        }
 
-                        wakePollPrevColors = after
+                            await updateAverageColorInfoAsync()
+                            let after = averageColors
+
+                            if !wakePollDidChange, let cache = sleepColorCache, after != cache {
+                                wakePollDidChange = true
+                            }
+
+                            if wakePollDidChange {
+                                if let prev = wakePollPrevColors, prev == after {
+                                    wakePollStableCount += 1
+                                    if wakePollStableCount >= 1 {
+                                        sleepColorCache = nil
+                                        wakePollTimer = nil
+                                        return
+                                    }
+                                } else {
+                                    wakePollStableCount = 0
+                                }
+                            }
+
+                            wakePollPrevColors = after
+                        }
                     }
             }
             .store(in: &c)
@@ -473,7 +481,22 @@ final class MenuBarManager: ObservableObject {
 
     /// Updates the ``averageColorInfo`` and ``averageColors`` properties with
     /// the current average color of the menu bar background per screen.
+    ///
+    /// Fire-and-forget shape preserved for the call sites that don't need to
+    /// read averageColors immediately after. Callers that DO need read-after
+    /// semantics (captureAdaptiveColorWithRetry, the wake-poll loop) must use
+    /// updateAverageColorInfoAsync directly so their read sees fresh state.
     func updateAverageColorInfo() {
+        Task { [weak self] in
+            await self?.updateAverageColorInfoAsync()
+        }
+    }
+
+    /// Awaitable variant of updateAverageColorInfo. Per-screen captures run
+    /// concurrently in a TaskGroup; the for-await loop collects results on the
+    /// @MainActor context, so all averageColors / averageColorInfo writes are
+    /// complete before the await returns.
+    func updateAverageColorInfoAsync() async {
         guard let appState else { return }
 
         // Only update if we really need the color info
@@ -503,40 +526,49 @@ final class MenuBarManager: ObservableObject {
         let windows = WindowInfo.createWindows(option: .onScreen)
         let activeDisplayID = NSScreen.screenWithActiveMenuBar?.displayID
 
+        // Resolve per-screen capture inputs synchronously on MainActor before
+        // fanning out; the SCK calls themselves are the only async work.
+        var inputs = [(displayID: CGDirectDisplayID, windowIDs: [CGWindowID], bounds: CGRect)]()
         for screen in targetScreens {
             let displayID = screen.displayID
-
             guard
                 let menuBarWindow = WindowInfo.menuBarWindow(from: windows, for: displayID),
                 let wallpaperWindow = WindowInfo.wallpaperWindow(from: windows, for: displayID)
             else {
                 continue
             }
-
             let windowIDs = [menuBarWindow.windowID, wallpaperWindow.windowID]
             let bounds = withMutableCopy(of: wallpaperWindow.bounds) { $0.size.height = 1 }
+            inputs.append((displayID, windowIDs, bounds))
+        }
 
-            // SCK runs off MainActor; the Task body resumes on @MainActor for
-            // the per-display state mutations. Per-screen captures are
-            // independent so they can run concurrently.
-            Task { [weak self] in
-                guard
-                    let image = await ScreenCapture.captureWindowsAsync(
-                        with: windowIDs,
-                        screenBounds: bounds,
-                        option: .nominalResolution
-                    ),
-                    let color = image.averageColor(option: .ignoreAlpha)
-                else {
-                    return
+        await withTaskGroup(of: (CGDirectDisplayID, MenuBarAverageColorInfo)?.self) { group in
+            for input in inputs {
+                group.addTask {
+                    guard
+                        let image = await ScreenCapture.captureWindowsAsync(
+                            with: input.windowIDs,
+                            screenBounds: input.bounds,
+                            option: .nominalResolution
+                        ),
+                        let color = image.averageColor(option: .ignoreAlpha)
+                    else {
+                        return nil
+                    }
+                    return (input.displayID, MenuBarAverageColorInfo(color: color, source: .menuBarWindow))
                 }
-                guard let self else { return }
-                let info = MenuBarAverageColorInfo(color: color, source: .menuBarWindow)
-                if self.averageColors[displayID] != info {
-                    self.averageColors[displayID] = info
+            }
+
+            // Collected on @MainActor (enclosing class isolation), so the
+            // averageColors / averageColorInfo writes below are safe and
+            // observable to read-after callers as soon as this await returns.
+            for await result in group {
+                guard let (displayID, info) = result else { continue }
+                if averageColors[displayID] != info {
+                    averageColors[displayID] = info
                 }
-                if displayID == activeDisplayID, self.averageColorInfo != info {
-                    self.averageColorInfo = info
+                if displayID == activeDisplayID, averageColorInfo != info {
+                    averageColorInfo = info
                 }
             }
         }
@@ -546,23 +578,21 @@ final class MenuBarManager: ObservableObject {
     /// capture fails (e.g. during early app launch before the Window Server
     /// is fully settled). Retries until all screens have a color entry.
     private func captureAdaptiveColorWithRetry() {
-        updateAverageColorInfo()
-        let allCaptured = NSScreen.screens.allSatisfy { averageColors.keys.contains($0.displayID) }
-        guard !allCaptured else { return }
-        var retries = 0
-        func scheduleRetry() {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
-                guard let self else { return }
-                retries += 1
-                guard retries < 10 else { return }
-                updateAverageColorInfo()
-                let allCaptured = NSScreen.screens.allSatisfy { averageColors.keys.contains($0.displayID) }
-                if !allCaptured {
-                    scheduleRetry()
+        // Awaits each capture before checking averageColors so we don't burn
+        // retries on stale reads of fire-and-forget Task results.
+        Task { [weak self] in
+            guard let self else { return }
+            for attempt in 0..<10 {
+                if attempt > 0 {
+                    try? await Task.sleep(for: .seconds(1))
                 }
+                await self.updateAverageColorInfoAsync()
+                let allCaptured = NSScreen.screens.allSatisfy {
+                    self.averageColors.keys.contains($0.displayID)
+                }
+                if allCaptured { return }
             }
         }
-        scheduleRetry()
     }
 
     /// Returns a Boolean value that indicates whether the given display
