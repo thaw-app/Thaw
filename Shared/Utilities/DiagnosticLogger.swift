@@ -145,6 +145,7 @@ final class DiagnosticLogger: @unchecked Sendable {
             try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         } catch {
             osLog.error("Failed to create log directory at \(dir.path): \(error)")
+            isEnabledLock.withLock { $0 = false }
             return
         }
 
@@ -162,6 +163,7 @@ final class DiagnosticLogger: @unchecked Sendable {
             try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         } catch {
             osLog.error("Failed to create log directory at \(dir.path): \(error)")
+            isEnabledLock.withLock { $0 = false }
             return
         }
 
@@ -179,6 +181,7 @@ final class DiagnosticLogger: @unchecked Sendable {
         let fd = open(fileURL.path, O_WRONLY | O_APPEND | O_CREAT, 0o644)
         guard fd >= 0 else {
             osLog.error("Failed to open log file at \(fileURL.path): errno \(errno)")
+            isEnabledLock.withLock { $0 = false }
             return
         }
         let handle = FileHandle(fileDescriptor: fd, closeOnDealloc: true)
