@@ -6,6 +6,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Foundation
 import XPC
 
 /// A wrapper around an XPC listener object.
@@ -37,6 +38,10 @@ final class Listener: @unchecked Sendable {
             case .start:
                 diagLog.debug("Listener received start request")
                 return .start
+            case let .configureLogging(filePath):
+                DiagnosticLogger.shared.attachToFile(at: URL(fileURLWithPath: filePath))
+                diagLog.debug("Listener attached diagnostic logging to \(filePath)")
+                return .configureLogging
             case let .sourcePID(window):
                 diagLog.debug("Listener: sourcePID request for windowID=\(window.windowID) title=\(window.title ?? "nil")")
                 let pid = SourcePIDCache.shared.pid(for: window)

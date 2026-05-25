@@ -115,7 +115,30 @@ final class DiagnosticLogger: @unchecked Sendable {
 
     // MARK: - File Management
 
-    /// Creates the log directory if needed and opens a new log file.
+    /// Enables diagnostic logging using an explicit log file URL chosen
+    /// by another process. The MenuBarItemService XPC service calls this
+    /// after the main app sends its log file path over the XPC channel,
+    /// so both processes append to the same file instead of each
+    /// minting its own filename from its own wall clock (which can
+    /// straddle a one-second boundary at startup and produce two
+    /// separate files). Safe to call repeatedly; the existing handle
+    /// is closed before the new one is opened.
+    func attachToFile(at fileURL: URL) {
+        let wasEnabled = isEnabledLock.withLock { current -> Bool in
+            let was = current
+            current = true
+            return was
+        }
+        if wasEnabled {
+            closeLogFile()
+        }
+        openLogFile(at: fileURL)
+    }
+
+    /// Creates the log directory if needed and opens a freshly minted
+    /// log file. Called by the main app when diagnostic logging is
+    /// turned on; the chosen URL is then shared with the XPC service
+    /// via attachToFile(at:).
     private func openLogFile() {
         let dir = logDirectory
         do {
@@ -126,21 +149,33 @@ final class DiagnosticLogger: @unchecked Sendable {
         }
 
         let fileName = "thaw_\(fileNameFormatter.string(from: Date())).log"
-        let fileURL = dir.appendingPathComponent(fileName)
+        openLogFile(at: dir.appendingPathComponent(fileName))
+    }
 
-        // Open with O_APPEND so the main app and the XPC service
-        // can safely write to the same file. Both processes call
-        // openLogFile during startup, often within the same second,
-        // so they land on the same filename. FileManager.createFile
-        // and FileHandle(forWritingTo:) would truncate an existing
-        // file and the two processes' per-fd offsets would race
-        // against each other on the same byte range. POSIX open(2)
-        // with O_APPEND tells the kernel to atomically position
-        // each write at end-of-file, which is atomic between
-        // processes for writes smaller than PIPE_BUF on local
-        // filesystems; O_CREAT creates the file if absent without
-        // touching an existing one. Swift's FileHandle initializers
-        // do not expose these flags, hence the POSIX call.
+    /// Opens the given file with O_APPEND and writes the per-process
+    /// header. Shared by the main app's fresh-mint path and the XPC
+    /// service's attach path so both processes use identical open and
+    /// header logic.
+    private func openLogFile(at fileURL: URL) {
+        let dir = fileURL.deletingLastPathComponent()
+        do {
+            try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        } catch {
+            osLog.error("Failed to create log directory at \(dir.path): \(error)")
+            return
+        }
+
+        // Open with O_APPEND so the main app and the XPC service can
+        // safely write to the same file. FileManager.createFile and
+        // FileHandle(forWritingTo:) would truncate an existing file
+        // and the two processes' per-fd offsets would race against
+        // each other on the same byte range. POSIX open(2) with
+        // O_APPEND tells the kernel to atomically position each write
+        // at end-of-file, which is atomic between processes for writes
+        // smaller than PIPE_BUF on local filesystems; O_CREAT creates
+        // the file if absent without touching an existing one. Swift's
+        // FileHandle initializers do not expose these flags, hence the
+        // POSIX call.
         let fd = open(fileURL.path, O_WRONLY | O_APPEND | O_CREAT, 0o644)
         guard fd >= 0 else {
             osLog.error("Failed to open log file at \(fileURL.path): errno \(errno)")

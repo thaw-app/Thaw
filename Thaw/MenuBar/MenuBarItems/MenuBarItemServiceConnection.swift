@@ -44,6 +44,24 @@ extension MenuBarItemService {
         func start() async {
             diagLog.debug("Starting MenuBarItemService connection")
 
+            // If the main app already has a diagnostic log file open,
+            // hand its path to the XPC service so both processes append
+            // to the same file. Sent before the start request so the
+            // XPC service is logging to disk by the time it handles any
+            // subsequent traffic. When file logging is off in the main
+            // app currentLogFile is nil and the XPC service simply logs
+            // to OSLog only, matching the prior release-build behaviour.
+            if let logFile = DiagnosticLogger.shared.currentLogFile {
+                let response = await session.sendAsync(request: .configureLogging(filePath: logFile.path))
+                if response == nil {
+                    diagLog.error("configureLogging request returned nil")
+                } else if case .configureLogging = response {
+                    // success
+                } else {
+                    diagLog.error("configureLogging request returned invalid response \(String(describing: response))")
+                }
+            }
+
             let response = await session.sendAsync(request: .start)
             guard let response else {
                 diagLog.error("Start request returned nil")

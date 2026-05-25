@@ -15,12 +15,14 @@ enum MenuBarItemService {
 extension MenuBarItemService {
     enum Request: Codable {
         case start
+        case configureLogging(filePath: String)
         case sourcePID(WindowInfo)
         case sourcePIDs([WindowInfo])
     }
 
     enum Response: Codable {
         case start
+        case configureLogging
         case sourcePID(pid_t?)
         case sourcePIDs([pid_t?])
     }
