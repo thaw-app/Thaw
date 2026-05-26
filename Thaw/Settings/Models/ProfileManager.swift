@@ -667,6 +667,35 @@ final class ProfileManager: ObservableObject {
         try saveProfileAndUpdateManifest(profile)
     }
 
+    /// Writes the given itemSpacingOffset into every profile's stored
+    /// displayConfigurations entry for the specified display UUID. Creates
+    /// a default entry when a profile has no prior configuration for that
+    /// display. Used by the spacing-apply confirmation in DisplaySettingsPane
+    /// so a freshly applied spacing change is not reverted by the next
+    /// profile reapply.
+    func updateAllProfilesItemSpacingOffset(displayUUID: String, offset: Double) throws {
+        let now = Date()
+        var pending: [Profile] = []
+        pending.reserveCapacity(profiles.count)
+        for meta in profiles {
+            var profile = try loadProfile(id: meta.id)
+            let base = profile.displayConfigurations[displayUUID] ?? .defaultConfiguration
+            profile.displayConfigurations[displayUUID] = base.withItemSpacingOffset(offset)
+            profile.modifiedAt = now
+            pending.append(profile)
+        }
+        for profile in pending {
+            let data = try encoder.encode(profile)
+            try data.write(to: profileURL(for: profile.id), options: .atomic)
+        }
+        for profile in pending {
+            if let index = profiles.firstIndex(where: { $0.id == profile.id }) {
+                profiles[index].modifiedAt = profile.modifiedAt
+            }
+        }
+        saveManifest()
+    }
+
     // MARK: - Profile Hooks
 
     /// Returns the automation config (pre/post hooks) attached to the

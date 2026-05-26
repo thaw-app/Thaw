@@ -46,6 +46,15 @@ final class DisplaySettingsManager: ObservableObject {
     /// Internal access so unit tests in ThawTests can seed and assert it.
     var lastAppliedActiveDisplayUUID: String?
 
+    /// UUID of the display that currently owns the menu bar, or nil if it
+    /// cannot be determined. Exposed for views that need to decide whether
+    /// a spacing change will trigger the relaunch wave (only writes against
+    /// the active display do, because applyActiveDisplaySpacing only reads
+    /// configurationForActiveDisplay()).
+    var activeMenuBarDisplayUUID: String? {
+        Bridging.getActiveMenuBarDisplayUUID()
+    }
+
     /// Performs the initial setup of the manager.
     func performSetup(with appState: AppState) {
         self.appState = appState
@@ -84,15 +93,32 @@ final class DisplaySettingsManager: ObservableObject {
 
     // MARK: - Loading
 
-    /// Loads saved configurations from Defaults.
+    /// Default baseline for NSStatusItemSpacing and NSStatusItemSelectionPadding,
+    /// kept in sync with MenuBarItemSpacingManager.Key.defaultValue. Used to
+    /// translate on-disk system spacing into Thaw's relative offset model.
+    private static let systemSpacingDefault = 16
+
+    /// Loads saved configurations from Defaults. On a truly first launch
+    /// (no persisted per-display configurations) with externally configured
+    /// system spacing, adopts the on-disk value as the seed offset for each
+    /// connected display so Thaw does not overwrite a user's manual
+    /// defaults write NSStatusItemSpacing and trigger a startup relaunch
+    /// wave. See issue #602.
     private func loadInitialState() {
-        if let data = Defaults.data(forKey: .displayIceBarConfigurations) {
+        let persistedData = Defaults.data(forKey: .displayIceBarConfigurations)
+        if let data = persistedData {
             do {
                 configurations = try decoder.decode([String: DisplayIceBarConfiguration].self, from: data)
                 diagLog.info("Loaded per-display configurations for \(configurations.count) display(s)")
             } catch {
                 diagLog.error("Failed to decode per-display configurations: \(error)")
             }
+        }
+        // Gate seeding on absence of the persisted key rather than an empty
+        // in-memory dictionary so a user-initiated reset (which persists an
+        // empty dict) is not silently re-seeded from on-disk system spacing.
+        if persistedData == nil {
+            seedConfigurationsFromSystemSpacing()
         }
         if let data = Defaults.data(forKey: .knownDisplays) {
             do {
@@ -112,6 +138,62 @@ final class DisplaySettingsManager: ObservableObject {
             } catch {
                 diagLog.error("Failed to decode known display cache: \(error)")
             }
+        }
+    }
+
+    /// Reads the current system value for NSStatusItemSpacing from the byHost
+    /// global domain. Returns nil when the key is unset, letting callers
+    /// distinguish "user has explicitly configured spacing" from "macOS
+    /// default applies".
+    private static func currentSystemSpacing() -> Int? {
+        CFPreferencesCopyValue(
+            "NSStatusItemSpacing" as CFString,
+            kCFPreferencesAnyApplication,
+            kCFPreferencesCurrentUser,
+            kCFPreferencesCurrentHost
+        ) as? Int
+    }
+
+    /// When the user has manually set NSStatusItemSpacing outside of Thaw
+    /// (e.g. via a defaults write in Terminal), seed an entry for each
+    /// connected display whose itemSpacingOffset corresponds to that on-disk
+    /// value. Without this, applyActiveDisplaySpacing on first launch reads
+    /// the default offset of 0, computes target = 16, sees on-disk = N, and
+    /// fires a relaunch wave that rewrites the user's manual setting back to
+    /// 16. The seeded entries are written to Defaults inline because the
+    /// persistence sink is not yet wired at loadInitialState time; without
+    /// the explicit save, subsequent launches would re-seed on every start
+    /// instead of remembering the adopted value. The padding key is not
+    /// consulted because Thaw drives both keys from a single offset; users
+    /// whose padding diverges from spacing will see one normalising relaunch
+    /// on first launch but no recurring waves thereafter.
+    private func seedConfigurationsFromSystemSpacing() {
+        guard let onDisk = Self.currentSystemSpacing(),
+              onDisk != Self.systemSpacingDefault
+        else {
+            return
+        }
+        let offset = Double(onDisk - Self.systemSpacingDefault)
+        var seeded = configurations
+        for screen in NSScreen.screens {
+            guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else {
+                continue
+            }
+            if seeded[uuid] != nil { continue }
+            seeded[uuid] = DisplayIceBarConfiguration
+                .defaultConfiguration
+                .withItemSpacingOffset(offset)
+        }
+        guard seeded != configurations else { return }
+        configurations = seeded
+        do {
+            let data = try encoder.encode(seeded)
+            Defaults.set(data, forKey: .displayIceBarConfigurations)
+            diagLog.info(
+                "Seeded itemSpacingOffset=\(offset) from external NSStatusItemSpacing=\(onDisk) for \(seeded.count) display(s)"
+            )
+        } catch {
+            diagLog.error("Failed to persist seeded per-display configurations: \(error)")
         }
     }
 

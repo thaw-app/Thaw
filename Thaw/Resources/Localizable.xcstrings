@@ -43989,6 +43989,30 @@
           }
         }
       }
+    },
+    "Apply spacing change?" : {
+      "comment" : "Title of the alert shown before applying a menu bar item spacing change.",
+      "localizations" : {}
+    },
+    "Applying this spacing change will briefly relaunch all apps with menu bar items." : {
+      "comment" : "Alert message variant shown when applying a spacing change for the active menu bar display and no profile is active.",
+      "localizations" : {}
+    },
+    "Applying this spacing change will briefly relaunch all apps with menu bar items. Save the new spacing to the active profile \"%@\", or save it to every profile." : {
+      "comment" : "Alert message variant shown when applying a spacing change for the active menu bar display while a profile is active. %@ is the active profile name.",
+      "localizations" : {}
+    },
+    "Save the new spacing to the active profile \"%@\", or save it to every profile." : {
+      "comment" : "Alert message variant shown when applying a spacing change for a non-active display while a profile is active. %@ is the active profile name.",
+      "localizations" : {}
+    },
+    "Update Active Profile" : {
+      "comment" : "Button in the spacing-change confirmation alert that writes the new spacing into the active profile.",
+      "localizations" : {}
+    },
+    "Update All Profiles" : {
+      "comment" : "Button in the spacing-change confirmation alert that writes the new spacing into every profile.",
+      "localizations" : {}
     }
   },
   "version" : "1.1"
