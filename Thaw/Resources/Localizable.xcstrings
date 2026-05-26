@@ -24,14 +24,14 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "(no script selected)"
+            "state" : "translated",
+            "value" : "(aucun script sélectionné)"
           }
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "(no script selected)"
+            "state" : "translated",
+            "value" : "(nincs kiválasztva szkript)"
           }
         },
         "id" : {
@@ -60,8 +60,8 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "(no script selected)"
+            "state" : "translated",
+            "value" : "(geen script geselecteerd)"
           }
         },
         "pl" : {
@@ -78,14 +78,14 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "(no script selected)"
+            "state" : "translated",
+            "value" : "(скрипт не выбран)"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "(no script selected)"
+            "state" : "translated",
+            "value" : "(ไม่มีสคริปต์ที่ถูกเลือก)"
           }
         },
         "tr" : {
@@ -102,20 +102,20 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "(no script selected)"
+            "state" : "translated",
+            "value" : "(không có tập lệnh nào được chọn)"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "(no script selected)"
+            "state" : "translated",
+            "value" : "（未选择脚本）"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "(no script selected)"
+            "state" : "translated",
+            "value" : "（未選擇腳本）"
           }
         }
       }
@@ -869,8 +869,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ is currently running. Running multiple menu bar managers at the same time can cause display issues and unexpected behavior. Consider quitting %2$@ before using %3$@."
+            "state" : "translated",
+            "value" : "%1$@ jelenleg fut. Több menüsávkezelő egyidejű futtatása megjelenítési problémákat és váratlan viselkedést okozhat. Érdemes kilépni a következő alkalmazásból: %2$@, mielőtt használnád ezt: %3$@."
           }
         },
         "id" : {
@@ -2920,8 +2920,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Adaptive"
+            "state" : "translated",
+            "value" : "Adaptív"
           }
         },
         "id" : {
@@ -2992,20 +2992,20 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Adaptive"
+            "state" : "translated",
+            "value" : "Thích ứng"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Adaptive"
+            "state" : "translated",
+            "value" : "自适应"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Adaptive"
+            "state" : "translated",
+            "value" : "自適應"
           }
         }
       }
@@ -3039,8 +3039,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Add"
+            "state" : "translated",
+            "value" : "Hozzáadás"
           }
         },
         "id" : {
@@ -3158,8 +3158,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Add a Quit %@ item to the bottom of the secondary context menu."
+            "state" : "translated",
+            "value" : "„Kilépés ebből: %@” elem hozzáadása a másodlagos helyi menü aljához."
           }
         },
         "id" : {
@@ -3212,8 +3212,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Add a Quit %@ item to the bottom of the secondary context menu."
+            "state" : "translated",
+            "value" : "เพิ่มรายการ “ออกจาก %@” ที่ด้านล่างของเมนูคลิกขวารอง"
           }
         },
         "tr" : {
@@ -3230,8 +3230,8 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Add a Quit %@ item to the bottom of the secondary context menu."
+            "state" : "translated",
+            "value" : "Thêm mục Thoát %@ vào cuối menu ngữ cảnh phụ."
           }
         },
         "zh-Hans" : {
@@ -3242,8 +3242,8 @@
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Add a Quit %@ item to the bottom of the secondary context menu."
+            "state" : "translated",
+            "value" : "在次要右鍵選單底部加入「結束 %@」項目。"
           }
         }
       }
@@ -3277,8 +3277,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Add Application Manually"
+            "state" : "translated",
+            "value" : "Alkalmazás manuális hozzáadása"
           }
         },
         "id" : {
@@ -3515,8 +3515,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow"
+            "state" : "translated",
+            "value" : "Engedélyezés"
           }
         },
         "id" : {
@@ -3640,8 +3640,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow \"%1$@\" to control %2$@ settings?"
+            "state" : "translated",
+            "value" : "Engedélyezi, hogy \"%1$@\" vezérelje %2$@ beállításait?"
           }
         },
         "id" : {
@@ -3759,8 +3759,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow external applications to read and modify %@ settings via thaw:// URLs."
+            "state" : "translated",
+            "value" : "Külső alkalmazások engedélyezése %@ beállításainak olvasására és módosítására thaw:// URL-eken keresztül."
           }
         },
         "id" : {
@@ -3813,8 +3813,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow external applications to read and modify %@ settings via thaw:// URLs."
+            "state" : "translated",
+            "value" : "อนุญาตให้แอปภายนอกอ่านและแก้ไขการตั้งค่า %@ ผ่าน URL แบบ thaw://"
           }
         },
         "tr" : {
@@ -3878,8 +3878,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Always show hidden items"
+            "state" : "translated",
+            "value" : "Rejtett elemek mindig megjelenítése"
           }
         },
         "id" : {
@@ -3997,8 +3997,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Always show hidden menu bar items in the menu bar on this display."
+            "state" : "translated",
+            "value" : "A rejtett menüsávelemek mindig jelenjenek meg a menüsávban ezen a kijelzőn."
           }
         },
         "id" : {
@@ -4116,8 +4116,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Always show the %@ Bar at the mouse pointer's location when it is shown using a hotkey."
+            "state" : "translated",
+            "value" : "Mindig jelenjen meg a %@ sáv az egérmutató helyén, amikor gyorsbillentyűvel jeleníted meg."
           }
         },
         "id" : {
@@ -4354,8 +4354,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Appearance"
+            "state" : "translated",
+            "value" : "Megjelenés"
           }
         },
         "id" : {
@@ -4592,8 +4592,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply a Thaw menu bar profile when this Focus activates."
+            "state" : "translated",
+            "value" : "Thaw menüsávprofil alkalmazása, amikor ez a Fókusz aktiválódik."
           }
         },
         "id" : {
@@ -4711,8 +4711,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply briefly relaunches apps with menu bar items so they pick up the new spacing. Setting takes effect when this display is the active menu bar display."
+            "state" : "translated",
+            "value" : "Az „Alkalmazás” rövid időre újraindítja a menüsávelemekkel rendelkező alkalmazásokat, hogy átvegyék az új térközt. A beállítás akkor lép érvénybe, amikor ez a kijelző az aktív menüsáv kijelzője."
           }
         },
         "id" : {
@@ -4765,8 +4765,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply briefly relaunches apps with menu bar items so they pick up the new spacing. Setting takes effect when this display is the active menu bar display."
+            "state" : "translated",
+            "value" : "การนำไปใช้จะรีสตาร์ทแอปที่มีรายการในแถบเมนูชั่วคราว เพื่อให้แอปเหล่านั้นใช้ระยะห่างใหม่ การตั้งค่านี้จะมีผลเมื่อจอแสดงผลนี้เป็นจอที่ใช้แถบเมนูหลักอยู่"
           }
         },
         "tr" : {
@@ -4783,8 +4783,8 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply briefly relaunches apps with menu bar items so they pick up the new spacing. Setting takes effect when this display is the active menu bar display."
+            "state" : "translated",
+            "value" : "Áp dụng sẽ khởi chạy lại nhanh các ứng dụng có các mục trên thanh menu để chúng có khoảng cách mới. Cài đặt có hiệu lực khi màn hình này là màn hình thanh menu hoạt động."
           }
         },
         "zh-Hans" : {
@@ -4949,8 +4949,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply the spacing for this display"
+            "state" : "translated",
+            "value" : "Térköz alkalmazása ezen a kijelzőn"
           }
         },
         "id" : {
@@ -5003,8 +5003,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply the spacing for this display"
+            "state" : "translated",
+            "value" : "นำการตั้งค่าระยะห่างนี้ไปใช้กับจอแสดงผลนี้"
           }
         },
         "tr" : {
@@ -5021,8 +5021,8 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply the spacing for this display"
+            "state" : "translated",
+            "value" : "Áp dụng khoảng cách cho màn hình này"
           }
         },
         "zh-Hans" : {
@@ -5439,8 +5439,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apps that request settings access will appear here after you approve them."
+            "state" : "translated",
+            "value" : "A beállításokhoz hozzáférést kérő alkalmazások itt jelennek meg, miután jóváhagytad őket."
           }
         },
         "id" : {
@@ -5558,8 +5558,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Are you sure you want to delete the profile \"%@\"? This cannot be undone."
+            "state" : "translated",
+            "value" : "Biztosan törölni szeretnéd ezt a profilt: \"%@\"? Ez nem vonható vissza."
           }
         },
         "id" : {
@@ -5915,8 +5915,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Assign a profile to each display."
+            "state" : "translated",
+            "value" : "Rendelj profilt minden kijelzőhöz."
           }
         },
         "id" : {
@@ -6034,8 +6034,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Auto-Switch"
+            "state" : "translated",
+            "value" : "Automatikus váltás"
           }
         },
         "id" : {
@@ -6629,8 +6629,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Automation"
+            "state" : "translated",
+            "value" : "Automatizálás"
           }
         },
         "id" : {
@@ -6748,8 +6748,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Back"
+            "state" : "translated",
+            "value" : "Vissza"
           }
         },
         "id" : {
@@ -6867,8 +6867,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Background"
+            "state" : "translated",
+            "value" : "Háttér"
           }
         },
         "id" : {
@@ -6986,8 +6986,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Background - Dark Appearance"
+            "state" : "translated",
+            "value" : "Háttér – sötét megjelenés"
           }
         },
         "id" : {
@@ -7040,8 +7040,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Background - Dark Appearance"
+            "state" : "translated",
+            "value" : "พื้นหลัง - โหมดมืด"
           }
         },
         "tr" : {
@@ -7105,8 +7105,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Background - Light Appearance"
+            "state" : "translated",
+            "value" : "Háttér – világos megjelenés"
           }
         },
         "id" : {
@@ -7159,8 +7159,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Background - Light Appearance"
+            "state" : "translated",
+            "value" : "พื้นหลัง - โหมดสว่าง"
           }
         },
         "tr" : {
@@ -7700,8 +7700,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Bundle Identifier (e.g., iordv.Droppy)"
+            "state" : "translated",
+            "value" : "Csomagazonosító (például iordv.Droppy)"
           }
         },
         "id" : {
@@ -7819,8 +7819,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Can modify settings"
+            "state" : "translated",
+            "value" : "Módosíthatja a beállításokat"
           }
         },
         "id" : {
@@ -8057,8 +8057,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Cannot move %@ icon."
+            "state" : "translated",
+            "value" : "Nem mozgatható a %@ ikon."
           }
         },
         "id" : {
@@ -8771,8 +8771,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Check permissions"
+            "state" : "translated",
+            "value" : "Engedélyek ellenőrzése"
           }
         },
         "id" : {
@@ -9247,8 +9247,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Chevron (Down)"
+            "state" : "translated",
+            "value" : "Nyílhegy (lefelé)"
           }
         },
         "id" : {
@@ -9598,14 +9598,14 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose Script…"
+            "state" : "translated",
+            "value" : "Choisir un script…"
           }
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose Script…"
+            "state" : "translated",
+            "value" : "Szkript kiválasztása…"
           }
         },
         "id" : {
@@ -9634,8 +9634,8 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose Script…"
+            "state" : "translated",
+            "value" : "Script kiezen…"
           }
         },
         "pl" : {
@@ -9652,14 +9652,14 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose Script…"
+            "state" : "translated",
+            "value" : "Выберите скрипт…"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose Script…"
+            "state" : "translated",
+            "value" : "เลือกสคริปต์…"
           }
         },
         "tr" : {
@@ -9676,20 +9676,20 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose Script…"
+            "state" : "translated",
+            "value" : "Chọn tập lệnh…"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose Script…"
+            "state" : "translated",
+            "value" : "选择脚本…"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose Script…"
+            "state" : "translated",
+            "value" : "選擇腳本…"
           }
         }
       }
@@ -9723,8 +9723,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Clear"
+            "state" : "translated",
+            "value" : "Törlés"
           }
         },
         "id" : {
@@ -9777,8 +9777,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Clear"
+            "state" : "translated",
+            "value" : "ล้าง"
           }
         },
         "tr" : {
@@ -9836,14 +9836,14 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Clear hook"
+            "state" : "translated",
+            "value" : "Effacer le hook"
           }
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Clear hook"
+            "state" : "translated",
+            "value" : "Kapcsoló törlése"
           }
         },
         "id" : {
@@ -9872,8 +9872,8 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Clear hook"
+            "state" : "translated",
+            "value" : "Hook wissen"
           }
         },
         "pl" : {
@@ -9890,14 +9890,14 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Clear hook"
+            "state" : "translated",
+            "value" : "Очистить хук"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Clear hook"
+            "state" : "translated",
+            "value" : "ล้าง Hook"
           }
         },
         "tr" : {
@@ -9914,20 +9914,20 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Clear hook"
+            "state" : "translated",
+            "value" : "Xóa hook"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Clear hook"
+            "state" : "translated",
+            "value" : "清除 Hook"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Clear hook"
+            "state" : "translated",
+            "value" : "清除 Hook"
           }
         }
       }
@@ -9961,8 +9961,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Click an empty area of the menu bar to show hidden menu bar items."
+            "state" : "translated",
+            "value" : "Kattints a menüsáv egy üres területére a rejtett menüsávelemek megjelenítéséhez."
           }
         },
         "id" : {
@@ -10199,8 +10199,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Columns"
+            "state" : "translated",
+            "value" : "Oszlopok"
           }
         },
         "id" : {
@@ -10318,8 +10318,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Confirm"
+            "state" : "translated",
+            "value" : "Megerősítés"
           }
         },
         "id" : {
@@ -10437,8 +10437,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Conflicting Menu Bar Manager Detected"
+            "state" : "translated",
+            "value" : "Ütköző menüsávkezelő észlelve"
           }
         },
         "id" : {
@@ -10675,8 +10675,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Continue Anyway"
+            "state" : "translated",
+            "value" : "Folytatás mindenképpen"
           }
         },
         "id" : {
@@ -11032,8 +11032,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Copy"
+            "state" : "translated",
+            "value" : "Másolás"
           }
         },
         "id" : {
@@ -11151,8 +11151,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Copy version info"
+            "state" : "translated",
+            "value" : "Verzióinformációk másolása"
           }
         },
         "id" : {
@@ -11270,8 +11270,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Created: %@"
+            "state" : "translated",
+            "value" : "Létrehozva: %@"
           }
         },
         "id" : {
@@ -11865,8 +11865,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete"
+            "state" : "translated",
+            "value" : "Törlés"
           }
         },
         "id" : {
@@ -11984,8 +11984,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete Profile?"
+            "state" : "translated",
+            "value" : "Profil törlése?"
           }
         },
         "id" : {
@@ -12103,8 +12103,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Deny"
+            "state" : "translated",
+            "value" : "Elutasítás"
           }
         },
         "id" : {
@@ -12460,8 +12460,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Discard"
+            "state" : "translated",
+            "value" : "Elvetés"
           }
         },
         "id" : {
@@ -12579,8 +12579,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Disconnected"
+            "state" : "translated",
+            "value" : "Leválasztva"
           }
         },
         "id" : {
@@ -12936,8 +12936,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Displays"
+            "state" : "translated",
+            "value" : "Kijelzők"
           }
         },
         "id" : {
@@ -13531,8 +13531,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Double-click %@ icon to open always-hidden section"
+            "state" : "translated",
+            "value" : "Kattints duplán a %@ ikonra a mindig rejtett szakasz megnyitásához"
           }
         },
         "id" : {
@@ -13585,8 +13585,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Double-click %@ icon to open always-hidden section"
+            "state" : "translated",
+            "value" : "ดับเบิลคลิกไอคอน %@ เพื่อเปิดส่วนที่ถูกซ่อนตลอดเวลา"
           }
         },
         "tr" : {
@@ -13603,8 +13603,8 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Double-click %@ icon to open always-hidden section"
+            "state" : "translated",
+            "value" : "Bấm đúp vào biểu tượng %@ để mở phần luôn bị ẩn"
           }
         },
         "zh-Hans" : {
@@ -13615,8 +13615,8 @@
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Double-click %@ icon to open always-hidden section"
+            "state" : "translated",
+            "value" : "按兩下 %@ 圖示以開啟永遠隱藏區段"
           }
         }
       }
@@ -13650,8 +13650,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Double-click an empty area of the menu bar to show always-hidden menu bar items."
+            "state" : "translated",
+            "value" : "Kattints duplán a menüsáv egy üres területére a mindig rejtett menüsávelemek megjelenítéséhez."
           }
         },
         "id" : {
@@ -13769,8 +13769,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Double-click for always-hidden"
+            "state" : "translated",
+            "value" : "Dupla kattintás a mindig rejtett elemekhez"
           }
         },
         "id" : {
@@ -14126,8 +14126,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Duplicate"
+            "state" : "translated",
+            "value" : "Duplikálás"
           }
         },
         "id" : {
@@ -14406,8 +14406,8 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Edit Menu Bar Appearance…"
+            "state" : "translated",
+            "value" : "Editar aparência da barra de menus…"
           }
         },
         "ru" : {
@@ -14483,8 +14483,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Edit Menu Bar Layout…"
+            "state" : "translated",
+            "value" : "Menüsáv elrendezésének szerkesztése…"
           }
         },
         "id" : {
@@ -14602,8 +14602,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Edit Name"
+            "state" : "translated",
+            "value" : "Név szerkesztése"
           }
         },
         "id" : {
@@ -14721,8 +14721,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Effect"
+            "state" : "translated",
+            "value" : "Effekt"
           }
         },
         "id" : {
@@ -15078,8 +15078,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enable menu bar item overflow"
+            "state" : "translated",
+            "value" : "Menüsávelemek túlcsordulásának engedélyezése"
           }
         },
         "id" : {
@@ -15132,8 +15132,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enable menu bar item overflow"
+            "state" : "translated",
+            "value" : "เปิดใช้งานการล้นของรายการในแถบเมนู"
           }
         },
         "tr" : {
@@ -15150,8 +15150,8 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enable menu bar item overflow"
+            "state" : "translated",
+            "value" : "bật tính năng tràn mục trên thanh menu"
           }
         },
         "zh-Hans" : {
@@ -15316,8 +15316,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enable secondary context menu quit"
+            "state" : "translated",
+            "value" : "Kilépés engedélyezése a másodlagos helyi menüben"
           }
         },
         "id" : {
@@ -15370,8 +15370,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enable secondary context menu quit"
+            "state" : "translated",
+            "value" : "เปิดใช้งานเมนูคลิกขวาเพิ่มเติมสำหรับออกจากแอป"
           }
         },
         "tr" : {
@@ -15388,20 +15388,20 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enable secondary context menu quit"
+            "state" : "translated",
+            "value" : "Cho phép thoát khỏi menu ngữ cảnh phụ"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enable secondary context menu quit"
+            "state" : "translated",
+            "value" : "启用二级右键菜单退出选项"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enable secondary context menu quit"
+            "state" : "translated",
+            "value" : "啟用次要右鍵選單的結束選項"
           }
         }
       }
@@ -15435,8 +15435,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enable Settings URI Scheme"
+            "state" : "translated",
+            "value" : "Beállítások URI-sémájának engedélyezése"
           }
         },
         "id" : {
@@ -15786,14 +15786,14 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enabled"
+            "state" : "translated",
+            "value" : "Activé"
           }
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enabled"
+            "state" : "translated",
+            "value" : "Engedélyezve"
           }
         },
         "id" : {
@@ -15822,8 +15822,8 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enabled"
+            "state" : "translated",
+            "value" : "Ingeschakeld"
           }
         },
         "pl" : {
@@ -15840,14 +15840,14 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enabled"
+            "state" : "translated",
+            "value" : "Включено"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enabled"
+            "state" : "translated",
+            "value" : "เปิดใช้งาน"
           }
         },
         "tr" : {
@@ -15864,20 +15864,20 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enabled"
+            "state" : "translated",
+            "value" : "Đã bật"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enabled"
+            "state" : "translated",
+            "value" : "启用"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enabled"
+            "state" : "translated",
+            "value" : "已啟用"
           }
         }
       }
@@ -15905,14 +15905,14 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Environment variables passed to scripts"
+            "state" : "translated",
+            "value" : "Variables d’environnement transmises aux scripts"
           }
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Environment variables passed to scripts"
+            "state" : "translated",
+            "value" : "Szkripteknek átadott környezeti változók"
           }
         },
         "id" : {
@@ -15941,8 +15941,8 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Environment variables passed to scripts"
+            "state" : "translated",
+            "value" : "Omgevingsvariabelen doorgegeven aan scripts"
           }
         },
         "pl" : {
@@ -15959,14 +15959,14 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Environment variables passed to scripts"
+            "state" : "translated",
+            "value" : "Переменные окружения, переданные в скрипты"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Environment variables passed to scripts"
+            "state" : "translated",
+            "value" : "ตัวแปรสภาพแวดล้อมที่ส่งไปยังสคริปต์"
           }
         },
         "tr" : {
@@ -15983,20 +15983,20 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Environment variables passed to scripts"
+            "state" : "translated",
+            "value" : "Biến môi trường được truyền cho tập lệnh"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Environment variables passed to scripts"
+            "state" : "translated",
+            "value" : "传递给脚本的环境变量"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Environment variables passed to scripts"
+            "state" : "translated",
+            "value" : "傳遞給腳本的環境變數"
           }
         }
       }
@@ -16030,8 +16030,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Error"
+            "state" : "translated",
+            "value" : "Hiba"
           }
         },
         "id" : {
@@ -16149,8 +16149,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "ERROR"
+            "state" : "translated",
+            "value" : "HIBA"
           }
         },
         "id" : {
@@ -16262,14 +16262,14 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Example: a bash pre-hook could `defaults write com.bjango.istatmenus5 ActiveProfile -string \"$THAW_PROFILE_NAME\"` to keep iStat Menus in sync with Thaw."
+            "state" : "translated",
+            "value" : "Exemple : un pre-hook bash pourrait exécuter \\defaults write com.bjango.istatmenus5 ActiveProfile -string “$THAW_PROFILE_NAME”` pour garder iStat Menus synchronisé avec Thaw."
           }
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Example: a bash pre-hook could `defaults write com.bjango.istatmenus5 ActiveProfile -string \"$THAW_PROFILE_NAME\"` to keep iStat Menus in sync with Thaw."
+            "state" : "translated",
+            "value" : "Példa: egy bash elő-hook használhatja ezt: \\defaults write com.bjango.istatmenus5 ActiveProfile -string “$THAW_PROFILE_NAME”`, hogy az iStat Menus szinkronban maradjon a Thaw alkalmazással.`"
           }
         },
         "id" : {
@@ -16298,8 +16298,8 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Example: a bash pre-hook could `defaults write com.bjango.istatmenus5 ActiveProfile -string \"$THAW_PROFILE_NAME\"` to keep iStat Menus in sync with Thaw."
+            "state" : "translated",
+            "value" : "Voorbeeld: een bash pre-hook kan \\defaults write com.bjango.istatmenus5 ActiveProfile -string “$THAW_PROFILE_NAME”` uitvoeren om iStat Menus gesynchroniseerd te houden met Thaw."
           }
         },
         "pl" : {
@@ -16316,14 +16316,14 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Example: a bash pre-hook could `defaults write com.bjango.istatmenus5 ActiveProfile -string \"$THAW_PROFILE_NAME\"` to keep iStat Menus in sync with Thaw."
+            "state" : "translated",
+            "value" : "Пример: bash-скрипт pre-hook может выполнить defaults write com.bjango.istatmenus5 ActiveProfile -string \"$THAW_PROFILE_NAME\", чтобы синхронизировать iStat Menus с Thaw."
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Example: a bash pre-hook could `defaults write com.bjango.istatmenus5 ActiveProfile -string \"$THAW_PROFILE_NAME\"` to keep iStat Menus in sync with Thaw."
+            "state" : "translated",
+            "value" : "ตัวอย่าง: bash pre-hook สามารถใช้คำสั่ง `defaults write com.bjango.istatmenus5 ActiveProfile -string \"$THAW_PROFILE_NAME\"` เพื่อให้ iStat Menus ซิงก์กับ Thaw อยู่เสมอ"
           }
         },
         "tr" : {
@@ -16340,20 +16340,20 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Example: a bash pre-hook could `defaults write com.bjango.istatmenus5 ActiveProfile -string \"$THAW_PROFILE_NAME\"` to keep iStat Menus in sync with Thaw."
+            "state" : "translated",
+            "value" : "Ví dụ: một bash pre-hook có thể `defaults write com.bjango.istatmenus5 ActiveProfile -string \"$THAW_PROFILE_NAME\"` để giữ cho các Menu iStat được đồng bộ hóa với Thaw."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Example: a bash pre-hook could `defaults write com.bjango.istatmenus5 ActiveProfile -string \"$THAW_PROFILE_NAME\"` to keep iStat Menus in sync with Thaw."
+            "state" : "translated",
+            "value" : "例如：bash 前置 Hook 可通过 `defaults write com.bjango.istatmenus5 ActiveProfile -string \"$THAW_PROFILE_NAME\"` 使 iStat Menus 与 Thaw 的配置保持同步。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Example: a bash pre-hook could `defaults write com.bjango.istatmenus5 ActiveProfile -string \"$THAW_PROFILE_NAME\"` to keep iStat Menus in sync with Thaw."
+            "state" : "translated",
+            "value" : "範例：bash pre-hook 可使用 `defaults write com.bjango.istatmenus5 ActiveProfile -string \"$THAW_PROFILE_NAME\"` 讓 iStat Menus 與 Thaw 同步。"
           }
         }
       }
@@ -16387,8 +16387,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Export"
+            "state" : "translated",
+            "value" : "Exportálás"
           }
         },
         "id" : {
@@ -16506,8 +16506,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Export Profile(s)"
+            "state" : "translated",
+            "value" : "Profilok exportálása"
           }
         },
         "id" : {
@@ -16625,8 +16625,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Failed to encode profiles for export."
+            "state" : "translated",
+            "value" : "Nem sikerült kódolni a profilokat az exportáláshoz."
           }
         },
         "id" : {
@@ -16744,8 +16744,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Failed to update configuration on %lld profile(s)."
+            "state" : "translated",
+            "value" : "Nem sikerült frissíteni a konfigurációt %lld profilnál."
           }
         },
         "id" : {
@@ -16857,14 +16857,14 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "File does not exist."
+            "state" : "translated",
+            "value" : "Le fichier n’existe pas."
           }
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "File does not exist."
+            "state" : "translated",
+            "value" : "A fájl nem létezik."
           }
         },
         "id" : {
@@ -16893,8 +16893,8 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "File does not exist."
+            "state" : "translated",
+            "value" : "Het bestand bestaat niet."
           }
         },
         "pl" : {
@@ -16911,14 +16911,14 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "File does not exist."
+            "state" : "translated",
+            "value" : "Файл не существует."
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "File does not exist."
+            "state" : "translated",
+            "value" : "ไฟล์ดังกล่าวไม่มีอยู่จริง"
           }
         },
         "tr" : {
@@ -16935,20 +16935,20 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "File does not exist."
+            "state" : "translated",
+            "value" : "Tập tin không tồn tại."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "File does not exist."
+            "state" : "translated",
+            "value" : "文件不存在。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "File does not exist."
+            "state" : "translated",
+            "value" : "檔案不存在。"
           }
         }
       }
@@ -17101,8 +17101,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Forward"
+            "state" : "translated",
+            "value" : "Előre"
           }
         },
         "id" : {
@@ -17577,8 +17577,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Glass"
+            "state" : "translated",
+            "value" : "Üveg"
           }
         },
         "id" : {
@@ -17631,8 +17631,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Glass"
+            "state" : "translated",
+            "value" : "แบบแก้ว"
           }
         },
         "tr" : {
@@ -17649,8 +17649,8 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Glass"
+            "state" : "translated",
+            "value" : "Kính"
           }
         },
         "zh-Hans" : {
@@ -17696,8 +17696,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Glass Style"
+            "state" : "translated",
+            "value" : "Üvegstílus"
           }
         },
         "id" : {
@@ -17750,8 +17750,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Glass Style"
+            "state" : "translated",
+            "value" : "สไตล์แบบแก้ว"
           }
         },
         "tr" : {
@@ -17768,8 +17768,8 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Glass Style"
+            "state" : "translated",
+            "value" : "Phong cách Kính"
           }
         },
         "zh-Hans" : {
@@ -17809,14 +17809,14 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Global Hooks"
+            "state" : "translated",
+            "value" : "Hooks globaux"
           }
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Global Hooks"
+            "state" : "translated",
+            "value" : "Globális hookok"
           }
         },
         "id" : {
@@ -17845,8 +17845,8 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Global Hooks"
+            "state" : "translated",
+            "value" : "Globale hooks"
           }
         },
         "pl" : {
@@ -17863,14 +17863,14 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Global Hooks"
+            "state" : "translated",
+            "value" : "Глобальные хуки"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Global Hooks"
+            "state" : "translated",
+            "value" : "Hooks ส่วนกลาง"
           }
         },
         "tr" : {
@@ -17887,20 +17887,20 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Global Hooks"
+            "state" : "translated",
+            "value" : "Các hook toàn cục"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Global Hooks"
+            "state" : "translated",
+            "value" : "全局 Hook"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Global Hooks"
+            "state" : "translated",
+            "value" : "全域 Hook"
           }
         }
       }
@@ -18291,8 +18291,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Grid"
+            "state" : "translated",
+            "value" : "Rács"
           }
         },
         "id" : {
@@ -18999,14 +18999,14 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "Hooks"
           }
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Hooks"
+            "state" : "translated",
+            "value" : "Hookok"
           }
         },
         "id" : {
@@ -19035,7 +19035,7 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "Hooks"
           }
         },
@@ -19053,13 +19053,13 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Hooks"
+            "state" : "translated",
+            "value" : "Хуки"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "Hooks"
           }
         },
@@ -19077,20 +19077,20 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "Hooks"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "Hooks"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Hooks"
+            "state" : "translated",
+            "value" : "Hook"
           }
         }
       }
@@ -19124,8 +19124,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Horizontal"
+            "state" : "translated",
+            "value" : "Vízszintes"
           }
         },
         "id" : {
@@ -19600,8 +19600,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "How It Works"
+            "state" : "translated",
+            "value" : "Hogyan működik"
           }
         },
         "id" : {
@@ -19719,8 +19719,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "How often animated menu bar icons are refreshed in panels. Higher values are smoother but use more CPU."
+            "state" : "translated",
+            "value" : "Milyen gyakran frissülnek az animált menüsávikonok a panelekben. A magasabb értékek simább megjelenítést adnak, de több CPU-t használnak."
           }
         },
         "id" : {
@@ -20076,8 +20076,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Icon refresh rate"
+            "state" : "translated",
+            "value" : "Ikonfrissítési gyakoriság"
           }
         },
         "id" : {
@@ -20195,8 +20195,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If effects are not visible, disable \"Show menu bar background\" in System Settings %@ Menu Bar"
+            "state" : "translated",
+            "value" : "Ha az effektek nem láthatók, kapcsold ki a \"Menüsáv hátterének megjelenítése\" beállítást itt: Rendszerbeállítások %@ Menüsáv"
           }
         },
         "id" : {
@@ -20320,8 +20320,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If granted, this app will be able to:\n\n• Read current settings and configurations\n• Turn features and options on or off\n• Adjust timing values (delays, intervals, timers)\n• Change how %1$@ Bar behaves\n• Customize settings for each display\n\nThis permission stays active until removed in %2$@'s Automation settings."
+            "state" : "translated",
+            "value" : "Ha engedélyezed, ez az alkalmazás a következőkre lesz képes:\n\n• Jelenlegi beállítások és konfigurációk olvasása\n• Funkciók és beállítások be- vagy kikapcsolása\n• Időzítési értékek módosítása (késleltetések, időközök, időzítők)\n• A %1$@ sáv viselkedésének módosítása\n• Beállítások testreszabása minden kijelzőhöz\n\nEz az engedély addig marad aktív, amíg el nem távolítod a %2$@ Automatizálás beállításaiban."
           }
         },
         "id" : {
@@ -20439,8 +20439,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If not whitelisted, you'll see a confirmation dialog showing the app name and what it wants to do."
+            "state" : "translated",
+            "value" : "Ha nem szerepel az engedélyezőlistán, megjelenik egy megerősítő párbeszédablak, amely megmutatja az alkalmazás nevét és azt, hogy mit szeretne tenni."
           }
         },
         "id" : {
@@ -20558,8 +20558,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If you approve, the app is permanently whitelisted and can modify settings anytime without asking again."
+            "state" : "translated",
+            "value" : "Ha jóváhagyod, az alkalmazás véglegesen felkerül az engedélyezőlistára, és bármikor módosíthatja a beállításokat anélkül, hogy újra kérdezné."
           }
         },
         "id" : {
@@ -20796,8 +20796,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Import Profile(s)"
+            "state" : "translated",
+            "value" : "Profilok importálása"
           }
         },
         "id" : {
@@ -21153,8 +21153,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Items are arranged in a grid with multiple columns."
+            "state" : "translated",
+            "value" : "Az elemek több oszlopos rácsban vannak elrendezve."
           }
         },
         "id" : {
@@ -21272,8 +21272,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Items are arranged in a single horizontal row."
+            "state" : "translated",
+            "value" : "Az elemek egyetlen vízszintes sorban vannak elrendezve."
           }
         },
         "id" : {
@@ -21391,8 +21391,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Items are stacked vertically in a single column."
+            "state" : "translated",
+            "value" : "Az elemek függőlegesen, egyetlen oszlopban vannak egymásra rendezve."
           }
         },
         "id" : {
@@ -21629,8 +21629,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Keep search"
+            "state" : "translated",
+            "value" : "Keresés megtartása"
           }
         },
         "id" : {
@@ -21986,8 +21986,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Layout"
+            "state" : "translated",
+            "value" : "Elrendezés"
           }
         },
         "id" : {
@@ -22343,8 +22343,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Left aligned"
+            "state" : "translated",
+            "value" : "Balra igazítva"
           }
         },
         "id" : {
@@ -22581,8 +22581,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Left margin"
+            "state" : "translated",
+            "value" : "Bal margó"
           }
         },
         "id" : {
@@ -23295,7 +23295,7 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "max"
           }
         },
@@ -23414,8 +23414,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Maximum number of items per row in the grid layout."
+            "state" : "translated",
+            "value" : "Az elemek maximális száma soronként a rácsos elrendezésben."
           }
         },
         "id" : {
@@ -24604,8 +24604,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu Bar Profile"
+            "state" : "translated",
+            "value" : "Menüsávprofil"
           }
         },
         "id" : {
@@ -24961,8 +24961,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Modified: %@"
+            "state" : "translated",
+            "value" : "Módosítva: %@"
           }
         },
         "id" : {
@@ -25199,8 +25199,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move menu bar items from the visible section into the hidden section when they don't fit beside the notch on a notched display. Disable to keep the saved profile layout exactly as authored even when items would otherwise be pushed under the notch."
+            "state" : "translated",
+            "value" : "Menüsávelemek áthelyezése a látható szakaszból a rejtett szakaszba, ha nem férnek el a kamerakivágás mellett egy kamerakivágásos kijelzőn. Kapcsold ki, ha a mentett profil elrendezését pontosan úgy szeretnéd megtartani, ahogy létrehoztad, még akkor is, ha az elemek egyébként a kamerakivágás alá kerülnének."
           }
         },
         "id" : {
@@ -25253,8 +25253,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move menu bar items from the visible section into the hidden section when they don't fit beside the notch on a notched display. Disable to keep the saved profile layout exactly as authored even when items would otherwise be pushed under the notch."
+            "state" : "translated",
+            "value" : "ย้ายรายการแถบเมนูจากส่วนที่มองเห็นได้ไปยังส่วนที่ซ่อนอยู่ เมื่อรายการเหล่านั้นไม่พอดีกับขอบด้านข้างของหน้าจอที่มี Notch ได้ ปิดใช้งานเพื่อรักษารูปแบบโปรไฟล์ที่บันทึกไว้ให้เหมือนเดิมทุกประการ แม้ว่ารายการต่างๆ จะถูกดันไปอยู่ใต้ Notch ก็ตาม"
           }
         },
         "tr" : {
@@ -25271,8 +25271,8 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move menu bar items from the visible section into the hidden section when they don't fit beside the notch on a notched display. Disable to keep the saved profile layout exactly as authored even when items would otherwise be pushed under the notch."
+            "state" : "translated",
+            "value" : "Di chuyển các mục trên thanh menu từ phần hiển thị sang phần ẩn khi chúng không vừa với phần notch trên màn hình có khía. Tắt để giữ bố cục hồ sơ đã lưu chính xác như tác giả ngay cả khi các mục sẽ bị đẩy xuống dưới phần notch."
           }
         },
         "zh-Hans" : {
@@ -25318,8 +25318,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move the New Items badge to choose where newly detected items will appear."
+            "state" : "translated",
+            "value" : "Helyezd át az Új elemek jelvényt annak kiválasztásához, hogy hol jelenjenek meg az újonnan észlelt elemek."
           }
         },
         "id" : {
@@ -25556,8 +25556,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "New Items"
+            "state" : "translated",
+            "value" : "Új elemek"
           }
         },
         "id" : {
@@ -25675,8 +25675,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "New profile name"
+            "state" : "translated",
+            "value" : "Új profilnév"
           }
         },
         "id" : {
@@ -25913,8 +25913,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No profile selected"
+            "state" : "translated",
+            "value" : "Nincs kiválasztva profil"
           }
         },
         "id" : {
@@ -26026,14 +26026,14 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No profiles saved yet. Create one in the Profiles tab to attach per-profile hooks."
+            "state" : "translated",
+            "value" : "Aucun profil n’a encore été enregistré. Créez-en un dans l’onglet Profils pour y associer des hooks par profil."
           }
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No profiles saved yet. Create one in the Profiles tab to attach per-profile hooks."
+            "state" : "translated",
+            "value" : "Még nincsenek mentett profilok. Hozz létre egyet a Profilok lapon, hogy profilhoz kötött hookokat rendelhess hozzá."
           }
         },
         "id" : {
@@ -26062,8 +26062,8 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No profiles saved yet. Create one in the Profiles tab to attach per-profile hooks."
+            "state" : "translated",
+            "value" : "Er zijn nog geen profielen opgeslagen. Maak er een aan op het tabblad Profielen om hooks per profiel toe te voegen."
           }
         },
         "pl" : {
@@ -26080,14 +26080,14 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No profiles saved yet. Create one in the Profiles tab to attach per-profile hooks."
+            "state" : "translated",
+            "value" : "Профили еще не созданы. Создайте профиль на вкладке «Профили», чтобы привязать к нему хуки."
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No profiles saved yet. Create one in the Profiles tab to attach per-profile hooks."
+            "state" : "translated",
+            "value" : "ยังไม่มี Profiles ที่บันทึกไว้ สร้าง Profiles ในแท็บ Profiles เพื่อผูก Hooks สำหรับแต่ละ Profiles"
           }
         },
         "tr" : {
@@ -26104,20 +26104,20 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No profiles saved yet. Create one in the Profiles tab to attach per-profile hooks."
+            "state" : "translated",
+            "value" : "Chưa có hồ sơ nào được lưu. Tạo một cái trong tab Cấu hình để đính kèm các hook trên mỗi cấu hình."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No profiles saved yet. Create one in the Profiles tab to attach per-profile hooks."
+            "state" : "translated",
+            "value" : "尚未保存任何配置。请先在“配置”标签页中创建配置，以便为不同配置设置专属 Hook。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No profiles saved yet. Create one in the Profiles tab to attach per-profile hooks."
+            "state" : "translated",
+            "value" : "尚未儲存任何設定檔。請至「設定檔」分頁建立一個，以附加個別設定檔 Hook。"
           }
         }
       }
@@ -26151,8 +26151,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No profiles saved. Save your current configuration to create one."
+            "state" : "translated",
+            "value" : "Nincsenek mentett profilok. Mentsd el a jelenlegi konfigurációt egy profil létrehozásához."
           }
         },
         "id" : {
@@ -26389,8 +26389,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No whitelisted apps"
+            "state" : "translated",
+            "value" : "Nincsenek engedélyezőlistás alkalmazások"
           }
         },
         "id" : {
@@ -26746,8 +26746,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not available because the %@ Bar is enabled for this display."
+            "state" : "translated",
+            "value" : "Nem érhető el, mert a %@ sáv engedélyezve van ezen a kijelzőn."
           }
         },
         "id" : {
@@ -26978,14 +26978,14 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not executable. Run \"chmod +x\" on the file."
+            "state" : "translated",
+            "value" : "Non exécutable. Exécutez \"chmod +x\" sur le fichier."
           }
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not executable. Run \"chmod +x\" on the file."
+            "state" : "translated",
+            "value" : "Nem futtatható. Futtasd a \"chmod +x\" parancsot a fájlon."
           }
         },
         "id" : {
@@ -27014,8 +27014,8 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not executable. Run \"chmod +x\" on the file."
+            "state" : "translated",
+            "value" : "Niet uitvoerbaar. Voer \"chmod +x\" uit op het bestand."
           }
         },
         "pl" : {
@@ -27032,14 +27032,14 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not executable. Run \"chmod +x\" on the file."
+            "state" : "translated",
+            "value" : "Файл не является исполняемым. Выполните chmod +x для этого файла."
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not executable. Run \"chmod +x\" on the file."
+            "state" : "translated",
+            "value" : "ไฟล์ไม่สามารถรันได้ ให้ใช้คำสั่ง \"chmod +x\" กับไฟล์"
           }
         },
         "tr" : {
@@ -27056,20 +27056,20 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not executable. Run \"chmod +x\" on the file."
+            "state" : "translated",
+            "value" : "Không thực thi được. Chạy \"chmod +x\" trên tệp."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not executable. Run \"chmod +x\" on the file."
+            "state" : "translated",
+            "value" : "文件不可执行。请先对该文件运行 \"chmod +x\"。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not executable. Run \"chmod +x\" on the file."
+            "state" : "translated",
+            "value" : "沒有執行權限。請對此檔案執行 chmod +x。"
           }
         }
       }
@@ -27103,8 +27103,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Notch"
+            "state" : "translated",
+            "value" : "Képernyőkivágás"
           }
         },
         "id" : {
@@ -27222,8 +27222,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Notch margin"
+            "state" : "translated",
+            "value" : "Képernyőkivágás margója"
           }
         },
         "id" : {
@@ -27341,8 +27341,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Off"
+            "state" : "translated",
+            "value" : "Ki"
           }
         },
         "id" : {
@@ -27460,7 +27460,7 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "OK"
           }
         },
@@ -27698,8 +27698,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Opacity"
+            "state" : "translated",
+            "value" : "Átlátszatlanság"
           }
         },
         "id" : {
@@ -27936,8 +27936,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Open Focus Settings"
+            "state" : "translated",
+            "value" : "Fókuszbeállítások megnyitása"
           }
         },
         "id" : {
@@ -28168,14 +28168,14 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Per-Profile Hooks"
+            "state" : "translated",
+            "value" : "Hooks par profil"
           }
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Per-Profile Hooks"
+            "state" : "translated",
+            "value" : "Profilonkénti hookok"
           }
         },
         "id" : {
@@ -28204,8 +28204,8 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Per-Profile Hooks"
+            "state" : "translated",
+            "value" : "Hooks per profiel"
           }
         },
         "pl" : {
@@ -28222,14 +28222,14 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Per-Profile Hooks"
+            "state" : "translated",
+            "value" : "Хуки профилей"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Per-Profile Hooks"
+            "state" : "translated",
+            "value" : " Hooks สำหรับแต่ละ Profiles"
           }
         },
         "tr" : {
@@ -28246,20 +28246,20 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "Per-Profile Hooks"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Per-Profile Hooks"
+            "state" : "translated",
+            "value" : "配置专属 Hook"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Per-Profile Hooks"
+            "state" : "translated",
+            "value" : "個別設定檔 Hook"
           }
         }
       }
@@ -28525,14 +28525,14 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Post-apply"
+            "state" : "translated",
+            "value" : "Après application"
           }
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Post-apply"
+            "state" : "translated",
+            "value" : "Alkalmazás után"
           }
         },
         "id" : {
@@ -28561,8 +28561,8 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Post-apply"
+            "state" : "translated",
+            "value" : "Na toepassen"
           }
         },
         "pl" : {
@@ -28579,14 +28579,14 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Post-apply"
+            "state" : "translated",
+            "value" : "После применения"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Post-apply"
+            "state" : "translated",
+            "value" : "หลังนำไปใช้\n"
           }
         },
         "tr" : {
@@ -28603,20 +28603,20 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Post-apply"
+            "state" : "translated",
+            "value" : "Sau khi áp dụng"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Post-apply"
+            "state" : "translated",
+            "value" : "应用后"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Post-apply"
+            "state" : "translated",
+            "value" : "套用後"
           }
         }
       }
@@ -28644,14 +28644,14 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Pre-apply"
+            "state" : "translated",
+            "value" : "Avant application"
           }
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Pre-apply"
+            "state" : "translated",
+            "value" : "Alkalmazás előtt"
           }
         },
         "id" : {
@@ -28680,8 +28680,8 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Pre-apply"
+            "state" : "translated",
+            "value" : "Vóór toepassen"
           }
         },
         "pl" : {
@@ -28698,14 +28698,14 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Pre-apply"
+            "state" : "translated",
+            "value" : "Перед применением"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Pre-apply"
+            "state" : "translated",
+            "value" : "ก่อนนำไปใช้"
           }
         },
         "tr" : {
@@ -28722,20 +28722,20 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Pre-apply"
+            "state" : "translated",
+            "value" : "Trước khi áp dụng"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Pre-apply"
+            "state" : "translated",
+            "value" : "应用前"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Pre-apply"
+            "state" : "translated",
+            "value" : "套用前"
           }
         }
       }
@@ -28769,8 +28769,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Profile"
+            "state" : "translated",
+            "value" : "Profil"
           }
         },
         "id" : {
@@ -28888,8 +28888,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Profile name"
+            "state" : "translated",
+            "value" : "Profilnév"
           }
         },
         "id" : {
@@ -29007,8 +29007,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Profile: %@"
+            "state" : "translated",
+            "value" : "Profil: %@"
           }
         },
         "id" : {
@@ -29126,8 +29126,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Profiles"
+            "state" : "translated",
+            "value" : "Profilok"
           }
         },
         "id" : {
@@ -29602,8 +29602,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Regular"
+            "state" : "translated",
+            "value" : "Normál"
           }
         },
         "id" : {
@@ -29656,8 +29656,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Regular"
+            "state" : "translated",
+            "value" : "ปกติ"
           }
         },
         "tr" : {
@@ -29674,8 +29674,8 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Regular"
+            "state" : "translated",
+            "value" : "Thông thường"
           }
         },
         "zh-Hans" : {
@@ -29721,8 +29721,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Remove %@ from whitelist"
+            "state" : "translated",
+            "value" : "%@ eltávolítása az engedélyezőlistáról"
           }
         },
         "id" : {
@@ -29840,8 +29840,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Remove from whitelist"
+            "state" : "translated",
+            "value" : "Eltávolítás az engedélyezőlistáról"
           }
         },
         "id" : {
@@ -29959,8 +29959,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Rename"
+            "state" : "translated",
+            "value" : "Átnevezés"
           }
         },
         "id" : {
@@ -30316,8 +30316,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset %@"
+            "state" : "translated",
+            "value" : "%@ visszaállítása"
           }
         },
         "id" : {
@@ -30435,8 +30435,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset all settings"
+            "state" : "translated",
+            "value" : "Összes beállítás visszaállítása"
           }
         },
         "id" : {
@@ -30554,8 +30554,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset all settings to their default values. This action cannot be undone."
+            "state" : "translated",
+            "value" : "Az összes beállítás visszaállítása az alapértelmezett értékekre. Ez a művelet nem vonható vissza."
           }
         },
         "id" : {
@@ -30673,8 +30673,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Reset all settings?"
+            "state" : "translated",
+            "value" : "Visszaállítod az összes beállítást?"
           }
         },
         "id" : {
@@ -31744,8 +31744,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Restart %@"
+            "state" : "translated",
+            "value" : "%@ újraindítása"
           }
         },
         "id" : {
@@ -31798,8 +31798,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Restart %@"
+            "state" : "translated",
+            "value" : "เริ่ม %@ ใหม่"
           }
         },
         "tr" : {
@@ -31816,8 +31816,8 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Restart %@"
+            "state" : "translated",
+            "value" : "Khởi động lại %@"
           }
         },
         "zh-Hans" : {
@@ -31828,8 +31828,8 @@
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Restart %@"
+            "state" : "translated",
+            "value" : "重新啟動 %@"
           }
         }
       }
@@ -31863,8 +31863,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Restores divider defaults and moves every movable item except the %@ icon to Hidden. Use this if the layout looks broken or items won’t load."
+            "state" : "translated",
+            "value" : "Visszaállítja az elválasztók alapértelmezett beállításait, és minden mozgatható elemet a Rejtett részbe helyez, a %@ ikon kivételével. Használd ezt, ha az elrendezés hibásnak tűnik, vagy az elemek nem töltődnek be."
           }
         },
         "id" : {
@@ -31982,8 +31982,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Right aligned"
+            "state" : "translated",
+            "value" : "Jobbra igazítva"
           }
         },
         "id" : {
@@ -32220,8 +32220,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Right margin"
+            "state" : "translated",
+            "value" : "Jobb margó"
           }
         },
         "id" : {
@@ -32571,14 +32571,14 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Run a shell or AppleScript file before or after a profile switch. Hooks fire on every apply path: manual button, hotkey, display auto-switch, and Focus Filter."
+            "state" : "translated",
+            "value" : "Exécute un fichier shell ou AppleScript avant ou après un changement de profil. Les hooks s’exécutent à chaque chemin d’application : bouton manuel, raccourci clavier, changement automatique d’écran et filtre de concentration."
           }
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Run a shell or AppleScript file before or after a profile switch. Hooks fire on every apply path: manual button, hotkey, display auto-switch, and Focus Filter."
+            "state" : "translated",
+            "value" : "Shell- vagy AppleScript-fájl futtatása profilváltás előtt vagy után. A hookok minden alkalmazási útvonalon lefutnak: kézi gomb, gyorsbillentyű, automatikus kijelzőváltás és Fókuszszűrő."
           }
         },
         "id" : {
@@ -32607,8 +32607,8 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Run a shell or AppleScript file before or after a profile switch. Hooks fire on every apply path: manual button, hotkey, display auto-switch, and Focus Filter."
+            "state" : "translated",
+            "value" : "Voer een shell- of AppleScript-bestand uit vóór of na een profielwissel. Hooks worden uitgevoerd bij elke manier van toepassen: handmatige knop, sneltoets, automatische beeldschermwisseling en Focus-filter."
           }
         },
         "pl" : {
@@ -32625,14 +32625,14 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Run a shell or AppleScript file before or after a profile switch. Hooks fire on every apply path: manual button, hotkey, display auto-switch, and Focus Filter."
+            "state" : "translated",
+            "value" : "Запуск shell-скриптов или AppleScript файлов до или после переключения профиля. Хуки срабатывают при любом способе применения: по нажатию кнопки вручную, горячей клавише, автоматическому переключению дисплея или через «Фильтры фокусировки»."
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Run a shell or AppleScript file before or after a profile switch. Hooks fire on every apply path: manual button, hotkey, display auto-switch, and Focus Filter."
+            "state" : "translated",
+            "value" : "เรียกใช้งานไฟล์ Shell Script หรือ AppleScript ก่อนหรือหลังการสลับ Profile โดย Hooks จะทำงานทุกครั้งที่มีการนำไปใช้ ไม่ว่าจะผ่านปุ่มด้วยตนเอง ปุ่มลัด การสลับจอแสดงผลอัตโนมัติ หรือ Focus Filter"
           }
         },
         "tr" : {
@@ -32649,20 +32649,20 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Run a shell or AppleScript file before or after a profile switch. Hooks fire on every apply path: manual button, hotkey, display auto-switch, and Focus Filter."
+            "state" : "translated",
+            "value" : "Chạy tệp shell hoặc AppleScript trước hoặc sau khi chuyển đổi cấu hình. Kích hoạt trên mọi đường dẫn áp dụng: nút thủ công, phím nóng, tự động chuyển đổi màn hình và Bộ lọc Tập trung."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Run a shell or AppleScript file before or after a profile switch. Hooks fire on every apply path: manual button, hotkey, display auto-switch, and Focus Filter."
+            "state" : "translated",
+            "value" : "可在配置切换前后运行 Shell 或 AppleScript 脚本。\nHook 会在所有配置应用场景下触发，包括手动切换、快捷键、显示器自动切换以及专注模式过滤器。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Run a shell or AppleScript file before or after a profile switch. Hooks fire on every apply path: manual button, hotkey, display auto-switch, and Focus Filter."
+            "state" : "translated",
+            "value" : "在切換設定檔前後執行 Shell 或 AppleScript 檔案。所有套用方式皆會觸發 Hook：手動按鈕、快速鍵、顯示器自動切換以及專注模式過濾器。"
           }
         }
       }
@@ -32690,13 +32690,13 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "s"
           }
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "s"
           }
         },
@@ -32726,7 +32726,7 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "s"
           }
         },
@@ -32744,14 +32744,14 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "s"
+            "state" : "translated",
+            "value" : "с"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "s"
+            "state" : "translated",
+            "value" : "วิ"
           }
         },
         "tr" : {
@@ -32768,20 +32768,20 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "s"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "s"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "s"
+            "state" : "translated",
+            "value" : "秒"
           }
         }
       }
@@ -32815,8 +32815,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Save Current"
+            "state" : "translated",
+            "value" : "Jelenlegi mentése"
           }
         },
         "id" : {
@@ -33053,8 +33053,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Screen recording permissions are required to display tooltips."
+            "state" : "translated",
+            "value" : "Az eszköztippek megjelenítéséhez képernyőfelvételi engedélyek szükségesek."
           }
         },
         "id" : {
@@ -33172,8 +33172,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Screen recording permissions are required to search menu bar items."
+            "state" : "translated",
+            "value" : "A menüsávelemek kereséséhez képernyőfelvételi engedélyek szükségesek."
           }
         },
         "id" : {
@@ -33886,8 +33886,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Set Menu Bar Profile"
+            "state" : "translated",
+            "value" : "Menüsávprofil beállítása"
           }
         },
         "id" : {
@@ -34005,8 +34005,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Settings URI is disabled. External apps cannot read or modify %@ settings."
+            "state" : "translated",
+            "value" : "A Beállítások URI le van tiltva. Külső alkalmazások nem olvashatják vagy módosíthatják %@ beállításait."
           }
         },
         "id" : {
@@ -34368,8 +34368,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Should %1$@ automatically check for updates? You can always check manually from the %2$@ menu bar icon or Settings %3$@ About."
+            "state" : "translated",
+            "value" : "%1$@ automatikusan keressen frissítéseket? Kézzel bármikor ellenőrizheted a %2$@ menüsávikonból vagy a Beállítások %3$@ Névjegy menüpontban."
           }
         },
         "id" : {
@@ -34606,8 +34606,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Show a tooltip when hovering over menu bar items in the actual menu bar."
+            "state" : "translated",
+            "value" : "Eszköztipp megjelenítése, amikor az egérmutató a tényleges menüsáv elemei fölé kerül."
           }
         },
         "id" : {
@@ -34963,8 +34963,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Show at mouse pointer on hotkey"
+            "state" : "translated",
+            "value" : "Megjelenítés az egérmutatónál gyorsbillentyű használatakor"
           }
         },
         "id" : {
@@ -35082,8 +35082,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Show hidden menu bar items in a separate bar below the menu bar on this display."
+            "state" : "translated",
+            "value" : "Rejtett menüsávelemek megjelenítése külön sávban a menüsáv alatt ezen a kijelzőn."
           }
         },
         "id" : {
@@ -36034,8 +36034,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Show the %@ icon in the menu bar. Click to show hidden items, double-click for always-hidden, and right-click for settings."
+            "state" : "translated",
+            "value" : "A %@ ikon megjelenítése a menüsávban. Kattintás a rejtett elemek megjelenítéséhez, dupla kattintás a mindig rejtett elemekhez, jobb kattintás a beállításokhoz."
           }
         },
         "id" : {
@@ -36153,8 +36153,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Show tooltips in the menu bar"
+            "state" : "translated",
+            "value" : "Eszköztippek megjelenítése a menüsávban"
           }
         },
         "id" : {
@@ -36272,8 +36272,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Signed by: %@"
+            "state" : "translated",
+            "value" : "Aláírta: %@"
           }
         },
         "id" : {
@@ -37105,8 +37105,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Style"
+            "state" : "translated",
+            "value" : "Stílus"
           }
         },
         "id" : {
@@ -37700,8 +37700,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Supported Settings"
+            "state" : "translated",
+            "value" : "Támogatott beállítások"
           }
         },
         "id" : {
@@ -37819,8 +37819,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "The %@ Bar is aligned to the left edge of the display."
+            "state" : "translated",
+            "value" : "A %@ sáv a kijelző bal széléhez van igazítva."
           }
         },
         "id" : {
@@ -37938,8 +37938,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "The %@ Bar is aligned to the right edge of the display."
+            "state" : "translated",
+            "value" : "A %@ sáv a kijelző jobb széléhez van igazítva."
           }
         },
         "id" : {
@@ -38533,8 +38533,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "The %@ icon must always remain in the visible section."
+            "state" : "translated",
+            "value" : "A %@ ikonnak mindig a látható szakaszban kell maradnia."
           }
         },
         "id" : {
@@ -38652,8 +38652,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "The amount of time to wait before showing a tooltip over a menu bar item."
+            "state" : "translated",
+            "value" : "A várakozási idő, mielőtt eszköztipp jelenik meg egy menüsávelem felett."
           }
         },
         "id" : {
@@ -38884,14 +38884,14 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "These hooks run only when this profile is applied, after the global pre-hook and before the global post-hook."
+            "state" : "translated",
+            "value" : "Ces hooks ne s’exécutent que lorsque ce profil est appliqué, après le pre-hook global et avant le post-hook global."
           }
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "These hooks run only when this profile is applied, after the global pre-hook and before the global post-hook."
+            "state" : "translated",
+            "value" : "Ezek a hookok csak akkor futnak le, amikor ezt a profilt alkalmazod, a globális pre-hook után és a globális post-hook előtt."
           }
         },
         "id" : {
@@ -38920,8 +38920,8 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "These hooks run only when this profile is applied, after the global pre-hook and before the global post-hook."
+            "state" : "translated",
+            "value" : "Deze hooks worden alleen uitgevoerd wanneer dit profiel wordt toegepast, na de globale pre-hook en vóór de globale post-hook."
           }
         },
         "pl" : {
@@ -38938,14 +38938,14 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "These hooks run only when this profile is applied, after the global pre-hook and before the global post-hook."
+            "state" : "translated",
+            "value" : "Эти хуки запускаются только при применении данного профиля — после глобального pre-hook и перед глобальным post-hook"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "These hooks run only when this profile is applied, after the global pre-hook and before the global post-hook."
+            "state" : "translated",
+            "value" : "Hooks เหล่านี้จะทำงานเฉพาะเมื่อมีการใช้โปรไฟล์นี้เท่านั้น โดยจะทำงานหลังจาก pre-hook ส่วนกลาง และก่อน post-hook ส่วนกลาง"
           }
         },
         "tr" : {
@@ -38962,20 +38962,20 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "These hooks run only when this profile is applied, after the global pre-hook and before the global post-hook."
+            "state" : "translated",
+            "value" : "Các hook này chỉ chạy khi cấu hình này được áp dụng, sau hook pre-hook toàn cục và trước hook post-hook toàn cục."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "These hooks run only when this profile is applied, after the global pre-hook and before the global post-hook."
+            "state" : "translated",
+            "value" : "这些 Hook 仅会在应用当前配置时运行，执行顺序位于全局前置 Hook 之后、全局后置 Hook 之前。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "These hooks run only when this profile is applied, after the global pre-hook and before the global post-hook."
+            "state" : "translated",
+            "value" : "這些 Hook 僅在套用此設定檔時執行，於全域 pre-hook 之後、全域 post-hook 之前。"
           }
         }
       }
@@ -39128,8 +39128,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "This will reset all settings to their default values. This action cannot be undone."
+            "state" : "translated",
+            "value" : "Ez minden beállítást visszaállít az alapértelmezett értékére. Ez a művelet nem vonható vissza."
           }
         },
         "id" : {
@@ -39360,14 +39360,14 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Timeout"
+            "state" : "translated",
+            "value" : "Délai d’expiration"
           }
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Timeout"
+            "state" : "translated",
+            "value" : "Időtúllépés"
           }
         },
         "id" : {
@@ -39396,8 +39396,8 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Timeout"
+            "state" : "translated",
+            "value" : "Time-out"
           }
         },
         "pl" : {
@@ -39414,14 +39414,14 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Timeout"
+            "state" : "translated",
+            "value" : "Таймаут"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Timeout"
+            "state" : "translated",
+            "value" : "หมดเวลา"
           }
         },
         "tr" : {
@@ -39438,20 +39438,20 @@
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Timeout"
+            "state" : "translated",
+            "value" : "Hết giờ"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Timeout"
+            "state" : "translated",
+            "value" : "超时"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Timeout"
+            "state" : "translated",
+            "value" : "逾時"
           }
         }
       }
@@ -39729,8 +39729,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "To switch profiles with Focus modes, add %1$@ as a Focus Filter in System Settings %2$@ Focus %3$@ [Mode] %4$@ Focus Filters. When a Focus mode deactivates, the display profile is automatically restored."
+            "state" : "translated",
+            "value" : "Profilok Fókusz módokkal történő váltásához add hozzá a %1$@ elemet Fókuszszűrőként itt: Rendszerbeállítások %2$@ Fókusz %3$@ [Mód] %4$@ Fókuszszűrők. Amikor egy Fókusz mód kikapcsol, a kijelzőprofil automatikusan visszaáll."
           }
         },
         "id" : {
@@ -40205,8 +40205,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Tooltip delay"
+            "state" : "translated",
+            "value" : "Eszköztipp késleltetése"
           }
         },
         "id" : {
@@ -40324,8 +40324,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Tooltips"
+            "state" : "translated",
+            "value" : "Eszköztippek"
           }
         },
         "id" : {
@@ -40919,8 +40919,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Untitled"
+            "state" : "translated",
+            "value" : "Névtelen"
           }
         },
         "id" : {
@@ -41038,8 +41038,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update"
+            "state" : "translated",
+            "value" : "Frissítés"
           }
         },
         "id" : {
@@ -41157,8 +41157,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update All"
+            "state" : "translated",
+            "value" : "Összes frissítése"
           }
         },
         "id" : {
@@ -41395,8 +41395,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update Configuration on All Profiles"
+            "state" : "translated",
+            "value" : "Konfiguráció frissítése minden profilnál"
           }
         },
         "id" : {
@@ -41514,8 +41514,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update Configuration Only"
+            "state" : "translated",
+            "value" : "Csak a konfiguráció frissítése"
           }
         },
         "id" : {
@@ -41633,8 +41633,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update Layout Only"
+            "state" : "translated",
+            "value" : "Csak az elrendezés frissítése"
           }
         },
         "id" : {
@@ -41752,8 +41752,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update this profile with the current state"
+            "state" : "translated",
+            "value" : "Profil frissítése a jelenlegi állapottal"
           }
         },
         "id" : {
@@ -42228,8 +42228,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Use LCS sorting on notched displays"
+            "state" : "translated",
+            "value" : "LCS-rendezés használata képernyőkivágásos kijelzőkön"
           }
         },
         "id" : {
@@ -42347,8 +42347,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Use Option-click to open always-hidden section"
+            "state" : "translated",
+            "value" : "Option-kattintás használata a mindig rejtett szakasz megnyitásához"
           }
         },
         "id" : {
@@ -42466,8 +42466,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Use the faster LCS (Longest Common Subsequence) algorithm for profile sorting on notched displays instead of the full sort. LCS minimises the number of moves but may be less reliable on notched displays with smaller resolutions."
+            "state" : "translated",
+            "value" : "A gyorsabb LCS (Longest Common Subsequence) algoritmus használata profilrendezéshez képernyőkivágásos kijelzőkön a teljes rendezés helyett. Az LCS minimalizálja az áthelyezések számát, de kisebb felbontású, képernyőkivágásos kijelzőkön kevésbé lehet megbízható."
           }
         },
         "id" : {
@@ -42823,8 +42823,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Vertical"
+            "state" : "translated",
+            "value" : "Függőleges"
           }
         },
         "id" : {
@@ -43061,8 +43061,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Warning: This app is not code-signed."
+            "state" : "translated",
+            "value" : "Figyelmeztetés: Ez az alkalmazás nincs kódaláírással ellátva."
           }
         },
         "id" : {
@@ -43299,8 +43299,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "When an app sends a thaw:// URL to change settings, Thaw checks if that app is whitelisted."
+            "state" : "translated",
+            "value" : "Amikor egy alkalmazás thaw:// URL-t küld a beállítások módosításához, a Thaw ellenőrzi, hogy az alkalmazás szerepel-e az engedélyezőlistán."
           }
         },
         "id" : {
@@ -43418,8 +43418,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Whitelisted Applications"
+            "state" : "translated",
+            "value" : "Engedélyezőlistás alkalmazások"
           }
         },
         "id" : {
@@ -43543,8 +43543,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Whitelisted apps can read settings, toggle boolean options, set numeric values (timers, delays), change enum settings (rehide strategy, %1$@ Bar location), and modify per-display configurations. This includes auto-rehide, show on click/hover/scroll/double-click, %2$@ Bar, hide application menus, enable always-hidden section, show tooltips, and diagnostic logging."
+            "state" : "translated",
+            "value" : "Az engedélyezőlistás alkalmazások olvashatják a beállításokat, be- vagy kikapcsolhatják a logikai opciókat, numerikus értékeket állíthatnak be (időzítők, késleltetések), módosíthatják az enum beállításokat (újrarejtési stratégia, %1$@ sáv helye), és módosíthatják a kijelzőnkénti konfigurációkat. Ez magában foglalja az automatikus újrarejtést, a kattintásra/rámutatásra/görgetésre/dupla kattintásra történő megjelenítést, a %2$@ sávot, az alkalmazásmenük elrejtését, a mindig rejtett szakasz engedélyezését, az eszköztippek megjelenítését és a diagnosztikai naplózást."
           }
         },
         "id" : {
@@ -43900,8 +43900,8 @@
         },
         "hu" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "You can remove apps from this list at any time to revoke their access."
+            "state" : "translated",
+            "value" : "Bármikor eltávolíthatsz alkalmazásokat erről a listáról a hozzáférésük visszavonásához."
           }
         },
         "id" : {
@@ -43992,27 +43992,717 @@
     },
     "Apply spacing change?" : {
       "comment" : "Title of the alert shown before applying a menu bar item spacing change.",
-      "localizations" : {}
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply spacing change?"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply spacing change?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply spacing change?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply spacing change?"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply spacing change?"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply spacing change?"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply spacing change?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply spacing change?"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply spacing change?"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply spacing change?"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply spacing change?"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply spacing change?"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply spacing change?"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply spacing change?"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply spacing change?"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply spacing change?"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply spacing change?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply spacing change?"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply spacing change?"
+          }
+        }
+      }
     },
     "Applying this spacing change will briefly relaunch all apps with menu bar items." : {
       "comment" : "Alert message variant shown when applying a spacing change for the active menu bar display and no profile is active.",
-      "localizations" : {}
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items."
+          }
+        }
+      }
     },
     "Applying this spacing change will briefly relaunch all apps with menu bar items. Save the new spacing to the active profile \"%@\", or save it to every profile." : {
       "comment" : "Alert message variant shown when applying a spacing change for the active menu bar display while a profile is active. %@ is the active profile name.",
-      "localizations" : {}
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items. Save the new spacing to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items. Save the new spacing to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items. Save the new spacing to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items. Save the new spacing to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items. Save the new spacing to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items. Save the new spacing to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items. Save the new spacing to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items. Save the new spacing to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items. Save the new spacing to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items. Save the new spacing to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items. Save the new spacing to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items. Save the new spacing to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items. Save the new spacing to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items. Save the new spacing to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items. Save the new spacing to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items. Save the new spacing to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items. Save the new spacing to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items. Save the new spacing to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items. Save the new spacing to the active profile \"%@\", or save it to every profile."
+          }
+        }
+      }
     },
     "Save the new spacing to the active profile \"%@\", or save it to every profile." : {
       "comment" : "Alert message variant shown when applying a spacing change for a non-active display while a profile is active. %@ is the active profile name.",
-      "localizations" : {}
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save the new spacing to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save the new spacing to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save the new spacing to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save the new spacing to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save the new spacing to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save the new spacing to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save the new spacing to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save the new spacing to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save the new spacing to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save the new spacing to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save the new spacing to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save the new spacing to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save the new spacing to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save the new spacing to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save the new spacing to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save the new spacing to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save the new spacing to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save the new spacing to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save the new spacing to the active profile \"%@\", or save it to every profile."
+          }
+        }
+      }
     },
     "Update Active Profile" : {
       "comment" : "Button in the spacing-change confirmation alert that writes the new spacing into the active profile.",
-      "localizations" : {}
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Update Active Profile"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Update Active Profile"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Update Active Profile"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Update Active Profile"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Update Active Profile"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Update Active Profile"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Update Active Profile"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Update Active Profile"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Update Active Profile"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Update Active Profile"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Update Active Profile"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Update Active Profile"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Update Active Profile"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Update Active Profile"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Update Active Profile"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Update Active Profile"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Update Active Profile"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Update Active Profile"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Update Active Profile"
+          }
+        }
+      }
     },
     "Update All Profiles" : {
       "comment" : "Button in the spacing-change confirmation alert that writes the new spacing into every profile.",
-      "localizations" : {}
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Update All Profiles"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Update All Profiles"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Update All Profiles"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Update All Profiles"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Update All Profiles"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Update All Profiles"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Update All Profiles"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Update All Profiles"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Update All Profiles"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Update All Profiles"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Update All Profiles"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Update All Profiles"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Update All Profiles"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Update All Profiles"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Update All Profiles"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Update All Profiles"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Update All Profiles"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Update All Profiles"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Update All Profiles"
+          }
+        }
+      }
     }
   },
   "version" : "1.1"
