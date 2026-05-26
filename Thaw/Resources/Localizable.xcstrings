@@ -44013,8 +44013,8 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply spacing change?"
+            "state" : "translated",
+            "value" : "Appliquer les modifications d'espacement ?"
           }
         },
         "hu" : {
@@ -44132,8 +44132,8 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items."
+            "state" : "translated",
+            "value" : "L'enregistrement de cet espacement va brièvement relancer toutes les applications contenues dans la barre des menus."
           }
         },
         "hu" : {
@@ -44251,8 +44251,8 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items. Save the new spacing to the active profile \"%@\", or save it to every profile."
+            "state" : "translated",
+            "value" : "L'enregistrement de cet espacement va brièvement relancer toutes les applications contenues dans la barre des menus. Enregistrer le nouvel espacement au profil actif \"%@\", ou le sauvegarder sur tous les profils."
           }
         },
         "hu" : {
@@ -44370,8 +44370,8 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Save the new spacing to the active profile \"%@\", or save it to every profile."
+            "state" : "translated",
+            "value" : "Enregistrer le nouvel espacement au profil actif \"%@\", ou le sauvegarder sur tous les profils."
           }
         },
         "hu" : {
@@ -44489,8 +44489,8 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update Active Profile"
+            "state" : "translated",
+            "value" : "Mettre à jour le profil actif"
           }
         },
         "hu" : {
@@ -44608,8 +44608,8 @@
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update All Profiles"
+            "state" : "translated",
+            "value" : "Mettre à jour tous les profils"
           }
         },
         "hu" : {
