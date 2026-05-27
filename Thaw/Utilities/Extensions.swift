@@ -750,7 +750,8 @@ extension NSScreen {
     }
 
     /// Returns true when at least one menu bar status item is currently
-    /// rendered on-screen for the active space.
+    /// rendered on-screen for the active space and positioned within this
+    /// screen's vertical bounds.
     ///
     /// Returns false when the menu bar is auto-hidden behind a fullscreen app
     /// and not yet visually revealed. The menu bar window itself flips to
@@ -758,8 +759,23 @@ extension NSScreen {
     /// the status items become visible to the user; gating on the items list
     /// more closely matches the perceived reveal state, which is what click
     /// suppression needs.
+    ///
+    /// The bounds check is required on top of the `.onScreen` filter because
+    /// NSStatusItem windows in a fullscreen space can remain flagged as
+    /// on-screen by the Window Server while positioned above the screen's
+    /// top edge (the auto-hide resting position). Requiring at least one
+    /// item's bounds to intersect this screen's frame catches that case,
+    /// so a click at the top of a fullscreen app does not get treated as a
+    /// menu bar click while the menu bar is visually hidden.
     func isSystemMenuBarVisible() -> Bool {
-        !Bridging.getMenuBarWindowList(option: [.onScreen, .activeSpace, .itemsOnly]).isEmpty
+        let windowIDs = Bridging.getMenuBarWindowList(option: [.onScreen, .activeSpace, .itemsOnly])
+        let screenFrame = frame
+        return windowIDs.contains { windowID in
+            guard let bounds = Bridging.getWindowBounds(for: windowID) else {
+                return false
+            }
+            return bounds.intersects(screenFrame)
+        }
     }
 
     /// Returns the raw frame of the application menu on this screen, as
