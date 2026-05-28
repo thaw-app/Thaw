@@ -868,13 +868,15 @@ enum LayoutSolver {
         isResettingLayout: Bool,
         isInStartupSettling: Bool,
         isApplyingProfileLayout: Bool,
-        temporarilyShownItemContextsIsEmpty: Bool
+        temporarilyShownItemContextsIsEmpty: Bool,
+        hasRecentSectionDividerTransition: Bool
     ) -> Bool {
         !isRestoringItemOrder &&
             !isResettingLayout &&
             !isInStartupSettling &&
             !isApplyingProfileLayout &&
-            temporarilyShownItemContextsIsEmpty
+            temporarilyShownItemContextsIsEmpty &&
+            !hasRecentSectionDividerTransition
     }
 
     // MARK: - Pending rehide identifiers

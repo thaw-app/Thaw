@@ -117,6 +117,11 @@ final class MenuBarItemManager: ObservableObject {
     /// giving macOS time to settle menu bar item positions.
     static let uiSettleDelay: Duration = .milliseconds(300)
 
+    /// Grace period after a hidden/always-hidden divider geometry change
+    /// during which cache snapshots are transitional and must not be
+    /// promoted into persisted layout state.
+    static let sectionDividerTransitionSettleDelay: Duration = .milliseconds(750)
+
     /// The current cache of menu bar items.
     @Published private(set) var itemCache = ItemCache(displayID: nil)
 
@@ -142,6 +147,9 @@ final class MenuBarItemManager: ObservableObject {
 
     /// Timestamp of the most recent menu bar item move operation.
     private var lastMoveOperationTimestamp: ContinuousClock.Instant?
+    /// Timestamp of the most recent hidden/always-hidden divider state or
+    /// visibility change.
+    private var lastSectionDividerTransitionTimestamp: ContinuousClock.Instant?
 
     /// Cached timeouts for move operations.
     private var moveOperationTimeouts = [MenuBarItemTag: Duration]()
@@ -197,6 +205,7 @@ final class MenuBarItemManager: ObservableObject {
     //      - isRestoringItemOrder (+ isRestoringItemOrderTimestamp)
     //      - isApplyingProfileLayout
     //      - suppressNextNewLeftmostItemRelocation
+    //      - lastSectionDividerTransitionTimestamp
     //
     // 2. Startup settling. Gates restore and saves during the cold-boot
     //    or post-permission-grant window when many apps appear at once:
@@ -1329,10 +1338,27 @@ final class MenuBarItemManager: ObservableObject {
         return timestamp.duration(to: .now) <= duration
     }
 
+    /// Returns a Boolean value that indicates whether a hidden/always-hidden
+    /// divider changed state recently enough that section classification may
+    /// still reflect a transitional layout.
+    func sectionDividerTransitionOccurred(within duration: Duration) -> Bool {
+        guard let timestamp = lastSectionDividerTransitionTimestamp else {
+            return false
+        }
+        return timestamp.duration(to: .now) <= duration
+    }
+
     /// Records that a move operation occurred outside of Thaw's own `move()` function
     /// (e.g. the user cmd+dragged an item directly on the menu bar).
     func recordExternalMoveOperation() {
         lastMoveOperationTimestamp = .now
+    }
+
+    /// Records that the hidden/always-hidden divider geometry changed
+    /// (show/hide, style/width change, or add/remove), so the next cache
+    /// snapshot should not be treated as stable saved layout state.
+    func recordSectionDividerTransition() {
+        lastSectionDividerTransitionTimestamp = .now
     }
 }
 
@@ -1755,12 +1781,16 @@ extension MenuBarItemManager {
             isRestoringItemOrderTimestamp = nil
         }
 
+        let hasRecentSectionDividerTransition = sectionDividerTransitionOccurred(
+            within: Self.sectionDividerTransitionSettleDelay
+        )
         if LayoutSolver.shouldPersistSavedOrder(
             isRestoringItemOrder: isRestoringItemOrder,
             isResettingLayout: isResettingLayout,
             isInStartupSettling: isInStartupSettling,
             isApplyingProfileLayout: isApplyingProfileLayout,
-            temporarilyShownItemContextsIsEmpty: temporarilyShownItemContexts.isEmpty
+            temporarilyShownItemContextsIsEmpty: temporarilyShownItemContexts.isEmpty,
+            hasRecentSectionDividerTransition: hasRecentSectionDividerTransition
         ) {
             // Don't persist if any items are in a transient blocked state (x=-1).
             // Wait for the next cache cycle when bounds are reliable.
@@ -1777,6 +1807,10 @@ extension MenuBarItemManager {
                     "Skipping saveSectionOrder; blocked items detected (x=-1), will retry on next cache tick"
                 )
             }
+        } else if hasRecentSectionDividerTransition {
+            MenuBarItemManager.diagLog.debug(
+                "Skipping saveSectionOrder; section divider transition grace period active"
+            )
         }
         MenuBarItemManager.diagLog.debug("Updated menu bar item cache: visible=\(context.cache[.visible].count), hidden=\(context.cache[.hidden].count), alwaysHidden=\(context.cache[.alwaysHidden].count)")
     }
@@ -6356,6 +6390,10 @@ extension MenuBarItemManager {
         // running; a concurrent savedOrder apply would fight it.
         guard !isApplyingProfileLayout else {
             MenuBarItemManager.diagLog.debug("applySavedLayout: skipping, profile apply in flight")
+            return false
+        }
+        guard !sectionDividerTransitionOccurred(within: Self.sectionDividerTransitionSettleDelay) else {
+            MenuBarItemManager.diagLog.debug("applySavedLayout: skipping, section divider transition grace period active")
             return false
         }
         // 5 s cooldown after a recent move (same value the legacy

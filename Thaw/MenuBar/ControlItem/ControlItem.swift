@@ -48,7 +48,7 @@ final class ControlItem {
     }
 
     /// A hiding state for a control item.
-    enum HidingState {
+    enum HidingState: Equatable {
         case showSection
         case hideSection
     }
@@ -117,7 +117,14 @@ final class ControlItem {
     }
 
     /// The control item's hiding state (`@Published`).
-    @Published var state = HidingState.hideSection
+    @Published var state = HidingState.hideSection {
+        didSet {
+            guard oldValue != state, isSectionDivider else {
+                return
+            }
+            appState?.itemManager.recordSectionDividerTransition()
+        }
+    }
 
     /// The control item's window (`@Published`).
     @Published private(set) var window: NSWindow?
@@ -506,6 +513,9 @@ final class ControlItem {
             return
         }
         statusItem.isVisible = true
+        if isSectionDivider {
+            appState?.itemManager.recordSectionDividerTransition()
+        }
     }
 
     /// Removes the control item from the menu bar.
@@ -522,6 +532,9 @@ final class ControlItem {
         statusItem.isVisible = false
         if !isSectionDivider {
             ControlItemDefaults[.preferredPosition, autosaveName] = cached
+        }
+        if isSectionDivider {
+            appState?.itemManager.recordSectionDividerTransition()
         }
     }
 

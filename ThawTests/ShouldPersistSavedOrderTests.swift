@@ -26,7 +26,8 @@ final class ShouldPersistSavedOrderTests: XCTestCase {
             isResettingLayout: false,
             isInStartupSettling: false,
             isApplyingProfileLayout: false,
-            temporarilyShownItemContextsIsEmpty: true
+            temporarilyShownItemContextsIsEmpty: true,
+            hasRecentSectionDividerTransition: false
         ))
     }
 
@@ -39,7 +40,8 @@ final class ShouldPersistSavedOrderTests: XCTestCase {
             isResettingLayout: false,
             isInStartupSettling: false,
             isApplyingProfileLayout: false,
-            temporarilyShownItemContextsIsEmpty: true
+            temporarilyShownItemContextsIsEmpty: true,
+            hasRecentSectionDividerTransition: false
         ))
     }
 
@@ -51,7 +53,8 @@ final class ShouldPersistSavedOrderTests: XCTestCase {
             isResettingLayout: true,
             isInStartupSettling: false,
             isApplyingProfileLayout: false,
-            temporarilyShownItemContextsIsEmpty: true
+            temporarilyShownItemContextsIsEmpty: true,
+            hasRecentSectionDividerTransition: false
         ))
     }
 
@@ -64,7 +67,8 @@ final class ShouldPersistSavedOrderTests: XCTestCase {
             isResettingLayout: false,
             isInStartupSettling: true,
             isApplyingProfileLayout: false,
-            temporarilyShownItemContextsIsEmpty: true
+            temporarilyShownItemContextsIsEmpty: true,
+            hasRecentSectionDividerTransition: false
         ))
     }
 
@@ -78,7 +82,8 @@ final class ShouldPersistSavedOrderTests: XCTestCase {
             isResettingLayout: false,
             isInStartupSettling: false,
             isApplyingProfileLayout: true,
-            temporarilyShownItemContextsIsEmpty: true
+            temporarilyShownItemContextsIsEmpty: true,
+            hasRecentSectionDividerTransition: false
         ))
     }
 
@@ -94,7 +99,22 @@ final class ShouldPersistSavedOrderTests: XCTestCase {
             isResettingLayout: false,
             isInStartupSettling: false,
             isApplyingProfileLayout: false,
-            temporarilyShownItemContextsIsEmpty: false
+            temporarilyShownItemContextsIsEmpty: false,
+            hasRecentSectionDividerTransition: false
+        ))
+    }
+
+    /// Divider show/hide transitions briefly move the hidden and
+    /// always-hidden boundaries through item space. A cache snapshot in
+    /// that window is transitional UI state, not user intent.
+    func testRecentSectionDividerTransitionBlocks() {
+        XCTAssertFalse(LayoutSolver.shouldPersistSavedOrder(
+            isRestoringItemOrder: false,
+            isResettingLayout: false,
+            isInStartupSettling: false,
+            isApplyingProfileLayout: false,
+            temporarilyShownItemContextsIsEmpty: true,
+            hasRecentSectionDividerTransition: true
         ))
     }
 
@@ -107,14 +127,24 @@ final class ShouldPersistSavedOrderTests: XCTestCase {
             isResettingLayout: true,
             isInStartupSettling: false,
             isApplyingProfileLayout: false,
-            temporarilyShownItemContextsIsEmpty: true
+            temporarilyShownItemContextsIsEmpty: true,
+            hasRecentSectionDividerTransition: false
         ))
         XCTAssertFalse(LayoutSolver.shouldPersistSavedOrder(
             isRestoringItemOrder: false,
             isResettingLayout: false,
             isInStartupSettling: true,
             isApplyingProfileLayout: true,
-            temporarilyShownItemContextsIsEmpty: true
+            temporarilyShownItemContextsIsEmpty: true,
+            hasRecentSectionDividerTransition: false
+        ))
+        XCTAssertFalse(LayoutSolver.shouldPersistSavedOrder(
+            isRestoringItemOrder: false,
+            isResettingLayout: false,
+            isInStartupSettling: false,
+            isApplyingProfileLayout: false,
+            temporarilyShownItemContextsIsEmpty: false,
+            hasRecentSectionDividerTransition: true
         ))
     }
 }
