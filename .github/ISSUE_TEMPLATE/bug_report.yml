@@ -76,9 +76,7 @@ body:
     id: logs
     attributes:
       label: Logs / Console Output
-      description: |
-        Attach relevant logs.
-      placeholder: Paste logs here or attach as file...
+      description: Attach relevant logs.
     validations:
       required: false
 
