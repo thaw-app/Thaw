@@ -1,35 +1,51 @@
 name: Bug Report
-description: Submit a bug report.
-title: "[Bug]: "
-labels: Bug
+description: File a bug report
+title: "[Bug] "
+labels: ["bug"] 
 body:
-  - type: checkboxes
+  - type: markdown
     attributes:
-      label: Search for Similar Reports
-      description: |
-        Please use the search feature on the repository's [Issues](https://github.com/stonerl/Thaw/issues) page to see if a report already exists for the bug you encountered. Make sure to include both open and closed issues in your search.
+      value: |
+        **Before submitting:** Search [open & closed issues](https://github.com/stonerl/Thaw/issues?q=is%3Aissue) for duplicates.
 
-        **Important**: Only submit a new issue if the bug you encountered hasn't been reported in an existing open issue, or if a regression has occurred with a previously closed issue.
-      options:
-        - label: I have searched existing issues for similar reports
-          required: true
-  - type: textarea
+  - type: checkboxes
+    id: checks
     attributes:
-      label: Description
-      placeholder: A clear and concise description of the bug...
+      label: Pre-submission Checklist
+      options:
+        - label: I searched existing issues (open & closed) and found no duplicates
+          required: true
+        - label: I'm using the latest app version
+          required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Clear and concise description of the bug.
     validations:
       required: true
+
   - type: textarea
+    id: steps
     attributes:
       label: Steps to Reproduce
-      description: Steps to reliably reproduce the behavior.
+      description: How can we reproduce this?
       placeholder: |
-        1. Go to '...'
-        2. Click on '....'
-        3. Scroll down to '....'
-        4. See error
+        1.
+        2.
+        3.
     validations:
       required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+
   - type: input
     id: app_version
     attributes:
@@ -37,24 +53,39 @@ body:
       placeholder: e.g. 1.2.3
     validations:
       required: true
+
   - type: input
     id: macos_version
     attributes:
       label: macOS Version
-      placeholder: e.g. 15.3.2
+      placeholder: e.g. 26.4.1 (Tahoe)
     validations:
       required: true
+
   - type: dropdown
     id: monitor_setup
     attributes:
-      label: Monitor Setup
-      description: Please select your current display configuration.
+      label: Display Setup
       options:
-        - Single Monitor
-        - Multi-monitor Setup
+        - Single monitor
+        - Multiple monitors
     validations:
       required: true
-  - type: textarea
+
+  - type: upload
+    id: logs
     attributes:
-      label: Additional Information
-      placeholder: Screenshots, screen recordings, logs, crash reports, or anything else you think might be helpful...
+      label: Logs / Console Output
+      description: |
+        Attach relevant logs.
+      placeholder: Paste logs here or attach as file...
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Screenshots, screen recordings, configuration details, etc.
+    validations:
+      required: false
