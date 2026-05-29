@@ -76,6 +76,12 @@ final class LayoutBarPaddingView: NSView {
 
     override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
         guard !isStabilizing else { return [] }
+        // Freeze the destination's arrangedViews so that the cache refresh
+        // triggered while the system move is in flight cannot overwrite the
+        // mid-drag visual state. updateNewItemsPlacement at the end of move()
+        // depends on that state to capture the badge's new neighbors; without
+        // this guard the dropped item bounces to the wrong side of the badge.
+        container.canSetArrangedViews = false
         return container.updateArrangedViewsForDrag(with: sender, phase: .entered)
     }
 
@@ -143,6 +149,7 @@ final class LayoutBarPaddingView: NSView {
         }
 
         var willMove = false
+        let sourceContainer = draggingSource.oldContainerInfo?.container
 
         if let index = arrangedViews.firstIndex(of: draggingSource) {
             if arrangedViews.count == 1 {
@@ -150,30 +157,33 @@ final class LayoutBarPaddingView: NSView {
                 Task {
                     guard case let .item(item) = draggingSource.kind else {
                         self.container.canSetArrangedViews = true
+                        sourceContainer?.canSetArrangedViews = true
                         return
                     }
                     if let destination = await self.liveFallbackDestinationForDraggedItem() {
-                        self.move(item: item, to: destination)
+                        self.move(item: item, to: destination, sourceContainer: sourceContainer)
                     } else {
                         Self.diagLog.error("No target item for layout bar drag")
                         self.container.canSetArrangedViews = true
+                        sourceContainer?.canSetArrangedViews = true
                     }
                 }
             } else if case let .item(item) = draggingSource.kind {
                 if let targetItem = nearestItem(toRightOf: index) {
                     willMove = true
-                    move(item: item, to: .leftOfItem(targetItem))
+                    move(item: item, to: .leftOfItem(targetItem), sourceContainer: sourceContainer)
                 } else if let targetItem = nearestItem(toLeftOf: index) {
                     willMove = true
-                    move(item: item, to: .rightOfItem(targetItem))
+                    move(item: item, to: .rightOfItem(targetItem), sourceContainer: sourceContainer)
                 } else if !arrangedViews.isEmpty {
                     willMove = true
                     Task {
                         if let destination = await self.liveFallbackDestinationForDraggedItem() {
-                            self.move(item: item, to: destination)
+                            self.move(item: item, to: destination, sourceContainer: sourceContainer)
                         } else {
                             Self.diagLog.error("No target item for layout bar drag")
                             self.container.canSetArrangedViews = true
+                            sourceContainer?.canSetArrangedViews = true
                         }
                     }
                 }
@@ -189,7 +199,11 @@ final class LayoutBarPaddingView: NSView {
         return true
     }
 
-    private func move(item: MenuBarItem, to destination: MenuBarItemManager.MoveDestination) {
+    private func move(
+        item: MenuBarItem,
+        to destination: MenuBarItemManager.MoveDestination,
+        sourceContainer: LayoutBarContainer? = nil
+    ) {
         guard let appState = container.appState else {
             return
         }
@@ -243,9 +257,15 @@ final class LayoutBarPaddingView: NSView {
                         arrangedViews: self.container.arrangedViews
                     )
                 }
-                // Re-enable view updates. The didSet will automatically refresh
-                // from the current cache with the updated badge anchor.
+                // Re-enable view updates on both the destination (frozen by
+                // draggingEntered) and the source (frozen by willBeginAt on
+                // the dragging session). Without resetting the source, its
+                // arrangedViews would stay frozen at the mid-drag snapshot
+                // until the next drag originated from that container.
                 self.container.canSetArrangedViews = true
+                if sourceContainer !== self.container {
+                    sourceContainer?.canSetArrangedViews = true
+                }
             }
         }
     }
