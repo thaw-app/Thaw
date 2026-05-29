@@ -194,7 +194,7 @@ struct AdvancedSettingsPane: View {
             .buttonStyle(.borderless)
             .disabled(isLast)
             .accessibilityLabel(String(localized: "Move down"))
-            Toggle("", isOn: searchInclusionBinding(for: name))
+            Toggle(name.localized, isOn: searchInclusionBinding(for: name))
                 .labelsHidden()
         }
     }

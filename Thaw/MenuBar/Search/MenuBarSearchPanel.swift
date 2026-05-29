@@ -484,27 +484,19 @@ private struct MenuBarSearchContentView: View {
             }
             .onChange(of: appState.settings.advanced.searchSectionOrder) {
                 updateDisplayedItems()
-                if model.selection == nil {
-                    selectFirstDisplayedItem()
-                }
+                ensureValidSelection()
             }
             .onChange(of: appState.settings.advanced.searchIncludeVisible) {
                 updateDisplayedItems()
-                if model.selection == nil {
-                    selectFirstDisplayedItem()
-                }
+                ensureValidSelection()
             }
             .onChange(of: appState.settings.advanced.searchIncludeHidden) {
                 updateDisplayedItems()
-                if model.selection == nil {
-                    selectFirstDisplayedItem()
-                }
+                ensureValidSelection()
             }
             .onChange(of: appState.settings.advanced.searchIncludeAlwaysHidden) {
                 updateDisplayedItems()
-                if model.selection == nil {
-                    selectFirstDisplayedItem()
-                }
+                ensureValidSelection()
             }
     }
 
@@ -626,6 +618,18 @@ private struct MenuBarSearchContentView: View {
             return
         }
         model.selection = model.displayedItems.first { $0.isSelectable }?.id
+    }
+
+    /// Re-selects the first item when the current selection has been
+    /// filtered out of `displayedItems` (or was never set).
+    private func ensureValidSelection() {
+        guard let selection = model.selection else {
+            selectFirstDisplayedItem()
+            return
+        }
+        if !model.displayedItems.contains(where: { $0.id == selection }) {
+            selectFirstDisplayedItem()
+        }
     }
 
     private func updateDisplayedItems() {
