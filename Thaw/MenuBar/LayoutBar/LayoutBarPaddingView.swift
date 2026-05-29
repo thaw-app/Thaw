@@ -235,8 +235,27 @@ final class LayoutBarPaddingView: NSView {
                 await stabilizePlacement(of: item, to: destination, expectedSection: container.section, appState: appState)
             } catch {
                 Self.diagLog.error("Error moving menu bar item: \(error)")
-                let alert = NSAlert(error: error)
-                alert.runModal()
+                // The system event-driven move sometimes throws cannotComplete
+                // after macOS has already settled the item into the requested
+                // slot: the click sequence bounces the item past the target
+                // and back during verification, but a subsequent reconciliation
+                // lands it where the user asked. Resample the cache after a
+                // short settle window and only show the alert when the item
+                // is NOT in the position the user actually dragged it to;
+                // showing it for a move that visibly worked is a false alarm.
+                try? await Task.sleep(for: .milliseconds(250))
+                await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
+                if didItemReachIntendedPosition(
+                    item: item,
+                    destination: destination,
+                    expectedSection: container.section,
+                    cache: appState.itemManager.itemCache
+                ) {
+                    Self.diagLog.info("Move verification failed but \(item.logString) reached intended position in \(container.section.logString); suppressing alert")
+                } else {
+                    let alert = NSAlert(error: error)
+                    alert.runModal()
+                }
             }
             watchdogTask.cancel()
             if let appState = container.appState {
@@ -267,6 +286,34 @@ final class LayoutBarPaddingView: NSView {
                     sourceContainer?.canSetArrangedViews = true
                 }
             }
+        }
+    }
+
+    /// Returns true when the dragged item is sitting in the slot the user
+    /// asked for: in the destination section, immediately adjacent to the
+    /// target on the requested side. For control-item targets (section
+    /// dividers) there is no array entry to anchor against, so containment
+    /// in the destination section is the strongest claim we can make.
+    private func didItemReachIntendedPosition(
+        item: MenuBarItem,
+        destination: MenuBarItemManager.MoveDestination,
+        expectedSection: MenuBarSection.Name,
+        cache: MenuBarItemManager.ItemCache
+    ) -> Bool {
+        let sectionItems = cache[expectedSection]
+        guard let itemIndex = sectionItems.firstIndex(where: { $0.tag == item.tag }) else {
+            return false
+        }
+        let target = destination.targetItem
+        if target.isControlItem {
+            return true
+        }
+        guard let targetIndex = sectionItems.firstIndex(where: { $0.tag == target.tag }) else {
+            return false
+        }
+        return switch destination {
+        case .leftOfItem: itemIndex + 1 == targetIndex
+        case .rightOfItem: itemIndex == targetIndex + 1
         }
     }
 
