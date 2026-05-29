@@ -44703,6 +44703,50 @@
           }
         }
       }
+    },
+    "Always show hidden menu bar items in the menu bar." : {
+      "comment" : "Annotation for the Always-show-hidden-items toggle in the Global section of the Displays pane.",
+      "localizations" : {}
+    },
+    "Apply global settings to all displays?" : {
+      "comment" : "Title of the alert shown before applying the global display template to every known display.",
+      "localizations" : {}
+    },
+    "Apply the global template above to every connected and previously-seen display. Newly connected displays are also seeded from this template." : {
+      "comment" : "Annotation under the Apply-to-All-Displays button in the Global section of the Displays pane.",
+      "localizations" : {}
+    },
+    "Apply to All Displays" : {
+      "comment" : "Button in the Global section of the Displays pane that broadcasts the global template to every known display.",
+      "localizations" : {}
+    },
+    "Applying briefly relaunches apps with menu bar items so they pick up the new spacing." : {
+      "comment" : "Annotation under the spacing slider in the Global section of the Displays pane.",
+      "localizations" : {}
+    },
+    "Broadcast" : {
+      "comment" : "Label for the row that contains the Apply-to-All-Displays button in the Global section of the Displays pane.",
+      "localizations" : {}
+    },
+    "Global" : {
+      "comment" : "Header of the Global section at the top of the Displays pane.",
+      "localizations" : {}
+    },
+    "Not available because the %@ Bar is enabled in the global template." : {
+      "comment" : "Annotation shown when the Always-show-hidden-items toggle in the Global section is disabled because Use Thaw Bar is enabled in the global template. %@ is the Thaw display name.",
+      "localizations" : {}
+    },
+    "Show hidden menu bar items in a separate bar below the menu bar." : {
+      "comment" : "Annotation under the Use-Thaw-Bar toggle in the Global section of the Displays pane.",
+      "localizations" : {}
+    },
+    "This will overwrite the settings of %d display(s) with the global template and may briefly relaunch apps with menu bar items." : {
+      "comment" : "Alert message variant shown before applying the global template to all displays when no profile is active. %d is the number of affected displays.",
+      "localizations" : {}
+    },
+    "This will overwrite the settings of %d display(s) with the global template and may briefly relaunch apps with menu bar items. Save the global template to the active profile \"%@\", or save it to every profile." : {
+      "comment" : "Alert message variant shown before applying the global template to all displays while a profile is active. %d is the number of affected displays. %@ is the active profile name.",
+      "localizations" : {}
     }
   },
   "version" : "1.1"

@@ -206,6 +206,7 @@ final class ProfileManager: ObservableObject {
                 advancedSettings: AdvancedSettingsSnapshot.capture(from: appState.settings.advanced),
                 hotkeys: Defaults.dictionary(forKey: .hotkeys) as? [String: Data] ?? [:],
                 displayConfigurations: appState.settings.displaySettings.configurations,
+                globalDisplayConfiguration: appState.settings.displaySettings.globalConfiguration,
                 appearanceConfiguration: appState.appearanceManager.configuration,
                 menuBarLayout: captureCurrentLayout(from: appState)
             )
@@ -438,6 +439,9 @@ final class ProfileManager: ObservableObject {
         // Apply display configurations
         appState.settings.displaySettings.configurations = profile.displayConfigurations
 
+        // Apply global display configuration template
+        appState.settings.displaySettings.globalConfiguration = profile.globalDisplayConfiguration
+
         // Apply appearance configuration
         appState.appearanceManager.configuration = profile.appearanceConfiguration
 
@@ -616,6 +620,7 @@ final class ProfileManager: ObservableObject {
         )
         profile.hotkeys = Defaults.dictionary(forKey: .hotkeys) as? [String: Data] ?? [:]
         profile.displayConfigurations = appState.settings.displaySettings.configurations
+        profile.globalDisplayConfiguration = appState.settings.displaySettings.globalConfiguration
         profile.appearanceConfiguration = appState.appearanceManager.configuration
     }
 
@@ -681,6 +686,43 @@ final class ProfileManager: ObservableObject {
             var profile = try loadProfile(id: meta.id)
             let base = profile.displayConfigurations[displayUUID] ?? .defaultConfiguration
             profile.displayConfigurations[displayUUID] = base.withItemSpacingOffset(offset)
+            profile.modifiedAt = now
+            pending.append(profile)
+        }
+        for profile in pending {
+            let data = try encoder.encode(profile)
+            try data.write(to: profileURL(for: profile.id), options: .atomic)
+        }
+        for profile in pending {
+            if let index = profiles.firstIndex(where: { $0.id == profile.id }) {
+                profiles[index].modifiedAt = profile.modifiedAt
+            }
+        }
+        saveManifest()
+    }
+
+    /// Writes the given configuration into every profile's
+    /// globalDisplayConfiguration field. When propagateToDisplays is true,
+    /// every per-display entry in each profile is also overwritten so a
+    /// later profile reapply does not revert the broadcast. Mirrors the
+    /// load-all-first, single-manifest-write shape of
+    /// updateAllProfilesItemSpacingOffset so partial writes do not leave
+    /// some profiles updated and others not.
+    func updateAllProfilesGlobalConfiguration(
+        _ config: DisplayIceBarConfiguration,
+        propagateToDisplays: Bool
+    ) throws {
+        let now = Date()
+        var pending: [Profile] = []
+        pending.reserveCapacity(profiles.count)
+        for meta in profiles {
+            var profile = try loadProfile(id: meta.id)
+            profile.globalDisplayConfiguration = config
+            if propagateToDisplays {
+                for uuid in profile.displayConfigurations.keys {
+                    profile.displayConfigurations[uuid] = config
+                }
+            }
             profile.modifiedAt = now
             pending.append(profile)
         }

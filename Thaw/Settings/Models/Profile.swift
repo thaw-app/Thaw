@@ -281,6 +281,7 @@ struct ProfileContent {
     var advancedSettings: AdvancedSettingsSnapshot
     var hotkeys: [String: Data]
     var displayConfigurations: [String: DisplayIceBarConfiguration]
+    var globalDisplayConfiguration: DisplayIceBarConfiguration
     var appearanceConfiguration: MenuBarAppearanceConfigurationV2
     var menuBarLayout: MenuBarLayoutSnapshot
     var automation: ProfileAutomation?
@@ -290,6 +291,7 @@ struct ProfileContent {
         advancedSettings: AdvancedSettingsSnapshot,
         hotkeys: [String: Data],
         displayConfigurations: [String: DisplayIceBarConfiguration],
+        globalDisplayConfiguration: DisplayIceBarConfiguration = Defaults.DefaultValue.globalDisplayConfiguration,
         appearanceConfiguration: MenuBarAppearanceConfigurationV2,
         menuBarLayout: MenuBarLayoutSnapshot,
         automation: ProfileAutomation? = nil
@@ -298,6 +300,7 @@ struct ProfileContent {
         self.advancedSettings = advancedSettings
         self.hotkeys = hotkeys
         self.displayConfigurations = displayConfigurations
+        self.globalDisplayConfiguration = globalDisplayConfiguration
         self.appearanceConfiguration = appearanceConfiguration
         self.menuBarLayout = menuBarLayout
         self.automation = automation
@@ -316,6 +319,7 @@ struct Profile: Codable, Identifiable {
     var advancedSettings: AdvancedSettingsSnapshot
     var hotkeys: [String: Data]
     var displayConfigurations: [String: DisplayIceBarConfiguration]
+    var globalDisplayConfiguration: DisplayIceBarConfiguration
     var appearanceConfiguration: MenuBarAppearanceConfigurationV2
     var menuBarLayout: MenuBarLayoutSnapshot
     var automation: ProfileAutomation?
@@ -337,6 +341,7 @@ struct Profile: Codable, Identifiable {
             advancedSettings: advancedSettings,
             hotkeys: hotkeys,
             displayConfigurations: displayConfigurations,
+            globalDisplayConfiguration: globalDisplayConfiguration,
             appearanceConfiguration: appearanceConfiguration,
             menuBarLayout: menuBarLayout,
             automation: automation
@@ -354,6 +359,7 @@ struct Profile: Codable, Identifiable {
         case advancedSettings
         case hotkeys
         case displayConfigurations
+        case globalDisplayConfiguration
         case appearanceConfiguration
         case menuBarLayout
         case automation
@@ -374,6 +380,7 @@ struct Profile: Codable, Identifiable {
         self.advancedSettings = content.advancedSettings
         self.hotkeys = content.hotkeys
         self.displayConfigurations = content.displayConfigurations
+        self.globalDisplayConfiguration = content.globalDisplayConfiguration
         self.appearanceConfiguration = content.appearanceConfiguration
         self.menuBarLayout = content.menuBarLayout
         self.automation = content.automation
@@ -438,6 +445,11 @@ struct Profile: Codable, Identifiable {
             [String: DisplayIceBarConfiguration].self,
             forKey: .displayConfigurations
         ) ?? Defaults.DefaultValue.displayIceBarConfigurations
+
+        globalDisplayConfiguration = try container.decodeIfPresent(
+            DisplayIceBarConfiguration.self,
+            forKey: .globalDisplayConfiguration
+        ) ?? Defaults.DefaultValue.globalDisplayConfiguration
 
         appearanceConfiguration = try container.decodeIfPresent(
             MenuBarAppearanceConfigurationV2.self,

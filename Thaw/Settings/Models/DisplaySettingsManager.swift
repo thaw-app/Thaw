@@ -21,6 +21,13 @@ final class DisplaySettingsManager: ObservableObject {
     /// Per-display configurations, keyed by display UUID string.
     @Published var configurations: [String: DisplayIceBarConfiguration] = [:]
 
+    /// The global configuration template applied to all displays by the
+    /// Apply-to-All action in the Displays pane and used as the seed for
+    /// newly connected displays. Persisted independently from
+    /// configurations so the template survives display disconnects, and
+    /// captured by every Profile so each profile carries its own global.
+    @Published var globalConfiguration: DisplayIceBarConfiguration = .defaultConfiguration
+
     /// Cache of previously-seen displays (name + notch state), keyed by
     /// display UUID. Lets the Displays pane show settings rows for
     /// disconnected displays so users can edit them without having to
@@ -74,6 +81,8 @@ final class DisplaySettingsManager: ObservableObject {
     private func captureCurrentlyConnectedDisplays() {
         var updated = knownDisplays
         var changed = false
+        var seededConfigurations = configurations
+        var configurationsChanged = false
         for screen in NSScreen.screens {
             guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else {
                 continue
@@ -85,9 +94,22 @@ final class DisplaySettingsManager: ObservableObject {
                 updated[uuid] = entry
                 changed = true
             }
+            // Seed an entry for newly-detected displays from the current
+            // global template so first-time connections inherit the
+            // user's chosen defaults instead of falling through to
+            // DisplayIceBarConfiguration.defaultConfiguration at read time.
+            // Existing entries are left alone so per-display overrides
+            // are preserved across reconnects.
+            if seededConfigurations[uuid] == nil {
+                seededConfigurations[uuid] = globalConfiguration
+                configurationsChanged = true
+            }
         }
         if changed {
             knownDisplays = updated
+        }
+        if configurationsChanged {
+            configurations = seededConfigurations
         }
     }
 
@@ -119,6 +141,14 @@ final class DisplaySettingsManager: ObservableObject {
         // empty dict) is not silently re-seeded from on-disk system spacing.
         if persistedData == nil {
             seedConfigurationsFromSystemSpacing()
+        }
+        if let data = Defaults.data(forKey: .globalDisplayConfiguration) {
+            do {
+                globalConfiguration = try decoder.decode(DisplayIceBarConfiguration.self, from: data)
+                diagLog.info("Loaded global display configuration template")
+            } catch {
+                diagLog.error("Failed to decode global display configuration: \(error)")
+            }
         }
         if let data = Defaults.data(forKey: .knownDisplays) {
             do {
@@ -227,6 +257,20 @@ final class DisplaySettingsManager: ObservableObject {
                     Defaults.set(data, forKey: .knownDisplays)
                 } catch {
                     diagLog.error("Failed to encode known display cache: \(error)")
+                }
+            }
+            .store(in: &c)
+
+        $globalConfiguration
+            .dropFirst()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] config in
+                guard let self else { return }
+                do {
+                    let data = try encoder.encode(config)
+                    Defaults.set(data, forKey: .globalDisplayConfiguration)
+                } catch {
+                    diagLog.error("Failed to encode global display configuration: \(error)")
                 }
             }
             .store(in: &c)
@@ -668,6 +712,25 @@ final class DisplaySettingsManager: ObservableObject {
         var newConfigurations = configurations
         newConfigurations[uuid] = updated
         configurations = newConfigurations
+    }
+
+    /// Overwrites the configuration of every known display (connected and
+    /// previously-seen but currently disconnected) with the current
+    /// globalConfiguration. Returns the list of affected UUIDs. Drives a
+    /// single assignment to configurations so the persistence sink and
+    /// applyActiveDisplaySpacing each fire once.
+    @discardableResult
+    func applyGlobalToAllKnownDisplays() -> [String] {
+        let targets = allDisplays().map(\.id)
+        guard !targets.isEmpty else { return [] }
+        var updated = configurations
+        for uuid in targets {
+            updated[uuid] = globalConfiguration
+        }
+        if updated != configurations {
+            configurations = updated
+        }
+        return targets
     }
 
     /// Toggles the Thaw Bar for the display with the active menu bar.

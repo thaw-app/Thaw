@@ -197,6 +197,7 @@ extension Defaults {
         // MARK: Display Settings
 
         static let displayIceBarConfigurations: [String: DisplayIceBarConfiguration] = [:]
+        static let globalDisplayConfiguration: DisplayIceBarConfiguration = .defaultConfiguration
     }
 }
 
@@ -219,6 +220,7 @@ extension Defaults {
         case rehideStrategy = "RehideStrategy"
         case rehideInterval = "RehideInterval"
         case displayIceBarConfigurations = "DisplayIceBarConfigurations"
+        case globalDisplayConfiguration = "GlobalDisplayConfiguration"
         case knownDisplays = "KnownDisplays"
 
         // MARK: Hotkeys Settings
