@@ -1,25 +1,51 @@
 name: Feature Request
 description: Request a feature or suggest an idea.
-title: "[Feature Request]: "
-labels: Feature
+title: "[Feature Request] "
+labels: ["feature"]
 body:
-  - type: checkboxes
+  - type: markdown
     attributes:
-      label: Search for Similar Requests
-      description: |
-        Please use the search feature on the repository's [Issues](https://github.com/stonerl/Thaw/issues) page to see if this feature has already been requested. Make sure to include both open and closed issues in your search.
+      value: |
+        **Before submitting:** Search [open & closed suggestions](https://github.com/stonerl/Thaw/issues?q=is%3Aissue%20state%3Aopen%20-label%3Abug) for duplicates.
 
-        **Important**: Only submit a new issue if the feature you want hasn't been requested in another issue.
-      options:
-        - label: I have searched existing issues for similar requests
-          required: true
-  - type: textarea
+  - type: checkboxes
+    id: checks
     attributes:
-      label: Description
-      placeholder: A clear and concise description of the feature...
+      label: Pre-submission Checklist
+      options:
+        - label: I searched existing issues (open & closed) and found no duplicates
+          required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / Use Case
+      description: What are you trying to do that isn't possible or convenient right now?
+      placeholder: "I'd like to be able to…"
     validations:
       required: true
+
   - type: textarea
+    id: solution
     attributes:
-      label: Additional Information
-      placeholder: Screenshots, screen recordings, mockups, or anything else you think might be helpful...
+      label: Proposed Solution
+      description: How do you envision this working?
+      placeholder: A clear and concise description of what you'd like to happen.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Any workarounds you've tried or other ways this could work.
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Screenshots, mockups, screen recordings, or anything else helpful.
+    validations:
+      required: false
