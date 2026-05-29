@@ -13,7 +13,7 @@ import SwiftUI
 @MainActor
 final class MenuBarSection {
     /// The name of a menu bar section.
-    enum Name: CaseIterable {
+    enum Name: String, CaseIterable, Codable {
         case visible
         case hidden
         case alwaysHidden

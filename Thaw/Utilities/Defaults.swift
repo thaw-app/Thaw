@@ -185,6 +185,10 @@ extension Defaults {
         // MARK: Search
 
         static let rememberSearchQuery = false
+        static let searchSectionOrder: [String] = ["visible", "hidden", "alwaysHidden"]
+        static let searchIncludeVisible = true
+        static let searchIncludeHidden = true
+        static let searchIncludeAlwaysHidden = true
 
         // MARK: Hotkeys Settings
 
@@ -197,6 +201,7 @@ extension Defaults {
         // MARK: Display Settings
 
         static let displayIceBarConfigurations: [String: DisplayIceBarConfiguration] = [:]
+        static let globalDisplayConfiguration: DisplayIceBarConfiguration = .defaultConfiguration
     }
 }
 
@@ -219,6 +224,7 @@ extension Defaults {
         case rehideStrategy = "RehideStrategy"
         case rehideInterval = "RehideInterval"
         case displayIceBarConfigurations = "DisplayIceBarConfigurations"
+        case globalDisplayConfiguration = "GlobalDisplayConfiguration"
         case knownDisplays = "KnownDisplays"
 
         // MARK: Hotkeys Settings
@@ -249,6 +255,10 @@ extension Defaults {
         // MARK: Search
 
         case rememberSearchQuery = "RememberSearchQuery"
+        case searchSectionOrder = "SearchSectionOrder"
+        case searchIncludeVisible = "SearchIncludeVisible"
+        case searchIncludeHidden = "SearchIncludeHidden"
+        case searchIncludeAlwaysHidden = "SearchIncludeAlwaysHidden"
 
         // MARK: Internal
 
