@@ -58,7 +58,7 @@ body:
     id: macos_version
     attributes:
       label: macOS Version
-      placeholder: e.g. 26.4.1 (Tahoe)
+      placeholder: e.g. 26.0 (Tahoe)
     validations:
       required: true
 
