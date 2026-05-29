@@ -185,6 +185,10 @@ extension Defaults {
         // MARK: Search
 
         static let rememberSearchQuery = false
+        static let searchSectionOrder: [String] = ["visible", "hidden", "alwaysHidden"]
+        static let searchIncludeVisible = true
+        static let searchIncludeHidden = true
+        static let searchIncludeAlwaysHidden = true
 
         // MARK: Hotkeys Settings
 
@@ -249,6 +253,10 @@ extension Defaults {
         // MARK: Search
 
         case rememberSearchQuery = "RememberSearchQuery"
+        case searchSectionOrder = "SearchSectionOrder"
+        case searchIncludeVisible = "SearchIncludeVisible"
+        case searchIncludeHidden = "SearchIncludeHidden"
+        case searchIncludeAlwaysHidden = "SearchIncludeAlwaysHidden"
 
         // MARK: Internal
 

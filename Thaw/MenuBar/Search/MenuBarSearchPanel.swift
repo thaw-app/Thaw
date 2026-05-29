@@ -430,6 +430,7 @@ private final class MenuBarSearchHostingView: NSHostingView<AnyView> {
 private struct MenuBarSearchContentView: View {
     private typealias ListItem = SectionedListItem<MenuBarSearchModel.ItemID>
 
+    @EnvironmentObject var appState: AppState
     @EnvironmentObject var itemManager: MenuBarItemManager
     @EnvironmentObject var imageCache: MenuBarItemImageCache
     @EnvironmentObject var model: MenuBarSearchModel
@@ -476,6 +477,30 @@ private struct MenuBarSearchContentView: View {
                 selectFirstDisplayedItem()
             }
             .onChange(of: itemManager.itemCache, initial: true) {
+                updateDisplayedItems()
+                if model.selection == nil {
+                    selectFirstDisplayedItem()
+                }
+            }
+            .onChange(of: appState.settings.advanced.searchSectionOrder) {
+                updateDisplayedItems()
+                if model.selection == nil {
+                    selectFirstDisplayedItem()
+                }
+            }
+            .onChange(of: appState.settings.advanced.searchIncludeVisible) {
+                updateDisplayedItems()
+                if model.selection == nil {
+                    selectFirstDisplayedItem()
+                }
+            }
+            .onChange(of: appState.settings.advanced.searchIncludeHidden) {
+                updateDisplayedItems()
+                if model.selection == nil {
+                    selectFirstDisplayedItem()
+                }
+            }
+            .onChange(of: appState.settings.advanced.searchIncludeAlwaysHidden) {
                 updateDisplayedItems()
                 if model.selection == nil {
                     selectFirstDisplayedItem()
@@ -596,6 +621,10 @@ private struct MenuBarSearchContentView: View {
     }
 
     private func selectFirstDisplayedItem() {
+        guard !model.displayedItems.isEmpty else {
+            model.selection = nil
+            return
+        }
         model.selection = model.displayedItems.first { $0.isSelectable }?.id
     }
 
@@ -610,8 +639,21 @@ private struct MenuBarSearchContentView: View {
         }
         typealias ScoredItem = (listItem: ListItem, score: Double)
 
-        let searchItems: [SearchItem] = MenuBarSection.Name.allCases
+        let advanced = itemManager.appState?.settings.advanced
+        let orderedNames: [MenuBarSection.Name] = advanced?.searchSectionOrder ?? Array(MenuBarSection.Name.allCases)
+
+        let searchItems: [SearchItem] = orderedNames
             .reduce(into: []) { items, name in
+                let included: Bool = {
+                    guard let advanced else { return true }
+                    switch name {
+                    case .visible: return advanced.searchIncludeVisible
+                    case .hidden: return advanced.searchIncludeHidden
+                    case .alwaysHidden: return advanced.searchIncludeAlwaysHidden
+                    }
+                }()
+                guard included else { return }
+
                 if
                     let appState = itemManager.appState,
                     let section = appState.menuBarManager.section(

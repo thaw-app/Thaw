@@ -104,6 +104,10 @@ struct AdvancedSettingsSnapshot: Codable {
     var useOptionClickToShowAlwaysHiddenSection: Bool
     var useLCSSortingOnNotchedDisplays: Bool
     var enableMenuBarItemOverflow: Bool
+    var searchSectionOrder: [String]
+    var searchIncludeVisible: Bool
+    var searchIncludeHidden: Bool
+    var searchIncludeAlwaysHidden: Bool
 
     @MainActor
     static func capture(from settings: AdvancedSettings) -> AdvancedSettingsSnapshot {
@@ -122,7 +126,11 @@ struct AdvancedSettingsSnapshot: Codable {
             useDoubleClickToShowAlwaysHiddenSection: settings.useDoubleClickToShowAlwaysHiddenSection,
             useOptionClickToShowAlwaysHiddenSection: settings.useOptionClickToShowAlwaysHiddenSection,
             useLCSSortingOnNotchedDisplays: settings.useLCSSortingOnNotchedDisplays,
-            enableMenuBarItemOverflow: settings.enableMenuBarItemOverflow
+            enableMenuBarItemOverflow: settings.enableMenuBarItemOverflow,
+            searchSectionOrder: settings.searchSectionOrder.map(\.rawValue),
+            searchIncludeVisible: settings.searchIncludeVisible,
+            searchIncludeHidden: settings.searchIncludeHidden,
+            searchIncludeAlwaysHidden: settings.searchIncludeAlwaysHidden
         )
     }
 
@@ -145,6 +153,10 @@ struct AdvancedSettingsSnapshot: Codable {
         settings.useOptionClickToShowAlwaysHiddenSection = useOptionClickToShowAlwaysHiddenSection
         settings.useLCSSortingOnNotchedDisplays = useLCSSortingOnNotchedDisplays
         settings.enableMenuBarItemOverflow = enableMenuBarItemOverflow
+        settings.searchSectionOrder = AdvancedSettings.sanitizedSearchSectionOrder(from: searchSectionOrder)
+        settings.searchIncludeVisible = searchIncludeVisible
+        settings.searchIncludeHidden = searchIncludeHidden
+        settings.searchIncludeAlwaysHidden = searchIncludeAlwaysHidden
     }
 
     enum CodingKeys: String, CodingKey {
@@ -163,6 +175,10 @@ struct AdvancedSettingsSnapshot: Codable {
         case useOptionClickToShowAlwaysHiddenSection
         case useLCSSortingOnNotchedDisplays
         case enableMenuBarItemOverflow
+        case searchSectionOrder
+        case searchIncludeVisible
+        case searchIncludeHidden
+        case searchIncludeAlwaysHidden
     }
 
     init(
@@ -180,7 +196,11 @@ struct AdvancedSettingsSnapshot: Codable {
         useDoubleClickToShowAlwaysHiddenSection: Bool,
         useOptionClickToShowAlwaysHiddenSection: Bool,
         useLCSSortingOnNotchedDisplays: Bool,
-        enableMenuBarItemOverflow: Bool
+        enableMenuBarItemOverflow: Bool,
+        searchSectionOrder: [String],
+        searchIncludeVisible: Bool,
+        searchIncludeHidden: Bool,
+        searchIncludeAlwaysHidden: Bool
     ) {
         self.enableAlwaysHiddenSection = enableAlwaysHiddenSection
         self.showAllSectionsOnUserDrag = showAllSectionsOnUserDrag
@@ -197,6 +217,10 @@ struct AdvancedSettingsSnapshot: Codable {
         self.useOptionClickToShowAlwaysHiddenSection = useOptionClickToShowAlwaysHiddenSection
         self.useLCSSortingOnNotchedDisplays = useLCSSortingOnNotchedDisplays
         self.enableMenuBarItemOverflow = enableMenuBarItemOverflow
+        self.searchSectionOrder = searchSectionOrder
+        self.searchIncludeVisible = searchIncludeVisible
+        self.searchIncludeHidden = searchIncludeHidden
+        self.searchIncludeAlwaysHidden = searchIncludeAlwaysHidden
     }
 
     init(from decoder: Decoder) throws {
@@ -246,6 +270,18 @@ struct AdvancedSettingsSnapshot: Codable {
         enableMenuBarItemOverflow = try container.decodeIfPresent(
             Bool.self, forKey: .enableMenuBarItemOverflow
         ) ?? Defaults.DefaultValue.enableMenuBarItemOverflow
+        searchSectionOrder = try container.decodeIfPresent(
+            [String].self, forKey: .searchSectionOrder
+        ) ?? Defaults.DefaultValue.searchSectionOrder
+        searchIncludeVisible = try container.decodeIfPresent(
+            Bool.self, forKey: .searchIncludeVisible
+        ) ?? Defaults.DefaultValue.searchIncludeVisible
+        searchIncludeHidden = try container.decodeIfPresent(
+            Bool.self, forKey: .searchIncludeHidden
+        ) ?? Defaults.DefaultValue.searchIncludeHidden
+        searchIncludeAlwaysHidden = try container.decodeIfPresent(
+            Bool.self, forKey: .searchIncludeAlwaysHidden
+        ) ?? Defaults.DefaultValue.searchIncludeAlwaysHidden
     }
 }
 
@@ -426,7 +462,11 @@ struct Profile: Codable, Identifiable {
             useDoubleClickToShowAlwaysHiddenSection: Defaults.DefaultValue.useDoubleClickToShowAlwaysHiddenSection,
             useOptionClickToShowAlwaysHiddenSection: Defaults.DefaultValue.useOptionClickToShowAlwaysHiddenSection,
             useLCSSortingOnNotchedDisplays: Defaults.DefaultValue.useLCSSortingOnNotchedDisplays,
-            enableMenuBarItemOverflow: Defaults.DefaultValue.enableMenuBarItemOverflow
+            enableMenuBarItemOverflow: Defaults.DefaultValue.enableMenuBarItemOverflow,
+            searchSectionOrder: Defaults.DefaultValue.searchSectionOrder,
+            searchIncludeVisible: Defaults.DefaultValue.searchIncludeVisible,
+            searchIncludeHidden: Defaults.DefaultValue.searchIncludeHidden,
+            searchIncludeAlwaysHidden: Defaults.DefaultValue.searchIncludeAlwaysHidden
         )
 
         hotkeys = try container.decodeIfPresent(

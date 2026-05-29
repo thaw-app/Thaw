@@ -58,6 +58,12 @@ extension AppSettings {
         advanced.showMenuBarTooltips = Defaults.DefaultValue.showMenuBarTooltips
         advanced.iconRefreshInterval = Defaults.DefaultValue.iconRefreshInterval
         advanced.enableDiagnosticLogging = Defaults.DefaultValue.enableDiagnosticLogging
+        advanced.searchSectionOrder = AdvancedSettings.sanitizedSearchSectionOrder(
+            from: Defaults.DefaultValue.searchSectionOrder
+        )
+        advanced.searchIncludeVisible = Defaults.DefaultValue.searchIncludeVisible
+        advanced.searchIncludeHidden = Defaults.DefaultValue.searchIncludeHidden
+        advanced.searchIncludeAlwaysHidden = Defaults.DefaultValue.searchIncludeAlwaysHidden
     }
 
     /// Resets Hotkeys settings to their default values.

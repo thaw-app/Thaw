@@ -64,6 +64,22 @@ final class AdvancedSettings: ObservableObject {
     /// Only affects notched displays; non-notched displays never use this path.
     @Published var enableMenuBarItemOverflow = Defaults.DefaultValue.enableMenuBarItemOverflow
 
+    /// The order in which menu bar sections appear in the search panel.
+    @Published var searchSectionOrder: [MenuBarSection.Name] = Defaults.DefaultValue.searchSectionOrder
+        .compactMap(MenuBarSection.Name.init(rawValue:))
+
+    /// A Boolean value that indicates whether items from the visible section
+    /// are included in the menu bar search panel.
+    @Published var searchIncludeVisible = Defaults.DefaultValue.searchIncludeVisible
+
+    /// A Boolean value that indicates whether items from the hidden section
+    /// are included in the menu bar search panel.
+    @Published var searchIncludeHidden = Defaults.DefaultValue.searchIncludeHidden
+
+    /// A Boolean value that indicates whether items from the always-hidden section
+    /// are included in the menu bar search panel.
+    @Published var searchIncludeAlwaysHidden = Defaults.DefaultValue.searchIncludeAlwaysHidden
+
     /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
 
@@ -93,12 +109,39 @@ final class AdvancedSettings: ObservableObject {
         Defaults.ifPresent(key: .enableDiagnosticLogging, assign: &enableDiagnosticLogging)
         Defaults.ifPresent(key: .useLCSSortingOnNotchedDisplays, assign: &useLCSSortingOnNotchedDisplays)
         Defaults.ifPresent(key: .enableMenuBarItemOverflow, assign: &enableMenuBarItemOverflow)
+        Defaults.ifPresent(key: .searchIncludeVisible, assign: &searchIncludeVisible)
+        Defaults.ifPresent(key: .searchIncludeHidden, assign: &searchIncludeHidden)
+        Defaults.ifPresent(key: .searchIncludeAlwaysHidden, assign: &searchIncludeAlwaysHidden)
 
         Defaults.ifPresent(key: .sectionDividerStyle) { rawValue in
             if let style = SectionDividerStyle(rawValue: rawValue) {
                 sectionDividerStyle = style
             }
         }
+
+        Defaults.ifPresent(key: .searchSectionOrder) { (rawValues: [String]) in
+            searchSectionOrder = Self.sanitizedSearchSectionOrder(from: rawValues)
+        }
+    }
+
+    /// Returns a search-section order that contains each `MenuBarSection.Name`
+    /// case exactly once, using the supplied raw values as the preferred order
+    /// and filling any missing cases at the end. Returns the default order if
+    /// the input is unusable.
+    static func sanitizedSearchSectionOrder(from rawValues: [String]) -> [MenuBarSection.Name] {
+        var seen = Set<MenuBarSection.Name>()
+        var ordered: [MenuBarSection.Name] = []
+        for raw in rawValues {
+            guard let name = MenuBarSection.Name(rawValue: raw), !seen.contains(name) else {
+                continue
+            }
+            ordered.append(name)
+            seen.insert(name)
+        }
+        for name in MenuBarSection.Name.allCases where !seen.contains(name) {
+            ordered.append(name)
+        }
+        return ordered
     }
 
     /// Configures the internal observers for the model.
@@ -132,6 +175,14 @@ final class AdvancedSettings: ObservableObject {
         )
         $useLCSSortingOnNotchedDisplays.persistToDefaults(key: .useLCSSortingOnNotchedDisplays, in: &c)
         $enableMenuBarItemOverflow.persistToDefaults(key: .enableMenuBarItemOverflow, in: &c)
+        $searchSectionOrder.persistToDefaults(
+            key: .searchSectionOrder,
+            transform: { $0.map(\.rawValue) },
+            in: &c
+        )
+        $searchIncludeVisible.persistToDefaults(key: .searchIncludeVisible, in: &c)
+        $searchIncludeHidden.persistToDefaults(key: .searchIncludeHidden, in: &c)
+        $searchIncludeAlwaysHidden.persistToDefaults(key: .searchIncludeAlwaysHidden, in: &c)
 
         // Observe external settings changes via Settings URI
         NotificationCenter.default
@@ -176,6 +227,12 @@ final class AdvancedSettings: ObservableObject {
                 useLCSSortingOnNotchedDisplays = boolValue
             case "enableMenuBarItemOverflow":
                 enableMenuBarItemOverflow = boolValue
+            case "searchIncludeVisible":
+                searchIncludeVisible = boolValue
+            case "searchIncludeHidden":
+                searchIncludeHidden = boolValue
+            case "searchIncludeAlwaysHidden":
+                searchIncludeAlwaysHidden = boolValue
             default:
                 // Key not handled by AdvancedSettings
                 break

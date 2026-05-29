@@ -43,7 +43,11 @@ final class AdvancedSettingsSnapshotTests: XCTestCase {
             useDoubleClickToShowAlwaysHiddenSection: false,
             useOptionClickToShowAlwaysHiddenSection: false,
             useLCSSortingOnNotchedDisplays: false,
-            enableMenuBarItemOverflow: false
+            enableMenuBarItemOverflow: false,
+            searchSectionOrder: ["visible", "hidden", "alwaysHidden"],
+            searchIncludeVisible: true,
+            searchIncludeHidden: true,
+            searchIncludeAlwaysHidden: true
         )
     }
 
@@ -63,7 +67,11 @@ final class AdvancedSettingsSnapshotTests: XCTestCase {
             useDoubleClickToShowAlwaysHiddenSection: true,
             useOptionClickToShowAlwaysHiddenSection: true,
             useLCSSortingOnNotchedDisplays: true,
-            enableMenuBarItemOverflow: true
+            enableMenuBarItemOverflow: true,
+            searchSectionOrder: ["alwaysHidden", "hidden", "visible"],
+            searchIncludeVisible: false,
+            searchIncludeHidden: true,
+            searchIncludeAlwaysHidden: false
         )
     }
 
@@ -303,7 +311,11 @@ final class AdvancedSettingsSnapshotTests: XCTestCase {
             useDoubleClickToShowAlwaysHiddenSection: false,
             useOptionClickToShowAlwaysHiddenSection: false,
             useLCSSortingOnNotchedDisplays: false,
-            enableMenuBarItemOverflow: false
+            enableMenuBarItemOverflow: false,
+            searchSectionOrder: ["visible", "hidden", "alwaysHidden"],
+            searchIncludeVisible: false,
+            searchIncludeHidden: false,
+            searchIncludeAlwaysHidden: false
         )
 
         let data = try encoder.encode(snapshot)
@@ -317,6 +329,9 @@ final class AdvancedSettingsSnapshotTests: XCTestCase {
         XCTAssertFalse(decoded.showMenuBarTooltips)
         XCTAssertFalse(decoded.enableDiagnosticLogging)
         XCTAssertFalse(decoded.useDoubleClickToShowAlwaysHiddenSection)
+        XCTAssertFalse(decoded.searchIncludeVisible)
+        XCTAssertFalse(decoded.searchIncludeHidden)
+        XCTAssertFalse(decoded.searchIncludeAlwaysHidden)
     }
 
     func testAllBooleansTrue() throws {
@@ -335,7 +350,11 @@ final class AdvancedSettingsSnapshotTests: XCTestCase {
             useDoubleClickToShowAlwaysHiddenSection: true,
             useOptionClickToShowAlwaysHiddenSection: true,
             useLCSSortingOnNotchedDisplays: true,
-            enableMenuBarItemOverflow: true
+            enableMenuBarItemOverflow: true,
+            searchSectionOrder: ["visible", "hidden", "alwaysHidden"],
+            searchIncludeVisible: true,
+            searchIncludeHidden: true,
+            searchIncludeAlwaysHidden: true
         )
 
         let data = try encoder.encode(snapshot)
@@ -349,5 +368,49 @@ final class AdvancedSettingsSnapshotTests: XCTestCase {
         XCTAssertTrue(decoded.showMenuBarTooltips)
         XCTAssertTrue(decoded.enableDiagnosticLogging)
         XCTAssertTrue(decoded.useDoubleClickToShowAlwaysHiddenSection)
+        XCTAssertTrue(decoded.searchIncludeVisible)
+        XCTAssertTrue(decoded.searchIncludeHidden)
+        XCTAssertTrue(decoded.searchIncludeAlwaysHidden)
+    }
+
+    // MARK: - Search Section Ordering
+
+    func testSearchSectionOrderRoundTrip() throws {
+        var snapshot = makeDefaultSnapshot()
+        snapshot.searchSectionOrder = ["alwaysHidden", "hidden", "visible"]
+        snapshot.searchIncludeVisible = false
+
+        let data = try encoder.encode(snapshot)
+        let decoded = try decoder.decode(AdvancedSettingsSnapshot.self, from: data)
+
+        XCTAssertEqual(decoded.searchSectionOrder, ["alwaysHidden", "hidden", "visible"])
+        XCTAssertFalse(decoded.searchIncludeVisible)
+        XCTAssertTrue(decoded.searchIncludeHidden)
+        XCTAssertTrue(decoded.searchIncludeAlwaysHidden)
+    }
+
+    func testDecodeProfileMissingSearchKeysFallsBackToDefaults() throws {
+        // Simulates a profile saved before the search-ordering fields were added.
+        let json = """
+        {
+            "enableAlwaysHiddenSection": true,
+            "showAllSectionsOnUserDrag": false,
+            "sectionDividerStyle": 0,
+            "hideApplicationMenus": true,
+            "enableSecondaryContextMenu": true,
+            "showOnHoverDelay": 0.2,
+            "tooltipDelay": 1.0,
+            "showMenuBarTooltips": false,
+            "iconRefreshInterval": 3.0,
+            "enableDiagnosticLogging": false
+        }
+        """.data(using: .utf8)!
+
+        let decoded = try decoder.decode(AdvancedSettingsSnapshot.self, from: json)
+
+        XCTAssertEqual(decoded.searchSectionOrder, Defaults.DefaultValue.searchSectionOrder)
+        XCTAssertEqual(decoded.searchIncludeVisible, Defaults.DefaultValue.searchIncludeVisible)
+        XCTAssertEqual(decoded.searchIncludeHidden, Defaults.DefaultValue.searchIncludeHidden)
+        XCTAssertEqual(decoded.searchIncludeAlwaysHidden, Defaults.DefaultValue.searchIncludeAlwaysHidden)
     }
 }

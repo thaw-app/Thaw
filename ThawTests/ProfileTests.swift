@@ -269,7 +269,11 @@ final class ProfileFullTests: XCTestCase {
                 useDoubleClickToShowAlwaysHiddenSection: false,
                 useOptionClickToShowAlwaysHiddenSection: false,
                 useLCSSortingOnNotchedDisplays: false,
-                enableMenuBarItemOverflow: false
+                enableMenuBarItemOverflow: false,
+                searchSectionOrder: ["visible", "hidden", "alwaysHidden"],
+                searchIncludeVisible: true,
+                searchIncludeHidden: true,
+                searchIncludeAlwaysHidden: true
             ),
             hotkeys: [:],
             displayConfigurations: [:],
@@ -482,7 +486,11 @@ final class ProfileContentTests: XCTestCase {
             useDoubleClickToShowAlwaysHiddenSection: false,
             useOptionClickToShowAlwaysHiddenSection: false,
             useLCSSortingOnNotchedDisplays: false,
-            enableMenuBarItemOverflow: false
+            enableMenuBarItemOverflow: false,
+            searchSectionOrder: ["visible", "hidden", "alwaysHidden"],
+            searchIncludeVisible: true,
+            searchIncludeHidden: true,
+            searchIncludeAlwaysHidden: true
         )
 
         let content = ProfileContent(
@@ -539,7 +547,11 @@ final class ProfileContentTests: XCTestCase {
                 useDoubleClickToShowAlwaysHiddenSection: false,
                 useOptionClickToShowAlwaysHiddenSection: false,
                 useLCSSortingOnNotchedDisplays: false,
-                enableMenuBarItemOverflow: false
+                enableMenuBarItemOverflow: false,
+                searchSectionOrder: ["visible", "hidden", "alwaysHidden"],
+                searchIncludeVisible: true,
+                searchIncludeHidden: true,
+                searchIncludeAlwaysHidden: true
             ),
             hotkeys: [:],
             displayConfigurations: [:],

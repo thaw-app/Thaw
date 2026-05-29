@@ -9694,6 +9694,9 @@
         }
       }
     },
+    "Choose which menu bar sections appear in the search panel, and in what order. Use the up and down buttons to reorder, and turn off a section to exclude its items from search results." : {
+      "comment" : "Description for the Search section in the Advanced settings pane that controls which menu bar sections appear in the menu bar search panel and in what order."
+    },
     "Clear" : {
       "comment" : "A glass style that is clear.",
       "localizations" : {
@@ -25170,6 +25173,9 @@
         }
       }
     },
+    "Move down" : {
+      "comment" : "Accessibility label for the down-chevron button that reorders a row to a lower position in a list."
+    },
     "Move menu bar items from the visible section into the hidden section when they don't fit beside the notch on a notched display. Disable to keep the saved profile layout exactly as authored even when items would otherwise be pushed under the notch." : {
       "comment" : "A tooltip that describes the effect of enabling or disabling the overflow.",
       "localizations" : {
@@ -25407,6 +25413,9 @@
           }
         }
       }
+    },
+    "Move up" : {
+      "comment" : "Accessibility label for the up-chevron button that reorders a row to a higher position in a list."
     },
     "Never" : {
       "comment" : "Text displayed in the \"Last update check\" section of the about settings pane, indicating that the last update check date is unknown.",
@@ -33380,6 +33389,9 @@
           }
         }
       }
+    },
+    "Search" : {
+      "comment" : "The header of the Search section in the Advanced settings pane."
     },
     "Search menu bar items" : {
       "comment" : "A description of an action that searches menu bar items.",
