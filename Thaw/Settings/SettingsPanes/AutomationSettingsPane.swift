@@ -21,6 +21,9 @@ struct AutomationSettingsPane: View {
     /// Bumped whenever a per-profile hook write completes, so SwiftUI
     /// re-reads the latest values from ProfileManager.
     @State private var profileHookRevision: Int = 0
+    /// Shared width for the hook-row label column, sized to the widest
+    /// localized label so longer translations never wrap mid-word.
+    @State private var hookLabelWidth: CGFloat = 90
 
     var body: some View {
         IceForm {
@@ -51,6 +54,9 @@ struct AutomationSettingsPane: View {
                 selectedHookProfileID = appState.profileManager.activeProfileID
                     ?? updated.first?.id
             }
+        }
+        .onPreferenceChange(HookLabelWidthKey.self) { width in
+            hookLabelWidth = max(width, 90)
         }
     }
 
@@ -344,12 +350,14 @@ struct AutomationSettingsPane: View {
 
             HookRow(
                 label: "Pre-apply",
-                hook: $hookSettings.globalPreHook
+                hook: $hookSettings.globalPreHook,
+                labelWidth: hookLabelWidth
             )
 
             HookRow(
                 label: "Post-apply",
-                hook: $hookSettings.globalPostHook
+                hook: $hookSettings.globalPostHook,
+                labelWidth: hookLabelWidth
             )
         }
     }
@@ -382,12 +390,14 @@ struct AutomationSettingsPane: View {
             } else if let profileID = selectedHookProfileID {
                 HookRow(
                     label: "Pre-apply",
-                    hook: bindingForProfileHook(profileID: profileID, phase: .pre)
+                    hook: bindingForProfileHook(profileID: profileID, phase: .pre),
+                    labelWidth: hookLabelWidth
                 )
 
                 HookRow(
                     label: "Post-apply",
-                    hook: bindingForProfileHook(profileID: profileID, phase: .post)
+                    hook: bindingForProfileHook(profileID: profileID, phase: .post),
+                    labelWidth: hookLabelWidth
                 )
 
                 Divider()
@@ -440,15 +450,35 @@ struct AutomationSettingsPane: View {
 
 // MARK: - HookRow
 
+/// Collects the widest natural label width across all hook rows so the
+/// label column can be sized to fit the longest localized string.
+private struct HookLabelWidthKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
 private struct HookRow: View {
     let label: LocalizedStringKey
     @Binding var hook: HookScript?
+    let labelWidth: CGFloat
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
                 Text(label)
-                    .frame(width: 90, alignment: .leading)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+                    .background(
+                        GeometryReader { proxy in
+                            Color.clear.preference(
+                                key: HookLabelWidthKey.self,
+                                value: proxy.size.width
+                            )
+                        }
+                    )
+                    .frame(minWidth: labelWidth, alignment: .leading)
 
                 Text(displayPath)
                     .font(.system(size: 12).monospaced())
@@ -475,7 +505,7 @@ private struct HookRow: View {
 
             if hook != nil {
                 HStack(spacing: 16) {
-                    Spacer().frame(width: 90)
+                    Spacer().frame(width: labelWidth)
 
                     Toggle("Enabled", isOn: enabledBinding)
                         .toggleStyle(.checkbox)
@@ -500,7 +530,7 @@ private struct HookRow: View {
 
                 if let warning = validationWarning {
                     HStack(spacing: 6) {
-                        Spacer().frame(width: 90)
+                        Spacer().frame(width: labelWidth)
                         Image(systemName: "exclamationmark.triangle.fill")
                             .foregroundStyle(.orange)
                         Text(warning)
