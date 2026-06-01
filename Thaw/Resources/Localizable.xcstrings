@@ -90,8 +90,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "(no script selected)"
+            "state" : "translated",
+            "value" : "(betik seçilmedi)"
           }
         },
         "uk" : {
@@ -929,8 +929,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ is currently running. Running multiple menu bar managers at the same time can cause display issues and unexpected behavior. Consider quitting %2$@ before using %3$@."
+            "state" : "translated",
+            "value" : "%1$@ şu anda çalışıyor. Birden fazla menü çubuğu yöneticisini aynı anda çalıştırmak görüntü sorunları ve beklenmedik davranışlara neden olabilir. %3$@ uygulamasını kullanmadan önce %2$@ uygulamasından çıkış yapmalısınız."
           }
         },
         "uk" : {
@@ -1895,7 +1895,7 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%lld fps"
           }
         },
@@ -2980,8 +2980,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Adaptive"
+            "state" : "translated",
+            "value" : "Uyarlanabilir"
           }
         },
         "uk" : {
@@ -3099,8 +3099,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Add"
+            "state" : "translated",
+            "value" : "Ekle"
           }
         },
         "uk" : {
@@ -3218,8 +3218,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Add a Quit %@ item to the bottom of the secondary context menu."
+            "state" : "translated",
+            "value" : "İkincil bağlam menüsünün en altına %@ uygulamasından çık ögesi ekleyin."
           }
         },
         "uk" : {
@@ -3337,8 +3337,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Add Application Manually"
+            "state" : "translated",
+            "value" : "Uygulamayı Manuel Ekle"
           }
         },
         "uk" : {
@@ -3575,8 +3575,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow"
+            "state" : "translated",
+            "value" : "İzin ver"
           }
         },
         "uk" : {
@@ -3700,8 +3700,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow \"%1$@\" to control %2$@ settings?"
+            "state" : "translated",
+            "value" : "%1$@ uygulamasının %2$@ ayarlarını kontrol etmesine izin verilsin mi?"
           }
         },
         "uk" : {
@@ -3819,8 +3819,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Allow external applications to read and modify %@ settings via thaw:// URLs."
+            "state" : "translated",
+            "value" : "Dış uygulamaların %@ ayarlarını thaw:// bağlantısı aracılığıyla okumasına ve düzenlemesine izin ver."
           }
         },
         "uk" : {
@@ -4414,8 +4414,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Appearance"
+            "state" : "translated",
+            "value" : "Görünüm"
           }
         },
         "uk" : {
@@ -4652,8 +4652,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply a Thaw menu bar profile when this Focus activates."
+            "state" : "translated",
+            "value" : "Bu Odak etkinleştiğinde bir Thaw menü çubuğu profili uygula."
           }
         },
         "uk" : {
@@ -4700,7 +4700,7 @@
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aplicar reinicia brevemente las aplicaciones con elementos en la barra de menús para que adopten el nuevo espaciado. El ajuste se aplica cuando esta vista es la vista activa de la barra de menús."
+            "value" : "Al aplicar, se reinician las aplicaciones con elementos en la barra de menús para que adopten el nuevo espaciado. El ajuste se aplica cuando esta es la vista activa de la barra de menús."
           }
         },
         "fr" : {
@@ -4771,8 +4771,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply briefly relaunches apps with menu bar items so they pick up the new spacing. Setting takes effect when this display is the active menu bar display."
+            "state" : "translated",
+            "value" : "Uygula seçeneği yeni aralığı algılayabilmeleri için menü çubuğu ögelerine sahip uygulamaları kısa süreliğine yeniden başlatır. Seçilen ayar, kullanılan ekran aktif menü çubuğu ekranı olduğunda geçerli olur."
           }
         },
         "uk" : {
@@ -5009,8 +5009,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply the spacing for this display"
+            "state" : "translated",
+            "value" : "Bu ekran için aralık ayarla"
           }
         },
         "uk" : {
@@ -5329,14 +5329,14 @@
             "plural" : {
               "one" : {
                 "stringUnit" : {
-                  "state" : "new",
-                  "value" : "%lld app"
+                  "state" : "translated",
+                  "value" : "%lld uygulama"
                 }
               },
               "other" : {
                 "stringUnit" : {
-                  "state" : "new",
-                  "value" : "%lld apps"
+                  "state" : "translated",
+                  "value" : "%lld uygulama"
                 }
               }
             }
@@ -5499,8 +5499,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apps that request settings access will appear here after you approve them."
+            "state" : "translated",
+            "value" : "Ayar erişimi talep eden uygulamalar onayladıktan sonra burada görünecektir."
           }
         },
         "uk" : {
@@ -5618,8 +5618,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Are you sure you want to delete the profile \"%@\"? This cannot be undone."
+            "state" : "translated",
+            "value" : "\"%@\" profilini silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."
           }
         },
         "uk" : {
@@ -5975,8 +5975,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Assign a profile to each display."
+            "state" : "translated",
+            "value" : "Her ekrana bir profil atayın."
           }
         },
         "uk" : {
@@ -6094,8 +6094,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Auto-Switch"
+            "state" : "translated",
+            "value" : "Otomatik Geçiş"
           }
         },
         "uk" : {
@@ -6689,8 +6689,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Automation"
+            "state" : "translated",
+            "value" : "Otomasyon"
           }
         },
         "uk" : {
@@ -6808,8 +6808,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Back"
+            "state" : "translated",
+            "value" : "Geri"
           }
         },
         "uk" : {
@@ -6927,8 +6927,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Background"
+            "state" : "translated",
+            "value" : "Arka plan"
           }
         },
         "uk" : {
@@ -7046,8 +7046,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Background - Dark Appearance"
+            "state" : "translated",
+            "value" : "Arka Plan – Koyu Görünüm"
           }
         },
         "uk" : {
@@ -7165,8 +7165,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Background - Light Appearance"
+            "state" : "translated",
+            "value" : "Arka Plan – Açık Görünüm"
           }
         },
         "uk" : {
@@ -7760,8 +7760,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Bundle Identifier (e.g., iordv.Droppy)"
+            "state" : "translated",
+            "value" : "Paket Tanımlayıcı (örn. iordv.Droppy)"
           }
         },
         "uk" : {
@@ -7879,8 +7879,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Can modify settings"
+            "state" : "translated",
+            "value" : "Ayarları değiştirebilir"
           }
         },
         "uk" : {
@@ -9188,7 +9188,7 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "Chevron"
           }
         },
@@ -9664,8 +9664,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose Script…"
+            "state" : "translated",
+            "value" : "Betik Seç…"
           }
         },
         "uk" : {
@@ -9695,7 +9695,123 @@
       }
     },
     "Choose which menu bar sections appear in the search panel, and in what order. Use the up and down buttons to reorder, and turn off a section to exclude its items from search results." : {
-      "comment" : "Description for the Search section in the Advanced settings pane that controls which menu bar sections appear in the menu bar search panel and in what order."
+      "comment" : "Description for the Search section in the Advanced settings pane that controls which menu bar sections appear in the menu bar search panel and in what order.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Choose which menu bar sections appear in the search panel, and in what order. Use the up and down buttons to reorder, and turn off a section to exclude its items from search results."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Choose which menu bar sections appear in the search panel, and in what order. Use the up and down buttons to reorder, and turn off a section to exclude its items from search results."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elige qué secciones de la barra de menús aparecen en el panel de búsqueda y en qué orden. Utiliza los botones de arriba y abajo para cambiar el orden, y desactiva una sección para excluir sus elementos de los resultados de búsqueda."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Choose which menu bar sections appear in the search panel, and in what order. Use the up and down buttons to reorder, and turn off a section to exclude its items from search results."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Choose which menu bar sections appear in the search panel, and in what order. Use the up and down buttons to reorder, and turn off a section to exclude its items from search results."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Choose which menu bar sections appear in the search panel, and in what order. Use the up and down buttons to reorder, and turn off a section to exclude its items from search results."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Choose which menu bar sections appear in the search panel, and in what order. Use the up and down buttons to reorder, and turn off a section to exclude its items from search results."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Choose which menu bar sections appear in the search panel, and in what order. Use the up and down buttons to reorder, and turn off a section to exclude its items from search results."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Choose which menu bar sections appear in the search panel, and in what order. Use the up and down buttons to reorder, and turn off a section to exclude its items from search results."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Choose which menu bar sections appear in the search panel, and in what order. Use the up and down buttons to reorder, and turn off a section to exclude its items from search results."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wybierz sekcje paska menu, które mają pojawiać się w panelu wyszukiwania, oraz ustal ich kolejność. Użyj przycisków w górę i w dół, aby zmienić kolejność, lub wyłącz daną sekcję, aby wykluczyć jej elementy z wyników wyszukiwania."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Choose which menu bar sections appear in the search panel, and in what order. Use the up and down buttons to reorder, and turn off a section to exclude its items from search results."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Choose which menu bar sections appear in the search panel, and in what order. Use the up and down buttons to reorder, and turn off a section to exclude its items from search results."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Choose which menu bar sections appear in the search panel, and in what order. Use the up and down buttons to reorder, and turn off a section to exclude its items from search results."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arama panelinde hangi menü çubuğu bölümlerinin hangi sırayla görüneceğini seçin. Sıralamayı değiştirmek için yukarı ve aşağı butonlarını kullanın; bir bölümün ögelerini arama sonuçlarından hariç tutmak için ise o bölümü kapatın."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Choose which menu bar sections appear in the search panel, and in what order. Use the up and down buttons to reorder, and turn off a section to exclude its items from search results."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Choose which menu bar sections appear in the search panel, and in what order. Use the up and down buttons to reorder, and turn off a section to exclude its items from search results."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Choose which menu bar sections appear in the search panel, and in what order. Use the up and down buttons to reorder, and turn off a section to exclude its items from search results."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Choose which menu bar sections appear in the search panel, and in what order. Use the up and down buttons to reorder, and turn off a section to exclude its items from search results."
+          }
+        }
+      }
     },
     "Clear" : {
       "comment" : "A glass style that is clear.",
@@ -9786,8 +9902,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Clear"
+            "state" : "translated",
+            "value" : "Temizle"
           }
         },
         "uk" : {
@@ -9905,8 +10021,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Clear hook"
+            "state" : "translated",
+            "value" : "Hook'u temizle"
           }
         },
         "uk" : {
@@ -10262,8 +10378,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Columns"
+            "state" : "translated",
+            "value" : "Sütunlar"
           }
         },
         "uk" : {
@@ -11095,8 +11211,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Copy"
+            "state" : "translated",
+            "value" : "Kopyala"
           }
         },
         "uk" : {
@@ -11214,8 +11330,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Copy version info"
+            "state" : "translated",
+            "value" : "Sürüm bilgisini kopyala"
           }
         },
         "uk" : {
@@ -11333,8 +11449,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Created: %@"
+            "state" : "translated",
+            "value" : "%@ oluşturdu"
           }
         },
         "uk" : {
@@ -11928,8 +12044,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete"
+            "state" : "translated",
+            "value" : "Sil"
           }
         },
         "uk" : {
@@ -12047,8 +12163,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Delete Profile?"
+            "state" : "translated",
+            "value" : "Profil silinsin mi?"
           }
         },
         "uk" : {
@@ -12166,8 +12282,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Deny"
+            "state" : "translated",
+            "value" : "Reddet"
           }
         },
         "uk" : {
@@ -12642,8 +12758,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Disconnected"
+            "state" : "translated",
+            "value" : "Bağlantı kesildi"
           }
         },
         "uk" : {
@@ -13594,8 +13710,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Double-click %@ icon to open always-hidden section"
+            "state" : "translated",
+            "value" : "Her zaman gizli bölümünü açmak için %@ ikonunu iki kez tıkla"
           }
         },
         "uk" : {
@@ -14189,8 +14305,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Duplicate"
+            "state" : "translated",
+            "value" : "Çoğalt"
           }
         },
         "uk" : {
@@ -14546,8 +14662,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Edit Menu Bar Layout…"
+            "state" : "translated",
+            "value" : "Menü Çubuğunu Düzenle…"
           }
         },
         "uk" : {
@@ -14784,8 +14900,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Effect"
+            "state" : "translated",
+            "value" : "Etki"
           }
         },
         "uk" : {
@@ -15141,8 +15257,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enable menu bar item overflow"
+            "state" : "translated",
+            "value" : "Menü çubuğu öğelerinin taşmasını etkinleştir"
           }
         },
         "uk" : {
@@ -15379,8 +15495,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enable secondary context menu quit"
+            "state" : "translated",
+            "value" : "İkincil bağlam menüsünden çıkışı etkinleştir"
           }
         },
         "uk" : {
@@ -15498,8 +15614,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enable Settings URI Scheme"
+            "state" : "translated",
+            "value" : "Ayarlar URI Şemasını Etkinleştir"
           }
         },
         "uk" : {
@@ -15855,8 +15971,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Enabled"
+            "state" : "translated",
+            "value" : "Etkin"
           }
         },
         "uk" : {
@@ -15974,8 +16090,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Environment variables passed to scripts"
+            "state" : "translated",
+            "value" : "Betiklere aktarılan ortam değişkenleri"
           }
         },
         "uk" : {
@@ -16093,8 +16209,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Error"
+            "state" : "translated",
+            "value" : "Hata"
           }
         },
         "uk" : {
@@ -16331,8 +16447,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Example: a bash pre-hook could `defaults write com.bjango.istatmenus5 ActiveProfile -string \"$THAW_PROFILE_NAME\"` to keep iStat Menus in sync with Thaw."
+            "state" : "translated",
+            "value" : "Bash pre-hook mekanizması, iStat Menus hizmetinin Thaw ile senkronize kalmasını sağlamak için defaults write com.bjango.istatmenus5 ActiveProfile -string \"$THAW_PROFILE_NAME\" komutunu çalıştırabilir."
           }
         },
         "uk" : {
@@ -16450,8 +16566,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Export"
+            "state" : "translated",
+            "value" : "Dışa Aktar"
           }
         },
         "uk" : {
@@ -16569,8 +16685,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Export Profile(s)"
+            "state" : "translated",
+            "value" : "Profil(ler)i Dışa Aktar"
           }
         },
         "uk" : {
@@ -16688,8 +16804,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Failed to encode profiles for export."
+            "state" : "translated",
+            "value" : "Profiller dışa aktarım için kodlanamadı."
           }
         },
         "uk" : {
@@ -16807,8 +16923,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Failed to update configuration on %lld profile(s)."
+            "state" : "translated",
+            "value" : "%lld profil(ler)inin yapılandırması güncellenemedi."
           }
         },
         "uk" : {
@@ -16926,8 +17042,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "File does not exist."
+            "state" : "translated",
+            "value" : "Dosya mevcut değil."
           }
         },
         "uk" : {
@@ -17164,8 +17280,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Forward"
+            "state" : "translated",
+            "value" : "İleri"
           }
         },
         "uk" : {
@@ -17640,8 +17756,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Glass"
+            "state" : "translated",
+            "value" : "Cam"
           }
         },
         "uk" : {
@@ -17759,8 +17875,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Glass Style"
+            "state" : "translated",
+            "value" : "Cam Stili"
           }
         },
         "uk" : {
@@ -17878,8 +17994,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Global Hooks"
+            "state" : "translated",
+            "value" : "Global Hooklar"
           }
         },
         "uk" : {
@@ -18354,8 +18470,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Grid"
+            "state" : "translated",
+            "value" : "Izgara"
           }
         },
         "uk" : {
@@ -19068,8 +19184,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Hooks"
+            "state" : "translated",
+            "value" : "Hooklar"
           }
         },
         "uk" : {
@@ -19187,8 +19303,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Horizontal"
+            "state" : "translated",
+            "value" : "Yatay"
           }
         },
         "uk" : {
@@ -19663,8 +19779,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "How It Works"
+            "state" : "translated",
+            "value" : "Nasıl Çalışır"
           }
         },
         "uk" : {
@@ -20258,8 +20374,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If effects are not visible, disable \"Show menu bar background\" in System Settings %@ Menu Bar"
+            "state" : "translated",
+            "value" : "Etkiler görünmüyorsa, Sistem Ayarlarındaki %@ Menü Çubuğu ayarlarında \"Menü çubuğu arka planını göster\" seçeneğini devre dışı bırakın"
           }
         },
         "uk" : {
@@ -20383,8 +20499,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If granted, this app will be able to:\n\n• Read current settings and configurations\n• Turn features and options on or off\n• Adjust timing values (delays, intervals, timers)\n• Change how %1$@ Bar behaves\n• Customize settings for each display\n\nThis permission stays active until removed in %2$@'s Automation settings."
+            "state" : "translated",
+            "value" : "Verilirse, bu uygulama şunları yapabilecektir:\n\n• Mevcut ayarları ve yapılandırmaları okuma\n• Özellikleri ve seçenekleri açma veya kapatma\n• Zamanlama değerlerini ayarlama (gecikmeler, aralıklar, zamanlayıcılar)\n• %1$@ Çubuğunun nasıl davrandığını değiştirme\n• Her ekran için ayarları özelleştirme\n\nBu izin, %2$@ uygulamasının Otomasyon ayarlarından kaldırılana kadar aktif kalır."
           }
         },
         "uk" : {
@@ -20502,8 +20618,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If not whitelisted, you'll see a confirmation dialog showing the app name and what it wants to do."
+            "state" : "translated",
+            "value" : "Güvenli listede değilse, uygulama adını ve ne yapmak istediğini gösteren bir onay iletişim kutusu görürsünüz."
           }
         },
         "uk" : {
@@ -20621,8 +20737,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "If you approve, the app is permanently whitelisted and can modify settings anytime without asking again."
+            "state" : "translated",
+            "value" : "Onaylamanız durumunda uygulama kalıcı olarak güvenli listeye alınır ve bir daha sorulmadan ayarlar istendiği zaman değiştirebilir."
           }
         },
         "uk" : {
@@ -20859,8 +20975,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Import Profile(s)"
+            "state" : "translated",
+            "value" : "Profil(ler)i İçe Aktar"
           }
         },
         "uk" : {
@@ -21216,8 +21332,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Items are arranged in a grid with multiple columns."
+            "state" : "translated",
+            "value" : "Ögeler çok sütunlu bir ızgara düzeninde sıralanır."
           }
         },
         "uk" : {
@@ -21335,8 +21451,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Items are arranged in a single horizontal row."
+            "state" : "translated",
+            "value" : "Ögeler tek bir yatay sıra halinde dizilir."
           }
         },
         "uk" : {
@@ -21454,8 +21570,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Items are stacked vertically in a single column."
+            "state" : "translated",
+            "value" : "Ögeler tek bir sütunda dikey olarak üst üste sıralanır."
           }
         },
         "uk" : {
@@ -21692,8 +21808,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Keep search"
+            "state" : "translated",
+            "value" : "Aramayı koru"
           }
         },
         "uk" : {
@@ -22049,8 +22165,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Layout"
+            "state" : "translated",
+            "value" : "Düzen"
           }
         },
         "uk" : {
@@ -22406,8 +22522,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Left aligned"
+            "state" : "translated",
+            "value" : "Sola hizalı"
           }
         },
         "uk" : {
@@ -23477,8 +23593,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Maximum number of items per row in the grid layout."
+            "state" : "translated",
+            "value" : "Izgara düzenindeki satır başına maksimum öge sayısı."
           }
         },
         "uk" : {
@@ -24667,8 +24783,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Menu Bar Profile"
+            "state" : "translated",
+            "value" : "Menü Çubuğu Profili"
           }
         },
         "uk" : {
@@ -25024,8 +25140,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Modified: %@"
+            "state" : "translated",
+            "value" : "Değiştirilme %@"
           }
         },
         "uk" : {
@@ -25174,7 +25290,123 @@
       }
     },
     "Move down" : {
-      "comment" : "Accessibility label for the down-chevron button that reorders a row to a lower position in a list."
+      "comment" : "Accessibility label for the down-chevron button that reorders a row to a lower position in a list.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move down"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move down"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mover hacia abajo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Déplacer vers le bas"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move down"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move down"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move down"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move down"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move down"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move down"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Przesuń w dół"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move down"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move down"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move down"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aşağı taşı"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move down"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move down"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下移"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move down"
+          }
+        }
+      }
     },
     "Move menu bar items from the visible section into the hidden section when they don't fit beside the notch on a notched display. Disable to keep the saved profile layout exactly as authored even when items would otherwise be pushed under the notch." : {
       "comment" : "A tooltip that describes the effect of enabling or disabling the overflow.",
@@ -25265,8 +25497,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move menu bar items from the visible section into the hidden section when they don't fit beside the notch on a notched display. Disable to keep the saved profile layout exactly as authored even when items would otherwise be pushed under the notch."
+            "state" : "translated",
+            "value" : "Çentikli bir ekranda menü çubuğu ögeleri çentiğin yanına sığmadığında, bunları görünür bölümden gizli bölüme taşıyın. Ögelerin çentiğin altında kalacağı durumlarda bile kaydedilen profil düzenini tam olarak tasarlandığı gibi korumak için bu seçeneği devre dışı bırakın."
           }
         },
         "uk" : {
@@ -25384,8 +25616,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move the New Items badge to choose where newly detected items will appear."
+            "state" : "translated",
+            "value" : "Yeni Ögeler rozetini taşımak, yeni algılanan ögelerin nerede görüneceğini seçmenizi sağlar."
           }
         },
         "uk" : {
@@ -25415,7 +25647,123 @@
       }
     },
     "Move up" : {
-      "comment" : "Accessibility label for the up-chevron button that reorders a row to a higher position in a list."
+      "comment" : "Accessibility label for the up-chevron button that reorders a row to a higher position in a list.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move up"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move up"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mover hacia arriba"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Déplacer vers le haut"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move up"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move up"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move up"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move up"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move up"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move up"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Przesuń w górę"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move up"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move up"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move up"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yukarı taşı"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move up"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move up"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上移"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move up"
+          }
+        }
+      }
     },
     "Never" : {
       "comment" : "Text displayed in the \"Last update check\" section of the about settings pane, indicating that the last update check date is unknown.",
@@ -25625,8 +25973,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "New Items"
+            "state" : "translated",
+            "value" : "Yeni Ögeler"
           }
         },
         "uk" : {
@@ -25744,8 +26092,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "New profile name"
+            "state" : "translated",
+            "value" : "Yeni profil adı"
           }
         },
         "uk" : {
@@ -25982,8 +26330,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No profile selected"
+            "state" : "translated",
+            "value" : "Profil seçilmedi"
           }
         },
         "uk" : {
@@ -26101,8 +26449,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No profiles saved yet. Create one in the Profiles tab to attach per-profile hooks."
+            "state" : "translated",
+            "value" : "Henüz kaydedilmiş bir profil yok. Profile özel hooklar eklemek için Profiller sekmesinden bir profil oluşturun."
           }
         },
         "uk" : {
@@ -26220,8 +26568,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No profiles saved. Save your current configuration to create one."
+            "state" : "translated",
+            "value" : "Kaydedilmiş profil yok. Bir profil oluşturmak için mevcut yapılandırmanızı kaydedin."
           }
         },
         "uk" : {
@@ -26458,8 +26806,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "No whitelisted apps"
+            "state" : "translated",
+            "value" : "Güvenli listede uygulama yok"
           }
         },
         "uk" : {
@@ -27053,8 +27401,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not executable. Run \"chmod +x\" on the file."
+            "state" : "translated",
+            "value" : "Çalıştırılabilir değil. Dosya üzerinde \"chmod +x\" komutunu çalıştırın."
           }
         },
         "uk" : {
@@ -27291,8 +27639,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Notch margin"
+            "state" : "translated",
+            "value" : "Çentik payı"
           }
         },
         "uk" : {
@@ -27410,8 +27758,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Off"
+            "state" : "translated",
+            "value" : "Kapalı"
           }
         },
         "uk" : {
@@ -27767,8 +28115,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Opacity"
+            "state" : "translated",
+            "value" : "Şeffaflık"
           }
         },
         "uk" : {
@@ -28005,8 +28353,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Open Focus Settings"
+            "state" : "translated",
+            "value" : "Odak Ayarlarını Aç"
           }
         },
         "uk" : {
@@ -28243,8 +28591,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Per-Profile Hooks"
+            "state" : "translated",
+            "value" : "Profile Özgü Hooklar"
           }
         },
         "uk" : {
@@ -28600,8 +28948,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Post-apply"
+            "state" : "translated",
+            "value" : "Uygulama sonrası"
           }
         },
         "uk" : {
@@ -28719,8 +29067,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Pre-apply"
+            "state" : "translated",
+            "value" : "Uygulama öncesi"
           }
         },
         "uk" : {
@@ -28838,8 +29186,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Profile"
+            "state" : "translated",
+            "value" : "Profil"
           }
         },
         "uk" : {
@@ -28957,8 +29305,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Profile name"
+            "state" : "translated",
+            "value" : "Profil adı"
           }
         },
         "uk" : {
@@ -29076,8 +29424,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Profile: %@"
+            "state" : "translated",
+            "value" : "Profil: %@"
           }
         },
         "uk" : {
@@ -29195,8 +29543,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Profiles"
+            "state" : "translated",
+            "value" : "Profiller"
           }
         },
         "uk" : {
@@ -29671,8 +30019,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Regular"
+            "state" : "translated",
+            "value" : "Normal"
           }
         },
         "uk" : {
@@ -29790,8 +30138,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Remove %@ from whitelist"
+            "state" : "translated",
+            "value" : "%@ uygulamasını güvenli listeden kaldır"
           }
         },
         "uk" : {
@@ -29909,8 +30257,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Remove from whitelist"
+            "state" : "translated",
+            "value" : "Güvenli listeden çıkar"
           }
         },
         "uk" : {
@@ -30028,8 +30376,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Rename"
+            "state" : "translated",
+            "value" : "Yeniden adlandır"
           }
         },
         "uk" : {
@@ -31813,8 +32161,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Restart %@"
+            "state" : "translated",
+            "value" : "%@ Uygulamasını Yeniden Başlat"
           }
         },
         "uk" : {
@@ -32051,8 +32399,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Right aligned"
+            "state" : "translated",
+            "value" : "Sağa hizalı"
           }
         },
         "uk" : {
@@ -32646,8 +32994,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Run a shell or AppleScript file before or after a profile switch. Hooks fire on every apply path: manual button, hotkey, display auto-switch, and Focus Filter."
+            "state" : "translated",
+            "value" : "Bir profil geçişinden önce veya sonra bir shell ya da AppleScript dosyası çalıştırın. Hooks her uygulama yolunda tetiklenir: manuel buton, kısayol tuşu, otomatik ekran geçişi ve Odak Filtresi."
           }
         },
         "uk" : {
@@ -32884,8 +33232,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Save Current"
+            "state" : "translated",
+            "value" : "Mevcut Olanı Kaydet"
           }
         },
         "uk" : {
@@ -33391,7 +33739,123 @@
       }
     },
     "Search" : {
-      "comment" : "The header of the Search section in the Advanced settings pane."
+      "comment" : "The header of the Search section in the Advanced settings pane.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Search"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Search"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buscar"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rechercher"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Search"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Search"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Search"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Search"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Search"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Search"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Szukaj"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Search"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Search"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Search"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ara"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Search"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Search"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜索"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Search"
+          }
+        }
+      }
     },
     "Search menu bar items" : {
       "comment" : "A description of an action that searches menu bar items.",
@@ -33958,8 +34422,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Set Menu Bar Profile"
+            "state" : "translated",
+            "value" : "Menü Çubuğu Profilini Ayarla"
           }
         },
         "uk" : {
@@ -34077,8 +34541,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Settings URI is disabled. External apps cannot read or modify %@ settings."
+            "state" : "translated",
+            "value" : "Ayarlar URI'si devre dışı. Harici uygulamalar %@ ayarlarını okuyamaz veya değiştiremez."
           }
         },
         "uk" : {
@@ -34440,8 +34904,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Should %1$@ automatically check for updates? You can always check manually from the %2$@ menu bar icon or Settings %3$@ About."
+            "state" : "translated",
+            "value" : "%1$@ güncellemeleri otomatik olarak kontrol etsin mi? Güncellemeleri her zaman %2$@ menü çubuğu simgesinden veya Ayarlar %3$@ Hakkında bölümünden manuel olarak kontrol edebilirsiniz."
           }
         },
         "uk" : {
@@ -36344,8 +36808,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Signed by: %@"
+            "state" : "translated",
+            "value" : "İmzalayan: %@"
           }
         },
         "uk" : {
@@ -37177,8 +37641,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Style"
+            "state" : "translated",
+            "value" : "Stil"
           }
         },
         "uk" : {
@@ -37772,8 +38236,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Supported Settings"
+            "state" : "translated",
+            "value" : "Desteklenen Ayarlar"
           }
         },
         "uk" : {
@@ -37891,8 +38355,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "The %@ Bar is aligned to the left edge of the display."
+            "state" : "translated",
+            "value" : "%@ Çubuğu ekranın sol kenarına hizalanmıştır."
           }
         },
         "uk" : {
@@ -38010,8 +38474,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "The %@ Bar is aligned to the right edge of the display."
+            "state" : "translated",
+            "value" : "%@ Çubuğu ekranın sağ kenarına hizalanmıştır."
           }
         },
         "uk" : {
@@ -38962,8 +39426,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "These hooks run only when this profile is applied, after the global pre-hook and before the global post-hook."
+            "state" : "translated",
+            "value" : "Bu hooklar, yalnızca bu profil uygulandığında, global pre-hook 'dan sonra ve global post-hook 'dan önce çalışır."
           }
         },
         "uk" : {
@@ -39438,8 +39902,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Timeout"
+            "state" : "translated",
+            "value" : "Zaman aşımı"
           }
         },
         "uk" : {
@@ -39801,8 +40265,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "To switch profiles with Focus modes, add %1$@ as a Focus Filter in System Settings %2$@ Focus %3$@ [Mode] %4$@ Focus Filters. When a Focus mode deactivates, the display profile is automatically restored."
+            "state" : "translated",
+            "value" : "Odak modlarıyla profil değiştirmek için %1$@ uygulamasını Sistem Ayarları %2$@ Odak %3$@ [Mod] %4$@ Odak Filtreleri altından bir Odak Filtresi olarak ekleyin. Bir Odak modu devre dışı kaldığında, ekran profili otomatik olarak geri yüklenir."
           }
         },
         "uk" : {
@@ -40991,8 +41455,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Untitled"
+            "state" : "translated",
+            "value" : "Başlıksız"
           }
         },
         "uk" : {
@@ -41110,8 +41574,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update"
+            "state" : "translated",
+            "value" : "Güncelle"
           }
         },
         "uk" : {
@@ -41229,8 +41693,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update All"
+            "state" : "translated",
+            "value" : "Tümünü Güncelle"
           }
         },
         "uk" : {
@@ -41467,8 +41931,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update Configuration on All Profiles"
+            "state" : "translated",
+            "value" : "Tüm Profillerdeki Yapılandırmayı Güncelle"
           }
         },
         "uk" : {
@@ -41586,8 +42050,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update Configuration Only"
+            "state" : "translated",
+            "value" : "Yalnızca Yapılandırmayı Güncelle"
           }
         },
         "uk" : {
@@ -41705,8 +42169,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update Layout Only"
+            "state" : "translated",
+            "value" : "Yalnızca Düzeni Güncelle"
           }
         },
         "uk" : {
@@ -41824,8 +42288,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update this profile with the current state"
+            "state" : "translated",
+            "value" : "Bu profili mevcut durumla güncelle"
           }
         },
         "uk" : {
@@ -42300,8 +42764,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Use LCS sorting on notched displays"
+            "state" : "translated",
+            "value" : "Çentikli ekranlarda LCS sıralamasını kullan"
           }
         },
         "uk" : {
@@ -42419,8 +42883,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Use Option-click to open always-hidden section"
+            "state" : "translated",
+            "value" : "Her zaman gizli bölümü açmak için Option tuşuna basarak tıklayın"
           }
         },
         "uk" : {
@@ -42538,8 +43002,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Use the faster LCS (Longest Common Subsequence) algorithm for profile sorting on notched displays instead of the full sort. LCS minimises the number of moves but may be less reliable on notched displays with smaller resolutions."
+            "state" : "translated",
+            "value" : "Çentikli ekranlarda profil sıralaması için tam sıralama yerine daha hızlı olan LCS (En Uzun Ortak Alt Dizi) algoritmasını kullanın. LCS, taşıma sayısını en aza indirir ancak daha düşük çözünürlüklü çentikli ekranlarda daha az güvenilir olabilir."
           }
         },
         "uk" : {
@@ -42895,8 +43359,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Vertical"
+            "state" : "translated",
+            "value" : "Dikey"
           }
         },
         "uk" : {
@@ -43133,8 +43597,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Warning: This app is not code-signed."
+            "state" : "translated",
+            "value" : "Uyarı: Bu uygulama kod imzalı değil."
           }
         },
         "uk" : {
@@ -43371,8 +43835,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "When an app sends a thaw:// URL to change settings, Thaw checks if that app is whitelisted."
+            "state" : "translated",
+            "value" : "Bir uygulama ayarları değiştirmek için thaw:// bağlantısı gönderdiğinde, Thaw o uygulamanın güvenli listede olup olmadığını kontrol eder."
           }
         },
         "uk" : {
@@ -43490,8 +43954,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Whitelisted Applications"
+            "state" : "translated",
+            "value" : "Güvenli Listedeki Uygulamalar"
           }
         },
         "uk" : {
@@ -43615,8 +44079,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Whitelisted apps can read settings, toggle boolean options, set numeric values (timers, delays), change enum settings (rehide strategy, %1$@ Bar location), and modify per-display configurations. This includes auto-rehide, show on click/hover/scroll/double-click, %2$@ Bar, hide application menus, enable always-hidden section, show tooltips, and diagnostic logging."
+            "state" : "translated",
+            "value" : "Güvenli listedeki uygulamalar ayarları okuyabilir, boolean seçenekleri değiştirebilir, sayısal değerler (zamanlayıcılar, gecikmeler) ayarlayabilir, enum ayarlarını değiştirebilir (yeniden gizleme stratejisi, %1$@ Çubuğu), ve ekran başına yapılandırmaları düzenleyebilir. Buna otomatik yeniden gizleme, tıklama/üzerine gelme/kaydırma/çift tıklama ile gösterme, %2$@ Çubuğu, uygulama menülerini gizleme, her zaman gizli bölümü etkinleştirme, ipuçlarını gösterme ve tanı günlüğü dahildir."
           }
         },
         "uk" : {
@@ -43972,8 +44436,8 @@
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "You can remove apps from this list at any time to revoke their access."
+            "state" : "translated",
+            "value" : "Bu listedeki uygulamaları erişimlerini iptal etmek için istediğiniz zaman kaldırabilirsiniz."
           }
         },
         "uk" : {
@@ -44007,8 +44471,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply spacing change?"
+            "state" : "translated",
+            "value" : "Použít změnu nastavení rozestupů?"
           }
         },
         "de" : {
@@ -44019,8 +44483,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply spacing change?"
+            "state" : "translated",
+            "value" : "¿Aplicar el cambio en el espaciado?"
           }
         },
         "fr" : {
@@ -44067,14 +44531,14 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply spacing change?"
+            "state" : "translated",
+            "value" : "Zastosować zmianę odstępów?"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply spacing change?"
+            "state" : "translated",
+            "value" : "Aplicar mudança de espaçamento?"
           }
         },
         "ru" : {
@@ -44085,14 +44549,14 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply spacing change?"
+            "state" : "translated",
+            "value" : "ปรับเปลี่ยนระยะห่าง"
           }
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply spacing change?"
+            "state" : "translated",
+            "value" : "Aralık değişikliği uygulansın mı?"
           }
         },
         "uk" : {
@@ -44109,8 +44573,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply spacing change?"
+            "state" : "translated",
+            "value" : "确定应用空白变动吗？"
           }
         },
         "zh-Hant" : {
@@ -44126,8 +44590,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items."
+            "state" : "translated",
+            "value" : "Po změně nastavení rozestupů se krátce restartují aplikace s položkami v řádku nabídek."
           }
         },
         "de" : {
@@ -44138,8 +44602,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items."
+            "state" : "translated",
+            "value" : "Al aplicar este cambio de espaciado, se reiniciarán momentáneamente todas las aplicaciones que tengan elementos en la barra de menús."
           }
         },
         "fr" : {
@@ -44186,14 +44650,14 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items."
+            "state" : "translated",
+            "value" : "Zastosowanie tej zmiany odstępów spowoduje ponowne uruchomienie wszystkich aplikacji z ikonami na pasku menu."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items."
+            "state" : "translated",
+            "value" : "Aplicar essa mudança de espaçamento reiniciará brevemente todos os aplicativos com itens na barra de menus."
           }
         },
         "ru" : {
@@ -44204,14 +44668,14 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items."
+            "state" : "translated",
+            "value" : "การปรับเปลี่ยนระยะห่างนี้จะทำให้แอปพลิเคชันทั้งหมดที่มีรายการในแถบเมนูรีสตาร์ทชั่วครู่"
           }
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items."
+            "state" : "translated",
+            "value" : "Bu aralığı uygulamak menü çubuğundaki tüm uygulamaları yeniden başlatır."
           }
         },
         "uk" : {
@@ -44245,8 +44709,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items. Save the new spacing to the active profile \"%@\", or save it to every profile."
+            "state" : "translated",
+            "value" : "Po změně nastavení rozestupů se krátce restartují aplikace s položkami v řádku nabídek. Uložte nové nastavení rozložení pro aktivní profil „%@“, nebo pro všechny profily."
           }
         },
         "de" : {
@@ -44257,8 +44721,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items. Save the new spacing to the active profile \"%@\", or save it to every profile."
+            "state" : "translated",
+            "value" : "Al aplicar este cambio de espaciado, se reiniciarán momentáneamente todas las aplicaciones que tengan elementos en la barra de menús. Guarda el nuevo espaciado en el perfil activo %@ o guárdalo en todos los perfiles."
           }
         },
         "fr" : {
@@ -44305,14 +44769,14 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items. Save the new spacing to the active profile \"%@\", or save it to every profile."
+            "state" : "translated",
+            "value" : "Zastosowanie tej zmiany odstępów spowoduje chwilowe ponowne uruchomienie wszystkich aplikacji z ikonami na pasku menu. Zapisz nowe ustawienie odstępów w aktywnym profilu \"%@\" lub we wszystkich profilach."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items. Save the new spacing to the active profile \"%@\", or save it to every profile."
+            "state" : "translated",
+            "value" : "Aplicar essa mudança de espaçamento reiniciará brevemente todos os aplicativos com itens na barra de menus. Salve o novo espaçamento no perfil ativo \"%@\", ou salve em todos os perfis."
           }
         },
         "ru" : {
@@ -44323,14 +44787,14 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items. Save the new spacing to the active profile \"%@\", or save it to every profile."
+            "state" : "translated",
+            "value" : "การเปลี่ยนแปลงระยะห่างนี้จะทำให้แอปพลิเคชันทั้งหมดที่มีรายการในแถบเมนูเปิดใหม่ บันทึกระยะห่างใหม่ลงในโปรไฟล์ที่ใช้งานอยู่ \"%@\" หรือบันทึกไว้ในทุกโปรไฟล์"
           }
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items. Save the new spacing to the active profile \"%@\", or save it to every profile."
+            "state" : "translated",
+            "value" : "Bu aralık değişikliği uygulandığında, menü çubuğu ögesi olan tüm uygulamalar kısaca yeniden başlatılacak. Yeni aralığı aktif profil \"%@\" için kaydet veya tüm profiller için kaydet."
           }
         },
         "uk" : {
@@ -44364,8 +44828,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Save the new spacing to the active profile \"%@\", or save it to every profile."
+            "state" : "translated",
+            "value" : "Uložit nové nastavení rozestupů pro aktivní profil „%@“, nebo pro všechny profily."
           }
         },
         "de" : {
@@ -44376,8 +44840,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Save the new spacing to the active profile \"%@\", or save it to every profile."
+            "state" : "translated",
+            "value" : "Guarda el nuevo espaciado en el perfil activo %@ o guárdalo en todos los perfiles."
           }
         },
         "fr" : {
@@ -44424,14 +44888,14 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Save the new spacing to the active profile \"%@\", or save it to every profile."
+            "state" : "translated",
+            "value" : "Zapisz nowe odstępy w aktywnym profilu \"%@\" lub we wszystkich profilach."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Save the new spacing to the active profile \"%@\", or save it to every profile."
+            "state" : "translated",
+            "value" : "Salve o novo espaçamento no perfil ativo \"%@\", ou salve em todos os perfis."
           }
         },
         "ru" : {
@@ -44442,14 +44906,14 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Save the new spacing to the active profile \"%@\", or save it to every profile."
+            "state" : "translated",
+            "value" : "บันทึกการเว้นวรรคใหม่ลงในโปรไฟล์ที่ใช้งานอยู่ \"%@\" หรือบันทึกไว้ในทุกโปรไฟล์"
           }
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Save the new spacing to the active profile \"%@\", or save it to every profile."
+            "state" : "translated",
+            "value" : "Yeni aralığı aktif profil \"%@\" için kaydet veya tüm profiller için kaydet."
           }
         },
         "uk" : {
@@ -44483,8 +44947,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update Active Profile"
+            "state" : "translated",
+            "value" : "Uložit pro aktivní profil"
           }
         },
         "de" : {
@@ -44495,8 +44959,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update Active Profile"
+            "state" : "translated",
+            "value" : "Actualizar perfil activo"
           }
         },
         "fr" : {
@@ -44543,14 +45007,14 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update Active Profile"
+            "state" : "translated",
+            "value" : "Zaktualizuj aktywny profil"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update Active Profile"
+            "state" : "translated",
+            "value" : "Atualizar perfil ativo"
           }
         },
         "ru" : {
@@ -44561,14 +45025,14 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update Active Profile"
+            "state" : "translated",
+            "value" : "อัปเดตโปรไฟล์ที่ใช้งานอยู่"
           }
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update Active Profile"
+            "state" : "translated",
+            "value" : "Aktif Profili Güncelle"
           }
         },
         "uk" : {
@@ -44602,8 +45066,8 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update All Profiles"
+            "state" : "translated",
+            "value" : "Uložit pro všechny profily"
           }
         },
         "de" : {
@@ -44614,8 +45078,8 @@
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update All Profiles"
+            "state" : "translated",
+            "value" : "Actualizar todos los perfiles"
           }
         },
         "fr" : {
@@ -44662,14 +45126,14 @@
         },
         "pl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update All Profiles"
+            "state" : "translated",
+            "value" : "Zaktualizuj wszystkie profile"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update All Profiles"
+            "state" : "translated",
+            "value" : "Atualizar todos os perfis"
           }
         },
         "ru" : {
@@ -44680,14 +45144,14 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update All Profiles"
+            "state" : "translated",
+            "value" : "อัปเดตโปรไฟล์ทั้งหมด"
           }
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update All Profiles"
+            "state" : "translated",
+            "value" : "Tüm Profilleri Güncelle"
           }
         },
         "uk" : {
@@ -44718,47 +45182,1312 @@
     },
     "Always show hidden menu bar items in the menu bar." : {
       "comment" : "Annotation for the Always-show-hidden-items toggle in the Global section of the Displays pane.",
-      "localizations" : {}
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Always show hidden menu bar items in the menu bar."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Always show hidden menu bar items in the menu bar."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mostrar siempre los elementos ocultos de la barra de menús en esta pantalla."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toujours afficher les éléments cachés de la barre de menu."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Always show hidden menu bar items in the menu bar."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Always show hidden menu bar items in the menu bar."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Always show hidden menu bar items in the menu bar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Always show hidden menu bar items in the menu bar."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Always show hidden menu bar items in the menu bar."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Always show hidden menu bar items in the menu bar."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zawsze pokazuj ukryte elementy paska menu na pasku menu."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Always show hidden menu bar items in the menu bar."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Always show hidden menu bar items in the menu bar."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Always show hidden menu bar items in the menu bar."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gizli menü çubuğu ögelerini menü çubuğunda her zaman göster."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Always show hidden menu bar items in the menu bar."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Always show hidden menu bar items in the menu bar."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Always show hidden menu bar items in the menu bar."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Always show hidden menu bar items in the menu bar."
+          }
+        }
+      }
     },
     "Apply global settings to all displays?" : {
       "comment" : "Title of the alert shown before applying the global display template to every known display.",
-      "localizations" : {}
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply global settings to all displays?"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply global settings to all displays?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Aplicar la configuración global a todas las pantallas?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Appliquer les paramètres globaux à tous les écrans ?"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply global settings to all displays?"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply global settings to all displays?"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply global settings to all displays?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply global settings to all displays?"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply global settings to all displays?"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply global settings to all displays?"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zastosować ustawienia globalne do wszystkich wyświetlaczy?"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply global settings to all displays?"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply global settings to all displays?"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply global settings to all displays?"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Genel ayarlar tüm ekranlara uygulansın mı?"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply global settings to all displays?"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply global settings to all displays?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply global settings to all displays?"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply global settings to all displays?"
+          }
+        }
+      }
     },
     "Apply the global template above to every connected and previously-seen display. Newly connected displays are also seeded from this template." : {
       "comment" : "Annotation under the Apply-to-All-Displays button in the Global section of the Displays pane.",
-      "localizations" : {}
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply the global template above to every connected and previously-seen display. Newly connected displays are also seeded from this template."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply the global template above to every connected and previously-seen display. Newly connected displays are also seeded from this template."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aplica la plantilla global anterior a todas las pantallas conectadas y que se hayan visto anteriormente. Las pantallas recién conectadas también se configuran a partir de esta plantilla."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply the global template above to every connected and previously-seen display. Newly connected displays are also seeded from this template."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply the global template above to every connected and previously-seen display. Newly connected displays are also seeded from this template."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply the global template above to every connected and previously-seen display. Newly connected displays are also seeded from this template."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply the global template above to every connected and previously-seen display. Newly connected displays are also seeded from this template."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply the global template above to every connected and previously-seen display. Newly connected displays are also seeded from this template."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply the global template above to every connected and previously-seen display. Newly connected displays are also seeded from this template."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply the global template above to every connected and previously-seen display. Newly connected displays are also seeded from this template."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zastosuj powyższy szablon globalny do każdego podłączonego i wcześniej widocznego wyświetlacza. Nowo podłączone wyświetlacze są również konfigurowane na podstawie tego szablonu."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply the global template above to every connected and previously-seen display. Newly connected displays are also seeded from this template."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply the global template above to every connected and previously-seen display. Newly connected displays are also seeded from this template."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply the global template above to every connected and previously-seen display. Newly connected displays are also seeded from this template."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yukarıdaki genel şablonu bağlı olan ve daha önce bağlanmış tüm ekranlara uygula. Yeni bağlanan ekranlar da bu şablondan türetilir."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply the global template above to every connected and previously-seen display. Newly connected displays are also seeded from this template."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply the global template above to every connected and previously-seen display. Newly connected displays are also seeded from this template."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply the global template above to every connected and previously-seen display. Newly connected displays are also seeded from this template."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply the global template above to every connected and previously-seen display. Newly connected displays are also seeded from this template."
+          }
+        }
+      }
     },
     "Apply to All Displays" : {
       "comment" : "Button in the Global section of the Displays pane that broadcasts the global template to every known display.",
-      "localizations" : {}
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply to All Displays"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply to All Displays"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aplicar a todas las pantallas"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Appliquer à tous les écrans"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply to All Displays"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply to All Displays"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply to All Displays"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply to All Displays"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply to All Displays"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply to All Displays"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zastosuj do wszystkich wyświetlaczy"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply to All Displays"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply to All Displays"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply to All Displays"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tüm Ekranlara Uygula"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply to All Displays"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply to All Displays"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply to All Displays"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply to All Displays"
+          }
+        }
+      }
     },
     "Applying briefly relaunches apps with menu bar items so they pick up the new spacing." : {
       "comment" : "Annotation under the spacing slider in the Global section of the Displays pane.",
-      "localizations" : {}
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying briefly relaunches apps with menu bar items so they pick up the new spacing."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying briefly relaunches apps with menu bar items so they pick up the new spacing."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Al aplicar, se vuelve a iniciar las aplicaciones con elementos de la barra de menús para que adopten el nuevo espaciado."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying briefly relaunches apps with menu bar items so they pick up the new spacing."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying briefly relaunches apps with menu bar items so they pick up the new spacing."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying briefly relaunches apps with menu bar items so they pick up the new spacing."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying briefly relaunches apps with menu bar items so they pick up the new spacing."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying briefly relaunches apps with menu bar items so they pick up the new spacing."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying briefly relaunches apps with menu bar items so they pick up the new spacing."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying briefly relaunches apps with menu bar items so they pick up the new spacing."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zatwierdzenie zmian na chwilę zrestartuje programy w pasku menu, by odświeżyć ich odstępy."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying briefly relaunches apps with menu bar items so they pick up the new spacing."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying briefly relaunches apps with menu bar items so they pick up the new spacing."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying briefly relaunches apps with menu bar items so they pick up the new spacing."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uygulama, yeni aralığı algılayabilmeleri için menü çubuğu ögelerine sahip uygulamaları kısa süreliğine yeniden başlatır."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying briefly relaunches apps with menu bar items so they pick up the new spacing."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying briefly relaunches apps with menu bar items so they pick up the new spacing."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying briefly relaunches apps with menu bar items so they pick up the new spacing."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Applying briefly relaunches apps with menu bar items so they pick up the new spacing."
+          }
+        }
+      }
     },
     "Broadcast" : {
       "comment" : "Label for the row that contains the Apply-to-All-Displays button in the Global section of the Displays pane.",
-      "localizations" : {}
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Broadcast"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Broadcast"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Transmisión"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Broadcast"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Broadcast"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Broadcast"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Broadcast"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Broadcast"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Broadcast"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Broadcast"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Transmisja"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Broadcast"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Broadcast"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Broadcast"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tümüne Uygula"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Broadcast"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Broadcast"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Broadcast"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Broadcast"
+          }
+        }
+      }
     },
     "Global" : {
       "comment" : "Header of the Global section at the top of the Displays pane.",
-      "localizations" : {}
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Global"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Global"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Global"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Global"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Global"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Global"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Global"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Global"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Global"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Global"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Globalne"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Global"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Global"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Global"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Genel"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Global"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Global"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全局"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Global"
+          }
+        }
+      }
     },
     "Not available because the %@ Bar is enabled in the global template." : {
       "comment" : "Annotation shown when the Always-show-hidden-items toggle in the Global section is disabled because Use Thaw Bar is enabled in the global template. %@ is the Thaw display name.",
-      "localizations" : {}
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not available because the %@ Bar is enabled in the global template."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not available because the %@ Bar is enabled in the global template."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No disponible porque la barra de %@ está activada en esta pantalla."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not available because the %@ Bar is enabled in the global template."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not available because the %@ Bar is enabled in the global template."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not available because the %@ Bar is enabled in the global template."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not available because the %@ Bar is enabled in the global template."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not available because the %@ Bar is enabled in the global template."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not available because the %@ Bar is enabled in the global template."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not available because the %@ Bar is enabled in the global template."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opcja niedostępna ze względu na włączony pasek %@ w szablonie globalnym."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not available because the %@ Bar is enabled in the global template."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not available because the %@ Bar is enabled in the global template."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not available because the %@ Bar is enabled in the global template."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Genel şablonda %@ Çubuğu etkin olduğu için kullanılamıyor."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not available because the %@ Bar is enabled in the global template."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not available because the %@ Bar is enabled in the global template."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not available because the %@ Bar is enabled in the global template."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Not available because the %@ Bar is enabled in the global template."
+          }
+        }
+      }
     },
     "Show hidden menu bar items in a separate bar below the menu bar." : {
       "comment" : "Annotation under the Use-Thaw-Bar toggle in the Global section of the Displays pane.",
-      "localizations" : {}
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show hidden menu bar items in a separate bar below the menu bar."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show hidden menu bar items in a separate bar below the menu bar."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mostrar los elementos ocultos de la barra de menús en una barra separada debajo de la barra de menús en esta pantalla."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show hidden menu bar items in a separate bar below the menu bar."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show hidden menu bar items in a separate bar below the menu bar."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show hidden menu bar items in a separate bar below the menu bar."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show hidden menu bar items in a separate bar below the menu bar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show hidden menu bar items in a separate bar below the menu bar."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show hidden menu bar items in a separate bar below the menu bar."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show hidden menu bar items in a separate bar below the menu bar."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pokaż ukryte elementy paska menu w osobnym pasku poniżej paska menu."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show hidden menu bar items in a separate bar below the menu bar."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show hidden menu bar items in a separate bar below the menu bar."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show hidden menu bar items in a separate bar below the menu bar."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gizli menü çubuğu ögelerini menü çubuğunun altındaki ayrı bir çubukta göster."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show hidden menu bar items in a separate bar below the menu bar."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show hidden menu bar items in a separate bar below the menu bar."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show hidden menu bar items in a separate bar below the menu bar."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show hidden menu bar items in a separate bar below the menu bar."
+          }
+        }
+      }
     },
     "This will overwrite the settings of %d display(s) with the global template and may briefly relaunch apps with menu bar items." : {
       "comment" : "Alert message variant shown before applying the global template to all displays when no profile is active. %d is the number of affected displays.",
-      "localizations" : {}
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This will overwrite the settings of %d display(s) with the global template and may briefly relaunch apps with menu bar items."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This will overwrite the settings of %d display(s) with the global template and may briefly relaunch apps with menu bar items."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esto sobrescribirá la configuración de %d pantallas con la plantilla global y puede provocar que las aplicaciones con elementos en la barra de menús se reinicien brevemente."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This will overwrite the settings of %d display(s) with the global template and may briefly relaunch apps with menu bar items."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This will overwrite the settings of %d display(s) with the global template and may briefly relaunch apps with menu bar items."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This will overwrite the settings of %d display(s) with the global template and may briefly relaunch apps with menu bar items."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This will overwrite the settings of %d display(s) with the global template and may briefly relaunch apps with menu bar items."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This will overwrite the settings of %d display(s) with the global template and may briefly relaunch apps with menu bar items."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This will overwrite the settings of %d display(s) with the global template and may briefly relaunch apps with menu bar items."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This will overwrite the settings of %d display(s) with the global template and may briefly relaunch apps with menu bar items."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zastosowanie szablonu globalnego nadpisze ustawienia %d wyświetlaczy. Aplikacje posiadające ikony w pasku menu mogą zostać na chwilę zrestartowane."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This will overwrite the settings of %d display(s) with the global template and may briefly relaunch apps with menu bar items."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This will overwrite the settings of %d display(s) with the global template and may briefly relaunch apps with menu bar items."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This will overwrite the settings of %d display(s) with the global template and may briefly relaunch apps with menu bar items."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu işlem, %d ekranın ayarlarını genel şablonla geçersiz kılacaktır ve menü çubuğu ögelerine sahip uygulamaları kısa süreliğine yeniden başlatabilir."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This will overwrite the settings of %d display(s) with the global template and may briefly relaunch apps with menu bar items."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This will overwrite the settings of %d display(s) with the global template and may briefly relaunch apps with menu bar items."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This will overwrite the settings of %d display(s) with the global template and may briefly relaunch apps with menu bar items."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This will overwrite the settings of %d display(s) with the global template and may briefly relaunch apps with menu bar items."
+          }
+        }
+      }
     },
     "This will overwrite the settings of %d display(s) with the global template and may briefly relaunch apps with menu bar items. Save the global template to the active profile \"%@\", or save it to every profile." : {
       "comment" : "Alert message variant shown before applying the global template to all displays while a profile is active. %d is the number of affected displays. %@ is the active profile name.",
-      "localizations" : {}
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This will overwrite the settings of %d display(s) with the global template and may briefly relaunch apps with menu bar items. Save the global template to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This will overwrite the settings of %d display(s) with the global template and may briefly relaunch apps with menu bar items. Save the global template to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esto sobrescribirá la configuración de %d pantallas con la plantilla global y puede provocar que las aplicaciones con elementos en la barra de menús se reinicien brevemente. Guarda la plantilla global en el perfil activo %@ o guárdala en todos los perfiles."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This will overwrite the settings of %d display(s) with the global template and may briefly relaunch apps with menu bar items. Save the global template to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This will overwrite the settings of %d display(s) with the global template and may briefly relaunch apps with menu bar items. Save the global template to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This will overwrite the settings of %d display(s) with the global template and may briefly relaunch apps with menu bar items. Save the global template to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This will overwrite the settings of %d display(s) with the global template and may briefly relaunch apps with menu bar items. Save the global template to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This will overwrite the settings of %d display(s) with the global template and may briefly relaunch apps with menu bar items. Save the global template to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This will overwrite the settings of %d display(s) with the global template and may briefly relaunch apps with menu bar items. Save the global template to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This will overwrite the settings of %d display(s) with the global template and may briefly relaunch apps with menu bar items. Save the global template to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta operacja nadpisze konfigurację %d wyświetlaczy szablonem globalnym. Aplikacje z ikonami w pasku menu mogą zostać na moment uruchomione ponownie. Zapisz szablon w aktywnym profilu \"%@\" lub w każdym z dostępnych profili."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This will overwrite the settings of %d display(s) with the global template and may briefly relaunch apps with menu bar items. Save the global template to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This will overwrite the settings of %d display(s) with the global template and may briefly relaunch apps with menu bar items. Save the global template to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This will overwrite the settings of %d display(s) with the global template and may briefly relaunch apps with menu bar items. Save the global template to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu işlem, %d ekranın ayarlarını genel şablonla geçersiz kılacaktır ve menü çubuğu ögelerine sahip uygulamaları kısa süreliğine yeniden başlatabilir. Genel şablonu aktif \"%@\" profiline kaydet veya her bir profile kaydet."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This will overwrite the settings of %d display(s) with the global template and may briefly relaunch apps with menu bar items. Save the global template to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This will overwrite the settings of %d display(s) with the global template and may briefly relaunch apps with menu bar items. Save the global template to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This will overwrite the settings of %d display(s) with the global template and may briefly relaunch apps with menu bar items. Save the global template to the active profile \"%@\", or save it to every profile."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This will overwrite the settings of %d display(s) with the global template and may briefly relaunch apps with menu bar items. Save the global template to the active profile \"%@\", or save it to every profile."
+          }
+        }
+      }
     }
   },
   "version" : "1.1"
