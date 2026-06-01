@@ -23,7 +23,8 @@ final class VirtualDisplay {
     private let handle: UnsafeMutableRawPointer
     private var isValid = true
 
-    /// The display identifier assigned by the window server, or 0 if unknown.
+    /// The display identifier assigned by the window server. Always non-zero;
+    /// create returns nil when no valid identifier is available.
     let displayID: CGDirectDisplayID
 
     private init(handle: UnsafeMutableRawPointer, displayID: CGDirectDisplayID) {
@@ -44,7 +45,16 @@ final class VirtualDisplay {
         guard let handle = ThawVirtualDisplayCreate() else {
             return nil
         }
-        return VirtualDisplay(handle: handle, displayID: ThawVirtualDisplayGetID(handle))
+        let displayID = ThawVirtualDisplayGetID(handle)
+        guard displayID != 0 else {
+            // Without a valid display ID the phantom cannot be excluded from
+            // display enumeration (Bridging.excludedDisplayID would only filter
+            // the null display), so it would leak into per-display behaviours.
+            // Treat it as a creation failure and tear the handle down.
+            ThawVirtualDisplayDestroy(handle)
+            return nil
+        }
+        return VirtualDisplay(handle: handle, displayID: displayID)
     }
 
     /// Removes the virtual display. Idempotent.
