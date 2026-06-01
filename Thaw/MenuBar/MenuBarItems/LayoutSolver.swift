@@ -138,6 +138,37 @@ enum LayoutSolver {
         let previousWindowIDs: [CGWindowID]
     }
 
+    // MARK: - Current flat construction
+
+    /// Flattens the three current sections into the single ordered identifier
+    /// sequence the profile-apply planner consumes, inserting the hidden and
+    /// always-hidden control items at their section boundaries.
+    ///
+    /// Order is: visible items, hidden control item, hidden items, always-
+    /// hidden control item (when present), always-hidden items. The visible
+    /// control item is already part of the visible array (it is not filtered
+    /// out upstream the way the hidden and always-hidden control items are), so
+    /// it is not reinserted here.
+    ///
+    /// Pure over its inputs. Shared by applyProfileLayout and the log-replay
+    /// harness so both build currentFlat identically.
+    nonisolated static func flattenCurrentSections(
+        visible: [String],
+        hidden: [String],
+        alwaysHidden: [String],
+        hiddenCtrlUID: String,
+        ahCtrlUID: String?
+    ) -> [String] {
+        var result = visible
+        result.append(hiddenCtrlUID)
+        result.append(contentsOf: hidden)
+        if let ahCtrlUID {
+            result.append(ahCtrlUID)
+        }
+        result.append(contentsOf: alwaysHidden)
+        return result
+    }
+
     // MARK: - Unmanaged partition
 
     /// Returns the subset of currentFlat that should be routed through
@@ -155,6 +186,17 @@ enum LayoutSolver {
     /// cache cycle. Visible-control-item exclusion was the omission
     /// that caused the field-reported "Thaw icon keeps moving" bug.
     ///
+    /// Unresolved generic Control Center items (uniqueIdentifiers passed in
+    /// unresolvedGenericCCUIDs) are also excluded. These are widgets macOS
+    /// hosts under Control Center that Thaw cannot yet attribute to their
+    /// owning app (e.g. Little Snitch's agent before its marker window
+    /// appears): they fall back to the com.apple.controlcenter namespace,
+    /// never match a profile entry, and would otherwise be relocated as
+    /// unmanaged arrivals on every cycle. Leaving them in place until they
+    /// resolve was the fix for the field-reported "Little Snitch keeps moving"
+    /// bug. The caller computes the set from items whose tag is a Control
+    /// Center generic item and whose sourcePID is nil.
+    ///
     /// Input order is preserved, since downstream consumers (LCS
     /// planner) treat the result as the iteration order for placement.
     /// Pure over its inputs.
@@ -163,13 +205,15 @@ enum LayoutSolver {
         desiredUIDs: Set<String>,
         hiddenCtrlUID: String?,
         ahCtrlUID: String?,
-        visibleCtrlUID: String?
+        visibleCtrlUID: String?,
+        unresolvedGenericCCUIDs: Set<String>
     ) -> [String] {
         currentFlat.filter { uid in
             !desiredUIDs.contains(uid)
                 && uid != hiddenCtrlUID
                 && uid != ahCtrlUID
                 && uid != visibleCtrlUID
+                && !unresolvedGenericCCUIDs.contains(uid)
         }
     }
 

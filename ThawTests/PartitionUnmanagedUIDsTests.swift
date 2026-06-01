@@ -43,7 +43,8 @@ final class PartitionUnmanagedUIDsTests: XCTestCase {
             desiredUIDs: [],
             hiddenCtrlUID: hidden,
             ahCtrlUID: ah,
-            visibleCtrlUID: visible
+            visibleCtrlUID: visible,
+            unresolvedGenericCCUIDs: []
         )
 
         XCTAssertEqual(result, [app])
@@ -64,7 +65,8 @@ final class PartitionUnmanagedUIDsTests: XCTestCase {
             desiredUIDs: [saved],
             hiddenCtrlUID: hidden,
             ahCtrlUID: nil,
-            visibleCtrlUID: visible
+            visibleCtrlUID: visible,
+            unresolvedGenericCCUIDs: []
         )
 
         XCTAssertEqual(result, [unsaved])
@@ -83,10 +85,32 @@ final class PartitionUnmanagedUIDsTests: XCTestCase {
             desiredUIDs: [saved],
             hiddenCtrlUID: nil,
             ahCtrlUID: nil,
-            visibleCtrlUID: nil
+            visibleCtrlUID: nil,
+            unresolvedGenericCCUIDs: []
         )
 
         XCTAssertEqual(result, [unsaved])
+    }
+
+    /// Items passed in unresolvedGenericCCUIDs are excluded even though they
+    /// are absent from desiredUIDs and are not control items. This is the
+    /// Little Snitch orphan case: a Control-Center-hosted widget with no
+    /// resolved source PID must not be treated as an unmanaged arrival and
+    /// relocated.
+    func testUnresolvedGenericCCUIDsAreExcluded() {
+        let orphan = "com.apple.controlcenter:Item-0"
+        let app = "com.example.app:Item-0"
+
+        let result = LayoutSolver.partitionUnmanagedUIDs(
+            currentFlat: [orphan, app],
+            desiredUIDs: [],
+            hiddenCtrlUID: nil,
+            ahCtrlUID: nil,
+            visibleCtrlUID: nil,
+            unresolvedGenericCCUIDs: [orphan]
+        )
+
+        XCTAssertEqual(result, [app])
     }
 
     /// Input order is preserved. The LCS planner iterates the result in
@@ -103,7 +127,8 @@ final class PartitionUnmanagedUIDsTests: XCTestCase {
             desiredUIDs: [],
             hiddenCtrlUID: nil,
             ahCtrlUID: nil,
-            visibleCtrlUID: nil
+            visibleCtrlUID: nil,
+            unresolvedGenericCCUIDs: []
         )
 
         XCTAssertEqual(result, [c, a, b])
@@ -117,7 +142,8 @@ final class PartitionUnmanagedUIDsTests: XCTestCase {
             desiredUIDs: ["com.example.app:Item-0"],
             hiddenCtrlUID: "h",
             ahCtrlUID: "ah",
-            visibleCtrlUID: "v"
+            visibleCtrlUID: "v",
+            unresolvedGenericCCUIDs: []
         )
 
         XCTAssertTrue(result.isEmpty)

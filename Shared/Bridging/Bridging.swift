@@ -79,6 +79,17 @@ extension Bridging {
 extension Bridging {
     // MARK: Private Display Helpers
 
+    /// A display to exclude from Thaw's display enumeration while it exists.
+    ///
+    /// Set to the identifier of the transient virtual display that
+    /// VirtualDisplayProvoker creates to provoke marker-pair resolution on a
+    /// single-display machine, and cleared when it is removed. Filtering it
+    /// here keeps the phantom out of every display list derived from
+    /// getActiveDisplayList (including the active-menu-bar-display lookup),
+    /// so it never drives profile auto-switch or per-display state. nil during
+    /// normal operation, which makes the filter a no-op.
+    nonisolated(unsafe) static var excludedDisplayID: CGDirectDisplayID?
+
     private static func getActiveDisplayCount() -> UInt32? {
         var count: UInt32 = 0
         let result = CGGetActiveDisplayList(0, nil, &count)
@@ -98,6 +109,9 @@ extension Bridging {
         guard result == .success else {
             diagLog.error("CGGetActiveDisplayList failed with error \(result.logString)")
             return []
+        }
+        if let excluded = excludedDisplayID {
+            list.removeAll { $0 == excluded }
         }
         return list
     }

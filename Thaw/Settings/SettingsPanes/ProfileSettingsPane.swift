@@ -460,7 +460,7 @@ struct ProfileSettingsPane: View {
     /// any disconnected displays that still have a profile association.
     private func allDisplays() -> [DisplayInfo] {
         let knownDisplays = appState.settings.displaySettings.knownDisplays
-        var displays = NSScreen.screens.compactMap { screen -> DisplayInfo? in
+        var displays = NSScreen.managedScreens.compactMap { screen -> DisplayInfo? in
             guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else {
                 return nil
             }

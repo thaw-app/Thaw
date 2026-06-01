@@ -1305,11 +1305,15 @@ final class MenuBarItemManager: ObservableObject {
             }
             .store(in: &c)
 
-        // Periodic check for new menu bar items that appeared after the
-        // launch notification follow-ups (e.g. background-only apps like
-        // OneDrive that register their NSStatusItem late). Lightweight
-        // windowID comparison bails fast when nothing changed.
-        cacheTickCancellable = Timer.publish(every: 60, on: .main, in: .common)
+        // Rescan on menu bar window-list changes. cacheItemsIfNeeded compares
+        // the current items-only window IDs against the cached set and recaches
+        // only when they differ, so this catches both late-registering items
+        // (background-only apps like OneDrive) and the transient bundle-ID
+        // marker windows that source-PID marker-pair resolution depends on,
+        // which can appear and disappear between sparser app-event triggers. A
+        // short interval keeps marker-pair latency low; the windowID comparison
+        // bails fast and triggers no recache when nothing changed.
+        cacheTickCancellable = Timer.publish(every: 3, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in
                 Task { [weak self] in
@@ -1779,6 +1783,38 @@ extension MenuBarItemManager {
             }
         }
         MenuBarItemManager.diagLog.debug("Updated menu bar item cache: visible=\(context.cache[.visible].count), hidden=\(context.cache[.hidden].count), alwaysHidden=\(context.cache[.alwaysHidden].count)")
+    }
+
+    /// Whether a startup or profile-apply settling period is currently active.
+    ///
+    /// During settling the menu bar is still converging and items are
+    /// transiently unresolved before the spatial AX, marker-pair, and
+    /// elimination passes finish. Consumers that react to unresolved items
+    /// (VirtualDisplayProvoker) must wait until this is false, otherwise they
+    /// would treat normal cold-boot churn as genuinely-stuck orphans.
+    ///
+    /// Tracks `isInStartupSettling` only: that flag is cleared when the period
+    /// ends, whereas `startupSettlingTask` keeps referencing the finished task
+    /// and so would report settling forever after the first period.
+    var isSettling: Bool {
+        isInStartupSettling
+    }
+
+    /// The window IDs of currently-cached menu bar items that have no resolved
+    /// source PID and are not Thaw control items.
+    ///
+    /// These are the items that may still need marker-pair resolution. On a
+    /// single display the bundle-ID marker windows are absent, so these stay
+    /// unresolved; VirtualDisplayProvoker uses this to decide when to briefly
+    /// add a virtual display so the markers publish. The caller is expected to
+    /// ignore the result while isSettling is true, since cold-boot churn
+    /// surfaces transient unresolved items here.
+    func unresolvedOrphanWindowIDs() -> Set<CGWindowID> {
+        Set(
+            itemCache.managedItems
+                .filter { $0.sourcePID == nil && !$0.isControlItem }
+                .map(\.windowID)
+        )
     }
 
     /// Caches the current menu bar items, regardless of whether the
@@ -5564,7 +5600,7 @@ extension MenuBarItemManager {
         // planFullSortSequence's early-return check to fail against a
         // single-divider desiredFiltered and the notched full-sort
         // path to regenerate the entire sequence every cycle.
-        var currentFlat = [String]()
+        var sectionUIDs = [MenuBarSection.Name: [String]]()
         for sectionName in [MenuBarSection.Name.visible, .hidden, .alwaysHidden] {
             let sectionItems = items.filter { item in
                 guard isProfileItem(item) else { return false }
@@ -5575,13 +5611,18 @@ extension MenuBarItemManager {
             MenuBarItemManager.diagLog.debug(
                 "applyProfileLayout: current \(sectionName.logString) has \(sectionItems.count) items: \(sectionItems.map(\.uniqueIdentifier))"
             )
-            currentFlat.append(contentsOf: sectionItems.map(\.uniqueIdentifier))
-            if sectionName == .visible {
-                currentFlat.append(hiddenCtrlUID)
-            } else if sectionName == .hidden, let ahCtrlUID {
-                currentFlat.append(ahCtrlUID)
-            }
+            sectionUIDs[sectionName] = sectionItems.map(\.uniqueIdentifier)
         }
+        // Flatten with control items at the section boundaries via the shared
+        // pure helper, so this path and the log-replay harness build currentFlat
+        // identically.
+        var currentFlat = LayoutSolver.flattenCurrentSections(
+            visible: sectionUIDs[.visible] ?? [],
+            hidden: sectionUIDs[.hidden] ?? [],
+            alwaysHidden: sectionUIDs[.alwaysHidden] ?? [],
+            hiddenCtrlUID: hiddenCtrlUID,
+            ahCtrlUID: ahCtrlUID
+        )
 
         // Filter desired sequence to only items present in the current bar.
         let currentSet = Set(currentFlat)
@@ -5597,12 +5638,24 @@ extension MenuBarItemManager {
         // leftmost" behavior.
         let visibleCtrlUID = items.first(where: { $0.tag == .visibleControlItem })?.uniqueIdentifier
         let desiredSet = Set(desiredFiltered)
+        // Generic Control Center items (Item-N title) with no resolved source
+        // PID are widgets macOS hosts under Control Center that Thaw cannot yet
+        // attribute to their owning app (e.g. Little Snitch's agent before its
+        // marker window appears). They fall back to the com.apple.controlcenter
+        // namespace, never match a profile entry, and so would be relocated as
+        // unmanaged arrivals on every cycle. Exclude them until they resolve.
+        let unresolvedGenericCCUIDs = Set(
+            items
+                .filter { $0.tag.isControlCenterGenericItem && $0.sourcePID == nil }
+                .map(\.uniqueIdentifier)
+        )
         let unmanagedUIDs = LayoutSolver.partitionUnmanagedUIDs(
             currentFlat: currentFlat,
             desiredUIDs: desiredSet,
             hiddenCtrlUID: hiddenCtrlUID,
             ahCtrlUID: ahCtrlUID,
-            visibleCtrlUID: visibleCtrlUID
+            visibleCtrlUID: visibleCtrlUID,
+            unresolvedGenericCCUIDs: unresolvedGenericCCUIDs
         )
         if !unmanagedUIDs.isEmpty {
             // Build a DesiredLayout for the profile-apply context: the
@@ -5913,6 +5966,11 @@ extension MenuBarItemManager {
 
             let desiredHiddenSet = Set(itemOrder["hidden"] ?? [])
             let desiredAHSet = Set(itemOrder["alwaysHidden"] ?? [])
+            // Logged for the log-replay harness so the desired visible set is
+            // captured rather than inferred from current visible minus control
+            // items and unresolved orphans. Not consulted by Phase 1's section
+            // arithmetic, which only crosses hidden and always-hidden.
+            let desiredVisibleSet = Set(itemOrder["visible"] ?? [])
 
             // Check if AH_ctrl needs to move: items changing between hidden↔alwaysHidden.
             let wrongInHidden = currentHiddenSet.subtracting(desiredHiddenSet).intersection(desiredAHSet)
@@ -5947,6 +6005,9 @@ extension MenuBarItemManager {
             )
             MenuBarItemManager.diagLog.debug(
                 "Profile layout Phase 1: desiredAH=\(desiredAHSet.sorted())"
+            )
+            MenuBarItemManager.diagLog.debug(
+                "Profile layout Phase 1: desiredVisible=\(desiredVisibleSet.sorted())"
             )
 
             if crossSectionMoves > 0 || totalSectionMismatch > 0, let ahCtrlUID {

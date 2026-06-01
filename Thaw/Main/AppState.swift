@@ -52,6 +52,11 @@ final class AppState: ObservableObject {
     /// Manager for settings profiles.
     let profileManager = ProfileManager()
 
+    /// Briefly adds a virtual display on single-display machines so the window
+    /// server publishes the marker windows needed to resolve unidentified menu
+    /// bar items, then tears it down.
+    private(set) lazy var virtualDisplayProvoker = VirtualDisplayProvoker(appState: self)
+
     /// Manager for app updates.
     let updatesManager = UpdatesManager()
 
@@ -65,7 +70,7 @@ final class AppState: ObservableObject {
     private var openWindows = Set<IceWindowIdentifier>()
 
     /// Track last known screen count to detect disconnects.
-    private var lastKnownScreenCount = NSScreen.screens.count
+    private var lastKnownScreenCount = NSScreen.managedScreens.count
 
     /// Prevent repeated restart attempts.
     private var isRestarting = false
@@ -274,9 +279,18 @@ final class AppState: ObservableObject {
             }
             .store(in: &c)
 
+        // After each cache cycle settles, let the provoker decide whether to
+        // briefly add a virtual display to resolve any single-display orphans.
+        itemManager.$itemCache
+            .debounce(for: .seconds(0.5), scheduler: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.virtualDisplayProvoker.considerProvoking()
+            }
+            .store(in: &c)
+
         NotificationCenter.default.publisher(for: NSApplication.didChangeScreenParametersNotification)
             .debounce(for: .seconds(0.5), scheduler: DispatchQueue.main)
-            .map { _ in NSScreen.screens.count }
+            .map { _ in NSScreen.managedScreens.count }
             .sink { [weak self] count in
                 guard let self else { return }
                 defer { self.lastKnownScreenCount = count }

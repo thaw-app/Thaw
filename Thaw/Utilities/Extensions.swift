@@ -612,6 +612,21 @@ extension NSScreen {
         return screens.first { $0.displayID == displayID }
     }
 
+    /// The connected screens excluding Thaw's transient resolver virtual
+    /// display.
+    ///
+    /// VirtualDisplayProvoker may briefly add a virtual display to provoke
+    /// marker-pair resolution on a single-display machine. Enumerating this
+    /// instead of screens keeps that phantom out of per-display state (Thaw's
+    /// Displays settings, overlay panels, average-color capture, screen-count
+    /// logic). Identical to screens whenever no virtual display is active.
+    static var managedScreens: [NSScreen] {
+        guard let excluded = Bridging.excludedDisplayID else {
+            return screens
+        }
+        return screens.filter { $0.displayID != excluded }
+    }
+
     /// The display identifier of the screen.
     var displayID: CGDirectDisplayID {
         // Value and type are guaranteed here, so force casting is okay.
@@ -667,7 +682,7 @@ extension NSScreen {
     /// Removes cache entries for displays that are no longer connected.
     /// This prevents memory growth when displays are reconnected (which assigns new display IDs).
     static func cleanupDisconnectedDisplayCaches() {
-        let connectedDisplayIDs = Set(NSScreen.screens.map(\.displayID))
+        let connectedDisplayIDs = Set(NSScreen.managedScreens.map(\.displayID))
         displayCache.withLock { cache in
             cache.menuBarHeights = cache.menuBarHeights.filter { connectedDisplayIDs.contains($0.key) }
             cache.menuFrames = cache.menuFrames.filter { connectedDisplayIDs.contains($0.key) }

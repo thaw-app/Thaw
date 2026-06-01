@@ -513,7 +513,7 @@ final class MenuBarManager: ObservableObject {
 
         let targetScreens: [NSScreen]
         if isAdaptiveActive {
-            targetScreens = NSScreen.screens
+            targetScreens = NSScreen.managedScreens
         } else if isSettingsVisible {
             targetScreens = [settingsWindow?.screen].compactMap(\.self)
         } else {
@@ -587,7 +587,7 @@ final class MenuBarManager: ObservableObject {
                     try? await Task.sleep(for: .seconds(1))
                 }
                 await self.updateAverageColorInfoAsync()
-                let allCaptured = NSScreen.screens.allSatisfy {
+                let allCaptured = NSScreen.managedScreens.allSatisfy {
                     self.averageColors.keys.contains($0.displayID)
                 }
                 if allCaptured { return }
