@@ -226,11 +226,6 @@ final class VirtualDisplayProvoker {
             return
         }
         self.display = display
-        // Keep the phantom from becoming the main display: macOS may place a
-        // freshly added display at the origin and make it main, which yanks the
-        // menu bar and windows onto the tiny phantom and snaps the screen small
-        // until teardown (issue #661). Re-anchor the real display as main.
-        display.excludeFromMainDisplay(realMain: realMain)
         // Exclude our phantom from Thaw's display enumeration so it never
         // pollutes per-display state (the Displays settings panel, overlay
         // panels, profile auto-switch, etc.) while it briefly exists. The
@@ -241,13 +236,29 @@ final class VirtualDisplayProvoker {
         // teardown to also cover the debounced removal notification.
         Self.displayReactionsSuppressedUntil = .distantFuture
         diagLog.info(
-            "VirtualDisplayProvoke: created virtual display id=\(display.displayID); polling for marker-pair resolution"
+            "VirtualDisplayProvoke: created virtual display id=\(display.displayID); realMain=\(realMain), mainAfterCreate=\(CGMainDisplayID()); polling for marker-pair resolution"
         )
+        // Keep the phantom from becoming the main display (issue #661). macOS can
+        // hand a freshly added display main status a moment after it comes online,
+        // so assert it once immediately and again on every poll below rather than
+        // trusting a single call to stick.
+        enforceRealDisplayMain(realMain: realMain, display: display)
 
         var resolvedAll = false
+        // The set of targets still unresolved at the last in-hold poll. Initialised
+        // to all targets so a provoke that somehow never polls counts as a failure.
+        var heldUnresolved = targets
         while Date().timeIntervalSince(start) < maxHold {
             try? await Task.sleep(for: pollInterval)
+            // Re-assert the real display as main: the phantom can take main status
+            // late, after the immediate call above, so this keeps it corrected for
+            // the phantom's whole lifetime.
+            enforceRealDisplayMain(realMain: realMain, display: display)
             let stillUnresolved = await unresolvedTargets(targets)
+            // Remember the last in-hold result: this, taken while the phantom is up
+            // and the markers are present, is the authoritative "did the provoke
+            // resolve it" signal that the blacklist decision uses.
+            heldUnresolved = stillUnresolved
             let elapsed = Date().timeIntervalSince(start)
             diagLog.info(
                 "VirtualDisplayProvoke: +\(String(format: "%.2f", elapsed))s \(targets.count - stillUnresolved.count)/\(targets.count) target orphan(s) resolved"
@@ -286,15 +297,20 @@ final class VirtualDisplayProvoker {
             "VirtualDisplayProvoke: after teardown \(targets.count - stillUnresolved.count)/\(targets.count) target(s) still resolved (persistence check)"
         )
 
-        // Blacklist any target the provoke could not resolve so it is not provoked
-        // again. A display either makes the markers publish (resolves within ~1s)
-        // or it does not, in which case repeating the disruption every few minutes
-        // just churns the display arrangement for nothing (issue #661). A relaunch
-        // assigns a fresh windowID, which is not blacklisted, so a genuinely new
-        // instance still gets one clean attempt.
-        if !stillUnresolved.isEmpty {
-            blacklisted.formUnion(stillUnresolved)
-            diagLog.info("VirtualDisplayProvoke: blacklisted \(stillUnresolved.sorted()); will not provoke these again")
+        // Blacklist any target that did not resolve during the hold (while the
+        // phantom and its markers were present) so it is not provoked again. A
+        // display either makes the markers publish (resolves within ~1s) or it does
+        // not, in which case repeating the disruption every few minutes just churns
+        // the display arrangement for nothing (issue #661). This uses the in-hold
+        // result, not the post-teardown persistence check above: a flapping orphan
+        // can momentarily read as resolved at the instant of that check and thereby
+        // dodge the blacklist, only to provoke again seconds later, observed as a
+        // back-to-back double provoke in the field. A relaunch assigns a fresh
+        // windowID, which is not blacklisted, so a genuinely new instance still gets
+        // one clean attempt.
+        if !heldUnresolved.isEmpty {
+            blacklisted.formUnion(heldUnresolved)
+            diagLog.info("VirtualDisplayProvoke: blacklisted \(heldUnresolved.sorted()); will not provoke these again")
         }
 
         // Propagate the freshly resolved sourcePIDs into the manager's
@@ -310,6 +326,28 @@ final class VirtualDisplayProvoker {
         if stillUnresolved.count < targets.count {
             await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
         }
+    }
+
+    /// Keeps realMain the system main display while the phantom exists. No-ops
+    /// (and stays silent) when the real display is already main, which is the
+    /// normal case on machines where the phantom never takes main. When the
+    /// phantom has taken main it runs one reanchor transaction and logs the
+    /// before/after main display IDs and the transaction return codes, so whether
+    /// the phantom ever hijacks main, and whether the correction lands, is
+    /// auditable from the field log (issue #661). Returns whether the real display
+    /// is main after the call.
+    @discardableResult
+    private func enforceRealDisplayMain(realMain: CGDirectDisplayID, display: VirtualDisplay) -> Bool {
+        let before = CGMainDisplayID()
+        guard before != realMain else {
+            return true
+        }
+        let result = display.reanchorRealDisplayAsMain(realMain)
+        let after = CGMainDisplayID()
+        diagLog.info(
+            "VirtualDisplayProvoke: phantom held main (was \(before), realMain \(realMain)); reanchor begin=\(result.beginOK) originReal=\(result.originReal.rawValue) originPhantom=\(result.originPhantom.rawValue) complete=\(result.complete.rawValue) -> main now \(after)"
+        )
+        return after == realMain
     }
 
     /// Returns which of the given target windowIDs are still unresolved, read
