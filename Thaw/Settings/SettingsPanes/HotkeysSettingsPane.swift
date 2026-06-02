@@ -141,10 +141,19 @@ private struct MenuBarItemHotkeyList: View {
         } label: {
             Text("Open menu bar items")
         }
-        .task {
+        // Tell the image cache whether this list is visible so it only runs the
+        // live capture loop while the disclosure is expanded.
+        .onChange(of: isExpanded, initial: true) { _, expanded in
+            imageCache.setItemHotkeyListExpanded(expanded)
+        }
+        .onDisappear {
+            imageCache.setItemHotkeyListExpanded(false)
+        }
+        .task(id: isExpanded) {
             // Item images for the hidden and always-hidden sections are not
-            // captured until something requests them. Prewarm all sections so
-            // off-screen items show their real icon rather than a placeholder.
+            // captured until something requests them. Prewarm all sections when
+            // the list is expanded so off-screen items show their real icon.
+            guard isExpanded else { return }
             await imageCache.updateCacheWithoutChecks(sections: MenuBarSection.Name.allCases)
         }
     }
@@ -179,33 +188,46 @@ private struct MenuBarItemHotkeyList: View {
         var rows: [Row] = []
         var seen = Set<String>()
 
-        // Present items, in their on-screen order.
-        for item in itemManager.itemCache.managedItems
-            where !item.isControlItem && item.sourcePID != nil
-        {
-            let id = item.uniqueIdentifier
-            guard let hotkey = menuBarManager.itemHotkeys[id], seen.insert(id).inserted else {
-                continue
+        // Present items grouped by section (visible, hidden, always-hidden),
+        // reversed within each section so the rightmost menu bar item (e.g. the
+        // clock) appears first.
+        for section in MenuBarSection.Name.allCases {
+            for item in itemManager.itemCache.managedItems(for: section).reversed()
+                where !item.isControlItem && item.sourcePID != nil
+            {
+                let id = item.uniqueIdentifier
+                guard let hotkey = menuBarManager.itemHotkeys[id], seen.insert(id).inserted else {
+                    continue
+                }
+                rows.append(Row(
+                    id: id,
+                    name: item.displayName,
+                    bundle: item.tag.namespace.description,
+                    item: item,
+                    hotkey: hotkey
+                ))
             }
-            rows.append(Row(
-                id: id,
-                name: item.displayName,
-                bundle: item.tag.namespace.description,
-                item: item,
-                hotkey: hotkey
-            ))
         }
 
         // Configured-but-absent items (owning app not currently running).
-        for (id, hotkey) in menuBarManager.itemHotkeys
-            where hotkey.keyCombination != nil && !seen.contains(id)
-        {
+        // itemHotkeys is an unordered dictionary, so sort by name (then id) for
+        // a stable row order across renders.
+        let absent = menuBarManager.itemHotkeys
+            .filter { id, hotkey in hotkey.keyCombination != nil && !seen.contains(id) }
+            .map { (id: $0.key, hotkey: $0.value, name: lastKnownName(for: $0.key)) }
+            .sorted { lhs, rhs in
+                if lhs.name != rhs.name {
+                    return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+                }
+                return lhs.id < rhs.id
+            }
+        for entry in absent {
             rows.append(Row(
-                id: id,
-                name: lastKnownName(for: id),
-                bundle: bundle(forIdentifier: id),
+                id: entry.id,
+                name: entry.name,
+                bundle: bundle(forIdentifier: entry.id),
                 item: nil,
-                hotkey: hotkey
+                hotkey: entry.hotkey
             ))
         }
 
