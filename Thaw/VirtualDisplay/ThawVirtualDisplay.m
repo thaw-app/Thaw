@@ -53,15 +53,21 @@ void *ThawVirtualDisplayCreate(void) {
     }
 
     @try {
-        const NSUInteger width = 1920;
-        const NSUInteger height = 1080;
+        // Keep the phantom as small as the window server will accept. It only
+        // has to exist so the marker windows are published; nothing is ever
+        // rendered on it, so a tiny framebuffer minimises its footprint in the
+        // display arrangement. 640x480 is the smallest standard mode that is
+        // reliably accepted; smaller modes risk applySettings rejecting it,
+        // which would defeat the whole provoke.
+        const NSUInteger width = 640;
+        const NSUInteger height = 480;
 
         CGVirtualDisplayDescriptor *descriptor = [[descriptorClass alloc] init];
         descriptor.queue = dispatch_get_main_queue();
         descriptor.name = @"Thaw Resolver";
         descriptor.maxPixelsWide = width;
         descriptor.maxPixelsHigh = height;
-        descriptor.sizeInMillimeters = CGSizeMake(600.0, 340.0);
+        descriptor.sizeInMillimeters = CGSizeMake(200.0, 150.0);
         descriptor.productID = 0x1234;
         descriptor.vendorID = 0x3456;
         descriptor.serialNum = 0x0001;

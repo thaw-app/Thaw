@@ -47,17 +47,22 @@ final class VirtualDisplayProvoker {
 
     /// When each currently-unresolved orphan windowID was first observed.
     private var firstSeenUnresolved = [CGWindowID: Date]()
-    /// Last provoke attempt per windowID, for the cooldown.
-    private var lastAttempt = [CGWindowID: Date]()
+    /// WindowIDs that a provoke already failed to resolve. Every field case
+    /// resolves within a second of the markers publishing or never resolves at
+    /// all (retrying the same window produced an identical 0/1 each time), so a
+    /// single failed hold means a display will not help this window and we stop
+    /// provoking for it. Keyed on windowID, not source PID, because these orphans
+    /// have no resolvable source PID; the set is in-memory so a relaunch (which
+    /// assigns a fresh windowID) still gets one clean attempt.
+    private var blacklisted = Set<CGWindowID>()
 
     /// How long an orphan must stay unresolved before provoking, so we do not
     /// fire for items the normal AX / marker pass resolves within a cycle.
     private let unresolvedGrace: TimeInterval = 3
-    /// Minimum time between provoke attempts for the same windowID, so an
-    /// orphan that cannot resolve even with a display does not flicker-loop.
-    private let attemptCooldown: TimeInterval = 300
-    /// Maximum time to keep the virtual display up waiting for resolution.
-    private let maxHold: TimeInterval = 12
+    /// Maximum time to keep the virtual display up waiting for resolution. Every
+    /// field resolution landed under a second, so this is generous headroom; a
+    /// window that has not resolved by here is blacklisted rather than retried.
+    private let maxHold: TimeInterval = 4
     /// Poll cadence while waiting for markers to publish and orphans to resolve.
     private let pollInterval: Duration = .milliseconds(250)
 
@@ -108,7 +113,7 @@ final class VirtualDisplayProvoker {
         // any virtual display we created.
         guard displayCount == 1, !orphans.isEmpty else {
             firstSeenUnresolved.removeAll()
-            lastAttempt.removeAll()
+            blacklisted.removeAll()
             return
         }
 
@@ -128,7 +133,7 @@ final class VirtualDisplayProvoker {
 
         // Forget state for windowIDs that are no longer orphaned.
         firstSeenUnresolved = firstSeenUnresolved.filter { orphans.contains($0.key) }
-        lastAttempt = lastAttempt.filter { orphans.contains($0.key) }
+        blacklisted = blacklisted.intersection(orphans)
         for windowID in orphans where firstSeenUnresolved[windowID] == nil {
             firstSeenUnresolved[windowID] = now
         }
@@ -140,10 +145,7 @@ final class VirtualDisplayProvoker {
             else {
                 return false
             }
-            if let attempted = lastAttempt[windowID], now.timeIntervalSince(attempted) < attemptCooldown {
-                return false
-            }
-            return true
+            return !blacklisted.contains(windowID)
         }
 
         guard !eligible.isEmpty else {
@@ -155,16 +157,18 @@ final class VirtualDisplayProvoker {
                     let age = firstSeenUnresolved[windowID].map { now.timeIntervalSince($0) } ?? 0
                     return "\(windowID):\(String(format: "%.1f", age))s"
                 }
-                let cooled = orphans.sorted().filter { windowID in
-                    lastAttempt[windowID].map { now.timeIntervalSince($0) < attemptCooldown } ?? false
-                }
+                let blocked = orphans.sorted().filter { blacklisted.contains($0) }
                 diagLog.info(
-                    "VirtualDisplayProvoke: not yet eligible (orphan ages \(ages), grace \(unresolvedGrace)s, cooldown-blocked \(cooled))"
+                    "VirtualDisplayProvoke: not yet eligible (orphan ages \(ages), grace \(unresolvedGrace)s, blacklisted \(blocked))"
                 )
             }
             // Re-check at grace expiry so firing does not depend on an incidental
-            // cache cycle landing after the grace elapses.
-            scheduleRecheckIfNeeded()
+            // cache cycle landing after the grace elapses. Only worth doing while
+            // a non-blacklisted orphan is still inside its grace window; once every
+            // orphan is blacklisted there is nothing that will become eligible.
+            if orphans.contains(where: { !blacklisted.contains($0) }) {
+                scheduleRecheckIfNeeded()
+            }
             return
         }
 
@@ -200,15 +204,13 @@ final class VirtualDisplayProvoker {
             return
         }
 
-        let attemptTime = Date()
-        for windowID in targets {
-            lastAttempt[windowID] = attemptTime
-        }
-
         let start = Date()
         diagLog.info(
             "VirtualDisplayProvoke: single display with \(targets.count) unresolved orphan(s) \(targets.sorted()); creating virtual display"
         )
+        // Capture the real main display before the phantom exists, so it can be
+        // re-anchored as main once the phantom is added (see excludeFromMainDisplay).
+        let realMain = CGMainDisplayID()
         guard let display = VirtualDisplay.create() else {
             // Report which private classes resolved so a binding failure on a
             // given macOS version is diagnosable from Thaw's own log (the ObjC
@@ -224,6 +226,11 @@ final class VirtualDisplayProvoker {
             return
         }
         self.display = display
+        // Keep the phantom from becoming the main display: macOS may place a
+        // freshly added display at the origin and make it main, which yanks the
+        // menu bar and windows onto the tiny phantom and snaps the screen small
+        // until teardown (issue #661). Re-anchor the real display as main.
+        display.excludeFromMainDisplay(realMain: realMain)
         // Exclude our phantom from Thaw's display enumeration so it never
         // pollutes per-display state (the Displays settings panel, overlay
         // panels, profile auto-switch, etc.) while it briefly exists. The
@@ -255,7 +262,7 @@ final class VirtualDisplayProvoker {
         }
         if !resolvedAll {
             diagLog.info(
-                "VirtualDisplayProvoke: gave up after \(String(format: "%.2f", maxHold))s; some orphans still unresolved (retry after cooldown)"
+                "VirtualDisplayProvoke: gave up after \(String(format: "%.2f", maxHold))s; some orphans still unresolved (blacklisting)"
             )
         }
 
@@ -278,6 +285,17 @@ final class VirtualDisplayProvoker {
         diagLog.info(
             "VirtualDisplayProvoke: after teardown \(targets.count - stillUnresolved.count)/\(targets.count) target(s) still resolved (persistence check)"
         )
+
+        // Blacklist any target the provoke could not resolve so it is not provoked
+        // again. A display either makes the markers publish (resolves within ~1s)
+        // or it does not, in which case repeating the disruption every few minutes
+        // just churns the display arrangement for nothing (issue #661). A relaunch
+        // assigns a fresh windowID, which is not blacklisted, so a genuinely new
+        // instance still gets one clean attempt.
+        if !stillUnresolved.isEmpty {
+            blacklisted.formUnion(stillUnresolved)
+            diagLog.info("VirtualDisplayProvoke: blacklisted \(stillUnresolved.sorted()); will not provoke these again")
+        }
 
         // Propagate the freshly resolved sourcePIDs into the manager's
         // published item cache. The provoke only updates the XPC's PID cache;

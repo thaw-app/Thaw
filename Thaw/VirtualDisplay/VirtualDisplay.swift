@@ -57,6 +57,33 @@ final class VirtualDisplay {
         return VirtualDisplay(handle: handle, displayID: displayID)
     }
 
+    /// Keeps the real display the system main display and parks this phantom to
+    /// its right, so adding the phantom never relocates the menu bar or reshuffles
+    /// the user's windows. macOS places a freshly added display at the global
+    /// origin in some arrangements, which makes it the main display (the main
+    /// display is whichever sits at the origin); when that happens the menu bar
+    /// and windows jump onto the tiny phantom and the screen visibly snaps small
+    /// until teardown. Re-anchoring the real display at the origin and offsetting
+    /// the phantom undoes that. realMain must be captured before the phantom is
+    /// created, while the real display is still the only one.
+    func excludeFromMainDisplay(realMain: CGDirectDisplayID) {
+        var configRef: CGDisplayConfigRef?
+        guard CGBeginDisplayConfiguration(&configRef) == .success, let configRef else {
+            return
+        }
+        // The main display is the one at the global origin, so anchoring the real
+        // display there guarantees it stays main regardless of where the window
+        // server initially placed the phantom.
+        CGConfigureDisplayOrigin(configRef, realMain, 0, 0)
+        // Place the phantom immediately to the right of the real display so it is
+        // never at the origin and never overlaps the real desktop.
+        let offset = Int32(clamping: CGDisplayPixelsWide(realMain))
+        CGConfigureDisplayOrigin(configRef, displayID, offset, 0)
+        if CGCompleteDisplayConfiguration(configRef, .forSession) != .success {
+            CGCancelDisplayConfiguration(configRef)
+        }
+    }
+
     /// Removes the virtual display. Idempotent.
     func invalidate() {
         guard isValid else {
