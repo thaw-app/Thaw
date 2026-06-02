@@ -441,7 +441,9 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
             return true
         }
 
-        return nav.isAppFrontmost && nav.isSettingsPresented && nav.settingsNavigationIdentifier == .menuBarLayout
+        return nav.isAppFrontmost && nav.isSettingsPresented
+            && (nav.settingsNavigationIdentifier == .menuBarLayout
+                || nav.settingsNavigationIdentifier == .hotkeys)
     }
 
     /// Convenience overload that reads current state on MainActor when no snapshot is provided.
@@ -534,7 +536,9 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
             // Determine which sections to refresh based on what's visible
             let sections: [MenuBarSection.Name]
             if nav.isSearchPresented
-                || (nav.isSettingsPresented && nav.settingsNavigationIdentifier == .menuBarLayout)
+                || (nav.isSettingsPresented
+                    && (nav.settingsNavigationIdentifier == .menuBarLayout
+                        || nav.settingsNavigationIdentifier == .hotkeys))
             {
                 sections = MenuBarSection.Name.allCases
             } else if nav.isIceBarPresented,

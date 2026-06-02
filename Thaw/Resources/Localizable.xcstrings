@@ -1,6 +1,12 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "No menu bar items available" : {
+      "comment" : "Text shown in the per-item hotkeys list when there are no menu bar items to assign a hotkey to."
+    },
+    "Open menu bar items" : {
+      "comment" : "A disclosure group label in the hotkeys settings pane that expands the list of per-item hotkeys."
+    },
     "(no script selected)" : {
       "comment" : "A placeholder displayed in the \"Path\" column of a hook row when no script is selected.",
       "localizations" : {

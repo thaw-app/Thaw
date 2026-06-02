@@ -451,6 +451,14 @@ final class ProfileManager: ObservableObject {
             forKey: .menuBarItemCustomNames
         )
 
+        // Apply per-item hotkeys to UserDefaults, then rebuild the live hotkey
+        // objects so the restored bindings register immediately.
+        Defaults.set(
+            profile.menuBarLayout.itemHotkeys ?? [:],
+            forKey: .menuBarItemHotkeys
+        )
+        appState.menuBarManager.rebuildItemHotkeys()
+
         // Apply the New Items badge placement before starting the layout
         // task, so late-arriving items land in the profile-defined spot.
         if let placement = profile.menuBarLayout.newItemsPlacement {
@@ -574,6 +582,9 @@ final class ProfileManager: ObservableObject {
         let customNames = Defaults.dictionary(
             forKey: .menuBarItemCustomNames
         ) as? [String: String] ?? [:]
+        let itemHotkeys = Defaults.dictionary(
+            forKey: .menuBarItemHotkeys
+        ) as? [String: Data] ?? [:]
 
         // itemOrder must agree with savedSectionOrder; they are two
         // representations of the same "where does each item belong?"
@@ -606,7 +617,8 @@ final class ProfileManager: ObservableObject {
             customNames: customNames,
             itemSectionMap: itemSectionMap,
             itemOrder: itemOrder,
-            newItemsPlacement: appState.itemManager.newItemsPlacement
+            newItemsPlacement: appState.itemManager.newItemsPlacement,
+            itemHotkeys: itemHotkeys
         )
     }
 

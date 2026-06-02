@@ -3520,6 +3520,29 @@ extension MenuBarItemManager {
         }
     }
 
+    /// Activates a menu bar item by opening its menu, choosing the correct
+    /// path based on whether the item is currently on screen.
+    ///
+    /// On-screen items are clicked in place. Off-screen items (in the hidden
+    /// or always-hidden section) are routed through temporarilyShow, which
+    /// moves, clicks, and rehides the item internally.
+    ///
+    /// - Parameters:
+    ///   - item: The menu bar item to activate.
+    ///   - displayID: The display whose menu bar hosts a temporary reveal for
+    ///     off-screen items.
+    func activate(item: MenuBarItem, on displayID: CGDirectDisplayID?) async {
+        if Bridging.isWindowOnScreen(item.windowID) {
+            do {
+                try await click(item: item, with: .left)
+            } catch {
+                MenuBarItemManager.diagLog.error("Failed to activate \(item.logString): \(error)")
+            }
+        } else {
+            await temporarilyShow(item: item, clickingWith: .left, on: displayID)
+        }
+    }
+
     /// Clicks a menu bar item with the given mouse button.
     ///
     /// - Parameters:

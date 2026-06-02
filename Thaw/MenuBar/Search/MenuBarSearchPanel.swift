@@ -723,17 +723,7 @@ private struct MenuBarSearchContentView: View {
             // the selected item. Uses KVO on isVisible so we resume as soon
             // as the panel hides rather than waiting a fixed 25 ms.
             await panel.waitUntilClosed(timeout: .milliseconds(200))
-            if Bridging.isWindowOnScreen(item.windowID) {
-                try await itemManager.click(item: item, with: .left)
-            } else {
-                // temporarilyShow handles move, click, and fallback click
-                // internally so shownInterfaceWindow is always captured.
-                await itemManager.temporarilyShow(
-                    item: item,
-                    clickingWith: .left,
-                    on: displayID
-                )
-            }
+            await itemManager.activate(item: item, on: displayID)
         }
     }
 }

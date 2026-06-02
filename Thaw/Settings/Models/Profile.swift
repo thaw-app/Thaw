@@ -307,6 +307,12 @@ struct MenuBarLayoutSnapshot: Codable {
     /// Placement preference for the New Items badge (section and anchor).
     /// Absent in profiles saved before this field was introduced.
     var newItemsPlacement: MenuBarItemManager.NewItemsPlacement?
+
+    /// Per-item hotkey bindings keyed by uniqueIdentifier (namespace:title).
+    /// Each value is an encoded KeyCombination, matching the storage shape of
+    /// the menuBarItemHotkeys default. Absent in profiles saved before this
+    /// field was introduced.
+    var itemHotkeys: [String: Data]?
 }
 
 // MARK: - ProfileContent

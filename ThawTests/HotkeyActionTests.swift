@@ -19,6 +19,7 @@ final class HotkeyActionTests: XCTestCase {
         XCTAssertEqual(HotkeyAction.enableIceBar.rawValue, "EnableIceBar")
         XCTAssertEqual(HotkeyAction.toggleApplicationMenus.rawValue, "ToggleApplicationMenus")
         XCTAssertEqual(HotkeyAction.profileApply.rawValue, "ProfileApply")
+        XCTAssertEqual(HotkeyAction.openMenuBarItem.rawValue, "OpenMenuBarItem")
     }
 
     // MARK: - Init from Raw Value Tests
@@ -38,7 +39,7 @@ final class HotkeyActionTests: XCTestCase {
     // MARK: - CaseIterable Tests
 
     func testAllCasesCount() {
-        XCTAssertEqual(HotkeyAction.allCases.count, 6)
+        XCTAssertEqual(HotkeyAction.allCases.count, 7)
     }
 
     func testAllCasesContainsExpectedActions() {
@@ -49,6 +50,7 @@ final class HotkeyActionTests: XCTestCase {
         XCTAssertTrue(allCases.contains(.enableIceBar))
         XCTAssertTrue(allCases.contains(.toggleApplicationMenus))
         XCTAssertTrue(allCases.contains(.profileApply))
+        XCTAssertTrue(allCases.contains(.openMenuBarItem))
     }
 
     // MARK: - Settings Actions Tests
@@ -56,6 +58,11 @@ final class HotkeyActionTests: XCTestCase {
     func testSettingsActionsExcludesProfileApply() {
         let settingsActions = HotkeyAction.settingsActions
         XCTAssertFalse(settingsActions.contains(.profileApply))
+    }
+
+    func testSettingsActionsExcludesOpenMenuBarItem() {
+        let settingsActions = HotkeyAction.settingsActions
+        XCTAssertFalse(settingsActions.contains(.openMenuBarItem))
     }
 
     func testSettingsActionsContainsOtherActions() {
@@ -68,8 +75,8 @@ final class HotkeyActionTests: XCTestCase {
     }
 
     func testSettingsActionsCount() {
-        // All cases minus profileApply
-        XCTAssertEqual(HotkeyAction.settingsActions.count, HotkeyAction.allCases.count - 1)
+        // All cases minus the externally-handled profileApply and openMenuBarItem.
+        XCTAssertEqual(HotkeyAction.settingsActions.count, HotkeyAction.allCases.count - 2)
     }
 
     // MARK: - Codable Tests
