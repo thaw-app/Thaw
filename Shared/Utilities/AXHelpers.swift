@@ -41,6 +41,14 @@ enum AXHelpers {
         queue.sync { try? element.attribute(.enabled) } ?? false
     }
 
+    /// The raw AXEnabled attribute, or nil when the element does not expose it.
+    /// isEnabled collapses a missing attribute to false, so it cannot tell
+    /// "explicitly disabled" from "attribute absent"; this keeps that distinction
+    /// for diagnostics.
+    static func enabledAttribute(_ element: UIElement) -> Bool? {
+        queue.sync { try? element.attribute(.enabled) }
+    }
+
     static func frame(for element: UIElement) -> CGRect? {
         queue.sync { try? element.attribute(.frame) }
     }
