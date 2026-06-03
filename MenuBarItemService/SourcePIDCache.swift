@@ -366,7 +366,13 @@ final class SourcePIDCache {
                 let children = AXHelpers.children(for: bar)
                 for child in children {
                     totalChildrenChecked += 1
-                    guard AXHelpers.isEnabled(child),
+                    // Skip only children the app marks explicitly disabled. A
+                    // missing AXEnabled attribute (nil) is treated as enabled:
+                    // some status items hosted by Control Center (The Clock's
+                    // among them) never publish AXEnabled, and treating absent as
+                    // disabled would drop an otherwise exact positional match and
+                    // leave the item unresolved.
+                    guard AXHelpers.enabledAttribute(child) != false,
                           let childFrame = AXHelpers.frame(for: child)
                     else {
                         continue
@@ -510,12 +516,11 @@ final class SourcePIDCache {
             for window in unresolvedWindowInfos {
                 let target = window.bounds.center
                 // Collect every extras-bar child across all apps as a candidate,
-                // not just the single closest, so the diag shows whether the match
-                // is unique. Option A only needs the closest child's enabled state;
-                // Option B (dropping the isEnabled guard) needs to know whether a
-                // second, competing or explicitly-disabled candidate sits within the
-                // match radius, which would make dropping the guard a misattribution
-                // risk. Both questions are answered from one log this way.
+                // not just the single closest, so the diagnostic shows whether the
+                // nearest match is unique or whether a competing child sits within
+                // the match radius. Paired with each candidate's enabled state and
+                // distance, this is usually enough to see why an item failed to
+                // resolve (wrong distance, missing AXEnabled, or ambiguity).
                 var candidates: [(distance: CGFloat, label: String, frame: CGRect, enabled: Bool?)] = []
                 for app in apps {
                     guard let bar = app.getOrCreateExtrasMenuBar() else { continue }
@@ -530,11 +535,10 @@ final class SourcePIDCache {
                 let cgOwner = window.owningApplication.map { app in
                     "\(app.bundleIdentifier ?? app.localizedName ?? "?"):pid=\(app.processIdentifier)"
                 } ?? "nil"
-                // closestAXEnabled distinguishes absent (nil) from explicitly false
-                // (Option A); nearest lists the top candidates with their enabled
-                // state so we can tell whether dropping the isEnabled guard entirely
-                // (Option B) would still match uniquely or pull in a competing or
-                // disabled child from another app.
+                // closestAXEnabled distinguishes a missing AXEnabled attribute (nil)
+                // from an explicitly disabled child, and nearest lists the top
+                // candidates with their owning app and enabled state, so a future
+                // unresolved item can be diagnosed from a single log line.
                 let nearestDesc = nearest.prefix(3).map {
                     "\($0.label)@\(String(format: "%.1f", $0.distance))(enabled=\($0.enabled.map { "\($0)" } ?? "nil"))"
                 }.joined(separator: ", ")
@@ -547,8 +551,8 @@ final class SourcePIDCache {
                 guard let bar = app.getOrCreateExtrasMenuBar() else { continue }
                 let children = AXHelpers.children(for: bar)
                 // Include each child's raw enabled value (nil = attribute absent)
-                // so a child that the matching pass skips on the isEnabled guard
-                // is visible here next to its frame.
+                // next to its frame, so a child the matching pass excluded as
+                // explicitly disabled is visible here.
                 let childDescs = children.compactMap { child -> String? in
                     guard let frame = AXHelpers.frame(for: child) else { return nil }
                     let enabled = AXHelpers.enabledAttribute(child).map { "\($0)" } ?? "nil"
