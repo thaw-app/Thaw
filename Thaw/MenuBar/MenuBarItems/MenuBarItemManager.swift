@@ -3595,7 +3595,10 @@ extension MenuBarItemManager {
         if children.count == 1 {
             target = children[0]
         } else {
-            let itemCenter = item.bounds.center
+            // Use the item's live window bounds so the nearest-child match is not
+            // thrown off by a stale cached position (which would make an Electron
+            // item fall back to the synthetic click it ignores).
+            let itemCenter = (Bridging.getWindowBounds(for: item.windowID) ?? item.bounds).center
             guard
                 let best = children.min(by: { lhs, rhs in
                     let lhsDistance = AXHelpers.frame(for: lhs)?.center.distance(to: itemCenter) ?? .greatestFiniteMagnitude
