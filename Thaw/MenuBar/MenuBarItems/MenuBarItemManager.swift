@@ -3745,6 +3745,20 @@ extension MenuBarItemManager {
                     return current.isOnScreen
                 }
                 if let app = current.owningApplication {
+                    // The captured window is the popup we just opened, so trust its
+                    // on-screen state rather than requiring the app to be active in
+                    // two cases the isActive check gets wrong:
+                    //   - Menu-bar agent apps (.accessory) can never report active,
+                    //     so their popover (e.g. BetterDisplay) would look hidden
+                    //     the instant it opens.
+                    //   - Some apps (e.g. Claude/Electron) place their menu at a
+                    //     non-standard window level, and it is our programmatic
+                    //     trigger, not the user, that opened it, so the app is
+                    //     not frontmost. A menu-sized window distinguishes this
+                    //     from an incidental small window.
+                    if app.activationPolicy == .accessory || current.bounds.height > 40 {
+                        return current.isOnScreen
+                    }
                     return app.isActive && current.isOnScreen
                 }
                 return current.isOnScreen
@@ -3763,26 +3777,37 @@ extension MenuBarItemManager {
         }
 
         /// Checks whether the item's owning application has any visible
-        /// popup-menu window on screen.
+        /// menu window on screen.
         ///
-        /// Only matches the pop-up menu level (the level macOS uses for
-        /// menus opened from menu bar items). Status-level and main-menu
-        /// level windows are excluded because those are the menu bar items
-        /// themselves; including the temporarily-shown item we're
-        /// tracking; not popups created by clicking them. A liberal
-        /// "above normal" match was previously used as a catch-all, but
-        /// it matched floating panels, modal levels, and other unrelated
-        /// app windows, keeping `isShowingInterface` true indefinitely
-        /// and preventing rehide.
+        /// Matches the pop-up menu level (the level macOS uses for menus opened
+        /// from menu bar items). Some apps (e.g. DisplayLink) instead draw their
+        /// menu as a status- or main-menu-level window owned by the app rather
+        /// than at pop-up level, so those levels are also matched, but only when
+        /// the window is taller than a menu bar item, so the status item itself
+        /// (which sits in the menu bar) is not mistaken for an open menu. A
+        /// liberal "above normal" match was previously used as a catch-all, but
+        /// it matched floating panels, modal levels, and other unrelated app
+        /// windows, keeping `isShowingInterface` true indefinitely and
+        /// preventing rehide.
         private func appHasVisiblePopup() -> Bool {
             let windows = WindowInfo.createWindows(option: .onScreen)
             let popUpLevel = CGWindowLevelForKey(.popUpMenuWindow)
+            let statusLevel = CGWindowLevelForKey(.statusWindow)
+            let mainMenuLevel = CGWindowLevelForKey(.mainMenuWindow)
             return windows.contains { window in
                 guard window.ownerPID == sourcePID else {
                     return false
                 }
                 let level = CGWindowLevel(Int32(window.layer))
-                return level == popUpLevel || level == popUpLevel - 1
+                if level == popUpLevel || level == popUpLevel - 1 {
+                    return true
+                }
+                // Menu bar items are at most ~menu-bar height; a real menu drawn
+                // at status/main-menu level is taller, which distinguishes it.
+                if level == statusLevel || level == mainMenuLevel {
+                    return window.bounds.height > 40
+                }
+                return false
             }
         }
 
