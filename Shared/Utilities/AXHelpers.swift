@@ -56,4 +56,19 @@ enum AXHelpers {
             return result == .success ? pid : nil
         }
     }
+
+    /// Performs the press action on the given element, returning whether it
+    /// succeeded. Used to open the menus of Electron/Chromium tray items, which
+    /// ignore synthetic mouse clicks.
+    @discardableResult
+    static func press(_ element: UIElement) -> Bool {
+        queue.sync {
+            do {
+                try element.performAction(.press)
+                return true
+            } catch {
+                return false
+            }
+        }
+    }
 }

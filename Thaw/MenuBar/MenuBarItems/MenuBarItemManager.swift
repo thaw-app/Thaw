@@ -6,6 +6,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+@preconcurrency import AXSwift
 import Cocoa
 @preconcurrency import Combine
 @preconcurrency import CoreGraphics
@@ -3533,6 +3534,15 @@ extension MenuBarItemManager {
     ///     off-screen items.
     func activate(item: MenuBarItem, on displayID: CGDirectDisplayID?) async {
         if Bridging.isWindowOnScreen(item.windowID) {
+            // Electron/Chromium tray items (e.g. Claude) ignore Thaw's synthetic
+            // mouse click, so open those via an Accessibility press. Every other
+            // app responds to the normal click, which also preserves its native
+            // open/close toggle and works with popover-style menus (e.g. Cap,
+            // Droppy) that a stray AX interaction would disturb.
+            if isElectronItem(item), pressItemViaAccessibility(item) {
+                MenuBarItemManager.diagLog.info("Activated \(item.logString) via AX press")
+                return
+            }
             do {
                 try await click(item: item, with: .left)
             } catch {
@@ -3541,6 +3551,66 @@ extension MenuBarItemManager {
         } else {
             await temporarilyShow(item: item, clickingWith: .left, on: displayID)
         }
+    }
+
+    /// Returns whether the item's owning app is an Electron app, detected by the
+    /// presence of the bundled Electron framework. Such apps ignore synthetic
+    /// mouse clicks on their tray icon and must be opened via an AX press.
+    private func isElectronItem(_ item: MenuBarItem) -> Bool {
+        // Fall back to ownerPID so this works during startup before sourcePID
+        // has been resolved.
+        let pid = item.sourcePID ?? item.ownerPID
+        guard let bundleURL = NSRunningApplication(processIdentifier: pid)?.bundleURL else {
+            return false
+        }
+        let electronFramework = bundleURL.appendingPathComponent(
+            "Contents/Frameworks/Electron Framework.framework"
+        )
+        return FileManager.default.fileExists(atPath: electronFramework.path)
+    }
+
+    /// Attempts to open the item's menu by performing an Accessibility press on
+    /// its status item element. Returns false (so the caller can fall back to
+    /// a synthetic click) when the element cannot be resolved or the press fails.
+    private func pressItemViaAccessibility(_ item: MenuBarItem) -> Bool {
+        // Fall back to ownerPID so this works during startup before sourcePID
+        // has been resolved.
+        let pid = item.sourcePID ?? item.ownerPID
+        guard
+            let runningApp = NSRunningApplication(processIdentifier: pid),
+            let app = AXHelpers.application(for: runningApp),
+            let extrasMenuBar = AXHelpers.extrasMenuBar(for: app)
+        else {
+            return false
+        }
+
+        let children = AXHelpers.children(for: extrasMenuBar)
+        guard !children.isEmpty else {
+            return false
+        }
+
+        // A single status item is unambiguous. With several, match the one whose
+        // AX frame lines up with this item's window so the right menu opens.
+        let target: UIElement
+        if children.count == 1 {
+            target = children[0]
+        } else {
+            let itemCenter = item.bounds.center
+            guard
+                let best = children.min(by: { lhs, rhs in
+                    let lhsDistance = AXHelpers.frame(for: lhs)?.center.distance(to: itemCenter) ?? .greatestFiniteMagnitude
+                    let rhsDistance = AXHelpers.frame(for: rhs)?.center.distance(to: itemCenter) ?? .greatestFiniteMagnitude
+                    return lhsDistance < rhsDistance
+                }),
+                let bestFrame = AXHelpers.frame(for: best),
+                bestFrame.center.distance(to: itemCenter) <= 10
+            else {
+                return false
+            }
+            target = best
+        }
+
+        return AXHelpers.press(target)
     }
 
     /// Clicks a menu bar item with the given mouse button.
@@ -4096,34 +4166,42 @@ extension MenuBarItemManager {
         let idsBeforeClick = Set(Bridging.getWindowList(option: .onScreen))
         let clickPID = clickItem.sourcePID ?? clickItem.ownerPID
 
-        do {
-            // Single attempt: the item is already at a known-good position with
-            // fresh bounds. If it fails, fall through to the fallback path below
-            // rather than spending 3× the semaphore timeout here.
-            try await click(item: clickItem, with: mouseButton, skipInputPause: true, maxAttempts: 1)
-        } catch {
-            MenuBarItemManager.diagLog.error("Error clicking item (first attempt): \(error); attempting fallback click")
-
-            // Fallback: re-fetch the item from the live window list so the
-            // click targets a fresh MenuBarItem with current windowID and
-            // bounds, rather than the potentially stale pre-click struct.
-            let fallbackItems = await MenuBarItem.getMenuBarItems(on: resolvedDisplayID, option: .onScreen)
-            let fallbackItem = fallbackItems.first(where: { $0.windowID == clickItem.windowID }) ??
-                fallbackItems.first(where: {
-                    $0.tag.matchesIgnoringWindowID(clickItem.tag) &&
-                        ($0.sourcePID ?? $0.ownerPID) == (clickItem.sourcePID ?? clickItem.ownerPID)
-                }) ?? clickItem
-
-            // We stay inside temporarilyShow so that idsBeforeClick and context
-            // remain in scope; shownInterfaceWindow can still be captured if
-            // the fallback succeeds, keeping isShowingInterface accurate for
-            // the rehide logic.
+        // Electron/Chromium tray items ignore the synthetic click, so open their
+        // menu via an Accessibility press once revealed, mirroring the on-screen
+        // path. Other apps (and right-clicks) use the synthetic click below. The
+        // popup window capture that follows is unaffected by which path opened it.
+        if mouseButton == .left, isElectronItem(clickItem), pressItemViaAccessibility(clickItem) {
+            MenuBarItemManager.diagLog.info("Activated \(clickItem.logString) via AX press")
+        } else {
             do {
-                try await click(item: fallbackItem, with: mouseButton, skipInputPause: true)
+                // Single attempt: the item is already at a known-good position with
+                // fresh bounds. If it fails, fall through to the fallback path below
+                // rather than spending 3× the semaphore timeout here.
+                try await click(item: clickItem, with: mouseButton, skipInputPause: true, maxAttempts: 1)
             } catch {
-                MenuBarItemManager.diagLog.error("Fallback click also failed for \(item.logString): \(error)")
-                // Icon is visible but both click attempts failed.
-                return .movedButClickFailed
+                MenuBarItemManager.diagLog.error("Error clicking item (first attempt): \(error); attempting fallback click")
+
+                // Fallback: re-fetch the item from the live window list so the
+                // click targets a fresh MenuBarItem with current windowID and
+                // bounds, rather than the potentially stale pre-click struct.
+                let fallbackItems = await MenuBarItem.getMenuBarItems(on: resolvedDisplayID, option: .onScreen)
+                let fallbackItem = fallbackItems.first(where: { $0.windowID == clickItem.windowID }) ??
+                    fallbackItems.first(where: {
+                        $0.tag.matchesIgnoringWindowID(clickItem.tag) &&
+                            ($0.sourcePID ?? $0.ownerPID) == (clickItem.sourcePID ?? clickItem.ownerPID)
+                    }) ?? clickItem
+
+                // We stay inside temporarilyShow so that idsBeforeClick and context
+                // remain in scope; shownInterfaceWindow can still be captured if
+                // the fallback succeeds, keeping isShowingInterface accurate for
+                // the rehide logic.
+                do {
+                    try await click(item: fallbackItem, with: mouseButton, skipInputPause: true)
+                } catch {
+                    MenuBarItemManager.diagLog.error("Fallback click also failed for \(item.logString): \(error)")
+                    // Icon is visible but both click attempts failed.
+                    return .movedButClickFailed
+                }
             }
         }
 

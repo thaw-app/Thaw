@@ -127,7 +127,7 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
     /// cost for items the user cannot see.
     @Published private(set) var isItemHotkeyListExpanded = false
 
-    /// Updates ``isItemHotkeyListExpanded`` from the Hotkeys settings UI.
+    /// Updates isItemHotkeyListExpanded from the Hotkeys settings UI.
     func setItemHotkeyListExpanded(_ expanded: Bool) {
         guard isItemHotkeyListExpanded != expanded else {
             return
