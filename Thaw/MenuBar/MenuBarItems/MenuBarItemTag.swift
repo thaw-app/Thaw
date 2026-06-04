@@ -72,8 +72,16 @@ struct MenuBarItemTag: Hashable, CustomStringConvertible {
     /// A Boolean value that indicates whether the item identified
     /// by this tag is a system-created clone of an actual item,
     /// and therefore invalid for management.
+    ///
+    /// The title is a stable name the WindowServer assigns to clone
+    /// windows, but the namespace varies: it can be a UUID, the owning
+    /// process name (Window Server) when the source PID never resolves,
+    /// or even a real bundle ID when the clone spatially mis-matches a
+    /// nearby app. Matching on the title alone catches every variant;
+    /// gating on a UUID namespace missed the process-name and bundle-ID
+    /// clones seen in the field.
     var isSystemClone: Bool {
-        namespace.isUUID && title == "System Status Item Clone"
+        title == "System Status Item Clone"
     }
 
     /// A textual representation of the tag.

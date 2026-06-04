@@ -1383,6 +1383,12 @@ extension MenuBarItemManager {
         /// transient sourcePID resolution errors (e.g. stale AX data after moves).
         private(set) var cachedItemPIDs = [CGWindowID: pid_t]()
 
+        /// Window identifiers of the system clone windows seen in the most
+        /// recent cache cycle. cacheItemsIfNeeded filters these out of its
+        /// change comparison so a transient clone appearing or vanishing
+        /// doesn't read as a layout change and trigger a recache.
+        private(set) var cachedCloneWindowIDs = Set<CGWindowID>()
+
         /// Runs the given async closure as a task and waits for it to
         /// complete before returning.
         ///
@@ -1400,6 +1406,11 @@ extension MenuBarItemManager {
             cachedItemWindowIDs = itemWindowIDs
         }
 
+        /// Updates the set of cached system clone window identifiers.
+        func updateCachedCloneWindowIDs(_ ids: Set<CGWindowID>) {
+            cachedCloneWindowIDs = ids
+        }
+
         /// Updates the mapping from window identifiers to source process identifiers.
         func updateCachedItemPIDs(_ pids: [CGWindowID: pid_t]) {
             cachedItemPIDs = pids
@@ -1409,6 +1420,11 @@ extension MenuBarItemManager {
         func clearCachedItemWindowIDs() {
             cachedItemWindowIDs.removeAll()
             cachedItemPIDs.removeAll()
+            // Clear clone IDs alongside the main set so the two don't drift.
+            // Leaving stale clone IDs here would let cacheItemsIfNeeded filter
+            // a recycled windowID out of its comparison before the recache
+            // that follows this reset repopulates the set.
+            cachedCloneWindowIDs.removeAll()
         }
     }
 
@@ -1879,6 +1895,22 @@ extension MenuBarItemManager {
 
         MenuBarItemManager.diagLog.debug("cacheItemsRegardless: getMenuBarItems returned \(items.count) items")
 
+        // Drop System Status Item Clone windows before any downstream
+        // processing. These are transient duplicates the WindowServer
+        // spawns during screen capture and menu bar animations. Each one
+        // carries a fresh windowID and a nil source PID, and resolves to
+        // an unstable namespace, so they must never be cached, assigned to
+        // a section, placed via planUnmanagedPlacement, or moved. Removing
+        // them here also keeps their windowIDs out of the stored set
+        // below, so a clone appearing or vanishing can't trip the
+        // windowID-change trigger that dispatches a bulk re-layout.
+        let cloneWindowIDs = Set(items.filter(\.isSystemClone).map(\.windowID))
+        if !cloneWindowIDs.isEmpty {
+            let cloneDescriptions = items.filter(\.isSystemClone).map(\.tag.description)
+            MenuBarItemManager.diagLog.debug("cacheItemsRegardless: dropping \(cloneWindowIDs.count) system clone window(s): \(cloneDescriptions)")
+            items.removeAll(where: \.isSystemClone)
+        }
+
         // Reconcile resolved sourcePIDs against previously known values to
         // prevent transient resolution errors (e.g. stale AX data after item
         // moves) from corrupting item identities. SourcePIDCache does spatial
@@ -1950,8 +1982,15 @@ extension MenuBarItemManager {
             MenuBarItemManager.diagLog.error("cacheItemsRegardless: getMenuBarItems returned ZERO items even after retry; this is the root cause of 'Loading menu bar items' being stuck")
         }
 
-        let itemWindowIDs = currentItemWindowIDs ?? items.reversed().map(\.windowID)
+        // currentItemWindowIDs comes straight from the bridging window
+        // list and may still contain clone IDs; items has already been
+        // filtered, so strip any clone IDs to keep the stored set in sync
+        // with the managed item set. The fallback branch is clone-free
+        // because items is filtered.
+        let itemWindowIDs = (currentItemWindowIDs ?? items.reversed().map(\.windowID))
+            .filter { !cloneWindowIDs.contains($0) }
         cacheActor.updateCachedItemWindowIDs(itemWindowIDs)
+        cacheActor.updateCachedCloneWindowIDs(cloneWindowIDs)
 
         await MainActor.run {
             MenuBarItemTag.Namespace.pruneUUIDCache(keeping: Set(itemWindowIDs))
@@ -2223,7 +2262,16 @@ extension MenuBarItemManager {
     /// the hidden and always-hidden sections are correctly ordered,
     /// arranging them into valid positions if needed.
     func cacheItemsIfNeeded() async {
-        let itemWindowIDs = Bridging.getMenuBarWindowList(option: [.itemsOnly, .activeSpace])
+        let rawWindowIDs = Bridging.getMenuBarWindowList(option: [.itemsOnly, .activeSpace])
+        // Exclude windowIDs already known to be system clones so their
+        // churn doesn't read as a layout change. A brand-new clone whose
+        // windowID hasn't been learned yet still triggers one recache,
+        // which resolves it, records it, and drops it; from then on its
+        // presence and removal are ignored.
+        let cloneIDs = cacheActor.cachedCloneWindowIDs
+        let itemWindowIDs = cloneIDs.isEmpty
+            ? rawWindowIDs
+            : rawWindowIDs.filter { !cloneIDs.contains($0) }
         let cachedIDs = cacheActor.cachedItemWindowIDs
         if cachedIDs != itemWindowIDs {
             MenuBarItemManager.diagLog.debug("cacheItemsIfNeeded: window IDs changed (\(cachedIDs.count) cached vs \(itemWindowIDs.count) current), triggering recache")
@@ -3257,6 +3305,16 @@ extension MenuBarItemManager {
         watchdogTimeout: DispatchTimeInterval? = nil,
         maxMoveAttempts: Int = 8
     ) async throws {
+        // System clone windows are transient WindowServer duplicates that
+        // must never be moved. Refuse here as a final safety net so no
+        // planning path can drag a phantom and displace real items. The
+        // planners filter clones earlier; this backstops every move caller.
+        // A no-op is correct: the clone has no managed position to restore
+        // and will vanish on its own, so there's nothing to fail or retry.
+        guard !item.isSystemClone else {
+            MenuBarItemManager.diagLog.warning("Skipping move for \(item.logString) - system status item clone")
+            return
+        }
         guard item.isMovable else {
             throw EventError.itemNotMovable(item)
         }
@@ -5530,6 +5588,12 @@ extension MenuBarItemManager {
 
         // Discover current items and build current flat sequence (right-to-left).
         var items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+        // Drop transient System Status Item Clone windows before planning.
+        // partitionUnmanagedUIDs would otherwise classify a clone as an
+        // unmanaged item and anchor it into a section, dragging a phantom
+        // and reshuffling the bar. This fetch is independent of the cache
+        // path, so it needs its own filter.
+        items.removeAll(where: \.isSystemClone)
         guard var itemsCopy = Optional(items),
               let controlItems = ControlItemPair(
                   items: &itemsCopy,

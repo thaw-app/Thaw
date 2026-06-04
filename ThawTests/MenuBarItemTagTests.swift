@@ -401,13 +401,23 @@ final class MenuBarItemTagTests: XCTestCase {
         XCTAssertTrue(tag.isSystemClone)
     }
 
-    func testIsNotSystemCloneWithStringNamespace() {
-        let tag = MenuBarItemTag(
-            namespace: .string("com.example.app"),
+    func testIsSystemCloneWithStringNamespace() {
+        // Field logs show clones carry a non-UUID namespace: the owning
+        // process name (Window Server) when the source PID never resolves,
+        // or a real bundle ID when the clone spatially mis-matches a nearby
+        // app. The title is the reliable discriminator, so a string
+        // namespace with the clone title must still count as a clone.
+        let processNamespaceClone = MenuBarItemTag(
+            namespace: .string("Window Server"),
+            title: "System Status Item Clone"
+        )
+        let bundleNamespaceClone = MenuBarItemTag(
+            namespace: .string("com.google.drivefs"),
             title: "System Status Item Clone"
         )
 
-        XCTAssertFalse(tag.isSystemClone)
+        XCTAssertTrue(processNamespaceClone.isSystemClone)
+        XCTAssertTrue(bundleNamespaceClone.isSystemClone)
     }
 
     func testIsNotSystemCloneWithDifferentTitle() {
