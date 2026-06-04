@@ -1,6 +1,17 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Connecting a display whose spacing differs from the current spacing relaunches every menu bar app. Keep spacing consistent across displays to avoid relaunches." : {
+      "comment" : "A warning that mismatched per-display spacing causes a menu bar app relaunch wave when a display is connected.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Connecting a display whose spacing differs from the current spacing relaunches every menu bar app. Keep spacing consistent across displays to avoid relaunches."
+          }
+        }
+      }
+    },
     "No menu bar items available" : {
       "comment" : "Text shown in the per-item hotkeys list when there are no menu bar items to assign a hotkey to."
     },

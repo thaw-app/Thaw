@@ -56,6 +56,9 @@ struct DisplaySettingsPane: View {
             IceSection {
                 globalSection()
             }
+            CalloutBox(systemImage: "exclamationmark.triangle.fill", font: .callout, foregroundStyle: Color.warning) {
+                Text("Connecting a display whose spacing differs from the current spacing relaunches every menu bar app. Keep spacing consistent across displays to avoid relaunches.")
+            }
             ForEach(displaySettings.allDisplays()) { display in
                 IceSection {
                     displayRow(for: display)

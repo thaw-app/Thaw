@@ -532,10 +532,10 @@ private struct HookRow: View {
                     HStack(spacing: 6) {
                         Spacer().frame(width: labelWidth)
                         Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(Color.warning)
                         Text(warning)
                             .font(.caption)
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(Color.warning)
                     }
                 }
             }
