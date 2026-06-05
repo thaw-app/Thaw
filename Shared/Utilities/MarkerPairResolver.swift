@@ -163,3 +163,51 @@ enum MarkerPairResolver {
         }
     }
 }
+
+/// Decides whether a Control-Center-hosted menu bar window's title
+/// indicates which application owns it, used by SourcePIDCache's
+/// corroborated spatial fallback to attribute an icon whose own app
+/// publishes an extras-bar AX child offset too far for the strict 1pt
+/// pass (AirBuddy's icon sits ~2pt off, SpamSieve up to ~8pt).
+///
+/// Some widgets carry a reverse-DNS title on the icon window itself
+/// (codes.rambo.AirBuddy.Menu, com.c-command.spamsieve) even though the
+/// CG window is owned by Control Center. Pairing that title against a
+/// candidate app's bundle identifier corroborates a loose spatial match,
+/// so a nearby unrelated neighbor can never be mis-attributed the way a
+/// bare distance threshold would allow.
+enum HostedItemOwnership {
+    /// Returns true when title and bundleID, treated as reverse-DNS
+    /// strings, are in an owner relationship: they agree on at least two
+    /// leading components, and either one is a full component-prefix of
+    /// the other or their first differing component is a prefix of its
+    /// counterpart.
+    ///
+    /// This matches codes.rambo.AirBuddy.Menu to codes.rambo.AirBuddyHelper
+    /// and com.c-command.spamsieve to com.c-command.SpamSieve, while
+    /// rejecting same-vendor different-app pairs such as
+    /// pl.maketheweb.pixelsnap2 vs pl.maketheweb.cleanshotx and unrelated
+    /// neighbors such as com.wireguard.macos vs app.updatest.Updatest.
+    /// Comparison is case-insensitive. Generic titles without a reverse-DNS
+    /// shape (Item-0, empty) never qualify.
+    static func titleIndicatesOwner(_ title: String?, bundleID: String) -> Bool {
+        guard let title, !title.isEmpty else { return false }
+        let titleParts = title.lowercased().split(separator: ".", omittingEmptySubsequences: false)
+        let bundleParts = bundleID.lowercased().split(separator: ".", omittingEmptySubsequences: false)
+        // A reverse-DNS-shaped title has at least three components; a bundle
+        // id at least two. Demanding three on the title keeps two-component
+        // or generic titles out.
+        guard titleParts.count >= 3, bundleParts.count >= 2 else { return false }
+        let shared = zip(titleParts, bundleParts).prefix { $0 == $1 }.count
+        // Require agreement on at least the vendor plus one component so a
+        // bare vendor prefix (com.apple, pl.maketheweb) is never enough.
+        guard shared >= 2 else { return false }
+        // One component array is a full prefix of the other.
+        if shared == titleParts.count || shared == bundleParts.count { return true }
+        // Otherwise the first differing component must be a prefix of its
+        // counterpart (airbuddy vs airbuddyhelper), which is what separates
+        // AirBuddy from same-vendor different-app pairs.
+        return titleParts[shared].hasPrefix(bundleParts[shared])
+            || bundleParts[shared].hasPrefix(titleParts[shared])
+    }
+}

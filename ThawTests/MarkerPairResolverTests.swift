@@ -391,3 +391,98 @@ final class MarkerPairResolverTests: XCTestCase {
         XCTAssertEqual(markers.map(\.windowID), [2])
     }
 }
+
+/// Tests for HostedItemOwnership.titleIndicatesOwner, the corroboration
+/// gate behind SourcePIDCache's loose spatial fallback. The accept/reject
+/// cases are drawn directly from captured field logs so the dataset that
+/// motivated the rule stays locked in: every accepted pair is a real
+/// owner match seen unresolved, every rejected pair is a wrong neighbor or
+/// same-vendor different-app collision seen in the same logs.
+final class HostedItemOwnershipTests: XCTestCase {
+    // MARK: - Accept: genuine owner matches observed unresolved in logs
+
+    func testAirBuddyMenuMatchesAirBuddyHelper() {
+        // codes.rambo.AirBuddy.Menu hosted by Control Center, owned by the
+        // helper whose bundle id extends the icon's distinctive component.
+        XCTAssertTrue(
+            HostedItemOwnership.titleIndicatesOwner(
+                "codes.rambo.AirBuddy.Menu",
+                bundleID: "codes.rambo.AirBuddyHelper"
+            )
+        )
+    }
+
+    func testSpamSieveMatchesCaseInsensitively() {
+        XCTAssertTrue(
+            HostedItemOwnership.titleIndicatesOwner(
+                "com.c-command.spamsieve",
+                bundleID: "com.c-command.SpamSieve"
+            )
+        )
+    }
+
+    func testCotypistSubItemMatchesParentBundle() {
+        XCTAssertTrue(
+            HostedItemOwnership.titleIndicatesOwner(
+                "app.cotypist.Cotypist.ModelRepository",
+                bundleID: "app.cotypist.Cotypist"
+            )
+        )
+    }
+
+    // MARK: - Reject: same-vendor different-app collisions
+
+    func testPixelSnapDoesNotMatchCleanShot() {
+        // Both pl.maketheweb, but pixelsnap2 and cleanshotx are distinct
+        // apps; a vendor-only prefix must never be enough.
+        XCTAssertFalse(
+            HostedItemOwnership.titleIndicatesOwner(
+                "pl.maketheweb.pixelsnap2",
+                bundleID: "pl.maketheweb.cleanshotx"
+            )
+        )
+        XCTAssertFalse(
+            HostedItemOwnership.titleIndicatesOwner(
+                "pl.maketheweb.cleanshotx",
+                bundleID: "pl.maketheweb.pixelsnap2"
+            )
+        )
+    }
+
+    // MARK: - Reject: unrelated neighbors that sat within the radius
+
+    func testWireGuardDoesNotMatchUpdatest() {
+        XCTAssertFalse(
+            HostedItemOwnership.titleIndicatesOwner(
+                "com.wireguard.macos",
+                bundleID: "app.updatest.Updatest"
+            )
+        )
+    }
+
+    func testSpamSieveDoesNotMatchAusweisApp() {
+        // Same first component (com) but different vendor; one shared
+        // component is not enough.
+        XCTAssertFalse(
+            HostedItemOwnership.titleIndicatesOwner(
+                "com.c-command.spamsieve",
+                bundleID: "com.governikus.ausweisapp2"
+            )
+        )
+    }
+
+    // MARK: - Reject: non-reverse-DNS and empty titles
+
+    func testGenericTitleNeverMatches() {
+        XCTAssertFalse(HostedItemOwnership.titleIndicatesOwner("Item-0", bundleID: "de.fauler-apfel.CMD-Z"))
+    }
+
+    func testTwoComponentTitleNeverMatches() {
+        XCTAssertFalse(HostedItemOwnership.titleIndicatesOwner("mega.mac", bundleID: "mega.mac"))
+    }
+
+    func testNilAndEmptyTitleNeverMatch() {
+        XCTAssertFalse(HostedItemOwnership.titleIndicatesOwner(nil, bundleID: "codes.rambo.AirBuddyHelper"))
+        XCTAssertFalse(HostedItemOwnership.titleIndicatesOwner("", bundleID: "codes.rambo.AirBuddyHelper"))
+    }
+}

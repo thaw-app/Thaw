@@ -393,6 +393,53 @@ final class SourcePIDCache {
             }
         }
 
+        // Corroborated spatial fallback for Control-Center-hosted items
+        // whose own app DOES publish an extras-bar AX child, but offset from
+        // the CG window center by more than the strict 1pt pass tolerates.
+        // The hosting CG slot is wider than the real icon, so their centers
+        // diverge: AirBuddy's by ~2pt, SpamSieve's by up to ~8pt. Accept the
+        // nearest such child within a generous radius ONLY when the window's
+        // reverse-DNS title is in an owner relationship with the app's bundle
+        // identifier (HostedItemOwnership). The title corroboration, not the
+        // distance, is what makes this safe: a nearby unrelated neighbor
+        // (WireGuard's slot beside Updatest at ~2pt) fails the owner check and
+        // is left for later passes. Runs BEFORE marker-pair so items that have
+        // their own AX child are claimed here and never reach that fallback.
+        // Empirically the furthest correct owner-corroborated match across
+        // captured logs is ~15pt; 20 leaves margin while staying well inside
+        // a neighbor's slot. The owner check is the real guard.
+        let hostedExtrasMatchRadius: CGFloat = 20
+        for app in apps {
+            if unresolvedWindows.isEmpty { break }
+            guard let appBundleID = app.bundleIdentifier else { continue }
+            let candidateWindows = allWindows.filter {
+                unresolvedWindows.contains($0.windowID)
+                    && HostedItemOwnership.titleIndicatesOwner($0.title, bundleID: appBundleID)
+            }
+            guard !candidateWindows.isEmpty else { continue }
+            autoreleasepool {
+                guard let bar = app.getOrCreateExtrasMenuBar() else { return }
+                let childCenters = AXHelpers.children(for: bar).compactMap { child -> CGPoint? in
+                    guard AXHelpers.enabledAttribute(child) != false,
+                          let frame = AXHelpers.frame(for: child)
+                    else {
+                        return nil
+                    }
+                    return frame.center
+                }
+                guard !childCenters.isEmpty else { return }
+                for window in candidateWindows {
+                    let target = window.bounds.center
+                    let nearest = childCenters.lazy.map { $0.distance(to: target) }.min()
+                        ?? .greatestFiniteMagnitude
+                    guard nearest <= hostedExtrasMatchRadius else { continue }
+                    totalMatchesFound += 1
+                    unresolvedWindows.remove(window.windowID)
+                    state.withLock { $0.pids[window.windowID] = app.processIdentifier }
+                }
+            }
+        }
+
         // Marker-pair PID resolution.
         //
         // On macOS 26 some widgets (Little Snitch's agent observed in
