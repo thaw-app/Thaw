@@ -487,4 +487,21 @@ final class RelaunchSettlingGateTests: XCTestCase {
             MenuBarItemManager.tracksMenuBarItem(bundleID: "org.freedownloadmanager.fdm6", in: [])
         )
     }
+
+    func testControlCenterSingletonItemMatches() {
+        // A simple "namespace:title" entry (title has no dots) still matches
+        // on the namespace.
+        XCTAssertTrue(
+            MenuBarItemManager.tracksMenuBarItem(bundleID: "com.apple.controlcenter", in: tracked)
+        )
+    }
+
+    func testAirBuddyWithMultiComponentTitleMatches() {
+        // The title here is itself reverse-DNS shaped
+        // (codes.rambo.AirBuddy.Menu); the ":" anchor must match on the
+        // namespace and not be confused by the dots in the title.
+        XCTAssertTrue(
+            MenuBarItemManager.tracksMenuBarItem(bundleID: "codes.rambo.AirBuddyHelper", in: tracked)
+        )
+    }
 }
