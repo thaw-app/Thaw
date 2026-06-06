@@ -445,3 +445,46 @@ extension ProfileLayoutLogReplay.Cycle {
         )
     }
 }
+
+/// Red→green guard for the relaunch-settling gate
+/// (MenuBarItemManager.tracksMenuBarItem). When a tracked app relaunches
+/// (e.g. an in-app update) Thaw must arm a settling period so the move pass
+/// waits out the churn; without it the bulk apply runs on the transient
+/// layout and sweeps hidden items into the visible section (the Free Download
+/// Manager update unhide). Equally it must NOT arm for ordinary launches, so
+/// users don't pay a deferral on every app start, and one bundle ID must not
+/// loosely prefix-match another app.
+final class RelaunchSettlingGateTests: XCTestCase {
+    private let tracked: Set<String> = [
+        "org.freedownloadmanager.fdm6:Item-0",
+        "codes.rambo.AirBuddyHelper:codes.rambo.AirBuddy.Menu",
+        "com.apple.controlcenter:WiFi",
+    ]
+
+    func testTrackedAppRelaunchArmsSettling() {
+        XCTAssertTrue(
+            MenuBarItemManager.tracksMenuBarItem(bundleID: "org.freedownloadmanager.fdm6", in: tracked)
+        )
+    }
+
+    func testUntrackedAppLaunchDoesNotArmSettling() {
+        XCTAssertFalse(
+            MenuBarItemManager.tracksMenuBarItem(bundleID: "com.apple.Safari", in: tracked)
+        )
+    }
+
+    func testBundleIDPrefixBoundaryDoesNotFalseMatch() {
+        // org.freedownloadmanager.fdm6 must not match a different app whose
+        // bundle id merely extends it; the ":" separator anchors the match.
+        let other: Set<String> = ["org.freedownloadmanager.fdm6x:Item-0"]
+        XCTAssertFalse(
+            MenuBarItemManager.tracksMenuBarItem(bundleID: "org.freedownloadmanager.fdm6", in: other)
+        )
+    }
+
+    func testEmptyKnownSetNeverArms() {
+        XCTAssertFalse(
+            MenuBarItemManager.tracksMenuBarItem(bundleID: "org.freedownloadmanager.fdm6", in: [])
+        )
+    }
+}

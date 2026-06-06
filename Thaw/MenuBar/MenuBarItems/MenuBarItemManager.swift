@@ -1230,9 +1230,35 @@ final class MenuBarItemManager: ObservableObject {
             for: NSWorkspace.didLaunchApplicationNotification
         )
         .debounce(for: 1, scheduler: DispatchQueue.main)
-        .sink { [weak self] _ in
+        .sink { [weak self] notification in
             guard let self else { return }
-            MenuBarItemManager.diagLog.debug("App launched, refreshing cache for potential new items")
+            let launchedBundleID = (notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)?
+                .bundleIdentifier
+            MenuBarItemManager.diagLog.debug(
+                "App launched\(launchedBundleID.map { " (\($0))" } ?? ""), refreshing cache for potential new items"
+            )
+
+            // If the launched app is one we already track a menu bar item for,
+            // it just relaunched (e.g. an in-app update): its status item is
+            // about to disappear and re-register, churning the bar for a few
+            // seconds. Start a settling period keyed on its bundle ID so the
+            // move pass (applyProfileLayout waits on waitForStartupSettlingToEnd)
+            // and the virtual-display provoke (guarded by isSettling) both hold
+            // off until the item has re-paired. Without this the bulk apply ran
+            // on the transient layout and swept hidden items into the visible
+            // section. The period exits the instant the bundle ID reappears
+            // with a resolved PID (median ~3s in field logs); maxDuration is
+            // only a backstop. Apps with no tracked menu bar item arm nothing,
+            // so there is no deferral for ordinary launches.
+            if let launchedBundleID,
+               MenuBarItemManager.tracksMenuBarItem(bundleID: launchedBundleID, in: self.knownItemIdentifiers)
+            {
+                self.startSettlingPeriod(
+                    reason: "appLaunch",
+                    expectedBundleIDs: [launchedBundleID],
+                    maxDuration: .seconds(8)
+                )
+            }
             Task { [weak self] in
                 await self?.cacheItemsRegardless()
                 // Many apps register their NSStatusItem more than 1s after
@@ -1833,6 +1859,16 @@ extension MenuBarItemManager {
                 .filter { $0.sourcePID == nil && !$0.isControlItem }
                 .map(\.windowID)
         )
+    }
+
+    /// Whether bundleID owns a menu bar item Thaw already tracks: an entry
+    /// in identifiers (each formatted "namespace:title") whose namespace is
+    /// exactly bundleID. The trailing ":" anchors the match so one bundle ID
+    /// can't be a loose prefix of another (org.x.fdm6 must not match
+    /// org.x.fdm6x:Item-0). Used to arm relaunch settling only for apps whose
+    /// status item actually churns the bar when they relaunch.
+    nonisolated static func tracksMenuBarItem(bundleID: String, in identifiers: Set<String>) -> Bool {
+        identifiers.contains { $0.hasPrefix(bundleID + ":") }
     }
 
     /// Caches the current menu bar items, regardless of whether the
