@@ -9,98 +9,69 @@
 import SwiftUI
 
 struct AboutSettingsPane: View {
-    @EnvironmentObject var appState: AppState
     @ObservedObject var updatesManager: UpdatesManager
     @Environment(\.openURL) private var openURL
 
-    private var acknowledgementsURL: URL {
-        // swiftlint:disable:next force_unwrapping
-        Bundle.main.url(forResource: "Acknowledgements", withExtension: "pdf")!
-    }
-
-    private var contributeURL: URL {
-        Constants.repositoryURL
-    }
-
-    private var issuesURL: URL {
-        Constants.issuesURL
-    }
-
-    private var donateURL: URL {
-        Constants.donateURL
-    }
-
-    private var lastUpdateCheckString: String {
-        if let date = updatesManager.lastUpdateCheckDate {
-            date.formatted(date: .abbreviated, time: .standard)
-        } else {
-            String(localized: "Never")
-        }
-    }
-
     var body: some View {
-        contentForm()
-    }
-
-    private func contentForm() -> some View {
         IceForm {
-            mainContent()
+            mainContent
             Spacer()
-            bottomBar()
+            bottomBar
         }
     }
 
-    private func mainContent() -> some View {
+    private var mainContent: some View {
         IceSection(options: [.isBordered]) {
             VStack(spacing: 24) {
                 appIconAndCopyrightSection
                 updatesSection
             }
-            .padding(.vertical, 8) // Uses your new 8pt standard for height
+            .padding(.vertical, 8)
         }
     }
 
+    private func copyVersionInfo(_ text: LocalizedStringResource) {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(String(localized: text), forType: .string)
+    }
+
     private var appIconAndCopyrightSection: some View {
-        IceSection(options: .plain) {
-            HStack(spacing: 10) {
-                if let nsImage = NSImage(named: NSImage.applicationIconName) {
-                    Image(nsImage: nsImage)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 230)
-                }
-
-                VStack(alignment: .leading) {
-                    Text(verbatim: "\(Constants.displayName)")
-                        .font(.system(size: 80))
-                        .foregroundStyle(.primary)
-
-                    HStack(spacing: 6) {
-                        let versionText = LocalizedStringResource("Version \(Constants.versionString) (\(Constants.buildString))")
-
-                        Text(versionText)
-                            .font(.system(size: 15))
-                            .foregroundStyle(.secondary)
-                            .textSelection(.enabled)
-
-                        Button {
-                            let pasteboard = NSPasteboard.general
-                            pasteboard.clearContents()
-                            pasteboard.setString(String(localized: versionText), forType: .string)
-                        } label: {
-                            Image(systemName: "doc.on.doc")
-                        }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(.secondary)
-                        .help("Copy version info")
-                    }
-
-                    Text(Constants.copyrightString)
-                        .font(.system(size: 14))
-                        .foregroundStyle(.secondary)
-                }
-                .fontWeight(.medium)
+        HStack(spacing: 10) {
+            if let appIcon = NSImage(named: NSImage.applicationIconName) {
+                Image(nsImage: appIcon)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 180, height: 180)
             }
+            VStack(alignment: .leading) {
+                Text(verbatim: Constants.displayName)
+                    .font(.system(size: 60))
+                    .foregroundStyle(.primary)
+
+                HStack(spacing: 6) {
+                    let versionText = LocalizedStringResource("Version \(Constants.versionString) (\(Constants.buildString))")
+
+                    Text(versionText)
+                        .font(.system(size: 15))
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+
+                    Button {
+                        copyVersionInfo(versionText)
+                    } label: {
+                        Image(systemName: "doc.on.doc")
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.secondary)
+                    .help("Copy version info")
+                }
+
+                Text(Constants.copyrightString)
+                    .font(.system(size: 14))
+                    .foregroundStyle(.secondary)
+            }
+            .fontWeight(.medium)
         }
     }
 
@@ -146,12 +117,11 @@ struct AboutSettingsPane: View {
             Button("Check for Updates") {
                 updatesManager.checkForUpdates()
             }
-            // Disable the button instead of hiding the whole stack
             .disabled(!updatesManager.canCheckForUpdates)
 
             Spacer()
 
-            Text("Last checked: \(lastUpdateCheckString)")
+            Text("Last checked: \(updatesManager.lastUpdateCheckDate?.formatted(date: .abbreviated, time: .standard) ?? String(localized: "Never"))")
                 .font(.caption)
                 .monospacedDigit()
                 .foregroundStyle(.secondary)
@@ -159,7 +129,7 @@ struct AboutSettingsPane: View {
         }
     }
 
-    private func bottomBar() -> some View {
+    private var bottomBar: some View {
         IceSection(options: [.isBordered]) {
             HStack(spacing: 0) {
                 Button("Quit \(Constants.displayName)") {
@@ -171,11 +141,15 @@ struct AboutSettingsPane: View {
                 Spacer()
 
                 HStack(spacing: 20) {
-                    Button("Acknowledgements") { NSWorkspace.shared.open(acknowledgementsURL) }
-                    Button("Contribute") { openURL(contributeURL) }
-                    Button("Report a Bug") { openURL(issuesURL) }
+                    Button("Acknowledgements") {
+                        if let url = Bundle.main.url(forResource: "Acknowledgements", withExtension: "pdf") {
+                            NSWorkspace.shared.open(url)
+                        }
+                    }
+                    Button("Contribute") { openURL(Constants.repositoryURL) }
+                    Button("Report a Bug") { openURL(Constants.issuesURL) }
                     Button("Support \(Constants.displayName)", systemImage: "heart.circle.fill") {
-                        openURL(donateURL)
+                        openURL(Constants.donateURL)
                     }
                 }
                 .buttonStyle(.plain)
