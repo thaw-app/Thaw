@@ -200,6 +200,7 @@ struct PermissionsView<Manager: PermissionsManaging>: View {
 struct PermissionCard: View {
     @EnvironmentObject var appState: AppState
     @ObservedObject var permission: Permission
+    @State var isRequestingPermission = false
 
     /// Whether granting should reopen/refocus the permissions window afterward.
     ///
@@ -243,8 +244,13 @@ struct PermissionCard: View {
                 }
 
                 Button {
+                    guard !isRequestingPermission else {
+                        return
+                    }
+                    isRequestingPermission = true
                     permission.performRequest()
-                    Task {
+                    Task { _ in
+                        defer { isRequestingPermission = false }
                         await permission.waitForPermission()
                         appState.activate(withPolicy: .regular)
                         if refocusesWindowAfterGrant {
@@ -263,6 +269,7 @@ struct PermissionCard: View {
                 .buttonStyle(.borderedProminent)
                 .tint(permission.hasPermission ? .green : .accentColor)
                 .allowsHitTesting(!permission.hasPermission)
+                .disabled(isRequestingPermission)
             }
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
