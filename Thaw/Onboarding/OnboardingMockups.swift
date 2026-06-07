@@ -346,8 +346,8 @@ struct AppearanceScreen: View {
     private func barIcons(tint: Color) -> some View {
         HStack(spacing: 7) {
             MenuBarIconRow(symbols: ["wifi", "battery.100"], color: tint.opacity(0.9), spacing: 7)
-            MenuBarDividerDot(tint: tint.label.opacity(0.85))
-            MenuBarClockGroup(tint: tint.label.opacity(0.9))
+            MenuBarDividerDot(tint: tint.opacity(0.85))
+            MenuBarClockGroup(tint: tint.opacity(0.9))
         }
     }
 
