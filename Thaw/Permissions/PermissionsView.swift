@@ -169,7 +169,14 @@ struct PermissionsView<Manager: PermissionsManaging>: View {
             isImportingIceSettings = false
 
             if result.success {
-                // Mark first launch as completed after successful import
+                // Mark first launch as completed after successful import.
+                //
+                // Note: during a first-launch onboarding this also flips
+                // ``OnboardingSheet/isFirstLaunchFlow`` to false mid-flow. That
+                // stays correct — the permissions step is hosted in a window
+                // that already rendered as the onboarding sheet (the host is
+                // chosen once and isn't re-evaluated), and the final
+                // ``AppState/completeFirstLaunchSetup()`` is idempotent.
                 Defaults.set(true, forKey: .hasCompletedFirstLaunch)
                 showImportIceSettings = true
 
@@ -193,6 +200,15 @@ struct PermissionsView<Manager: PermissionsManaging>: View {
 struct PermissionCard: View {
     @EnvironmentObject var appState: AppState
     @ObservedObject var permission: Permission
+
+    /// Whether granting should reopen/refocus the permissions window afterward.
+    ///
+    /// True in the standalone ``PermissionsView`` (the window *is* the host, so
+    /// refocusing it is correct). False when the card is embedded in the
+    /// onboarding tour's permissions preview — there the card lives inside the
+    /// onboarding sheet, and popping a separate permissions window on top of it
+    /// would be jarring, so granting just reactivates the app in place.
+    var refocusesWindowAfterGrant = true
 
     var body: some View {
         IceSection {
@@ -231,7 +247,9 @@ struct PermissionCard: View {
                     Task {
                         await permission.waitForPermission()
                         appState.activate(withPolicy: .regular)
-                        appState.openWindow(.permissions)
+                        if refocusesWindowAfterGrant {
+                            appState.openWindow(.permissions)
+                        }
                     }
                 } label: {
                     if permission.hasPermission {
