@@ -292,7 +292,7 @@ struct OnboardingSheet: View {
         ScrollView {
             HStack(alignment: .top, spacing: 16) {
                 ForEach(appState.permissions.allPermissions) { permission in
-                    PermissionCard(permission: permission)
+                    PermissionCard(permission: permission, refocusesWindowAfterGrant: false)
                 }
             }
             .padding(.horizontal, 6)
