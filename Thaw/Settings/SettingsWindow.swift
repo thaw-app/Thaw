@@ -23,10 +23,18 @@ struct SettingsWindow: Scene {
                         appState.updatesManager.automaticallyChecksForUpdates = true
                         appState.updatesManager.automaticallyDownloadsUpdates = autoDownload
                         appState.startUpdaterIfNeeded()
+                        appState.presentOnboardingIfNeeded()
                     } onDisable: {
                         appState.isUpdateConsentPresented = false
                         Defaults.set(true, forKey: .hasSeenUpdateConsent)
                         appState.updatesManager.automaticallyChecksForUpdates = false
+                        appState.presentOnboardingIfNeeded()
+                    }
+                }
+                .sheet(isPresented: $appState.isOnboardingPresented) {
+                    OnboardingSheet {
+                        Defaults.set(true, forKey: .hasSeenOnboarding)
+                        appState.isOnboardingPresented = false
                     }
                 }
                 .frame(minWidth: 850, minHeight: 600)
