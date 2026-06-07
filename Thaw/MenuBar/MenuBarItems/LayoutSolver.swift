@@ -351,6 +351,23 @@ enum LayoutSolver {
         uidWidths: [String: CGFloat],
         availableWidth: CGFloat
     ) -> NotchOverflowResult {
+        // Guard against invalid / not-yet-settled geometry. A non-positive or
+        // non-finite budget means the menu bar layout could not be measured:
+        // during a display disconnect/reconnect Control Center transiently
+        // reports a stale off-screen left edge, which drives rightBoundary and
+        // therefore availableWidth negative. On such a budget the eject logic
+        // below would treat every visible item as overflow and dump the whole
+        // section into hidden, corrupting the layout (and the persisted saved
+        // order). Never act on a budget we cannot trust: return no overflow and
+        // leave the layout untouched until the geometry settles.
+        guard availableWidth > 0, availableWidth.isFinite else {
+            return NotchOverflowResult(
+                overflowUIDs: [],
+                updatedDesiredFiltered: desiredFiltered,
+                updatedSectionMap: sectionMap
+            )
+        }
+
         // Visible-section UIDs in profile order (left-to-right).
         let visibleUIDs = Array(desiredFiltered.prefix(while: { $0 != controlUIDs.hidden }))
         let chevronWidth = controlUIDs.visible.flatMap { uidWidths[$0] } ?? 0

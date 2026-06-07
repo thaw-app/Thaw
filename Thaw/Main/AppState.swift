@@ -298,6 +298,17 @@ final class AppState: ObservableObject {
                     self.diagLog.info("Display disconnected: refresh item cache + cleanup image cache")
                     Task { @MainActor [weak self] in
                         guard let self else { return }
+                        // A display change relocates items to the remaining
+                        // display and leaves the menu bar geometry (Control
+                        // Center position, item bounds) unsettled for a short
+                        // window. Open a settling period so saved-layout restores
+                        // defer until the bar restabilizes and then run once on
+                        // settled geometry. Without this, a restore could fire
+                        // against transient off-screen geometry: Control Center's
+                        // stale left edge produces a negative notch-overflow
+                        // budget that collapses the hidden section into visible
+                        // and is then persisted into the saved order.
+                        self.itemManager.startSettlingPeriod(reason: "displayDisconnect")
                         // Force item cache rebuild so displayID reflects current
                         // display geometry (items moved to remaining display).
                         await self.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
@@ -311,6 +322,10 @@ final class AppState: ObservableObject {
                     self.diagLog.info("Display connected: refresh item cache")
                     Task { @MainActor [weak self] in
                         guard let self else { return }
+                        // Defer the saved-layout restore until the menu bar
+                        // geometry settles after the new display attaches; see
+                        // the disconnect branch above for the rationale.
+                        self.itemManager.startSettlingPeriod(reason: "displayConnect")
                         // Items keep their windowIDs when moving to new display.
                         // Item cache rebuild picks up new items on the added display.
                         await self.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
