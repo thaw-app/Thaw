@@ -1097,6 +1097,7 @@
     },
     "%@ needs this to:" : {
       "comment" : "A section within a permission box that lists the reasons why a particular permission is needed. The argument is the name of the app.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -1216,6 +1217,7 @@
     },
     "%@ needs your permission to manage the menu bar." : {
       "comment" : "A paragraph explaining the app's purpose and its commitment to user privacy.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -2553,6 +2555,7 @@
     },
     "Absolutely no personal information is collected or stored." : {
       "comment" : "A description of how user data is handled by the app.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -3865,6 +3868,9 @@
           }
         }
       }
+    },
+    "Almost there! %@ needs the permissions below to manage your menu bar." : {
+
     },
     "Always show hidden items" : {
       "comment" : "A toggle that allows users to configure whether hidden menu bar items should always be visible in the native menu bar on a particular display.",
@@ -11139,6 +11145,9 @@
         }
       }
     },
+    "Click again to hide" : {
+
+    },
     "Click an empty area of the menu bar to show hidden menu bar items." : {
       "comment" : "Toggle that allows the user to enable or disable the feature of showing hidden menu bar items by clicking on an empty area of the menu bar.",
       "localizations" : {
@@ -11257,6 +11266,9 @@
           }
         }
       }
+    },
+    "Click divider to reveal" : {
+
     },
     "Click Item" : {
       "comment" : "A button label that appears when the item is currently being displayed.",
@@ -11730,6 +11742,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "偵測到衝突的選單列管理工具"
+          }
+        }
+      }
+    },
+    "Connecting a display whose spacing differs from the current spacing relaunches every menu bar app. Keep spacing consistent across displays to avoid relaunches." : {
+      "comment" : "A warning that mismatched per-display spacing causes a menu bar app relaunch wave when a display is connected.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Connecting a display whose spacing differs from the current spacing relaunches every menu bar app. Keep spacing consistent across displays to avoid relaunches."
           }
         }
       }
@@ -16375,6 +16398,9 @@
         }
       }
     },
+    "Enable Permissions" : {
+
+    },
     "Enable secondary context menu" : {
       "comment" : "A toggle that enables or disables the secondary context menu.",
       "localizations" : {
@@ -18160,6 +18186,9 @@
         }
       }
     },
+    "Finder" : {
+
+    },
     "Focus" : {
       "comment" : "Localized string key for the \"Focus\" case in the `RehideStrategy` enum.",
       "localizations" : {
@@ -18754,6 +18783,9 @@
           }
         }
       }
+    },
+    "Get Started" : {
+
     },
     "Glass" : {
       "comment" : "Localized string key for the glass-material background.",
@@ -20183,6 +20215,9 @@
         }
       }
     },
+    "Hide or show menu bar items on demand. Drag items between sections, keep your favorites always visible, and tuck the rest away in the always-hidden section." : {
+
+    },
     "Hold to Preview" : {
       "comment" : "A button that, when held, allows users to preview changes in a menu bar.",
       "localizations" : {
@@ -20778,6 +20813,9 @@
         }
       }
     },
+    "Hotkeys & Automation" : {
+
+    },
     "Hover over an empty area of the menu bar to show hidden menu bar items." : {
       "comment" : "Text displayed in a toggle that allows the user to enable or disable the feature of showing hidden menu bar items by hovering over an empty area of the menu bar.",
       "localizations" : {
@@ -21254,8 +21292,12 @@
         }
       }
     },
+    "Icon positions can't be restored." : {
+
+    },
     "Icon positions cannot be restored." : {
       "comment" : "A footnote explaining that icon positions cannot be restored when importing settings from Ice.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -22093,6 +22135,9 @@
         }
       }
     },
+    "Import from Ice" : {
+
+    },
     "Import Profile(s)" : {
       "comment" : "A button label that imports one or more profiles.",
       "localizations" : {
@@ -22449,6 +22494,9 @@
           }
         }
       }
+    },
+    "Imported %lld settings successfully." : {
+
     },
     "Items are arranged in a grid with multiple columns." : {
       "comment" : "A description of the grid layout.",
@@ -25782,6 +25830,9 @@
         }
       }
     },
+    "Menu Bar Management" : {
+
+    },
     "Menu Bar Overlay" : {
       "comment" : "Title of the menu bar overlay panel.",
       "localizations" : {
@@ -27447,6 +27498,9 @@
           }
         }
       }
+    },
+    "No menu bar items available" : {
+      "comment" : "Text shown in the per-item hotkeys list when there are no menu bar items to assign a hotkey to."
     },
     "No profile selected" : {
       "comment" : "Subtitle of the display representation of the ThawFocusFilter intent when no profile is selected.",
@@ -29709,6 +29763,9 @@
         }
       }
     },
+    "Open menu bar items" : {
+      "comment" : "A disclosure group label in the hotkeys settings pane that expands the list of per-item hotkeys."
+    },
     "Other" : {
       "comment" : "Section title for advanced settings related to other functionality.",
       "localizations" : {
@@ -29827,6 +29884,9 @@
           }
         }
       }
+    },
+    "Paint your menu bar your way. Choose solid colors, gradients, and custom shapes, then add shadows and borders for a polished finish." : {
+
     },
     "Per-Profile Hooks" : {
       "comment" : "A heading for the hooks that apply only to a specific profile.",
@@ -30422,6 +30482,9 @@
           }
         }
       }
+    },
+    "Press ⌃ Space" : {
+
     },
     "Profile" : {
       "comment" : "Title of the parameter in the \"Set Menu Bar Profile\" focus filter.",
@@ -34826,6 +34889,9 @@
         }
       }
     },
+    "Save your current configuration as a named profile. Switch between layouts instantly, or let Thaw switch automatically when you change your frontmost app." : {
+
+    },
     "Screen Recording" : {
       "comment" : "Title of the screen recording permission.",
       "localizations" : {
@@ -38521,6 +38587,9 @@
         }
       }
     },
+    "Skip" : {
+
+    },
     "Smart" : {
       "comment" : "Localized string key for the \"Smart\" rehide strategy.",
       "localizations" : {
@@ -39356,6 +39425,7 @@
     },
     "Successfully imported %lld settings!" : {
       "comment" : "A success message displayed when the user successfully imports settings from the original app. The argument is the number of settings that were successfully imported.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -39948,6 +40018,12 @@
           }
         }
       }
+    },
+    "Thaw gives you complete control over your menu bar — hide clutter, customize the look, and automate your workflow." : {
+
+    },
+    "Thaw needs a couple of permissions to manage your menu bar. You can grant them now, or skip and grant them later from Settings." : {
+
     },
     "The %@ Bar is aligned to the left edge of the display." : {
       "comment" : "A label that describes the location of the \\(Constants.displayName) Bar on a display.",
@@ -43063,6 +43139,9 @@
         }
       }
     },
+    "Trigger any action with a keystroke. Combine auto-rehide timers and Focus Filter integration so Thaw adapts to whatever you're doing." : {
+
+    },
     "Type Hotkey" : {
       "comment" : "A label displayed in the leading segment of the hotkey recorder when it is recording.",
       "localizations" : {
@@ -45919,8 +45998,12 @@
         }
       }
     },
+    "We found existing settings from Ice, the original app." : {
+
+    },
     "We found settings from Ice (the original app)." : {
       "comment" : "A description of the feature that allows users to import settings from the original app, Ice.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -46037,6 +46120,9 @@
           }
         }
       }
+    },
+    "Welcome to Thaw" : {
+
     },
     "When an app sends a thaw:// URL to change settings, Thaw checks if that app is whitelisted." : {
       "comment" : "A step in the process of how to use Thaw.",
@@ -46403,6 +46489,7 @@
     },
     "Would you like to import your existing configuration?" : {
       "comment" : "A question displayed to the user when they first open the app, asking if they would like to import their existing configuration.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -46757,6 +46844,9 @@
           }
         }
       }
+    },
+    "Your data stays on your Mac — nothing is ever collected or shared." : {
+
     }
   },
   "version" : "1.1"
