@@ -46,7 +46,7 @@ private struct AppMenuLabels: View {
         HStack(spacing: 10) {
             Image(systemName: "apple.logo")
                 .font(.system(size: 11))
-            Text("Finder")
+            Text(verbatim: "Finder")
                 .font(.system(size: 10, weight: .semibold))
         }
         .foregroundStyle((tint ?? MenuBarTint(colorScheme: colorScheme).label).opacity(0.75))
@@ -492,9 +492,13 @@ struct HotkeysHUD: View {
     var body: some View {
         ControlHUD {
             Button { model.triggerHotkey() } label: {
-                Label("Press ⌃ Space", systemImage: "keyboard")
-                    .font(.system(size: 11))
-                    .foregroundStyle(Color.white.opacity(0.85))
+                Label {
+                    Text(verbatim: "Press ⌃ Space")
+                } icon: {
+                    Image(systemName: "keyboard")
+                }
+                .font(.system(size: 11))
+                .foregroundStyle(Color.white.opacity(0.85))
             }
             .buttonStyle(.plain)
         }
