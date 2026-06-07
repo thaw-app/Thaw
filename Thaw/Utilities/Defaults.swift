@@ -292,6 +292,10 @@ extension Defaults {
 
         case hasSeenUpdateConsent
 
+        // MARK: Onboarding
+
+        case hasSeenOnboarding
+
         // MARK: Settings URI
 
         case settingsURIEnabled = "SettingsURIEnabled"
