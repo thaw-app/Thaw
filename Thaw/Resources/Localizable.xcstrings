@@ -11746,17 +11746,6 @@
         }
       }
     },
-    "Connecting a display whose spacing differs from the current spacing relaunches every menu bar app. Keep spacing consistent across displays to avoid relaunches." : {
-      "comment" : "A warning that mismatched per-display spacing causes a menu bar app relaunch wave when a display is connected.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Connecting a display whose spacing differs from the current spacing relaunches every menu bar app. Keep spacing consistent across displays to avoid relaunches."
-          }
-        }
-      }
-    },
     "Continue" : {
       "comment" : "Label for the \"Continue\" button in the Permissions view.",
       "localizations" : {
@@ -21290,11 +21279,7 @@
       }
     },
     "Icon positions can't be restored." : {
-      "comment" : "A footnote explaining that icon positions cannot be restored when importing settings from Ice."
-    },
-    "Icon positions cannot be restored." : {
       "comment" : "A footnote explaining that icon positions cannot be restored when importing settings from Ice.",
-      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -22493,7 +22478,123 @@
       }
     },
     "Imported %lld settings successfully." : {
-      "comment" : "A success message shown after importing settings from Ice. The argument is the number of settings imported."
+      "comment" : "A success message shown after importing settings from Ice. The argument is the number of settings imported.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nastavení aplikace %lld úspěšně importována!"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einstellungen von %lld erfolgreich importiert!"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¡%lld ajustes importados correctamente!"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réglages de %lld importés avec succès !"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sikeresen importálva: %lld beállítás!"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pengaturan %lld berhasil diimpor!"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impostazioni %lld importate con successo!"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 件の設定をインポートしました！"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld개 설정을 성공적으로 가져왔습니다!"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld-instellingen succesvol geïmporteerd!"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pomyślnie zaimportowano %lld ustawień!"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld configurações importadas com sucesso!"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Успешно импортировано настроек: %lld!"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "นำเข้าการตั้งค่า %lld รายการได้สำเร็จ!"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld ayar başarıyla içe aktarıldı!"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Успішно імпортовано налаштувань: %lld!"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã nhập thành công cài đặt %lld!"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "成功导入 %lld 项设置！"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已成功匯入 %lld 項設定！"
+          }
+        }
+      }
     },
     "Items are arranged in a grid with multiple columns." : {
       "comment" : "A description of the grid layout.",
@@ -27496,9 +27597,6 @@
         }
       }
     },
-    "No menu bar items available" : {
-      "comment" : "Text shown in the per-item hotkeys list when there are no menu bar items to assign a hotkey to."
-    },
     "No profile selected" : {
       "comment" : "Subtitle of the display representation of the ThawFocusFilter intent when no profile is selected.",
       "localizations" : {
@@ -29759,9 +29857,6 @@
           }
         }
       }
-    },
-    "Open menu bar items" : {
-      "comment" : "A disclosure group label in the hotkeys settings pane that expands the list of per-item hotkeys."
     },
     "Other" : {
       "comment" : "Section title for advanced settings related to other functionality.",
@@ -39417,126 +39512,6 @@
         }
       }
     },
-    "Successfully imported %lld settings!" : {
-      "comment" : "A success message displayed when the user successfully imports settings from the original app. The argument is the number of settings that were successfully imported.",
-      "extractionState" : "stale",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nastavení aplikace %lld úspěšně importována!"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Einstellungen von %lld erfolgreich importiert!"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "¡%lld ajustes importados correctamente!"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Réglages de %lld importés avec succès !"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sikeresen importálva: %lld beállítás!"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pengaturan %lld berhasil diimpor!"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Impostazioni %lld importate con successo!"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld 件の設定をインポートしました！"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld개 설정을 성공적으로 가져왔습니다!"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld-instellingen succesvol geïmporteerd!"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pomyślnie zaimportowano %lld ustawień!"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld configurações importadas com sucesso!"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Успешно импортировано настроек: %lld!"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "นำเข้าการตั้งค่า %lld รายการได้สำเร็จ!"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld ayar başarıyla içe aktarıldı!"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Успішно імпортовано налаштувань: %lld!"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Đã nhập thành công cài đặt %lld!"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "成功导入 %lld 项设置！"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已成功匯入 %lld 項設定！"
-          }
-        }
-      }
-    },
     "Sunglasses" : {
       "comment" : "Localized string key for the \"Custom\" control item image.",
       "localizations" : {
@@ -45993,11 +45968,7 @@
       }
     },
     "We found existing settings from Ice, the original app." : {
-      "comment" : "A description of the feature that allows users to import settings from the original app, Ice."
-    },
-    "We found settings from Ice (the original app)." : {
       "comment" : "A description of the feature that allows users to import settings from the original app, Ice.",
-      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
