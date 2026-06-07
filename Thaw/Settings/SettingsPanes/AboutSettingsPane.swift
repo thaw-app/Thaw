@@ -12,6 +12,12 @@ struct AboutSettingsPane: View {
     @ObservedObject var updatesManager: UpdatesManager
     @Environment(\.openURL) private var openURL
 
+    private static let iconSize: CGFloat = 180
+    private static let iconCenter = iconSize / 2
+
+    @State private var iconHoverLocation = CGPoint(x: iconCenter, y: iconCenter)
+    @State private var iconIsHovering = false
+
     var body: some View {
         IceForm {
             mainContent
@@ -39,10 +45,38 @@ struct AboutSettingsPane: View {
     private var appIconAndCopyrightSection: some View {
         HStack(spacing: 10) {
             if let appIcon = NSImage(named: NSImage.applicationIconName) {
+                let center = Self.iconCenter
+                let tiltX = iconIsHovering ? (iconHoverLocation.y - center) / center * -14 : 0
+                let tiltY = iconIsHovering ? (iconHoverLocation.x - center) / center *  14 : 0
+                let shadowX = iconIsHovering ? (iconHoverLocation.x - center) / center * -10 : 0
+                let shadowY = iconIsHovering ? (iconHoverLocation.y - center) / center * -10 : 0
+
                 Image(nsImage: appIcon)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: 180, height: 180)
+                    .frame(width: Self.iconSize, height: Self.iconSize)
+                    .rotation3DEffect(.degrees(tiltX), axis: (x: 1, y: 0, z: 0), perspective: 0.6)
+                    .rotation3DEffect(.degrees(tiltY), axis: (x: 0, y: 1, z: 0), perspective: 0.6)
+                    .shadow(
+                        color: .black.opacity(iconIsHovering ? 0.28 : 0.08),
+                        radius: iconIsHovering ? 22 : 6,
+                        x: shadowX,
+                        y: shadowY
+                    )
+                    .animation(.interactiveSpring(duration: 0.25), value: iconHoverLocation)
+                    .animation(.easeInOut(duration: 0.2), value: iconIsHovering)
+                    .onContinuousHover { phase in
+                        switch phase {
+                        case .active(let location):
+                            iconIsHovering = true
+                            iconHoverLocation = location
+                        case .ended:
+                            withAnimation(.spring(duration: 0.4, bounce: 0.3)) {
+                                iconIsHovering = false
+                                iconHoverLocation = CGPoint(x: Self.iconCenter, y: Self.iconCenter)
+                            }
+                        }
+                    }
             }
             VStack(alignment: .leading) {
                 Text(verbatim: Constants.displayName)
