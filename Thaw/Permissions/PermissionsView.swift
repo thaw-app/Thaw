@@ -249,7 +249,7 @@ struct PermissionCard: View {
                     }
                     isRequestingPermission = true
                     permission.performRequest()
-                    Task { _ in
+                    Task {
                         defer { isRequestingPermission = false }
                         await permission.waitForPermission()
                         appState.activate(withPolicy: .regular)
