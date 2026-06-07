@@ -21,5 +21,7 @@ struct OnboardingPageIndicator: View {
                     .animation(.snappy, value: currentPage)
             }
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Page \(currentPage + 1) of \(totalPages)")
     }
 }

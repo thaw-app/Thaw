@@ -46,7 +46,9 @@ struct MacBookBezelView<Content: View>: View {
         )
     }
 
-    private var bezelShape: UnevenRoundedRectangle { concentricShape(reducingRadiusBy: 0) }
+    private var bezelShape: UnevenRoundedRectangle {
+        concentricShape(reducingRadiusBy: 0)
+    }
 
     private func bottomOnlyCornerRadiusShape(_ radius: CGFloat) -> UnevenRoundedRectangle {
         UnevenRoundedRectangle(
@@ -58,7 +60,9 @@ struct MacBookBezelView<Content: View>: View {
         )
     }
 
-    private var bottomShape: UnevenRoundedRectangle { bottomOnlyCornerRadiusShape(9) }
+    private var bottomShape: UnevenRoundedRectangle {
+        bottomOnlyCornerRadiusShape(9)
+    }
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -113,6 +117,7 @@ struct OnboardingSheet: View {
 
     @State private var currentSlide = 0
     @State private var zoomed = false
+    @State private var zoomGeneration = 0
 
     @StateObject private var managementModel = ManagementMockupModel()
     @StateObject private var appearanceModel = AppearanceMockupModel()
@@ -374,12 +379,18 @@ struct OnboardingSheet: View {
     /// screen content and HUD crossfade on subsequent navigation. Stepping
     /// back to the welcome slide resets the zoom so it can replay on re-entry.
     private func restartCurrentSlide() {
+        zoomGeneration += 1
+        let thisZoomGen = zoomGeneration
+
         if current == .welcome {
             var resetTransaction = Transaction(animation: nil)
             resetTransaction.disablesAnimations = true
             withTransaction(resetTransaction) { zoomed = false }
         } else if current != .permissions, !zoomed {
-            delay(0.35) { withAnimation(.spring(duration: 0.7, bounce: 0.1)) { zoomed = true } }
+            delay(0.35) {
+                guard zoomGeneration == thisZoomGen, current != .welcome else { return }
+                withAnimation(.spring(duration: 0.7, bounce: 0.1)) { zoomed = true }
+            }
         }
 
         switch current {

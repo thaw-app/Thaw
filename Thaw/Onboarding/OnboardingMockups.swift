@@ -14,8 +14,8 @@ private struct DesktopBackground: View {
     var body: some View {
         LinearGradient(
             colors: [
-                Color(red: 0x6e / 255, green: 0xab / 255, blue: 0xef / 255),
-                Color(red: 0x3e / 255, green: 0x5a / 255, blue: 0xc1 / 255),
+                Color(red: 0x6E / 255, green: 0xAB / 255, blue: 0xEF / 255),
+                Color(red: 0x3E / 255, green: 0x5A / 255, blue: 0xC1 / 255),
             ],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
@@ -254,7 +254,7 @@ struct ManagementScreen: View {
             AppMenuLabels()
             Spacer()
 
-            MenuBarIconRow(symbols: MenuBarDemoItems.hidden, color: .white.opacity(0.85))
+            MenuBarIconRow(symbols: MenuBarDemoItems.hidden, color: tint.label.opacity(0.85))
                 .opacity(model.itemsHidden ? 0 : 1)
                 .offset(x: model.itemsHidden ? 16 : 0)
                 .animation(.spring(duration: 0.45, bounce: 0.1), value: model.itemsHidden)
@@ -265,13 +265,13 @@ struct ManagementScreen: View {
             } label: {
                 ZStack {
                     Color.clear.frame(width: 22, height: 24)
-                    MenuBarDividerDot(tint: .white.opacity(0.85))
+                    MenuBarDividerDot(tint: tint.label.opacity(0.85))
                 }
             }
             .buttonStyle(.plain)
             .padding(.horizontal, 2)
 
-            MenuBarClockGroup(tint: .white.opacity(0.9))
+            MenuBarClockGroup(tint: tint.label.opacity(0.9))
                 .padding(.trailing, 8)
         }
         .frame(height: 24)
@@ -286,7 +286,9 @@ struct ManagementHUD: View {
     var body: some View {
         ControlHUD {
             Label(
-                model.itemsHidden ? "Click divider to reveal" : "Click again to hide",
+                model.itemsHidden ?
+                    String(localized: "onboarding.mockup.management.show") :
+                    String(localized: "onboarding.mockup.management.hide"),
                 systemImage: "hand.tap"
             )
             .font(.system(size: 11))
@@ -305,7 +307,11 @@ struct ManagementHUD: View {
 
 @MainActor
 final class AppearanceMockupModel: ObservableObject {
-    static let styleLabels = ["Default", "Gradient", "Rounded"]
+    static let styleLabels = [
+        String(localized: "onboarding.mockup.style.default"),
+        String(localized: "onboarding.mockup.style.gradient"),
+        String(localized: "onboarding.mockup.style.rounded"),
+    ]
 
     @Published var styleIndex = 0
     private let timeline = MockupTimeline()
@@ -340,8 +346,8 @@ struct AppearanceScreen: View {
     private func barIcons(tint: Color) -> some View {
         HStack(spacing: 7) {
             MenuBarIconRow(symbols: ["wifi", "battery.100"], color: tint.opacity(0.9), spacing: 7)
-            MenuBarDividerDot(tint: tint.opacity(0.85))
-            MenuBarClockGroup(tint: tint.opacity(0.9))
+            MenuBarDividerDot(tint: tint.label.opacity(0.85))
+            MenuBarClockGroup(tint: tint.label.opacity(0.9))
         }
     }
 
@@ -352,7 +358,7 @@ struct AppearanceScreen: View {
             HStack(spacing: 0) {
                 AppMenuLabels(tint: .white)
                 Spacer()
-                barIcons(tint: .white).padding(.horizontal, 9)
+                barIcons(tint: tint.label).padding(.horizontal, 9)
             }
             .frame(height: 24)
             .frame(maxWidth: .infinity)
@@ -395,7 +401,7 @@ struct AppearanceScreen: View {
             HStack(spacing: 0) {
                 AppMenuLabels(tint: tint.label)
                 Spacer()
-                barIcons(tint: .white).padding(.horizontal, 9)
+                barIcons(tint: tint.label).padding(.horizontal, 9)
             }
             .frame(height: 24)
             .frame(maxWidth: .infinity)
@@ -469,15 +475,15 @@ struct HotkeysScreen: View {
         HStack(spacing: 0) {
             AppMenuLabels()
             Spacer()
-            MenuBarIconRow(symbols: MenuBarDemoItems.hidden, color: .white.opacity(0.85))
+            MenuBarIconRow(symbols: MenuBarDemoItems.hidden, color: tint.label.opacity(0.85))
                 .opacity(model.itemsVisible ? 1 : 0)
                 .offset(x: model.itemsVisible ? 0 : 14)
                 .animation(.spring(duration: 0.4, bounce: 0.1), value: model.itemsVisible)
                 .padding(.trailing, 8)
-            MenuBarDividerDot(tint: .white.opacity(0.85))
+            MenuBarDividerDot(tint: tint.label.opacity(0.85))
                 .padding(.trailing, 8)
 
-            MenuBarClockGroup(tint: .white.opacity(0.9))
+            MenuBarClockGroup(tint: tint.label.opacity(0.9))
                 .padding(.trailing, 8)
         }
         .frame(height: 24)
@@ -526,9 +532,9 @@ final class ProfilesMockupModel: ObservableObject {
     /// same kind of system icons Thaw actually manages — so swapping profiles
     /// visibly reshuffles the bar rather than showing made-up app icons.
     static let focusModes: [FocusMode] = [
-        FocusMode(name: "Work", symbol: "briefcase.fill", items: ["wifi", "airpods", "battery.75"]),
-        FocusMode(name: "Personal", symbol: "house.fill", items: ["speaker.wave.2.fill", "airpods", "wifi"]),
-        FocusMode(name: "Travel", symbol: "airplane", items: ["wifi.slash", "personalhotspot", "battery.25"]),
+        FocusMode(name: String(localized: "onboarding.mockup.profiles.work"), symbol: "briefcase.fill", items: ["wifi", "airpods", "battery.75"]),
+        FocusMode(name: String(localized: "onboarding.mockup.profiles.personal"), symbol: "house.fill", items: ["speaker.wave.2.fill", "airpods", "wifi"]),
+        FocusMode(name: String(localized: "onboarding.mockup.profiles.travel"), symbol: "airplane", items: ["wifi.slash", "personalhotspot", "battery.25"]),
     ]
 
     @Published var focusIndex = 0
@@ -571,26 +577,26 @@ struct ProfilesScreen: View {
             AppMenuLabels()
             Spacer()
 
-            MenuBarIconRow(symbols: model.active.items, color: .white.opacity(0.9))
+            MenuBarIconRow(symbols: model.active.items, color: tint.label.opacity(0.85))
                 .id(model.focusIndex)
                 .transition(.opacity.combined(with: .scale(scale: 0.9)))
                 .animation(.spring(duration: 0.35), value: model.focusIndex)
                 .padding(.trailing, 8)
 
-            MenuBarDividerDot(tint: .white.opacity(0.85))
+            MenuBarDividerDot(tint: tint.label.opacity(0.85))
                 .padding(.trailing, 8)
 
             // Mirrors the active Focus mode's own symbol so the menu bar
             // status item visibly updates alongside the showcased profile.
             Image(systemName: model.active.symbol)
                 .font(.system(size: 9))
-                .foregroundStyle(.white)
+                .foregroundStyle(tint.label)
                 .id(model.focusIndex)
                 .transition(.opacity.combined(with: .scale(scale: 0.6)))
                 .animation(.spring(duration: 0.35), value: model.focusIndex)
                 .padding(.trailing, 8)
 
-            MenuBarClockGroup(tint: .white.opacity(0.9))
+            MenuBarClockGroup(tint: tint.label.opacity(0.9))
                 .padding(.trailing, 8)
         }
         .frame(height: 24)
