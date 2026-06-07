@@ -17,9 +17,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var terminationAttemptID = UUID()
     private var terminationTimeoutTask: Task<Void, Never>?
 
+    #if DEBUG
+        /// Whether the app is running as an Xcode preview/playground.
+        ///
+        /// Xcode sets one of these environment variables depending on the
+        /// Tools version and execution mode (newer versions report
+        /// `XCODE_RUNNING_FOR_PLAYGROUNDS` for SwiftUI previews). Checking
+        /// both keeps the guard working across versions.
+        private var isRunningForPreviews: Bool {
+            let environment = ProcessInfo.processInfo.environment
+            return environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" || environment["XCODE_RUNNING_FOR_PLAYGROUNDS"] == "1"
+        }
+    #endif
+
     // MARK: NSApplicationDelegate Methods
 
     func applicationWillFinishLaunching(_: Notification) {
+        #if DEBUG
+            // Don't perform setup if running as a preview.
+            if isRunningForPreviews {
+                return
+            }
+        #endif
+
         // Initial chore work.
         NSSplitViewItem.swizzle()
         MigrationManager(appState: appState).migrateAll()
@@ -48,7 +68,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         #if DEBUG
             // Don't perform setup if running as a preview.
-            if ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" {
+            if isRunningForPreviews {
                 return
             }
         #endif
@@ -73,7 +93,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             appState.performSetup(hasPermissions: false)
         }
 
-        // Show permissions window on first launch or if missing required permissions
+        // On first launch, walk the user through onboarding — its final step
+        // is where they decide whether to grant permissions, so there's no
+        // separate need to surface the permissions window here (PermissionsWindow
+        // shows the onboarding tour until first launch completes). Afterward,
+        // only resurface the plain permissions window if required permissions
+        // are missing (e.g. they were revoked), so a reset doesn't drag the
+        // user back through onboarding.
         if isFirstLaunch || appState.permissions.permissionsState == .missing {
             appState.openWindow(.permissions)
         }
