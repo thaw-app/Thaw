@@ -8,9 +8,9 @@
 
 import SwiftUI
 
-struct PermissionsView: View {
+struct PermissionsView<Manager: PermissionsManaging>: View {
     @EnvironmentObject var appState: AppState
-    @EnvironmentObject var manager: AppPermissions
+    @EnvironmentObject var manager: Manager
 
     @State private var hasIceSettings = false
     @State private var showImportIceSettings = false
@@ -39,18 +39,19 @@ struct PermissionsView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: 24) {
             headerView
-                .padding(.vertical)
+
+            if showImportIceSettings {
+                iceImportBox
+            }
 
             permissionsStack
 
             footerView
-                .padding(.vertical)
         }
-        .padding(.horizontal)
-        .frame(width: 550)
-        .fixedSize()
+        .padding(24)
+        .frame(width: 760, height: 600)
         .onAppear {
             checkForIceSettings()
             showImportIceSettings = hasIceSettings && !Defaults.bool(forKey: .hasCompletedFirstLaunch)
@@ -58,48 +59,31 @@ struct PermissionsView: View {
     }
 
     private var headerView: some View {
-        Label {
-            Text("Permissions")
-                .font(.system(size: 40, weight: .medium))
-        } icon: {
-            if let nsImage = NSImage(named: NSImage.applicationIconName) {
-                Image(nsImage: nsImage)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 85, height: 85)
-            }
-        }
-    }
+        VStack(spacing: 12) {
+            Text("Enable Permissions")
+                .font(.largeTitle.weight(.semibold))
 
-    private var explanationBox: some View {
-        IceSection {
-            VStack {
-                Text("\(Constants.displayName) needs your permission to manage the menu bar.")
-                    .fontWeight(.medium)
-                Text("Absolutely no personal information is collected or stored.")
-                    .bold()
-                    .foregroundStyle(Color(red: 0.5, green: 0.75, blue: 1))
+            VStack(spacing: 4) {
+                Text("Almost there! \(Constants.displayName) needs the permissions below to manage your menu bar.")
+                Text("Your data stays on your Mac — nothing is ever collected or shared.")
+                    .foregroundStyle(.secondary)
             }
-            .padding()
+            .font(.body)
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: 500)
         }
-        .font(.title3)
     }
 
     private var permissionsStack: some View {
-        VStack {
-            if showImportIceSettings {
-                iceImportBox
-            }
-
-            explanationBox
+        HStack(alignment: .top, spacing: 16) {
             ForEach(manager.allPermissions) { permission in
-                permissionBox(permission)
+                PermissionCard(permission: permission)
             }
         }
     }
 
     private var footerView: some View {
-        HStack {
+        HStack(spacing: 12) {
             quitButton
             continueButton
         }
@@ -113,126 +97,49 @@ struct PermissionsView: View {
             Text("Quit")
                 .frame(maxWidth: .infinity)
         }
+        .buttonStyle(.bordered)
     }
 
     private var continueButton: some View {
         Button {
-            appState.dismissWindow(.permissions)
-
-            guard manager.permissionsState != .missing else {
-                appState.performSetup(hasPermissions: false)
-                Defaults.set(true, forKey: .hasCompletedFirstLaunch)
-                return
-            }
-
-            appState.performSetup(hasPermissions: true)
-            Defaults.set(true, forKey: .hasCompletedFirstLaunch)
-
-            Task {
-                appState.activate(withPolicy: .regular)
-                appState.openWindow(.settings)
-            }
+            appState.completeFirstLaunchSetup()
         } label: {
             Text(continueButtonText)
                 .frame(maxWidth: .infinity)
                 .foregroundStyle(continueButtonForegroundStyle)
         }
+        .buttonStyle(.borderedProminent)
         .disabled(manager.permissionsState == .missing)
-    }
-
-    private func permissionBox(_ permission: Permission) -> some View {
-        IceSection {
-            VStack(spacing: 12) {
-                Text(permission.title)
-                    .font(.title.weight(.medium))
-                    .underline()
-
-                VStack(spacing: 2) {
-                    Text("\(Constants.displayName) needs this to:")
-                        .font(.title3)
-                        .bold()
-
-                    VStack(alignment: .leading) {
-                        ForEach(permission.details, id: \.self) { detail in
-                            HStack {
-                                Text(verbatim: "•").bold()
-                                Text(detail).fontWeight(.medium)
-                            }
-                        }
-                    }
-                }
-
-                Button {
-                    permission.performRequest()
-                    Task {
-                        await permission.waitForPermission()
-                        appState.activate(withPolicy: .regular)
-                        appState.openWindow(.permissions)
-                    }
-                } label: {
-                    if permission.hasPermission {
-                        Text("Permission Granted")
-                            .foregroundStyle(.green)
-                    } else {
-                        Text("Grant Permission")
-                    }
-                }
-                .allowsHitTesting(!permission.hasPermission)
-
-                if !permission.isRequired {
-                    CalloutBox("\(Constants.displayName) can work in a limited mode without this permission.") {
-                        Image(systemName: "checkmark.shield")
-                            .foregroundStyle(.green)
-                    }
-                }
-            }
-            .padding(10)
-            .frame(maxWidth: .infinity)
-        }
     }
 
     private var iceImportBox: some View {
         IceSection {
-            VStack(spacing: 12) {
-                Text("Import Settings")
-                    .font(.title.weight(.medium))
-                    .underline()
+            VStack(alignment: .leading, spacing: 8) {
+                Label("Import from Ice", systemImage: "square.and.arrow.down")
+                    .font(.title3.weight(.semibold))
 
-                VStack(spacing: 2) {
-                    Text("We found settings from Ice (the original app).")
-                        .font(.title3)
-                        .bold()
-
+                Group {
                     if let result = iceImportResult {
                         if result.success {
-                            Text("Successfully imported \(result.settingsImported) settings!")
-                                .font(.title3)
+                            Text("Imported \(result.settingsImported) settings successfully.")
                                 .foregroundStyle(.green)
-                                .bold()
                         } else {
                             Text("Import failed. You can configure settings manually.")
-                                .font(.title3)
                                 .foregroundStyle(.red)
-                                .bold()
                         }
                     } else {
-                        Text("Would you like to import your existing configuration?")
-                            .font(.title3)
-                            .fontWeight(.medium)
-                        Text("Icon positions cannot be restored.")
-                            .font(.calloutBox)
-                            .bold()
-                            .foregroundStyle(.red)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("We found existing settings from Ice, the original app.")
+                            Text("Icon positions can't be restored.")
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
+                .font(.callout)
 
                 if iceImportResult?.success == true {
-                    // Disabled status label — no action needed.
-                    Button("Imported") {
-                        // Intentionally empty: this is a disabled status-only button after a successful import.
-                    }
-                    .foregroundStyle(.green)
-                    .disabled(true)
+                    Label("Imported", systemImage: "checkmark")
+                        .foregroundStyle(.green)
                 } else {
                     Button("Import Settings") {
                         importIceSettings()
@@ -240,8 +147,8 @@ struct PermissionsView: View {
                     .disabled(isImportingIceSettings)
                 }
             }
-            .padding(10)
-            .frame(maxWidth: .infinity)
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
@@ -275,4 +182,87 @@ struct PermissionsView: View {
             }
         }
     }
+}
+
+// MARK: - PermissionCard
+
+/// A card describing a single permission, along with a button to grant it.
+///
+/// Shared by ``PermissionsView`` and the onboarding flow's permissions step,
+/// so both present an identical, always-up-to-date view of permission state.
+struct PermissionCard: View {
+    @EnvironmentObject var appState: AppState
+    @ObservedObject var permission: Permission
+
+    var body: some View {
+        IceSection {
+            VStack(alignment: .leading, spacing: 12) {
+                Label {
+                    Text(permission.title)
+                        .font(.title2.weight(.semibold))
+                } icon: {
+                    Image(systemName: permission.iconName)
+                        .font(.title2)
+                        .foregroundStyle(permission.iconColor)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(permission.details, id: \.self) { detail in
+                        Label {
+                            Text(detail)
+                        } icon: {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                .font(.callout)
+
+                if !permission.isRequired {
+                    CalloutBox("\(Constants.displayName) can work in a limited mode without this permission.") {
+                        Image(systemName: "checkmark.shield")
+                            .foregroundStyle(.green)
+                            .padding(-4)
+                    }
+                }
+
+                Button {
+                    permission.performRequest()
+                    Task {
+                        await permission.waitForPermission()
+                        appState.activate(withPolicy: .regular)
+                        appState.openWindow(.permissions)
+                    }
+                } label: {
+                    if permission.hasPermission {
+                        Label("Permission Granted", systemImage: "checkmark")
+                            .frame(maxWidth: .infinity)
+                    } else {
+                        Text("Grant Permission")
+                            .frame(maxWidth: .infinity)
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(permission.hasPermission ? .green : .accentColor)
+                .allowsHitTesting(!permission.hasPermission)
+            }
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+}
+
+private final class MockPermissionsManager: PermissionsManaging {
+    @Published var permissionsState: AppPermissions.PermissionsState = .missing
+
+    let allPermissions: [Permission] = [
+        AccessibilityPermission(),
+        ScreenRecordingPermission(),
+    ]
+}
+
+#Preview {
+    PermissionsView<MockPermissionsManager>()
+        .environmentObject(AppState())
+        .environmentObject(MockPermissionsManager())
 }

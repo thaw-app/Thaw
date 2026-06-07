@@ -8,6 +8,7 @@
 
 import Cocoa
 import Combine
+import SwiftUI
 
 // MARK: - Permission
 
@@ -20,6 +21,12 @@ class Permission: ObservableObject, Identifiable {
 
     /// The title of the permission.
     let title: String
+
+    /// The name of the system symbol image to display next to the title.
+    let iconName: String
+
+    /// The color of the icon displayed next to the title.
+    let iconColor: Color
 
     /// Descriptive details for the permission.
     let details: [String]
@@ -53,6 +60,8 @@ class Permission: ObservableObject, Identifiable {
     ///   - request: A function that requests permissions.
     init(
         title: String,
+        iconName: String,
+        iconColor: Color,
         details: [String],
         isRequired: Bool,
         settingsURL: URL?,
@@ -60,6 +69,8 @@ class Permission: ObservableObject, Identifiable {
         request: @escaping () -> Void
     ) {
         self.title = title
+        self.iconName = iconName
+        self.iconColor = iconColor
         self.details = details
         self.isRequired = isRequired
         self.settingsURL = settingsURL
@@ -132,6 +143,8 @@ final class AccessibilityPermission: Permission {
     init() {
         super.init(
             title: String(localized: "Accessibility"),
+            iconName: "accessibility",
+            iconColor: .blue,
             details: [
                 String(localized: "Get real-time information about the menu bar."),
                 String(localized: "Arrange menu bar items."),
@@ -154,6 +167,8 @@ final class ScreenRecordingPermission: Permission {
     init() {
         super.init(
             title: String(localized: "Screen Recording"),
+            iconName: "record.circle",
+            iconColor: .red,
             details: [
                 String(localized: "Change the menu bar's appearance."),
                 String(localized: "Display images of individual menu bar items."),
