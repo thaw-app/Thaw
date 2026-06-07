@@ -22,6 +22,9 @@ final class AppState: ObservableObject {
     /// Tracks presentation of the update consent sheet.
     @Published var isUpdateConsentPresented = false
 
+    /// Tracks presentation of the onboarding sheet.
+    @Published var isOnboardingPresented = false
+
     /// Model for the app's settings.
     let settings = AppSettings()
 
@@ -123,6 +126,32 @@ final class AppState: ObservableObject {
         updatesManager.startUpdaterIfNeeded()
     }
 
+    /// Presents the onboarding sheet if the user hasn't seen it yet.
+    func presentOnboardingIfNeeded() {
+        if !Defaults.bool(forKey: .hasSeenOnboarding) {
+            isOnboardingPresented = true
+        }
+    }
+
+    /// Completes first-launch setup based on the permissions currently granted,
+    /// then brings the app to regular activation and opens Settings. Shared by
+    /// the permissions window's Continue button and onboarding's final slide.
+    func completeFirstLaunchSetup() {
+        dismissWindow(.permissions)
+        Defaults.set(true, forKey: .hasSeenOnboarding)
+
+        let hasPermissions = permissions.permissionsState != .missing
+        performSetup(hasPermissions: hasPermissions)
+        Defaults.set(true, forKey: .hasCompletedFirstLaunch)
+
+        guard hasPermissions else { return }
+
+        Task {
+            activate(withPolicy: .regular)
+            openWindow(.settings)
+        }
+    }
+
     func dismissWindow(_ id: IceWindowIdentifier) {
         Task { @MainActor [weak self] in
             guard let self else { return }
@@ -222,6 +251,7 @@ final class AppState: ObservableObject {
                         self.isUpdateConsentPresented = true
                     } else {
                         self.updatesManager.startUpdaterIfNeeded()
+                        self.presentOnboardingIfNeeded()
                     }
                 } else {
                     self.openWindows.remove(.settings)
