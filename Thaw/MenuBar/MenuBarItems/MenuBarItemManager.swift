@@ -277,8 +277,10 @@ final class MenuBarItemManager: ObservableObject {
     private var pinnedAlwaysHiddenBundleIDs = Set<String>()
 
     /// Cached layout parameters from the last profile apply, used to re-sort
-    /// when profile-listed items appear after the initial apply.
-    private var activeProfileLayout: (
+    /// when profile-listed items appear after the initial apply. Read access
+    /// is internal so tests can verify the re-arm path refreshes it; writes
+    /// remain confined to this file (armProfileState and rearmActiveProfileLayout).
+    private(set) var activeProfileLayout: (
         pinnedHidden: Set<String>,
         pinnedAlwaysHidden: Set<String>,
         sectionOrder: [String: [String]],
@@ -288,7 +290,7 @@ final class MenuBarItemManager: ObservableObject {
 
     /// Flattened set of item identifiers from the active profile's itemOrder,
     /// for O(1) lookup when detecting late-arriving profile items.
-    private var activeProfileItemIdentifiers = Set<String>()
+    private(set) var activeProfileItemIdentifiers = Set<String>()
 
     /// Set of item identifiers that were present when the profile layout was
     /// last applied (or re-applied). Used to detect genuinely new arrivals.
@@ -5563,6 +5565,40 @@ extension MenuBarItemManager {
             itemOrder: itemOrder
         )
         activeProfileItemIdentifiers = Set(itemOrder.values.flatMap(\.self))
+    }
+
+    /// Refreshes the cached active-profile spec to match a freshly saved
+    /// layout, without performing any moves. Called when the user updates the
+    /// currently-active profile (Update Layout / Update All): the saved layout
+    /// is captured from the live savedSectionOrder, so the bar is already in
+    /// the target arrangement and only the in-memory spec that drives
+    /// late-arrival re-sorts needs to catch up. armProfileState runs only on
+    /// apply, so without this an update leaves activeProfileLayout pointing at
+    /// the pre-update spec and the next late-arrival re-sort reverts the bar
+    /// until the profile is re-applied.
+    ///
+    /// Unlike armProfileState this performs a pure cache refresh: it does not
+    /// touch savedSectionOrder or the live pinning sets (the snapshot already
+    /// equals them), does not arm isApplyingProfileLayout, and does not cancel
+    /// an in-flight re-sort.
+    func rearmActiveProfileLayout(
+        pinnedHidden: Set<String>,
+        pinnedAlwaysHidden: Set<String>,
+        sectionOrder: [String: [String]],
+        itemSectionMap: [String: String],
+        itemOrder: [String: [String]]
+    ) {
+        activeProfileLayout = (
+            pinnedHidden: pinnedHidden,
+            pinnedAlwaysHidden: pinnedAlwaysHidden,
+            sectionOrder: sectionOrder,
+            itemSectionMap: itemSectionMap,
+            itemOrder: itemOrder
+        )
+        activeProfileItemIdentifiers = Set(itemOrder.values.flatMap(\.self))
+        MenuBarItemManager.diagLog.debug(
+            "rearmActiveProfileLayout: refreshed cached profile spec after active-profile update (\(self.activeProfileItemIdentifiers.count) item identifiers)"
+        )
     }
 
     /// Persists the profile's pinning sets and saved section order to

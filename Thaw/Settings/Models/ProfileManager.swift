@@ -42,7 +42,11 @@ final class ProfileManager: ObservableObject {
     /// Observers for profile hotkey changes.
     private var profileHotkeyCancellables = Set<AnyCancellable>()
 
-    init() {
+    /// - Parameter profilesDirectory: Where profile JSON and the manifest
+    ///   live. Defaults to Application Support in production; tests pass a
+    ///   temporary directory to exercise the real load/save paths in isolation
+    ///   without touching the user's profiles.
+    init(profilesDirectory: URL? = nil) {
         let enc = JSONEncoder()
         enc.dateEncodingStrategy = .iso8601
         enc.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -52,15 +56,19 @@ final class ProfileManager: ObservableObject {
         dec.dateDecodingStrategy = .iso8601
         decoder = dec
 
-        guard let appSupport = FileManager.default.urls(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask
-        ).first else {
-            fatalError("Application Support directory not found")
+        if let profilesDirectory {
+            self.profilesDirectory = profilesDirectory
+        } else {
+            guard let appSupport = FileManager.default.urls(
+                for: .applicationSupportDirectory,
+                in: .userDomainMask
+            ).first else {
+                fatalError("Application Support directory not found")
+            }
+            self.profilesDirectory = appSupport
+                .appendingPathComponent("Thaw/Profiles", isDirectory: true)
         }
-        profilesDirectory = appSupport
-            .appendingPathComponent("Thaw/Profiles", isDirectory: true)
-        manifestURL = profilesDirectory
+        manifestURL = self.profilesDirectory
             .appendingPathComponent("profiles.json")
 
         ensureDirectoryExists()
@@ -208,7 +216,7 @@ final class ProfileManager: ObservableObject {
                 displayConfigurations: appState.settings.displaySettings.configurations,
                 globalDisplayConfiguration: appState.settings.displaySettings.globalConfiguration,
                 appearanceConfiguration: appState.appearanceManager.configuration,
-                menuBarLayout: captureCurrentLayout(from: appState)
+                menuBarLayout: captureCurrentLayout(from: appState.itemManager)
             )
         )
 
@@ -564,12 +572,25 @@ final class ProfileManager: ObservableObject {
             profiles[index].modifiedAt = updated.modifiedAt
         }
         saveManifest()
+
+        // The live arrangement is unchanged by this save, so re-capturing it
+        // yields the same layout that was just persisted. Re-arm the cache from
+        // it when this is the active profile so a later late-arrival re-sort
+        // honours the update instead of reverting to the pre-update spec.
+        rearmActiveLayoutIfNeeded(
+            updatedID: id,
+            scope: .all,
+            layout: captureCurrentLayout(from: appState.itemManager),
+            itemManager: appState.itemManager
+        )
     }
 
     // MARK: - Capture Helpers
 
-    /// Captures the current menu bar layout from the app state.
-    private func captureCurrentLayout(from appState: AppState) -> MenuBarLayoutSnapshot {
+    /// Captures the current menu bar layout. Depends only on the item manager
+    /// (and UserDefaults), not the full app state, so the capture and re-arm
+    /// paths can be exercised in tests without standing up an AppState.
+    private func captureCurrentLayout(from itemManager: MenuBarItemManager) -> MenuBarLayoutSnapshot {
         let savedSectionOrder = UserDefaults.standard.dictionary(
             forKey: "MenuBarItemManager.savedSectionOrder"
         ) as? [String: [String]] ?? [:]
@@ -600,8 +621,8 @@ final class ProfileManager: ObservableObject {
         // MenuBarItemManager.computeSectionOrder runs the same filter
         // and closed-app preservation, so the profile's itemOrder is
         // a curated snapshot consistent with savedSectionOrder.
-        let itemOrder = appState.itemManager.computeSectionOrder(
-            from: appState.itemManager.itemCache
+        let itemOrder = itemManager.computeSectionOrder(
+            from: itemManager.itemCache
         )
         var itemSectionMap = [String: String]()
         for (sectionKey, uids) in itemOrder {
@@ -617,7 +638,7 @@ final class ProfileManager: ObservableObject {
             customNames: customNames,
             itemSectionMap: itemSectionMap,
             itemOrder: itemOrder,
-            newItemsPlacement: appState.itemManager.newItemsPlacement,
+            newItemsPlacement: itemManager.newItemsPlacement,
             itemHotkeys: itemHotkeys
         )
     }
@@ -656,24 +677,79 @@ final class ProfileManager: ObservableObject {
         case configurationOnly
     }
 
+    /// Decides whether updating profile updatedID under scope should
+    /// refresh MenuBarItemManager's in-memory active-profile layout cache.
+    /// True only when the updated profile is the currently-active one and the
+    /// update captured a fresh layout (.all or .layoutOnly): a
+    /// configuration-only update changes no layout, and updating an inactive
+    /// profile must never touch live state. Without re-arming, an update writes
+    /// the new layout to disk but leaves the cache pointing at the pre-update
+    /// spec, so the next late-arrival re-sort reverts the bar until the profile
+    /// is manually re-applied.
+    nonisolated static func shouldRearmActiveLayout(
+        updatedID: UUID,
+        activeID: UUID?,
+        scope: ProfileUpdateScope
+    ) -> Bool {
+        guard updatedID == activeID else { return false }
+        switch scope {
+        case .all, .layoutOnly:
+            return true
+        case .configurationOnly:
+            return false
+        }
+    }
+
     /// Updates a profile with only the specified scope of current state.
     func updateProfile(id: UUID, scope: ProfileUpdateScope, appState: AppState) throws {
         switch scope {
         case .all:
             try updateProfileWithCurrentState(id: id, appState: appState)
         case .layoutOnly:
-            try updateProfileLayout(id: id, appState: appState)
+            try updateProfileLayout(id: id, itemManager: appState.itemManager)
         case .configurationOnly:
             try updateProfileConfiguration(id: id, appState: appState)
         }
     }
 
-    /// Updates only the menu bar layout of an existing profile.
-    private func updateProfileLayout(id: UUID, appState: AppState) throws {
+    /// Updates only the menu bar layout of an existing profile. Takes the item
+    /// manager rather than the full app state: layout capture and re-arm need
+    /// nothing else, and the narrower dependency lets this be exercised in
+    /// tests without an AppState. Internal so the integration test can drive it
+    /// directly through the injected profiles directory.
+    func updateProfileLayout(id: UUID, itemManager: MenuBarItemManager) throws {
         var profile = try loadProfile(id: id)
-        profile.menuBarLayout = captureCurrentLayout(from: appState)
+        let layout = captureCurrentLayout(from: itemManager)
+        profile.menuBarLayout = layout
         profile.modifiedAt = Date()
         try saveProfileAndUpdateManifest(profile)
+        rearmActiveLayoutIfNeeded(updatedID: id, scope: .layoutOnly, layout: layout, itemManager: itemManager)
+    }
+
+    /// Refreshes MenuBarItemManager's cached active-profile layout after an
+    /// update that captured a fresh layout, so a later late-arrival re-sort
+    /// honours the new layout without a manual re-apply. No-op unless the
+    /// updated profile is the active one (see shouldRearmActiveLayout). The
+    /// captured layout already matches the live arrangement, so this only syncs
+    /// the in-memory spec and moves nothing.
+    private func rearmActiveLayoutIfNeeded(
+        updatedID: UUID,
+        scope: ProfileUpdateScope,
+        layout: MenuBarLayoutSnapshot,
+        itemManager: MenuBarItemManager
+    ) {
+        guard Self.shouldRearmActiveLayout(
+            updatedID: updatedID,
+            activeID: activeProfileID,
+            scope: scope
+        ) else { return }
+        itemManager.rearmActiveProfileLayout(
+            pinnedHidden: Set(layout.pinnedHiddenBundleIDs),
+            pinnedAlwaysHidden: Set(layout.pinnedAlwaysHiddenBundleIDs),
+            sectionOrder: layout.savedSectionOrder,
+            itemSectionMap: layout.itemSectionMap ?? [:],
+            itemOrder: layout.itemOrder ?? [:]
+        )
     }
 
     /// Updates only the configuration (settings, hotkeys, appearance) of an existing profile.
