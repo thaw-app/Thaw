@@ -6,9 +6,9 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import SwiftUI
 @testable import Thaw
 import XCTest
-import SwiftUI
 
 // MARK: - MenuBarTint
 
@@ -137,6 +137,15 @@ final class AppearanceMockupModelTests: XCTestCase {
 
         model.selectStyle(2)
         XCTAssertEqual(model.styleIndex, 2)
+    }
+
+    func testSelectStyleToCurrentIndexIsNoOp() {
+        let model = AppearanceMockupModel()
+        model.selectStyle(1)
+        XCTAssertEqual(model.styleIndex, 1)
+
+        model.selectStyle(1)
+        XCTAssertEqual(model.styleIndex, 1)
     }
 }
 
