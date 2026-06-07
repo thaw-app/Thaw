@@ -3870,7 +3870,7 @@
       }
     },
     "Almost there! %@ needs the permissions below to manage your menu bar." : {
-
+      "comment" : "Subtitle on the permissions screen reassuring the user they're nearly done. The argument is the name of the app."
     },
     "Always show hidden items" : {
       "comment" : "A toggle that allows users to configure whether hidden menu bar items should always be visible in the native menu bar on a particular display.",
@@ -11146,7 +11146,7 @@
       }
     },
     "Click again to hide" : {
-
+      "comment" : "Hint shown in the onboarding menu bar management demo after items are revealed, prompting the user to click the divider again to hide them."
     },
     "Click an empty area of the menu bar to show hidden menu bar items." : {
       "comment" : "Toggle that allows the user to enable or disable the feature of showing hidden menu bar items by clicking on an empty area of the menu bar.",
@@ -11268,7 +11268,7 @@
       }
     },
     "Click divider to reveal" : {
-
+      "comment" : "Hint shown in the onboarding menu bar management demo, prompting the user to click the divider to reveal hidden items."
     },
     "Click Item" : {
       "comment" : "A button label that appears when the item is currently being displayed.",
@@ -16399,7 +16399,7 @@
       }
     },
     "Enable Permissions" : {
-
+      "comment" : "Title of the permissions screen shown during onboarding."
     },
     "Enable secondary context menu" : {
       "comment" : "A toggle that enables or disables the secondary context menu.",
@@ -18186,9 +18186,6 @@
         }
       }
     },
-    "Finder" : {
-
-    },
     "Focus" : {
       "comment" : "Localized string key for the \"Focus\" case in the `RehideStrategy` enum.",
       "localizations" : {
@@ -18785,7 +18782,7 @@
       }
     },
     "Get Started" : {
-
+      "comment" : "Label for the primary button on the final onboarding slide that completes the tour."
     },
     "Glass" : {
       "comment" : "Localized string key for the glass-material background.",
@@ -20216,7 +20213,7 @@
       }
     },
     "Hide or show menu bar items on demand. Drag items between sections, keep your favorites always visible, and tuck the rest away in the always-hidden section." : {
-
+      "comment" : "Description of the menu bar management onboarding slide."
     },
     "Hold to Preview" : {
       "comment" : "A button that, when held, allows users to preview changes in a menu bar.",
@@ -20814,7 +20811,7 @@
       }
     },
     "Hotkeys & Automation" : {
-
+      "comment" : "Title of the hotkeys and automation onboarding slide."
     },
     "Hover over an empty area of the menu bar to show hidden menu bar items." : {
       "comment" : "Text displayed in a toggle that allows the user to enable or disable the feature of showing hidden menu bar items by hovering over an empty area of the menu bar.",
@@ -21293,7 +21290,7 @@
       }
     },
     "Icon positions can't be restored." : {
-
+      "comment" : "A footnote explaining that icon positions cannot be restored when importing settings from Ice."
     },
     "Icon positions cannot be restored." : {
       "comment" : "A footnote explaining that icon positions cannot be restored when importing settings from Ice.",
@@ -22136,7 +22133,7 @@
       }
     },
     "Import from Ice" : {
-
+      "comment" : "Title of the box offering to import settings from Ice, the original app."
     },
     "Import Profile(s)" : {
       "comment" : "A button label that imports one or more profiles.",
@@ -22496,7 +22493,7 @@
       }
     },
     "Imported %lld settings successfully." : {
-
+      "comment" : "A success message shown after importing settings from Ice. The argument is the number of settings imported."
     },
     "Items are arranged in a grid with multiple columns." : {
       "comment" : "A description of the grid layout.",
@@ -25831,7 +25828,7 @@
       }
     },
     "Menu Bar Management" : {
-
+      "comment" : "Title of the menu bar management onboarding slide."
     },
     "Menu Bar Overlay" : {
       "comment" : "Title of the menu bar overlay panel.",
@@ -29886,7 +29883,7 @@
       }
     },
     "Paint your menu bar your way. Choose solid colors, gradients, and custom shapes, then add shadows and borders for a polished finish." : {
-
+      "comment" : "Description of the menu bar appearance onboarding slide."
     },
     "Per-Profile Hooks" : {
       "comment" : "A heading for the hooks that apply only to a specific profile.",
@@ -30482,9 +30479,6 @@
           }
         }
       }
-    },
-    "Press ⌃ Space" : {
-
     },
     "Profile" : {
       "comment" : "Title of the parameter in the \"Set Menu Bar Profile\" focus filter.",
@@ -34890,7 +34884,7 @@
       }
     },
     "Save your current configuration as a named profile. Switch between layouts instantly, or let Thaw switch automatically when you change your frontmost app." : {
-
+      "comment" : "Description of the profiles onboarding slide."
     },
     "Screen Recording" : {
       "comment" : "Title of the screen recording permission.",
@@ -38588,7 +38582,7 @@
       }
     },
     "Skip" : {
-
+      "comment" : "Label for the button that skips ahead to the final onboarding slide."
     },
     "Smart" : {
       "comment" : "Localized string key for the \"Smart\" rehide strategy.",
@@ -40020,10 +40014,10 @@
       }
     },
     "Thaw gives you complete control over your menu bar — hide clutter, customize the look, and automate your workflow." : {
-
+      "comment" : "Description of the welcome onboarding slide."
     },
     "Thaw needs a couple of permissions to manage your menu bar. You can grant them now, or skip and grant them later from Settings." : {
-
+      "comment" : "Description of the permissions onboarding slide."
     },
     "The %@ Bar is aligned to the left edge of the display." : {
       "comment" : "A label that describes the location of the \\(Constants.displayName) Bar on a display.",
@@ -43140,7 +43134,7 @@
       }
     },
     "Trigger any action with a keystroke. Combine auto-rehide timers and Focus Filter integration so Thaw adapts to whatever you're doing." : {
-
+      "comment" : "Description of the hotkeys and automation onboarding slide."
     },
     "Type Hotkey" : {
       "comment" : "A label displayed in the leading segment of the hotkey recorder when it is recording.",
@@ -45999,7 +45993,7 @@
       }
     },
     "We found existing settings from Ice, the original app." : {
-
+      "comment" : "A description of the feature that allows users to import settings from the original app, Ice."
     },
     "We found settings from Ice (the original app)." : {
       "comment" : "A description of the feature that allows users to import settings from the original app, Ice.",
@@ -46122,7 +46116,7 @@
       }
     },
     "Welcome to Thaw" : {
-
+      "comment" : "Title of the welcome onboarding slide."
     },
     "When an app sends a thaw:// URL to change settings, Thaw checks if that app is whitelisted." : {
       "comment" : "A step in the process of how to use Thaw.",
@@ -46846,7 +46840,7 @@
       }
     },
     "Your data stays on your Mac — nothing is ever collected or shared." : {
-
+      "comment" : "A privacy reassurance shown on the permissions screen."
     }
   },
   "version" : "1.1"
