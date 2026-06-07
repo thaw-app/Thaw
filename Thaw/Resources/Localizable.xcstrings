@@ -1,23 +1,6 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "Connecting a display whose spacing differs from the current spacing relaunches every menu bar app. Keep spacing consistent across displays to avoid relaunches." : {
-      "comment" : "A warning that mismatched per-display spacing causes a menu bar app relaunch wave when a display is connected.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Connecting a display whose spacing differs from the current spacing relaunches every menu bar app. Keep spacing consistent across displays to avoid relaunches."
-          }
-        }
-      }
-    },
-    "No menu bar items available" : {
-      "comment" : "Text shown in the per-item hotkeys list when there are no menu bar items to assign a hotkey to."
-    },
-    "Open menu bar items" : {
-      "comment" : "A disclosure group label in the hotkeys settings pane that expands the list of per-item hotkeys."
-    },
     "(no script selected)" : {
       "comment" : "A placeholder displayed in the \"Path\" column of a hook row when no script is selected.",
       "localizations" : {
@@ -11145,9 +11128,6 @@
         }
       }
     },
-    "Click again to hide" : {
-      "comment" : "Hint shown in the onboarding menu bar management demo after items are revealed, prompting the user to click the divider again to hide them."
-    },
     "Click an empty area of the menu bar to show hidden menu bar items." : {
       "comment" : "Toggle that allows the user to enable or disable the feature of showing hidden menu bar items by clicking on an empty area of the menu bar.",
       "localizations" : {
@@ -11266,9 +11246,6 @@
           }
         }
       }
-    },
-    "Click divider to reveal" : {
-      "comment" : "Hint shown in the onboarding menu bar management demo, prompting the user to click the divider to reveal hidden items."
     },
     "Click Item" : {
       "comment" : "A button label that appears when the item is currently being displayed.",
@@ -11742,6 +11719,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "偵測到衝突的選單列管理工具"
+          }
+        }
+      }
+    },
+    "Connecting a display whose spacing differs from the current spacing relaunches every menu bar app. Keep spacing consistent across displays to avoid relaunches." : {
+      "comment" : "A warning that mismatched per-display spacing causes a menu bar app relaunch wave when a display is connected.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Connecting a display whose spacing differs from the current spacing relaunches every menu bar app. Keep spacing consistent across displays to avoid relaunches."
           }
         }
       }
@@ -27597,6 +27585,9 @@
         }
       }
     },
+    "No menu bar items available" : {
+      "comment" : "Text shown in the per-item hotkeys list when there are no menu bar items to assign a hotkey to."
+    },
     "No profile selected" : {
       "comment" : "Subtitle of the display representation of the ThawFocusFilter intent when no profile is selected.",
       "localizations" : {
@@ -29382,6 +29373,94 @@
         }
       }
     },
+    "onboarding.mockup.management.hide" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Click again to hide"
+          }
+        }
+      }
+    },
+    "onboarding.mockup.management.show" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Click divider to reveal"
+          }
+        }
+      }
+    },
+    "onboarding.mockup.profiles.personal" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Personal"
+          }
+        }
+      }
+    },
+    "onboarding.mockup.profiles.travel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Travel"
+          }
+        }
+      }
+    },
+    "onboarding.mockup.profiles.work" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Work"
+          }
+        }
+      }
+    },
+    "onboarding.mockup.style.default" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Default"
+          }
+        }
+      }
+    },
+    "onboarding.mockup.style.gradient" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradient"
+          }
+        }
+      }
+    },
+    "onboarding.mockup.style.rounded" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rounded"
+          }
+        }
+      }
+    },
     "One or more section dividers are hidden by macOS" : {
       "comment" : "A message displayed when macOS hides one or more section dividers in the menu bar.",
       "localizations" : {
@@ -29858,6 +29937,9 @@
         }
       }
     },
+    "Open menu bar items" : {
+      "comment" : "A disclosure group label in the hotkeys settings pane that expands the list of per-item hotkeys."
+    },
     "Other" : {
       "comment" : "Section title for advanced settings related to other functionality.",
       "localizations" : {
@@ -29973,6 +30055,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "其他"
+          }
+        }
+      }
+    },
+    "Page %lld of %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Page %1$lld of %2$lld"
           }
         }
       }
