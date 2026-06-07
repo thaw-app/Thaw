@@ -36,4 +36,13 @@ final class OnboardingSlideTests: XCTestCase {
             XCTAssertEqual(slide.id, slide.rawValue)
         }
     }
+
+    // MARK: - Content
+
+    func testEveryCaseHasNonEmptyTitleAndDescription() {
+        for slide in OnboardingSlide.allCases {
+            XCTAssertFalse(String(localized: slide.title).isEmpty, "title for \(slide) should not be empty")
+            XCTAssertFalse(String(localized: slide.description).isEmpty, "description for \(slide) should not be empty")
+        }
+    }
 }
