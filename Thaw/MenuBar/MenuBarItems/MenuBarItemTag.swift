@@ -53,7 +53,7 @@ struct MenuBarItemTag: Hashable, CustomStringConvertible {
     /// dynamically-named Control Center item (Live Activities, etc.)
     /// with the pattern `controlCenter:Item-\d+`.
     var isControlCenterGenericItem: Bool {
-        namespace == .controlCenter && title.wholeMatch(of: /Item-\d+/) != nil
+        namespace == .controlCenter && MarkerPairResolver.isGenericControlCenterTitle(title)
     }
 
     /// A Boolean value that indicates whether the item identified

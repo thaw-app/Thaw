@@ -162,6 +162,36 @@ enum MarkerPairResolver {
             )
         }
     }
+
+    /// True when a CG window title has the generic Item-N shape macOS assigns to
+    /// Control-Center-hosted items that publish no name of their own (Item-0,
+    /// Item-38, ...). The single source of truth for that shape, shared by
+    /// MenuBarItemTag.isControlCenterGenericItem and isCCHostedGenericSlot so the
+    /// two can never drift apart.
+    static func isGenericControlCenterTitle(_ title: String?) -> Bool {
+        guard let title else { return false }
+        return title.wholeMatch(of: /Item-\d+/) != nil
+    }
+
+    /// Returns true when a strict 1pt spatial match only confirms Control
+    /// Center hosting and does not identify the owning app. Control Center is
+    /// the CG owner of every CC-hosted NSStatusItem on macOS 26; when the
+    /// matched app IS Control Center and the window carries a generic Item-N
+    /// title, writing Control Center's PID would tag the item as a transient
+    /// CC widget (isTransientControlCenterItem true, canBeHidden false), hiding
+    /// it from profile management and the virtual-display provoke's orphan
+    /// scan. The window must be left unresolved so marker-pair can supply the
+    /// real owner PID. Named CC items (BentoBox-0, Clock, WiFi, NowPlaying, ...)
+    /// carry non-generic titles and are unaffected; a widget that publishes its
+    /// own extras-bar child (The Clock, com.fabriceleyne.theclock) matches via
+    /// that app, not Control Center, so it is never flagged here.
+    static func isCCHostedGenericSlot(
+        appBundleID: String?,
+        windowTitle: String?,
+        ccBundleID: String
+    ) -> Bool {
+        appBundleID == ccBundleID && isGenericControlCenterTitle(windowTitle)
+    }
 }
 
 /// Decides whether a Control-Center-hosted menu bar window's title
