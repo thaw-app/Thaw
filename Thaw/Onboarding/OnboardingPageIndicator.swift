@@ -8,8 +8,12 @@
 
 import SwiftUI
 
+/// A row of capsule dots marking progress through the onboarding tour, with
+/// the current page drawn wider and in the accent color.
 struct OnboardingPageIndicator: View {
+    /// The number of dots to display.
     let totalPages: Int
+    /// The zero-based index of the page to highlight.
     let currentPage: Int
 
     var body: some View {

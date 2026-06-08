@@ -10,10 +10,15 @@ import SwiftUI
 
 // MARK: - MacBook Bezel Frame
 
+/// Frames `content` inside a stylized MacBook screen — bezel, notch, and lid
+/// edge — and optionally zooms into a corner of it via ``OnboardingZoomSpec``.
 struct MacBookBezelView<Content: View>: View {
     let content: Content
+    /// Whether the screen should be zoomed into ``corner`` at ``scale``.
     var zoomed: Bool
+    /// How far the screen zooms in when ``zoomed`` is `true`.
     var scale: CGFloat
+    /// The unit point (within the zoomed content) the camera pushes into.
     var corner: UnitPoint
 
     @Environment(\.displayScale) private var displayScale
@@ -110,7 +115,12 @@ struct MacBookBezelView<Content: View>: View {
 
 // MARK: -
 
+/// The first-launch and replayable onboarding tour: a sequence of feature
+/// slides shown inside a stylized MacBook frame, ending on the permissions
+/// decision.
 struct OnboardingSheet: View {
+    /// Called when the tour is dismissed without going through
+    /// ``finishOnboarding()`` — i.e. on a replay, once the user closes it.
     var onDismiss: () -> Void
 
     @EnvironmentObject var appState: AppState
@@ -402,11 +412,13 @@ struct OnboardingSheet: View {
         }
     }
 
+    /// Steps to the next slide, unless already on the last one.
     private func advance() {
         guard !isLast else { return }
         withAnimation(.snappy) { currentSlide += 1 }
     }
 
+    /// Steps to the previous slide, unless already on the first one.
     private func goBack() {
         guard !isFirst else { return }
         withAnimation(.snappy) { currentSlide -= 1 }

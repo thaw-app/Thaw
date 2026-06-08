@@ -8,6 +8,7 @@
 
 import Foundation
 
+/// A single page of the onboarding tour, in the order it's presented.
 enum OnboardingSlide: Int, CaseIterable, Identifiable {
     case welcome
     case menuBarManagement
@@ -20,6 +21,7 @@ enum OnboardingSlide: Int, CaseIterable, Identifiable {
         rawValue
     }
 
+    /// The slide's headline, shown beneath its mockup.
     var title: LocalizedStringResource {
         switch self {
         case .welcome: "Welcome to Thaw"
@@ -31,6 +33,7 @@ enum OnboardingSlide: Int, CaseIterable, Identifiable {
         }
     }
 
+    /// The slide's body copy, shown beneath its title.
     var description: LocalizedStringResource {
         switch self {
         case .welcome:

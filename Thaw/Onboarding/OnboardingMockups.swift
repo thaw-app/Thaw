@@ -10,6 +10,8 @@ import SwiftUI
 
 // MARK: - Shared desktop pieces
 
+/// A blue gradient backdrop that stands in for the user's desktop wallpaper
+/// behind the demo menu bar.
 private struct DesktopBackground: View {
     var body: some View {
         LinearGradient(
@@ -29,15 +31,20 @@ private struct DesktopBackground: View {
 struct MenuBarTint {
     let colorScheme: ColorScheme
 
+    /// The translucent material color behind the demo menu bar.
     var background: Color {
         colorScheme == .dark ? Color.black.opacity(0.5) : Color.white.opacity(0.6)
     }
 
+    /// The color used for icons and text drawn on top of the menu bar.
     var label: Color {
         colorScheme == .dark ? .white : .black
     }
 }
 
+/// The leading "apple.logo" + app name pairing that mirrors the left side of
+/// the real macOS menu bar. An optional `tint` overrides the color derived
+/// from the current ``MenuBarTint``, e.g. when drawn over a colored bar style.
 private struct AppMenuLabels: View {
     @Environment(\.colorScheme) private var colorScheme
     var tint: Color?
@@ -124,6 +131,7 @@ struct ControlHUD<Content: View>: View {
     }
 }
 
+/// Runs `action` on the main queue after `seconds` have elapsed.
 @MainActor
 func delay(_ seconds: Double, action: @escaping @MainActor @Sendable () -> Void) {
     DispatchQueue.main.asyncAfter(deadline: .now() + seconds, execute: action)
@@ -185,6 +193,8 @@ extension View {
 
 // MARK: - Welcome
 
+/// The opening slide's mockup: just the app icon, scaling and fading in on
+/// appearance.
 struct OnboardingWelcomeMockup: View {
     @State private var appear = false
 
@@ -216,11 +226,16 @@ struct OnboardingWelcomeMockup: View {
 // when hidden. The HUD label below floats outside the laptop and stays put
 // while the screen zooms in around the divider.
 
+/// Drives the menu bar management slide: starts with the demo items hidden,
+/// then automatically reveals them, mirroring `ControlItem.HidingState`
+/// going from `.hideSection` to `.showSection`.
 @MainActor
 final class ManagementMockupModel: ObservableObject {
+    /// Whether the demo's hidden-section items are currently tucked away.
     @Published var itemsHidden = true
     private let timeline = MockupTimeline()
 
+    /// Resets to the hidden state, then schedules the automatic reveal.
     func restart() {
         let gen = timeline.restart()
         itemsHidden = true
@@ -229,11 +244,14 @@ final class ManagementMockupModel: ObservableObject {
         }
     }
 
+    /// Flips the hidden/visible state, as if the divider had been clicked.
     func toggle() {
         withAnimation(.spring(duration: 0.45, bounce: 0.1)) { itemsHidden.toggle() }
     }
 }
 
+/// Renders the demo menu bar for the management slide, with a tappable
+/// divider dot that hides or reveals the demo's status items.
 struct ManagementScreen: View {
     @ObservedObject var model: ManagementMockupModel
     @Environment(\.colorScheme) private var colorScheme
@@ -280,6 +298,8 @@ struct ManagementScreen: View {
     }
 }
 
+/// The floating capsule label for the management slide, naming the action
+/// ("Show"/"Hide") that the next automatic step will perform.
 struct ManagementHUD: View {
     @ObservedObject var model: ManagementMockupModel
 
@@ -305,17 +325,24 @@ struct ManagementHUD: View {
 // matching MenuBarTintKind (solid, gradient) and MenuBarShapeKind (capsule).
 // The style picker HUD floats unzoomed below the laptop.
 
+/// Drives the menu bar appearance slide: cycles the demo bar through its
+/// default, gradient, and rounded looks, matching `MenuBarTintKind` (solid,
+/// gradient) and `MenuBarShapeKind` (capsule).
 @MainActor
 final class AppearanceMockupModel: ObservableObject {
+    /// Display names for the styles, in the order ``selectStyle(_:)`` indexes them.
     static let styleLabels = [
         String(localized: "onboarding.mockup.style.default"),
         String(localized: "onboarding.mockup.style.gradient"),
         String(localized: "onboarding.mockup.style.rounded"),
     ]
 
+    /// The index into ``styleLabels`` of the style currently shown.
     @Published var styleIndex = 0
     private let timeline = MockupTimeline()
 
+    /// Resets to the default style, then schedules the automatic walk through
+    /// the gradient and rounded looks.
     func restart() {
         let gen = timeline.restart()
         styleIndex = 0
@@ -323,11 +350,14 @@ final class AppearanceMockupModel: ObservableObject {
         timeline.schedule(after: 2.85, generation: gen) { [weak self] in self?.selectStyle(2) }
     }
 
+    /// Switches to the style at `index`, as if its HUD button had been tapped.
     func selectStyle(_ index: Int) {
         withAnimation(.spring(duration: 0.4)) { styleIndex = index }
     }
 }
 
+/// Renders the demo menu bar for the appearance slide, switching between
+/// default, gradient, and rounded presentations as the model's style changes.
 struct AppearanceScreen: View {
     @ObservedObject var model: AppearanceMockupModel
     @Environment(\.colorScheme) private var colorScheme
@@ -411,6 +441,8 @@ struct AppearanceScreen: View {
     }
 }
 
+/// The floating capsule style picker for the appearance slide, highlighting
+/// whichever style the model is currently showing.
 struct AppearanceHUD: View {
     @ObservedObject var model: AppearanceMockupModel
 
@@ -440,22 +472,30 @@ struct AppearanceHUD: View {
 // Demonstrates the trigger loop: key combo toast appears, then the hidden
 // section snaps open — matching MenuBarSection.show() / .hide() flow.
 
+/// Drives the hotkeys & automation slide: starts with the demo's hidden items
+/// tucked away, then automatically "presses" the hotkey to reveal them,
+/// matching the `MenuBarSection.show()` / `.hide()` trigger loop.
 @MainActor
 final class HotkeysMockupModel: ObservableObject {
+    /// Whether the demo's hidden-section items are currently shown.
     @Published var itemsVisible = false
     private let timeline = MockupTimeline()
 
+    /// Resets to the hidden state, then schedules the automatic hotkey trigger.
     func restart() {
         let gen = timeline.restart()
         itemsVisible = false
         timeline.schedule(after: 1.00, generation: gen) { [weak self] in self?.triggerHotkey() }
     }
 
+    /// Toggles item visibility, as if the demo hotkey had just been pressed.
     func triggerHotkey() {
         withAnimation(.spring(duration: 0.4, bounce: 0.1)) { itemsVisible.toggle() }
     }
 }
 
+/// Renders the demo menu bar for the hotkeys slide, fading its hidden-section
+/// items in and out as the model's hotkey trigger fires.
 struct HotkeysScreen: View {
     @ObservedObject var model: HotkeysMockupModel
     @Environment(\.colorScheme) private var colorScheme
@@ -492,6 +532,8 @@ struct HotkeysScreen: View {
     }
 }
 
+/// The floating capsule button for the hotkeys slide, showing the demo key
+/// combo and letting the user replay the trigger by tapping it.
 struct HotkeysHUD: View {
     @ObservedObject var model: HotkeysMockupModel
 
@@ -519,8 +561,13 @@ struct HotkeysHUD: View {
 // menu bar layout — shown here via a Focus indicator triggering a banner
 // and a profile-driven item swap.
 
+/// Drives the profiles slide: cycles through a few demo Focus modes,
+/// mirroring `ProfileManager`'s macOS Focus integration where a system Focus
+/// change auto-activates a linked profile and swaps the menu bar layout.
 @MainActor
 final class ProfilesMockupModel: ObservableObject {
+    /// A demo Focus mode: its display name, symbol, and the menu bar items
+    /// that profile shows.
     struct FocusMode {
         let name: String
         let symbol: String
@@ -537,13 +584,17 @@ final class ProfilesMockupModel: ObservableObject {
         FocusMode(name: String(localized: "onboarding.mockup.profiles.travel"), symbol: "airplane", items: ["wifi.slash", "personalhotspot", "battery.25"]),
     ]
 
+    /// The index into ``focusModes`` of the Focus mode currently active.
     @Published var focusIndex = 0
     private let timeline = MockupTimeline()
 
+    /// The Focus mode currently shown by the demo.
     var active: FocusMode {
         Self.focusModes[focusIndex]
     }
 
+    /// Resets to the first Focus mode, then schedules the automatic walk
+    /// through the remaining modes.
     func restart() {
         let gen = timeline.restart()
         focusIndex = 0
@@ -551,12 +602,16 @@ final class ProfilesMockupModel: ObservableObject {
         timeline.schedule(after: 2.85, generation: gen) { [weak self] in self?.switchFocus(to: 2) }
     }
 
+    /// Activates the Focus mode at `index`, as if the system Focus had
+    /// changed and the linked profile had taken over.
     func switchFocus(to index: Int) {
         guard index != focusIndex else { return }
         withAnimation(.spring(duration: 0.35)) { focusIndex = index }
     }
 }
 
+/// Renders the demo menu bar for the profiles slide, swapping its status
+/// items and Focus indicator as the active profile changes.
 struct ProfilesScreen: View {
     @ObservedObject var model: ProfilesMockupModel
     @Environment(\.colorScheme) private var colorScheme
@@ -605,6 +660,8 @@ struct ProfilesScreen: View {
     }
 }
 
+/// The floating capsule profile picker for the profiles slide, highlighting
+/// whichever Focus mode the model is currently showing.
 struct ProfilesHUD: View {
     @ObservedObject var model: ProfilesMockupModel
 
