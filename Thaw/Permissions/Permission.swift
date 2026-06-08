@@ -81,6 +81,10 @@ class Permission: ObservableObject, Identifiable {
     }
 
     /// Sets up the internal observers for the permission.
+    ///
+    /// Polls ``check`` on a timer until the permission is granted, at which
+    /// point the timer cancels itself — there's no need to keep checking once
+    /// the app already has what it needs.
     private func configureCancellables() {
         timerCancellable = Timer.publish(every: 3, tolerance: 0.5, on: .main, in: .default)
             .autoconnect()
@@ -139,6 +143,8 @@ class Permission: ObservableObject, Identifiable {
 
 // MARK: - AccessibilityPermission
 
+/// The Accessibility permission, required for Thaw to detect, move, and
+/// interact with menu bar items on the user's behalf.
 final class AccessibilityPermission: Permission {
     init() {
         super.init(
@@ -164,6 +170,9 @@ final class AccessibilityPermission: Permission {
 
 // MARK: - ScreenRecordingPermission
 
+/// The Screen Recording permission, used for sampling menu bar colors,
+/// previewing menu bar items, and visual search. Optional — Thaw can run in
+/// a limited mode without it.
 final class ScreenRecordingPermission: Permission {
     init() {
         super.init(

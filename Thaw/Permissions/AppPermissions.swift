@@ -26,14 +26,20 @@ protocol PermissionsManaging: ObservableObject {
 final class AppPermissions: ObservableObject, PermissionsManaging {
     /// Keys to access individual permissions.
     enum PermissionKey {
+        /// Identifies ``AppPermissions/accessibility``.
         case accessibility
+        /// Identifies ``AppPermissions/screenRecording``.
         case screenRecording
     }
 
     /// The state of the app's granted permissions.
     enum PermissionsState {
+        /// At least one required permission hasn't been granted.
         case missing
+        /// Every permission, required or not, has been granted.
         case hasAll
+        /// All required permissions are granted, but at least one optional
+        /// permission is missing — the app can run in limited mode.
         case hasRequired
     }
 

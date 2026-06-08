@@ -8,6 +8,8 @@
 
 import SwiftUI
 
+/// The window that hosts the permissions decision — either the first-launch
+/// onboarding tour or, on later launches, the standalone permissions view.
 struct PermissionsWindow: Scene {
     @ObservedObject var appState: AppState
 
