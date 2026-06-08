@@ -9,6 +9,63 @@
 import AppKit
 import Foundation
 
+/// Pure-value retry-state tracker for `VirtualDisplayProvoker`. Extracted so
+/// the bounded retry / backoff logic can be unit-tested without `@MainActor`
+/// or live CG / AX dependencies.
+struct ProvocationRetryState {
+    /// Per-window failure record: the cumulative strike count and the
+    /// earliest time another attempt may be made.
+    private(set) var failedAttempts = [CGWindowID: (strikes: Int, retryAfter: Date)]()
+    /// Ordered retry delays indexed by strike count (1-based). After the
+    /// last entry is consumed the window is permanently exhausted for the
+    /// session.
+    let retryBackoffs: [TimeInterval]
+
+    init(retryBackoffs: [TimeInterval] = [120, 600]) {
+        self.retryBackoffs = retryBackoffs
+    }
+
+    /// Returns the recorded failure entry for `windowID`, or `nil` if no
+    /// attempt has been recorded yet.
+    func attempt(for windowID: CGWindowID) -> (strikes: Int, retryAfter: Date)? {
+        failedAttempts[windowID]
+    }
+
+    /// Returns `true` when `windowID` has used up every retry in
+    /// `retryBackoffs` and should never be provoked again this session.
+    func isExhausted(_ windowID: CGWindowID) -> Bool {
+        guard let attempt = failedAttempts[windowID] else { return false }
+        return attempt.strikes > retryBackoffs.count
+    }
+
+    /// Returns `true` when `windowID` may be provoked now: either it has
+    /// never failed, or it has failed but is neither exhausted nor still
+    /// waiting out its backoff.
+    func isEligibleForRetry(_ windowID: CGWindowID, now: Date) -> Bool {
+        guard let attempt = failedAttempts[windowID] else { return true }
+        return !isExhausted(windowID) && now >= attempt.retryAfter
+    }
+
+    /// Records a failed hold for `windowID`, scheduling the next
+    /// backed-off retry or marking it exhausted once every backoff has
+    /// been used.
+    mutating func recordFailedAttempt(for windowID: CGWindowID, now: Date) {
+        let strikes = (failedAttempts[windowID]?.strikes ?? 0) + 1
+        guard strikes <= retryBackoffs.count else {
+            failedAttempts[windowID] = (strikes: strikes, retryAfter: .distantFuture)
+            return
+        }
+        let retryAfter = now.addingTimeInterval(retryBackoffs[strikes - 1])
+        failedAttempts[windowID] = (strikes: strikes, retryAfter: retryAfter)
+    }
+
+    /// Removes entries for windowIDs that are no longer in the active
+    /// orphan set so the tracker does not grow unboundedly.
+    mutating func pruneStaleEntries(keepingOnly windowIDs: Set<CGWindowID>) {
+        failedAttempts = failedAttempts.filter { windowIDs.contains($0.key) }
+    }
+}
+
 /// Briefly creates a virtual display when, on a single physical display, menu
 /// bar items remain unresolved (nil sourcePID), so the window server publishes
 /// the bundle-ID marker windows that marker-pair resolution needs. Once the
@@ -47,22 +104,27 @@ final class VirtualDisplayProvoker {
 
     /// When each currently-unresolved orphan windowID was first observed.
     private var firstSeenUnresolved = [CGWindowID: Date]()
-    /// WindowIDs that a provoke already failed to resolve. Every field case
-    /// resolves within a second of the markers publishing or never resolves at
-    /// all (retrying the same window produced an identical 0/1 each time), so a
-    /// single failed hold means a display will not help this window and we stop
-    /// provoking for it. Keyed on windowID, not source PID, because these orphans
-    /// have no resolvable source PID; the set is in-memory so a relaunch (which
-    /// assigns a fresh windowID) still gets one clean attempt.
-    private var blacklisted = Set<CGWindowID>()
+    /// Retry / backoff state for windowIDs that a provoke failed to resolve.
+    /// Most field cases resolve within a second of the markers publishing, but
+    /// not every machine is that fast (slower hardware, system load, multiple
+    /// competing orphans in the same hold), so a single missed hold is not
+    /// proof the display will never help this window. Each failure is given a
+    /// backed-off retry; only after the retries are exhausted does the
+    /// windowID stop being provoked for the rest of the session. Keyed on
+    /// windowID, not source PID, because these orphans have no resolvable
+    /// source PID; the map is in-memory so a relaunch (which assigns a fresh
+    /// windowID) always gets a clean set of attempts.
+    private var retryState = ProvocationRetryState()
 
     /// How long an orphan must stay unresolved before provoking, so we do not
     /// fire for items the normal AX / marker pass resolves within a cycle.
     private let unresolvedGrace: TimeInterval = 3
-    /// Maximum time to keep the virtual display up waiting for resolution. Every
-    /// field resolution landed under a second, so this is generous headroom; a
-    /// window that has not resolved by here is blacklisted rather than retried.
-    private let maxHold: TimeInterval = 4
+    /// Maximum time to keep the virtual display up waiting for resolution. Most
+    /// field resolutions land under a second, but this leaves headroom for
+    /// slower machines before a hold counts as a miss; a window that has not
+    /// resolved by here earns a backed-off retry rather than being skipped
+    /// outright.
+    private let maxHold: TimeInterval = 8
     /// Poll cadence while waiting for markers to publish and orphans to resolve.
     private let pollInterval: Duration = .milliseconds(250)
 
@@ -113,7 +175,7 @@ final class VirtualDisplayProvoker {
         // any virtual display we created.
         guard displayCount == 1, !orphans.isEmpty else {
             firstSeenUnresolved.removeAll()
-            blacklisted.removeAll()
+            retryState = ProvocationRetryState()
             return
         }
 
@@ -133,7 +195,7 @@ final class VirtualDisplayProvoker {
 
         // Forget state for windowIDs that are no longer orphaned.
         firstSeenUnresolved = firstSeenUnresolved.filter { orphans.contains($0.key) }
-        blacklisted = blacklisted.intersection(orphans)
+        retryState.pruneStaleEntries(keepingOnly: orphans)
         for windowID in orphans where firstSeenUnresolved[windowID] == nil {
             firstSeenUnresolved[windowID] = now
         }
@@ -145,7 +207,7 @@ final class VirtualDisplayProvoker {
             else {
                 return false
             }
-            return !blacklisted.contains(windowID)
+            return retryState.isEligibleForRetry(windowID, now: now)
         }
 
         guard !eligible.isEmpty else {
@@ -157,16 +219,24 @@ final class VirtualDisplayProvoker {
                     let age = firstSeenUnresolved[windowID].map { now.timeIntervalSince($0) } ?? 0
                     return "\(windowID):\(String(format: "%.1f", age))s"
                 }
-                let blocked = orphans.sorted().filter { blacklisted.contains($0) }
+                let waiting = orphans.sorted().compactMap { windowID -> String? in
+                    guard let attempt = retryState.attempt(for: windowID), attempt.retryAfter > now else {
+                        return nil
+                    }
+                    return "\(windowID):strike\(attempt.strikes)/retryIn\(String(format: "%.0f", attempt.retryAfter.timeIntervalSince(now)))s"
+                }
+                let exhausted = orphans.sorted().filter { retryState.isExhausted($0) }
                 diagLog.info(
-                    "VirtualDisplayProvoke: not yet eligible (orphan ages \(ages), grace \(unresolvedGrace)s, blacklisted \(blocked))"
+                    "VirtualDisplayProvoke: not yet eligible (orphan ages \(ages), grace \(unresolvedGrace)s, "
+                        + "in backoff \(waiting), exhausted \(exhausted))"
                 )
             }
             // Re-check at grace expiry so firing does not depend on an incidental
             // cache cycle landing after the grace elapses. Only worth doing while
-            // a non-blacklisted orphan is still inside its grace window; once every
-            // orphan is blacklisted there is nothing that will become eligible.
-            if orphans.contains(where: { !blacklisted.contains($0) }) {
+            // a non-exhausted orphan can still become eligible (either still inside
+            // its grace window or waiting out a backoff); once every orphan has
+            // exhausted its retries there is nothing that will become eligible.
+            if orphans.contains(where: { !retryState.isExhausted($0) }) {
                 scheduleRecheckIfNeeded()
             }
             return
@@ -257,7 +327,7 @@ final class VirtualDisplayProvoker {
             let stillUnresolved = await unresolvedTargets(targets)
             // Remember the last in-hold result: this, taken while the phantom is up
             // and the markers are present, is the authoritative "did the provoke
-            // resolve it" signal that the blacklist decision uses.
+            // resolve it" signal that the retry/skip decision uses.
             heldUnresolved = stillUnresolved
             let elapsed = Date().timeIntervalSince(start)
             diagLog.info(
@@ -272,8 +342,10 @@ final class VirtualDisplayProvoker {
             }
         }
         if !resolvedAll {
+            let descriptions = await describeOrphans(heldUnresolved)
             diagLog.info(
-                "VirtualDisplayProvoke: gave up after \(String(format: "%.2f", maxHold))s; some orphans still unresolved (blacklisting)"
+                "VirtualDisplayProvoke: gave up after \(String(format: "%.2f", maxHold))s; "
+                    + "orphan(s) still unresolved: \(descriptions)"
             )
         }
 
@@ -297,20 +369,40 @@ final class VirtualDisplayProvoker {
             "VirtualDisplayProvoke: after teardown \(targets.count - stillUnresolved.count)/\(targets.count) target(s) still resolved (persistence check)"
         )
 
-        // Blacklist any target that did not resolve during the hold (while the
-        // phantom and its markers were present) so it is not provoked again. A
-        // display either makes the markers publish (resolves within ~1s) or it does
-        // not, in which case repeating the disruption every few minutes just churns
-        // the display arrangement for nothing (issue #661). This uses the in-hold
-        // result, not the post-teardown persistence check above: a flapping orphan
-        // can momentarily read as resolved at the instant of that check and thereby
-        // dodge the blacklist, only to provoke again seconds later, observed as a
-        // back-to-back double provoke in the field. A relaunch assigns a fresh
-        // windowID, which is not blacklisted, so a genuinely new instance still gets
-        // one clean attempt.
+        // Record a failed attempt for any target that did not resolve during
+        // the hold (while the phantom and its markers were present), so it
+        // backs off rather than being provoked again immediately. A display
+        // usually either makes the markers publish within about a second or it
+        // does not, so repeating the disruption every few minutes would just
+        // churn the display arrangement for nothing (issue #661) — but a
+        // single miss is not proof the display can never help this window
+        // (slower hardware, system load, or a marker that was a beat late all
+        // produce an identical-looking miss), so the window earns a small,
+        // backed-off number of further attempts before being skipped for the
+        // rest of the session. This uses the in-hold result, not the
+        // post-teardown persistence check above: a flapping orphan can
+        // momentarily read as resolved at the instant of that check and
+        // thereby dodge the count, only to provoke again seconds later,
+        // observed as a back-to-back double provoke in the field. A relaunch
+        // assigns a fresh windowID, which has no recorded attempts, so a
+        // genuinely new instance always gets a full set of clean attempts.
         if !heldUnresolved.isEmpty {
-            blacklisted.formUnion(heldUnresolved)
-            diagLog.info("VirtualDisplayProvoke: blacklisted \(heldUnresolved.sorted()); will not provoke these again")
+            let now = Date()
+            let descriptions = await describeOrphans(heldUnresolved)
+            for windowID in heldUnresolved {
+                retryState.recordFailedAttempt(for: windowID, now: now)
+            }
+            let exhausted = heldUnresolved.filter { retryState.isExhausted($0) }.sorted()
+            let retrying = heldUnresolved.subtracting(Set(exhausted)).sorted().compactMap { windowID -> String? in
+                guard let attempt = retryState.attempt(for: windowID) else {
+                    return nil
+                }
+                return "\(windowID):strike\(attempt.strikes) retry in \(String(format: "%.0f", attempt.retryAfter.timeIntervalSince(now)))s"
+            }
+            diagLog.info(
+                "VirtualDisplayProvoke: did not resolve \(descriptions); "
+                    + "will retry \(retrying); permanently skipping \(exhausted) for this session"
+            )
         }
 
         // Propagate the freshly resolved sourcePIDs into the manager's
@@ -359,6 +451,30 @@ final class VirtualDisplayProvoker {
         let items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
         return targets.filter { windowID in
             items.contains { $0.windowID == windowID && $0.sourcePID == nil }
+        }
+    }
+
+    /// Describes each of the given windowIDs by its current placeholder tag
+    /// and on-screen size (e.g. "5992 (controlCenter:Item-3, 22.0x24.0)").
+    ///
+    /// An item that never resolves never logs its real bundle ID anywhere
+    /// (marker-pair resolution, the only path that would name it, never runs
+    /// for it again), so without this a stuck widget like Little Snitch is
+    /// invisible in the field log under its own name. Logging the placeholder
+    /// tag and icon size lets it be correlated by hand against the saved
+    /// profile's `<bundleID>:Item-N` entry even when automatic resolution
+    /// never completes.
+    private func describeOrphans(_ windowIDs: Set<CGWindowID>) async -> [String] {
+        guard !windowIDs.isEmpty else {
+            return []
+        }
+        let items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+        return windowIDs.sorted().map { windowID in
+            guard let item = items.first(where: { $0.windowID == windowID }) else {
+                return "\(windowID) (no longer present)"
+            }
+            let size = item.bounds.size
+            return "\(windowID) (\(item.tag.description), \(String(format: "%.1fx%.1f", size.width, size.height)))"
         }
     }
 }

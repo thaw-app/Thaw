@@ -164,6 +164,27 @@ enum MarkerPairResolver {
     }
 }
 
+extension MarkerPairResolver {
+    /// Returns `true` when the spatial match only confirms CC hosting
+    /// and does not identify the owning app. Control Center is the CG
+    /// owner for all CC-hosted NSStatusItems; when the matched app IS CC
+    /// and the window title is a generic "Item-N" slot, writing CC's PID
+    /// would falsely tag the item as a transient CC widget
+    /// (`isTransientControlCenterItem=true`, `canBeHidden=false`), hiding
+    /// it from profile management and VirtualDisplayProvoker's orphan
+    /// scan. The window must be left unresolved so marker-pair can supply
+    /// the correct owner PID. Named CC items (BentoBox-0, Clock, WiFi,
+    /// NowPlaying, …) carry non-generic titles and are unaffected.
+    static func isCCHostedGenericSlot(
+        matchedBundleID: String?,
+        windowTitle: String?,
+        ccBundleID: String
+    ) -> Bool {
+        matchedBundleID == ccBundleID
+            && windowTitle?.wholeMatch(of: /Item-\d+/) != nil
+    }
+}
+
 /// Decides whether a Control-Center-hosted menu bar window's title
 /// indicates which application owns it, used by SourcePIDCache's
 /// corroborated spatial fallback to attribute an icon whose own app
