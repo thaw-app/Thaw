@@ -23,4 +23,5 @@ struct OnboardingPageIndicator: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(String(localized: "Page \(currentPage + 1) of \(totalPages)"))
+    }
 }
