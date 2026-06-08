@@ -358,8 +358,12 @@
         }
       }
     },
+    "%@ can work in a limited mode without Screen Recording." : {
+
+    },
     "%@ can work in a limited mode without this permission." : {
       "comment" : "A callout box that explains that the app can work in a limited mode without a particular permission.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -6608,6 +6612,7 @@
     },
     "Arrange menu bar items." : {
       "comment" : "A detail about the \"Accessibility\" permission, describing the app's ability to rearrange menu bar items.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -9226,6 +9231,7 @@
     },
     "Change the menu bar's appearance." : {
       "comment" : "Detail about the \"Screen Recording\" permission, describing how to change the menu bar's appearance.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -11366,6 +11372,9 @@
         }
       }
     },
+    "Click menu bar items on your behalf, such as when using the search bar." : {
+
+    },
     "Columns" : {
       "comment" : "A label displayed above a stepper that lets the user select the number of columns in the grid layout.",
       "localizations" : {
@@ -13400,6 +13409,9 @@
         }
       }
     },
+    "Detect the menu bar items on your Mac and where they're positioned." : {
+
+    },
     "Development" : {
       "comment" : "A label for the \"Development\" segment in the update channel picker.",
       "localizations" : {
@@ -13878,6 +13890,7 @@
     },
     "Display images of individual menu bar items." : {
       "comment" : "Descriptive detail for the \"Screen Recording\" permission, describing the app's ability to display images of individual menu bar items.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -18163,6 +18176,9 @@
         }
       }
     },
+    "Find menu bar items visually when searching." : {
+
+    },
     "Focus" : {
       "comment" : "Localized string key for the \"Focus\" case in the `RehideStrategy` enum.",
       "localizations" : {
@@ -18400,6 +18416,9 @@
           }
         }
       }
+    },
+    "Found existing settings. Icon positions can't be restored." : {
+
     },
     "Full" : {
       "comment" : "Localized string key for the menu bar shape kind that takes up the full menu bar.",
@@ -18641,6 +18660,7 @@
     },
     "Get real-time information about the menu bar." : {
       "comment" : "A detail about the \"Accessibility\" permission, explaining that the app needs permission to get real-time information about the menu bar.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -21268,6 +21288,7 @@
     },
     "Icon positions can't be restored." : {
       "comment" : "A footnote explaining that icon positions cannot be restored when importing settings from Ice.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -26870,6 +26891,9 @@
           }
         }
       }
+    },
+    "Move menu bar items to rearrange or hide them." : {
+
     },
     "Move the New Items badge to choose where newly detected items will appear." : {
       "comment" : "A description of how to use the New Items badge.",
@@ -34713,6 +34737,9 @@
         }
       }
     },
+    "Sample colors from the menu bar to adjust its tint and appearance." : {
+
+    },
     "Save Current" : {
       "comment" : "A button that saves the current profile when pressed.",
       "localizations" : {
@@ -37815,6 +37842,9 @@
           }
         }
       }
+    },
+    "Show live previews of your menu bar items." : {
+
     },
     "Show Log Files in Finder" : {
       "comment" : "A button that opens the directory containing diagnostic log files.",
@@ -46061,6 +46091,7 @@
     },
     "We found existing settings from Ice, the original app." : {
       "comment" : "A description of the feature that allows users to import settings from the original app, Ice.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
