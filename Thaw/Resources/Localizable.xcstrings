@@ -1,23 +1,6 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "Connecting a display whose spacing differs from the current spacing relaunches every menu bar app. Keep spacing consistent across displays to avoid relaunches." : {
-      "comment" : "A warning that mismatched per-display spacing causes a menu bar app relaunch wave when a display is connected.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Connecting a display whose spacing differs from the current spacing relaunches every menu bar app. Keep spacing consistent across displays to avoid relaunches."
-          }
-        }
-      }
-    },
-    "No menu bar items available" : {
-      "comment" : "Text shown in the per-item hotkeys list when there are no menu bar items to assign a hotkey to."
-    },
-    "Open menu bar items" : {
-      "comment" : "A disclosure group label in the hotkeys settings pane that expands the list of per-item hotkeys."
-    },
     "(no script selected)" : {
       "comment" : "A placeholder displayed in the \"Path\" column of a hook row when no script is selected.",
       "localizations" : {
@@ -375,8 +358,127 @@
         }
       }
     },
+    "%@ can work in a limited mode without Screen Recording." : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ can work in a limited mode without Screen Recording."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ can work in a limited mode without Screen Recording."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ can work in a limited mode without Screen Recording."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ can work in a limited mode without Screen Recording."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ can work in a limited mode without Screen Recording."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ can work in a limited mode without Screen Recording."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ can work in a limited mode without Screen Recording."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ can work in a limited mode without Screen Recording."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ can work in a limited mode without Screen Recording."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ can work in a limited mode without Screen Recording."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ can work in a limited mode without Screen Recording."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ can work in a limited mode without Screen Recording."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ can work in a limited mode without Screen Recording."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ can work in a limited mode without Screen Recording."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ can work in a limited mode without Screen Recording."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ can work in a limited mode without Screen Recording."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ can work in a limited mode without Screen Recording."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ can work in a limited mode without Screen Recording."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ can work in a limited mode without Screen Recording."
+          }
+        }
+      }
+    },
     "%@ can work in a limited mode without this permission." : {
       "comment" : "A callout box that explains that the app can work in a limited mode without a particular permission.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -1097,6 +1199,7 @@
     },
     "%@ needs this to:" : {
       "comment" : "A section within a permission box that lists the reasons why a particular permission is needed. The argument is the name of the app.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -1216,6 +1319,7 @@
     },
     "%@ needs your permission to manage the menu bar." : {
       "comment" : "A paragraph explaining the app's purpose and its commitment to user privacy.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -2553,6 +2657,7 @@
     },
     "Absolutely no personal information is collected or stored." : {
       "comment" : "A description of how user data is handled by the app.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -3866,6 +3971,125 @@
         }
       }
     },
+    "Almost there! %@ needs the permissions below to manage your menu bar." : {
+      "comment" : "Subtitle on the permissions screen reassuring the user they're nearly done. The argument is the name of the app.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Almost there! %@ needs the permissions below to manage your menu bar."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Almost there! %@ needs the permissions below to manage your menu bar."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Almost there! %@ needs the permissions below to manage your menu bar."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Almost there! %@ needs the permissions below to manage your menu bar."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Almost there! %@ needs the permissions below to manage your menu bar."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Almost there! %@ needs the permissions below to manage your menu bar."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Almost there! %@ needs the permissions below to manage your menu bar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Almost there! %@ needs the permissions below to manage your menu bar."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Almost there! %@ needs the permissions below to manage your menu bar."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Almost there! %@ needs the permissions below to manage your menu bar."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Almost there! %@ needs the permissions below to manage your menu bar."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Almost there! %@ needs the permissions below to manage your menu bar."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Almost there! %@ needs the permissions below to manage your menu bar."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Almost there! %@ needs the permissions below to manage your menu bar."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Almost there! %@ needs the permissions below to manage your menu bar."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Almost there! %@ needs the permissions below to manage your menu bar."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Almost there! %@ needs the permissions below to manage your menu bar."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Almost there! %@ needs the permissions below to manage your menu bar."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Almost there! %@ needs the permissions below to manage your menu bar."
+          }
+        }
+      }
+    },
     "Always show hidden items" : {
       "comment" : "A toggle that allows users to configure whether hidden menu bar items should always be visible in the native menu bar on a particular display.",
       "localizations" : {
@@ -4109,14 +4333,14 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Always show hidden menu bar items in the menu bar."
+            "state" : "translated",
+            "value" : "Vždy zobrazovat skryté položky v řádku nabídek."
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Always show hidden menu bar items in the menu bar."
+            "state" : "translated",
+            "value" : "Versteckte Menüleisteneinträge immer in der Menüleiste anzeigen."
           }
         },
         "es" : {
@@ -4139,8 +4363,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Always show hidden menu bar items in the menu bar."
+            "state" : "translated",
+            "value" : "Selalu tampilkan item bar menu tersembunyi pada bar menu."
           }
         },
         "it" : {
@@ -4157,14 +4381,14 @@
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Always show hidden menu bar items in the menu bar."
+            "state" : "translated",
+            "value" : "메뉴 막대에 숨겨진 메뉴 막대 항목을 항상 표시합니다."
           }
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Always show hidden menu bar items in the menu bar."
+            "state" : "translated",
+            "value" : "Toon verborgen menubalk-items altijd in de menubalk op dit scherm."
           }
         },
         "pl" : {
@@ -4187,8 +4411,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Always show hidden menu bar items in the menu bar."
+            "state" : "translated",
+            "value" : "แสดงรายการแถบเมนูที่ซ่อนไว้เสมอในแถบเมนูบนหน้าจอนี้"
           }
         },
         "tr" : {
@@ -4211,8 +4435,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Always show hidden menu bar items in the menu bar."
+            "state" : "translated",
+            "value" : "始终在该显示器的菜单栏中显示隐藏的项目。"
           }
         },
         "zh-Hant" : {
@@ -5061,14 +5285,14 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply global settings to all displays?"
+            "state" : "translated",
+            "value" : "Chcete použít obecné nastavení na všechny obrazovky?"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply global settings to all displays?"
+            "state" : "translated",
+            "value" : "Globale Einstellungen auf allen Bildschirmen anwenden?"
           }
         },
         "es" : {
@@ -5091,8 +5315,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply global settings to all displays?"
+            "state" : "translated",
+            "value" : "Terapkan pengaturan global ke semua layar?"
           }
         },
         "it" : {
@@ -5115,8 +5339,8 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply global settings to all displays?"
+            "state" : "translated",
+            "value" : "Algemene instellingen toepassen op alle schermen?"
           }
         },
         "pl" : {
@@ -5127,20 +5351,20 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply global settings to all displays?"
+            "state" : "translated",
+            "value" : "Aplicar configurações globais a todas as telas?"
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply global settings to all displays?"
+            "state" : "translated",
+            "value" : "Применить общие настройки ко всем дисплеям?"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply global settings to all displays?"
+            "state" : "translated",
+            "value" : "ใช้การตั้งค่าโดยรวมกับทุกจอแสดงผล?"
           }
         },
         "tr" : {
@@ -5163,8 +5387,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply global settings to all displays?"
+            "state" : "translated",
+            "value" : "是否将全局设置应用到所有显示器？"
           }
         },
         "zh-Hant" : {
@@ -5186,8 +5410,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply spacing change?"
+            "state" : "translated",
+            "value" : "Abstandsänderung übernehmen?"
           }
         },
         "es" : {
@@ -5210,8 +5434,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply spacing change?"
+            "state" : "translated",
+            "value" : "Terapkan perubahan jarak?"
           }
         },
         "it" : {
@@ -5234,8 +5458,8 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply spacing change?"
+            "state" : "translated",
+            "value" : "Afstand aanpassen?"
           }
         },
         "pl" : {
@@ -5299,14 +5523,14 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply the global template above to every connected and previously-seen display. Newly connected displays are also seeded from this template."
+            "state" : "translated",
+            "value" : "Použít obecné nastavení na všechny aktuálně nebo dříve připojené obrazovky. Nově připojené obrazovky také převezmou nastavené z této šablony."
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply the global template above to every connected and previously-seen display. Newly connected displays are also seeded from this template."
+            "state" : "translated",
+            "value" : "Übernimm die globale Vorlage für alle verbundene und bereits bekannte Bildschirme. Neu verbundene Bildschirme erben auch von dieser Vorlage."
           }
         },
         "es" : {
@@ -5329,8 +5553,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply the global template above to every connected and previously-seen display. Newly connected displays are also seeded from this template."
+            "state" : "translated",
+            "value" : "Terapkan templat global ke semua layar yang terhubung dan yang pernah terdeteksi. Layar yang baru dihubungkan juga akan menggunakan templat ini secara otomatis."
           }
         },
         "it" : {
@@ -5353,8 +5577,8 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply the global template above to every connected and previously-seen display. Newly connected displays are also seeded from this template."
+            "state" : "translated",
+            "value" : "Pas deze algemene sjabloon toe op elk aangesloten en eerder weergegeven scherm. Ook nieuw aangesloten schermen worden op basis van deze sjabloon ingesteld."
           }
         },
         "pl" : {
@@ -5365,8 +5589,8 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply the global template above to every connected and previously-seen display. Newly connected displays are also seeded from this template."
+            "state" : "translated",
+            "value" : "Aplicar template global acima a todas as telas conectadas e anteriormente vistas. Novas telas conectadas também utilizarão este template como base."
           }
         },
         "ru" : {
@@ -5377,8 +5601,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply the global template above to every connected and previously-seen display. Newly connected displays are also seeded from this template."
+            "state" : "translated",
+            "value" : "ใช้เทมเพลตโดยรวมด้านบนกับทุกจอที่เชื่อมต่ออยู่และเคยเชื่อมต่อมาก่อน จอที่เชื่อมต่อใหม่จะได้รับการตั้งค่าเริ่มต้นจากเทมเพลตนี้ด้วย"
           }
         },
         "tr" : {
@@ -5401,8 +5625,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply the global template above to every connected and previously-seen display. Newly connected displays are also seeded from this template."
+            "state" : "translated",
+            "value" : "将上面的全局模板应用于所有已连接且之前曾显示过的显示器。新连接的显示器也将以该模板为初始配置。"
           }
         },
         "zh-Hant" : {
@@ -5537,14 +5761,14 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply to All Displays"
+            "state" : "translated",
+            "value" : "Použít na všechny obrazovky"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply to All Displays"
+            "state" : "translated",
+            "value" : "Auf alle Bildschirme anwenden"
           }
         },
         "es" : {
@@ -5567,8 +5791,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply to All Displays"
+            "state" : "translated",
+            "value" : "Terapkan ke Semua Layar"
           }
         },
         "it" : {
@@ -5585,14 +5809,14 @@
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply to All Displays"
+            "state" : "translated",
+            "value" : "모든 디스플레이에 적용"
           }
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply to All Displays"
+            "state" : "translated",
+            "value" : "Toepassen op alle schermen"
           }
         },
         "pl" : {
@@ -5603,20 +5827,20 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply to All Displays"
+            "state" : "translated",
+            "value" : "Aplicar em todas as telas"
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply to All Displays"
+            "state" : "translated",
+            "value" : "Применить ко всем дисплеям"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply to All Displays"
+            "state" : "translated",
+            "value" : "ใช้กับทุกจอแสดงผล"
           }
         },
         "tr" : {
@@ -5639,8 +5863,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply to All Displays"
+            "state" : "translated",
+            "value" : "应用到所有显示器"
           }
         },
         "zh-Hant" : {
@@ -5656,14 +5880,14 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Applying briefly relaunches apps with menu bar items so they pick up the new spacing."
+            "state" : "translated",
+            "value" : "Po použití se krátce restartují aplikace s položkami v řádku nabídek, tím se nové rozestupy aktivují."
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Applying briefly relaunches apps with menu bar items so they pick up the new spacing."
+            "state" : "translated",
+            "value" : "Das Anwenden führt zu einem kurzen Neustart der Anwendungen, die Menüleisteneinträge haben, damit sie den neuen Abstand annehmen."
           }
         },
         "es" : {
@@ -5686,8 +5910,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Applying briefly relaunches apps with menu bar items so they pick up the new spacing."
+            "state" : "translated",
+            "value" : "Penerapan jarak baru dapat memulai ulang sementara aplikasi yang memiliki item bar menu."
           }
         },
         "it" : {
@@ -5710,8 +5934,8 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Applying briefly relaunches apps with menu bar items so they pick up the new spacing."
+            "state" : "translated",
+            "value" : "Als je ‘Toepassen’ klikt, worden apps met menubalk-items kort opnieuw gestart, zodat de nieuwe afstand wordt toegepast."
           }
         },
         "pl" : {
@@ -5734,8 +5958,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Applying briefly relaunches apps with menu bar items so they pick up the new spacing."
+            "state" : "translated",
+            "value" : "การใช้งานจะรีสตาร์ทแอปที่มีรายการแถบเมนูชั่วคราว เพื่อให้รับค่าระยะห่างใหม่"
           }
         },
         "tr" : {
@@ -5758,8 +5982,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Applying briefly relaunches apps with menu bar items so they pick up the new spacing."
+            "state" : "translated",
+            "value" : "点击“应用”可重新启动带有菜单栏项目的应用程序，使其采用新的间距设置。"
           }
         },
         "zh-Hant" : {
@@ -5781,8 +6005,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items."
+            "state" : "translated",
+            "value" : "Das Übernehmen der Abstandsänderung führt zu einem kurzen Neustart der Anwendungen, die Menüleisteneinträge haben."
           }
         },
         "es" : {
@@ -5805,8 +6029,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items."
+            "state" : "translated",
+            "value" : "Penerapan perubahan jarak ini dapat memulai ulang sementara semua aplikasi yang memiliki item bar menu."
           }
         },
         "it" : {
@@ -5829,8 +6053,8 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items."
+            "state" : "translated",
+            "value" : "Als je deze wijziging in de afstand toepast, worden alle apps met menubalk-items kort opnieuw gestart."
           }
         },
         "pl" : {
@@ -5877,8 +6101,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items."
+            "state" : "translated",
+            "value" : "应用此间距更改后，所有带有菜单栏项目的应用程序都会短暂地重新启动。"
           }
         },
         "zh-Hant" : {
@@ -5900,8 +6124,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items. Save the new spacing to the active profile \"%@\", or save it to every profile."
+            "state" : "translated",
+            "value" : "Das Anwenden führt zu einem kurzen Neustart der Anwendungen, die Menüleisteneinträge haben. Speichere die neue Abstandsregelung in dem aktiven Profil \"%@\" oder speichere sie in jedem Profil."
           }
         },
         "es" : {
@@ -5924,8 +6148,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items. Save the new spacing to the active profile \"%@\", or save it to every profile."
+            "state" : "translated",
+            "value" : "Penerapan perubahan jarak ini dapat memulai ulang sementara semua aplikasi yang memiliki item bar menu. Simpan jarak baru ke profil aktif \"%@\" atau simpan ke semua profil."
           }
         },
         "it" : {
@@ -5948,8 +6172,8 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items. Save the new spacing to the active profile \"%@\", or save it to every profile."
+            "state" : "translated",
+            "value" : "Als je deze wijziging in de afstand toepast, worden alle apps met menu-items kort opnieuw gestart. Sla de nieuwe afstand op in het actieve profiel “%@”, of sla deze op in alle profielen."
           }
         },
         "pl" : {
@@ -5996,8 +6220,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Applying this spacing change will briefly relaunch all apps with menu bar items. Save the new spacing to the active profile \"%@\", or save it to every profile."
+            "state" : "translated",
+            "value" : "应用此间距更改后，所有带有菜单栏项目的应用程序都会短暂地重新启动。将新间距保存到当前配置文件“%@”，或保存到所有配置文件。"
           }
         },
         "zh-Hant" : {
@@ -6619,6 +6843,7 @@
     },
     "Arrange menu bar items." : {
       "comment" : "A detail about the \"Accessibility\" permission, describing the app's ability to rearrange menu bar items.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -8645,13 +8870,13 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Broadcast"
+            "state" : "translated",
+            "value" : "Rozšířit"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "Broadcast"
           }
         },
@@ -8675,7 +8900,7 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "Broadcast"
           }
         },
@@ -8699,8 +8924,8 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Broadcast"
+            "state" : "translated",
+            "value" : "Zend uit"
           }
         },
         "pl" : {
@@ -8711,8 +8936,8 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Broadcast"
+            "state" : "translated",
+            "value" : "Transmitir"
           }
         },
         "ru" : {
@@ -8723,7 +8948,7 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "Broadcast"
           }
         },
@@ -9237,6 +9462,7 @@
     },
     "Change the menu bar's appearance." : {
       "comment" : "Detail about the \"Screen Recording\" permission, describing how to change the menu bar's appearance.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -10787,14 +11013,14 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose which menu bar sections appear in the search panel, and in what order. Use the up and down buttons to reorder, and turn off a section to exclude its items from search results."
+            "state" : "translated",
+            "value" : "Vyberte, které sekce řádku nabídek se objeví ve vyhledávacím panelu a v jakém pořadí. Pro uspořádání použijte tlačítka nahoru a dolů, vypnutím sekce ji vyloučíte z výsledků vyhledávání."
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose which menu bar sections appear in the search panel, and in what order. Use the up and down buttons to reorder, and turn off a section to exclude its items from search results."
+            "state" : "translated",
+            "value" : "Wähle, welche Menüleistensektionen in der Suchleiste auftauchen und in welcher Reihenfolge. Nutze die Knöpfe für hoch und runter zum Anordnen, und schalte eine Sektion aus, um ihre Einträge aus der Suche zu entfernen."
           }
         },
         "es" : {
@@ -10817,8 +11043,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose which menu bar sections appear in the search panel, and in what order. Use the up and down buttons to reorder, and turn off a section to exclude its items from search results."
+            "state" : "translated",
+            "value" : "Pilih bagian bar menu yang ditampilkan di panel pencarian beserta urutannya. Gunakan tombol Naikkan dan Turunkan untuk mengatur ulang urutan, lalu nonaktifkan bagian untuk mengecualikan itemnya dari hasil pencarian."
           }
         },
         "it" : {
@@ -10841,8 +11067,8 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose which menu bar sections appear in the search panel, and in what order. Use the up and down buttons to reorder, and turn off a section to exclude its items from search results."
+            "state" : "translated",
+            "value" : "Kies welke onderdelen van de menubalk in het zoekvenster worden weergegeven en in welke volgorde. Gebruik de pijltjes omhoog en omlaag om de volgorde aan te passen, en schakel een onderdeel uit om de bijbehorende items uit de zoekresultaten te verwijderen."
           }
         },
         "pl" : {
@@ -10865,8 +11091,8 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose which menu bar sections appear in the search panel, and in what order. Use the up and down buttons to reorder, and turn off a section to exclude its items from search results."
+            "state" : "translated",
+            "value" : "เลือกว่าส่วนใดของแถบเมนูจะปรากฏในแผงค้นหา และลำดับที่จะแสดง ใช้ปุ่มขึ้นและลงเพื่อจัดเรียงใหม่ และปิดส่วนนั้นเพื่อไม่ให้รายการของส่วนนั้นปรากฏในผลการค้นหา"
           }
         },
         "tr" : {
@@ -10889,8 +11115,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Choose which menu bar sections appear in the search panel, and in what order. Use the up and down buttons to reorder, and turn off a section to exclude its items from search results."
+            "state" : "translated",
+            "value" : "选择要在搜索面板中显示的菜单栏区域以及它们的显示顺序。使用上下键调整顺序，关闭某个部分即可将其中的项目从搜索结果中排除。"
           }
         },
         "zh-Hant" : {
@@ -11377,6 +11603,124 @@
         }
       }
     },
+    "Click menu bar items on your behalf, such as when using the search bar." : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click menu bar items on your behalf, such as when using the search bar."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click menu bar items on your behalf, such as when using the search bar."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click menu bar items on your behalf, such as when using the search bar."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click menu bar items on your behalf, such as when using the search bar."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click menu bar items on your behalf, such as when using the search bar."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click menu bar items on your behalf, such as when using the search bar."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click menu bar items on your behalf, such as when using the search bar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click menu bar items on your behalf, such as when using the search bar."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click menu bar items on your behalf, such as when using the search bar."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click menu bar items on your behalf, such as when using the search bar."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click menu bar items on your behalf, such as when using the search bar."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click menu bar items on your behalf, such as when using the search bar."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click menu bar items on your behalf, such as when using the search bar."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click menu bar items on your behalf, such as when using the search bar."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click menu bar items on your behalf, such as when using the search bar."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click menu bar items on your behalf, such as when using the search bar."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click menu bar items on your behalf, such as when using the search bar."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click menu bar items on your behalf, such as when using the search bar."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click menu bar items on your behalf, such as when using the search bar."
+          }
+        }
+      }
+    },
     "Columns" : {
       "comment" : "A label displayed above a stepper that lets the user select the number of columns in the grid layout.",
       "localizations" : {
@@ -11730,6 +12074,131 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "偵測到衝突的選單列管理工具"
+          }
+        }
+      }
+    },
+    "Connecting a display whose spacing differs from the current spacing relaunches every menu bar app. Keep spacing consistent across displays to avoid relaunches." : {
+      "comment" : "A warning that mismatched per-display spacing causes a menu bar app relaunch wave when a display is connected.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Po připojení obrazovky, která má odlišné nastavení rozestupů, se restartují aplikace s ikonami v řádku nabídek. Předejdete tomu používáním neměnných rozestupů."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wenn ein Bildschirm angeschlossen wird, dessen Abstände von den aktuell verwendeten Abständen abweichen, startet das alle Menüleisten-Anwendungen neu. Sinnvollerweise sollten die Abstände auf allen Bildschirmen konsistent gehalten werden, um Neustarts zu vermeiden."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Connecting a display whose spacing differs from the current spacing relaunches every menu bar app. Keep spacing consistent across displays to avoid relaunches."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Si conectas una pantalla cuyo espaciado es diferente al actual, se reiniciarán todas las aplicaciones de la barra de menús. Mantén un espaciado uniforme en todas las pantallas para evitar que se reinicien."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Connecting a display whose spacing differs from the current spacing relaunches every menu bar app. Keep spacing consistent across displays to avoid relaunches."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Connecting a display whose spacing differs from the current spacing relaunches every menu bar app. Keep spacing consistent across displays to avoid relaunches."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menghubungkan layar dengan jarak yang berbeda dari yang digunakan saat ini akan memulai ulang semua aplikasi bar menu. Gunakan jarak yang sama pada semua layar untuk mencegah hal ini."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Connecting a display whose spacing differs from the current spacing relaunches every menu bar app. Keep spacing consistent across displays to avoid relaunches."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Connecting a display whose spacing differs from the current spacing relaunches every menu bar app. Keep spacing consistent across displays to avoid relaunches."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Connecting a display whose spacing differs from the current spacing relaunches every menu bar app. Keep spacing consistent across displays to avoid relaunches."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Als je een beeldscherm aansluit waarvan de schermindeling afwijkt van de huidige indeling, worden alle apps in de menubalk opnieuw gestart. Zorg ervoor dat de schermindeling op alle beeldschermen hetzelfde is om te voorkomen dat apps opnieuw worden gestart."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Connecting a display whose spacing differs from the current spacing relaunches every menu bar app. Keep spacing consistent across displays to avoid relaunches."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Connecting a display whose spacing differs from the current spacing relaunches every menu bar app. Keep spacing consistent across displays to avoid relaunches."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Connecting a display whose spacing differs from the current spacing relaunches every menu bar app. Keep spacing consistent across displays to avoid relaunches."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Connecting a display whose spacing differs from the current spacing relaunches every menu bar app. Keep spacing consistent across displays to avoid relaunches."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Connecting a display whose spacing differs from the current spacing relaunches every menu bar app. Keep spacing consistent across displays to avoid relaunches."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Connecting a display whose spacing differs from the current spacing relaunches every menu bar app. Keep spacing consistent across displays to avoid relaunches."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Connecting a display whose spacing differs from the current spacing relaunches every menu bar app. Keep spacing consistent across displays to avoid relaunches."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Connecting a display whose spacing differs from the current spacing relaunches every menu bar app. Keep spacing consistent across displays to avoid relaunches."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Connecting a display whose spacing differs from the current spacing relaunches every menu bar app. Keep spacing consistent across displays to avoid relaunches."
           }
         }
       }
@@ -13400,6 +13869,124 @@
         }
       }
     },
+    "Detect the menu bar items on your Mac and where they're positioned." : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Detect the menu bar items on your Mac and where they're positioned."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Detect the menu bar items on your Mac and where they're positioned."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Detect the menu bar items on your Mac and where they're positioned."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Detect the menu bar items on your Mac and where they're positioned."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Detect the menu bar items on your Mac and where they're positioned."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Detect the menu bar items on your Mac and where they're positioned."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Detect the menu bar items on your Mac and where they're positioned."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Detect the menu bar items on your Mac and where they're positioned."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Detect the menu bar items on your Mac and where they're positioned."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Detect the menu bar items on your Mac and where they're positioned."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Detect the menu bar items on your Mac and where they're positioned."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Detect the menu bar items on your Mac and where they're positioned."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Detect the menu bar items on your Mac and where they're positioned."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Detect the menu bar items on your Mac and where they're positioned."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Detect the menu bar items on your Mac and where they're positioned."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Detect the menu bar items on your Mac and where they're positioned."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Detect the menu bar items on your Mac and where they're positioned."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Detect the menu bar items on your Mac and where they're positioned."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Detect the menu bar items on your Mac and where they're positioned."
+          }
+        }
+      }
+    },
     "Development" : {
       "comment" : "A label for the \"Development\" segment in the update channel picker.",
       "localizations" : {
@@ -13878,6 +14465,7 @@
     },
     "Display images of individual menu bar items." : {
       "comment" : "Descriptive detail for the \"Screen Recording\" permission, describing the app's ability to display images of individual menu bar items.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -16375,6 +16963,125 @@
         }
       }
     },
+    "Enable Permissions" : {
+      "comment" : "Title of the permissions screen shown during onboarding.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable Permissions"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable Permissions"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable Permissions"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable Permissions"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable Permissions"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable Permissions"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable Permissions"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable Permissions"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable Permissions"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable Permissions"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable Permissions"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable Permissions"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable Permissions"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable Permissions"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable Permissions"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable Permissions"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable Permissions"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable Permissions"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Enable Permissions"
+          }
+        }
+      }
+    },
     "Enable secondary context menu" : {
       "comment" : "A toggle that enables or disables the secondary context menu.",
       "localizations" : {
@@ -18160,6 +18867,124 @@
         }
       }
     },
+    "Find menu bar items visually when searching." : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Find menu bar items visually when searching."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Find menu bar items visually when searching."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Find menu bar items visually when searching."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Find menu bar items visually when searching."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Find menu bar items visually when searching."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Find menu bar items visually when searching."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Find menu bar items visually when searching."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Find menu bar items visually when searching."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Find menu bar items visually when searching."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Find menu bar items visually when searching."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Find menu bar items visually when searching."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Find menu bar items visually when searching."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Find menu bar items visually when searching."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Find menu bar items visually when searching."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Find menu bar items visually when searching."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Find menu bar items visually when searching."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Find menu bar items visually when searching."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Find menu bar items visually when searching."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Find menu bar items visually when searching."
+          }
+        }
+      }
+    },
     "Focus" : {
       "comment" : "Localized string key for the \"Focus\" case in the `RehideStrategy` enum.",
       "localizations" : {
@@ -18394,6 +19219,124 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "向前"
+          }
+        }
+      }
+    },
+    "Found existing settings. Icon positions can't be restored." : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Found existing settings. Icon positions can't be restored."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Found existing settings. Icon positions can't be restored."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Found existing settings. Icon positions can't be restored."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Found existing settings. Icon positions can't be restored."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Found existing settings. Icon positions can't be restored."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Found existing settings. Icon positions can't be restored."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Found existing settings. Icon positions can't be restored."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Found existing settings. Icon positions can't be restored."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Found existing settings. Icon positions can't be restored."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Found existing settings. Icon positions can't be restored."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Found existing settings. Icon positions can't be restored."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Found existing settings. Icon positions can't be restored."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Found existing settings. Icon positions can't be restored."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Found existing settings. Icon positions can't be restored."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Found existing settings. Icon positions can't be restored."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Found existing settings. Icon positions can't be restored."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Found existing settings. Icon positions can't be restored."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Found existing settings. Icon positions can't be restored."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Found existing settings. Icon positions can't be restored."
           }
         }
       }
@@ -18638,6 +19581,7 @@
     },
     "Get real-time information about the menu bar." : {
       "comment" : "A detail about the \"Accessibility\" permission, explaining that the app needs permission to get real-time information about the menu bar.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -18751,6 +19695,125 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "取得選單列的即時資訊。"
+          }
+        }
+      }
+    },
+    "Get Started" : {
+      "comment" : "Label for the primary button on the final onboarding slide that completes the tour.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Get Started"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Get Started"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Get Started"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Get Started"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Get Started"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Get Started"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Get Started"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Get Started"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Get Started"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Get Started"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Get Started"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Get Started"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Get Started"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Get Started"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Get Started"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Get Started"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Get Started"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Get Started"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Get Started"
           }
         }
       }
@@ -18998,13 +20061,13 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Global"
+            "state" : "translated",
+            "value" : "Obecná šablona"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "Global"
           }
         },
@@ -19028,7 +20091,7 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "Global"
           }
         },
@@ -19052,8 +20115,8 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Global"
+            "state" : "translated",
+            "value" : "Globaal"
           }
         },
         "pl" : {
@@ -19064,20 +20127,20 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "Global"
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Global"
+            "state" : "translated",
+            "value" : "Общие"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Global"
+            "state" : "translated",
+            "value" : "โดยรวม"
           }
         },
         "tr" : {
@@ -20183,6 +21246,125 @@
         }
       }
     },
+    "Hide or show menu bar items on demand. Drag items between sections, keep your favorites always visible, and tuck the rest away in the always-hidden section." : {
+      "comment" : "Description of the menu bar management onboarding slide.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide or show menu bar items on demand. Drag items between sections, keep your favorites always visible, and tuck the rest away in the always-hidden section."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide or show menu bar items on demand. Drag items between sections, keep your favorites always visible, and tuck the rest away in the always-hidden section."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide or show menu bar items on demand. Drag items between sections, keep your favorites always visible, and tuck the rest away in the always-hidden section."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide or show menu bar items on demand. Drag items between sections, keep your favorites always visible, and tuck the rest away in the always-hidden section."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide or show menu bar items on demand. Drag items between sections, keep your favorites always visible, and tuck the rest away in the always-hidden section."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide or show menu bar items on demand. Drag items between sections, keep your favorites always visible, and tuck the rest away in the always-hidden section."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide or show menu bar items on demand. Drag items between sections, keep your favorites always visible, and tuck the rest away in the always-hidden section."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide or show menu bar items on demand. Drag items between sections, keep your favorites always visible, and tuck the rest away in the always-hidden section."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide or show menu bar items on demand. Drag items between sections, keep your favorites always visible, and tuck the rest away in the always-hidden section."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide or show menu bar items on demand. Drag items between sections, keep your favorites always visible, and tuck the rest away in the always-hidden section."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide or show menu bar items on demand. Drag items between sections, keep your favorites always visible, and tuck the rest away in the always-hidden section."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide or show menu bar items on demand. Drag items between sections, keep your favorites always visible, and tuck the rest away in the always-hidden section."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide or show menu bar items on demand. Drag items between sections, keep your favorites always visible, and tuck the rest away in the always-hidden section."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide or show menu bar items on demand. Drag items between sections, keep your favorites always visible, and tuck the rest away in the always-hidden section."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide or show menu bar items on demand. Drag items between sections, keep your favorites always visible, and tuck the rest away in the always-hidden section."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide or show menu bar items on demand. Drag items between sections, keep your favorites always visible, and tuck the rest away in the always-hidden section."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide or show menu bar items on demand. Drag items between sections, keep your favorites always visible, and tuck the rest away in the always-hidden section."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide or show menu bar items on demand. Drag items between sections, keep your favorites always visible, and tuck the rest away in the always-hidden section."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hide or show menu bar items on demand. Drag items between sections, keep your favorites always visible, and tuck the rest away in the always-hidden section."
+          }
+        }
+      }
+    },
     "Hold to Preview" : {
       "comment" : "A button that, when held, allows users to preview changes in a menu bar.",
       "localizations" : {
@@ -20778,6 +21960,125 @@
         }
       }
     },
+    "Hotkeys & Automation" : {
+      "comment" : "Title of the hotkeys and automation onboarding slide.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hotkeys & Automation"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hotkeys & Automation"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hotkeys & Automation"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hotkeys & Automation"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hotkeys & Automation"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hotkeys & Automation"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hotkeys & Automation"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hotkeys & Automation"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hotkeys & Automation"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hotkeys & Automation"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hotkeys & Automation"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hotkeys & Automation"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hotkeys & Automation"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hotkeys & Automation"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hotkeys & Automation"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hotkeys & Automation"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hotkeys & Automation"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hotkeys & Automation"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hotkeys & Automation"
+          }
+        }
+      }
+    },
     "Hover over an empty area of the menu bar to show hidden menu bar items." : {
       "comment" : "Text displayed in a toggle that allows the user to enable or disable the feature of showing hidden menu bar items by hovering over an empty area of the menu bar.",
       "localizations" : {
@@ -21254,8 +22555,9 @@
         }
       }
     },
-    "Icon positions cannot be restored." : {
+    "Icon positions can't be restored." : {
       "comment" : "A footnote explaining that icon positions cannot be restored when importing settings from Ice.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -22093,6 +23395,125 @@
         }
       }
     },
+    "Import from Ice" : {
+      "comment" : "Title of the box offering to import settings from Ice, the original app.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Import from Ice"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Import from Ice"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Import from Ice"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Import from Ice"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Import from Ice"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Import from Ice"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Import from Ice"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Import from Ice"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Import from Ice"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Import from Ice"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Import from Ice"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Import from Ice"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Import from Ice"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Import from Ice"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Import from Ice"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Import from Ice"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Import from Ice"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Import from Ice"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Import from Ice"
+          }
+        }
+      }
+    },
     "Import Profile(s)" : {
       "comment" : "A button label that imports one or more profiles.",
       "localizations" : {
@@ -22446,6 +23867,125 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已匯入"
+          }
+        }
+      }
+    },
+    "Imported %lld settings successfully." : {
+      "comment" : "A success message shown after importing settings from Ice. The argument is the number of settings imported.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nastavení aplikace %lld úspěšně importována!"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einstellungen von %lld erfolgreich importiert!"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¡%lld ajustes importados correctamente!"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réglages de %lld importés avec succès !"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sikeresen importálva: %lld beállítás!"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pengaturan %lld berhasil diimpor!"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impostazioni %lld importate con successo!"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 件の設定をインポートしました！"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld개 설정을 성공적으로 가져왔습니다!"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld-instellingen succesvol geïmporteerd!"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pomyślnie zaimportowano %lld ustawień!"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld configurações importadas com sucesso!"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Успешно импортировано настроек: %lld!"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "นำเข้าการตั้งค่า %lld รายการได้สำเร็จ!"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld ayar başarıyla içe aktarıldı!"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Успішно імпортовано налаштувань: %lld!"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã nhập thành công cài đặt %lld!"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "成功导入 %lld 项设置！"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已成功匯入 %lld 項設定！"
           }
         }
       }
@@ -25782,6 +27322,125 @@
         }
       }
     },
+    "Menu Bar Management" : {
+      "comment" : "Title of the menu bar management onboarding slide.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Menu Bar Management"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Menu Bar Management"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Menu Bar Management"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Menu Bar Management"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Menu Bar Management"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Menu Bar Management"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Menu Bar Management"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Menu Bar Management"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Menu Bar Management"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Menu Bar Management"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Menu Bar Management"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Menu Bar Management"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Menu Bar Management"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Menu Bar Management"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Menu Bar Management"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Menu Bar Management"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Menu Bar Management"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Menu Bar Management"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Menu Bar Management"
+          }
+        }
+      }
+    },
     "Menu Bar Overlay" : {
       "comment" : "Title of the menu bar overlay panel.",
       "localizations" : {
@@ -26501,14 +28160,14 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move down"
+            "state" : "translated",
+            "value" : "Přesunout dolů"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move down"
+            "state" : "translated",
+            "value" : "Nach unten bewegen"
           }
         },
         "es" : {
@@ -26531,8 +28190,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move down"
+            "state" : "translated",
+            "value" : "Turunkan"
           }
         },
         "it" : {
@@ -26555,8 +28214,8 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move down"
+            "state" : "translated",
+            "value" : "Omlaag"
           }
         },
         "pl" : {
@@ -26567,20 +28226,20 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move down"
+            "state" : "translated",
+            "value" : "Mover para baixo"
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move down"
+            "state" : "translated",
+            "value" : "Переместить ниже"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move down"
+            "state" : "translated",
+            "value" : "เลื่อนลง"
           }
         },
         "tr" : {
@@ -26734,6 +28393,124 @@
         }
       }
     },
+    "Move menu bar items to rearrange or hide them." : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move menu bar items to rearrange or hide them."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move menu bar items to rearrange or hide them."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move menu bar items to rearrange or hide them."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move menu bar items to rearrange or hide them."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move menu bar items to rearrange or hide them."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move menu bar items to rearrange or hide them."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move menu bar items to rearrange or hide them."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move menu bar items to rearrange or hide them."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move menu bar items to rearrange or hide them."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move menu bar items to rearrange or hide them."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move menu bar items to rearrange or hide them."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move menu bar items to rearrange or hide them."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move menu bar items to rearrange or hide them."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move menu bar items to rearrange or hide them."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move menu bar items to rearrange or hide them."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move menu bar items to rearrange or hide them."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move menu bar items to rearrange or hide them."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move menu bar items to rearrange or hide them."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move menu bar items to rearrange or hide them."
+          }
+        }
+      }
+    },
     "Move the New Items badge to choose where newly detected items will appear." : {
       "comment" : "A description of how to use the New Items badge.",
       "localizations" : {
@@ -26858,14 +28635,14 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move up"
+            "state" : "translated",
+            "value" : "Přesunout nahoru"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move up"
+            "state" : "translated",
+            "value" : "Nach oben bewegen"
           }
         },
         "es" : {
@@ -26888,8 +28665,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move up"
+            "state" : "translated",
+            "value" : "Naikkan"
           }
         },
         "it" : {
@@ -26912,8 +28689,8 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move up"
+            "state" : "translated",
+            "value" : "Omhoog"
           }
         },
         "pl" : {
@@ -26924,20 +28701,20 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move up"
+            "state" : "translated",
+            "value" : "Mover para cima"
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move up"
+            "state" : "translated",
+            "value" : "Переставить выше"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Move up"
+            "state" : "translated",
+            "value" : "เลื่อนขึ้น"
           }
         },
         "tr" : {
@@ -27444,6 +29221,125 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "此區域中沒有項目"
+          }
+        }
+      }
+    },
+    "No menu bar items available" : {
+      "comment" : "Text shown in the per-item hotkeys list when there are no menu bar items to assign a hotkey to.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nejsou dostupné žádné položky řádku nabídek"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine Menüleisten-Einträge verfügbar"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No hay elementos de la barra de menús disponibles"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No menu bar items available"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No menu bar items available"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidak ada item bar menu yang tersedia"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No menu bar items available"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No menu bar items available"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No menu bar items available"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Er zijn geen menubalk-items beschikbaar"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No menu bar items available"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nenhum item disponível"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No menu bar items available"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No menu bar items available"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No menu bar items available"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No menu bar items available"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No menu bar items available"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No menu bar items available"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No menu bar items available"
           }
         }
       }
@@ -28405,14 +30301,14 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not available because the %@ Bar is enabled in the global template."
+            "state" : "translated",
+            "value" : "Není k dispozici, protože pro obecnou šablonu je aktivována lišta %@."
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not available because the %@ Bar is enabled in the global template."
+            "state" : "translated",
+            "value" : "Nicht verfügbar, weil die %@-Leiste in der globalen Vorlage aktiviert ist."
           }
         },
         "es" : {
@@ -28435,8 +30331,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not available because the %@ Bar is enabled in the global template."
+            "state" : "translated",
+            "value" : "Tidak tersedia karena Bar %@ diaktifkan di templat global."
           }
         },
         "it" : {
@@ -28459,8 +30355,8 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not available because the %@ Bar is enabled in the global template."
+            "state" : "translated",
+            "value" : "Niet beschikbaar omdat de %@-balk is ingeschakeld in het algemene sjabloon."
           }
         },
         "pl" : {
@@ -28477,14 +30373,14 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not available because the %@ Bar is enabled in the global template."
+            "state" : "translated",
+            "value" : "Недоступно, так как панель %@ включена в общем шаблоне."
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not available because the %@ Bar is enabled in the global template."
+            "state" : "translated",
+            "value" : "ไม่พร้อมใช้งาน เนื่องจาก %@ Bar เปิดใช้งานอยู่ในเทมเพลตโดยรวม"
           }
         },
         "tr" : {
@@ -28507,8 +30403,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Not available because the %@ Bar is enabled in the global template."
+            "state" : "translated",
+            "value" : "由于该显示器已启用 %@ 栏，因此该功能不可用。"
           }
         },
         "zh-Hant" : {
@@ -29233,6 +31129,1006 @@
         }
       }
     },
+    "onboarding.mockup.management.hide" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click again to hide"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click again to hide"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Click again to hide"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click again to hide"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click again to hide"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click again to hide"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click again to hide"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click again to hide"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click again to hide"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click again to hide"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click again to hide"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click again to hide"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click again to hide"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click again to hide"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click again to hide"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click again to hide"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click again to hide"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click again to hide"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click again to hide"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click again to hide"
+          }
+        }
+      }
+    },
+    "onboarding.mockup.management.show" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click divider to reveal"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click divider to reveal"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Click divider to reveal"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click divider to reveal"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click divider to reveal"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click divider to reveal"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click divider to reveal"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click divider to reveal"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click divider to reveal"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click divider to reveal"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click divider to reveal"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click divider to reveal"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click divider to reveal"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click divider to reveal"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click divider to reveal"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click divider to reveal"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click divider to reveal"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click divider to reveal"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click divider to reveal"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Click divider to reveal"
+          }
+        }
+      }
+    },
+    "onboarding.mockup.profiles.personal" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Personal"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Personal"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Personal"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Personal"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Personal"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Personal"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Personal"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Personal"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Personal"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Personal"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Personal"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Personal"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Personal"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Personal"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Personal"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Personal"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Personal"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Personal"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Personal"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Personal"
+          }
+        }
+      }
+    },
+    "onboarding.mockup.profiles.travel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Travel"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Travel"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Travel"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Travel"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Travel"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Travel"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Travel"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Travel"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Travel"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Travel"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Travel"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Travel"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Travel"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Travel"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Travel"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Travel"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Travel"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Travel"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Travel"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Travel"
+          }
+        }
+      }
+    },
+    "onboarding.mockup.profiles.work" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Work"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Work"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Work"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Work"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Work"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Work"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Work"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Work"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Work"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Work"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Work"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Work"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Work"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Work"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Work"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Work"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Work"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Work"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Work"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Work"
+          }
+        }
+      }
+    },
+    "onboarding.mockup.style.default" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Default"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Default"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Default"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Default"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Default"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Default"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Default"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Default"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Default"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Default"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Default"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Default"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Default"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Default"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Default"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Default"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Default"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Default"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Default"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Default"
+          }
+        }
+      }
+    },
+    "onboarding.mockup.style.gradient" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Gradient"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Gradient"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradient"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Gradient"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Gradient"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Gradient"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Gradient"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Gradient"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Gradient"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Gradient"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Gradient"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Gradient"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Gradient"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Gradient"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Gradient"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Gradient"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Gradient"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Gradient"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Gradient"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Gradient"
+          }
+        }
+      }
+    },
+    "onboarding.mockup.style.rounded" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Rounded"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Rounded"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rounded"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Rounded"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Rounded"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Rounded"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Rounded"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Rounded"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Rounded"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Rounded"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Rounded"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Rounded"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Rounded"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Rounded"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Rounded"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Rounded"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Rounded"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Rounded"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Rounded"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Rounded"
+          }
+        }
+      }
+    },
     "One or more section dividers are hidden by macOS" : {
       "comment" : "A message displayed when macOS hides one or more section dividers in the menu bar.",
       "localizations" : {
@@ -29709,6 +32605,125 @@
         }
       }
     },
+    "Open menu bar items" : {
+      "comment" : "A disclosure group label in the hotkeys settings pane that expands the list of per-item hotkeys.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Otevřít položky řádku nabídek"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menüleisten-Einträge öffnen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Organizar elementos de la barra de menús"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Open menu bar items"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Open menu bar items"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka item bar menu"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Open menu bar items"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Open menu bar items"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Open menu bar items"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menubalk-items openen"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Open menu bar items"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Open menu bar items"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Open menu bar items"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Open menu bar items"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Open menu bar items"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Open menu bar items"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Open menu bar items"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Open menu bar items"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Open menu bar items"
+          }
+        }
+      }
+    },
     "Other" : {
       "comment" : "Section title for advanced settings related to other functionality.",
       "localizations" : {
@@ -29824,6 +32839,249 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "其他"
+          }
+        }
+      }
+    },
+    "Page %lld of %lld" : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Page %1$lld of %2$lld"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Page %1$lld of %2$lld"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Page %1$lld of %2$lld"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Page %1$lld of %2$lld"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Page %1$lld of %2$lld"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Page %1$lld of %2$lld"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Page %1$lld of %2$lld"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Page %1$lld of %2$lld"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Page %1$lld of %2$lld"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Page %1$lld of %2$lld"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Page %1$lld of %2$lld"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Page %1$lld of %2$lld"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Page %1$lld of %2$lld"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Page %1$lld of %2$lld"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Page %1$lld of %2$lld"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Page %1$lld of %2$lld"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Page %1$lld of %2$lld"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Page %1$lld of %2$lld"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Page %1$lld of %2$lld"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Page %1$lld of %2$lld"
+          }
+        }
+      }
+    },
+    "Paint your menu bar your way. Choose solid colors, gradients, and custom shapes, then add shadows and borders for a polished finish." : {
+      "comment" : "Description of the menu bar appearance onboarding slide.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Paint your menu bar your way. Choose solid colors, gradients, and custom shapes, then add shadows and borders for a polished finish."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Paint your menu bar your way. Choose solid colors, gradients, and custom shapes, then add shadows and borders for a polished finish."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Paint your menu bar your way. Choose solid colors, gradients, and custom shapes, then add shadows and borders for a polished finish."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Paint your menu bar your way. Choose solid colors, gradients, and custom shapes, then add shadows and borders for a polished finish."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Paint your menu bar your way. Choose solid colors, gradients, and custom shapes, then add shadows and borders for a polished finish."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Paint your menu bar your way. Choose solid colors, gradients, and custom shapes, then add shadows and borders for a polished finish."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Paint your menu bar your way. Choose solid colors, gradients, and custom shapes, then add shadows and borders for a polished finish."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Paint your menu bar your way. Choose solid colors, gradients, and custom shapes, then add shadows and borders for a polished finish."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Paint your menu bar your way. Choose solid colors, gradients, and custom shapes, then add shadows and borders for a polished finish."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Paint your menu bar your way. Choose solid colors, gradients, and custom shapes, then add shadows and borders for a polished finish."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Paint your menu bar your way. Choose solid colors, gradients, and custom shapes, then add shadows and borders for a polished finish."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Paint your menu bar your way. Choose solid colors, gradients, and custom shapes, then add shadows and borders for a polished finish."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Paint your menu bar your way. Choose solid colors, gradients, and custom shapes, then add shadows and borders for a polished finish."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Paint your menu bar your way. Choose solid colors, gradients, and custom shapes, then add shadows and borders for a polished finish."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Paint your menu bar your way. Choose solid colors, gradients, and custom shapes, then add shadows and borders for a polished finish."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Paint your menu bar your way. Choose solid colors, gradients, and custom shapes, then add shadows and borders for a polished finish."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Paint your menu bar your way. Choose solid colors, gradients, and custom shapes, then add shadows and borders for a polished finish."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Paint your menu bar your way. Choose solid colors, gradients, and custom shapes, then add shadows and borders for a polished finish."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Paint your menu bar your way. Choose solid colors, gradients, and custom shapes, then add shadows and borders for a polished finish."
           }
         }
       }
@@ -34469,6 +37727,124 @@
         }
       }
     },
+    "Sample colors from the menu bar to adjust its tint and appearance." : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sample colors from the menu bar to adjust its tint and appearance."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sample colors from the menu bar to adjust its tint and appearance."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sample colors from the menu bar to adjust its tint and appearance."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sample colors from the menu bar to adjust its tint and appearance."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sample colors from the menu bar to adjust its tint and appearance."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sample colors from the menu bar to adjust its tint and appearance."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sample colors from the menu bar to adjust its tint and appearance."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sample colors from the menu bar to adjust its tint and appearance."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sample colors from the menu bar to adjust its tint and appearance."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sample colors from the menu bar to adjust its tint and appearance."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sample colors from the menu bar to adjust its tint and appearance."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sample colors from the menu bar to adjust its tint and appearance."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sample colors from the menu bar to adjust its tint and appearance."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sample colors from the menu bar to adjust its tint and appearance."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sample colors from the menu bar to adjust its tint and appearance."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sample colors from the menu bar to adjust its tint and appearance."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sample colors from the menu bar to adjust its tint and appearance."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sample colors from the menu bar to adjust its tint and appearance."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sample colors from the menu bar to adjust its tint and appearance."
+          }
+        }
+      }
+    },
     "Save Current" : {
       "comment" : "A button that saves the current profile when pressed.",
       "localizations" : {
@@ -34593,20 +37969,20 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Save the global template to the active profile \"%@\", or save it to every profile."
+            "state" : "translated",
+            "value" : "Uložit nastavení obecné šablony do aktivního profilu „%@“, nebo do všech profilů."
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Save the global template to the active profile \"%@\", or save it to every profile."
+            "state" : "translated",
+            "value" : "Die globale Vorlage zum aktiven Profil \"%@\" oder zu jedem Profil speichern."
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Save the global template to the active profile \"%@\", or save it to every profile."
+            "state" : "translated",
+            "value" : "Guarda el nuevo espaciado en el perfil activo %@ o guárdalo en todos los perfiles."
           }
         },
         "fr" : {
@@ -34623,8 +37999,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Save the global template to the active profile \"%@\", or save it to every profile."
+            "state" : "translated",
+            "value" : "Simpan templat global ke profil aktif \"%@\", atau simpan ke semua profil."
           }
         },
         "it" : {
@@ -34647,8 +38023,8 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Save the global template to the active profile \"%@\", or save it to every profile."
+            "state" : "translated",
+            "value" : "Sla het algemene sjabloon op in het actieve profiel “%@”, of sla deze op in alle profielen."
           }
         },
         "pl" : {
@@ -34671,14 +38047,14 @@
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Save the global template to the active profile \"%@\", or save it to every profile."
+            "state" : "translated",
+            "value" : "บันทึกเทมเพลตโดยรวมไปยังโปรไฟล์ที่ใช้งานอยู่ “%@” หรือบันทึกไปยังทุกโปรไฟล์"
           }
         },
         "tr" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Save the global template to the active profile \"%@\", or save it to every profile."
+            "state" : "translated",
+            "value" : "Yeni genel ayarı aktif profil \"%@\" için kaydet veya tüm profiller için kaydet."
           }
         },
         "uk" : {
@@ -34718,8 +38094,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Save the new spacing to the active profile \"%@\", or save it to every profile."
+            "state" : "translated",
+            "value" : "Die neuen Abstände zum aktiven Profil \"%@\" oder zu jedem Profil speichern."
           }
         },
         "es" : {
@@ -34742,8 +38118,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Save the new spacing to the active profile \"%@\", or save it to every profile."
+            "state" : "translated",
+            "value" : "Simpan jarak baru ke profil aktif \"%@\", atau simpan ke semua profil."
           }
         },
         "it" : {
@@ -34766,8 +38142,8 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Save the new spacing to the active profile \"%@\", or save it to every profile."
+            "state" : "translated",
+            "value" : "Sla de nieuwe afstand op in het actieve profiel “%@”, of sla deze op in alle profielen."
           }
         },
         "pl" : {
@@ -34814,14 +38190,133 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Save the new spacing to the active profile \"%@\", or save it to every profile."
+            "state" : "translated",
+            "value" : "将新间距保存到当前配置文件“%@”，或保存到所有配置文件。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "new",
             "value" : "Save the new spacing to the active profile \"%@\", or save it to every profile."
+          }
+        }
+      }
+    },
+    "Save your current configuration as a named profile. Switch between layouts instantly, or let Thaw switch automatically when you change your frontmost app." : {
+      "comment" : "Description of the profiles onboarding slide.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save your current configuration as a named profile. Switch between layouts instantly, or let Thaw switch automatically when you change your frontmost app."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save your current configuration as a named profile. Switch between layouts instantly, or let Thaw switch automatically when you change your frontmost app."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save your current configuration as a named profile. Switch between layouts instantly, or let Thaw switch automatically when you change your frontmost app."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save your current configuration as a named profile. Switch between layouts instantly, or let Thaw switch automatically when you change your frontmost app."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save your current configuration as a named profile. Switch between layouts instantly, or let Thaw switch automatically when you change your frontmost app."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save your current configuration as a named profile. Switch between layouts instantly, or let Thaw switch automatically when you change your frontmost app."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save your current configuration as a named profile. Switch between layouts instantly, or let Thaw switch automatically when you change your frontmost app."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save your current configuration as a named profile. Switch between layouts instantly, or let Thaw switch automatically when you change your frontmost app."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save your current configuration as a named profile. Switch between layouts instantly, or let Thaw switch automatically when you change your frontmost app."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save your current configuration as a named profile. Switch between layouts instantly, or let Thaw switch automatically when you change your frontmost app."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save your current configuration as a named profile. Switch between layouts instantly, or let Thaw switch automatically when you change your frontmost app."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save your current configuration as a named profile. Switch between layouts instantly, or let Thaw switch automatically when you change your frontmost app."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save your current configuration as a named profile. Switch between layouts instantly, or let Thaw switch automatically when you change your frontmost app."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save your current configuration as a named profile. Switch between layouts instantly, or let Thaw switch automatically when you change your frontmost app."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save your current configuration as a named profile. Switch between layouts instantly, or let Thaw switch automatically when you change your frontmost app."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save your current configuration as a named profile. Switch between layouts instantly, or let Thaw switch automatically when you change your frontmost app."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save your current configuration as a named profile. Switch between layouts instantly, or let Thaw switch automatically when you change your frontmost app."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save your current configuration as a named profile. Switch between layouts instantly, or let Thaw switch automatically when you change your frontmost app."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save your current configuration as a named profile. Switch between layouts instantly, or let Thaw switch automatically when you change your frontmost app."
           }
         }
       }
@@ -35307,14 +38802,14 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Search"
+            "state" : "translated",
+            "value" : "Vyhledávání"
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Search"
+            "state" : "translated",
+            "value" : "Suche"
           }
         },
         "es" : {
@@ -35337,8 +38832,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Search"
+            "state" : "translated",
+            "value" : "Pencarian"
           }
         },
         "it" : {
@@ -35355,14 +38850,14 @@
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Search"
+            "state" : "translated",
+            "value" : "검색"
           }
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Search"
+            "state" : "translated",
+            "value" : "Zoeken"
           }
         },
         "pl" : {
@@ -35373,20 +38868,20 @@
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Search"
+            "state" : "translated",
+            "value" : "Buscar"
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Search"
+            "state" : "translated",
+            "value" : "Поиск"
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Search"
+            "state" : "translated",
+            "value" : "ค้นหา"
           }
         },
         "tr" : {
@@ -37217,14 +40712,14 @@
       "localizations" : {
         "cs" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Show hidden menu bar items in a separate bar below the menu bar."
+            "state" : "translated",
+            "value" : "Zobrazit skryté ikony v oddělené liště pod řádkem nabídek."
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Show hidden menu bar items in a separate bar below the menu bar."
+            "state" : "translated",
+            "value" : "Versteckte Menüleisteneinträge in separater Leiste unter der Menüleiste anzeigen."
           }
         },
         "es" : {
@@ -37247,8 +40742,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Show hidden menu bar items in a separate bar below the menu bar."
+            "state" : "translated",
+            "value" : "Tampilkan item bar menu tersembunyi di bar terpisah di bawah bar menu."
           }
         },
         "it" : {
@@ -37271,8 +40766,8 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Show hidden menu bar items in a separate bar below the menu bar."
+            "state" : "translated",
+            "value" : "Toon verborgen menubalk-items in een aparte balk onder de menubalk."
           }
         },
         "pl" : {
@@ -37289,14 +40784,14 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Show hidden menu bar items in a separate bar below the menu bar."
+            "state" : "translated",
+            "value" : "Показывать скрытые элементы строки меню в отдельной панели под строкой меню."
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Show hidden menu bar items in a separate bar below the menu bar."
+            "state" : "translated",
+            "value" : "แสดงรายการแถบเมนูที่ซ่อนอยู่ในแถบแยกต่างหากด้านล่างแถบเมนู"
           }
         },
         "tr" : {
@@ -37319,8 +40814,8 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Show hidden menu bar items in a separate bar below the menu bar."
+            "state" : "translated",
+            "value" : "在该显示器的菜单栏下方，以独立菜单栏显示隐藏的项目。"
           }
         },
         "zh-Hant" : {
@@ -37565,6 +41060,124 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "顯示項目"
+          }
+        }
+      }
+    },
+    "Show live previews of your menu bar items." : {
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show live previews of your menu bar items."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show live previews of your menu bar items."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show live previews of your menu bar items."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show live previews of your menu bar items."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show live previews of your menu bar items."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show live previews of your menu bar items."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show live previews of your menu bar items."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show live previews of your menu bar items."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show live previews of your menu bar items."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show live previews of your menu bar items."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show live previews of your menu bar items."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show live previews of your menu bar items."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show live previews of your menu bar items."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show live previews of your menu bar items."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show live previews of your menu bar items."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show live previews of your menu bar items."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show live previews of your menu bar items."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show live previews of your menu bar items."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show live previews of your menu bar items."
           }
         }
       }
@@ -38521,6 +42134,125 @@
         }
       }
     },
+    "Skip" : {
+      "comment" : "Label for the button that skips ahead to the final onboarding slide.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Skip"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Skip"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Skip"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Skip"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Skip"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Skip"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Skip"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Skip"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Skip"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Skip"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Skip"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Skip"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Skip"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Skip"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Skip"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Skip"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Skip"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Skip"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Skip"
+          }
+        }
+      }
+    },
     "Smart" : {
       "comment" : "Localized string key for the \"Smart\" rehide strategy.",
       "localizations" : {
@@ -39354,125 +43086,6 @@
         }
       }
     },
-    "Successfully imported %lld settings!" : {
-      "comment" : "A success message displayed when the user successfully imports settings from the original app. The argument is the number of settings that were successfully imported.",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nastavení aplikace %lld úspěšně importována!"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Einstellungen von %lld erfolgreich importiert!"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "¡%lld ajustes importados correctamente!"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Réglages de %lld importés avec succès !"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sikeresen importálva: %lld beállítás!"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pengaturan %lld berhasil diimpor!"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Impostazioni %lld importate con successo!"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld 件の設定をインポートしました！"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld개 설정을 성공적으로 가져왔습니다!"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld-instellingen succesvol geïmporteerd!"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pomyślnie zaimportowano %lld ustawień!"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld configurações importadas com sucesso!"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Успешно импортировано настроек: %lld!"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "นำเข้าการตั้งค่า %lld รายการได้สำเร็จ!"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld ayar başarıyla içe aktarıldı!"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Успішно імпортовано налаштувань: %lld!"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Đã nhập thành công cài đặt %lld!"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "成功导入 %lld 项设置！"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已成功匯入 %lld 項設定！"
-          }
-        }
-      }
-    },
     "Sunglasses" : {
       "comment" : "Localized string key for the \"Custom\" control item image.",
       "localizations" : {
@@ -39945,6 +43558,244 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "支援的設定"
+          }
+        }
+      }
+    },
+    "Thaw gives you complete control over your menu bar — hide clutter, customize the look, and automate your workflow." : {
+      "comment" : "Description of the welcome onboarding slide.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Thaw gives you complete control over your menu bar — hide clutter, customize the look, and automate your workflow."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Thaw gives you complete control over your menu bar — hide clutter, customize the look, and automate your workflow."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Thaw gives you complete control over your menu bar — hide clutter, customize the look, and automate your workflow."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Thaw gives you complete control over your menu bar — hide clutter, customize the look, and automate your workflow."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Thaw gives you complete control over your menu bar — hide clutter, customize the look, and automate your workflow."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Thaw gives you complete control over your menu bar — hide clutter, customize the look, and automate your workflow."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Thaw gives you complete control over your menu bar — hide clutter, customize the look, and automate your workflow."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Thaw gives you complete control over your menu bar — hide clutter, customize the look, and automate your workflow."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Thaw gives you complete control over your menu bar — hide clutter, customize the look, and automate your workflow."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Thaw gives you complete control over your menu bar — hide clutter, customize the look, and automate your workflow."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Thaw gives you complete control over your menu bar — hide clutter, customize the look, and automate your workflow."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Thaw gives you complete control over your menu bar — hide clutter, customize the look, and automate your workflow."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Thaw gives you complete control over your menu bar — hide clutter, customize the look, and automate your workflow."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Thaw gives you complete control over your menu bar — hide clutter, customize the look, and automate your workflow."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Thaw gives you complete control over your menu bar — hide clutter, customize the look, and automate your workflow."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Thaw gives you complete control over your menu bar — hide clutter, customize the look, and automate your workflow."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Thaw gives you complete control over your menu bar — hide clutter, customize the look, and automate your workflow."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Thaw gives you complete control over your menu bar — hide clutter, customize the look, and automate your workflow."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Thaw gives you complete control over your menu bar — hide clutter, customize the look, and automate your workflow."
+          }
+        }
+      }
+    },
+    "Thaw needs a couple of permissions to manage your menu bar. You can grant them now, or skip and grant them later from Settings." : {
+      "comment" : "Description of the permissions onboarding slide.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Thaw needs a couple of permissions to manage your menu bar. You can grant them now, or skip and grant them later from Settings."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Thaw needs a couple of permissions to manage your menu bar. You can grant them now, or skip and grant them later from Settings."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Thaw needs a couple of permissions to manage your menu bar. You can grant them now, or skip and grant them later from Settings."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Thaw needs a couple of permissions to manage your menu bar. You can grant them now, or skip and grant them later from Settings."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Thaw needs a couple of permissions to manage your menu bar. You can grant them now, or skip and grant them later from Settings."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Thaw needs a couple of permissions to manage your menu bar. You can grant them now, or skip and grant them later from Settings."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Thaw needs a couple of permissions to manage your menu bar. You can grant them now, or skip and grant them later from Settings."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Thaw needs a couple of permissions to manage your menu bar. You can grant them now, or skip and grant them later from Settings."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Thaw needs a couple of permissions to manage your menu bar. You can grant them now, or skip and grant them later from Settings."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Thaw needs a couple of permissions to manage your menu bar. You can grant them now, or skip and grant them later from Settings."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Thaw needs a couple of permissions to manage your menu bar. You can grant them now, or skip and grant them later from Settings."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Thaw needs a couple of permissions to manage your menu bar. You can grant them now, or skip and grant them later from Settings."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Thaw needs a couple of permissions to manage your menu bar. You can grant them now, or skip and grant them later from Settings."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Thaw needs a couple of permissions to manage your menu bar. You can grant them now, or skip and grant them later from Settings."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Thaw needs a couple of permissions to manage your menu bar. You can grant them now, or skip and grant them later from Settings."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Thaw needs a couple of permissions to manage your menu bar. You can grant them now, or skip and grant them later from Settings."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Thaw needs a couple of permissions to manage your menu bar. You can grant them now, or skip and grant them later from Settings."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Thaw needs a couple of permissions to manage your menu bar. You can grant them now, or skip and grant them later from Settings."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Thaw needs a couple of permissions to manage your menu bar. You can grant them now, or skip and grant them later from Settings."
           }
         }
       }
@@ -41266,26 +45117,26 @@
             "plural" : {
               "few" : {
                 "stringUnit" : {
-                  "state" : "new",
-                  "value" : "This will overwrite the settings of %lld displays with the global template and may briefly relaunch apps with menu bar items."
+                  "state" : "translated",
+                  "value" : "Chcete nahradit nastavení %lld obrazovek nastaveními v obecné šabloně? Některé aplikace s položkami v řádku nabídek se mohou krátce restartovat."
                 }
               },
               "many" : {
                 "stringUnit" : {
-                  "state" : "new",
-                  "value" : "This will overwrite the settings of %lld displays with the global template and may briefly relaunch apps with menu bar items."
+                  "state" : "translated",
+                  "value" : "Chcete nahradit nastavení %lld obrazovek nastaveními v obecné šabloně? Některé aplikace s položkami v řádku nabídek se mohou krátce restartovat."
                 }
               },
               "one" : {
                 "stringUnit" : {
-                  "state" : "new",
-                  "value" : "This will overwrite the settings of %lld display with the global template and may briefly relaunch apps with menu bar items."
+                  "state" : "translated",
+                  "value" : "Chcete nahradit nastavení %lld obrazovky nastaveními v obecné šabloně? Některé aplikace s položkami v řádku nabídek se mohou krátce restartovat."
                 }
               },
               "other" : {
                 "stringUnit" : {
-                  "state" : "new",
-                  "value" : "This will overwrite the settings of %lld displays with the global template and may briefly relaunch apps with menu bar items."
+                  "state" : "translated",
+                  "value" : "Chcete nahradit nastavení %lld obrazovek nastaveními v obecné šabloně? Některé aplikace s položkami v řádku nabídek se mohou krátce restartovat."
                 }
               }
             }
@@ -41296,14 +45147,14 @@
             "plural" : {
               "one" : {
                 "stringUnit" : {
-                  "state" : "new",
-                  "value" : "This will overwrite the settings of %lld display with the global template and may briefly relaunch apps with menu bar items."
+                  "state" : "translated",
+                  "value" : "Dies wird die Einstellungen des \"%lld\" Bildschirms überschreiben und kann kurz die Anwendungen mit Menüleisteneinträgen neu starten."
                 }
               },
               "other" : {
                 "stringUnit" : {
-                  "state" : "new",
-                  "value" : "This will overwrite the settings of %lld displays with the global template and may briefly relaunch apps with menu bar items."
+                  "state" : "translated",
+                  "value" : "Dies wird die Einstellungen des \"%lld\" Displays mit der globalen Vorlage überschreiben und kann kurz die Anwendungen mit Menüleisteneinträgen neu starten."
                 }
               }
             }
@@ -41332,14 +45183,14 @@
             "plural" : {
               "one" : {
                 "stringUnit" : {
-                  "state" : "new",
-                  "value" : "This will overwrite the settings of %lld display with the global template and may briefly relaunch apps with menu bar items."
+                  "state" : "translated",
+                  "value" : "Esto sobrescribirá la configuración de %lld pantallas con la plantilla global y puede provocar que las aplicaciones con elementos en la barra de menús se reinicien brevemente."
                 }
               },
               "other" : {
                 "stringUnit" : {
-                  "state" : "new",
-                  "value" : "This will overwrite the settings of %lld displays with the global template and may briefly relaunch apps with menu bar items."
+                  "state" : "translated",
+                  "value" : "Esto sobrescribirá la configuración de %lld pantallas con la plantilla global y puede provocar que las aplicaciones con elementos en la barra de menús se reinicien brevemente."
                 }
               }
             }
@@ -41386,8 +45237,8 @@
             "plural" : {
               "other" : {
                 "stringUnit" : {
-                  "state" : "new",
-                  "value" : "This will overwrite the settings of %lld displays with the global template and may briefly relaunch apps with menu bar items."
+                  "state" : "translated",
+                  "value" : "Pengaturan pada layar %lld akan ditimpa menggunakan templat global. Beberapa aplikasi dengan item bar menu mungkin akan dimulai ulang sesaat."
                 }
               }
             }
@@ -41440,14 +45291,14 @@
             "plural" : {
               "one" : {
                 "stringUnit" : {
-                  "state" : "new",
-                  "value" : "This will overwrite the settings of %lld display with the global template and may briefly relaunch apps with menu bar items."
+                  "state" : "translated",
+                  "value" : "Hierdoor worden de instellingen van het %lld-scherm overschreven door het algemene sjabloon en kan het zijn dat apps met menubalk-items kortstondig opnieuw worden gestart."
                 }
               },
               "other" : {
                 "stringUnit" : {
-                  "state" : "new",
-                  "value" : "This will overwrite the settings of %lld displays with the global template and may briefly relaunch apps with menu bar items."
+                  "state" : "translated",
+                  "value" : "Hierdoor worden de instellingen van %lld-schermen overschreven door het algemene sjabloon en kunnen apps met menubalk-items kortstondig opnieuw worden gestart."
                 }
               }
             }
@@ -41536,8 +45387,8 @@
             "plural" : {
               "other" : {
                 "stringUnit" : {
-                  "state" : "new",
-                  "value" : "This will overwrite the settings of %lld displays with the global template and may briefly relaunch apps with menu bar items."
+                  "state" : "translated",
+                  "value" : "การดำเนินการนี้จะเขียนทับการตั้งค่าของจอแสดงผล %lld จอด้วยเทมเพลตโดยรวม และอาจรีสตาร์ทแอปที่มีรายการแถบเมนูชั่วคราว"
                 }
               }
             }
@@ -41548,14 +45399,14 @@
             "plural" : {
               "one" : {
                 "stringUnit" : {
-                  "state" : "new",
-                  "value" : "This will overwrite the settings of %lld display with the global template and may briefly relaunch apps with menu bar items."
+                  "state" : "translated",
+                  "value" : "Bu işlem, %lld ekranın ayarlarını genel şablonla geçersiz kılacaktır ve menü çubuğu ögelerine sahip uygulamaları kısa süreliğine yeniden başlatabilir."
                 }
               },
               "other" : {
                 "stringUnit" : {
-                  "state" : "new",
-                  "value" : "This will overwrite the settings of %lld displays with the global template and may briefly relaunch apps with menu bar items."
+                  "state" : "translated",
+                  "value" : "Bu işlem, %lld ekranın ayarlarını genel şablonla geçersiz kılacaktır ve menü çubuğu ögelerine sahip uygulamaları kısa süreliğine yeniden başlatabilir."
                 }
               }
             }
@@ -41608,8 +45459,8 @@
             "plural" : {
               "other" : {
                 "stringUnit" : {
-                  "state" : "new",
-                  "value" : "This will overwrite the settings of %lld displays with the global template and may briefly relaunch apps with menu bar items."
+                  "state" : "translated",
+                  "value" : "这将用全局模板覆盖 %lld 显示器的设置，并可能会短暂地重新启动带有菜单栏项目的应用程序。"
                 }
               }
             }
@@ -43063,6 +46914,125 @@
         }
       }
     },
+    "Trigger any action with a keystroke. Combine auto-rehide timers and Focus Filter integration so Thaw adapts to whatever you're doing." : {
+      "comment" : "Description of the hotkeys and automation onboarding slide.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Trigger any action with a keystroke. Combine auto-rehide timers and Focus Filter integration so Thaw adapts to whatever you're doing."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Trigger any action with a keystroke. Combine auto-rehide timers and Focus Filter integration so Thaw adapts to whatever you're doing."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Trigger any action with a keystroke. Combine auto-rehide timers and Focus Filter integration so Thaw adapts to whatever you're doing."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Trigger any action with a keystroke. Combine auto-rehide timers and Focus Filter integration so Thaw adapts to whatever you're doing."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Trigger any action with a keystroke. Combine auto-rehide timers and Focus Filter integration so Thaw adapts to whatever you're doing."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Trigger any action with a keystroke. Combine auto-rehide timers and Focus Filter integration so Thaw adapts to whatever you're doing."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Trigger any action with a keystroke. Combine auto-rehide timers and Focus Filter integration so Thaw adapts to whatever you're doing."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Trigger any action with a keystroke. Combine auto-rehide timers and Focus Filter integration so Thaw adapts to whatever you're doing."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Trigger any action with a keystroke. Combine auto-rehide timers and Focus Filter integration so Thaw adapts to whatever you're doing."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Trigger any action with a keystroke. Combine auto-rehide timers and Focus Filter integration so Thaw adapts to whatever you're doing."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Trigger any action with a keystroke. Combine auto-rehide timers and Focus Filter integration so Thaw adapts to whatever you're doing."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Trigger any action with a keystroke. Combine auto-rehide timers and Focus Filter integration so Thaw adapts to whatever you're doing."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Trigger any action with a keystroke. Combine auto-rehide timers and Focus Filter integration so Thaw adapts to whatever you're doing."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Trigger any action with a keystroke. Combine auto-rehide timers and Focus Filter integration so Thaw adapts to whatever you're doing."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Trigger any action with a keystroke. Combine auto-rehide timers and Focus Filter integration so Thaw adapts to whatever you're doing."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Trigger any action with a keystroke. Combine auto-rehide timers and Focus Filter integration so Thaw adapts to whatever you're doing."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Trigger any action with a keystroke. Combine auto-rehide timers and Focus Filter integration so Thaw adapts to whatever you're doing."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Trigger any action with a keystroke. Combine auto-rehide timers and Focus Filter integration so Thaw adapts to whatever you're doing."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Trigger any action with a keystroke. Combine auto-rehide timers and Focus Filter integration so Thaw adapts to whatever you're doing."
+          }
+        }
+      }
+    },
     "Type Hotkey" : {
       "comment" : "A label displayed in the leading segment of the hotkey recorder when it is recording.",
       "localizations" : {
@@ -43669,8 +47639,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update Active Profile"
+            "state" : "translated",
+            "value" : "Aktives Profil aktualisieren"
           }
         },
         "es" : {
@@ -43693,8 +47663,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update Active Profile"
+            "state" : "translated",
+            "value" : "Perbarui Profil Ini"
           }
         },
         "it" : {
@@ -43711,14 +47681,14 @@
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update Active Profile"
+            "state" : "translated",
+            "value" : "활성화된 프로필 업데이트"
           }
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update Active Profile"
+            "state" : "translated",
+            "value" : "Actief profiel bijwerken"
           }
         },
         "pl" : {
@@ -43735,8 +47705,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update Active Profile"
+            "state" : "translated",
+            "value" : "Обновить текущий профиль"
           }
         },
         "th" : {
@@ -43907,8 +47877,8 @@
         },
         "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update All Profiles"
+            "state" : "translated",
+            "value" : "Alle Profile aktualisieren"
           }
         },
         "es" : {
@@ -43931,8 +47901,8 @@
         },
         "id" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update All Profiles"
+            "state" : "translated",
+            "value" : "Perbarui Semua Profil"
           }
         },
         "it" : {
@@ -43949,14 +47919,14 @@
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update All Profiles"
+            "state" : "translated",
+            "value" : "모든 프로필 업데이트"
           }
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update All Profiles"
+            "state" : "translated",
+            "value" : "Alle profielen bijwerken"
           }
         },
         "pl" : {
@@ -43973,8 +47943,8 @@
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "Update All Profiles"
+            "state" : "translated",
+            "value" : "Обновить все профили"
           }
         },
         "th" : {
@@ -45919,8 +49889,9 @@
         }
       }
     },
-    "We found settings from Ice (the original app)." : {
+    "We found existing settings from Ice, the original app." : {
       "comment" : "A description of the feature that allows users to import settings from the original app, Ice.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -46034,6 +50005,125 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "我們發現了來自 Ice（原始應用程式）的設定。"
+          }
+        }
+      }
+    },
+    "Welcome to Thaw" : {
+      "comment" : "Title of the welcome onboarding slide.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Welcome to Thaw"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Welcome to Thaw"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Welcome to Thaw"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Welcome to Thaw"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Welcome to Thaw"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Welcome to Thaw"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Welcome to Thaw"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Welcome to Thaw"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Welcome to Thaw"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Welcome to Thaw"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Welcome to Thaw"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Welcome to Thaw"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Welcome to Thaw"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Welcome to Thaw"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Welcome to Thaw"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Welcome to Thaw"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Welcome to Thaw"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Welcome to Thaw"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Welcome to Thaw"
           }
         }
       }
@@ -46403,6 +50493,7 @@
     },
     "Would you like to import your existing configuration?" : {
       "comment" : "A question displayed to the user when they first open the app, asking if they would like to import their existing configuration.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -46754,6 +50845,125 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "您可以隨時從列表中移除應用程式以撤銷其存取權限。"
+          }
+        }
+      }
+    },
+    "Your data stays on your Mac — nothing is ever collected or shared." : {
+      "comment" : "A privacy reassurance shown on the permissions screen.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your data stays on your Mac — nothing is ever collected or shared."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your data stays on your Mac — nothing is ever collected or shared."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your data stays on your Mac — nothing is ever collected or shared."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your data stays on your Mac — nothing is ever collected or shared."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your data stays on your Mac — nothing is ever collected or shared."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your data stays on your Mac — nothing is ever collected or shared."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your data stays on your Mac — nothing is ever collected or shared."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your data stays on your Mac — nothing is ever collected or shared."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your data stays on your Mac — nothing is ever collected or shared."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your data stays on your Mac — nothing is ever collected or shared."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your data stays on your Mac — nothing is ever collected or shared."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your data stays on your Mac — nothing is ever collected or shared."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your data stays on your Mac — nothing is ever collected or shared."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your data stays on your Mac — nothing is ever collected or shared."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your data stays on your Mac — nothing is ever collected or shared."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your data stays on your Mac — nothing is ever collected or shared."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your data stays on your Mac — nothing is ever collected or shared."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your data stays on your Mac — nothing is ever collected or shared."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your data stays on your Mac — nothing is ever collected or shared."
           }
         }
       }
