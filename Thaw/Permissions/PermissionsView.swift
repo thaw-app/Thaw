@@ -152,7 +152,7 @@ struct PermissionsView<Manager: PermissionsManaging>: View {
                     Image(systemName: "square.and.arrow.down")
                         .font(.title2)
                         .foregroundStyle(.secondary)
-                    
+
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Import from Ice")
                             .font(.headline)
@@ -173,9 +173,9 @@ struct PermissionsView<Manager: PermissionsManaging>: View {
                         .font(.subheadline)
                     }
                 }
-                
+
                 Spacer()
-                
+
                 if iceImportResult?.success == true {
                     Label("Imported", systemImage: "checkmark.circle.fill")
                         .foregroundStyle(.green)
@@ -261,7 +261,7 @@ struct PermissionCard: View {
                     }
                 }
                 .font(.callout)
-                
+
                 Spacer(minLength: 0)
 
                 Button {
