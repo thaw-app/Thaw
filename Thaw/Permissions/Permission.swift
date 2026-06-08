@@ -146,8 +146,9 @@ final class AccessibilityPermission: Permission {
             iconName: "accessibility",
             iconColor: .blue,
             details: [
-                String(localized: "Get real-time information about the menu bar."),
-                String(localized: "Arrange menu bar items."),
+                String(localized: "Detect the menu bar items on your Mac and where they're positioned."),
+                String(localized: "Move menu bar items to rearrange or hide them."),
+                String(localized: "Click menu bar items on your behalf, such as when using the search bar."),
             ],
             isRequired: true,
             settingsURL: nil,
@@ -170,8 +171,9 @@ final class ScreenRecordingPermission: Permission {
             iconName: "record.circle",
             iconColor: .red,
             details: [
-                String(localized: "Change the menu bar's appearance."),
-                String(localized: "Display images of individual menu bar items."),
+                String(localized: "Show live previews of your menu bar items."),
+                String(localized: "Sample colors from the menu bar to adjust its tint and appearance."),
+                String(localized: "Find menu bar items visually when searching."),
             ],
             isRequired: false,
             settingsURL: URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"),
