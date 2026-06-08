@@ -48,7 +48,10 @@ struct PermissionsView<Manager: PermissionsManaging>: View {
 
             permissionsStack
 
-            footerView
+            VStack(spacing: 16) {
+                limitedModeFootnote
+                footerView
+            }
         }
         .padding(24)
         .frame(width: 760, height: 600)
@@ -75,11 +78,23 @@ struct PermissionsView<Manager: PermissionsManaging>: View {
     }
 
     private var permissionsStack: some View {
-        HStack(alignment: .top, spacing: 16) {
+        HStack(spacing: 16) {
             ForEach(manager.allPermissions) { permission in
                 PermissionCard(permission: permission)
             }
         }
+        .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var limitedModeFootnote: some View {
+        Label {
+            Text("\(Constants.displayName) can work in a limited mode without Screen Recording.")
+                .foregroundStyle(.secondary)
+        } icon: {
+            Image(systemName: "checkmark.shield")
+                .foregroundStyle(.green)
+        }
+        .font(.subheadline)
     }
 
     private var footerView: some View {
@@ -114,32 +129,39 @@ struct PermissionsView<Manager: PermissionsManaging>: View {
 
     private var iceImportBox: some View {
         IceSection {
-            VStack(alignment: .leading, spacing: 8) {
-                Label("Import from Ice", systemImage: "square.and.arrow.down")
-                    .font(.title3.weight(.semibold))
-
-                Group {
-                    if let result = iceImportResult {
-                        if result.success {
-                            Text("Imported \(result.settingsImported) settings successfully.")
-                                .foregroundStyle(.green)
-                        } else {
-                            Text("Import failed. You can configure settings manually.")
-                                .foregroundStyle(.red)
+            HStack(alignment: .center) {
+                HStack(alignment: .center, spacing: 12) {
+                    Image(systemName: "square.and.arrow.down")
+                        .font(.title2)
+                        .foregroundStyle(.secondary)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Import from Ice")
+                            .font(.headline)
+                        Group {
+                            if let result = iceImportResult {
+                                if result.success {
+                                    Text("Imported \(result.settingsImported) settings successfully.")
+                                        .foregroundStyle(.green)
+                                } else {
+                                    Text("Import failed. You can configure settings manually.")
+                                        .foregroundStyle(.red)
+                                }
+                            } else {
+                                Text("Found existing settings. Icon positions can't be restored.")
+                                    .foregroundStyle(.secondary)
+                            }
                         }
-                    } else {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("We found existing settings from Ice, the original app.")
-                            Text("Icon positions can't be restored.")
-                                .foregroundStyle(.secondary)
-                        }
+                        .font(.subheadline)
                     }
                 }
-                .font(.callout)
-
+                
+                Spacer()
+                
                 if iceImportResult?.success == true {
-                    Label("Imported", systemImage: "checkmark")
+                    Label("Imported", systemImage: "checkmark.circle.fill")
                         .foregroundStyle(.green)
+                        .font(.subheadline.weight(.medium))
                 } else {
                     Button("Import Settings") {
                         importIceSettings()
@@ -147,8 +169,8 @@ struct PermissionsView<Manager: PermissionsManaging>: View {
                     .disabled(isImportingIceSettings)
                 }
             }
-            .padding(12)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .center)
+            .padding(.vertical, 4)
         }
     }
 
@@ -169,20 +191,9 @@ struct PermissionsView<Manager: PermissionsManaging>: View {
             isImportingIceSettings = false
 
             if result.success {
-                // Mark first launch as completed after successful import.
-                //
-                // Note: during a first-launch onboarding this also flips
-                // ``OnboardingSheet/isFirstLaunchFlow`` to false mid-flow. That
-                // stays correct — the permissions step is hosted in a window
-                // that already rendered as the onboarding sheet (the host is
-                // chosen once and isn't re-evaluated), and the final
-                // ``AppState/completeFirstLaunchSetup()`` is idempotent.
                 Defaults.set(true, forKey: .hasCompletedFirstLaunch)
                 showImportIceSettings = true
 
-                // Ensure section dividers are re-added after import by forcing a toggle
-                // of the always-hidden section setting. This recreates control items
-                // even when the setting was previously off.
                 let currentlyEnabled = appState.settings.advanced.enableAlwaysHiddenSection
                 appState.settings.advanced.enableAlwaysHiddenSection = !currentlyEnabled
                 appState.settings.advanced.enableAlwaysHiddenSection = currentlyEnabled
@@ -193,22 +204,11 @@ struct PermissionsView<Manager: PermissionsManaging>: View {
 
 // MARK: - PermissionCard
 
-/// A card describing a single permission, along with a button to grant it.
-///
-/// Shared by ``PermissionsView`` and the onboarding flow's permissions step,
-/// so both present an identical, always-up-to-date view of permission state.
 struct PermissionCard: View {
     @EnvironmentObject var appState: AppState
     @ObservedObject var permission: Permission
     @State var isRequestingPermission = false
 
-    /// Whether granting should reopen/refocus the permissions window afterward.
-    ///
-    /// True in the standalone ``PermissionsView`` (the window *is* the host, so
-    /// refocusing it is correct). False when the card is embedded in the
-    /// onboarding tour's permissions preview — there the card lives inside the
-    /// onboarding sheet, and popping a separate permissions window on top of it
-    /// would be jarring, so granting just reactivates the app in place.
     var refocusesWindowAfterGrant = true
 
     var body: some View {
@@ -234,14 +234,8 @@ struct PermissionCard: View {
                     }
                 }
                 .font(.callout)
-
-                if !permission.isRequired {
-                    CalloutBox("\(Constants.displayName) can work in a limited mode without this permission.") {
-                        Image(systemName: "checkmark.shield")
-                            .foregroundStyle(.green)
-                            .padding(-4)
-                    }
-                }
+                
+                Spacer(minLength: 0)
 
                 Button {
                     guard !isRequestingPermission else {
@@ -272,7 +266,7 @@ struct PermissionCard: View {
                 .disabled(isRequestingPermission)
             }
             .padding(12)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         }
     }
 }
