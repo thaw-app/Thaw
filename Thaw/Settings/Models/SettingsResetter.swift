@@ -78,5 +78,7 @@ extension AppSettings {
     func resetDisplay() {
         displaySettings.configurations = Defaults.DefaultValue.displayIceBarConfigurations
         displaySettings.globalConfiguration = Defaults.DefaultValue.globalDisplayConfiguration
+        displaySettings.confirmSpacingRelaunch = Defaults.DefaultValue.confirmSpacingRelaunch
+        displaySettings.unconfirmedSpacingProfileScope = Defaults.DefaultValue.unconfirmedSpacingProfileScope
     }
 }

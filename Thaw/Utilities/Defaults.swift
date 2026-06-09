@@ -202,6 +202,8 @@ extension Defaults {
 
         static let displayIceBarConfigurations: [String: DisplayIceBarConfiguration] = [:]
         static let globalDisplayConfiguration: DisplayIceBarConfiguration = .defaultConfiguration
+        static let confirmSpacingRelaunch = true
+        static let unconfirmedSpacingProfileScope: SpacingProfileSaveScope = .activeProfile
     }
 }
 
@@ -226,6 +228,8 @@ extension Defaults {
         case displayIceBarConfigurations = "DisplayIceBarConfigurations"
         case globalDisplayConfiguration = "GlobalDisplayConfiguration"
         case knownDisplays = "KnownDisplays"
+        case confirmSpacingRelaunch = "ConfirmSpacingRelaunch"
+        case unconfirmedSpacingProfileScope = "UnconfirmedSpacingProfileScope"
 
         // MARK: Hotkeys Settings
 
