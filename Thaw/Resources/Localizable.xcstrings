@@ -41450,7 +41450,7 @@
       }
     },
     "This will overwrite the settings of %lld display with the global template. If the active display's spacing changes, Thaw will relaunch each app with a menu bar item. Relaunching apps may cause unsaved input, progress, or transient app state to be lost." : {
-      "comment" : "A confirmation message that appears when the user is prompted to apply a global template. The first argument is the number of displays that will be affected. The second argument is the name of the active profile.",
+      "comment" : "A confirmation message that appears when the user is prompted to apply a global template. The argument is the number of displays that will be affected.",
       "localizations" : {
         "cs" : {
           "variations" : {
