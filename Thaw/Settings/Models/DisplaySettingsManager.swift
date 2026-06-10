@@ -445,8 +445,9 @@ final class DisplaySettingsManager: ObservableObject {
     /// Presents an app-modal confirmation before a display transition fires
     /// the relaunch wave. Returns true when the user approves the relaunch,
     /// false when they cancel. Runs modally so it surfaces even with the
-    /// Settings window closed; ticking the suppression checkbox turns
-    /// confirmSpacingRelaunch off so future transitions apply silently.
+    /// Settings window closed; ticking the suppression checkbox while pressing
+    /// Apply turns confirmSpacingRelaunch off so future transitions apply
+    /// silently. Cancelling never changes that setting.
     private func presentSpacingRelaunchConfirmation() -> Bool {
         NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()
@@ -456,11 +457,11 @@ final class DisplaySettingsManager: ObservableObject {
         alert.addButton(withTitle: String(localized: "Cancel"))
         alert.showsSuppressionButton = true
         alert.suppressionButton?.title = String(localized: "Don't ask again")
-        let response = alert.runModal()
-        if alert.suppressionButton?.state == .on {
+        let apply = alert.runModal() == .alertFirstButtonReturn
+        if apply, alert.suppressionButton?.state == .on {
             confirmSpacingRelaunch = false
         }
-        return response == .alertFirstButtonReturn
+        return apply
     }
 
     /// Handles per-display settings changed externally via Settings URI scheme.
