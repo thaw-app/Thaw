@@ -2242,7 +2242,9 @@ extension MenuBarItemManager {
             let didApplySavedLayout = await applySavedLayout(
                 items: items,
                 previousWindowIDs: previousWindowIDs,
-                controlItems: controlItems
+                controlItems: controlItems,
+                previousDisplayID: itemCache.displayID,
+                currentDisplayID: displayID
             )
             if didApplySavedLayout {
                 backgroundCacheContinuation?.resume()
@@ -6668,10 +6670,44 @@ extension MenuBarItemManager {
         return false
     }
 
+    /// Decides whether a windowID-set difference between two cache cycles is a
+    /// genuine change that should trigger a saved-layout re-apply, or merely an
+    /// artifact of the active menu bar display switching to another screen.
+    ///
+    /// With "Displays have separate Spaces" enabled the menu bar follows the
+    /// active display, so on a switch the previous display's item windows leave
+    /// the active-space window list and read as "missing" even though the same
+    /// logical items are still present on the other screen. Treating that as an
+    /// item quit fires a full bulk re-sort on every cross-screen focus change,
+    /// which on a notched display drifts items into always-hidden. A display
+    /// switch is not a layout edit, so it must not advance the gate; the
+    /// divergence check still runs and catches genuine section drift.
+    nonisolated static func windowIDsChanged(
+        previous: Set<CGWindowID>,
+        current: Set<CGWindowID>,
+        previousDisplayID: CGDirectDisplayID?,
+        currentDisplayID: CGDirectDisplayID?
+    ) -> Bool {
+        // First cycle: no prior frame to diff against.
+        guard !previous.isEmpty else { return false }
+        // The active menu bar display moved to another screen. With separate
+        // Spaces the prior display's windows are no longer on the active space,
+        // so they read as missing even though the same logical items are still
+        // present elsewhere. Not an item quit; do not advance the gate. Only
+        // suppress when both displays are known and genuinely differ, so an
+        // unknown display falls back to the plain disappearance signal.
+        if let previousDisplayID, let currentDisplayID, previousDisplayID != currentDisplayID {
+            return false
+        }
+        return !previous.isSubset(of: current)
+    }
+
     func applySavedLayout(
         items: [MenuBarItem],
         previousWindowIDs: [CGWindowID],
-        controlItems: ControlItemPair
+        controlItems: ControlItemPair,
+        previousDisplayID: CGDirectDisplayID? = nil,
+        currentDisplayID: CGDirectDisplayID? = nil
     ) async -> Bool {
         // Each guard logs a distinct reason so a "Thaw stopped
         // restoring my layout" bug report can be diagnosed from the
@@ -6727,8 +6763,12 @@ extension MenuBarItemManager {
         // happy path on app quit/relaunch pays nothing.
         let currentWindowIDSet = Set(items.map(\.windowID))
         let previousWindowIDSet = Set(previousWindowIDs)
-        let windowIDsChanged = !previousWindowIDSet.isEmpty &&
-            !previousWindowIDSet.isSubset(of: currentWindowIDSet)
+        let windowIDsChanged = Self.windowIDsChanged(
+            previous: previousWindowIDSet,
+            current: currentWindowIDSet,
+            previousDisplayID: previousDisplayID,
+            currentDisplayID: currentDisplayID
+        )
         let layoutDiverged = windowIDsChanged
             ? false
             : currentLayoutDivergesFromSaved(items: items, controlItems: controlItems)
