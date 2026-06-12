@@ -268,6 +268,72 @@ final class ProfileLayoutLogReplayTests: XCTestCase {
         )
         XCTAssertEqual(result.updatedDesiredFiltered, desiredFiltered)
     }
+
+    // MARK: Regression lock for the unsettled-geometry layout pass
+
+    /// Replays a real field cycle (thaw_2026-06-11_09-11-10.log, 11:31:05) on
+    /// the patched build where the notch-overflow guard is already present:
+    /// Control Center was reported at rightBoundary=672, left of the notch's
+    /// right edge (956), giving a negative budget. The overflow guard correctly
+    /// skipped the eject, but the pass still ran its control-item placement on
+    /// that stale geometry and moved the Thaw visible icon to the far left. The
+    /// geometry-readiness gate must report this cycle as not ready so the whole
+    /// pass is deferred. Red before the gate (the stub reports ready).
+    func testUnsettledGeometryFieldCycleIsNotReady() throws {
+        let log = """
+        2026-06-11 11:31:05.750 [DEBUG] [MenuBarItemManager] applyProfileLayout: current visible section has 1 items: ["leits.MeetingBar:Item-0"]
+        2026-06-11 11:31:05.750 [DEBUG] [MenuBarItemManager] applyProfileLayout: current hidden section has 0 items: []
+        2026-06-11 11:31:05.750 [DEBUG] [MenuBarItemManager] applyProfileLayout: current always-hidden section has 0 items: []
+        2026-06-11 11:31:05.751 [DEBUG] [MenuBarItemManager] Notch overflow budget: screen.maxX=1728.0 notch=[771.0…956.0] rightBoundary=672.0 availableWidth=-308.0 userSpacing=0.0 visibleUIDs.count=14 nonProfileCount=0 nonProfileFootprint=0.0 chevronFootprint=0.0 nonProfileBreakdown=[]
+        """
+        let parsed = ProfileLayoutLogReplay.parse(log)
+        let cycle = try XCTUnwrap(parsed.cycles.first)
+
+        XCTAssertEqual(cycle.notchRightBoundary, 672)
+        XCTAssertEqual(cycle.notchMaxX, 956)
+
+        XCTAssertFalse(
+            LayoutSolver.isMenuBarGeometryReady(
+                rightBoundary: try XCTUnwrap(cycle.notchRightBoundary),
+                notchMaxX: try XCTUnwrap(cycle.notchMaxX)
+            ),
+            "Control Center reported left of the notch (672 <= 956) is unsettled geometry; the pass must defer"
+        )
+    }
+
+    /// A settled field cycle (rightBoundary 1562, right of the notch 956) is
+    /// ready and must not be deferred. Guards against a gate that blocks valid
+    /// layouts.
+    func testSettledGeometryFieldCycleIsReady() throws {
+        let log = """
+        2026-06-11 13:13:58.558 [DEBUG] [MenuBarItemManager] applyProfileLayout: current visible section has 1 items: ["leits.MeetingBar:Item-0"]
+        2026-06-11 13:13:58.558 [DEBUG] [MenuBarItemManager] applyProfileLayout: current hidden section has 0 items: []
+        2026-06-11 13:13:58.558 [DEBUG] [MenuBarItemManager] applyProfileLayout: current always-hidden section has 0 items: []
+        2026-06-11 13:13:58.559 [DEBUG] [MenuBarItemManager] Notch overflow budget: screen.maxX=1728.0 notch=[771.0…956.0] rightBoundary=1562.0 availableWidth=565.0 userSpacing=0.0 visibleUIDs.count=14 nonProfileCount=0 nonProfileFootprint=0.0 chevronFootprint=17.0 nonProfileBreakdown=[]
+        """
+        let parsed = ProfileLayoutLogReplay.parse(log)
+        let cycle = try XCTUnwrap(parsed.cycles.first)
+
+        XCTAssertEqual(cycle.notchRightBoundary, 1562)
+        XCTAssertEqual(cycle.notchMaxX, 956)
+
+        XCTAssertTrue(
+            LayoutSolver.isMenuBarGeometryReady(
+                rightBoundary: try XCTUnwrap(cycle.notchRightBoundary),
+                notchMaxX: try XCTUnwrap(cycle.notchMaxX)
+            )
+        )
+    }
+
+    /// Boundary cases for the pure gate: strictly right of the notch is ready;
+    /// at the edge, left of it, or non-finite is not.
+    func testGeometryReadyBoundaries() {
+        XCTAssertTrue(LayoutSolver.isMenuBarGeometryReady(rightBoundary: 957, notchMaxX: 956))
+        XCTAssertFalse(LayoutSolver.isMenuBarGeometryReady(rightBoundary: 956, notchMaxX: 956))
+        XCTAssertFalse(LayoutSolver.isMenuBarGeometryReady(rightBoundary: -222, notchMaxX: 956))
+        XCTAssertFalse(LayoutSolver.isMenuBarGeometryReady(rightBoundary: .infinity, notchMaxX: 956))
+        XCTAssertFalse(LayoutSolver.isMenuBarGeometryReady(rightBoundary: .nan, notchMaxX: 956))
+    }
 }
 
 /// Parses Thaw profile-layout log text into replayable cycles and drives the
@@ -297,6 +363,12 @@ enum ProfileLayoutLogReplay {
         /// How many items the cycle logged as overflowing visible -> hidden
         /// (the field verdict for the overflow planner).
         var loggedOverflowCount: Int?
+        /// The notch's right edge (notch.maxX) from the budget line.
+        var notchMaxX: CGFloat?
+        /// The rightBoundary the cycle logged: Control Center's left edge, or
+        /// the screen's right edge when Control Center is absent. The
+        /// geometry-readiness gate compares this against notchMaxX.
+        var notchRightBoundary: CGFloat?
     }
 
     /// The parsed result: the ordered cycles plus the set of menu bar items
@@ -383,8 +455,12 @@ enum ProfileLayoutLogReplay {
                 continue
             }
 
-            if let match = line.firstMatch(of: /Notch overflow budget:.*availableWidth=(-?[0-9.]+)/) {
-                current?.notchAvailableWidth = Double(match.output.1).map { CGFloat($0) }
+            if let match = line.firstMatch(
+                of: /Notch overflow budget:.*notch=\[[0-9.]+…([0-9.]+)\] rightBoundary=(-?[0-9.]+) availableWidth=(-?[0-9.]+)/
+            ) {
+                current?.notchMaxX = Double(match.output.1).map { CGFloat($0) }
+                current?.notchRightBoundary = Double(match.output.2).map { CGFloat($0) }
+                current?.notchAvailableWidth = Double(match.output.3).map { CGFloat($0) }
                 continue
             }
 

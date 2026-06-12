@@ -6777,6 +6777,29 @@ extension MenuBarItemManager {
             return false
         }
 
+        // Geometry-readiness gate. On a notched display, if Control Center is
+        // reported at or left of the notch's right edge the menu bar geometry
+        // has not settled: a stale off-screen position reported transiently
+        // during a display reconnect or Control Center widget churn. Dispatching
+        // the bulk apply now runs the control-item placement against that
+        // geometry and mis-positions the Thaw visible icon to the far left (the
+        // notch-overflow budget guard alone only suppresses the eject, not the
+        // moves). Skip; the cache cycle falls through to a plain recache and a
+        // later tick retries once the geometry settles.
+        if let screen = NSScreen.screenWithActiveMenuBar ?? NSScreen.main,
+           screen.hasNotch,
+           let notch = screen.frameOfNotch
+        {
+            let rightBoundary = items.first(where: { $0.tag == .controlCenter })?.bounds.minX
+                ?? screen.frame.maxX
+            guard LayoutSolver.isMenuBarGeometryReady(rightBoundary: rightBoundary, notchMaxX: notch.maxX) else {
+                MenuBarItemManager.diagLog.debug(
+                    "applySavedLayout: skipping, menu bar geometry not settled (rightBoundary=\(rightBoundary), notch.maxX=\(notch.maxX))"
+                )
+                return false
+            }
+        }
+
         // Saved-tags intersection: skip if none of the saved items are
         // currently present. Matches the legacy restore's guard;
         // protects against running the bulk apply on a menu bar that

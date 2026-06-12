@@ -326,6 +326,27 @@ enum LayoutSolver {
         return .newHideableItem(candidate, identifierToMark: identifierToMark)
     }
 
+    // MARK: - Geometry readiness
+
+    /// Whether the menu bar geometry is settled enough to run a layout pass on
+    /// a notched display.
+    ///
+    /// `rightBoundary` is Control Center's left edge (or the screen's right edge
+    /// when Control Center is absent), the same value the notch-overflow budget
+    /// is derived from. A finite value to the right of the notch's right edge is
+    /// a valid layout anchor. A value at or left of the notch (or non-finite)
+    /// means Control Center was reported at a stale off-screen position, which
+    /// happens transiently during a display reconnect or Control Center widget
+    /// churn. Running the placement and move logic against that geometry
+    /// mis-positions the control items (the Thaw visible icon jumps to the far
+    /// left), so the pass must be deferred until the geometry settles.
+    static nonisolated func isMenuBarGeometryReady(
+        rightBoundary: CGFloat,
+        notchMaxX: CGFloat
+    ) -> Bool {
+        rightBoundary.isFinite && rightBoundary > notchMaxX
+    }
+
     // MARK: - Notch overflow
 
     /// Decides which visible items must overflow into hidden to fit the
