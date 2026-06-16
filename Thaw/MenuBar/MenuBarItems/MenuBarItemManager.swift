@@ -578,13 +578,18 @@ final class MenuBarItemManager: ObservableObject {
     }
 
     /// Returns the section name for the given persisted key, if valid.
-    private func sectionName(for key: String) -> MenuBarSection.Name? {
+    private nonisolated static func persistedSectionName(for key: String) -> MenuBarSection.Name? {
         switch key {
         case "visible": .visible
         case "hidden": .hidden
         case "alwaysHidden": .alwaysHidden
         default: nil
         }
+    }
+
+    /// Returns the section name for the given persisted key, if valid.
+    private func sectionName(for key: String) -> MenuBarSection.Name? {
+        Self.persistedSectionName(for: key)
     }
 
     /// Prefix used in `pendingRelocations` values to mark items whose rehide
@@ -6620,33 +6625,60 @@ extension MenuBarItemManager {
     /// `getMenuBarItems` pass) rather than via per-item AX round-trips
     /// through `CacheContext`. Items that straddle a control-item
     /// boundary are ignored to avoid false positives during transient
-    /// section show/hide animations. Multi-instance baseIDs use
-    /// "last write wins" in the expected-section map; this can
-    /// false-positive when a single app has instances split across
-    /// sections in `savedSectionOrder`, but the bulk apply
-    /// early-returns when no moves are needed, so the cost is minor.
+    /// section show/hide animations. Exact instance identifiers participate
+    /// directly; base-identifier fallback is allowed only when all saved
+    /// instances for that base belong to one section, avoiding false positives
+    /// from multi-instance items split across sections.
+    nonisolated static func baseIdentifier(forSavedIdentifier identifier: String) -> String {
+        let parts = identifier.split(separator: ":", maxSplits: 2, omittingEmptySubsequences: false)
+        guard parts.count >= 2 else { return identifier }
+        return "\(parts[0]):\(parts[1])"
+    }
+
+    nonisolated static func savedLayoutSectionLookup(
+        savedSectionOrder: [String: [String]]
+    ) -> (
+        exact: [String: MenuBarSection.Name],
+        unambiguousBase: [String: MenuBarSection.Name]
+    ) {
+        var exactSections = [String: Set<MenuBarSection.Name>]()
+        var baseSections = [String: Set<MenuBarSection.Name>]()
+
+        for (sectionKey, identifiers) in savedSectionOrder {
+            guard let section = persistedSectionName(for: sectionKey) else { continue }
+            for identifier in identifiers {
+                exactSections[identifier, default: []].insert(section)
+                baseSections[baseIdentifier(forSavedIdentifier: identifier), default: []].insert(section)
+            }
+        }
+
+        let exact = exactSections.compactMapValues { sections in
+            sections.count == 1 ? sections.first : nil
+        }
+        let unambiguousBase = baseSections.compactMapValues { sections in
+            sections.count == 1 ? sections.first : nil
+        }
+
+        return (exact, unambiguousBase)
+    }
+
     private func currentLayoutDivergesFromSaved(
         items: [MenuBarItem],
         controlItems: ControlItemPair
     ) -> Bool {
-        var savedSectionByBaseID = [String: MenuBarSection.Name]()
-        for (sectionKey, ids) in savedSectionOrder {
-            guard let section = sectionName(for: sectionKey) else { continue }
-            for id in ids {
-                let parts = id.split(separator: ":", maxSplits: 2)
-                let baseID = parts.prefix(2).joined(separator: ":")
-                savedSectionByBaseID[baseID] = section
-            }
-        }
-        guard !savedSectionByBaseID.isEmpty else { return false }
+        let sectionLookup = Self.savedLayoutSectionLookup(savedSectionOrder: savedSectionOrder)
+        guard !sectionLookup.exact.isEmpty || !sectionLookup.unambiguousBase.isEmpty else { return false }
 
         let hiddenMinX = controlItems.hidden.bounds.minX
         let hiddenMaxX = controlItems.hidden.bounds.maxX
         let ahBounds = controlItems.alwaysHidden?.bounds
 
         for item in items where !item.isControlItem && item.canBeHidden && item.isMovable {
-            let baseID = "\(item.tag.namespace):\(item.tag.title)"
-            guard let expectedSection = savedSectionByBaseID[baseID] else {
+            let identifier = item.uniqueIdentifier
+            let baseID = Self.baseIdentifier(forSavedIdentifier: identifier)
+            guard let expectedSection = sectionLookup.exact[identifier]
+                ?? sectionLookup.unambiguousBase[baseID]
+            else {
                 continue
             }
 
@@ -6777,13 +6809,19 @@ extension MenuBarItemManager {
             return false
         }
 
-        // Saved-tags intersection: skip if none of the saved items are
-        // currently present. Matches the legacy restore's guard;
-        // protects against running the bulk apply on a menu bar that
-        // shares no widgets with the persisted layout.
-        let currentTags = Set(items.map { "\($0.tag.namespace):\($0.tag.title)" })
-        let savedTags = Set(savedSectionOrder.values.flatMap(\.self))
-        guard !savedTags.isDisjoint(with: currentTags) else {
+        // Saved-item intersection: skip if none of the saved items are
+        // currently present. Prefer exact namespace/title/instance matches;
+        // fall back to namespace/title only when every saved instance for that
+        // base belongs to one section. This avoids treating ambiguous
+        // multi-instance Control Center items (for example Item-0:1 visible,
+        // Item-0:2 hidden) as evidence that the saved layout is present and
+        // needs a bulk apply.
+        let sectionLookup = Self.savedLayoutSectionLookup(savedSectionOrder: savedSectionOrder)
+        let currentIdentifiers = Set(items.map(\.uniqueIdentifier))
+        let currentBaseIdentifiers = Set(items.map { Self.baseIdentifier(forSavedIdentifier: $0.uniqueIdentifier) })
+        guard !Set(sectionLookup.exact.keys).isDisjoint(with: currentIdentifiers)
+            || !Set(sectionLookup.unambiguousBase.keys).isDisjoint(with: currentBaseIdentifiers)
+        else {
             MenuBarItemManager.diagLog.debug("applySavedLayout: skipping, no saved items currently present")
             return false
         }
