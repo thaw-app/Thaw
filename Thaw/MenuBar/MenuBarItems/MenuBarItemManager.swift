@@ -303,7 +303,7 @@ final class MenuBarItemManager: ObservableObject {
     /// True while `applyProfileLayout` is executing. Suppresses the
     /// late-arrival detection in `cacheItemsRegardless` to prevent
     /// false re-sort triggers during an in-flight sort.
-    private var isApplyingProfileLayout = false
+    private(set) var isApplyingProfileLayout = false
 
     /// Persisted mapping of item tag identifiers to their original section name for
     /// temporarily shown items whose apps quit before they could be rehidden. When
@@ -5597,7 +5597,7 @@ extension MenuBarItemManager {
     /// Phase 7 with Task.isCancelled false). If a crash, SIGKILL, or
     /// mid-apply cancellation aborts before that point, disk reflects
     /// the previous profile rather than an unexecuted intent.
-    private func armProfileState(
+    func armProfileState(
         source: ApplySource,
         pinnedHidden: Set<String>,
         pinnedAlwaysHidden: Set<String>,
@@ -5686,6 +5686,19 @@ extension MenuBarItemManager {
         updateProfileSortedSnapshot(source: source, items: items)
         guard case .profile = source else { return }
         isApplyingProfileLayout = false
+    }
+
+    /// Cleanup for a profile apply that needed no item moves: the bar was
+    /// already in the target arrangement, so the move loop is skipped and the
+    /// normal Phase 7 exit (which clears the in-flight flag) is never reached.
+    /// This early exit must run the same profile-only teardown as Phase 7,
+    /// otherwise a no-moves apply (common on a display reconnect, where the
+    /// active-display profile is re-applied onto an already-correct bar) leaks
+    /// isApplyingProfileLayout = true and permanently blocks applySavedLayout
+    /// for the rest of the session.
+    func concludeProfileApplyWithoutMoves(source: ApplySource, items: [MenuBarItem]) {
+        persistProfileStateOnSuccess(source: source)
+        clearProfileState(source: source, items: items)
     }
 
     /// Schedules the post-apply refresh sequence on a detached Task:
@@ -6521,8 +6534,7 @@ extension MenuBarItemManager {
                 } else {
                     MenuBarItemManager.diagLog.info("Profile layout: all items already in correct positions")
                 }
-                updateProfileSortedSnapshot(source: source, items: items)
-                persistProfileStateOnSuccess(source: source)
+                concludeProfileApplyWithoutMoves(source: source, items: items)
                 scheduleDeferredCacheRefresh()
                 return
             }
