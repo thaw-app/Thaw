@@ -1820,12 +1820,30 @@ extension MenuBarItemManager {
                     return bounds.origin.x == -1
                 }
             }
-            if !hasBlockedItems {
-                saveSectionOrder(from: context.cache)
-            } else {
+            // Don't persist while the items straddle two displays. A cross-display
+            // cache is a menu bar relocation caught mid-flight, not a settled
+            // layout: macOS un-hides items as it moves them to the new screen, so
+            // capturing the section order now would bake those un-hidden items
+            // into the saved layout as if the user wanted them visible. Wait for
+            // the items to collapse back onto a single display.
+            let screenFrames = NSScreen.screens.map { CGDisplayBounds($0.displayID) }
+            let itemCenters = MenuBarSection.Name.allCases.flatMap { section in
+                context.cache[section].map { CGPoint(x: $0.bounds.midX, y: $0.bounds.midY) }
+            }
+            let spansDisplays = LayoutSolver.itemsSpanMultipleDisplays(
+                itemCenters: itemCenters,
+                screenFrames: screenFrames
+            )
+            if hasBlockedItems {
                 MenuBarItemManager.diagLog.debug(
                     "Skipping saveSectionOrder; blocked items detected (x=-1), will retry on next cache tick"
                 )
+            } else if spansDisplays {
+                MenuBarItemManager.diagLog.debug(
+                    "Skipping saveSectionOrder; menu bar items span multiple displays (relocation in progress)"
+                )
+            } else {
+                saveSectionOrder(from: context.cache)
             }
         }
         MenuBarItemManager.diagLog.debug("Updated menu bar item cache: visible=\(context.cache[.visible].count), hidden=\(context.cache[.hidden].count), alwaysHidden=\(context.cache[.alwaysHidden].count)")
@@ -6798,6 +6816,24 @@ extension MenuBarItemManager {
                 )
                 return false
             }
+        }
+
+        // Display-spread gate. While the active menu bar is relocating to
+        // another display macOS migrates the status item windows between
+        // screens asynchronously, so the items transiently straddle two
+        // displays. A bulk apply dispatched now resolves each item's move
+        // against whichever display its window currently occupies and cannot
+        // converge, stranding items on the wrong screen where they read as
+        // un-hidden. Skip; a later tick retries once the items collapse back
+        // onto the active display. Frames come from CGDisplayBounds so they
+        // share the top-left origin coordinate space of the item bounds.
+        let screenFrames = NSScreen.screens.map { CGDisplayBounds($0.displayID) }
+        let itemCenters = items.map { CGPoint(x: $0.bounds.midX, y: $0.bounds.midY) }
+        if LayoutSolver.itemsSpanMultipleDisplays(itemCenters: itemCenters, screenFrames: screenFrames) {
+            MenuBarItemManager.diagLog.debug(
+                "applySavedLayout: skipping, menu bar items span multiple displays (relocation in progress)"
+            )
+            return false
         }
 
         // Saved-tags intersection: skip if none of the saved items are

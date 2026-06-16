@@ -347,6 +347,40 @@ enum LayoutSolver {
         rightBoundary.isFinite && rightBoundary > notchMaxX
     }
 
+    /// Whether the given menu bar items currently occupy more than one display.
+    ///
+    /// Each center is matched to the screen frame that contains it. Frames and
+    /// centers are expected in the global CoreGraphics coordinate space
+    /// (top-left origin), so a secondary display above the main one has a
+    /// negative y origin. Centers that fall on no screen are intentionally
+    /// parked off-screen hidden items (the control item shoves them thousands
+    /// of points to the left) and are ignored. When the remaining on-screen
+    /// items resolve to more than one distinct screen the active menu bar is
+    /// relocating between displays: macOS migrates the status item windows
+    /// asynchronously, so for a window of time some items sit on the old screen
+    /// and some on the new one. A bulk apply dispatched then resolves each
+    /// move against a different display and cannot converge, leaving items
+    /// stranded where they read as un-hidden; a section order persisted then
+    /// bakes that transition artifact into the saved layout. Both callers defer
+    /// until the items collapse back onto a single display.
+    static nonisolated func itemsSpanMultipleDisplays(
+        itemCenters: [CGPoint],
+        screenFrames: [CGRect]
+    ) -> Bool {
+        guard screenFrames.count > 1 else { return false }
+        var hitScreens = Set<Int>()
+        for center in itemCenters {
+            guard let index = screenFrames.firstIndex(where: { $0.contains(center) }) else {
+                continue
+            }
+            hitScreens.insert(index)
+            if hitScreens.count > 1 {
+                return true
+            }
+        }
+        return false
+    }
+
     // MARK: - Notch overflow
 
     /// Decides which visible items must overflow into hidden to fit the
