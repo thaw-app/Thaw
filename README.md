@@ -29,7 +29,7 @@ Thaw is a powerful menu bar management tool for macOS 26. While its primary func
 
 ### Manual Installation
 
-Download the `Thaw_1.x.x.zip` file from the [latest release](https://github.com/stonerl/Thaw/releases/latest) and move the unzipped app into your `Applications` folder.
+Download the `Thaw_<version>.zip` file from the [latest release](https://github.com/stonerl/Thaw/releases/latest) and move the unzipped app into your `Applications` folder.
 
 ### Homebrew
 
