@@ -1,8 +1,8 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" width="600" srcset="Resources/headers/Header_Dark.svg">
-    <source media="(prefers-color-scheme: light)" width="600" srcset="Resources/headers/Header_Light.svg">
-    <img src="Resources/headers/Header_Light.svg" width="600" alt="Thaw Header" />
+    <source media="(prefers-color-scheme: dark)" width="400" srcset="Resources/headers/Header_Dark.svg">
+    <source media="(prefers-color-scheme: light)" width="400" srcset="Resources/headers/Header_Light.svg">
+    <img src="Resources/headers/Header_Light.svg" width="400" alt="Thaw Header" />
   </picture>
 </p>
 Thaw is a powerful menu bar management tool for macOS 26. While its primary function is hiding and showing menu bar items, it aims to cover a wide variety of additional features to make it one of the most versatile menu bar tools available.
