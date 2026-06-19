@@ -45,7 +45,7 @@ jobs:
       - name: Run SwiftLint
         run: |
           docker run --rm -v "$PWD:/work" -w /work \
-            ghcr.io/realm/swiftlint:latest \
+            ghcr.io/realm/swiftlint:0.63.3 \
             swiftlint --strict
 
   build:
@@ -81,10 +81,15 @@ jobs:
 
       - name: Convert coverage to XML
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          XCRESULTPARSER_VERSION: "2.0.1"
         run: |
-          brew install a7ex/homebrew-formulae/xcresultparser
+          set -euo pipefail
+          curl -fsSL -o xcresultparser.zip \
+            "https://github.com/a7ex/xcresultparser/releases/download/${XCRESULTPARSER_VERSION}/xcresultparser.zip"
+          unzip -oq xcresultparser.zip
           NEWEST_BUNDLE=$(ls -td Build/Logs/Test/*.xcresult 2>/dev/null | head -n1)
-          xcresultparser -c -o xml "$NEWEST_BUNDLE" > coverage.xml
+          ./product/xcresultparser -c -o xml "$NEWEST_BUNDLE" > coverage.xml
 
       - name: Upload Coverage XML
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
