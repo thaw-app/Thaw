@@ -24,7 +24,7 @@ jobs:
   static_analysis:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Validate XCStrings
@@ -50,14 +50,15 @@ jobs:
 
   build:
     runs-on: macos-26
+    needs: static_analysis
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: 1
     steps:
-      - uses: actions/checkout@v6
-
-      # Issues with other Xcode versions, so we need to specify the version explicitly
+      - uses: actions/checkout@v7
       - run: sudo xcode-select -s /Applications/Xcode_26.5.app/Contents/Developer
 
       - name: Cache SwiftPM
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             Build/SourcePackages
@@ -78,39 +79,38 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
 
-      - name: Upload Coverage Only
+      - name: Convert coverage to XML
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        run: |
+          brew install a7ex/homebrew-formulae/xcresultparser
+          NEWEST_BUNDLE=$(ls -td Build/Logs/Test/*.xcresult 2>/dev/null | head -n1)
+          xcresultparser -c -o xml "$NEWEST_BUNDLE" > coverage.xml
+
+      - name: Upload Coverage XML
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         uses: actions/upload-artifact@v7
         with:
           name: coverage-data
-          path: Build/Logs/Test/*.xcresult
+          path: coverage.xml
           retention-days: 1
           if-no-files-found: error
 
   sonarqube:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     needs: build
-    runs-on: macos-26
-    env:
-      HOMEBREW_NO_AUTO_UPDATE: 1
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
-      - name: Download Coverage Only
-        uses: actions/download-artifact@v7
+      - name: Download Coverage XML
+        uses: actions/download-artifact@v8
         with:
           name: coverage-data
-          path: Build/Logs/Test/
-
-      - name: Process coverage & Scan
-        run: |
-          brew install a7ex/homebrew-formulae/xcresultparser
-          NEWEST_BUNDLE=$(ls -td Build/Logs/Test/*.xcresult 2>/dev/null | head -n1)
-          xcresultparser -c -o xml "$NEWEST_BUNDLE" > coverage.xml
 
       - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v6
+        uses: SonarSource/sonarqube-scan-action@v8.2.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
