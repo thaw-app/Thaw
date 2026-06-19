@@ -1,6 +1,6 @@
 name: CI
 concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref}}
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 on:
   pull_request:
@@ -22,7 +22,7 @@ on:
 
 jobs:
   static_analysis:
-    runs-on: macos-26
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
         with:
@@ -42,19 +42,29 @@ jobs:
             python3 -m json.tool "$file" > /dev/null
           done
 
-      - name: Install SwiftLint
-        run: brew install swiftlint
       - name: Run SwiftLint
-        run: swiftlint --strict
+        run: |
+          docker run --rm -v "$PWD:/work" -w /work \
+            ghcr.io/realm/swiftlint:latest \
+            swiftlint --strict
 
   build:
     runs-on: macos-26
-    needs: static_analysis
     steps:
       - uses: actions/checkout@v6
 
       # Issues with other Xcode versions, so we need to specify the version explicitly
       - run: sudo xcode-select -s /Applications/Xcode_26.5.app/Contents/Developer
+
+      - name: Cache SwiftPM
+        uses: actions/cache@v4
+        with:
+          path: |
+            Build/SourcePackages
+            ~/Library/Caches/org.swift.swiftpm
+          key: spm-${{ runner.os }}-${{ hashFiles('**/Package.resolved') }}
+          restore-keys: |
+            spm-${{ runner.os }}-
 
       - name: Build and Test
         run: |
@@ -80,6 +90,8 @@ jobs:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     needs: build
     runs-on: macos-26
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: 1
     steps:
       - uses: actions/checkout@v6
         with:
