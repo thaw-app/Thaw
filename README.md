@@ -1,5 +1,5 @@
 <div align="center">
-    <img alt="Thaw icon" src="Resources/Icon.svg" width="200" height="200" />
+    <img alt="Thaw icon" src="Resources/NewIcon.png" width="200" height="200" />
     <h1>Thaw</h1>
 </div>
 
