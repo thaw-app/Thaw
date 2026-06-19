@@ -1,5 +1,6 @@
 <div align="center">
-    <h1><img alt="Thaw icon" src="Resources/Icon.png" width="80" height="80" align="center" />&nbsp;Thaw</h1>
+    <img alt="Thaw icon" src="Resources/Icon.svg" width="200" height="200" />
+    <h1>Thaw</h1>
 </div>
 
 Thaw is a powerful menu bar management tool for macOS 26. While its primary function is hiding and showing menu bar items, it aims to cover a wide variety of additional features to make it one of the most versatile menu bar tools available.
@@ -55,26 +56,24 @@ Thaw is currently available in the following languages:
         <td>🇨🇿 <b>Čeština</b><br /><img alt="cs translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=cs&style=square&logo=crowdin&query=%24.progress.0.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
         <td>🇩🇪 🇦🇹 <b>Deutsch</b><br /><img alt="de translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=de&style=square&logo=crowdin&query=%24.progress.1.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
         <td>🇬🇧 🇺🇸 <b>English</b><br /><img alt="en translation" src="https://img.shields.io/badge/en-100%25-blue?style=square&logo=crowdin" /></td>
+        <td>🇪🇸 🇲🇽 <b>Español</b><br /><img alt="es-ES translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=es-ES&style=square&logo=crowdin&query=%24.progress.2.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
     </tr>
     <tr>
-        <td>🇪🇸 🇲🇽 <b>Español</b><br /><img alt="es-ES translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=es-ES&style=square&logo=crowdin&query=%24.progress.2.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
         <td>🇫🇷 <b>Français</b><br /><img alt="fr translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=fr&style=square&logo=crowdin&query=%24.progress.3.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
         <td>🇮🇹 <b>Italiano</b><br /><img alt="it translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=it&style=square&logo=crowdin&query=%24.progress.6.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
         <td>🇯🇵 <b>日本語</b><br /><img alt="ja translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=ja&style=square&logo=crowdin&query=%24.progress.7.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
-    </tr>
-    <tr>
         <td>🇰🇷 <b>한국어</b><br /><img alt="ko translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=ko&style=square&logo=crowdin&query=%24.progress.8.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
         <td>🇭🇺 <b>Magyar</b><br /><img alt="hu translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=hu&style=square&logo=crowdin&query=%24.progress.4.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
-        <td>🇳🇱 🇧🇪 <b>Nederlands</b><br /><img alt="nl translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=nl&style=square&logo=crowdin&query=%24.progress.9.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
-        <td>🇧🇷 <b>Português (Brasil)</b><br /><img alt="pt-BR translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=pt-BR&style=square&logo=crowdin&query=%24.progress.11.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
     </tr>
     <tr>
+        <td>🇳🇱 🇧🇪 <b>Nederlands</b><br /><img alt="nl translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=nl&style=square&logo=crowdin&query=%24.progress.9.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
+        <td>🇧🇷 <b>Português (Brasil)</b><br /><img alt="pt-BR translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=pt-BR&style=square&logo=crowdin&query=%24.progress.11.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
         <td>🇷🇺 <b>Русский</b><br /><img alt="ru translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=ru&style=square&logo=crowdin&query=%24.progress.12.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
         <td>🇨🇳 <b>简体中文</b><br /><img alt="zh-CN translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=zh-CN&style=square&logo=crowdin&query=%24.progress.17.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
         <td>🇹🇼 <b>正體中文</b><br /><img alt="zh-TW translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=zh-TW&style=square&logo=crowdin&query=%24.progress.18.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
-        <td>🇹🇭 <b>ภาษาไทย</b><br /><img alt="th translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=th&style=square&logo=crowdin&query=%24.progress.13.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
     </tr>
     <tr>
+        <td>🇹🇭 <b>ภาษาไทย</b><br /><img alt="th translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=th&style=square&logo=crowdin&query=%24.progress.13.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
         <td>🇵🇱 <b>Polski</b><br /><img alt="pl translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=pl&style=square&logo=crowdin&query=%24.progress.10.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
         <td>🇹🇷 <b>Türkçe</b><br /><img alt="tr translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=tr&style=square&logo=crowdin&query=%24.progress.14.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
         <td>🇺🇦 <b>Українська(*)</b><br /><img alt="uk translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=uk&style=square&logo=crowdin&query=%24.progress.15.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
