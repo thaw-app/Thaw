@@ -9,6 +9,7 @@ jobs:
     runs-on: ubuntu-slim
     permissions:
       pull-requests: write
+      issues: write
     steps:
       - name: Apply labels from PR template
         uses: actions/github-script@v9
