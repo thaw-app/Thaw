@@ -3,6 +3,10 @@ name: Build DMG
 on:
   workflow_dispatch:
 
+concurrency:
+  group: build-dmg-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-dmg:
     runs-on: macos-26
@@ -10,7 +14,7 @@ jobs:
       APP_NAME: "Thaw.app"
       DMG_NAME: "Thaw-dev.dmg"
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       # Issues with other Xcode versions, so we need to specify the version explicitly
       - run: sudo xcode-select -s /Applications/Xcode_26.5.app/Contents/Developer
