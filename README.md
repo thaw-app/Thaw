@@ -92,7 +92,7 @@ If a language you'd like to help to translate is not listed here, let us know an
 ## Features
 
 <details>
-<summary>Click to view the full list of features</summary>
+<summary>Click to view the full features list</summary>
 
 ### Menu bar item management
 
@@ -106,7 +106,7 @@ If a language you'd like to help to translate is not listed here, let us know an
 - Drag and drop interface to arrange individual menu bar items
 - Display hidden menu bar items in a separate bar (e.g. for MacBooks with the notch)
 - Search menu bar items
-- Menu bar item spacing (BETA)
+- Menu bar item spacing
 - Profiles for menu bar layout
 
 ### Menu bar appearance
@@ -126,21 +126,22 @@ If a language you'd like to help to translate is not listed here, let us know an
 - Show/hide section divider icons
 - Toggle application menus
 
-### Other
-
-- Launch at login
-- Automatic updates
-
 </details>
 
 ## Roadmap
 
-Planned features, grouped by area:
+<details>
+<summary>Click to view the roadmap</summary>
 
+<br>
+
+- **macOS 27 support** — compatibility with the next macOS release.
 - **Menu bar item management** — individual spacer items; menu bar item groups; show menu bar items when trigger conditions are met
 - **Menu bar appearance** — rounded screen corners
 - **Hotkeys** — enable/disable auto rehide; temporarily show individual menu bar items
 - **Other** — menu bar widgets
+
+</details>
 
 ## Gallery
 
