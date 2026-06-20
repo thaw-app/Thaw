@@ -455,13 +455,16 @@ enum LayoutSolver {
             .filter { !controlSet.contains($0) }
 
         let overflowSet = Set(overflowUIDs)
-        let remainingNonChevron = nonChevronUIDs.filter { !overflowSet.contains($0) }
+        // Keep the visible items in their saved order and drop only the
+        // overflowed ones. The visible control item is never in overflowSet, so
+        // filtering preserves its saved position instead of forcing it to the
+        // front of the visible section. Prepending the chevron relocated the
+        // always-visible Thaw icon to the leftmost slot on every overflow even
+        // though it was never the item that overflowed.
+        let remainingVisible = visibleUIDs.filter { !overflowSet.contains($0) }
 
         var rebuilt = [String]()
-        if let chevron = controlUIDs.visible {
-            rebuilt.append(chevron)
-        }
-        rebuilt.append(contentsOf: remainingNonChevron)
+        rebuilt.append(contentsOf: remainingVisible)
         rebuilt.append(controlUIDs.hidden)
         rebuilt.append(contentsOf: existingHidden)
         rebuilt.append(contentsOf: overflowUIDs)
