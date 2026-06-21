@@ -46,9 +46,6 @@ class Permission: ObservableObject, Identifiable {
     /// Observer that runs on a timer to check permissions.
     private var timerCancellable: AnyCancellable?
 
-    /// Observer that observes the ``hasPermission`` property.
-    private var hasPermissionCancellable: AnyCancellable?
-
     /// Creates a permission.
     ///
     /// - Parameters:
@@ -105,39 +102,16 @@ class Permission: ObservableObject, Identifiable {
     /// Performs the request and opens the System Settings app to the appropriate pane.
     func performRequest() {
         request()
+        configureCancellables()
         if let settingsURL {
             NSWorkspace.shared.open(settingsURL)
         }
-    }
-
-    /// Asynchronously waits for the app to be granted this permission.
-    func waitForPermission() async {
-        hasPermissionCancellable?.cancel()
-        configureCancellables()
-        guard !hasPermission else {
-            return
-        }
-        await withCheckedContinuation { continuation in
-            hasPermissionCancellable = $hasPermission.sink { [weak self] hasPermission in
-                guard self != nil else {
-                    continuation.resume()
-                    return
-                }
-                if hasPermission {
-                    continuation.resume()
-                }
-            }
-        }
-        hasPermissionCancellable?.cancel()
-        hasPermissionCancellable = nil
     }
 
     /// Stops running the permission check.
     func stopCheck() {
         timerCancellable?.cancel()
         timerCancellable = nil
-        hasPermissionCancellable?.cancel()
-        hasPermissionCancellable = nil
     }
 }
 
@@ -187,7 +161,7 @@ final class ScreenRecordingPermission: Permission {
             isRequired: false,
             settingsURL: URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"),
             check: {
-                ScreenCapture.checkPermissions()
+                ScreenCapture.cachedCheckPermissions(reset: true)
             },
             request: {
                 ScreenCapture.requestPermissions()

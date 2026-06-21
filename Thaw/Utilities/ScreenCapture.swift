@@ -22,6 +22,7 @@ enum ScreenCapture {
     static func checkPermissions() -> Bool {
         let windowIDs = Bridging.getMenuBarWindowList(option: [.itemsOnly, .activeSpace])
         diagLog.debug("checkPermissions: checking \(windowIDs.count) menu bar window(s) for title access")
+        var windowTitles = [String?]()
 
         for windowID in windowIDs {
             guard
@@ -32,13 +33,26 @@ enum ScreenCapture {
             }
             let hasTitle = window.title != nil
             diagLog.debug("checkPermissions: windowID=\(windowID) pid=\(window.ownerPID) owner=\"\(window.ownerName ?? "nil")\" title=\"\(window.title ?? "nil")\" → hasTitle=\(hasTitle)")
-            return hasTitle
+            windowTitles.append(window.title)
         }
-        // CGPreflightScreenCaptureAccess() only returns an initial value,
-        // but we can use it as a fallback.
+
         let preflightResult = CGPreflightScreenCaptureAccess()
-        diagLog.debug("checkPermissions: no suitable non-owned windows found, fallback CGPreflightScreenCaptureAccess() → \(preflightResult)")
-        return preflightResult
+        let result = permissionGranted(
+            windowTitles: windowTitles,
+            preflightResult: preflightResult
+        )
+        diagLog.debug("checkPermissions: titledWindow=\(windowTitles.contains { $0 != nil }), CGPreflightScreenCaptureAccess()=\(preflightResult) → \(result)")
+        return result
+    }
+
+    /// Resolves screen capture access from all eligible window titles and the
+    /// Core Graphics preflight result. A single untitled window must not mask
+    /// a later titled window that proves access.
+    static func permissionGranted(
+        windowTitles: [String?],
+        preflightResult: Bool
+    ) -> Bool {
+        preflightResult || windowTitles.contains { $0 != nil }
     }
 
     /// Returns a Boolean value that indicates whether the app has screen

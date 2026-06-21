@@ -14,19 +14,34 @@ import XCTest
 final class OnboardingSlideTests: XCTestCase {
     // MARK: - Ordering invariant
 
-    // The onboarding flow relies on a fixed slide order: `welcome` must be
-    // first, and `permissions` must be last. The "Skip" button jumps to
-    // `slides.count - 1`, `OnboardingSheet/isLast` gates the first-launch
-    // permissions handoff, and the zoom reset keys off the welcome slide.
-    // Reordering the enum would silently break those flows, so lock the
-    // endpoints here.
+    // The onboarding flow is a feature tour only. Permission requests are
+    // handled by the standalone permissions window before this tour appears.
+    // Lock the complete sequence so a permission slide cannot be added back
+    // accidentally.
 
     func testWelcomeIsFirst() {
         XCTAssertEqual(OnboardingSlide.allCases.first, .welcome)
     }
 
-    func testPermissionsIsLast() {
-        XCTAssertEqual(OnboardingSlide.allCases.last, .permissions)
+    func testFeatureTourSequence() {
+        XCTAssertEqual(
+            OnboardingSlide.allCases,
+            [.welcome, .menuBarManagement, .menuBarAppearance, .hotkeysAutomation, .profiles]
+        )
+    }
+
+    func testFirstLaunchPermissionsFlowStartsWithOnboarding() {
+        XCTAssertEqual(
+            PermissionsFlowStage(hasSeenOnboarding: false, hasCompletedFirstLaunch: false),
+            .onboarding
+        )
+    }
+
+    func testPermissionsFlowSkipsOnboardingAfterItWasSeen() {
+        XCTAssertEqual(
+            PermissionsFlowStage(hasSeenOnboarding: true, hasCompletedFirstLaunch: false),
+            .permissions
+        )
     }
 
     // MARK: - id

@@ -134,11 +134,9 @@ final class AppState: ObservableObject {
     }
 
     /// Completes first-launch setup based on the permissions currently granted,
-    /// then brings the app to regular activation and opens Settings. Shared by
-    /// the permissions window's Continue button and onboarding's final slide.
+    /// then brings the app to regular activation and opens Settings.
     func completeFirstLaunchSetup() {
         dismissWindow(.permissions)
-        Defaults.set(true, forKey: .hasSeenOnboarding)
 
         let hasPermissions = permissions.permissionsState != .missing
         performSetup(hasPermissions: hasPermissions)

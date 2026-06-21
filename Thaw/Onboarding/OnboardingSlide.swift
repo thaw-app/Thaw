@@ -15,7 +15,6 @@ enum OnboardingSlide: Int, CaseIterable, Identifiable {
     case menuBarAppearance
     case hotkeysAutomation
     case profiles
-    case permissions
 
     var id: Int {
         rawValue
@@ -29,7 +28,6 @@ enum OnboardingSlide: Int, CaseIterable, Identifiable {
         case .menuBarAppearance: "Menu Bar Appearance"
         case .hotkeysAutomation: "Hotkeys & Automation"
         case .profiles: "Profiles"
-        case .permissions: "Permissions"
         }
     }
 
@@ -46,8 +44,6 @@ enum OnboardingSlide: Int, CaseIterable, Identifiable {
             "Trigger any action with a keystroke. Combine auto-rehide timers and Focus Filter integration so Thaw adapts to whatever you're doing."
         case .profiles:
             "Save your current configuration as a named profile. Switch between layouts instantly, or let Thaw switch automatically when you change your frontmost app."
-        case .permissions:
-            "Thaw needs a couple of permissions to manage your menu bar. You can grant them now, or skip and grant them later from Settings."
         }
     }
 }

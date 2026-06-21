@@ -116,14 +116,10 @@ struct MacBookBezelView<Content: View>: View {
 // MARK: -
 
 /// The first-launch and replayable onboarding tour: a sequence of feature
-/// slides shown inside a stylized MacBook frame, ending on the permissions
-/// decision.
+/// slides shown inside a stylized MacBook frame.
 struct OnboardingSheet: View {
-    /// Called when the tour is dismissed without going through
-    /// ``finishOnboarding()`` — i.e. on a replay, once the user closes it.
+    /// Called when the tour is dismissed.
     var onDismiss: () -> Void
-
-    @EnvironmentObject var appState: AppState
 
     @State private var currentSlide = 0
     @State private var zoomed = false
@@ -147,93 +143,59 @@ struct OnboardingSheet: View {
         slides[currentSlide]
     }
 
-    /// Whether this presentation of the sheet is gating first launch — in
-    /// which case its final slide is responsible for deciding how setup
-    /// proceeds, rather than simply dismissing.
-    private var isFirstLaunchFlow: Bool {
-        !Defaults.bool(forKey: .hasCompletedFirstLaunch)
-    }
-
     private var zoomSpec: OnboardingZoomSpec {
-        switch current {
-        case .welcome, .permissions: .none
-        default: .featureTour
-        }
+        current == .welcome ? .none : .featureTour
     }
 
     var body: some View {
-        Group {
-            if current == .permissions, isFirstLaunchFlow {
-                // On first launch, this sheet is hosted inside the permissions
-                // window itself, and this slide *is* the permissions decision —
-                // so show the real window rather than a mockup of it. Its own
-                // header, cards, and Quit/Continue actions correctly take over
-                // from the tour's nav row and "Get Started" button here.
-                //
-                // On a replay, though, the decision was already made on first
-                // launch and this sheet isn't hosted in that window, so its
-                // Quit/Continue actions would target the wrong window — the
-                // tour falls through to ``permissionsPreview`` instead.
-                PermissionsView<AppPermissions>()
-                    .environmentObject(appState.permissions)
-                    .transition(.opacity.combined(with: .scale(scale: 0.99)))
-            } else {
-                VStack(spacing: 0) {
-                    navRow
+        VStack(spacing: 0) {
+            navRow
 
-                    // Welcome slide shows just the app icon; the permissions
-                    // slide (on a replay) shows a read-only preview of the
-                    // permission cards; every other slide shows its feature
-                    // mockup inside the MacBook frame. The laptop zooms into
-                    // the relevant corner of its screen as a single object —
-                    // the HUD floats outside it, pinned in place, so it never
-                    // zooms.
-                    Group {
-                        if current == .welcome {
-                            OnboardingWelcomeMockup()
-                                .transition(.opacity.combined(with: .scale(scale: 0.99)))
-                        } else if current == .permissions {
-                            permissionsPreview
-                                .transition(.opacity.combined(with: .scale(scale: 0.99)))
-                        } else {
-                            ZStack(alignment: .bottom) {
-                                MacBookBezelView(zoomed: zoomed, scale: zoomSpec.scale, corner: zoomSpec.corner) {
-                                    ZStack {
-                                        ForEach(slides) { slide in
-                                            if slide != .welcome, slide != .permissions, slide.rawValue == currentSlide {
-                                                screenContent(for: slide)
-                                                    .transition(.opacity)
-                                            }
-                                        }
+            // Welcome shows the app icon; every other slide shows its feature
+            // mockup inside the MacBook frame. The laptop zooms into the
+            // relevant corner of its screen as a single object — the HUD
+            // floats outside it, pinned in place, so it never zooms.
+            Group {
+                if current == .welcome {
+                    OnboardingWelcomeMockup()
+                        .transition(.opacity.combined(with: .scale(scale: 0.99)))
+                } else {
+                    ZStack(alignment: .bottom) {
+                        MacBookBezelView(zoomed: zoomed, scale: zoomSpec.scale, corner: zoomSpec.corner) {
+                            ZStack {
+                                ForEach(slides) { slide in
+                                    if slide != .welcome, slide.rawValue == currentSlide {
+                                        screenContent(for: slide)
+                                            .transition(.opacity)
                                     }
                                 }
-                                .padding(.horizontal, 28)
-
-                                ZStack {
-                                    ForEach(slides) { slide in
-                                        if slide != .welcome, slide != .permissions, slide.rawValue == currentSlide {
-                                            hudContent(for: slide)
-                                                .transition(.opacity)
-                                        }
-                                    }
-                                }
-                                .padding(.bottom, 14)
                             }
-                            .transition(.opacity.combined(with: .scale(scale: 0.99)))
                         }
-                    }
-                    .padding(.top, 4)
-                    .frame(height: 280)
-                    .clipped()
-                    .onAppear { restartCurrentSlide() }
-                    .onChange(of: currentSlide) { _, _ in restartCurrentSlide() }
-
-                    bottomArea
                         .padding(.horizontal, 28)
-                        .padding(.top, 22)
-                        .padding(.bottom, 24)
+
+                        ZStack {
+                            ForEach(slides) { slide in
+                                if slide != .welcome, slide.rawValue == currentSlide {
+                                    hudContent(for: slide)
+                                        .transition(.opacity)
+                                }
+                            }
+                        }
+                        .padding(.bottom, 14)
+                    }
+                    .transition(.opacity.combined(with: .scale(scale: 0.99)))
                 }
             }
+            .padding(.top, 4)
+            .frame(height: 280)
+            .clipped()
+            .onAppear { restartCurrentSlide() }
+            .onChange(of: currentSlide) { _, _ in restartCurrentSlide() }
+
+            bottomArea
+                .padding(.horizontal, 28)
+                .padding(.top, 22)
+                .padding(.bottom, 24)
         }
         .frame(width: 760, height: 600)
         .background(Color(nsColor: .windowBackgroundColor))
@@ -263,10 +225,6 @@ struct OnboardingSheet: View {
 
             if !isLast {
                 Button("Skip") {
-                    // Jumps straight to the final, permissions slide rather
-                    // than dismissing outright — on first launch that step is
-                    // mandatory, and on a replay it's the most useful place
-                    // to land if the user just wants to check their access.
                     withAnimation(.snappy) { currentSlide = slides.count - 1 }
                 }
                 .buttonStyle(.plain)
@@ -291,29 +249,6 @@ struct OnboardingSheet: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
-    }
-
-    // MARK: Permissions preview (replay)
-
-    /// A preview of the permission cards shown when replaying the tour.
-    ///
-    /// The decision was already made on first launch, and this sheet isn't
-    /// hosted inside the permissions window here, so showing the real
-    /// ``PermissionsView`` (whose actions target that window) would leave the
-    /// slide stuck. The cards themselves are still fully interactive — the
-    /// user can grant or check access — they just sit within the tour's own
-    /// nav row and "Get Started" button instead of the window's chrome.
-    private var permissionsPreview: some View {
-        ScrollView {
-            HStack(alignment: .top, spacing: 16) {
-                ForEach(appState.permissions.allPermissions) { permission in
-                    PermissionCard(permission: permission, refocusesWindowAfterGrant: false)
-                }
-            }
-            .padding(.horizontal, 6)
-            .padding(.vertical, 4)
-        }
-        .scrollBounceBehavior(.basedOnSize)
     }
 
     // MARK: Bottom area
@@ -344,17 +279,20 @@ struct OnboardingSheet: View {
                 .frame(maxWidth: 440)
             }
 
-            Button(isLast ? "Get Started" : "Continue") {
+            Button {
                 if isLast { finishOnboarding() } else { advance() }
+            } label: {
+                Text(isLast ? "Get Started" : "Continue")
+                    .font(.body.bold())
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                    .background(Color.accentColor)
+                    .clipShape(Capsule())
+                    .contentShape(Capsule())
             }
             .keyboardShortcut(.defaultAction)
             .buttonStyle(.plain)
-            .font(.body.bold())
-            .foregroundStyle(.white)
-            .frame(maxWidth: .infinity)
-            .frame(height: 44)
-            .background(Color.accentColor)
-            .clipShape(Capsule())
         }
     }
 
@@ -363,7 +301,7 @@ struct OnboardingSheet: View {
     @ViewBuilder
     private func screenContent(for slide: OnboardingSlide) -> some View {
         switch slide {
-        case .welcome, .permissions: EmptyView()
+        case .welcome: EmptyView()
         case .menuBarManagement: ManagementScreen(model: managementModel)
         case .menuBarAppearance: AppearanceScreen(model: appearanceModel)
         case .hotkeysAutomation: HotkeysScreen(model: hotkeysModel)
@@ -374,7 +312,7 @@ struct OnboardingSheet: View {
     @ViewBuilder
     private func hudContent(for slide: OnboardingSlide) -> some View {
         switch slide {
-        case .welcome, .permissions: EmptyView()
+        case .welcome: EmptyView()
         case .menuBarManagement: ManagementHUD(model: managementModel)
         case .menuBarAppearance: AppearanceHUD(model: appearanceModel)
         case .hotkeysAutomation: HotkeysHUD(model: hotkeysModel)
@@ -396,7 +334,7 @@ struct OnboardingSheet: View {
             var resetTransaction = Transaction(animation: nil)
             resetTransaction.disablesAnimations = true
             withTransaction(resetTransaction) { zoomed = false }
-        } else if current != .permissions, !zoomed {
+        } else if !zoomed {
             delay(0.35) {
                 guard zoomGeneration == thisZoomGen, current != .welcome else { return }
                 withAnimation(.spring(duration: 0.7, bounce: 0.1)) { zoomed = true }
@@ -404,7 +342,7 @@ struct OnboardingSheet: View {
         }
 
         switch current {
-        case .welcome, .permissions: break
+        case .welcome: break
         case .menuBarManagement: managementModel.restart()
         case .menuBarAppearance: appearanceModel.restart()
         case .hotkeysAutomation: hotkeysModel.restart()
@@ -425,50 +363,13 @@ struct OnboardingSheet: View {
     }
 
     /// Closes the tour early, from any slide before the last.
-    ///
-    /// On a replay, this is a plain dismissal. On first launch, though, the
-    /// tour can't simply be dismissed — the permissions decision still needs
-    /// resolving and setup still needs to run — so closing early falls back
-    /// to ``finishOnboarding()``, completing setup with whatever permissions
-    /// state currently holds.
     private func closeOnboarding() {
-        guard isFirstLaunchFlow else {
-            Defaults.set(true, forKey: .hasSeenOnboarding)
-            onDismiss()
-            return
-        }
-
-        // On first launch, the tour gates whether the app ever finishes
-        // setting up — closing early without completing it would leave the
-        // app running in limbo. Quitting outright (matching the permissions
-        // window's own Quit button) is the only sound option here.
-        //
-        // Deferred to the next default-mode runloop turn: firing it directly
-        // from this button action races with the sheet's own dismissal/
-        // transition machinery, which can swallow the termination reply and
-        // leave the app stuck running (see MenuBarManager.quitFromSecondaryContextMenu
-        // for the same pattern under a different cause).
-        RunLoop.main.perform(inModes: [.default]) {
-            MainActor.assumeIsolated {
-                NSApp.terminate(nil)
-            }
-        }
+        finishOnboarding()
     }
 
-    /// Completes the tour from its final, permissions slide.
-    ///
-    /// On a replay (e.g. from the About pane), this is just a dismissal —
-    /// setup already happened on first launch. On first launch, though, this
-    /// slide is the moment the user has decided whether to grant permissions,
-    /// so it takes over from ``PermissionsView``'s continue button: closing
-    /// the permissions window and kicking off setup based on what was granted.
+    /// Completes and dismisses the tour.
     private func finishOnboarding() {
-        guard isFirstLaunchFlow else {
-            Defaults.set(true, forKey: .hasSeenOnboarding)
-            onDismiss()
-            return
-        }
-
-        appState.completeFirstLaunchSetup()
+        Defaults.set(true, forKey: .hasSeenOnboarding)
+        onDismiss()
     }
 }
