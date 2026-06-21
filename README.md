@@ -178,7 +178,8 @@ If a language you'd like to help to translate is not listed here, let us know an
 - [x] Profiles for menu bar layout
 - [ ] Individual spacer items
 - [ ] Menu bar item groups
-- [ ] Show menu bar items when trigger conditions are met
+- [x] Show menu bar items when battery/power trigger conditions are met
+- [ ] Optimize additional trigger sources
 
 ### Menu bar appearance
 
