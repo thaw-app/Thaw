@@ -440,7 +440,9 @@ final class MenuBarItemTriggersManager: ObservableObject {
         // Drop cached outcomes for paths no longer referenced.
         let removed = Set(scriptOutcomes.keys).subtracting(paths)
         let removedAny = !removed.isEmpty
-        for path in removed { scriptOutcomes[path] = nil }
+        for path in removed {
+            scriptOutcomes[path] = nil
+        }
 
         guard !paths.isEmpty else {
             if removedAny {
@@ -489,7 +491,9 @@ final class MenuBarItemTriggersManager: ObservableObject {
 
         let removed = Set(imageHashes.keys).subtracting(ids)
         let removedAny = !removed.isEmpty
-        for id in removed { imageHashes[id] = nil }
+        for id in removed {
+            imageHashes[id] = nil
+        }
 
         guard !ids.isEmpty else {
             if removedAny {

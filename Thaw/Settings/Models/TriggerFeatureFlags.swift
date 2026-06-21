@@ -40,7 +40,9 @@ enum TriggerFeature: String, CaseIterable, Identifiable {
     case advancedOptions
     case invertAction
 
-    var id: String { rawValue }
+    var id: String {
+        rawValue
+    }
 
     /// A short title for the Developer pane.
     var title: String {

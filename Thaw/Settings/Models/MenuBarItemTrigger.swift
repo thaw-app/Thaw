@@ -19,7 +19,9 @@ enum ThermalLevel: Int, Codable, Hashable, CaseIterable, Identifiable {
     case serious = 2
     case critical = 3
 
-    var id: Int { rawValue }
+    var id: Int {
+        rawValue
+    }
 
     var displayString: String {
         switch self {
@@ -65,7 +67,7 @@ enum TriggerCondition: Codable, Hashable {
     case focusActive
     case focusMode(name: String)
 
-    // Location
+    /// Location
     case nearLocation(latitude: Double, longitude: Double, radiusMeters: Double, label: String)
 
     // System load
@@ -76,10 +78,10 @@ enum TriggerCondition: Codable, Hashable {
     case cameraInUse
     case microphoneInUse
 
-    // Script
+    /// Script
     case scriptResult(path: String, expectedOutput: String)
 
-    // Image comparison
+    /// Image comparison
     case imageChanged(itemIdentifier: String, referenceHash: UInt64?)
 
     /// Returns whether the condition is satisfied by the given state at the
@@ -272,7 +274,9 @@ enum TriggerConditionKind: String, CaseIterable, Identifiable {
     case scriptResult
     case imageChanged
 
-    var id: String { rawValue }
+    var id: String {
+        rawValue
+    }
 
     /// A human-readable description for the settings interface.
     var displayString: String {
@@ -647,7 +651,9 @@ enum TriggerCombinator: String, Codable, Hashable, CaseIterable, Identifiable {
     case all
     case any
 
-    var id: String { rawValue }
+    var id: String {
+        rawValue
+    }
 
     var displayString: String {
         switch self {

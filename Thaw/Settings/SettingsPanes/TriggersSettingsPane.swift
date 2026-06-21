@@ -63,8 +63,8 @@ struct TriggersSettingsPane: View {
     @ObservedObject var manager: MenuBarItemTriggersManager
     @ObservedObject private var flags: TriggerFeatureFlagsManager
 
-    // A plain reference, not an @ObservedObject: observing the item manager
-    // would re-render the pane on every item cache publish, stealing focus.
+    /// A plain reference, not an @ObservedObject: observing the item manager
+    /// would re-render the pane on every item cache publish, stealing focus.
     let itemManager: MenuBarItemManager
 
     @State private var itemOptions: [TriggerItemOption] = []
@@ -480,7 +480,6 @@ private struct TriggerRow: View {
 
     // MARK: Conditions (primary + optional compound)
 
-    @ViewBuilder
     private var conditionsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             if compoundEnabled, !trigger.additionalConditions.isEmpty {
@@ -1041,7 +1040,10 @@ private struct ImageConditionEditor: View {
 
     @State private var isCapturing = false
 
-    private var watchedID: String { condition.imageValue?.itemIdentifier ?? "" }
+    private var watchedID: String {
+        condition.imageValue?.itemIdentifier ?? ""
+    }
+
     private var hasReference: Bool {
         guard case let .imageChanged(_, referenceHash) = condition else { return false }
         return referenceHash != nil

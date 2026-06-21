@@ -166,12 +166,12 @@ final class SystemStateMonitor: ObservableObject {
     private var systemLoadObservers = [NSObjectProtocol]()
     private var pathMonitor: NWPathMonitor?
 
-    // Poll timer for the sampled sources.
+    /// Poll timer for the sampled sources.
     private var pollTimer: Timer?
 
-    // Provides Location authorization (needed for Wi-Fi SSID) and the
-    // current coordinate (needed for the location condition). Created lazily
-    // so the prompt only appears when a location-using feature is enabled.
+    /// Provides Location authorization (needed for Wi-Fi SSID) and the
+    /// current coordinate (needed for the location condition). Created lazily
+    /// so the prompt only appears when a location-using feature is enabled.
     private var locationProvider: LocationProvider?
 
     private let diagLog = DiagLog(category: "SystemStateMonitor")
@@ -751,7 +751,9 @@ private final class LocationProvider: NSObject, CLLocationManagerDelegate {
         manager.desiredAccuracy = kCLLocationAccuracyHundredMeters
     }
 
-    var status: CLAuthorizationStatus { manager.authorizationStatus }
+    var status: CLAuthorizationStatus {
+        manager.authorizationStatus
+    }
 
     func requestIfNeeded() {
         if manager.authorizationStatus == .notDetermined {
@@ -772,7 +774,7 @@ private final class LocationProvider: NSObject, CLLocationManagerDelegate {
         currentLocation = nil
     }
 
-    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+    func locationManager(_: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         currentLocation = locations.last
     }
 
@@ -783,7 +785,7 @@ private final class LocationProvider: NSObject, CLLocationManagerDelegate {
         }
     }
 
-    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+    func locationManager(_: CLLocationManager, didFailWithError _: Error) {
         // Ignore transient errors; the next update refreshes the location.
     }
 }

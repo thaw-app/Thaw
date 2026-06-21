@@ -17,8 +17,8 @@ import SwiftUI
 struct DeveloperSettingsPane: View {
     @ObservedObject private var flags: TriggerFeatureFlagsManager
 
-    // Plain reference (not observed): used to read Location authorization
-    // status and to (re)request it for the Wi-Fi SSID diagnostic.
+    /// Plain reference (not observed): used to read Location authorization
+    /// status and to (re)request it for the Wi-Fi SSID diagnostic.
     private let systemMonitor: SystemStateMonitor
 
     /// A direct, flag-independent snapshot of the system, refreshed on a

@@ -548,8 +548,8 @@ final class MenuBarItemTriggerTests: XCTestCase {
         // Encode/decode the condition shape via the real encoder to avoid
         // hand-writing its representation; fall back to a constructed value
         // if the enum encoding differs.
-        let constructed = MenuBarItemTrigger(
-            id: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!,
+        let constructed = try MenuBarItemTrigger(
+            id: XCTUnwrap(UUID(uuidString: "00000000-0000-0000-0000-000000000001")),
             name: "Legacy",
             itemIdentifier: "x",
             itemDisplayName: "X",
