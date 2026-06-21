@@ -139,7 +139,7 @@ final class LayoutReconcilerTests: XCTestCase {
 
     /// .sectionBoundary is resolved directly via boundaryDestination,
     /// independent of the fallbackSection argument.
-    func testResolveDestinationSectionBoundaryUsesGivenSection() {
+    func testResolveDestinationSectionBoundaryUsesGivenSection() throws {
         let pair = MenuBarItemManager.ControlItemPair.fixture(
             hiddenAt: CGRect(x: 400, y: 0, width: 10, height: 22),
             alwaysHiddenAt: CGRect(x: 200, y: 0, width: 10, height: 22)
@@ -152,7 +152,7 @@ final class LayoutReconcilerTests: XCTestCase {
             fallbackSection: .visible // intentionally wrong; should be ignored
         )
 
-        XCTAssertEqual(result, .leftOfItem(pair.alwaysHidden!))
+        XCTAssertEqual(result, try .leftOfItem(XCTUnwrap(pair.alwaysHidden)))
     }
 
     // MARK: - boundaryDestination
@@ -189,7 +189,7 @@ final class LayoutReconcilerTests: XCTestCase {
 
     /// .alwaysHidden boundary places the item to the left of the
     /// always-hidden control item when present.
-    func testBoundaryDestinationAlwaysHiddenWithControl() {
+    func testBoundaryDestinationAlwaysHiddenWithControl() throws {
         let pair = MenuBarItemManager.ControlItemPair.fixture(
             hiddenAt: CGRect(x: 400, y: 0, width: 10, height: 22),
             alwaysHiddenAt: CGRect(x: 200, y: 0, width: 10, height: 22)
@@ -200,7 +200,7 @@ final class LayoutReconcilerTests: XCTestCase {
             controlItems: pair
         )
 
-        XCTAssertEqual(result, .leftOfItem(pair.alwaysHidden!))
+        XCTAssertEqual(result, try .leftOfItem(XCTUnwrap(pair.alwaysHidden)))
     }
 
     /// .alwaysHidden boundary falls back to the hidden control item

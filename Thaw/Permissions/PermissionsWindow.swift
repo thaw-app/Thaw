@@ -8,12 +8,14 @@
 
 import SwiftUI
 
+/// The window that hosts the permissions decision — either the first-launch
+/// onboarding tour or, on later launches, the standalone permissions view.
 struct PermissionsWindow: Scene {
     @ObservedObject var appState: AppState
 
     var body: some Scene {
         IceWindow(id: .permissions) {
-            PermissionsView()
+            permissionsContent
                 .onWindowChange { window in
                     guard let window else {
                         return
@@ -36,5 +38,20 @@ struct PermissionsWindow: Scene {
         .windowStyle(.hiddenTitleBar)
         .environmentObject(appState)
         .environmentObject(appState.permissions)
+    }
+
+    /// During first launch, permissions are requested as the final step of
+    /// onboarding. Later on — say, if permissions get revoked — this window
+    /// shows the standalone permissions view instead, so re-granting access
+    /// doesn't send the user through the whole tour again.
+    @ViewBuilder
+    private var permissionsContent: some View {
+        if Defaults.bool(forKey: .hasCompletedFirstLaunch) {
+            PermissionsView<AppPermissions>()
+        } else {
+            OnboardingSheet {
+                Defaults.set(true, forKey: .hasSeenOnboarding)
+            }
+        }
     }
 }

@@ -22,6 +22,9 @@ final class AppState: ObservableObject {
     /// Tracks presentation of the update consent sheet.
     @Published var isUpdateConsentPresented = false
 
+    /// Tracks presentation of the onboarding sheet.
+    @Published var isOnboardingPresented = false
+
     /// Model for the app's settings.
     let settings = AppSettings()
 
@@ -52,6 +55,11 @@ final class AppState: ObservableObject {
     /// Manager for settings profiles.
     let profileManager = ProfileManager()
 
+    /// Briefly adds a virtual display on single-display machines so the window
+    /// server publishes the marker windows needed to resolve unidentified menu
+    /// bar items, then tears it down.
+    private(set) lazy var virtualDisplayProvoker = VirtualDisplayProvoker(appState: self)
+
     /// Manager for app updates.
     let updatesManager = UpdatesManager()
 
@@ -65,7 +73,7 @@ final class AppState: ObservableObject {
     private var openWindows = Set<IceWindowIdentifier>()
 
     /// Track last known screen count to detect disconnects.
-    private var lastKnownScreenCount = NSScreen.screens.count
+    private var lastKnownScreenCount = NSScreen.managedScreens.count
 
     /// Prevent repeated restart attempts.
     private var isRestarting = false
@@ -116,6 +124,32 @@ final class AppState: ObservableObject {
     /// Allows explicit starting of the updater from UI flows.
     func startUpdaterIfNeeded() {
         updatesManager.startUpdaterIfNeeded()
+    }
+
+    /// Presents the onboarding sheet if the user hasn't seen it yet.
+    func presentOnboardingIfNeeded() {
+        if !Defaults.bool(forKey: .hasSeenOnboarding) {
+            isOnboardingPresented = true
+        }
+    }
+
+    /// Completes first-launch setup based on the permissions currently granted,
+    /// then brings the app to regular activation and opens Settings. Shared by
+    /// the permissions window's Continue button and onboarding's final slide.
+    func completeFirstLaunchSetup() {
+        dismissWindow(.permissions)
+        Defaults.set(true, forKey: .hasSeenOnboarding)
+
+        let hasPermissions = permissions.permissionsState != .missing
+        performSetup(hasPermissions: hasPermissions)
+        Defaults.set(true, forKey: .hasCompletedFirstLaunch)
+
+        guard hasPermissions else { return }
+
+        Task {
+            activate(withPolicy: .regular)
+            openWindow(.settings)
+        }
     }
 
     func dismissWindow(_ id: IceWindowIdentifier) {
@@ -217,6 +251,7 @@ final class AppState: ObservableObject {
                         self.isUpdateConsentPresented = true
                     } else {
                         self.updatesManager.startUpdaterIfNeeded()
+                        self.presentOnboardingIfNeeded()
                     }
                 } else {
                     self.openWindows.remove(.settings)
@@ -274,9 +309,18 @@ final class AppState: ObservableObject {
             }
             .store(in: &c)
 
+        // After each cache cycle settles, let the provoker decide whether to
+        // briefly add a virtual display to resolve any single-display orphans.
+        itemManager.$itemCache
+            .debounce(for: .seconds(0.5), scheduler: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.virtualDisplayProvoker.considerProvoking()
+            }
+            .store(in: &c)
+
         NotificationCenter.default.publisher(for: NSApplication.didChangeScreenParametersNotification)
             .debounce(for: .seconds(0.5), scheduler: DispatchQueue.main)
-            .map { _ in NSScreen.screens.count }
+            .map { _ in NSScreen.managedScreens.count }
             .sink { [weak self] count in
                 guard let self else { return }
                 defer { self.lastKnownScreenCount = count }
@@ -284,6 +328,17 @@ final class AppState: ObservableObject {
                     self.diagLog.info("Display disconnected: refresh item cache + cleanup image cache")
                     Task { @MainActor [weak self] in
                         guard let self else { return }
+                        // A display change relocates items to the remaining
+                        // display and leaves the menu bar geometry (Control
+                        // Center position, item bounds) unsettled for a short
+                        // window. Open a settling period so saved-layout restores
+                        // defer until the bar restabilizes and then run once on
+                        // settled geometry. Without this, a restore could fire
+                        // against transient off-screen geometry: Control Center's
+                        // stale left edge produces a negative notch-overflow
+                        // budget that collapses the hidden section into visible
+                        // and is then persisted into the saved order.
+                        self.itemManager.startSettlingPeriod(reason: "displayDisconnect")
                         // Force item cache rebuild so displayID reflects current
                         // display geometry (items moved to remaining display).
                         await self.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
@@ -297,6 +352,10 @@ final class AppState: ObservableObject {
                     self.diagLog.info("Display connected: refresh item cache")
                     Task { @MainActor [weak self] in
                         guard let self else { return }
+                        // Defer the saved-layout restore until the menu bar
+                        // geometry settles after the new display attaches; see
+                        // the disconnect branch above for the rationale.
+                        self.itemManager.startSettlingPeriod(reason: "displayConnect")
                         // Items keep their windowIDs when moving to new display.
                         // Item cache rebuild picks up new items on the added display.
                         await self.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)

@@ -177,7 +177,7 @@ extension Defaults {
         #else
             static let enableDiagnosticLogging = false
         #endif
-        static let useLCSSortingOnNotchedDisplays = false
+        static let useLCSSortingOnNotchedDisplays = true
         static let useOptionClickToShowAlwaysHiddenSection = false
         static let useDoubleClickToShowAlwaysHiddenSection = false
         static let enableMenuBarItemOverflow = true
@@ -202,6 +202,8 @@ extension Defaults {
 
         static let displayIceBarConfigurations: [String: DisplayIceBarConfiguration] = [:]
         static let globalDisplayConfiguration: DisplayIceBarConfiguration = .defaultConfiguration
+        static let confirmSpacingRelaunch = true
+        static let unconfirmedSpacingProfileScope: SpacingProfileSaveScope = .activeProfile
     }
 }
 
@@ -226,11 +228,14 @@ extension Defaults {
         case displayIceBarConfigurations = "DisplayIceBarConfigurations"
         case globalDisplayConfiguration = "GlobalDisplayConfiguration"
         case knownDisplays = "KnownDisplays"
+        case confirmSpacingRelaunch = "ConfirmSpacingRelaunch"
+        case unconfirmedSpacingProfileScope = "UnconfirmedSpacingProfileScope"
 
         // MARK: Hotkeys Settings
 
         case hotkeys = "Hotkeys"
         case profileHotkeys = "ProfileHotkeys"
+        case menuBarItemHotkeys = "MenuBarItemHotkeys"
 
         // MARK: Advanced Settings
 
@@ -291,6 +296,10 @@ extension Defaults {
 
         case hasSeenUpdateConsent
 
+        // MARK: Onboarding
+
+        case hasSeenOnboarding
+
         // MARK: Settings URI
 
         case settingsURIEnabled = "SettingsURIEnabled"
@@ -301,6 +310,12 @@ extension Defaults {
 
         case globalPreProfileHook = "GlobalPreProfileHook"
         case globalPostProfileHook = "GlobalPostProfileHook"
+
+        // MARK: Menu Bar Item Triggers
+
+        case menuBarItemTriggers = "MenuBarItemTriggers"
+        case triggerFeatureFlags = "TriggerFeatureFlags"
+        case showTriggerFeatureFlagsAllOffMenuItem = "ShowTriggerFeatureFlagsAllOffMenuItem"
 
         // MARK: Deprecated (Appearance Settings)
 

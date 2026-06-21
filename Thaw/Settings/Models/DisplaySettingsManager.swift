@@ -34,6 +34,17 @@ final class DisplaySettingsManager: ObservableObject {
     /// re-connect the display first.
     @Published var knownDisplays: [String: KnownDisplay] = [:]
 
+    /// Whether Thaw asks for confirmation before a spacing change relaunches
+    /// menu bar apps. When true, the automatic display-transition path shows
+    /// a just-in-time prompt and the Displays pane shows its Apply/global
+    /// confirmation alerts. When false, both apply without asking.
+    @Published var confirmSpacingRelaunch = Defaults.DefaultValue.confirmSpacingRelaunch
+
+    /// When confirmSpacingRelaunch is off and a profile is active, selects
+    /// whether an applied spacing change is saved to the active profile only
+    /// or to every profile.
+    @Published var unconfirmedSpacingProfileScope = Defaults.DefaultValue.unconfirmedSpacingProfileScope
+
     /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
 
@@ -83,7 +94,7 @@ final class DisplaySettingsManager: ObservableObject {
         var changed = false
         var seededConfigurations = configurations
         var configurationsChanged = false
-        for screen in NSScreen.screens {
+        for screen in NSScreen.managedScreens {
             guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else {
                 continue
             }
@@ -169,6 +180,12 @@ final class DisplaySettingsManager: ObservableObject {
                 diagLog.error("Failed to decode known display cache: \(error)")
             }
         }
+        Defaults.ifPresent(key: .confirmSpacingRelaunch, assign: &confirmSpacingRelaunch)
+        if let raw = Defaults.string(forKey: .unconfirmedSpacingProfileScope),
+           let scope = SpacingProfileSaveScope(rawValue: raw)
+        {
+            unconfirmedSpacingProfileScope = scope
+        }
     }
 
     /// Reads the current system value for NSStatusItemSpacing from the byHost
@@ -205,7 +222,7 @@ final class DisplaySettingsManager: ObservableObject {
         }
         let offset = Double(onDisk - Self.systemSpacingDefault)
         var seeded = configurations
-        for screen in NSScreen.screens {
+        for screen in NSScreen.managedScreens {
             guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else {
                 continue
             }
@@ -292,7 +309,17 @@ final class DisplaySettingsManager: ObservableObject {
             .debounce(for: .seconds(1), scheduler: DispatchQueue.main)
             .sink { [weak self] _ in
                 guard let self else { return }
-                diagLog.info("Screen parameters changed — \(NSScreen.screens.count) screen(s) connected")
+                // Ignore the self-inflicted parameter change from the virtual
+                // display the provoker briefly creates and tears down. Reacting
+                // to it (a no-op spacing preflight) cancels the in-flight item
+                // cache cycle mid-resolution and surfaces a bar of orphans for
+                // several seconds. The phantom never changes the active menu bar
+                // display, so there is nothing here to apply.
+                if let until = VirtualDisplayProvoker.displayReactionsSuppressedUntil, Date() < until {
+                    diagLog.info("Screen parameters changed during virtual-display provoke; ignoring self-inflicted event")
+                    return
+                }
+                diagLog.info("Screen parameters changed — \(NSScreen.managedScreens.count) screen(s) connected")
                 captureCurrentlyConnectedDisplays()
                 let currentUUID = Bridging.getActiveMenuBarDisplayUUID()
                 if Self.shouldSkipSpacingApply(
@@ -328,6 +355,13 @@ final class DisplaySettingsManager: ObservableObject {
             }
             .store(in: &c)
 
+        $confirmSpacingRelaunch.persistToDefaults(key: .confirmSpacingRelaunch, in: &c)
+        $unconfirmedSpacingProfileScope.persistToDefaults(
+            key: .unconfirmedSpacingProfileScope,
+            transform: \.rawValue,
+            in: &c
+        )
+
         cancellables = c
     }
 
@@ -356,8 +390,23 @@ final class DisplaySettingsManager: ObservableObject {
     /// moving them.
     private func applyActiveDisplaySpacing(reason: String) {
         guard let appState else { return }
-        lastAppliedActiveDisplayUUID = Bridging.getActiveMenuBarDisplayUUID()
         let desired = Int(configurationForActiveDisplay().itemSpacingOffset.rounded())
+        // A display transition can fire the relaunch wave with no warning.
+        // When confirmations are enabled and this apply would actually
+        // relaunch apps, ask the user first. Declining keeps the current
+        // on-disk spacing and leaves lastAppliedActiveDisplayUUID untouched
+        // so the next genuine transition re-prompts. The in-pane Apply and
+        // global broadcast carry their own confirmations, so only the
+        // automatic path is gated here.
+        if reason == "screenParametersChanged",
+           confirmSpacingRelaunch,
+           appState.spacingManager.willRelaunch(forOffset: desired),
+           !presentSpacingRelaunchConfirmation()
+        {
+            diagLog.info("User declined the spacing relaunch confirmation for a display transition; skipping apply")
+            return
+        }
+        lastAppliedActiveDisplayUUID = Bridging.getActiveMenuBarDisplayUUID()
         appState.spacingManager.offset = desired
         Task { [weak self] in
             guard let self else { return }
@@ -393,6 +442,28 @@ final class DisplaySettingsManager: ObservableObject {
         }
     }
 
+    /// Presents an app-modal confirmation before a display transition fires
+    /// the relaunch wave. Returns true when the user approves the relaunch,
+    /// false when they cancel. Runs modally so it surfaces even with the
+    /// Settings window closed; ticking the suppression checkbox while pressing
+    /// Apply turns confirmSpacingRelaunch off so future transitions apply
+    /// silently. Cancelling never changes that setting.
+    private func presentSpacingRelaunchConfirmation() -> Bool {
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.messageText = String(localized: "Apply menu bar spacing change?")
+        alert.informativeText = String(localized: "When a display transition requires Thaw to apply a different menu bar spacing, Thaw relaunches apps with menu bar items. Relaunching apps may cause unsaved input, progress, or transient app state to be lost.")
+        alert.addButton(withTitle: String(localized: "Apply"))
+        alert.addButton(withTitle: String(localized: "Cancel"))
+        alert.showsSuppressionButton = true
+        alert.suppressionButton?.title = String(localized: "Don't ask again")
+        let apply = alert.runModal() == .alertFirstButtonReturn
+        if apply, alert.suppressionButton?.state == .on {
+            confirmSpacingRelaunch = false
+        }
+        return apply
+    }
+
     /// Handles per-display settings changed externally via Settings URI scheme.
     private func handleExternalPerDisplaySettingsChange(_ notification: Notification) {
         guard let key = notification.userInfo?["key"] as? String,
@@ -406,7 +477,7 @@ final class DisplaySettingsManager: ObservableObject {
 
         // Validate specific UUID if provided (defense-in-depth)
         if let uuid = specificUUID {
-            let connectedUUIDs = NSScreen.screens.compactMap { Bridging.getDisplayUUIDString(for: $0.displayID) }
+            let connectedUUIDs = NSScreen.managedScreens.compactMap { Bridging.getDisplayUUIDString(for: $0.displayID) }
             let hasConfig = configurations[uuid] != nil
             guard connectedUUIDs.contains(uuid) || hasConfig else {
                 diagLog.warning("DisplaySettingsManager: Ignoring change for unknown display UUID '\(uuid)'")
@@ -536,7 +607,7 @@ final class DisplaySettingsManager: ObservableObject {
     private func setIceBarLocation(_ location: IceBarLocation, scope: SettingsURIHandler.PerDisplayScope) {
         if scope == .allEnabledDisplays {
             // Update all displays that have IceBar enabled
-            for screen in NSScreen.screens {
+            for screen in NSScreen.managedScreens {
                 guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else { continue }
                 let config = configurations[uuid] ?? .defaultConfiguration
                 if config.useIceBar {
@@ -558,7 +629,7 @@ final class DisplaySettingsManager: ObservableObject {
     /// Sets iceBarLayout for displays based on scope.
     private func setIceBarLayout(_ layout: IceBarLayout, scope: SettingsURIHandler.PerDisplayScope) {
         if scope == .allEnabledDisplays {
-            for screen in NSScreen.screens {
+            for screen in NSScreen.managedScreens {
                 guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else { continue }
                 let config = configurations[uuid] ?? .defaultConfiguration
                 if config.useIceBar {
@@ -580,7 +651,7 @@ final class DisplaySettingsManager: ObservableObject {
     /// Sets gridColumns for displays based on scope.
     private func setGridColumns(_ columns: Int, scope: SettingsURIHandler.PerDisplayScope) {
         if scope == .allEnabledDisplays {
-            for screen in NSScreen.screens {
+            for screen in NSScreen.managedScreens {
                 guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else { continue }
                 let config = configurations[uuid] ?? .defaultConfiguration
                 if config.useIceBar {
@@ -603,7 +674,7 @@ final class DisplaySettingsManager: ObservableObject {
     private func setAlwaysShowHiddenItems(_ value: Bool, scope: SettingsURIHandler.PerDisplayScope) {
         if scope == .allNonIceBarDisplays {
             // Update all displays that do NOT have IceBar enabled
-            for screen in NSScreen.screens {
+            for screen in NSScreen.managedScreens {
                 guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else { continue }
                 let config = configurations[uuid] ?? .defaultConfiguration
                 if !config.useIceBar {
@@ -619,7 +690,7 @@ final class DisplaySettingsManager: ObservableObject {
     private func toggleAlwaysShowHiddenItems(scope: SettingsURIHandler.PerDisplayScope) {
         if scope == .allNonIceBarDisplays {
             // Toggle on all displays that do NOT have IceBar enabled
-            for screen in NSScreen.screens {
+            for screen in NSScreen.managedScreens {
                 guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else { continue }
                 let config = configurations[uuid] ?? .defaultConfiguration
                 if !config.useIceBar {
@@ -760,7 +831,7 @@ final class DisplaySettingsManager: ObservableObject {
 
     /// Returns info about all currently connected displays.
     func connectedDisplays() -> [DisplayInfo] {
-        NSScreen.screens.compactMap { screen in
+        NSScreen.managedScreens.compactMap { screen in
             guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else {
                 return nil
             }
@@ -825,4 +896,11 @@ final class DisplaySettingsManager: ObservableObject {
 struct KnownDisplay: Codable, Equatable {
     let name: String
     let hasNotch: Bool
+}
+
+/// Destination for an applied spacing change when the relaunch confirmation
+/// is disabled and a profile is active.
+enum SpacingProfileSaveScope: String, CaseIterable, Codable {
+    case activeProfile
+    case allProfiles
 }

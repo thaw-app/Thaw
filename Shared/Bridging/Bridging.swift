@@ -7,6 +7,7 @@
 //  Licensed under the GNU GPLv3
 
 import Cocoa
+import os
 @preconcurrency import ScreenCaptureKit
 
 // MARK: - Bridging
@@ -79,6 +80,27 @@ extension Bridging {
 extension Bridging {
     // MARK: Private Display Helpers
 
+    /// A display to exclude from Thaw's display enumeration while it exists.
+    ///
+    /// Set to the identifier of the transient virtual display that
+    /// VirtualDisplayProvoker creates to provoke marker-pair resolution on a
+    /// single-display machine, and cleared when it is removed. Filtering it
+    /// here keeps the phantom out of every display list derived from
+    /// getActiveDisplayList (including the active-menu-bar-display lookup),
+    /// so it never drives profile auto-switch or per-display state. nil during
+    /// normal operation, which makes the filter a no-op.
+    ///
+    /// Backed by an unfair lock: the MainActor writer (VirtualDisplayProvoker)
+    /// and the off-MainActor readers (the nonisolated image-capture tasks reach
+    /// it through getActiveMenuBarDisplayID) would otherwise race on this
+    /// non-atomic optional.
+    static var excludedDisplayID: CGDirectDisplayID? {
+        get { excludedDisplayIDStorage.withLock { $0 } }
+        set { excludedDisplayIDStorage.withLock { $0 = newValue } }
+    }
+
+    private static let excludedDisplayIDStorage = OSAllocatedUnfairLock<CGDirectDisplayID?>(initialState: nil)
+
     private static func getActiveDisplayCount() -> UInt32? {
         var count: UInt32 = 0
         let result = CGGetActiveDisplayList(0, nil, &count)
@@ -98,6 +120,9 @@ extension Bridging {
         guard result == .success else {
             diagLog.error("CGGetActiveDisplayList failed with error \(result.logString)")
             return []
+        }
+        if let excluded = excludedDisplayID {
+            list.removeAll { $0 == excluded }
         }
         return list
     }

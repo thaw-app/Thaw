@@ -100,7 +100,7 @@ enum PendingLedger {
     /// hiddenBounds and per-item bounds via boundsForWindowID. State
     /// mutation (pendingRelocations, pendingReturnDestinations) and
     /// execution (move()) stay with the orchestrator.
-    nonisolated static func planPendingMove(
+    static nonisolated func planPendingMove(
         entry: PendingEntry,
         items: [MenuBarItem],
         controlItems: MenuBarItemManager.ControlItemPair,

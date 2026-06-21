@@ -71,7 +71,7 @@ final class PlanFullSortSequenceTests: XCTestCase {
     func testEmptySectionIsOmittedFromSequence() {
         // No always-hidden items, no hidden items, just one visible item.
         let desired = ["v1", hiddenCtrl, ahCtrl]
-        let sectionMap: [String: String] = ["v1": "visible"]
+        let sectionMap = ["v1": "visible"]
 
         let sequence = LayoutSolver.planFullSortSequence(
             currentFlat: [],

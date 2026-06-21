@@ -975,7 +975,7 @@ enum SettingsURIHandler {
 
         // Per-display settings
         var displaysData: [String: [String: Any]] = [:]
-        for screen in NSScreen.screens {
+        for screen in NSScreen.managedScreens {
             guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else { continue }
             displaysData[uuid] = getDisplayInfo(screen: screen, uuid: uuid)
         }
@@ -1006,7 +1006,7 @@ enum SettingsURIHandler {
 
         if let uuid {
             // Check if UUID matches a connected display
-            let connectedUUIDs = NSScreen.screens.compactMap { Bridging.getDisplayUUIDString(for: $0.displayID) }
+            let connectedUUIDs = NSScreen.managedScreens.compactMap { Bridging.getDisplayUUIDString(for: $0.displayID) }
             let isConnected = connectedUUIDs.contains(uuid)
             let hasPersisted = configurations[uuid] != nil
 
@@ -1053,7 +1053,7 @@ enum SettingsURIHandler {
     private static func getAllDisplays(requestId: String) -> [String: Any] {
         var displays: [[String: Any]] = []
 
-        for screen in NSScreen.screens {
+        for screen in NSScreen.managedScreens {
             guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else { continue }
             var info = getDisplayInfo(screen: screen, uuid: uuid)
             info["uuid"] = uuid
@@ -1070,7 +1070,7 @@ enum SettingsURIHandler {
     /// Gets a specific display by UUID.
     private static func getSpecificDisplay(uuid: String, requestId: String) -> [String: Any] {
         // Find screen with matching UUID
-        for screen in NSScreen.screens {
+        for screen in NSScreen.managedScreens {
             guard let screenUUID = Bridging.getDisplayUUIDString(for: screen.displayID),
                   screenUUID == uuid else { continue }
 

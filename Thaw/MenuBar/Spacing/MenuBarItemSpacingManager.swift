@@ -228,6 +228,18 @@ final class MenuBarItemSpacingManager {
         return value ?? key.defaultValue
     }
 
+    /// Returns true when applying the given offset would rewrite the on-disk
+    /// spacing or padding, and therefore fire a relaunch wave. Mirrors the
+    /// no-op guard in applyOffsetLocked so callers can decide whether to
+    /// prompt the user before a relaunch without performing the apply.
+    func willRelaunch(forOffset offset: Int) -> Bool {
+        let targetSpacing = Key.spacing.defaultValue + offset
+        let targetPadding = Key.padding.defaultValue + offset
+        let onDiskSpacing = currentlyAppliedValue(forKey: .spacing)
+        let onDiskPadding = currentlyAppliedValue(forKey: .padding)
+        return onDiskSpacing != targetSpacing || onDiskPadding != targetPadding
+    }
+
     /// Applies the current ``offset``.
     ///
     /// Returns true if a relaunch wave was actually fired, or false if

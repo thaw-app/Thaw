@@ -347,6 +347,7 @@ final class SourcePIDCache {
             return state.apps
         }
 
+        let ccBundleID = "com.apple.controlcenter"
         var appsChecked = 0
         var appsWithBar = 0
         var totalChildrenChecked = 0
@@ -366,7 +367,13 @@ final class SourcePIDCache {
                 let children = AXHelpers.children(for: bar)
                 for child in children {
                     totalChildrenChecked += 1
-                    guard AXHelpers.isEnabled(child),
+                    // Skip only children the app marks explicitly disabled. A
+                    // missing AXEnabled attribute (nil) is treated as enabled:
+                    // some status items hosted by Control Center (The Clock's
+                    // among them) never publish AXEnabled, and treating absent as
+                    // disabled would drop an otherwise exact positional match and
+                    // leave the item unresolved.
+                    guard AXHelpers.enabledAttribute(child) != false,
                           let childFrame = AXHelpers.frame(for: child)
                     else {
                         continue
@@ -374,15 +381,79 @@ final class SourcePIDCache {
 
                     let childCenter = childFrame.center
 
-                    // Match this child to ANY window in our list.
+                    // Match this child to ANY window in our list, but skip
+                    // Control-Center-hosted generic slots. Control Center is the
+                    // CG owner for every CC-hosted NSStatusItem. When the matched
+                    // app is Control Center and the window title is a generic
+                    // Item-N slot, the spatial match only confirms the window is
+                    // CC-hosted; it does not identify the owning app. Writing
+                    // Control Center's PID would tag the item as a transient CC
+                    // widget (isTransientControlCenterItem true, canBeHidden
+                    // false), hiding it from profile management and the
+                    // virtual-display provoke's orphan scan. Leaving it
+                    // unresolved lets the marker-pair pass below supply the real
+                    // owner PID; named CC items (BentoBox-0, Clock, WiFi,
+                    // NowPlaying) carry non-generic titles and resolve to Control
+                    // Center normally.
                     if let matchedWindow = allWindows.first(where: {
                         $0.bounds.center.distance(to: childCenter) <= 1
-                    }) {
+                    }), !MarkerPairResolver.isCCHostedGenericSlot(
+                        appBundleID: app.bundleIdentifier,
+                        windowTitle: matchedWindow.title,
+                        ccBundleID: ccBundleID
+                    ) {
                         totalMatchesFound += 1
                         unresolvedWindows.remove(matchedWindow.windowID)
                         let pid = app.processIdentifier
                         state.withLock { $0.pids[matchedWindow.windowID] = pid }
                     }
+                }
+            }
+        }
+
+        // Corroborated spatial fallback for Control-Center-hosted items
+        // whose own app DOES publish an extras-bar AX child, but offset from
+        // the CG window center by more than the strict 1pt pass tolerates.
+        // The hosting CG slot is wider than the real icon, so their centers
+        // diverge: AirBuddy's by ~2pt, SpamSieve's by up to ~8pt. Accept the
+        // nearest such child within a generous radius ONLY when the window's
+        // reverse-DNS title is in an owner relationship with the app's bundle
+        // identifier (HostedItemOwnership). The title corroboration, not the
+        // distance, is what makes this safe: a nearby unrelated neighbor
+        // (WireGuard's slot beside Updatest at ~2pt) fails the owner check and
+        // is left for later passes. Runs BEFORE marker-pair so items that have
+        // their own AX child are claimed here and never reach that fallback.
+        // Empirically the furthest correct owner-corroborated match across
+        // captured logs is ~15pt; 20 leaves margin while staying well inside
+        // a neighbor's slot. The owner check is the real guard.
+        let hostedExtrasMatchRadius: CGFloat = 20
+        for app in apps {
+            if unresolvedWindows.isEmpty { break }
+            guard let appBundleID = app.bundleIdentifier else { continue }
+            let candidateWindows = allWindows.filter {
+                unresolvedWindows.contains($0.windowID)
+                    && HostedItemOwnership.titleIndicatesOwner($0.title, bundleID: appBundleID)
+            }
+            guard !candidateWindows.isEmpty else { continue }
+            autoreleasepool {
+                guard let bar = app.getOrCreateExtrasMenuBar() else { return }
+                let childCenters = AXHelpers.children(for: bar).compactMap { child -> CGPoint? in
+                    guard AXHelpers.enabledAttribute(child) != false,
+                          let frame = AXHelpers.frame(for: child)
+                    else {
+                        return nil
+                    }
+                    return frame.center
+                }
+                guard !childCenters.isEmpty else { return }
+                for window in candidateWindows {
+                    let target = window.bounds.center
+                    let nearest = childCenters.lazy.map { $0.distance(to: target) }.min()
+                        ?? .greatestFiniteMagnitude
+                    guard nearest <= hostedExtrasMatchRadius else { continue }
+                    totalMatchesFound += 1
+                    unresolvedWindows.remove(window.windowID)
+                    state.withLock { $0.pids[window.windowID] = app.processIdentifier }
                 }
             }
         }
@@ -420,7 +491,6 @@ final class SourcePIDCache {
         // never be attributed to a third-party widget.
         if !unresolvedWindows.isEmpty {
             let thawBundleID = "com.stonerl.Thaw"
-            let ccBundleID = "com.apple.controlcenter"
             let markers = MarkerPairResolver.extractMarkers(
                 from: allWindows.map { win in
                     (
@@ -509,38 +579,53 @@ final class SourcePIDCache {
             let unresolvedWindowInfos = allWindows.filter { unresolvedWindows.contains($0.windowID) }
             for window in unresolvedWindowInfos {
                 let target = window.bounds.center
-                var bestDistance = CGFloat.greatestFiniteMagnitude
-                var bestLabel = "(none)"
-                var bestFrame: CGRect?
+                // Collect every extras-bar child across all apps as a candidate,
+                // not just the single closest, so the diagnostic shows whether the
+                // nearest match is unique or whether a competing child sits within
+                // the match radius. Paired with each candidate's enabled state and
+                // distance, this is usually enough to see why an item failed to
+                // resolve (wrong distance, missing AXEnabled, or ambiguity).
+                var candidates: [(distance: CGFloat, label: String, frame: CGRect, enabled: Bool?)] = []
                 for app in apps {
                     guard let bar = app.getOrCreateExtrasMenuBar() else { continue }
-                    let children = AXHelpers.children(for: bar)
-                    for child in children {
+                    let label = app.bundleIdentifier ?? app.localizedName ?? "pid=\(app.processIdentifier)"
+                    for child in AXHelpers.children(for: bar) {
                         guard let frame = AXHelpers.frame(for: child) else { continue }
-                        let d = frame.center.distance(to: target)
-                        if d < bestDistance {
-                            bestDistance = d
-                            bestLabel = app.bundleIdentifier ?? app.localizedName ?? "pid=\(app.processIdentifier)"
-                            bestFrame = frame
-                        }
+                        candidates.append((frame.center.distance(to: target), label, frame, AXHelpers.enabledAttribute(child)))
                     }
                 }
+                let nearest = candidates.sorted { $0.distance < $1.distance }
+                let best = nearest.first
                 let cgOwner = window.owningApplication.map { app in
                     "\(app.bundleIdentifier ?? app.localizedName ?? "?"):pid=\(app.processIdentifier)"
                 } ?? "nil"
+                // closestAXEnabled distinguishes a missing AXEnabled attribute (nil)
+                // from an explicitly disabled child, and nearest lists the top
+                // candidates with their owning app and enabled state, so a future
+                // unresolved item can be diagnosed from a single log line.
+                let nearestDesc = nearest.prefix(3).map {
+                    "\($0.label)@\(String(format: "%.1f", $0.distance))(enabled=\($0.enabled.map { "\($0)" } ?? "nil"))"
+                }.joined(separator: ", ")
                 SourcePIDCache.diagLog.debug(
-                    "SourcePIDCache diag unresolved: windowID=\(window.windowID) title=\(window.title ?? "nil") bounds=\(window.bounds) center=\(target) | cgOwner=\(cgOwner) ownerName=\(window.ownerName ?? "nil") | closestAXFrame=\(bestFrame.map { "\($0)" } ?? "nil") in app=\(bestLabel) distance=\(bestDistance)"
+                    "SourcePIDCache diag unresolved: windowID=\(window.windowID) title=\(window.title ?? "nil") bounds=\(window.bounds) center=\(target) | cgOwner=\(cgOwner) ownerName=\(window.ownerName ?? "nil") | closestAXFrame=\(best.map { "\($0.frame)" } ?? "nil") in app=\(best?.label ?? "(none)") distance=\(best?.distance ?? .greatestFiniteMagnitude) closestAXEnabled=\(best?.enabled.map { "\($0)" } ?? "nil") | nearest=[\(nearestDesc)]"
                 )
             }
 
             for app in apps {
                 guard let bar = app.getOrCreateExtrasMenuBar() else { continue }
                 let children = AXHelpers.children(for: bar)
-                let frames = children.compactMap { AXHelpers.frame(for: $0) }
-                guard !frames.isEmpty else { continue }
+                // Include each child's raw enabled value (nil = attribute absent)
+                // next to its frame, so a child the matching pass excluded as
+                // explicitly disabled is visible here.
+                let childDescs = children.compactMap { child -> String? in
+                    guard let frame = AXHelpers.frame(for: child) else { return nil }
+                    let enabled = AXHelpers.enabledAttribute(child).map { "\($0)" } ?? "nil"
+                    return "(x=\(frame.minX),y=\(frame.minY),w=\(frame.width),h=\(frame.height),enabled=\(enabled))"
+                }
+                guard !childDescs.isEmpty else { continue }
                 let label = app.bundleIdentifier ?? app.localizedName ?? "pid=\(app.processIdentifier)"
                 SourcePIDCache.diagLog.debug(
-                    "SourcePIDCache diag app=\(label) extrasBar children=\(children.count) frames=\(frames.map { "(x=\($0.minX),y=\($0.minY),w=\($0.width),h=\($0.height))" }.joined(separator: " "))"
+                    "SourcePIDCache diag app=\(label) extrasBar children=\(children.count) frames=\(childDescs.joined(separator: " "))"
                 )
             }
         }

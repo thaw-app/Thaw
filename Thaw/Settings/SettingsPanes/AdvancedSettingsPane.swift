@@ -160,13 +160,19 @@ struct AdvancedSettingsPane: View {
 
     private var searchSectionOrdering: some View {
         VStack(alignment: .leading, spacing: 8) {
-            ForEach(displayedSearchSectionNames, id: \.self) { name in
+            ForEach(Array(displayedSearchSectionNames.enumerated()), id: \.element) { index, name in
                 searchSectionRow(for: name)
+                if index < displayedSearchSectionNames.count - 1 {
+                    Divider()
+                }
             }
         }
         .animation(.default, value: settings.searchSectionOrder)
         .animation(.default, value: settings.enableAlwaysHiddenSection)
-        .annotation("Choose which menu bar sections appear in the search panel, and in what order. Use the up and down buttons to reorder, and turn off a section to exclude its items from search results.")
+        .annotation(
+            "Choose which menu bar sections appear in the search panel, and in what order. Use the up and down buttons to reorder, and turn off a section to exclude its items from search results.",
+            spacing: 10
+        )
     }
 
     @ViewBuilder

@@ -23,6 +23,9 @@ final class AppSettings: ObservableObject {
     /// The model for per-display Thaw Bar settings.
     let displaySettings = DisplaySettingsManager()
 
+    /// The model for conditional menu bar item triggers.
+    let triggers = MenuBarItemTriggersManager()
+
     /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
 
@@ -36,6 +39,7 @@ final class AppSettings: ObservableObject {
         general.performSetup(with: appState)
         hotkeys.performSetup(with: appState)
         displaySettings.performSetup(with: appState)
+        triggers.performSetup(with: appState)
         configureCancellables()
     }
 
@@ -58,6 +62,11 @@ final class AppSettings: ObservableObject {
             }
             .store(in: &c)
         displaySettings.objectWillChange
+            .sink { [weak self] in
+                self?.objectWillChange.send()
+            }
+            .store(in: &c)
+        triggers.objectWillChange
             .sink { [weak self] in
                 self?.objectWillChange.send()
             }

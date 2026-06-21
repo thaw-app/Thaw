@@ -160,6 +160,30 @@ final class MenuBarLayoutSnapshotTests: XCTestCase {
         XCTAssertNil(decoded.itemSectionMap)
         XCTAssertNil(decoded.itemOrder)
         XCTAssertNil(decoded.newItemsPlacement)
+        XCTAssertNil(decoded.itemHotkeys)
+    }
+
+    func testEncodeDecodeItemHotkeys() throws {
+        let original = MenuBarLayoutSnapshot(
+            savedSectionOrder: [:],
+            pinnedHiddenBundleIDs: [],
+            pinnedAlwaysHiddenBundleIDs: [],
+            customNames: [:],
+            itemHotkeys: [
+                "com.apple.controlcenter:WiFi": Data([0x01, 0x02]),
+                "com.apple.controlcenter:Battery": Data([0x03]),
+            ]
+        )
+
+        let encoder = JSONEncoder()
+        let decoder = JSONDecoder()
+
+        let data = try encoder.encode(original)
+        let decoded = try decoder.decode(MenuBarLayoutSnapshot.self, from: data)
+
+        XCTAssertEqual(decoded.itemHotkeys?.count, 2)
+        XCTAssertEqual(decoded.itemHotkeys?["com.apple.controlcenter:WiFi"], Data([0x01, 0x02]))
+        XCTAssertEqual(decoded.itemHotkeys?["com.apple.controlcenter:Battery"], Data([0x03]))
     }
 
     func testEmptyCollections() {

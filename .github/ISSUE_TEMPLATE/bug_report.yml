@@ -76,9 +76,9 @@ body:
     id: logs
     attributes:
       label: Logs / Console Output
-      description: Attach relevant logs.
+      description: Please ensure you have reproduced the issue with Diagnostic logging enabled (Settings → Advanced → Diagnostics → Enable diagnostic logging).
     validations:
-      required: false
+      required: true
 
   - type: textarea
     id: additional

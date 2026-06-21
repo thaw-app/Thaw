@@ -307,6 +307,12 @@ struct MenuBarLayoutSnapshot: Codable {
     /// Placement preference for the New Items badge (section and anchor).
     /// Absent in profiles saved before this field was introduced.
     var newItemsPlacement: MenuBarItemManager.NewItemsPlacement?
+
+    /// Per-item hotkey bindings keyed by uniqueIdentifier (namespace:title).
+    /// Each value is an encoded KeyCombination, matching the storage shape of
+    /// the menuBarItemHotkeys default. Absent in profiles saved before this
+    /// field was introduced.
+    var itemHotkeys: [String: Data]?
 }
 
 // MARK: - ProfileContent
@@ -318,6 +324,8 @@ struct ProfileContent {
     var hotkeys: [String: Data]
     var displayConfigurations: [String: DisplayIceBarConfiguration]
     var globalDisplayConfiguration: DisplayIceBarConfiguration
+    var confirmSpacingRelaunch: Bool
+    var unconfirmedSpacingProfileScope: SpacingProfileSaveScope
     var appearanceConfiguration: MenuBarAppearanceConfigurationV2
     var menuBarLayout: MenuBarLayoutSnapshot
     var automation: ProfileAutomation?
@@ -328,6 +336,8 @@ struct ProfileContent {
         hotkeys: [String: Data],
         displayConfigurations: [String: DisplayIceBarConfiguration],
         globalDisplayConfiguration: DisplayIceBarConfiguration = Defaults.DefaultValue.globalDisplayConfiguration,
+        confirmSpacingRelaunch: Bool = Defaults.DefaultValue.confirmSpacingRelaunch,
+        unconfirmedSpacingProfileScope: SpacingProfileSaveScope = Defaults.DefaultValue.unconfirmedSpacingProfileScope,
         appearanceConfiguration: MenuBarAppearanceConfigurationV2,
         menuBarLayout: MenuBarLayoutSnapshot,
         automation: ProfileAutomation? = nil
@@ -337,6 +347,8 @@ struct ProfileContent {
         self.hotkeys = hotkeys
         self.displayConfigurations = displayConfigurations
         self.globalDisplayConfiguration = globalDisplayConfiguration
+        self.confirmSpacingRelaunch = confirmSpacingRelaunch
+        self.unconfirmedSpacingProfileScope = unconfirmedSpacingProfileScope
         self.appearanceConfiguration = appearanceConfiguration
         self.menuBarLayout = menuBarLayout
         self.automation = automation
@@ -356,6 +368,8 @@ struct Profile: Codable, Identifiable {
     var hotkeys: [String: Data]
     var displayConfigurations: [String: DisplayIceBarConfiguration]
     var globalDisplayConfiguration: DisplayIceBarConfiguration
+    var confirmSpacingRelaunch: Bool
+    var unconfirmedSpacingProfileScope: SpacingProfileSaveScope
     var appearanceConfiguration: MenuBarAppearanceConfigurationV2
     var menuBarLayout: MenuBarLayoutSnapshot
     var automation: ProfileAutomation?
@@ -378,6 +392,8 @@ struct Profile: Codable, Identifiable {
             hotkeys: hotkeys,
             displayConfigurations: displayConfigurations,
             globalDisplayConfiguration: globalDisplayConfiguration,
+            confirmSpacingRelaunch: confirmSpacingRelaunch,
+            unconfirmedSpacingProfileScope: unconfirmedSpacingProfileScope,
             appearanceConfiguration: appearanceConfiguration,
             menuBarLayout: menuBarLayout,
             automation: automation
@@ -396,6 +412,8 @@ struct Profile: Codable, Identifiable {
         case hotkeys
         case displayConfigurations
         case globalDisplayConfiguration
+        case confirmSpacingRelaunch
+        case unconfirmedSpacingProfileScope
         case appearanceConfiguration
         case menuBarLayout
         case automation
@@ -417,6 +435,8 @@ struct Profile: Codable, Identifiable {
         self.hotkeys = content.hotkeys
         self.displayConfigurations = content.displayConfigurations
         self.globalDisplayConfiguration = content.globalDisplayConfiguration
+        self.confirmSpacingRelaunch = content.confirmSpacingRelaunch
+        self.unconfirmedSpacingProfileScope = content.unconfirmedSpacingProfileScope
         self.appearanceConfiguration = content.appearanceConfiguration
         self.menuBarLayout = content.menuBarLayout
         self.automation = content.automation
@@ -490,6 +510,16 @@ struct Profile: Codable, Identifiable {
             DisplayIceBarConfiguration.self,
             forKey: .globalDisplayConfiguration
         ) ?? Defaults.DefaultValue.globalDisplayConfiguration
+
+        confirmSpacingRelaunch = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .confirmSpacingRelaunch
+        ) ?? Defaults.DefaultValue.confirmSpacingRelaunch
+
+        unconfirmedSpacingProfileScope = try container.decodeIfPresent(
+            SpacingProfileSaveScope.self,
+            forKey: .unconfirmedSpacingProfileScope
+        ) ?? Defaults.DefaultValue.unconfirmedSpacingProfileScope
 
         appearanceConfiguration = try container.decodeIfPresent(
             MenuBarAppearanceConfigurationV2.self,

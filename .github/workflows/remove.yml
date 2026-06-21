@@ -1,0 +1,42 @@
+name: Remove Skipped Workflow Runs
+on:
+  workflow_dispatch:
+jobs:
+  remove-skipped-runs:
+    runs-on: ubuntu-slim
+    permissions:
+      actions: write
+    steps:
+      - name: Remove Skipped Workflow Runs
+        uses: actions/github-script@v9
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const runs = await github.paginate(
+            	github.rest.actions.listWorkflowRunsForRepo,
+            	{
+            		owner: context.repo.owner,
+            		repo: context.repo.repo,
+            		status: "skipped",
+            		per_page: 100,
+            	},
+            );
+                    
+            let deletedCount = 0;
+            let failedCount = 0;
+                    
+            for (const run of runs) {
+            	try {
+            		await github.rest.actions.deleteWorkflowRun({
+            			owner: context.repo.owner,
+            			repo: context.repo.repo,
+            			run_id: run.id,
+            		});
+            		deletedCount++;
+            	} catch (error) {
+            		console.error(`Error deleting workflow run: ${error.message}`);
+            		failedCount++;
+            	}
+            }
+            console.log(`Deleted skipped workflow runs: ${deletedCount}`);
+            console.log(`Failed to delete workflow runs: ${failedCount}`);

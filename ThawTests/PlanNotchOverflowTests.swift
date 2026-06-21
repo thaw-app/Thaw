@@ -310,4 +310,113 @@ final class PlanNotchOverflowTests: XCTestCase {
         XCTAssertEqual(result.overflowUIDs, [],
                        "no item should overflow when widths sum to exactly the budget — spacing must not be double-counted")
     }
+
+    // MARK: - Invalid / unsettled geometry guard (issue #666, display reconnect)
+
+    /// A negative availableWidth means the budget was computed from invalid,
+    /// not-yet-settled geometry: during a display reconnect Control Center
+    /// reported a stale off-screen left edge, so rightBoundary went negative
+    /// and availableWidth came out at -1202 in the field log. The planner must
+    /// not eject items on a budget it cannot trust. Without the guard the
+    /// "profile alone exceeds budget" branch ejects every visible item, which
+    /// is the exact corruption observed (availableWidth=-1202 -> 13 items
+    /// ejected from visible, collapsing the hidden section into visible).
+    func testNegativeAvailableWidthYieldsNoOverflow() {
+        let desired = makeSequence(
+            chevron: chevron,
+            visible: ["a", "b", "c", "d"],
+            hiddenCtrl: hiddenCtrl,
+            ahCtrl: ahCtrl
+        )
+        let widths: [String: CGFloat] = [chevron: 24, "a": 24, "b": 24, "c": 24, "d": 24]
+        let sectionMap = ["a": "visible", "b": "visible", "c": "visible", "d": "visible"]
+
+        let result = LayoutSolver.planNotchOverflow(
+            desiredFiltered: desired,
+            unmanagedUIDs: [],
+            controlUIDs: ControlUIDs(visible: chevron, hidden: hiddenCtrl, alwaysHidden: ahCtrl),
+            sectionMap: sectionMap,
+            uidWidths: widths,
+            availableWidth: -1202 // exact value from the field log (display reconnect)
+        )
+
+        XCTAssertEqual(result.overflowUIDs, [], "must not eject items on a negative (invalid) budget")
+        XCTAssertEqual(result.updatedDesiredFiltered, desired)
+        XCTAssertEqual(result.updatedSectionMap, sectionMap)
+    }
+
+    /// A zero budget is equally untrustworthy (Control Center left edge at or
+    /// inside the notch boundary) and must not trigger overflow.
+    func testZeroAvailableWidthYieldsNoOverflow() {
+        let desired = makeSequence(
+            chevron: chevron,
+            visible: ["a", "b"],
+            hiddenCtrl: hiddenCtrl,
+            ahCtrl: ahCtrl
+        )
+        let widths: [String: CGFloat] = [chevron: 24, "a": 24, "b": 24]
+        let sectionMap = ["a": "visible", "b": "visible"]
+
+        let result = LayoutSolver.planNotchOverflow(
+            desiredFiltered: desired,
+            unmanagedUIDs: [],
+            controlUIDs: ControlUIDs(visible: chevron, hidden: hiddenCtrl, alwaysHidden: ahCtrl),
+            sectionMap: sectionMap,
+            uidWidths: widths,
+            availableWidth: 0
+        )
+
+        XCTAssertEqual(result.overflowUIDs, [], "must not eject items on a zero budget")
+    }
+
+    /// A non-finite budget (degenerate screen frame / missing geometry) must
+    /// not eject either.
+    func testNonFiniteAvailableWidthYieldsNoOverflow() {
+        let desired = makeSequence(
+            chevron: chevron,
+            visible: ["a", "b"],
+            hiddenCtrl: hiddenCtrl,
+            ahCtrl: ahCtrl
+        )
+        let widths: [String: CGFloat] = [chevron: 24, "a": 24, "b": 24]
+        let sectionMap = ["a": "visible", "b": "visible"]
+
+        for badBudget in [CGFloat.infinity, -.infinity, .nan] {
+            let result = LayoutSolver.planNotchOverflow(
+                desiredFiltered: desired,
+                unmanagedUIDs: [],
+                controlUIDs: ControlUIDs(visible: chevron, hidden: hiddenCtrl, alwaysHidden: ahCtrl),
+                sectionMap: sectionMap,
+                uidWidths: widths,
+                availableWidth: badBudget
+            )
+            XCTAssertEqual(result.overflowUIDs, [], "must not eject items on a non-finite budget (\(badBudget))")
+        }
+    }
+
+    /// Guard rail: a small but POSITIVE budget still overflows legitimately, so
+    /// the invalid-budget guard does not suppress real overflow on a genuinely
+    /// full bar.
+    func testSmallPositiveBudgetStillOverflows() {
+        // chevron(24) + a + b + c + d (24 each) = 120; budget 60 fits chevron + 1.
+        let desired = makeSequence(
+            chevron: chevron,
+            visible: ["a", "b", "c", "d"],
+            hiddenCtrl: hiddenCtrl,
+            ahCtrl: ahCtrl
+        )
+        let widths: [String: CGFloat] = [chevron: 24, "a": 24, "b": 24, "c": 24, "d": 24]
+        let sectionMap = ["a": "visible", "b": "visible", "c": "visible", "d": "visible"]
+
+        let result = LayoutSolver.planNotchOverflow(
+            desiredFiltered: desired,
+            unmanagedUIDs: [],
+            controlUIDs: ControlUIDs(visible: chevron, hidden: hiddenCtrl, alwaysHidden: ahCtrl),
+            sectionMap: sectionMap,
+            uidWidths: widths,
+            availableWidth: 60
+        )
+
+        XCTAssertFalse(result.overflowUIDs.isEmpty, "a genuinely full bar (positive budget) must still overflow")
+    }
 }

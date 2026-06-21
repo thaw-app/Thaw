@@ -80,6 +80,10 @@ extension UserNotificationManager: @preconcurrency UNUserNotificationCenterDeleg
                 break
             }
             appState.updatesManager.checkForUpdates()
+        case .triggerFired:
+            // Tapping a trigger notification opens Settings to the Triggers pane.
+            appState.navigationState.settingsNavigationIdentifier = .triggers
+            appState.openWindow(.settings)
         case nil:
             break
         }

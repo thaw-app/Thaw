@@ -8,6 +8,7 @@
 
 import Cocoa
 import Combine
+import SwiftUI
 
 // MARK: - Permission
 
@@ -20,6 +21,12 @@ class Permission: ObservableObject, Identifiable {
 
     /// The title of the permission.
     let title: String
+
+    /// The name of the system symbol image to display next to the title.
+    let iconName: String
+
+    /// The color of the icon displayed next to the title.
+    let iconColor: Color
 
     /// Descriptive details for the permission.
     let details: [String]
@@ -53,6 +60,8 @@ class Permission: ObservableObject, Identifiable {
     ///   - request: A function that requests permissions.
     init(
         title: String,
+        iconName: String,
+        iconColor: Color,
         details: [String],
         isRequired: Bool,
         settingsURL: URL?,
@@ -60,6 +69,8 @@ class Permission: ObservableObject, Identifiable {
         request: @escaping () -> Void
     ) {
         self.title = title
+        self.iconName = iconName
+        self.iconColor = iconColor
         self.details = details
         self.isRequired = isRequired
         self.settingsURL = settingsURL
@@ -70,6 +81,10 @@ class Permission: ObservableObject, Identifiable {
     }
 
     /// Sets up the internal observers for the permission.
+    ///
+    /// Polls ``check`` on a timer until the permission is granted, at which
+    /// point the timer cancels itself — there's no need to keep checking once
+    /// the app already has what it needs.
     private func configureCancellables() {
         timerCancellable = Timer.publish(every: 3, tolerance: 0.5, on: .main, in: .default)
             .autoconnect()
@@ -128,13 +143,18 @@ class Permission: ObservableObject, Identifiable {
 
 // MARK: - AccessibilityPermission
 
+/// The Accessibility permission, required for Thaw to detect, move, and
+/// interact with menu bar items on the user's behalf.
 final class AccessibilityPermission: Permission {
     init() {
         super.init(
             title: String(localized: "Accessibility"),
+            iconName: "accessibility",
+            iconColor: .blue,
             details: [
-                String(localized: "Get real-time information about the menu bar."),
-                String(localized: "Arrange menu bar items."),
+                String(localized: "Detect the menu bar items on your Mac and where they're positioned."),
+                String(localized: "Move menu bar items to rearrange or hide them."),
+                String(localized: "Click menu bar items on your behalf, such as when using the search bar."),
             ],
             isRequired: true,
             settingsURL: nil,
@@ -150,13 +170,19 @@ final class AccessibilityPermission: Permission {
 
 // MARK: - ScreenRecordingPermission
 
+/// The Screen Recording permission, used for sampling menu bar colors,
+/// previewing menu bar items, and visual search. Optional — Thaw can run in
+/// a limited mode without it.
 final class ScreenRecordingPermission: Permission {
     init() {
         super.init(
             title: String(localized: "Screen Recording"),
+            iconName: "record.circle",
+            iconColor: .red,
             details: [
-                String(localized: "Change the menu bar's appearance."),
-                String(localized: "Display images of individual menu bar items."),
+                String(localized: "Show live previews of your menu bar items."),
+                String(localized: "Sample colors from the menu bar to adjust its tint and appearance."),
+                String(localized: "Find menu bar items visually when searching."),
             ],
             isRequired: false,
             settingsURL: URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"),

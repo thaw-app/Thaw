@@ -9,19 +9,37 @@
 import Combine
 import Foundation
 
+/// An abstraction over ``AppPermissions`` that lets views depend on just the
+/// pieces they read, so previews can supply lightweight stand-ins instead of
+/// the real manager and its associated app machinery.
+@MainActor
+protocol PermissionsManaging: ObservableObject {
+    /// The state of the app's granted permissions.
+    var permissionsState: AppPermissions.PermissionsState { get }
+
+    /// The permissions required for full app functionality.
+    var allPermissions: [Permission] { get }
+}
+
 /// A type that manages the permissions of the app.
 @MainActor
-final class AppPermissions: ObservableObject {
+final class AppPermissions: ObservableObject, PermissionsManaging {
     /// Keys to access individual permissions.
     enum PermissionKey {
+        /// Identifies ``AppPermissions/accessibility``.
         case accessibility
+        /// Identifies ``AppPermissions/screenRecording``.
         case screenRecording
     }
 
     /// The state of the app's granted permissions.
     enum PermissionsState {
+        /// At least one required permission hasn't been granted.
         case missing
+        /// Every permission, required or not, has been granted.
         case hasAll
+        /// All required permissions are granted, but at least one optional
+        /// permission is missing — the app can run in limited mode.
         case hasRequired
     }
 

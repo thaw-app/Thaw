@@ -41,6 +41,16 @@ enum AXHelpers {
         queue.sync { try? element.attribute(.enabled) } ?? false
     }
 
+    /// The raw AXEnabled attribute, or nil when the element does not expose it.
+    /// isEnabled collapses a missing attribute to false, so it cannot tell an
+    /// explicitly disabled element from one that simply does not publish the
+    /// attribute. Callers that must keep that distinction use this: source-PID
+    /// matching treats absent as enabled, and the unresolved-item diagnostics
+    /// report it verbatim.
+    static func enabledAttribute(_ element: UIElement) -> Bool? {
+        queue.sync { try? element.attribute(.enabled) }
+    }
+
     static func frame(for element: UIElement) -> CGRect? {
         queue.sync { try? element.attribute(.frame) }
     }
@@ -54,6 +64,21 @@ enum AXHelpers {
             var pid: pid_t = 0
             let result = AXUIElementGetPid(element.element, &pid)
             return result == .success ? pid : nil
+        }
+    }
+
+    /// Performs the press action on the given element, returning whether it
+    /// succeeded. Used to open the menus of Electron/Chromium tray items, which
+    /// ignore synthetic mouse clicks.
+    @discardableResult
+    static func press(_ element: UIElement) -> Bool {
+        queue.sync {
+            do {
+                try element.performAction(.press)
+                return true
+            } catch {
+                return false
+            }
         }
     }
 }

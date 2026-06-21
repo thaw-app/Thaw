@@ -18,12 +18,17 @@ enum HotkeyAction: String, Codable, CaseIterable {
     case enableIceBar = "EnableIceBar"
     case toggleApplicationMenus = "ToggleApplicationMenus"
 
-    /// Used by profile hotkeys — action is handled externally.
+    /// Used by profile hotkeys, action is handled externally.
     case profileApply = "ProfileApply"
 
-    /// Actions that should appear in the Hotkeys settings pane.
+    /// Used by per-item hotkeys, action is handled externally.
+    case openMenuBarItem = "OpenMenuBarItem"
+
+    /// Actions that should appear in the Hotkeys settings pane as fixed,
+    /// singleton recorders. Dynamic per-profile and per-item hotkeys are
+    /// created separately and are excluded here.
     static var settingsActions: [HotkeyAction] {
-        allCases.filter { $0 != .profileApply }
+        allCases.filter { $0 != .profileApply && $0 != .openMenuBarItem }
     }
 
     @MainActor
@@ -55,6 +60,9 @@ enum HotkeyAction: String, Codable, CaseIterable {
             appState.menuBarManager.toggleApplicationMenus()
         case .profileApply:
             // Handled externally by ProfileManager's custom registration.
+            break
+        case .openMenuBarItem:
+            // Handled externally by MenuBarManager's per-item registration.
             break
         }
     }

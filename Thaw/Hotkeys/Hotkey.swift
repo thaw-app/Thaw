@@ -96,6 +96,11 @@ extension Hotkey {
                             profileManager.applyProfile(profile, to: appState, previousProfileID: previousID)
                         }
                     }
+                } else if hotkey.action == .openMenuBarItem {
+                    let key = ObjectIdentifier(hotkey)
+                    if let identifier = appState.menuBarManager.hotkeyItemMap[key] {
+                        appState.menuBarManager.openItem(withIdentifier: identifier)
+                    }
                 } else {
                     hotkey.action.perform(appState: appState)
                 }
