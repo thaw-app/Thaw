@@ -679,10 +679,8 @@ final class SystemStateMonitor: ObservableObject {
             return false
         }
         let tunnelPrefixes = ["tap", "tun", "ppp", "ipsec", "utun"]
-        for key in scoped.keys {
-            if tunnelPrefixes.contains(where: { key.contains($0) }) {
-                return true
-            }
+        for key in scoped.keys where tunnelPrefixes.contains(where: { key.contains($0) }) {
+            return true
         }
         return false
     }
