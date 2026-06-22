@@ -15,7 +15,10 @@ enum MenuBarItemService {
 extension MenuBarItemService {
     enum Request: Codable {
         case start
-        case configureLogging(filePath: String)
+        /// Points the service's diagnostic logger at `filePath`, or disables it
+        /// when `nil`. Sent at startup, on each rotation, and when the user
+        /// toggles diagnostic logging.
+        case configureLogging(filePath: String?)
         case sourcePID(WindowInfo)
         case sourcePIDs([WindowInfo])
     }

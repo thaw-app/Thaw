@@ -58,6 +58,9 @@ extension AppSettings {
         advanced.showMenuBarTooltips = Defaults.DefaultValue.showMenuBarTooltips
         advanced.iconRefreshInterval = Defaults.DefaultValue.iconRefreshInterval
         advanced.enableDiagnosticLogging = Defaults.DefaultValue.enableDiagnosticLogging
+        advanced.diagnosticLogMaxSizeMB = Defaults.DefaultValue.diagnosticLogMaxSizeMB
+        advanced.diagnosticLogRetentionDays = Defaults.DefaultValue.diagnosticLogRetentionDays
+        advanced.diagnosticLogRotationInterval = Defaults.DefaultValue.diagnosticLogRotationInterval
         advanced.searchSectionOrder = AdvancedSettings.sanitizedSearchSectionOrder(
             from: Defaults.DefaultValue.searchSectionOrder
         )

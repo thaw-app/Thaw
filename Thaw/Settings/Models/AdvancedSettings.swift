@@ -9,6 +9,38 @@
 import Combine
 import SwiftUI
 
+// MARK: - LogRotationInterval
+
+/// How often diagnostic logs are rotated on a time basis, in addition to the
+/// size limit.
+enum LogRotationInterval: String, CaseIterable, Identifiable {
+    case off
+    case hourly
+    case daily
+
+    var id: String {
+        rawValue
+    }
+
+    /// The interval in seconds, or `0` when time-based rotation is off.
+    var seconds: TimeInterval {
+        switch self {
+        case .off: 0
+        case .hourly: 3600
+        case .daily: 86400
+        }
+    }
+
+    /// A human-readable title for the picker.
+    var title: String {
+        switch self {
+        case .off: String(localized: "Off")
+        case .hourly: String(localized: "Hourly")
+        case .daily: String(localized: "Daily")
+        }
+    }
+}
+
 // MARK: - AdvancedSettings
 
 /// Model for the app's Advanced settings.
@@ -54,6 +86,16 @@ final class AdvancedSettings: ObservableObject {
 
     /// A Boolean value that indicates whether diagnostic logging to file is enabled.
     @Published var enableDiagnosticLogging = Defaults.DefaultValue.enableDiagnosticLogging
+
+    /// The maximum size, in megabytes, a diagnostic log file may reach before
+    /// it is rotated.
+    @Published var diagnosticLogMaxSizeMB = Defaults.DefaultValue.diagnosticLogMaxSizeMB
+
+    /// The number of days to keep diagnostic log files before deleting them.
+    @Published var diagnosticLogRetentionDays = Defaults.DefaultValue.diagnosticLogRetentionDays
+
+    /// How often diagnostic logs are rotated on a time basis.
+    @Published var diagnosticLogRotationInterval = Defaults.DefaultValue.diagnosticLogRotationInterval
 
     /// A Boolean value that indicates whether to use LCS sorting instead of
     /// full sorting on notched displays.
@@ -107,6 +149,13 @@ final class AdvancedSettings: ObservableObject {
         Defaults.ifPresent(key: .showMenuBarTooltips, assign: &showMenuBarTooltips)
         Defaults.ifPresent(key: .iconRefreshInterval, assign: &iconRefreshInterval)
         Defaults.ifPresent(key: .enableDiagnosticLogging, assign: &enableDiagnosticLogging)
+        Defaults.ifPresent(key: .diagnosticLogMaxSizeMB, assign: &diagnosticLogMaxSizeMB)
+        Defaults.ifPresent(key: .diagnosticLogRetentionDays, assign: &diagnosticLogRetentionDays)
+        Defaults.ifPresent(key: .diagnosticLogRotationInterval) { (rawValue: String) in
+            if let interval = LogRotationInterval(rawValue: rawValue) {
+                diagnosticLogRotationInterval = interval
+            }
+        }
         Defaults.ifPresent(key: .useLCSSortingOnNotchedDisplays, assign: &useLCSSortingOnNotchedDisplays)
         Defaults.ifPresent(key: .enableMenuBarItemOverflow, assign: &enableMenuBarItemOverflow)
         Defaults.ifPresent(key: .searchIncludeVisible, assign: &searchIncludeVisible)
@@ -170,9 +219,37 @@ final class AdvancedSettings: ObservableObject {
                 #else
                     DiagnosticLogger.shared.isEnabled = enabled
                 #endif
+                // Push the new state to the XPC service so toggling after launch
+                // takes effect there too (nil disables its file logging).
+                let path = DiagnosticLogger.shared.currentLogFile?.path
+                Task { await MenuBarItemService.Connection.shared.configureLogging(to: path) }
             },
             in: &c
         )
+        $diagnosticLogMaxSizeMB.persistToDefaults(key: .diagnosticLogMaxSizeMB, in: &c)
+        $diagnosticLogRetentionDays.persistToDefaults(key: .diagnosticLogRetentionDays, in: &c)
+        $diagnosticLogRotationInterval.persistToDefaults(
+            key: .diagnosticLogRotationInterval,
+            transform: \.rawValue,
+            in: &c
+        )
+        // Apply the rotation policy to the logger whenever any of its inputs
+        // change. CombineLatest3 also emits once on subscription, seeding the
+        // initial policy.
+        Publishers.CombineLatest3(
+            $diagnosticLogMaxSizeMB,
+            $diagnosticLogRetentionDays,
+            $diagnosticLogRotationInterval
+        )
+        .receive(on: DispatchQueue.main)
+        .sink { maxSizeMB, retentionDays, interval in
+            var policy = DiagnosticLogger.RotationPolicy()
+            policy.maxFileSizeBytes = UInt64(max(0, maxSizeMB)) * 1024 * 1024
+            policy.retentionDays = max(1, retentionDays)
+            policy.rotationInterval = interval.seconds
+            DiagnosticLogger.shared.setRotationPolicy(policy)
+        }
+        .store(in: &c)
         $useLCSSortingOnNotchedDisplays.persistToDefaults(key: .useLCSSortingOnNotchedDisplays, in: &c)
         $enableMenuBarItemOverflow.persistToDefaults(key: .enableMenuBarItemOverflow, in: &c)
         $searchSectionOrder.persistToDefaults(

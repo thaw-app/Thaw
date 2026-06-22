@@ -39,8 +39,13 @@ final class Listener: @unchecked Sendable {
                 diagLog.debug("Listener received start request")
                 return .start
             case let .configureLogging(filePath):
-                DiagnosticLogger.shared.attachToFile(at: URL(fileURLWithPath: filePath))
-                diagLog.debug("Listener attached diagnostic logging to \(filePath)")
+                if let filePath {
+                    DiagnosticLogger.shared.attachToFile(at: URL(fileURLWithPath: filePath))
+                    diagLog.debug("Listener attached diagnostic logging to \(filePath)")
+                } else {
+                    DiagnosticLogger.shared.isEnabled = false
+                    diagLog.debug("Listener disabled diagnostic logging")
+                }
                 return .configureLogging
             case let .sourcePID(window):
                 diagLog.debug("Listener: sourcePID request for windowID=\(window.windowID) title=\(window.title ?? "nil")")

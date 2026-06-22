@@ -177,6 +177,9 @@ extension Defaults {
         #else
             static let enableDiagnosticLogging = false
         #endif
+        static let diagnosticLogMaxSizeMB = 10
+        static let diagnosticLogRetentionDays = 2
+        static let diagnosticLogRotationInterval: LogRotationInterval = .off
         static let useLCSSortingOnNotchedDisplays = true
         static let useOptionClickToShowAlwaysHiddenSection = false
         static let useDoubleClickToShowAlwaysHiddenSection = false
@@ -252,6 +255,9 @@ extension Defaults {
         case iconRefreshInterval = "IconRefreshInterval"
         case showMenuBarTooltips = "ShowMenuBarTooltips"
         case enableDiagnosticLogging = "EnableDiagnosticLogging"
+        case diagnosticLogMaxSizeMB = "DiagnosticLogMaxSizeMB"
+        case diagnosticLogRetentionDays = "DiagnosticLogRetentionDays"
+        case diagnosticLogRotationInterval = "DiagnosticLogRotationInterval"
         case useLCSSortingOnNotchedDisplays = "UseLCSSortingOnNotchedDisplays"
         case useOptionClickToShowAlwaysHiddenSection = "UseOptionClickToShowAlwaysHiddenSection"
         case useDoubleClickToShowAlwaysHiddenSection = "UseDoubleClickToShowAlwaysHiddenSection"

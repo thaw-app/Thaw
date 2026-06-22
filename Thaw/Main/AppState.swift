@@ -82,6 +82,13 @@ final class AppState: ObservableObject {
     let diagLog = DiagLog(category: "AppState")
 
     private lazy var setupTask = Task { @MainActor in
+        // When the main app rotates to a new log file, hand its path to the XPC
+        // service so both processes keep appending to the same segment. Set
+        // before logging is enabled so the first rotation is handled.
+        DiagnosticLogger.shared.onRotate = { url in
+            Task { await MenuBarItemService.Connection.shared.configureLogging(to: url.path) }
+        }
+
         #if DEBUG
             // Debug builds always have diagnostic logging on so logs are
             // captured during development without depending on the toggle.

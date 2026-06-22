@@ -100,6 +100,9 @@ struct AdvancedSettingsSnapshot: Codable {
     var showMenuBarTooltips: Bool
     var iconRefreshInterval: TimeInterval
     var enableDiagnosticLogging: Bool
+    var diagnosticLogMaxSizeMB: Int
+    var diagnosticLogRetentionDays: Int
+    var diagnosticLogRotationInterval: String
     var useDoubleClickToShowAlwaysHiddenSection: Bool
     var useOptionClickToShowAlwaysHiddenSection: Bool
     var useLCSSortingOnNotchedDisplays: Bool
@@ -123,6 +126,9 @@ struct AdvancedSettingsSnapshot: Codable {
             showMenuBarTooltips: settings.showMenuBarTooltips,
             iconRefreshInterval: settings.iconRefreshInterval,
             enableDiagnosticLogging: settings.enableDiagnosticLogging,
+            diagnosticLogMaxSizeMB: settings.diagnosticLogMaxSizeMB,
+            diagnosticLogRetentionDays: settings.diagnosticLogRetentionDays,
+            diagnosticLogRotationInterval: settings.diagnosticLogRotationInterval.rawValue,
             useDoubleClickToShowAlwaysHiddenSection: settings.useDoubleClickToShowAlwaysHiddenSection,
             useOptionClickToShowAlwaysHiddenSection: settings.useOptionClickToShowAlwaysHiddenSection,
             useLCSSortingOnNotchedDisplays: settings.useLCSSortingOnNotchedDisplays,
@@ -149,6 +155,11 @@ struct AdvancedSettingsSnapshot: Codable {
         settings.showMenuBarTooltips = showMenuBarTooltips
         settings.iconRefreshInterval = iconRefreshInterval
         settings.enableDiagnosticLogging = enableDiagnosticLogging
+        settings.diagnosticLogMaxSizeMB = diagnosticLogMaxSizeMB
+        settings.diagnosticLogRetentionDays = diagnosticLogRetentionDays
+        if let interval = LogRotationInterval(rawValue: diagnosticLogRotationInterval) {
+            settings.diagnosticLogRotationInterval = interval
+        }
         settings.useDoubleClickToShowAlwaysHiddenSection = useDoubleClickToShowAlwaysHiddenSection
         settings.useOptionClickToShowAlwaysHiddenSection = useOptionClickToShowAlwaysHiddenSection
         settings.useLCSSortingOnNotchedDisplays = useLCSSortingOnNotchedDisplays
@@ -171,6 +182,9 @@ struct AdvancedSettingsSnapshot: Codable {
         case showMenuBarTooltips
         case iconRefreshInterval
         case enableDiagnosticLogging
+        case diagnosticLogMaxSizeMB
+        case diagnosticLogRetentionDays
+        case diagnosticLogRotationInterval
         case useDoubleClickToShowAlwaysHiddenSection
         case useOptionClickToShowAlwaysHiddenSection
         case useLCSSortingOnNotchedDisplays
@@ -193,6 +207,9 @@ struct AdvancedSettingsSnapshot: Codable {
         showMenuBarTooltips: Bool,
         iconRefreshInterval: TimeInterval,
         enableDiagnosticLogging: Bool,
+        diagnosticLogMaxSizeMB: Int = Defaults.DefaultValue.diagnosticLogMaxSizeMB,
+        diagnosticLogRetentionDays: Int = Defaults.DefaultValue.diagnosticLogRetentionDays,
+        diagnosticLogRotationInterval: String = Defaults.DefaultValue.diagnosticLogRotationInterval.rawValue,
         useDoubleClickToShowAlwaysHiddenSection: Bool,
         useOptionClickToShowAlwaysHiddenSection: Bool,
         useLCSSortingOnNotchedDisplays: Bool,
@@ -213,6 +230,9 @@ struct AdvancedSettingsSnapshot: Codable {
         self.showMenuBarTooltips = showMenuBarTooltips
         self.iconRefreshInterval = iconRefreshInterval
         self.enableDiagnosticLogging = enableDiagnosticLogging
+        self.diagnosticLogMaxSizeMB = diagnosticLogMaxSizeMB
+        self.diagnosticLogRetentionDays = diagnosticLogRetentionDays
+        self.diagnosticLogRotationInterval = diagnosticLogRotationInterval
         self.useDoubleClickToShowAlwaysHiddenSection = useDoubleClickToShowAlwaysHiddenSection
         self.useOptionClickToShowAlwaysHiddenSection = useOptionClickToShowAlwaysHiddenSection
         self.useLCSSortingOnNotchedDisplays = useLCSSortingOnNotchedDisplays
@@ -258,6 +278,15 @@ struct AdvancedSettingsSnapshot: Codable {
         enableDiagnosticLogging = try container.decodeIfPresent(
             Bool.self, forKey: .enableDiagnosticLogging
         ) ?? Defaults.DefaultValue.enableDiagnosticLogging
+        diagnosticLogMaxSizeMB = try container.decodeIfPresent(
+            Int.self, forKey: .diagnosticLogMaxSizeMB
+        ) ?? Defaults.DefaultValue.diagnosticLogMaxSizeMB
+        diagnosticLogRetentionDays = try container.decodeIfPresent(
+            Int.self, forKey: .diagnosticLogRetentionDays
+        ) ?? Defaults.DefaultValue.diagnosticLogRetentionDays
+        diagnosticLogRotationInterval = try container.decodeIfPresent(
+            String.self, forKey: .diagnosticLogRotationInterval
+        ) ?? Defaults.DefaultValue.diagnosticLogRotationInterval.rawValue
         useDoubleClickToShowAlwaysHiddenSection = try container.decodeIfPresent(
             Bool.self, forKey: .useDoubleClickToShowAlwaysHiddenSection
         ) ?? Defaults.DefaultValue.useDoubleClickToShowAlwaysHiddenSection
@@ -486,6 +515,9 @@ struct Profile: Codable, Identifiable {
             showMenuBarTooltips: Defaults.DefaultValue.showMenuBarTooltips,
             iconRefreshInterval: Defaults.DefaultValue.iconRefreshInterval,
             enableDiagnosticLogging: Defaults.DefaultValue.enableDiagnosticLogging,
+            diagnosticLogMaxSizeMB: Defaults.DefaultValue.diagnosticLogMaxSizeMB,
+            diagnosticLogRetentionDays: Defaults.DefaultValue.diagnosticLogRetentionDays,
+            diagnosticLogRotationInterval: Defaults.DefaultValue.diagnosticLogRotationInterval.rawValue,
             useDoubleClickToShowAlwaysHiddenSection: Defaults.DefaultValue.useDoubleClickToShowAlwaysHiddenSection,
             useOptionClickToShowAlwaysHiddenSection: Defaults.DefaultValue.useOptionClickToShowAlwaysHiddenSection,
             useLCSSortingOnNotchedDisplays: Defaults.DefaultValue.useLCSSortingOnNotchedDisplays,

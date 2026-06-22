@@ -27,6 +27,19 @@ extension MenuBarItemService {
         /// The connection's diagnostic logger.
         private let diagLog: DiagLog
 
+        /// Tracks the diagnostic log path last pushed to the service so a
+        /// failed push can be retried on the next request.
+        private struct LoggingState {
+            var hasDesired = false
+            var desiredPath: String?
+            var dirty = false
+            /// Bumped on every new desired state so a stale, out-of-order
+            /// response cannot clear a newer pending retry.
+            var generation = 0
+        }
+
+        private let loggingState = OSAllocatedUnfairLock(initialState: LoggingState())
+
         /// Creates a new connection.
         private init() {
             let queue = DispatchQueue.targetingGlobal(
@@ -44,22 +57,16 @@ extension MenuBarItemService {
         func start() async {
             diagLog.debug("Starting MenuBarItemService connection")
 
-            // If the main app already has a diagnostic log file open,
-            // hand its path to the XPC service so both processes append
-            // to the same file. Sent before the start request so the
-            // XPC service is logging to disk by the time it handles any
-            // subsequent traffic. When file logging is off in the main
-            // app currentLogFile is nil and the XPC service simply logs
-            // to OSLog only, matching the prior release-build behaviour.
-            if let logFile = DiagnosticLogger.shared.currentLogFile {
-                let response = await session.sendAsync(request: .configureLogging(filePath: logFile.path))
-                if response == nil {
-                    diagLog.error("configureLogging request returned nil")
-                } else if case .configureLogging = response {
-                    // success
-                } else {
-                    diagLog.error("configureLogging request returned invalid response \(String(describing: response))")
-                }
+            // Hand the service the diagnostic log path so both processes append
+            // to the same file. Sent before the start request so the XPC service
+            // is logging to disk by the time it handles any subsequent traffic.
+            // After the first push, `loggingState` holds the desired state
+            // (path, or nil to disable) and is replayed on reconnect.
+            let pending = loggingState.withLock { ($0.hasDesired, $0.desiredPath, $0.generation) }
+            if pending.0 {
+                await sendConfigureLogging(pending.1, generation: pending.2)
+            } else if let logFile = DiagnosticLogger.shared.currentLogFile {
+                await configureLogging(to: logFile.path)
             }
 
             let response = await session.sendAsync(request: .start)
@@ -72,6 +79,50 @@ extension MenuBarItemService {
             } else {
                 diagLog.error("Start request returned invalid response \(String(describing: response))")
             }
+        }
+
+        /// Points the service's diagnostic logger at `filePath`, or disables it
+        /// when `nil`. Called at startup, on each log rotation, and when the
+        /// user toggles diagnostic logging.
+        func configureLogging(to filePath: String?) async {
+            let generation = loggingState.withLock { state -> Int in
+                state.hasDesired = true
+                state.desiredPath = filePath
+                state.generation += 1
+                return state.generation
+            }
+            await sendConfigureLogging(filePath, generation: generation)
+        }
+
+        /// Sends a single configureLogging request and records whether it needs
+        /// to be retried. Only the latest send (matching `generation`) may
+        /// update the dirty flag, so a stale response cannot clear a newer retry.
+        private func sendConfigureLogging(_ filePath: String?, generation: Int) async {
+            let response = await session.sendAsync(request: .configureLogging(filePath: filePath))
+            loggingState.withLock { state in
+                guard state.generation == generation else { return }
+                if case .configureLogging = response {
+                    state.dirty = false
+                } else {
+                    state.dirty = true
+                }
+            }
+            if response == nil {
+                diagLog.error("configureLogging request returned nil")
+            } else if case .configureLogging = response {
+                // success
+            } else {
+                diagLog.error("configureLogging request returned invalid response \(String(describing: response))")
+            }
+        }
+
+        /// Resends the desired logging configuration if a previous push failed.
+        private func resendLoggingIfDirty() async {
+            let pending = loggingState.withLock { state -> (Bool, String?, Int) in
+                (state.dirty, state.desiredPath, state.generation)
+            }
+            guard pending.0 else { return }
+            await sendConfigureLogging(pending.1, generation: pending.2)
         }
 
         /// Returns the source process identifier for the given window.
@@ -93,6 +144,8 @@ extension MenuBarItemService {
         /// single batch XPC request, avoiding concurrent thread explosion
         /// in the XPC service.
         func sourcePIDs(for windows: [WindowInfo]) async -> [pid_t?] {
+            // Opportunistically retry a failed logging push on this frequent path.
+            await resendLoggingIfDirty()
             let response = await session.sendAsync(request: .sourcePIDs(windows))
             guard let response else {
                 diagLog.error("Source PIDs batch request returned nil")
