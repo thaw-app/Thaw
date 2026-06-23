@@ -367,6 +367,8 @@ final class PlanNotchOverflowTests: XCTestCase {
         )
 
         XCTAssertEqual(result.overflowUIDs, [], "must not eject items on a zero budget")
+        XCTAssertEqual(result.updatedDesiredFiltered, desired)
+        XCTAssertEqual(result.updatedSectionMap, sectionMap)
     }
 
     /// A non-finite budget (degenerate screen frame / missing geometry) must
@@ -391,6 +393,8 @@ final class PlanNotchOverflowTests: XCTestCase {
                 availableWidth: badBudget
             )
             XCTAssertEqual(result.overflowUIDs, [], "must not eject items on a non-finite budget (\(badBudget))")
+            XCTAssertEqual(result.updatedDesiredFiltered, desired)
+            XCTAssertEqual(result.updatedSectionMap, sectionMap)
         }
     }
 

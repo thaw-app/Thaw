@@ -50,13 +50,20 @@ final class PowerSourceMonitor: ObservableObject {
     @Published private(set) var state: PowerState = PowerSourceMonitor.readCurrentState()
 
     /// The IOKit run-loop source delivering power source change callbacks.
-    private var runLoopSource: CFRunLoopSource?
+    private nonisolated(unsafe) var runLoopSource: CFRunLoopSource?
 
     /// A safety timer that refreshes the state in case a notification is
     /// dropped (battery percentage updates are otherwise infrequent).
-    private var safetyTimer: Timer?
+    private nonisolated(unsafe) var safetyTimer: Timer?
 
     private let diagLog = DiagLog(category: "PowerSourceMonitor")
+
+    deinit {
+        if let runLoopSource {
+            CFRunLoopRemoveSource(CFRunLoopGetMain(), runLoopSource, .defaultMode)
+        }
+        safetyTimer?.invalidate()
+    }
 
     /// Begins observing power source changes. Safe to call more than once;
     /// subsequent calls are no-ops while already running.

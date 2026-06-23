@@ -6,7 +6,25 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Darwin
 import Foundation
+
+private final class ScriptOutputAccumulator: @unchecked Sendable {
+    private let lock = NSLock()
+    private var data = Data()
+
+    func append(_ newData: Data) {
+        lock.lock()
+        defer { lock.unlock() }
+        data.append(newData)
+    }
+
+    var collectedData: Data {
+        lock.lock()
+        defer { lock.unlock() }
+        return data
+    }
+}
 
 /// Runs a user-supplied script for a script-result trigger condition and
 /// returns its exit code and combined output, with a wall-clock timeout.
@@ -33,6 +51,16 @@ enum TriggerScriptRunner {
         process.standardOutput = pipe
         process.standardError = pipe
 
+        let outputAccumulator = ScriptOutputAccumulator()
+        let outputHandle = pipe.fileHandleForReading
+        outputHandle.readabilityHandler = { handle in
+            let data = handle.availableData
+            guard !data.isEmpty else {
+                return
+            }
+            outputAccumulator.append(data)
+        }
+
         let ext = (trimmed as NSString).pathExtension.lowercased()
         if appleScriptExtensions.contains(ext) {
             process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
@@ -44,6 +72,7 @@ enum TriggerScriptRunner {
         do {
             try process.run()
         } catch {
+            outputHandle.readabilityHandler = nil
             diagLog.warning("Failed to launch trigger script \(trimmed): \(error.localizedDescription)")
             return nil
         }
@@ -69,10 +98,20 @@ enum TriggerScriptRunner {
         if timedOut, process.isRunning {
             process.terminate()
             diagLog.warning("Trigger script timed out after \(timeout)s: \(trimmed)")
+            try? await Task.sleep(for: .milliseconds(500))
+            if process.isRunning {
+                _ = kill(process.processIdentifier, SIGKILL)
+                diagLog.warning("Force-killed trigger script after timeout grace period: \(trimmed)")
+            }
         }
 
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
         process.waitUntilExit()
+        outputHandle.readabilityHandler = nil
+        let tailData = outputHandle.availableData
+        if !tailData.isEmpty {
+            outputAccumulator.append(tailData)
+        }
+        let data = outputAccumulator.collectedData
         let output = String(data: data, encoding: .utf8) ?? ""
         let exitCode = timedOut ? -1 : process.terminationStatus
         return ScriptOutcome(exitCode: exitCode, output: output)

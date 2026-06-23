@@ -1225,33 +1225,19 @@ final class MenuBarItemManager: ObservableObject {
     private func configureCancellables(with appState: AppState) {
         var c = Set<AnyCancellable>()
 
-        // When any app launches, refresh the cache to detect new menu bar items
-        // (e.g., apps with "unremembered" icons that need restoration) and restore
-        // any items that moved to incorrect sections after their app restarted.
+        // If the launched app is one we already track a menu bar item for,
+        // it just relaunched (e.g. an in-app update): its status item is
+        // about to disappear and re-register, churning the bar for a few
+        // seconds. Start this immediately, before the debounced cache refresh,
+        // so layout work that starts during launch waits on settling.
         NSWorkspace.shared.notificationCenter.publisher(
             for: NSWorkspace.didLaunchApplicationNotification
         )
-        .debounce(for: 1, scheduler: DispatchQueue.main)
         .sink { [weak self] notification in
             guard let self else { return }
             let launchedBundleID = (notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)?
                 .bundleIdentifier
-            MenuBarItemManager.diagLog.debug(
-                "App launched\(launchedBundleID.map { " (\($0))" } ?? ""), refreshing cache for potential new items"
-            )
 
-            // If the launched app is one we already track a menu bar item for,
-            // it just relaunched (e.g. an in-app update): its status item is
-            // about to disappear and re-register, churning the bar for a few
-            // seconds. Start a settling period keyed on its bundle ID so the
-            // move pass (applyProfileLayout waits on waitForStartupSettlingToEnd)
-            // and the virtual-display provoke (guarded by isSettling) both hold
-            // off until the item has re-paired. Without this the bulk apply ran
-            // on the transient layout and swept hidden items into the visible
-            // section. The period exits the instant the bundle ID reappears
-            // with a resolved PID (median ~3s in field logs); maxDuration is
-            // only a backstop. Apps with no tracked menu bar item arm nothing,
-            // so there is no deferral for ordinary launches.
             if let launchedBundleID,
                MenuBarItemManager.tracksMenuBarItem(bundleID: launchedBundleID, in: self.knownItemIdentifiers)
             {
@@ -1261,6 +1247,22 @@ final class MenuBarItemManager: ObservableObject {
                     maxDuration: .seconds(8)
                 )
             }
+        }
+        .store(in: &c)
+
+        // When any app launches, refresh the cache to detect new menu bar items
+        // (e.g., apps with "unremembered" icons that need restoration) and restore
+        // any items that moved to incorrect sections after their app restarted.
+        NSWorkspace.shared.notificationCenter.publisher(
+            for: NSWorkspace.didLaunchApplicationNotification
+        )
+        .debounce(for: 1, scheduler: DispatchQueue.main)
+        .sink { [weak self] notification in
+            let launchedBundleID = (notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)?
+                .bundleIdentifier
+            MenuBarItemManager.diagLog.debug(
+                "App launched\(launchedBundleID.map { " (\($0))" } ?? ""), refreshing cache for potential new items"
+            )
             Task { [weak self] in
                 await self?.cacheItemsRegardless()
                 // Many apps register their NSStatusItem more than 1s after
@@ -1455,6 +1457,38 @@ extension MenuBarItemManager {
             // that follows this reset repopulates the set.
             cachedCloneWindowIDs.removeAll()
         }
+    }
+
+    /// Returns menu bar items with transient System Status Item Clone windows
+    /// removed before callers plan or execute moves against the live bar.
+    private static func getMenuBarItemsDroppingSystemClones(
+        on display: CGDirectDisplayID? = nil,
+        option: MenuBarItem.ListOption,
+        resolveSourcePID: Bool = true,
+        context: String
+    ) async -> [MenuBarItem] {
+        var items = await MenuBarItem.getMenuBarItems(
+            on: display,
+            option: option,
+            resolveSourcePID: resolveSourcePID
+        )
+        dropSystemClones(from: &items, context: context)
+        return items
+    }
+
+    /// Drops transient System Status Item Clone windows from an in-flight item
+    /// list and logs what was removed for diagnostics.
+    private static func dropSystemClones(from items: inout [MenuBarItem], context: String) {
+        let cloneItems = items.filter(\.isSystemClone)
+        guard !cloneItems.isEmpty else {
+            return
+        }
+
+        let cloneDescriptions = cloneItems.map(\.tag.description)
+        MenuBarItemManager.diagLog.debug(
+            "\(context): dropping \(cloneItems.count) system clone window(s): \(cloneDescriptions)"
+        )
+        items.removeAll(where: \.isSystemClone)
     }
 
     /// Cache for menu bar items.
@@ -2309,7 +2343,11 @@ extension MenuBarItemManager {
         // windowID hasn't been learned yet still triggers one recache,
         // which resolves it, records it, and drops it; from then on its
         // presence and removal are ignored.
-        let cloneIDs = cacheActor.cachedCloneWindowIDs
+        let rawWindowIDSet = Set(rawWindowIDs)
+        let cloneIDs = cacheActor.cachedCloneWindowIDs.intersection(rawWindowIDSet)
+        if cloneIDs.count != cacheActor.cachedCloneWindowIDs.count {
+            cacheActor.updateCachedCloneWindowIDs(cloneIDs)
+        }
         let itemWindowIDs = cloneIDs.isEmpty
             ? rawWindowIDs
             : rawWindowIDs.filter { !cloneIDs.contains($0) }
@@ -2408,23 +2446,16 @@ extension MenuBarItemManager {
         for duration: Duration = .milliseconds(50),
         timeout: Duration? = nil
     ) async throws {
-        let waitTask = Task {
-            let start = ContinuousClock.now
-            while true {
-                try Task.checkCancellation()
-                if let timeout, start.duration(to: .now) >= timeout {
-                    throw EventError.cannotComplete
-                }
-                if hasUserPausedInput(for: duration) {
-                    break
-                }
-                try await Task.sleep(for: .milliseconds(50))
+        let start = ContinuousClock.now
+        while true {
+            try Task.checkCancellation()
+            if let timeout, start.duration(to: .now) >= timeout {
+                throw EventError.cannotComplete
             }
-        }
-        do {
-            try await waitTask.value
-        } catch {
-            throw EventError.cannotComplete
+            if hasUserPausedInput(for: duration) {
+                return
+            }
+            try await Task.sleep(for: .milliseconds(50))
         }
     }
 
@@ -5310,7 +5341,10 @@ extension MenuBarItemManager {
         // Prevent the first post-reset cache pass from treating the freshly reset items as "new".
         suppressNextNewLeftmostItemRelocation = true
 
-        var items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+        var items = await Self.getMenuBarItemsDroppingSystemClones(
+            option: .activeSpace,
+            context: "resetLayout"
+        )
 
         let hiddenWID: CGWindowID? = appState.menuBarManager
             .controlItem(withName: .hidden)?.window
@@ -5334,7 +5368,10 @@ extension MenuBarItemManager {
                 appState.settings.advanced.enableAlwaysHiddenSection = true
                 try? await Task.sleep(for: .milliseconds(150))
 
-                items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+                items = await Self.getMenuBarItemsDroppingSystemClones(
+                    option: .activeSpace,
+                    context: "resetLayout(retry)"
+                )
                 if let retryControlItems = ControlItemPair(
                     items: &items,
                     hiddenControlItemWindowID: hiddenWID,
@@ -5401,7 +5438,10 @@ extension MenuBarItemManager {
         // right of the hidden control item) as well as items stuck in the
         // always-hidden section (to the left of the always-hidden control
         // item) when that section is enabled.
-        var refreshedItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+        var refreshedItems = await Self.getMenuBarItemsDroppingSystemClones(
+            option: .activeSpace,
+            context: "resetLayout(refresh)"
+        )
         var failedMoves = 0
         let refreshHiddenWID: CGWindowID? = appState.menuBarManager
             .controlItem(withName: .hidden)?.window
@@ -5842,13 +5882,10 @@ extension MenuBarItemManager {
         }
 
         // Discover current items and build current flat sequence (right-to-left).
-        var items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
-        // Drop transient System Status Item Clone windows before planning.
-        // partitionUnmanagedUIDs would otherwise classify a clone as an
-        // unmanaged item and anchor it into a section, dragging a phantom
-        // and reshuffling the bar. This fetch is independent of the cache
-        // path, so it needs its own filter.
-        items.removeAll(where: \.isSystemClone)
+        var items = await Self.getMenuBarItemsDroppingSystemClones(
+            option: .activeSpace,
+            context: "applyProfileLayout"
+        )
         guard var itemsCopy = Optional(items),
               let controlItems = ControlItemPair(
                   items: &itemsCopy,
@@ -6216,7 +6253,10 @@ extension MenuBarItemManager {
             for uid in fullSequence {
                 guard !Task.isCancelled else { break }
 
-                let freshItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+                let freshItems = await Self.getMenuBarItemsDroppingSystemClones(
+                    option: .activeSpace,
+                    context: "applyProfileLayout(full sort)"
+                )
 
                 let isControlUID = uid == hiddenCtrlUID || uid == ahCtrlUID
                 guard let item = freshItems.first(where: {
@@ -6344,7 +6384,10 @@ extension MenuBarItemManager {
                     "Profile layout: \(crossSectionMoves) items would change hidden↔alwaysHidden, moving AH_ctrl instead"
                 )
 
-                let allFreshItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+                let allFreshItems = await Self.getMenuBarItemsDroppingSystemClones(
+                    option: .activeSpace,
+                    context: "applyProfileLayout(AH control)"
+                )
 
                 // Place AH_ctrl so that desired hidden items are to its
                 // RIGHT and desired AH items are to its LEFT (screen coords).
@@ -6400,7 +6443,10 @@ extension MenuBarItemManager {
                 // or .rightOfItem(AH_ctrl) puts them on the correct
                 // side. The LCS within-section reorder pass below
                 // handles intra-section ordering.
-                let freshItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+                let freshItems = await Self.getMenuBarItemsDroppingSystemClones(
+                    option: .activeSpace,
+                    context: "applyProfileLayout(AH fallback)"
+                )
                 var freshItemsCopy = freshItems
                 if let freshControl = ControlItemPair(
                     items: &freshItemsCopy,
@@ -6503,7 +6549,10 @@ extension MenuBarItemManager {
             if movedCount > 0 {
                 // Re-fetch items and rebuild section assignments after
                 // the control item move changed section boundaries.
-                items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+                items = await Self.getMenuBarItemsDroppingSystemClones(
+                    option: .activeSpace,
+                    context: "applyProfileLayout(rebuild after controls)"
+                )
                 var itemsCopy2 = items
                 guard let freshControl = ControlItemPair(
                     items: &itemsCopy2,
@@ -6568,7 +6617,10 @@ extension MenuBarItemManager {
             for planned in plannedMoves {
                 guard !Task.isCancelled else { break }
 
-                let allFreshItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+                let allFreshItems = await Self.getMenuBarItemsDroppingSystemClones(
+                    option: .activeSpace,
+                    context: "applyProfileLayout(planned move)"
+                )
                 var freshItemsCopy = allFreshItems
                 guard let freshControl = ControlItemPair(
                     items: &freshItemsCopy,
@@ -6626,7 +6678,10 @@ extension MenuBarItemManager {
         // Profile-only: the profile-sorted snapshot and
         // isApplyingProfileLayout flag are only meaningful when a
         // profile is active; the savedOrder source leaves them alone.
-        items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+        items = await Self.getMenuBarItemsDroppingSystemClones(
+            option: .activeSpace,
+            context: "applyProfileLayout(finalize)"
+        )
         // Commit profile state to disk only if we weren't cancelled
         // mid-Phase-6. The in-loop cancellation guards break out of the
         // move loop but execution still flows into Phase 7; without
@@ -6895,7 +6950,10 @@ extension MenuBarItemManager {
     ) async -> Bool {
         guard let appState else { return false }
 
-        var items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+        var items = await Self.getMenuBarItemsDroppingSystemClones(
+            option: .activeSpace,
+            context: "moveItem(trigger)"
+        )
 
         // Resolve the target before ControlItemPair consumes the control
         // items from the list. Control items are never trigger targets.
@@ -6983,7 +7041,10 @@ extension MenuBarItemManager {
         }
 
         // Get current items
-        var items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+        var items = await Self.getMenuBarItemsDroppingSystemClones(
+            option: .activeSpace,
+            context: "restoreBlockedItemsToVisible"
+        )
 
         // Find items that are blocked (at x=-1)
         let blockedItems = items.filter { item in

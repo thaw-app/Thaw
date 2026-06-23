@@ -304,9 +304,53 @@ private final class MockPermissionsManager: PermissionsManaging {
     @Published var permissionsState: AppPermissions.PermissionsState = .missing
 
     let allPermissions: [Permission] = [
-        AccessibilityPermission(),
-        ScreenRecordingPermission(),
+        PreviewPermission(
+            title: String(localized: "Accessibility"),
+            iconName: "accessibility",
+            iconColor: .blue,
+            details: [
+                String(localized: "Detect menu bar items."),
+                String(localized: "Move items on your behalf."),
+            ],
+            isRequired: true,
+            granted: false
+        ),
+        PreviewPermission(
+            title: String(localized: "Screen Recording"),
+            iconName: "record.circle",
+            iconColor: .red,
+            details: [
+                String(localized: "Show live previews."),
+                String(localized: "Sample colors from the menu bar."),
+            ],
+            isRequired: false,
+            granted: false
+        ),
     ]
+}
+
+/// Static preview permission that never performs system permission probes.
+private final class PreviewPermission: Permission {
+    init(
+        title: String,
+        iconName: String,
+        iconColor: Color,
+        details: [String],
+        isRequired: Bool,
+        granted: Bool
+    ) {
+        super.init(
+            title: title,
+            iconName: iconName,
+            iconColor: iconColor,
+            details: details,
+            isRequired: isRequired,
+            settingsURL: nil,
+            check: { granted },
+            request: {}
+        )
+        stopCheck()
+    }
 }
 
 #Preview {
