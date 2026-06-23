@@ -778,7 +778,13 @@ private final class LocationProvider: NSObject, CLLocationManagerDelegate {
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         let status = manager.authorizationStatus
-        if isUpdating, status == .authorized || status == .authorizedAlways {
+        let isAuthorized: Bool
+        #if os(macOS)
+            isAuthorized = status == .authorized || status == .authorizedAlways
+        #else
+            isAuthorized = status == .authorized || status == .authorizedAlways || status == .authorizedWhenInUse
+        #endif
+        if isUpdating, isAuthorized {
             manager.startUpdatingLocation()
         }
     }

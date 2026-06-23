@@ -63,7 +63,7 @@ enum MouseHelpers {
             if
                 autoShowGeneration == generation,
                 let autoShowDeadline,
-                autoShowDeadline.uptimeNanoseconds >= deadline.uptimeNanoseconds
+                autoShowDeadline.uptimeNanoseconds <= deadline.uptimeNanoseconds
             {
                 return
             }

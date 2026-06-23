@@ -272,7 +272,8 @@ final class MenuBarItemTriggersManager: ObservableObject {
     /// short for discrete sources) so app/network/focus triggers stay
     /// responsive.
     private func scheduleDebouncedApply(for triggerID: UUID) {
-        guard pendingApplyTasks[triggerID] == nil else { return }
+        pendingApplyTasks[triggerID]?.cancel()
+        pendingApplyTasks[triggerID] = nil
         // Use the most conservative (longest) settle across all conditions so
         // a jittery source (e.g. battery) still absorbs flapping.
         let settle: Duration = {

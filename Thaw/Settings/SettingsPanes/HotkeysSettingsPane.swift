@@ -160,7 +160,7 @@ private struct MenuBarItemHotkeyList: View {
 
     @ViewBuilder
     private func iconView(for row: Row) -> some View {
-        if let image = row.item.flatMap({ imageCache.images[$0.tag]?.nsImage }) {
+        if let image = row.item.flatMap({ imageCache.image(for: $0.tag)?.nsImage }) {
             // Render at the captured size (the nsImage already carries the
             // item's scaled point size), matching the Layout pane rather than
             // forcing a square that distorts wide items like Clock or Outlook.

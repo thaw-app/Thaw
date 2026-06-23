@@ -6833,9 +6833,9 @@ extension MenuBarItemManager {
         // currently present. Matches the legacy restore's guard;
         // protects against running the bulk apply on a menu bar that
         // shares no widgets with the persisted layout.
-        let currentTags = Set(items.map { "\($0.tag.namespace):\($0.tag.title)" })
-        let savedTags = Set(savedSectionOrder.values.flatMap(\.self))
-        guard !savedTags.isDisjoint(with: currentTags) else {
+        let currentIdentifiers = Set(items.map(\.uniqueIdentifier))
+        let savedIdentifiers = Set(savedSectionOrder.values.flatMap(\.self))
+        guard !savedIdentifiers.isDisjoint(with: currentIdentifiers) else {
             MenuBarItemManager.diagLog.debug("applySavedLayout: skipping, no saved items currently present")
             return false
         }

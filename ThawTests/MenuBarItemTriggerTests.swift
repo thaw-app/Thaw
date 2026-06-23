@@ -545,19 +545,16 @@ final class MenuBarItemTriggerTests: XCTestCase {
             "condition": { "onACPower": {} }
         }
         """
-        // Encode/decode the condition shape via the real encoder to avoid
-        // hand-writing its representation; fall back to a constructed value
-        // if the enum encoding differs.
-        let constructed = try MenuBarItemTrigger(
+        let data = Data(json.utf8)
+        let expected = try MenuBarItemTrigger(
             id: XCTUnwrap(UUID(uuidString: "00000000-0000-0000-0000-000000000001")),
             name: "Legacy",
             itemIdentifier: "x",
             itemDisplayName: "X",
             condition: .onACPower
         )
-        let data = try JSONEncoder().encode(constructed)
         let decoded = try JSONDecoder().decode(MenuBarItemTrigger.self, from: data)
+        XCTAssertEqual(decoded, expected)
         XCTAssertFalse(decoded.invert)
-        _ = json
     }
 }
