@@ -324,11 +324,26 @@ final class MenuBarSection {
         // Determine whether we should use the Thaw Bar based on settings.
         let shouldUseIceBarBasedOnSettings = useIceBar
 
-        let preferredPresentationMode: PresentationMode
+        var preferredPresentationMode: PresentationMode
         if shouldUseIceBarBasedOnSettings {
             preferredPresentationMode = .iceBar
         } else if let screen = screenForIceBar {
             preferredPresentationMode = presentationMode(on: screen)
+            // Avoid hiding application menus while a fullscreen space is
+            // active. Hiding the application menus activates Thaw
+            // (NSApp.activate), and activating inside a fullscreen space
+            // makes macOS immediately hide the menu bar (FB13544993). Fall
+            // back to the Thaw Bar instead: its panel is shown via
+            // orderFrontRegardless() without activating. This mirrors the
+            // fullscreen guard already present in the reactive sink in
+            // MenuBarManager.
+            if
+                preferredPresentationMode == .inlineHidingApplicationMenus,
+                appState?.activeSpace.isFullscreen == true
+            {
+                diagLog.info("Fullscreen space active; falling back to Thaw Bar instead of hiding application menus")
+                preferredPresentationMode = .iceBar
+            }
             switch preferredPresentationMode {
             case .inline:
                 break
