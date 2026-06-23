@@ -428,6 +428,14 @@ final class MenuBarManager: ObservableObject {
                         return
                     }
 
+                    guard MenuBarSection.canHideApplicationMenusWithoutDockResize(
+                        screenFrame: screen.frame,
+                        visibleFrame: screen.visibleFrame
+                    ) else {
+                        diagLog.debug("Skipping app-menu hiding because the Dock reserves screen space")
+                        return
+                    }
+
                     Task {
                         // The window server needs time to update window positions after expansion.
                         try? await Task.sleep(for: .milliseconds(50))
