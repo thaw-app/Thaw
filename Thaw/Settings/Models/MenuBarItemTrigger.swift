@@ -321,6 +321,7 @@ enum TriggerConditionKind: String, CaseIterable, Identifiable {
         switch self {
         case .batteryBelow, .batteryAtOrAbove: .seconds(6)
         case .frontmostApp: .milliseconds(1500)
+        case .appRunning: .milliseconds(500)
         case .scriptResult, .imageChanged: .seconds(2)
         default: .seconds(1)
         }

@@ -359,6 +359,10 @@ final class MenuBarItemTriggerTests: XCTestCase {
         XCTAssertEqual(TriggerConditionKind.frontmostApp.settleInterval, .milliseconds(1500))
     }
 
+    func testAppRunningUsesFastSettleInterval() {
+        XCTAssertEqual(TriggerConditionKind.appRunning.settleInterval, .milliseconds(500))
+    }
+
     @MainActor
     func testDisableAllFeatureFlags() {
         let previous = Defaults.stringArray(forKey: .triggerFeatureFlags)
