@@ -56,11 +56,11 @@ final class MenuBarItemTriggersManager: ObservableObject {
     private var pendingMoveReveal = [UUID: Bool]()
 
     /// Per-trigger debounced apply tasks. A flipped decision only moves its
-    /// item after the new state has held for ``flipDebounce``.
+    /// item after the new state has held for the condition's settle interval.
     private var pendingApplyTasks = [UUID: Task<Void, Never>]()
 
-    /// How long a flipped decision must hold before the item is moved.
-    private let flipDebounce: Duration = .seconds(6)
+    /// Fallback settle when a trigger has no condition-specific interval.
+    private let fallbackSettleInterval: Duration = .seconds(1)
 
     /// True while loading from defaults; suppresses writeback.
     private var suppressPersist = false
@@ -286,17 +286,17 @@ final class MenuBarItemTriggersManager: ObservableObject {
     /// short for discrete sources) so app/network/focus triggers stay
     /// responsive.
     private func scheduleDebouncedApply(for triggerID: UUID) {
+        let replacedPendingApply = pendingApplyTasks[triggerID] != nil
         pendingApplyTasks[triggerID]?.cancel()
         pendingApplyTasks[triggerID] = nil
-        // Use the most conservative (longest) settle across all conditions so
-        // a jittery source (e.g. battery) still absorbs flapping.
-        let settle: Duration = {
-            guard let trigger = triggers.first(where: { $0.id == triggerID }) else { return flipDebounce }
-            if let override = trigger.settleSecondsOverride, override > 0 {
-                return .seconds(override)
-            }
-            return trigger.allConditions.map(\.kind.settleInterval).max() ?? flipDebounce
-        }()
+        guard let queuedTrigger = triggers.first(where: { $0.id == triggerID }) else { return }
+
+        let settle = settleInterval(for: queuedTrigger)
+        let scheduledAt = Date()
+        let replaceText = replacedPendingApply ? "replaced pending; " : ""
+        diagLog.debug(
+            "Trigger \(queuedTrigger.displayName) \(replaceText)queued pending apply for \(formattedDuration(settle))"
+        )
         pendingApplyTasks[triggerID] = Task { @MainActor [weak self] in
             try? await Task.sleep(for: settle)
             guard !Task.isCancelled, let self else { return }
@@ -308,11 +308,25 @@ final class MenuBarItemTriggersManager: ObservableObject {
                 !trigger.allItemIdentifiers.isEmpty,
                 self.isAvailable(trigger)
             else {
+                self.diagLog.debug(
+                    "Trigger \(queuedTrigger.displayName) pending apply expired after "
+                        + "\(self.formattedElapsed(since: scheduledAt)) but trigger is no longer available"
+                )
                 return
             }
             let state = self.effectiveState(for: trigger, base: self.evaluationState)
             let reveal = trigger.shouldReveal(state: state)
-            guard self.lastAppliedReveal[triggerID] != reveal else { return }
+            guard self.lastAppliedReveal[triggerID] != reveal else {
+                self.diagLog.debug(
+                    "Trigger \(trigger.displayName) pending apply expired after "
+                        + "\(self.formattedElapsed(since: scheduledAt)); already applied reveal=\(reveal)"
+                )
+                return
+            }
+            self.diagLog.debug(
+                "Trigger \(trigger.displayName) pending apply expired after "
+                    + "\(self.formattedElapsed(since: scheduledAt)); applying reveal=\(reveal)"
+            )
             self.apply(trigger, reveal: reveal)
         }
     }
@@ -403,23 +417,36 @@ final class MenuBarItemTriggersManager: ObservableObject {
         identifiers: [String],
         to section: MenuBarSection.Name
     ) {
+        let queuedAt = Date()
         let previous = moveChain
         moveChain = Task { @MainActor [weak self] in
             _ = await previous.value
             guard let self, let itemManager = self.appState?.itemManager else { return }
+            let batchStartedAt = Date()
             guard self.queuedMoveIsCurrent(for: trigger, reveal: reveal) else {
-                self.diagLog.debug("Skipping stale trigger move for \(trigger.displayName)")
+                self.diagLog.debug(
+                    "Skipping stale trigger move for \(trigger.displayName) after queue wait "
+                        + "\(self.formattedElapsed(since: queuedAt))"
+                )
                 return
             }
             let options = self.moveOptions(for: trigger)
+            self.diagLog.debug(
+                "Starting trigger move batch for \(trigger.displayName) after queue wait "
+                    + "\(self.formattedElapsed(since: queuedAt))"
+            )
             for identifier in identifiers {
                 guard self.queuedMoveIsCurrent(for: trigger, reveal: reveal) else {
-                    self.diagLog.debug("Stopping stale trigger move batch for \(trigger.displayName)")
+                    self.diagLog.debug(
+                        "Stopping stale trigger move batch for \(trigger.displayName) after "
+                            + "\(self.formattedElapsed(since: batchStartedAt))"
+                    )
                     if self.pendingMoveReveal[trigger.id] == reveal {
                         self.pendingMoveReveal[trigger.id] = nil
                     }
                     return
                 }
+                let itemMoveStartedAt = Date()
                 let result = await itemManager.moveItem(
                     withTagIdentifier: identifier,
                     toSection: section,
@@ -434,17 +461,59 @@ final class MenuBarItemTriggersManager: ObservableObject {
                 )
                 switch result {
                 case .moved, .alreadyInSection:
+                    self.diagLog.debug(
+                        "Trigger \(trigger.displayName) move for \(identifier) finished with \(result) in "
+                            + "\(self.formattedElapsed(since: itemMoveStartedAt))"
+                    )
                     continue
                 case .deferred:
+                    self.diagLog.debug(
+                        "Trigger \(trigger.displayName) move for \(identifier) deferred after "
+                            + "\(self.formattedElapsed(since: itemMoveStartedAt))"
+                    )
                     self.finishPendingMove(for: trigger, reveal: reveal, applied: false, retry: true)
                     return
                 case .failed, .unavailable:
+                    self.diagLog.debug(
+                        "Trigger \(trigger.displayName) move for \(identifier) failed with \(result) after "
+                            + "\(self.formattedElapsed(since: itemMoveStartedAt))"
+                    )
                     self.finishPendingMove(for: trigger, reveal: reveal, applied: false, retry: false)
                     return
                 }
             }
+            self.diagLog.debug(
+                "Finished trigger move batch for \(trigger.displayName) in "
+                    + "\(self.formattedElapsed(since: batchStartedAt))"
+            )
             self.finishPendingMove(for: trigger, reveal: reveal, applied: true, retry: false)
         }
+    }
+
+    private func settleInterval(for trigger: MenuBarItemTrigger) -> Duration {
+        if let override = trigger.settleSecondsOverride, override > 0 {
+            return .seconds(override)
+        }
+        // Use the most conservative (longest) settle across all conditions so
+        // a jittery source (e.g. battery) still absorbs flapping.
+        return trigger.allConditions.map(\.kind.settleInterval).max() ?? fallbackSettleInterval
+    }
+
+    private func formattedDuration(_ duration: Duration) -> String {
+        let components = duration.components
+        let seconds = TimeInterval(components.seconds) + TimeInterval(components.attoseconds) / 1_000_000_000_000_000_000
+        return formattedSeconds(seconds)
+    }
+
+    private func formattedElapsed(since start: Date) -> String {
+        formattedSeconds(Date().timeIntervalSince(start))
+    }
+
+    private func formattedSeconds(_ seconds: TimeInterval) -> String {
+        if seconds >= 10 {
+            return String(format: "%.1fs", seconds)
+        }
+        return String(format: "%.3fs", seconds)
     }
 
     private func finishPendingMove(

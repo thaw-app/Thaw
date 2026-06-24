@@ -320,7 +320,7 @@ enum TriggerConditionKind: String, CaseIterable, Identifiable {
     var settleInterval: Duration {
         switch self {
         case .batteryBelow, .batteryAtOrAbove: .seconds(6)
-        case .frontmostApp: .seconds(3)
+        case .frontmostApp: .milliseconds(1500)
         case .scriptResult, .imageChanged: .seconds(2)
         default: .seconds(1)
         }

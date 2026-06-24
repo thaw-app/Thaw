@@ -355,8 +355,8 @@ final class MenuBarItemTriggerTests: XCTestCase {
         XCTAssertEqual(TriggerConditionKind.imageChanged.requiredFeature, .imageComparison)
     }
 
-    func testFrontmostAppUsesLongerSettleInterval() {
-        XCTAssertEqual(TriggerConditionKind.frontmostApp.settleInterval, .seconds(3))
+    func testFrontmostAppUsesResponsiveSettleInterval() {
+        XCTAssertEqual(TriggerConditionKind.frontmostApp.settleInterval, .milliseconds(1500))
     }
 
     @MainActor
