@@ -146,10 +146,11 @@ struct SystemState: Equatable {
 /// enabled so disabled sources cost nothing.
 ///
 /// Event-driven sources (power, frontmost/running app, display, network)
-/// update the state immediately. Heavier sources (audio output, Bluetooth,
-/// VPN, Wi-Fi SSID, Focus) are sampled on a single low-frequency poll while
-/// their flag is enabled. Trigger evaluation already debounces, so the poll
-/// latency is not user-visible.
+/// update the state immediately. App-running also gets a lightweight polling
+/// fallback because workspace launch/terminate notifications are not perfectly
+/// reliable. Heavier sources (audio output, Bluetooth, VPN, Wi-Fi SSID, Focus)
+/// are sampled on a single low-frequency poll while their flag is enabled.
+/// Trigger evaluation already debounces, so the poll latency is not user-visible.
 @MainActor
 final class SystemStateMonitor: ObservableObject {
     @Published private(set) var state = SystemState()
@@ -168,6 +169,10 @@ final class SystemStateMonitor: ObservableObject {
 
     /// Poll timer for the sampled sources.
     private var pollTimer: Timer?
+
+    /// Poll timer for app-running state, used as a fallback for missed
+    /// workspace launch/terminate notifications.
+    private var appRefreshTimer: Timer?
 
     /// Provides Location authorization (needed for Wi-Fi SSID) and the
     /// current coordinate (needed for the location condition). Created lazily
@@ -214,6 +219,7 @@ final class SystemStateMonitor: ObservableObject {
         guard let flags else { return }
 
         setFrontmostAppMonitoring(flags.isEnabled(.frontmostApp) || flags.isEnabled(.appRunning))
+        setAppRefreshPolling(flags.isEnabled(.appRunning))
         setDisplayMonitoring(flags.isEnabled(.display))
         setNetworkMonitoring(flags.isEnabled(.network) || flags.isEnabled(.vpn))
         setSystemLoadMonitoring(flags.isEnabled(.lowPowerMode) || flags.isEnabled(.thermalPressure))
@@ -294,9 +300,26 @@ final class SystemStateMonitor: ObservableObject {
                 .filter { $0.activationPolicy == .regular }
                 .compactMap(\.bundleIdentifier)
         )
+        let changed = state.frontmostAppBundleID != frontmost || state.runningAppBundleIDs != running
         update {
             $0.frontmostAppBundleID = frontmost
             $0.runningAppBundleIDs = running
+        }
+        if changed {
+            diagLog.debug("App state refreshed: frontmost=\(frontmost ?? "nil"), running=\(running.count)")
+        }
+    }
+
+    private func setAppRefreshPolling(_ enabled: Bool) {
+        if enabled, appRefreshTimer == nil {
+            let timer = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
+                Task { @MainActor in self?.refreshApps() }
+            }
+            RunLoop.main.add(timer, forMode: .common)
+            appRefreshTimer = timer
+        } else if !enabled {
+            appRefreshTimer?.invalidate()
+            appRefreshTimer = nil
         }
     }
 

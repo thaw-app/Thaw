@@ -32,7 +32,7 @@ enum TriggerLiveStatus {
     case disabled
     /// The trigger is on, but its condition's feature flag is off.
     case inactive
-    /// The condition is currently met; the item is (being) revealed.
+    /// The condition is currently met; the item should be revealed.
     case revealing
     /// The condition is not met; the item is (being) hidden.
     case hidden
@@ -41,7 +41,7 @@ enum TriggerLiveStatus {
         switch self {
         case .disabled: "Off"
         case .inactive: "Inactive"
-        case .revealing: "Revealing"
+        case .revealing: "Active"
         case .hidden: "Idle"
         }
     }
