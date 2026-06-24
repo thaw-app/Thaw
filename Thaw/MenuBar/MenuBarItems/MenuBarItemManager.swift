@@ -2006,10 +2006,32 @@ extension MenuBarItemManager {
             for i in items.indices {
                 let item = items[i]
                 guard !item.isControlItem else { continue }
-                if let prevPID = previousPIDs[item.windowID],
-                   let currentPID = item.sourcePID,
-                   currentPID != prevPID
+                guard let prevPID = previousPIDs[item.windowID] else { continue }
+                if item.sourcePID == nil,
+                   let prevBundleID = NSRunningApplication(processIdentifier: prevPID)?.bundleIdentifier
                 {
+                    MenuBarItemManager.diagLog.warning(
+                        "SourcePID missing for windowID \(item.windowID); reusing previous PID \(prevPID) (\(prevBundleID)) for \(item.logString)"
+                    )
+                    let correctedTag = MenuBarItemTag(
+                        namespace: .string(prevBundleID),
+                        title: item.tag.title,
+                        windowID: item.windowID,
+                        instanceIndex: item.tag.instanceIndex
+                    )
+                    items[i] = MenuBarItem(
+                        tag: correctedTag,
+                        windowID: item.windowID,
+                        ownerPID: item.ownerPID,
+                        sourcePID: prevPID,
+                        bounds: item.bounds,
+                        title: item.title,
+                        isOnScreen: item.isOnScreen
+                    )
+                    continue
+                }
+
+                if let currentPID = item.sourcePID, currentPID != prevPID {
                     MenuBarItemManager.diagLog.warning(
                         "SourcePID changed for windowID \(item.windowID): \(prevPID) -> \(currentPID), reverting to previous PID"
                     )
