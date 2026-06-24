@@ -136,7 +136,7 @@ struct TriggersSettingsPane: View {
         _ = liveTick // re-read on each tick
         guard trigger.isEnabled else { return .disabled }
         guard allConditionsActive(trigger) else { return .inactive }
-        return trigger.shouldReveal(state: manager.currentSystemState) ? .revealing : .hidden
+        return manager.shouldRevealNow(trigger) ? .revealing : .hidden
     }
 
     /// Item identifiers targeted by more than one enabled trigger.

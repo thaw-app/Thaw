@@ -305,6 +305,14 @@ final class MenuBarItemManager: ObservableObject {
     /// false re-sort triggers during an in-flight sort.
     private var isApplyingProfileLayout = false
 
+    /// Whether a bulk layout operation is currently moving section controls
+    /// or restoring item order. Trigger-driven one-off moves should wait for
+    /// this to clear so they do not fight the layout reconciler over the same
+    /// menu bar windows.
+    var isBulkLayoutMoveInFlight: Bool {
+        isResettingLayout || isRestoringItemOrder || isApplyingProfileLayout
+    }
+
     /// Persisted mapping of item tag identifiers to their original section name for
     /// temporarily shown items whose apps quit before they could be rehidden. When
     /// the app relaunches, this allows us to move the item back to its original section.
@@ -6925,6 +6933,20 @@ extension MenuBarItemManager {
 
     // MARK: - Trigger-Driven Item Visibility
 
+    /// Result of a trigger-driven item move.
+    enum TriggerMoveResult {
+        /// A synthetic move was performed and verified.
+        case moved
+        /// The item was already in the requested section.
+        case alreadyInSection
+        /// The item or its controls are unavailable right now.
+        case unavailable
+        /// A bulk layout operation is in flight; retry after it settles.
+        case deferred
+        /// The move was attempted but did not complete.
+        case failed
+    }
+
     /// Moves the menu bar item identified by the given stable tag identifier
     /// into the given section, if the item is present and not already there.
     ///
@@ -6935,8 +6957,8 @@ extension MenuBarItemManager {
     /// cache to persist the new placement), so no special-casing of the
     /// reconciler is required.
     ///
-    /// - Returns: `true` when a move was performed; `false` for any no-op
-    ///   (item missing, immovable, non-hideable, or already in `section`).
+    /// - Returns: A ``TriggerMoveResult`` describing whether the move
+    ///   happened, was unnecessary, should be retried later, or failed.
     @discardableResult
     func moveItem(
         withTagIdentifier tagIdentifier: String,
@@ -6947,8 +6969,15 @@ extension MenuBarItemManager {
         maxMoveAttempts: Int = 8,
         hideCursorAcrossAttempts: Bool = true,
         shouldProceed: (@MainActor () -> Bool)? = nil
-    ) async -> Bool {
-        guard let appState else { return false }
+    ) async -> TriggerMoveResult {
+        guard let appState else { return .unavailable }
+
+        guard !isBulkLayoutMoveInFlight else {
+            MenuBarItemManager.diagLog.debug(
+                "moveItem(trigger): deferring \(tagIdentifier) because a bulk layout move is in flight"
+            )
+            return .deferred
+        }
 
         var items = await Self.getMenuBarItemsDroppingSystemClones(
             option: .activeSpace,
@@ -6959,16 +6988,16 @@ extension MenuBarItemManager {
         // items from the list. Control items are never trigger targets.
         guard let target = items.first(where: { $0.tag.tagIdentifier == tagIdentifier }) else {
             MenuBarItemManager.diagLog.debug("moveItem(trigger): no item matches identifier \(tagIdentifier)")
-            return false
+            return .unavailable
         }
         guard target.isMovable else {
             MenuBarItemManager.diagLog.debug("moveItem(trigger): \(target.logString) is not movable")
-            return false
+            return .unavailable
         }
         // Items destined for a hidden section must actually be hideable.
         if section != .visible, !target.canBeHidden {
             MenuBarItemManager.diagLog.debug("moveItem(trigger): \(target.logString) cannot be hidden")
-            return false
+            return .unavailable
         }
 
         let hiddenControlItemWID: CGWindowID? = appState.menuBarManager
@@ -6984,7 +7013,7 @@ extension MenuBarItemManager {
             alwaysHiddenControlItemWindowID: alwaysHiddenControlItemWID
         ) else {
             MenuBarItemManager.diagLog.warning("moveItem(trigger): missing control items; cannot move \(target.logString)")
-            return false
+            return .deferred
         }
 
         // Fall back to the hidden section when always-hidden is requested
@@ -7000,10 +7029,14 @@ extension MenuBarItemManager {
         let displayID = Bridging.getActiveMenuBarDisplayID()
         var context = CacheContext(controlItems: controlItems, displayID: displayID)
         if context.findSection(for: target) == resolvedSection {
-            return false
+            return .alreadyInSection
         }
 
         let destination = LayoutReconciler.boundaryDestination(for: resolvedSection, controlItems: controlItems)
+        let guardedShouldProceed: @MainActor () -> Bool = { [weak self] in
+            guard let self, !self.isBulkLayoutMoveInFlight else { return false }
+            return shouldProceed?() ?? true
+        }
 
         do {
             try await move(
@@ -7015,13 +7048,19 @@ extension MenuBarItemManager {
                 watchdogTimeout: watchdogTimeout,
                 maxMoveAttempts: maxMoveAttempts,
                 hideCursorAcrossAttempts: hideCursorAcrossAttempts,
-                shouldProceed: shouldProceed
+                shouldProceed: guardedShouldProceed
             )
             MenuBarItemManager.diagLog.info("moveItem(trigger): moved \(target.logString) to \(resolvedSection.logString)")
-            return true
+            return .moved
         } catch {
+            if isBulkLayoutMoveInFlight {
+                MenuBarItemManager.diagLog.debug(
+                    "moveItem(trigger): deferring \(target.logString) after layout started during move"
+                )
+                return .deferred
+            }
             MenuBarItemManager.diagLog.error("moveItem(trigger): failed to move \(target.logString): \(error)")
-            return false
+            return .failed
         }
     }
 

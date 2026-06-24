@@ -30,6 +30,7 @@ final class MenuBarItemTriggersManager: ObservableObject {
             // move is still a no-op when the item is already in the right
             // section, so this does not warp the cursor on no-op edits.)
             lastAppliedReveal.removeAll()
+            pendingMoveReveal.removeAll()
             runScriptsIfNeeded()
             refreshImageHashesIfNeeded()
             scheduleEvaluation()
@@ -48,6 +49,11 @@ final class MenuBarItemTriggersManager: ObservableObject {
     /// The reveal decision currently reflected in each target item's
     /// placement, used to skip redundant moves.
     private var lastAppliedReveal = [UUID: Bool]()
+
+    /// Reveal decisions with an in-flight move queued. These are not yet
+    /// reflected in the menu bar, but suppress duplicate queueing while the
+    /// move chain catches up.
+    private var pendingMoveReveal = [UUID: Bool]()
 
     /// Per-trigger debounced apply tasks. A flipped decision only moves its
     /// item after the new state has held for ``flipDebounce``.
@@ -155,6 +161,12 @@ final class MenuBarItemTriggersManager: ObservableObject {
         evaluationState
     }
 
+    /// Returns the current reveal decision using the same live frontmost-app
+    /// read used by the move engine.
+    func shouldRevealNow(_ trigger: MenuBarItemTrigger) -> Bool {
+        trigger.shouldReveal(state: effectiveState(for: trigger, base: evaluationState))
+    }
+
     /// Whether the trigger's target item is currently placed in its reveal
     /// section (i.e. the trigger last revealed it).
     func isCurrentlyRevealed(_ trigger: MenuBarItemTrigger) -> Bool {
@@ -172,6 +184,7 @@ final class MenuBarItemTriggersManager: ObservableObject {
     func remove(id: UUID) {
         triggers.removeAll { $0.id == id }
         lastAppliedReveal[id] = nil
+        pendingMoveReveal[id] = nil
         pendingApplyTasks[id]?.cancel()
         pendingApplyTasks[id] = nil
     }
@@ -182,6 +195,7 @@ final class MenuBarItemTriggersManager: ObservableObject {
         triggers.remove(atOffsets: offsets)
         for id in removedIDs {
             lastAppliedReveal[id] = nil
+            pendingMoveReveal[id] = nil
             pendingApplyTasks[id]?.cancel()
             pendingApplyTasks[id] = nil
         }
@@ -196,10 +210,10 @@ final class MenuBarItemTriggersManager: ObservableObject {
     // MARK: - Evaluation
 
     /// Schedules a debounced forced evaluation against the current state.
-    private func scheduleEvaluation() {
+    private func scheduleEvaluation(after delay: Duration = .milliseconds(300)) {
         debouncedEvaluationTask?.cancel()
         debouncedEvaluationTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .milliseconds(300))
+            try? await Task.sleep(for: delay)
             guard !Task.isCancelled, let self else { return }
             self.evaluate(for: self.evaluationState, force: true)
         }
@@ -236,7 +250,7 @@ final class MenuBarItemTriggersManager: ObservableObject {
             let triggerState = effectiveState(for: trigger, base: state)
             let reveal = trigger.shouldReveal(state: triggerState, now: now)
 
-            if lastAppliedReveal[trigger.id] == reveal {
+            if lastAppliedReveal[trigger.id] == reveal || pendingMoveReveal[trigger.id] == reveal {
                 pendingApplyTasks[trigger.id]?.cancel()
                 pendingApplyTasks[trigger.id] = nil
                 continue
@@ -313,8 +327,8 @@ final class MenuBarItemTriggersManager: ObservableObject {
         let targets = trigger.allItemIdentifiers.filter(presentIDs.contains)
         guard !targets.isEmpty else { return }
 
-        let wasRevealed = lastAppliedReveal[trigger.id] == true
-        lastAppliedReveal[trigger.id] = reveal
+        let wasRevealed = lastAppliedReveal[trigger.id] == true || pendingMoveReveal[trigger.id] == true
+        pendingMoveReveal[trigger.id] = reveal
 
         // Notify on the transition into the revealed state.
         if reveal, !wasRevealed, trigger.notifyOnReveal {
@@ -401,9 +415,12 @@ final class MenuBarItemTriggersManager: ObservableObject {
             for identifier in identifiers {
                 guard self.queuedMoveIsCurrent(for: trigger, reveal: reveal) else {
                     self.diagLog.debug("Stopping stale trigger move batch for \(trigger.displayName)")
+                    if self.pendingMoveReveal[trigger.id] == reveal {
+                        self.pendingMoveReveal[trigger.id] = nil
+                    }
                     return
                 }
-                await itemManager.moveItem(
+                let result = await itemManager.moveItem(
                     withTagIdentifier: identifier,
                     toSection: section,
                     requiredInputPause: options.requiredInputPause,
@@ -415,8 +432,38 @@ final class MenuBarItemTriggersManager: ObservableObject {
                         self?.queuedMoveIsCurrent(for: trigger, reveal: reveal) ?? false
                     }
                 )
+                switch result {
+                case .moved, .alreadyInSection:
+                    continue
+                case .deferred:
+                    self.finishPendingMove(for: trigger, reveal: reveal, applied: false, retry: true)
+                    return
+                case .failed, .unavailable:
+                    self.finishPendingMove(for: trigger, reveal: reveal, applied: false, retry: false)
+                    return
+                }
             }
+            self.finishPendingMove(for: trigger, reveal: reveal, applied: true, retry: false)
         }
+    }
+
+    private func finishPendingMove(
+        for trigger: MenuBarItemTrigger,
+        reveal: Bool,
+        applied: Bool,
+        retry: Bool
+    ) {
+        if pendingMoveReveal[trigger.id] == reveal {
+            pendingMoveReveal[trigger.id] = nil
+        }
+        if applied {
+            lastAppliedReveal[trigger.id] = reveal
+            return
+        }
+        lastAppliedReveal[trigger.id] = nil
+        guard retry, queuedMoveIsCurrent(for: trigger, reveal: reveal) else { return }
+        diagLog.debug("Retrying deferred trigger move for \(trigger.displayName) after layout settles")
+        scheduleEvaluation(after: .seconds(1))
     }
 
     // MARK: - Scripts
