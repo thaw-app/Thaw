@@ -319,18 +319,27 @@ final class LayoutBarContainer: NSView {
             {
                 sourceView.oldContainerInfo = (self, sourceIndex)
             }
-            // updating normally relies on the presence of other arranged views,
-            // but if the container is empty, it needs to be handled separately
-            guard !arrangedViews.filter(\.isEnabled).isEmpty else {
-                arrangedViews.insert(sourceView, at: 0)
-                return .move
-            }
             // convert dragging location from window coordinates
             let draggingLocation = convert(draggingInfo.draggingLocation, from: nil)
             // When dragging a regular item (not the badge), exclude the badge
             // from being a swap destination. The badge position should only
             // change when the user explicitly drags the badge itself.
             let excludeBadge = !sourceView.isNewItemsBadge
+            // Updating normally relies on the presence of other arranged
+            // views. A section containing only the New Items badge should
+            // still accept regular item drops; otherwise the badge becomes a
+            // dead zone that prevents moving the first icon into the section.
+            guard !Self.enabledDropTargets(in: arrangedViews, excludingBadge: excludeBadge).isEmpty else {
+                if !arrangedViews.contains(sourceView) {
+                    let insertionIndex = Self.emptyTargetInsertionIndex(
+                        for: draggingLocation.x,
+                        in: arrangedViews,
+                        excludingBadge: excludeBadge
+                    )
+                    arrangedViews.insert(sourceView, at: insertionIndex)
+                }
+                return .move
+            }
             guard
                 let destinationView = arrangedView(nearestTo: draggingLocation.x, excludingBadge: excludeBadge),
                 destinationView !== sourceView,
@@ -368,6 +377,29 @@ final class LayoutBarContainer: NSView {
         case .ended:
             return .move
         }
+    }
+
+    static func enabledDropTargets(
+        in arrangedViews: [LayoutBarArrangedView],
+        excludingBadge: Bool
+    ) -> [LayoutBarArrangedView] {
+        arrangedViews.filter { view in
+            view.isEnabled && (!excludingBadge || !view.isNewItemsBadge)
+        }
+    }
+
+    static func emptyTargetInsertionIndex(
+        for xPosition: CGFloat,
+        in arrangedViews: [LayoutBarArrangedView],
+        excludingBadge: Bool
+    ) -> Int {
+        guard excludingBadge,
+              let badgeIndex = arrangedViews.firstIndex(where: { $0.isNewItemsBadge })
+        else {
+            return arrangedViews.startIndex
+        }
+        let badgeView = arrangedViews[badgeIndex]
+        return xPosition > badgeView.frame.midX ? badgeIndex + 1 : badgeIndex
     }
 
     /// Returns the nearest arranged view to the given X position within
