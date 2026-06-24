@@ -80,4 +80,39 @@ final class MenuBarTestFixturesTests: XCTestCase {
         )
         XCTAssertNotEqual(pair.hidden.windowID, pair.alwaysHidden?.windowID)
     }
+
+    func testSectionNameClassifiesItemInsideWideHiddenDividerAsHidden() {
+        let hiddenControlBounds = CGRect(x: -3750, y: 0, width: 5016, height: 33)
+        let itemBounds = CGRect(x: -3749, y: 1, width: 26, height: 22)
+
+        let section = MenuBarItemManager.sectionName(
+            for: itemBounds,
+            hiddenControlItemBounds: hiddenControlBounds,
+            alwaysHiddenControlItemBounds: nil
+        )
+
+        XCTAssertEqual(section, .hidden)
+    }
+
+    func testSectionNameUsesAlwaysHiddenBoundaryWhenAvailable() {
+        let alwaysHiddenControlBounds = CGRect(x: -8766, y: 0, width: 5016, height: 33)
+        let hiddenControlBounds = CGRect(x: -3750, y: 0, width: 5016, height: 33)
+
+        let hiddenItemBounds = CGRect(x: -3749, y: 1, width: 26, height: 22)
+        let alwaysHiddenItemBounds = CGRect(x: -8799, y: 1, width: 33, height: 22)
+
+        let hiddenSection = MenuBarItemManager.sectionName(
+            for: hiddenItemBounds,
+            hiddenControlItemBounds: hiddenControlBounds,
+            alwaysHiddenControlItemBounds: alwaysHiddenControlBounds
+        )
+        let alwaysHiddenSection = MenuBarItemManager.sectionName(
+            for: alwaysHiddenItemBounds,
+            hiddenControlItemBounds: hiddenControlBounds,
+            alwaysHiddenControlItemBounds: alwaysHiddenControlBounds
+        )
+
+        XCTAssertEqual(hiddenSection, .hidden)
+        XCTAssertEqual(alwaysHiddenSection, .alwaysHidden)
+    }
 }

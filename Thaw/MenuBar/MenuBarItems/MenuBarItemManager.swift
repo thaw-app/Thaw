@@ -1658,6 +1658,47 @@ extension MenuBarItemManager {
         }
     }
 
+    static nonisolated func sectionName(
+        for itemBounds: CGRect,
+        hiddenControlItemBounds: CGRect,
+        alwaysHiddenControlItemBounds: CGRect?
+    ) -> MenuBarSection.Name {
+        // Strict-inequality fast path for items that lie entirely on
+        // one side of every boundary. Identical to the original cache
+        // semantics so well-behaved items keep their existing classification.
+        if itemBounds.minX >= hiddenControlItemBounds.maxX {
+            return .visible
+        }
+        if itemBounds.maxX <= hiddenControlItemBounds.minX {
+            if let alwaysHiddenControlItemBounds {
+                if itemBounds.minX >= alwaysHiddenControlItemBounds.maxX {
+                    return .hidden
+                }
+                if itemBounds.maxX <= alwaysHiddenControlItemBounds.minX {
+                    return .alwaysHidden
+                }
+            } else {
+                return .hidden
+            }
+        }
+
+        // Fall-through: the item straddles at least one boundary.
+        // Control items can be wide divider windows, so a correctly moved
+        // item may overlap the divider bounds instead of landing exactly
+        // adjacent to the divider edge. Classify by midpoint, matching the
+        // cache's existing straddle handling.
+        let itemMid = (itemBounds.minX + itemBounds.maxX) / 2
+        let hiddenMid = (hiddenControlItemBounds.minX + hiddenControlItemBounds.maxX) / 2
+        if itemMid >= hiddenMid {
+            return .visible
+        }
+        if let alwaysHiddenControlItemBounds {
+            let alwaysHiddenMid = (alwaysHiddenControlItemBounds.minX + alwaysHiddenControlItemBounds.maxX) / 2
+            return itemMid >= alwaysHiddenMid ? .hidden : .alwaysHidden
+        }
+        return .hidden
+    }
+
     /// Context maintained during a menu bar item cache operation.
     private struct CacheContext {
         let controlItems: ControlItemPair
@@ -1697,49 +1738,11 @@ extension MenuBarItemManager {
 
         mutating func findSection(for item: MenuBarItem) -> MenuBarSection.Name? {
             let itemBounds = Self.bestBounds(for: item)
-
-            // Strict-inequality fast path for items that lie entirely on
-            // one side of every boundary. Identical to the original
-            // semantics so well-behaved items keep their existing
-            // classification.
-            if itemBounds.minX >= hiddenControlItemBounds.maxX {
-                return .visible
-            }
-            if itemBounds.maxX <= hiddenControlItemBounds.minX {
-                if let alwaysHiddenBounds = alwaysHiddenControlItemBounds.first {
-                    if itemBounds.minX >= alwaysHiddenBounds.maxX {
-                        return .hidden
-                    }
-                    if itemBounds.maxX <= alwaysHiddenBounds.minX {
-                        return .alwaysHidden
-                    }
-                } else {
-                    return .hidden
-                }
-            }
-
-            // Fall-through: the item straddles at least one boundary.
-            // Control items are zero-width markers; any item whose
-            // physical bounds cross the marker's single X coordinate
-            // fails the strict inequalities above. This happens when a
-            // profile collapses a section by moving its control item
-            // into the items' physical range, or transiently while
-            // sections expand/collapse during section.show()/hide().
-            // Returning nil drops the item from the cache and from
-            // Phase 1's section sets, which causes the layout to skip
-            // the divider move it would otherwise prefer. Resolve every
-            // straddle case via midpoint: assign the item to whichever
-            // section its physical centre predominantly occupies.
-            let itemMid = (itemBounds.minX + itemBounds.maxX) / 2
-            let hiddenMid = (hiddenControlItemBounds.minX + hiddenControlItemBounds.maxX) / 2
-            if itemMid >= hiddenMid {
-                return .visible
-            }
-            if let alwaysHiddenBounds = alwaysHiddenControlItemBounds.first {
-                let ahMid = (alwaysHiddenBounds.minX + alwaysHiddenBounds.maxX) / 2
-                return itemMid >= ahMid ? .hidden : .alwaysHidden
-            }
-            return .hidden
+            return MenuBarItemManager.sectionName(
+                for: itemBounds,
+                hiddenControlItemBounds: hiddenControlItemBounds,
+                alwaysHiddenControlItemBounds: alwaysHiddenControlItemBounds.first
+            )
         }
     }
 
@@ -3100,10 +3103,74 @@ extension MenuBarItemManager {
     ) async throws -> Bool {
         let itemBounds = try await getCurrentBounds(for: item)
         let targetBounds = try await getCurrentBounds(for: destination.targetItem)
-        return switch destination {
-        case .leftOfItem: itemBounds.maxX == targetBounds.minX
-        case .rightOfItem: itemBounds.minX == targetBounds.maxX
+        if let expectedSection = Self.expectedSection(forControlBoundary: destination),
+           let controlBounds = await currentControlBounds(
+               targetItem: destination.targetItem,
+               targetBounds: targetBounds
+           )
+        {
+            let actualSection = Self.sectionName(
+                for: itemBounds,
+                hiddenControlItemBounds: controlBounds.hidden,
+                alwaysHiddenControlItemBounds: controlBounds.alwaysHidden
+            )
+            let matches = actualSection == expectedSection
+            if matches {
+                MenuBarItemManager.diagLog.debug(
+                    "\(item.logString) verified in \(expectedSection.logString) for \(destination.logString)"
+                )
+            }
+            return matches
         }
+
+        let tolerance: CGFloat = 1
+        return switch destination {
+        case .leftOfItem: abs(itemBounds.maxX - targetBounds.minX) <= tolerance
+        case .rightOfItem: abs(itemBounds.minX - targetBounds.maxX) <= tolerance
+        }
+    }
+
+    private static nonisolated func expectedSection(
+        forControlBoundary destination: MoveDestination
+    ) -> MenuBarSection.Name? {
+        switch (destination, destination.targetItem.tag) {
+        case (.leftOfItem, .hiddenControlItem):
+            .hidden
+        case (.rightOfItem, .hiddenControlItem):
+            .visible
+        case (.leftOfItem, .alwaysHiddenControlItem):
+            .alwaysHidden
+        case (.rightOfItem, .alwaysHiddenControlItem):
+            .hidden
+        default:
+            nil
+        }
+    }
+
+    private nonisolated func currentControlBounds(
+        targetItem: MenuBarItem,
+        targetBounds: CGRect
+    ) async -> (hidden: CGRect, alwaysHidden: CGRect?)? {
+        switch targetItem.tag {
+        case .hiddenControlItem:
+            let alwaysHiddenBounds = await currentBounds(matching: .alwaysHiddenControlItem)
+            return (targetBounds, alwaysHiddenBounds)
+        case .alwaysHiddenControlItem:
+            guard let hiddenBounds = await currentBounds(matching: .hiddenControlItem) else {
+                return nil
+            }
+            return (hiddenBounds, targetBounds)
+        default:
+            return nil
+        }
+    }
+
+    private nonisolated func currentBounds(matching tag: MenuBarItemTag) async -> CGRect? {
+        let items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+        guard let item = items.first(matching: tag) else {
+            return nil
+        }
+        return try? await getCurrentBounds(for: item)
     }
 
     /// Waits for a menu bar item to respond to a series of previously
