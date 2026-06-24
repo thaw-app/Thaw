@@ -13488,6 +13488,9 @@
         }
       }
     },
+    "Detect menu bar items." : {
+
+    },
     "Detect the menu bar items on your Mac and where they're positioned." : {
 
     },
@@ -26882,6 +26885,9 @@
         }
       }
     },
+    "Move items on your behalf." : {
+
+    },
     "Move menu bar items from the visible section into the hidden section when they don't fit beside the notch on a notched display. Disable to keep the saved profile layout exactly as authored even when items would otherwise be pushed under the notch." : {
       "comment" : "A tooltip that describes the effect of enabling or disabling the overflow.",
       "localizations" : {
@@ -34876,6 +34882,9 @@
     "Sample colors from the menu bar to adjust its tint and appearance." : {
 
     },
+    "Sample colors from the menu bar." : {
+
+    },
     "Save Current" : {
       "comment" : "A button that saves the current profile when pressed.",
       "localizations" : {
@@ -37986,6 +37995,9 @@
       }
     },
     "Show live previews of your menu bar items." : {
+
+    },
+    "Show live previews." : {
 
     },
     "Show Log Files in Finder" : {
