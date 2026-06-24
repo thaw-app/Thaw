@@ -244,7 +244,11 @@ final class AdvancedSettings: ObservableObject {
         .receive(on: DispatchQueue.main)
         .sink { maxSizeMB, retentionDays, interval in
             var policy = DiagnosticLogger.RotationPolicy()
-            policy.maxFileSizeBytes = UInt64(max(0, maxSizeMB)) * 1024 * 1024
+            // Clamp before converting to bytes: profiles or tampered UserDefaults
+            // can hold values outside the UI's 1...100 range, and
+            // UInt64(hugeMB) * 1024 * 1024 would overflow and trap.
+            let safeMB = min(max(0, maxSizeMB), 1_000_000)
+            policy.maxFileSizeBytes = UInt64(safeMB) * 1024 * 1024
             policy.retentionDays = max(1, retentionDays)
             policy.rotationInterval = interval.seconds
             DiagnosticLogger.shared.setRotationPolicy(policy)

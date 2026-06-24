@@ -25,17 +25,21 @@ final class DiagnosticLogger: @unchecked Sendable {
     var isEnabled: Bool {
         get { isEnabledLock.withLock { $0 } }
         set {
-            let wasEnabled = isEnabledLock.withLock { $0 }
-            guard newValue != wasEnabled else { return }
-            if newValue {
-                // `openLogFile()` flips `isEnabled` to true only after the file
-                // handle is installed, so a concurrent `log()` never sees
-                // enabled with no handle.
-                openLogFile()
-            } else {
-                // Stop new writes before closing so no line lands after the footer.
-                isEnabledLock.withLock { $0 = false }
-                closeLogFile()
+            // Serialize the whole transition on writeQueue so concurrent
+            // enable/disable toggles can't interleave: the last writer wins and
+            // the final state matches its intent. The enable path flips
+            // `isEnabled` to true only after the handle is installed, so a
+            // concurrent `log()` never sees enabled with no handle.
+            writeQueue.sync {
+                let wasEnabled = isEnabledLock.withLock { $0 }
+                guard newValue != wasEnabled else { return }
+                if newValue {
+                    openOwnerLogFileLocked()
+                } else {
+                    // Stop new writes before closing so no line lands after the footer.
+                    isEnabledLock.withLock { $0 = false }
+                    closeLogFileLocked()
+                }
             }
         }
     }
@@ -198,29 +202,27 @@ final class DiagnosticLogger: @unchecked Sendable {
         }
     }
 
-    /// Creates the log directory if needed and opens a freshly minted
-    /// log file. Called by the main app when diagnostic logging is
-    /// turned on; the chosen URL is then shared with the XPC service
-    /// via attachToFile(at:).
-    private func openLogFile() {
+    /// Creates the log directory if needed and opens a freshly minted log file.
+    /// Called by the main app when diagnostic logging is turned on; the chosen
+    /// URL is then shared with the XPC service via attachToFile(at:). Must run
+    /// on `writeQueue`.
+    private func openOwnerLogFileLocked() {
         // The main app mints the file and therefore owns rotation.
         isRotationOwnerLock.withLock { $0 = true }
-        writeQueue.sync {
-            let dir = logDirectory
-            do {
-                try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-            } catch {
-                osLog.error("Failed to create log directory at \(dir.path): \(error)")
-                isEnabledLock.withLock { $0 = false }
-                return
-            }
-
-            let baseName = "thaw_\(fileNameFormatter.string(from: Date()))"
-            let fileURL = Self.uniqueLogFileURL(in: dir, baseName: baseName) {
-                FileManager.default.fileExists(atPath: $0.path)
-            }
-            openLogFileLocked(at: fileURL)
+        let dir = logDirectory
+        do {
+            try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        } catch {
+            osLog.error("Failed to create log directory at \(dir.path): \(error)")
+            isEnabledLock.withLock { $0 = false }
+            return
         }
+
+        let baseName = "thaw_\(fileNameFormatter.string(from: Date()))"
+        let fileURL = Self.uniqueLogFileURL(in: dir, baseName: baseName) {
+            FileManager.default.fileExists(atPath: $0.path)
+        }
+        openLogFileLocked(at: fileURL)
     }
 
     /// Opens the given file and installs it as the current log file. Shared by
@@ -358,11 +360,6 @@ final class DiagnosticLogger: @unchecked Sendable {
         }
         currentLogFileLock.withLock { $0 = nil }
         osLog.info("Diagnostic logging stopped")
-    }
-
-    /// Closes the current log file, serializing against queued writes.
-    private func closeLogFile() {
-        writeQueue.sync { closeLogFileLocked() }
     }
 
     // MARK: - Rotation
