@@ -198,6 +198,21 @@ struct MenuBarItem: CustomStringConvertible {
         "<\(tag) (windowID: \(windowID))>"
     }
 
+    /// A verbose string for diagnosing section classification and move
+    /// failures.
+    var diagnosticLogString: String {
+        let ownerBundleID = owningApplication?.bundleIdentifier ?? "nil"
+        let sourcePIDString = sourcePID.map { "\($0)" } ?? "nil"
+        let sourceBundleID = sourceApplication?.bundleIdentifier ?? "nil"
+        let titleString = title.map { "\"\($0)\"" } ?? "nil"
+        return """
+        \(logString) id=\(uniqueIdentifier) name="\(displayName)" title=\(titleString) \
+        ownerPID=\(ownerPID) ownerBundle=\(ownerBundleID) sourcePID=\(sourcePIDString) \
+        sourceBundle=\(sourceBundleID) bounds=\(NSStringFromRect(bounds)) onScreen=\(isOnScreen) \
+        movable=\(isMovable) canHide=\(canBeHidden)
+        """
+    }
+
     /// Creates a menu bar item without checks.
     ///
     /// This initializer does not perform validity checks on its parameters.

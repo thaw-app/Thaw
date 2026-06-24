@@ -1736,13 +1736,40 @@ extension MenuBarItemManager {
             return true
         }
 
-        mutating func findSection(for item: MenuBarItem) -> MenuBarSection.Name? {
+        func findSection(for item: MenuBarItem) -> MenuBarSection.Name? {
             let itemBounds = Self.bestBounds(for: item)
             return MenuBarItemManager.sectionName(
                 for: itemBounds,
                 hiddenControlItemBounds: hiddenControlItemBounds,
                 alwaysHiddenControlItemBounds: alwaysHiddenControlItemBounds.first
             )
+        }
+
+        func invalidReason(for item: MenuBarItem) -> String? {
+            if item.tag == .visibleControlItem {
+                return nil
+            }
+            if !item.canBeHidden {
+                return "canBeHidden=false"
+            }
+            if item.isSystemClone {
+                return "systemClone=true"
+            }
+            if item.isControlItem, item.tag != .visibleControlItem {
+                return "nonVisibleControlItem=true"
+            }
+            return nil
+        }
+
+        var controlItemDiagnosticLogString: String {
+            let alwaysHidden = alwaysHiddenControlItemBounds.first.map(NSStringFromRect) ?? "nil"
+            return "hiddenControl=\(controlItems.hidden.logString) hiddenBounds=\(NSStringFromRect(hiddenControlItemBounds)) alwaysHiddenBounds=\(alwaysHidden)"
+        }
+
+        func diagnosticSummary(for item: MenuBarItem) -> String {
+            let liveBounds = Self.bestBounds(for: item)
+            let section = findSection(for: item)?.logString ?? "nil"
+            return "\(item.diagnosticLogString) liveBounds=\(NSStringFromRect(liveBounds)) classifiedSection=\(section) \(controlItemDiagnosticLogString)"
         }
     }
 
@@ -1759,6 +1786,8 @@ extension MenuBarItemManager {
         var validCount = 0
         var invalidCount = 0
         var noSectionCount = 0
+        var unresolvedSourcePIDDiagnostics = [String]()
+        var invalidItemDiagnostics = [String]()
 
         // Track which tags have already been cached to avoid duplicates.
         // macOS can briefly report two windows for the same item during
@@ -1775,7 +1804,9 @@ extension MenuBarItemManager {
 
             validCount += 1
             if item.sourcePID == nil {
-                MenuBarItemManager.diagLog.warning("Missing sourcePID for \(item.logString)")
+                let diagnostic = context.diagnosticSummary(for: item)
+                unresolvedSourcePIDDiagnostics.append(diagnostic)
+                MenuBarItemManager.diagLog.warning("Missing sourcePID for \(diagnostic)")
             }
 
             let matchingContext: TemporarilyShownItemContext? = {
@@ -1814,11 +1845,11 @@ extension MenuBarItemManager {
             let currentBounds = Bridging.getWindowBounds(for: item.windowID) ?? item.bounds
             if currentBounds.origin.x == -1 {
                 MenuBarItemManager.diagLog.warning(
-                    "Skipping \(item.logString); blocked (x=-1), will retry on next cache tick"
+                    "Skipping blocked item during cache (x=-1): \(context.diagnosticSummary(for: item))"
                 )
             } else {
                 MenuBarItemManager.diagLog.warning(
-                    "Couldn't find section for caching \(item.logString) bounds=\(NSStringFromRect(item.bounds)), assigning to hidden"
+                    "Couldn't find section for caching, assigning to hidden: \(context.diagnosticSummary(for: item))"
                 )
                 context.cache[.hidden].append(item)
             }
@@ -1827,15 +1858,29 @@ extension MenuBarItemManager {
         // Count invalid items
         for item in items where !context.isValidForCaching(item) {
             invalidCount += 1
+            if invalidItemDiagnostics.count < 8,
+               let reason = context.invalidReason(for: item),
+               !item.isSystemClone
+            {
+                invalidItemDiagnostics.append("\(reason): \(context.diagnosticSummary(for: item))")
+            }
         }
 
         MenuBarItemManager.diagLog.debug("uncheckedCacheItems: \(validCount) valid, \(invalidCount) invalid (filtered), \(noSectionCount) couldn't find section, \(context.temporarilyShownItems.count) temporarily shown")
+        if !invalidItemDiagnostics.isEmpty {
+            MenuBarItemManager.diagLog.debug("uncheckedCacheItems: invalid item diagnostics: \(invalidItemDiagnostics)")
+        }
 
         for (item, destination) in context.temporarilyShownItems {
             context.cache.insert(item, at: destination)
         }
 
         guard itemCache != context.cache else {
+            if !unresolvedSourcePIDDiagnostics.isEmpty {
+                MenuBarItemManager.diagLog.warning(
+                    "Not updating menu bar item cache; items unchanged but unresolved sourcePID item(s) remain: \(unresolvedSourcePIDDiagnostics)"
+                )
+            }
             MenuBarItemManager.diagLog.debug("Not updating menu bar item cache, as items haven't changed")
             return
         }
@@ -6868,6 +6913,14 @@ extension MenuBarItemManager {
 
             guard let currentSection else { continue }
             if currentSection != expectedSection {
+                MenuBarItemManager.diagLog.info(
+                    """
+                    currentLayoutDivergesFromSaved: \(item.diagnosticLogString) \
+                    expectedSection=\(expectedSection.logString) currentSection=\(currentSection.logString) \
+                    hiddenControlBounds=\(NSStringFromRect(controlItems.hidden.bounds)) \
+                    alwaysHiddenBounds=\(controlItems.alwaysHidden.map { NSStringFromRect($0.bounds) } ?? "nil")
+                    """
+                )
                 return true
             }
         }
@@ -6936,7 +6989,14 @@ extension MenuBarItemManager {
         // restoreItemsToSavedSections used) prevents cascading
         // re-applies when many apps relaunch in quick succession.
         guard !lastMoveOperationOccurred(within: .seconds(5)) else {
-            MenuBarItemManager.diagLog.debug("applySavedLayout: skipping, within 5s move cooldown")
+            let age = lastMoveOperationTimestamp.map { "\($0.duration(to: .now))" } ?? "nil"
+            let currentItems = items
+                .filter { !$0.isControlItem }
+                .prefix(12)
+                .map(\.diagnosticLogString)
+            MenuBarItemManager.diagLog.debug(
+                "applySavedLayout: skipping, within 5s move cooldown (lastMoveAge=\(age), currentItems=\(currentItems))"
+            )
             return false
         }
 
@@ -7076,7 +7136,13 @@ extension MenuBarItemManager {
         // Resolve the target before ControlItemPair consumes the control
         // items from the list. Control items are never trigger targets.
         guard let target = items.first(where: { $0.tag.tagIdentifier == tagIdentifier }) else {
-            MenuBarItemManager.diagLog.debug("moveItem(trigger): no item matches identifier \(tagIdentifier)")
+            let availableItems = items
+                .filter { !$0.isControlItem }
+                .prefix(12)
+                .map(\.diagnosticLogString)
+            MenuBarItemManager.diagLog.debug(
+                "moveItem(trigger): no item matches identifier \(tagIdentifier). Available non-control items: \(availableItems)"
+            )
             return .unavailable
         }
         guard target.isMovable else {
@@ -7116,12 +7182,24 @@ extension MenuBarItemManager {
 
         // Skip when the item already resides in the effective target section.
         let displayID = Bridging.getActiveMenuBarDisplayID()
-        var context = CacheContext(controlItems: controlItems, displayID: displayID)
-        if context.findSection(for: target) == resolvedSection {
+        let context = CacheContext(controlItems: controlItems, displayID: displayID)
+        let currentSection = context.findSection(for: target)
+        if currentSection == resolvedSection {
+            MenuBarItemManager.diagLog.info(
+                "moveItem(trigger): already in \(resolvedSection.logString), skipping \(context.diagnosticSummary(for: target))"
+            )
             return .alreadyInSection
         }
 
         let destination = LayoutReconciler.boundaryDestination(for: resolvedSection, controlItems: controlItems)
+        MenuBarItemManager.diagLog.info(
+            """
+            moveItem(trigger): planning move tagIdentifier=\(tagIdentifier) \
+            currentSection=\(currentSection?.logString ?? "nil") requestedSection=\(section.logString) \
+            resolvedSection=\(resolvedSection.logString) destination=\(destination.logString) \
+            target=\(context.diagnosticSummary(for: target))
+            """
+        )
         let guardedShouldProceed: @MainActor () -> Bool = { [weak self] in
             guard let self, !self.isBulkLayoutMoveInFlight else { return false }
             return shouldProceed?() ?? true
@@ -7144,11 +7222,13 @@ extension MenuBarItemManager {
         } catch {
             if isBulkLayoutMoveInFlight {
                 MenuBarItemManager.diagLog.debug(
-                    "moveItem(trigger): deferring \(target.logString) after layout started during move"
+                    "moveItem(trigger): deferring \(context.diagnosticSummary(for: target)) after layout started during move"
                 )
                 return .deferred
             }
-            MenuBarItemManager.diagLog.error("moveItem(trigger): failed to move \(target.logString): \(error)")
+            MenuBarItemManager.diagLog.error(
+                "moveItem(trigger): failed to move to \(resolvedSection.logString) via \(destination.logString): \(context.diagnosticSummary(for: target)); error=\(error)"
+            )
             return .failed
         }
     }

@@ -94,12 +94,12 @@ enum TriggerFeature: String, CaseIterable, Identifiable {
         }
     }
 
-    /// Whether the feature relies on private/fragile APIs or permissions and
-    /// may not work reliably on all systems.
-    var isExperimental: Bool {
+    /// A status badge for features that need extra caution while testing.
+    var statusBadge: String? {
         switch self {
-        case .wifiSSID, .focusMode, .location, .scriptResult, .imageComparison: true
-        default: false
+        case .vpn, .audioOutput: "Untested"
+        case .wifiSSID, .focusMode, .location, .scriptResult, .imageComparison: "Experimental"
+        default: nil
         }
     }
 }

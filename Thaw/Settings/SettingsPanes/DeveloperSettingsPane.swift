@@ -112,8 +112,8 @@ struct DeveloperSettingsPane: View {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     Text(feature.title)
-                    if feature.isExperimental {
-                        Text("Experimental")
+                    if let badge = feature.statusBadge {
+                        Text(badge)
                             .font(.caption2)
                             .padding(.horizontal, 5)
                             .padding(.vertical, 1)

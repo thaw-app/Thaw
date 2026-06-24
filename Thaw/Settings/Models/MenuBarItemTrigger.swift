@@ -32,6 +32,49 @@ enum ThermalLevel: Int, Codable, Hashable, CaseIterable, Identifiable {
     }
 }
 
+// MARK: - ScheduleWeekday
+
+/// A calendar weekday, using the same numeric values as
+/// `Calendar.Component.weekday` (Sunday = 1).
+enum ScheduleWeekday: Int, Codable, Hashable, CaseIterable, Identifiable {
+    case sunday = 1
+    case monday
+    case tuesday
+    case wednesday
+    case thursday
+    case friday
+    case saturday
+
+    var id: Int {
+        rawValue
+    }
+
+    var shortTitle: String {
+        switch self {
+        case .sunday: "Sun"
+        case .monday: "Mon"
+        case .tuesday: "Tue"
+        case .wednesday: "Wed"
+        case .thursday: "Thu"
+        case .friday: "Fri"
+        case .saturday: "Sat"
+        }
+    }
+
+    var previous: ScheduleWeekday {
+        ScheduleWeekday(rawValue: rawValue == Self.sunday.rawValue ? Self.saturday.rawValue : rawValue - 1) ?? .sunday
+    }
+
+    static var everyDay: Set<ScheduleWeekday> {
+        Set(allCases)
+    }
+
+    static func weekday(for date: Date, calendar: Calendar = .current) -> ScheduleWeekday {
+        let value = calendar.component(.weekday, from: date)
+        return ScheduleWeekday(rawValue: value) ?? .sunday
+    }
+}
+
 // MARK: - TriggerCondition
 
 /// A condition that decides whether a ``MenuBarItemTrigger`` is currently
@@ -64,6 +107,7 @@ enum TriggerCondition: Codable, Hashable {
 
     // Time / Focus
     case schedule(startMinutes: Int, endMinutes: Int)
+    case weeklySchedule(startMinutes: Int, endMinutes: Int, weekdays: Set<ScheduleWeekday>)
     case focusActive
     case focusMode(name: String)
 
@@ -120,6 +164,8 @@ enum TriggerCondition: Codable, Hashable {
             return state.externalDisplayConnected
         case let .schedule(start, end):
             return Self.isWithinSchedule(now: now, startMinutes: start, endMinutes: end)
+        case let .weeklySchedule(start, end, weekdays):
+            return Self.isWithinSchedule(now: now, startMinutes: start, endMinutes: end, weekdays: weekdays)
         case .focusActive:
             return state.isFocusActive
         case let .focusMode(name):
@@ -188,6 +234,10 @@ enum TriggerCondition: Codable, Hashable {
             return "External display is connected"
         case let .schedule(start, end):
             return "Between \(Self.clockString(start)) and \(Self.clockString(end))"
+        case let .weeklySchedule(start, end, weekdays):
+            let window = "Between \(Self.clockString(start)) and \(Self.clockString(end))"
+            let days = Self.weekdaySummary(weekdays)
+            return days == "every day" ? window : "\(window) on \(days)"
         case .focusActive:
             return "A Focus is active"
         case let .focusMode(name):
@@ -234,14 +284,45 @@ enum TriggerCondition: Codable, Hashable {
     /// Whether `now` falls within the daily window `[start, end)`, handling
     /// windows that wrap past midnight.
     static func isWithinSchedule(now: Date, startMinutes: Int, endMinutes: Int) -> Bool {
+        isWithinSchedule(now: now, startMinutes: startMinutes, endMinutes: endMinutes, weekdays: ScheduleWeekday.everyDay)
+    }
+
+    /// Whether `now` falls within a weekly schedule. For windows that wrap
+    /// past midnight, the selected weekday is the day the window starts.
+    static func isWithinSchedule(
+        now: Date,
+        startMinutes: Int,
+        endMinutes: Int,
+        weekdays: Set<ScheduleWeekday>
+    ) -> Bool {
         guard startMinutes != endMinutes else { return false }
+        guard !weekdays.isEmpty else { return false }
+
         let components = Calendar.current.dateComponents([.hour, .minute], from: now)
         let current = (components.hour ?? 0) * 60 + (components.minute ?? 0)
+        let weekday = ScheduleWeekday.weekday(for: now)
+
         if startMinutes < endMinutes {
-            return current >= startMinutes && current < endMinutes
+            return weekdays.contains(weekday) && current >= startMinutes && current < endMinutes
         }
+
         // Window wraps midnight (e.g. 22:00–06:00).
-        return current >= startMinutes || current < endMinutes
+        if current >= startMinutes {
+            return weekdays.contains(weekday)
+        }
+        if current < endMinutes {
+            return weekdays.contains(weekday.previous)
+        }
+        return false
+    }
+
+    private static func weekdaySummary(_ weekdays: Set<ScheduleWeekday>) -> String {
+        if weekdays == ScheduleWeekday.everyDay { return "every day" }
+        if weekdays.isEmpty { return "no days" }
+        return ScheduleWeekday.allCases
+            .filter { weekdays.contains($0) }
+            .map(\.shortTitle)
+            .joined(separator: ", ")
     }
 }
 
@@ -408,7 +489,7 @@ extension TriggerCondition {
         case .bluetoothConnected: .bluetoothConnected
         case .audioOutput: .audioOutput
         case .externalDisplayConnected: .externalDisplay
-        case .schedule: .schedule
+        case .schedule, .weeklySchedule: .schedule
         case .focusActive: .focusActive
         case .focusMode: .focusModeNamed
         case .nearLocation: .nearLocation
@@ -449,7 +530,20 @@ extension TriggerCondition {
     var scheduleWindow: (start: Int, end: Int)? {
         switch self {
         case let .schedule(start, end): (start, end)
+        case let .weeklySchedule(start, end, _): (start, end)
         default: nil
+        }
+    }
+
+    /// The selected weekdays for schedule conditions.
+    var scheduleWeekdays: Set<ScheduleWeekday>? {
+        switch self {
+        case .schedule:
+            ScheduleWeekday.everyDay
+        case let .weeklySchedule(_, _, weekdays):
+            weekdays
+        default:
+            nil
         }
     }
 
@@ -503,7 +597,7 @@ extension TriggerCondition {
         case .bluetoothConnected: .bluetoothConnected(name: "")
         case .audioOutput: .audioOutput(contains: "")
         case .externalDisplay: .externalDisplayConnected
-        case .schedule: .schedule(startMinutes: 9 * 60, endMinutes: 17 * 60)
+        case .schedule: .weeklySchedule(startMinutes: 9 * 60, endMinutes: 17 * 60, weekdays: ScheduleWeekday.everyDay)
         case .focusActive: .focusActive
         case .focusModeNamed: .focusMode(name: "")
         case .nearLocation: .nearLocation(latitude: 0, longitude: 0, radiusMeters: 150, label: "")
@@ -529,8 +623,15 @@ extension TriggerCondition {
         case .audioOutput: .audioOutput(contains: old.text ?? "")
         case .focusModeNamed: .focusMode(name: old.text ?? "")
         case .schedule:
-            old.scheduleWindow.map { TriggerCondition.schedule(startMinutes: $0.start, endMinutes: $0.end) }
-                ?? .schedule(startMinutes: 9 * 60, endMinutes: 17 * 60)
+            if let window = old.scheduleWindow {
+                .weeklySchedule(
+                    startMinutes: window.start,
+                    endMinutes: window.end,
+                    weekdays: old.scheduleWeekdays ?? ScheduleWeekday.everyDay
+                )
+            } else {
+                .weeklySchedule(startMinutes: 9 * 60, endMinutes: 17 * 60, weekdays: ScheduleWeekday.everyDay)
+            }
         case .thermalPressure: .thermalPressure(atLeast: old.thermalLevel ?? .serious)
         case .scriptResult:
             old.scriptValue.map { TriggerCondition.scriptResult(path: $0.path, expectedOutput: $0.expectedOutput) }
@@ -577,8 +678,23 @@ extension TriggerCondition {
     /// Returns a copy with the schedule window replaced.
     func withSchedule(start: Int, end: Int) -> TriggerCondition {
         switch self {
-        case .schedule: .schedule(startMinutes: start, endMinutes: end)
+        case .schedule:
+            .weeklySchedule(startMinutes: start, endMinutes: end, weekdays: ScheduleWeekday.everyDay)
+        case let .weeklySchedule(_, _, weekdays):
+            .weeklySchedule(startMinutes: start, endMinutes: end, weekdays: weekdays)
         default: self
+        }
+    }
+
+    /// Returns a copy with the selected schedule weekdays replaced.
+    func withScheduleWeekdays(_ weekdays: Set<ScheduleWeekday>) -> TriggerCondition {
+        switch self {
+        case let .schedule(start, end):
+            .weeklySchedule(startMinutes: start, endMinutes: end, weekdays: weekdays)
+        case let .weeklySchedule(start, end, _):
+            .weeklySchedule(startMinutes: start, endMinutes: end, weekdays: weekdays)
+        default:
+            self
         }
     }
 

@@ -17681,9 +17681,6 @@
     "Expand trigger" : {
 
     },
-    "Experimental" : {
-
-    },
     "Export" : {
       "comment" : "A menu item that exports a profile to a file.",
       "localizations" : {

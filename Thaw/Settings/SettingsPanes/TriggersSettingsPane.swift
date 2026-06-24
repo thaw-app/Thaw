@@ -53,6 +53,13 @@ private struct TriggerDropIndicator: Equatable {
     let placement: TriggerDropIndicatorPlacement
 }
 
+private func clearTriggerEditorFocus(_ focusedField: FocusState<String?>.Binding) {
+    focusedField.wrappedValue = nil
+    DispatchQueue.main.async {
+        NSApp.keyWindow?.makeFirstResponder(nil)
+    }
+}
+
 private extension MenuBarSection.Name {
     var triggerPickerDisplayString: String {
         switch self {
@@ -1004,17 +1011,20 @@ private struct TriggerRow: View {
 
     private var timeRangeEditor: some View {
         let window = trigger.condition.scheduleWindow ?? (start: 540, end: 1020)
-        return HStack(spacing: 12) {
-            DatePicker(
-                "From",
-                selection: scheduleBinding(isStart: true, window: window),
-                displayedComponents: .hourAndMinute
-            )
-            DatePicker(
-                "To",
-                selection: scheduleBinding(isStart: false, window: window),
-                displayedComponents: .hourAndMinute
-            )
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 12) {
+                DatePicker(
+                    "From",
+                    selection: scheduleBinding(isStart: true, window: window),
+                    displayedComponents: .hourAndMinute
+                )
+                DatePicker(
+                    "To",
+                    selection: scheduleBinding(isStart: false, window: window),
+                    displayedComponents: .hourAndMinute
+                )
+            }
+            ScheduleWeekdayPicker(selection: scheduleWeekdaysBinding)
         }
     }
 
@@ -1147,7 +1157,15 @@ private struct TriggerRow: View {
                 } else {
                     trigger.condition = trigger.condition.withSchedule(start: window.start, end: minutes)
                 }
+                clearTriggerEditorFocus(focusedField)
             }
+        )
+    }
+
+    private var scheduleWeekdaysBinding: Binding<Set<ScheduleWeekday>> {
+        Binding(
+            get: { trigger.condition.scheduleWeekdays ?? ScheduleWeekday.everyDay },
+            set: { trigger.condition = trigger.condition.withScheduleWeekdays($0) }
         )
     }
 
@@ -1232,9 +1250,12 @@ private struct ConditionEditorView: View {
             )
         case .timeRange:
             let window = condition.scheduleWindow ?? (start: 540, end: 1020)
-            HStack(spacing: 12) {
-                DatePicker("From", selection: scheduleBinding(isStart: true, window: window), displayedComponents: .hourAndMinute)
-                DatePicker("To", selection: scheduleBinding(isStart: false, window: window), displayedComponents: .hourAndMinute)
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 12) {
+                    DatePicker("From", selection: scheduleBinding(isStart: true, window: window), displayedComponents: .hourAndMinute)
+                    DatePicker("To", selection: scheduleBinding(isStart: false, window: window), displayedComponents: .hourAndMinute)
+                }
+                ScheduleWeekdayPicker(selection: scheduleWeekdaysBinding)
             }
         case .location:
             locationEditor
@@ -1322,8 +1343,51 @@ private struct ConditionEditorView: View {
                 condition = isStart
                     ? condition.withSchedule(start: minutes, end: window.end)
                     : condition.withSchedule(start: window.start, end: minutes)
+                clearTriggerEditorFocus(focusedField)
             }
         )
+    }
+
+    private var scheduleWeekdaysBinding: Binding<Set<ScheduleWeekday>> {
+        Binding(
+            get: { condition.scheduleWeekdays ?? ScheduleWeekday.everyDay },
+            set: { condition = condition.withScheduleWeekdays($0) }
+        )
+    }
+}
+
+// MARK: - ScheduleWeekdayPicker
+
+private struct ScheduleWeekdayPicker: View {
+    @Binding var selection: Set<ScheduleWeekday>
+
+    var body: some View {
+        HStack(spacing: 6) {
+            ForEach(ScheduleWeekday.allCases) { weekday in
+                Button {
+                    toggle(weekday)
+                } label: {
+                    Text(weekday.shortTitle)
+                        .font(.caption)
+                        .fontWeight(selection.contains(weekday) ? .semibold : .regular)
+                        .frame(minWidth: 32)
+                        .padding(.vertical, 4)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(selection.contains(weekday) ? Color.white : Color.primary)
+                .background(selection.contains(weekday) ? Color.orange : Color.secondary.opacity(0.12), in: Capsule())
+                .accessibilityLabel(Text(weekday.shortTitle))
+            }
+        }
+    }
+
+    private func toggle(_ weekday: ScheduleWeekday) {
+        if selection.contains(weekday) {
+            guard selection.count > 1 else { return }
+            selection.remove(weekday)
+        } else {
+            selection.insert(weekday)
+        }
     }
 }
 

@@ -160,8 +160,21 @@ final class MenuBarItemTriggerTests: XCTestCase {
 
     // MARK: - Schedule
 
-    private func date(hour: Int, minute: Int) -> Date {
-        Calendar.current.date(bySettingHour: hour, minute: minute, second: 0, of: Date())!
+    private func date(
+        year: Int = 2026,
+        month: Int = 6,
+        day: Int = 24,
+        hour: Int,
+        minute: Int
+    ) -> Date {
+        var components = DateComponents()
+        components.year = year
+        components.month = month
+        components.day = day
+        components.hour = hour
+        components.minute = minute
+        components.second = 0
+        return Calendar.current.date(from: components)!
     }
 
     func testScheduleNonWrapping() {
@@ -181,6 +194,56 @@ final class MenuBarItemTriggerTests: XCTestCase {
     func testScheduleEmptyWindow() {
         let condition = TriggerCondition.schedule(startMinutes: 600, endMinutes: 600)
         XCTAssertFalse(condition.isSatisfied(state: state(), now: date(hour: 10, minute: 0)))
+    }
+
+    func testWeeklyScheduleNonWrapping() {
+        let condition = TriggerCondition.weeklySchedule(
+            startMinutes: 9 * 60,
+            endMinutes: 17 * 60,
+            weekdays: [.monday]
+        )
+
+        XCTAssertTrue(condition.isSatisfied(state: state(), now: date(day: 22, hour: 12, minute: 0)))
+        XCTAssertFalse(condition.isSatisfied(state: state(), now: date(day: 23, hour: 12, minute: 0)))
+        XCTAssertFalse(condition.isSatisfied(state: state(), now: date(day: 22, hour: 8, minute: 0)))
+    }
+
+    func testWeeklyScheduleWrappingMidnightUsesStartDay() {
+        let condition = TriggerCondition.weeklySchedule(
+            startMinutes: 22 * 60,
+            endMinutes: 6 * 60,
+            weekdays: [.monday]
+        )
+
+        XCTAssertTrue(condition.isSatisfied(state: state(), now: date(day: 22, hour: 23, minute: 0)))
+        XCTAssertTrue(condition.isSatisfied(state: state(), now: date(day: 23, hour: 2, minute: 0)))
+        XCTAssertFalse(condition.isSatisfied(state: state(), now: date(day: 23, hour: 23, minute: 0)))
+        XCTAssertFalse(condition.isSatisfied(state: state(), now: date(day: 22, hour: 2, minute: 0)))
+    }
+
+    func testWeeklyScheduleCodableRoundTrip() throws {
+        let condition = TriggerCondition.weeklySchedule(
+            startMinutes: 9 * 60,
+            endMinutes: 17 * 60,
+            weekdays: [.monday, .wednesday, .friday]
+        )
+
+        let data = try JSONEncoder().encode(condition)
+        let decoded = try JSONDecoder().decode(TriggerCondition.self, from: data)
+
+        XCTAssertEqual(decoded, condition)
+    }
+
+    func testLegacyScheduleDefaultsToEveryDay() throws {
+        let json = """
+        { "schedule": { "startMinutes": 540, "endMinutes": 1020 } }
+        """
+
+        let decoded = try JSONDecoder().decode(TriggerCondition.self, from: Data(json.utf8))
+
+        XCTAssertEqual(decoded.scheduleWindow?.start, 540)
+        XCTAssertEqual(decoded.scheduleWindow?.end, 1020)
+        XCTAssertEqual(decoded.scheduleWeekdays, ScheduleWeekday.everyDay)
     }
 
     // MARK: - System load
