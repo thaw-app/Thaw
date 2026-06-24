@@ -4493,7 +4493,7 @@
         }
       }
     },
-    "Another enabled trigger also targets this item; they may fight over showing and hiding it." : {
+    "Another enabled trigger also targets this item. Priority runs top to bottom; the first active trigger wins." : {
 
     },
     "Appearance" : {
@@ -11450,6 +11450,9 @@
     "Click menu bar items on your behalf, such as when using the search bar." : {
 
     },
+    "Collapse trigger" : {
+
+    },
     "Columns" : {
       "comment" : "A label displayed above a stepper that lets the user select the number of columns in the grid layout.",
       "localizations" : {
@@ -15286,6 +15289,9 @@
         }
       }
     },
+    "Drag to change trigger priority" : {
+
+    },
     "Due to a bug in a previous version of the app, the data for %@'s menu bar sections was corrupted and had to be reset." : {
       "comment" : "Text in an alert that informs the user that the preferred positions of some menu bar controls have been reset because they were corrupted.",
       "localizations" : {
@@ -17671,6 +17677,9 @@
           }
         }
       }
+    },
+    "Expand trigger" : {
+
     },
     "Experimental" : {
 
@@ -24371,9 +24380,6 @@
         }
       }
     },
-    "Live status of this trigger" : {
-
-    },
     "Live System State" : {
 
     },
@@ -27128,6 +27134,12 @@
           }
         }
       }
+    },
+    "Move trigger down" : {
+
+    },
+    "Move trigger up" : {
+
     },
     "Move up" : {
       "comment" : "Accessibility label for the up-chevron button that reorders a row to a higher position in a list.",
@@ -30211,6 +30223,9 @@
       }
     },
     "Otherwise hide in" : {
+
+    },
+    "Overridden by %@. Move this trigger above them to give it priority." : {
 
     },
     "Page %lld of %lld" : {
@@ -43397,6 +43412,12 @@
       "comment" : "Description of the hotkeys and automation onboarding slide."
     },
     "Trigger Feature Flags" : {
+
+    },
+    "Trigger list" : {
+
+    },
+    "Trigger list view" : {
 
     },
     "Triggers" : {

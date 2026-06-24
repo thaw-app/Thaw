@@ -8,6 +8,16 @@
 
 import SwiftUI
 
+private extension MenuBarSection.Name {
+    var layoutDisplayString: String {
+        switch self {
+        case .visible: "Visible Bar"
+        case .hidden: "Hidden Bar"
+        case .alwaysHidden: "Always-Hidden Bar"
+        }
+    }
+}
+
 struct MenuBarLayoutSettingsPane: View {
     @EnvironmentObject var appState: AppState
     @ObservedObject var itemManager: MenuBarItemManager
@@ -195,7 +205,7 @@ struct MenuBarLayoutSettingsPane: View {
             section.isEnabled
         {
             VStack(alignment: .leading) {
-                Text(name.localized)
+                Text(name.layoutDisplayString)
                     .font(.headline)
                     .padding(.leading, 8)
 

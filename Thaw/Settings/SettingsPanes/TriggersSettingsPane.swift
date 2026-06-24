@@ -8,6 +8,7 @@
 
 import AppKit
 import SwiftUI
+import UniformTypeIdentifiers
 
 // MARK: - Option value types
 
@@ -26,32 +27,100 @@ struct TriggerAppOption: Hashable {
     let name: String
 }
 
-/// The live status of a trigger, shown as a small badge in its row.
-enum TriggerLiveStatus {
-    /// The trigger is turned off.
-    case disabled
-    /// The trigger is on, but its condition's feature flag is off.
-    case inactive
-    /// The condition is currently met; the item should be revealed.
-    case revealing
-    /// The condition is not met; the item is (being) hidden.
-    case hidden
+private enum TriggerListDisplayMode: String, CaseIterable, Identifiable {
+    case expanded
+    case compact
+
+    var id: Self {
+        self
+    }
 
     var label: String {
         switch self {
-        case .disabled: "Off"
+        case .expanded: "Expanded"
+        case .compact: "Compact"
+        }
+    }
+}
+
+private enum TriggerDropIndicatorPlacement {
+    case above
+    case below
+}
+
+private struct TriggerDropIndicator: Equatable {
+    let targetID: UUID
+    let placement: TriggerDropIndicatorPlacement
+}
+
+private extension MenuBarSection.Name {
+    var triggerPickerDisplayString: String {
+        switch self {
+        case .visible: "Visible Bar"
+        case .hidden: "Hidden Bar"
+        case .alwaysHidden: "Always-Hidden Bar"
+        }
+    }
+}
+
+private extension MenuBarItemTriggerRuntimeStatus {
+    var label: String {
+        switch self {
+        case .off: "Off"
         case .inactive: "Inactive"
-        case .revealing: "Active"
-        case .hidden: "Idle"
+        case .settling: "Settling"
+        case .moving: "Moving"
+        case .active: "Active"
+        case .idle: "Idle"
+        case .pending: "Pending"
+        case .overridden: "Overridden"
+        case .deferred: "Deferred"
+        case .unavailable: "Unavailable"
+        case .failed: "Failed"
         }
     }
 
     var color: Color {
         switch self {
-        case .disabled: .secondary
+        case .off: .secondary
         case .inactive: .orange
-        case .revealing: .green
-        case .hidden: .secondary
+        case .settling, .pending: .yellow
+        case .moving: .blue
+        case .active: .green
+        case .idle: .secondary
+        case .overridden, .deferred, .unavailable: .orange
+        case .failed: .red
+        }
+    }
+
+    var helpText: String {
+        switch self {
+        case .off:
+            "This trigger is turned off."
+        case .inactive:
+            "A required trigger source is disabled in Developer settings."
+        case .settling:
+            "The condition changed and is waiting for its settle delay before moving the item."
+        case .moving:
+            "The trigger has queued or started the menu bar item move."
+        case .active:
+            "The reveal decision was applied."
+        case .idle:
+            "No reveal is currently applied."
+        case .pending:
+            "The condition is true, but no move has been queued yet."
+        case let .overridden(names):
+            if names.isEmpty {
+                "A higher-priority trigger currently owns this item."
+            } else {
+                "Overridden by \(names.joined(separator: ", "))."
+            }
+        case .deferred:
+            "The move was deferred because another layout operation is in progress."
+        case .unavailable:
+            "The target item or required menu bar controls are not available."
+        case .failed:
+            "The item move was attempted but failed."
         }
     }
 }
@@ -69,11 +138,10 @@ struct TriggersSettingsPane: View {
 
     @State private var itemOptions: [TriggerItemOption] = []
     @State private var appOptions: [TriggerAppOption] = []
-
-    /// Bumped on a timer to recompute the live status indicators.
-    @State private var liveTick = 0
-
-    private let liveTimer = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
+    @State private var draggedTriggerID: UUID?
+    @State private var dropIndicator: TriggerDropIndicator?
+    @State private var listDisplayMode: TriggerListDisplayMode = .expanded
+    @State private var expandedCompactTriggerIDs = Set<UUID>()
 
     /// Composite key ("name-<id>" / "text-<id>") of the focused text field.
     @FocusState private var focusedField: String?
@@ -91,11 +159,14 @@ struct TriggersSettingsPane: View {
             if manager.triggers.isEmpty {
                 emptyState
             } else {
+                listDisplayControls
+
                 let conflicts = conflictingItemIdentifiers()
                 let kinds = enabledKinds()
-                ForEach($manager.triggers) { $trigger in
+                ForEach(Array(manager.triggers.enumerated()), id: \.element.id) { index, trigger in
+                    let isCompactMode = listDisplayMode == .compact
                     TriggerRow(
-                        trigger: $trigger,
+                        trigger: triggerBinding(for: trigger.id),
                         itemOptions: itemOptions,
                         appOptions: appOptions,
                         enabledKinds: kinds,
@@ -103,12 +174,36 @@ struct TriggersSettingsPane: View {
                         invertEnabled: flags.isEnabled(.invertAction),
                         advancedEnabled: flags.isEnabled(.advancedOptions),
                         conditionActive: allConditionsActive(trigger),
-                        liveStatus: liveStatus(for: trigger),
+                        liveStatus: manager.runtimeStatus(for: trigger),
                         hasConflict: trigger.allItemIdentifiers.contains { conflicts.contains($0) },
+                        priorityNumber: index + 1,
+                        canMoveUp: index > 0,
+                        canMoveDown: index < manager.triggers.count - 1,
+                        onMoveUp: { manager.moveTrigger(from: index, to: index - 1) },
+                        onMoveDown: { manager.moveTrigger(from: index, to: index + 1) },
+                        allowsCollapseToggle: isCompactMode,
+                        isCollapsed: isCompactMode && !expandedCompactTriggerIDs.contains(trigger.id),
+                        isDragging: draggedTriggerID == trigger.id,
+                        dropIndicatorPlacement: dropIndicator?.targetID == trigger.id ? dropIndicator?.placement : nil,
+                        onToggleCollapsedExpansion: { toggleCompactExpansion(for: trigger.id) },
+                        dragProvider: {
+                            draggedTriggerID = trigger.id
+                            dropIndicator = nil
+                            return NSItemProvider(object: trigger.id.uuidString as NSString)
+                        },
                         currentCoordinate: { manager.systemMonitor.currentCoordinate },
                         captureReference: { await manager.captureReferenceHash(forItemIdentifier: $0) },
                         focusedField: $focusedField,
                         onDelete: { manager.remove(id: trigger.id) }
+                    )
+                    .onDrop(
+                        of: [.plainText],
+                        delegate: TriggerPriorityDropDelegate(
+                            targetID: trigger.id,
+                            manager: manager,
+                            draggedTriggerID: $draggedTriggerID,
+                            dropIndicator: $dropIndicator
+                        )
                     )
                 }
             }
@@ -124,19 +219,11 @@ struct TriggersSettingsPane: View {
         .onReceive(itemManager.$itemCache) { _ in
             refreshItemOptions()
         }
-        .onReceive(liveTimer) { _ in
-            liveTick &+= 1
+        .onChange(of: listDisplayMode) { _, newValue in
+            if newValue == .expanded {
+                expandedCompactTriggerIDs.removeAll()
+            }
         }
-    }
-
-    // MARK: Live status
-
-    /// The current live status of a trigger, recomputed on the live timer.
-    private func liveStatus(for trigger: MenuBarItemTrigger) -> TriggerLiveStatus {
-        _ = liveTick // re-read on each tick
-        guard trigger.isEnabled else { return .disabled }
-        guard allConditionsActive(trigger) else { return .inactive }
-        return manager.shouldRevealNow(trigger) ? .revealing : .hidden
     }
 
     /// Item identifiers targeted by more than one enabled trigger.
@@ -148,6 +235,17 @@ struct TriggersSettingsPane: View {
             }
         }
         return Set(counts.filter { $0.value > 1 }.keys)
+    }
+
+    private func triggerBinding(for id: UUID) -> Binding<MenuBarItemTrigger> {
+        Binding(
+            get: {
+                manager.triggers.first(where: { $0.id == id }) ?? MenuBarItemTrigger(id: id)
+            },
+            set: { updated in
+                manager.update(updated)
+            }
+        )
     }
 
     // MARK: Available condition kinds
@@ -248,6 +346,27 @@ struct TriggersSettingsPane: View {
         }
     }
 
+    private var listDisplayControls: some View {
+        IceSection(options: [.isBordered]) {
+            HStack(spacing: 12) {
+                Text("Trigger list")
+                    .font(.headline)
+
+                Spacer(minLength: 12)
+
+                Picker("Trigger list view", selection: $listDisplayMode) {
+                    ForEach(TriggerListDisplayMode.allCases) { mode in
+                        Text(mode.label).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .fixedSize()
+            }
+            .padding(8)
+        }
+    }
+
     private var addButton: some View {
         Button {
             addTrigger()
@@ -268,6 +387,59 @@ struct TriggersSettingsPane: View {
         )
         manager.add(trigger)
     }
+
+    private func toggleCompactExpansion(for id: UUID) {
+        if expandedCompactTriggerIDs.contains(id) {
+            expandedCompactTriggerIDs.remove(id)
+        } else {
+            expandedCompactTriggerIDs.insert(id)
+        }
+    }
+}
+
+// MARK: - Trigger Priority Reordering
+
+private struct TriggerPriorityDropDelegate: DropDelegate {
+    let targetID: UUID
+    let manager: MenuBarItemTriggersManager
+    @Binding var draggedTriggerID: UUID?
+    @Binding var dropIndicator: TriggerDropIndicator?
+
+    func dropEntered(info _: DropInfo) {
+        guard let draggedTriggerID, draggedTriggerID != targetID else { return }
+        updateDropIndicator(for: draggedTriggerID)
+        manager.moveTrigger(id: draggedTriggerID, before: targetID)
+    }
+
+    func dropUpdated(info _: DropInfo) -> DropProposal? {
+        DropProposal(operation: .move)
+    }
+
+    func performDrop(info _: DropInfo) -> Bool {
+        draggedTriggerID = nil
+        dropIndicator = nil
+        return true
+    }
+
+    func dropExited(info _: DropInfo) {
+        if dropIndicator?.targetID == targetID {
+            dropIndicator = nil
+        }
+    }
+
+    private func updateDropIndicator(for draggedTriggerID: UUID) {
+        guard
+            let sourceIndex = manager.triggers.firstIndex(where: { $0.id == draggedTriggerID }),
+            let targetIndex = manager.triggers.firstIndex(where: { $0.id == targetID }),
+            sourceIndex != targetIndex
+        else {
+            dropIndicator = nil
+            return
+        }
+
+        let placement: TriggerDropIndicatorPlacement = sourceIndex < targetIndex ? .below : .above
+        dropIndicator = TriggerDropIndicator(targetID: targetID, placement: placement)
+    }
 }
 
 // MARK: - TriggerRow
@@ -282,8 +454,19 @@ private struct TriggerRow: View {
     let invertEnabled: Bool
     let advancedEnabled: Bool
     let conditionActive: Bool
-    let liveStatus: TriggerLiveStatus
+    let liveStatus: MenuBarItemTriggerRuntimeStatus
     let hasConflict: Bool
+    let priorityNumber: Int
+    let canMoveUp: Bool
+    let canMoveDown: Bool
+    let onMoveUp: () -> Void
+    let onMoveDown: () -> Void
+    let allowsCollapseToggle: Bool
+    let isCollapsed: Bool
+    let isDragging: Bool
+    let dropIndicatorPlacement: TriggerDropIndicatorPlacement?
+    let onToggleCollapsedExpansion: () -> Void
+    let dragProvider: () -> NSItemProvider
     let currentCoordinate: () -> (latitude: Double, longitude: Double)?
     let captureReference: (String) async -> UInt64?
     var focusedField: FocusState<String?>.Binding
@@ -308,36 +491,93 @@ private struct TriggerRow: View {
         !trigger.itemIdentifier.isEmpty && !itemOptions.contains { $0.id == trigger.itemIdentifier }
     }
 
+    private var overriddenNames: [String] {
+        if case let .overridden(names) = liveStatus {
+            return names
+        }
+        return []
+    }
+
     var body: some View {
+        if isCollapsed {
+            rowWithDropIndicator
+                .contentShape(RoundedRectangle(cornerRadius: 10))
+                .onDrag(dragProvider) {
+                    dragPreview
+                }
+        } else {
+            rowWithDropIndicator
+        }
+    }
+
+    private var rowWithDropIndicator: some View {
+        VStack(spacing: 4) {
+            if dropIndicatorPlacement == .above {
+                dropIndicatorLine
+            }
+
+            rowContent
+
+            if dropIndicatorPlacement == .below {
+                dropIndicatorLine
+            }
+        }
+    }
+
+    private var rowContent: some View {
         IceSection(options: [.isBordered]) {
             VStack(alignment: .leading, spacing: 12) {
                 header
-                Divider()
-                itemPicker
-                conditionsSection
-                if trigger.isEnabled, !conditionActive {
-                    inactiveConditionWarning
-                }
-                if hasConflict {
-                    conflictWarning
-                }
-                sectionPickers
-                if invertEnabled {
-                    Toggle("Hide the item while the condition is met (invert)", isOn: $trigger.invert)
-                        .toggleStyle(.switch)
-                }
-                if advancedEnabled {
-                    advancedOptions
+                if !isCollapsed {
+                    Divider()
+                    itemPicker
+                    conditionsSection
+                    if trigger.isEnabled, !conditionActive {
+                        inactiveConditionWarning
+                    }
+                    if hasConflict {
+                        conflictWarning
+                    }
+                    if !overriddenNames.isEmpty {
+                        overriddenWarning(names: overriddenNames)
+                    }
+                    sectionPickers
+                    if invertEnabled {
+                        Toggle("Hide the item while the condition is met (invert)", isOn: $trigger.invert)
+                            .toggleStyle(.switch)
+                    }
+                    if advancedEnabled {
+                        advancedOptions
+                    }
                 }
             }
-            .padding(8)
+            .padding(isCollapsed ? 6 : 8)
         }
+        .overlay {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(isDragging ? Color.orange : .clear, lineWidth: 2)
+        }
+        .animation(.easeInOut(duration: 0.12), value: isDragging)
+    }
+
+    private var dropIndicatorLine: some View {
+        Capsule()
+            .fill(Color.orange)
+            .frame(height: 3)
+            .padding(.horizontal, 12)
+            .shadow(color: .orange.opacity(0.45), radius: 4)
     }
 
     // MARK: Header
 
     private var header: some View {
         HStack(spacing: 8) {
+            priorityControls
+
+            if allowsCollapseToggle {
+                compactExpansionButton
+            }
+
             CommitTextField(
                 title: "Trigger name",
                 prompt: trigger.autoTitle,
@@ -360,6 +600,107 @@ private struct TriggerRow: View {
             .buttonStyle(.borderless)
             .help("Delete this trigger")
         }
+    }
+
+    private var compactExpansionButton: some View {
+        Button {
+            onToggleCollapsedExpansion()
+        } label: {
+            Image(systemName: isCollapsed ? "chevron.right" : "chevron.down")
+                .frame(width: 14)
+        }
+        .buttonStyle(.borderless)
+        .help(isCollapsed ? "Expand trigger" : "Collapse trigger")
+    }
+
+    @ViewBuilder
+    private var priorityControls: some View {
+        if isCollapsed {
+            priorityControlsContent
+        } else {
+            priorityControlsContent
+                .onDrag(dragProvider) {
+                    dragPreview
+                }
+        }
+    }
+
+    private var priorityControlsContent: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "line.3.horizontal")
+                .foregroundStyle(.secondary)
+                .help("Drag to change trigger priority")
+
+            Text(verbatim: "\(priorityNumber)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .monospacedDigit()
+                .frame(minWidth: 14)
+
+            VStack(spacing: 0) {
+                Button {
+                    onMoveUp()
+                } label: {
+                    Image(systemName: "chevron.up")
+                }
+                .disabled(!canMoveUp)
+                .help("Move trigger up")
+
+                Button {
+                    onMoveDown()
+                } label: {
+                    Image(systemName: "chevron.down")
+                }
+                .disabled(!canMoveDown)
+                .help("Move trigger down")
+            }
+            .buttonStyle(.borderless)
+            .controlSize(.mini)
+        }
+        .fixedSize()
+    }
+
+    private var dragPreview: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "line.3.horizontal")
+                .foregroundStyle(.secondary)
+
+            Text(verbatim: "\(priorityNumber)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .monospacedDigit()
+                .frame(minWidth: 14)
+
+            Text(trigger.displayName)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            statusBadge
+
+            dragPreviewToggle
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .frame(width: 560, alignment: .leading)
+        .background(.regularMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(.secondary.opacity(0.25))
+        }
+        .shadow(color: .black.opacity(0.18), radius: 14, y: 6)
+    }
+
+    private var dragPreviewToggle: some View {
+        ZStack(alignment: trigger.isEnabled ? .trailing : .leading) {
+            Capsule()
+                .fill(trigger.isEnabled ? Color.accentColor : Color.secondary.opacity(0.25))
+
+            Circle()
+                .fill(.white)
+                .padding(2)
+        }
+        .frame(width: 40, height: 22)
     }
 
     private var advancedOptions: some View {
@@ -447,7 +788,7 @@ private struct TriggerRow: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
-        .help("Live status of this trigger")
+        .help(liveStatus.helpText)
         .fixedSize()
     }
 
@@ -565,7 +906,19 @@ private struct TriggerRow: View {
         HStack(alignment: .firstTextBaseline, spacing: 6) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .foregroundStyle(.orange)
-            Text("Another enabled trigger also targets this item; they may fight over showing and hiding it.")
+            Text("Another enabled trigger also targets this item. Priority runs top to bottom; the first active trigger wins.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func overriddenWarning(names: [String]) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Image(systemName: "arrow.up.circle.fill")
+                .foregroundStyle(.orange)
+            Text("Overridden by \(names.joined(separator: ", ")). Move this trigger above them to give it priority.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -611,12 +964,12 @@ private struct TriggerRow: View {
         Group {
             IcePicker("Show in", selection: $trigger.revealSection) {
                 ForEach(MenuBarSection.Name.allCases, id: \.self) { section in
-                    Text(section.displayString).tag(section)
+                    Text(section.triggerPickerDisplayString).tag(section)
                 }
             }
             IcePicker("Otherwise hide in", selection: $trigger.hideSection) {
                 ForEach(MenuBarSection.Name.allCases, id: \.self) { section in
-                    Text(section.displayString).tag(section)
+                    Text(section.triggerPickerDisplayString).tag(section)
                 }
             }
         }

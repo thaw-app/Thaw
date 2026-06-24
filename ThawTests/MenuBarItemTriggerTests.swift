@@ -364,6 +364,135 @@ final class MenuBarItemTriggerTests: XCTestCase {
     }
 
     @MainActor
+    func testRuntimeStatusForDisabledTrigger() {
+        let manager = MenuBarItemTriggersManager()
+        let trigger = MenuBarItemTrigger(
+            isEnabled: false,
+            itemIdentifier: "com.example.StatusItem",
+            condition: .onACPower
+        )
+
+        XCTAssertEqual(manager.runtimeStatus(for: trigger), .off)
+    }
+
+    @MainActor
+    func testRuntimeStatusForUnappliedRevealDecision() {
+        let manager = MenuBarItemTriggersManager()
+        let trigger = MenuBarItemTrigger(
+            itemIdentifier: "com.example.StatusItem",
+            condition: .onACPower
+        )
+
+        XCTAssertEqual(manager.runtimeStatus(for: trigger), .pending)
+    }
+
+    @MainActor
+    func testRuntimeStatusForFalseCondition() {
+        let manager = MenuBarItemTriggersManager()
+        let trigger = MenuBarItemTrigger(
+            itemIdentifier: "com.example.StatusItem",
+            condition: .batteryBelow(percentage: 20)
+        )
+
+        XCTAssertEqual(manager.runtimeStatus(for: trigger), .idle)
+    }
+
+    @MainActor
+    func testPriorityPlanLetsLowerMetTriggerWinWhenHigherTriggerIsUnmet() {
+        let manager = MenuBarItemTriggersManager()
+        let higher = MenuBarItemTrigger(
+            name: "Battery low",
+            itemIdentifier: "battery-item",
+            condition: .batteryBelow(percentage: 75)
+        )
+        let lower = MenuBarItemTrigger(
+            name: "On AC",
+            itemIdentifier: "battery-item",
+            condition: .onACPower
+        )
+        manager.triggers = [higher, lower]
+
+        let plan = manager.priorityPlan(
+            for: state(battery: 80, onAC: true),
+            presentIdentifiers: ["battery-item"]
+        )
+
+        XCTAssertNil(plan.actions[higher.id])
+        XCTAssertEqual(
+            plan.actions[lower.id],
+            MenuBarItemTriggersManager.TriggerPriorityAction(reveal: true, identifiers: ["battery-item"])
+        )
+    }
+
+    @MainActor
+    func testPriorityPlanMarksLowerMetTriggerOverriddenByHigherMetTrigger() {
+        let manager = MenuBarItemTriggersManager()
+        let higher = MenuBarItemTrigger(
+            name: "Top trigger",
+            itemIdentifier: "battery-item",
+            condition: .onACPower
+        )
+        let lower = MenuBarItemTrigger(
+            name: "Lower trigger",
+            itemIdentifier: "battery-item",
+            condition: .onACPower
+        )
+        manager.triggers = [higher, lower]
+
+        let plan = manager.priorityPlan(
+            for: state(onAC: true),
+            presentIdentifiers: ["battery-item"]
+        )
+
+        XCTAssertEqual(
+            plan.actions[higher.id],
+            MenuBarItemTriggersManager.TriggerPriorityAction(reveal: true, identifiers: ["battery-item"])
+        )
+        XCTAssertNil(plan.actions[lower.id])
+        XCTAssertEqual(plan.overriddenBy[lower.id], ["Top trigger"])
+    }
+
+    @MainActor
+    func testPriorityPlanUsesHighestTriggerAsFallbackWhenNoneAreMet() {
+        let manager = MenuBarItemTriggersManager()
+        let higher = MenuBarItemTrigger(
+            name: "Battery below 75",
+            itemIdentifier: "battery-item",
+            condition: .batteryBelow(percentage: 75)
+        )
+        let lower = MenuBarItemTrigger(
+            name: "Battery below 50",
+            itemIdentifier: "battery-item",
+            condition: .batteryBelow(percentage: 50)
+        )
+        manager.triggers = [higher, lower]
+
+        let plan = manager.priorityPlan(
+            for: state(battery: 80),
+            presentIdentifiers: ["battery-item"]
+        )
+
+        XCTAssertEqual(
+            plan.actions[higher.id],
+            MenuBarItemTriggersManager.TriggerPriorityAction(reveal: false, identifiers: ["battery-item"])
+        )
+        XCTAssertNil(plan.actions[lower.id])
+    }
+
+    @MainActor
+    func testMoveTriggerReordersPriority() {
+        let manager = MenuBarItemTriggersManager()
+        let first = MenuBarItemTrigger(name: "First")
+        let second = MenuBarItemTrigger(name: "Second")
+        let third = MenuBarItemTrigger(name: "Third")
+        manager.triggers = [first, second, third]
+
+        manager.moveTrigger(id: third.id, before: first.id)
+
+        XCTAssertEqual(manager.triggers.map(\.id), [third.id, first.id, second.id])
+    }
+
+    @MainActor
     func testDisableAllFeatureFlags() {
         let previous = Defaults.stringArray(forKey: .triggerFeatureFlags)
         defer {
