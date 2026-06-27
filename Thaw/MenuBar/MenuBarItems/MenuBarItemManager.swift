@@ -3366,13 +3366,16 @@ extension MenuBarItemManager {
         lastMoveOperationTimestamp = .now
         // Skip the warp when the target is offscreen (negative-X items in
         // hidden/always-hidden on notch displays). CGWarpMouseCursorPosition
-        // clamps to the display's leftmost edge, which sits under the Apple
-        // menu, and the resulting tracking events then route stray clicks
-        // there. The 20ms eventSleep that follows the warp is only needed
-        // when slow apps have to register the tracking events before the
-        // mouseDown; irrelevant offscreen.
+        // clamps to the target display's leftmost edge, which sits under the
+        // Apple menu, and the resulting tracking events then route stray
+        // clicks there. The 20ms eventSleep that follows the warp is only
+        // needed when slow apps have to register the tracking events before
+        // the mouseDown; irrelevant offscreen.
         let warpPoint = targetPoints.start
-        let warpIsOnScreen = NSScreen.screens.contains { $0.frame.contains(warpPoint) }
+        let warpIsOnScreen = MouseHelpers.isCoreGraphicsPoint(
+            warpPoint,
+            onDisplay: displayID
+        )
         if shouldProceed?() == false {
             MenuBarItemManager.diagLog.debug("postMoveEvents: cancelled before cursor warp because caller state changed")
             throw EventError.cannotComplete
@@ -6352,9 +6355,18 @@ extension MenuBarItemManager {
         let isNotchedDisplay = activeScreen?.hasNotch == true && !useLCSOnNotched
 
         // Hide cursor for the entire profile apply to avoid visual jitter.
-        let savedCursorPosition = NSEvent.mouseLocation
+        // Save the pointer in CoreGraphics coordinates, matching
+        // CGWarpMouseCursorPosition. AppKit coordinates are fragile across
+        // external display layouts because display origins can be offset or
+        // negative.
+        let savedCursorPosition = MouseHelpers.locationCoreGraphics
         MouseHelpers.hideCursor(watchdogTimeout: .seconds(30))
-        defer { MouseHelpers.showCursor() }
+        defer {
+            if let savedCursorPosition {
+                MouseHelpers.warpCursor(to: savedCursorPosition)
+            }
+            MouseHelpers.showCursor()
+        }
 
         if isNotchedDisplay {
             // MARK: Phase 6a: full-sort execution (notched)
@@ -6806,14 +6818,6 @@ extension MenuBarItemManager {
         }
 
         // MARK: Phase 7: finalize (cursor, snapshot, cache, UI refresh)
-
-        // Restore cursor to its original position.
-        let screen = NSScreen.screens.first(where: { $0.frame.contains(savedCursorPosition) })
-            ?? NSScreen.main
-        if let screen {
-            let cgY = screen.frame.origin.y + screen.frame.height - savedCursorPosition.y
-            MouseHelpers.warpCursor(to: CGPoint(x: savedCursorPosition.x, y: cgY))
-        }
 
         // Re-fetch items after moves and update the snapshot so the
         // late-arrival detection doesn't re-trigger for items we just sorted.
