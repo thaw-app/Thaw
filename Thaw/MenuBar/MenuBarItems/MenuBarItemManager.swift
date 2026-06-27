@@ -2899,11 +2899,16 @@ extension MenuBarItemManager {
         event: CGEvent,
         item: MenuBarItem,
         timeout: Duration,
-        repeating count: Int
+        repeating count: Int,
+        manageCursorVisibility: Bool = true
     ) async throws {
-        MouseHelpers.hideCursor()
+        if manageCursorVisibility {
+            MouseHelpers.hideCursor()
+        }
         defer {
-            MouseHelpers.showCursor()
+            if manageCursorVisibility {
+                MouseHelpers.showCursor()
+            }
         }
 
         guard
@@ -2988,14 +2993,16 @@ extension MenuBarItemManager {
         _ event: CGEvent,
         to item: MenuBarItem,
         timeout: Duration,
-        repeating count: Int = 1
+        repeating count: Int = 1,
+        manageCursorVisibility: Bool = true
     ) async throws {
         try await performEventContinuationOperation(
             EventContinuationKind.postEventBarrier,
             event: event,
             item: item,
             timeout: timeout,
-            repeating: count
+            repeating: count,
+            manageCursorVisibility: manageCursorVisibility
         )
     }
 
@@ -3015,14 +3022,16 @@ extension MenuBarItemManager {
         _ event: CGEvent,
         item: MenuBarItem,
         timeout: Duration,
-        repeating count: Int = 1
+        repeating count: Int = 1,
+        manageCursorVisibility: Bool = true
     ) async throws {
         try await performEventContinuationOperation(
             EventContinuationKind.scromble,
             event: event,
             item: item,
             timeout: timeout,
-            repeating: count
+            repeating: count,
+            manageCursorVisibility: manageCursorVisibility
         )
     }
 }
@@ -3250,11 +3259,16 @@ extension MenuBarItemManager {
     private nonisolated func waitForMoveEventResponse(
         from item: MenuBarItem,
         initialOrigin: CGPoint,
-        timeout: Duration
+        timeout: Duration,
+        manageCursorVisibility: Bool = true
     ) async throws -> CGPoint {
-        MouseHelpers.hideCursor()
+        if manageCursorVisibility {
+            MouseHelpers.hideCursor()
+        }
         defer {
-            MouseHelpers.showCursor()
+            if manageCursorVisibility {
+                MouseHelpers.showCursor()
+            }
         }
         let responseTask = Task.detached {
             while true {
@@ -3433,7 +3447,8 @@ extension MenuBarItemManager {
             try await scrombleEvent(
                 mouseDown,
                 item: item,
-                timeout: timeout
+                timeout: timeout,
+                manageCursorVisibility: managesCursorVisibility
             )
             if shouldProceed?() == false {
                 MenuBarItemManager.diagLog.debug("postMoveEvents: cancelled after mouseDown because caller state changed")
@@ -3442,7 +3457,8 @@ extension MenuBarItemManager {
             itemOrigin = try await waitForMoveEventResponse(
                 from: item,
                 initialOrigin: itemOrigin,
-                timeout: timeout
+                timeout: timeout,
+                manageCursorVisibility: managesCursorVisibility
             )
             if shouldProceed?() == false {
                 MenuBarItemManager.diagLog.debug("postMoveEvents: cancelled before mouseUp because caller state changed")
@@ -3452,12 +3468,14 @@ extension MenuBarItemManager {
                 mouseUp,
                 item: item,
                 timeout: timeout,
-                repeating: 2 // Double mouse up prevents invalid item state.
+                repeating: 2, // Double mouse up prevents invalid item state.
+                manageCursorVisibility: managesCursorVisibility
             )
             itemOrigin = try await waitForMoveEventResponse(
                 from: item,
                 initialOrigin: itemOrigin,
-                timeout: timeout
+                timeout: timeout,
+                manageCursorVisibility: managesCursorVisibility
             )
             timeout -= timeout / 4
         } catch {
@@ -3467,7 +3485,8 @@ extension MenuBarItemManager {
                     mouseUp,
                     item: item,
                     timeout: .milliseconds(100), // Fixed timeout for fallback.
-                    repeating: 2 // Double mouse up prevents invalid item state.
+                    repeating: 2, // Double mouse up prevents invalid item state.
+                    manageCursorVisibility: managesCursorVisibility
                 )
             } catch {
                 // Catch this for logging purposes only. We want to propagate
@@ -5132,15 +5151,27 @@ extension MenuBarItemManager {
                     """
                 )
                 do {
-                    try await move(item: item, to: destination, skipInputPause: true)
+                    let maxAttempts = item.sourcePID == nil ? 1 : 8
+                    try await move(
+                        item: item,
+                        to: destination,
+                        skipInputPause: true,
+                        maxMoveAttempts: maxAttempts
+                    )
                     pendingRelocations.removeValue(forKey: tagIdentifier)
                     pendingReturnDestinations.removeValue(forKey: tagIdentifier)
                     didRelocate = true
                 } catch {
+                    pendingRelocations[tagIdentifier] = waitForRelaunchValue(
+                        windowID: item.windowID,
+                        section: targetSection
+                    )
+                    persistPendingRelocations()
                     MenuBarItemManager.diagLog.error(
                         """
                         Failed to relocate \(item.logString) back to \
-                        \(targetSection.logString): \(error)
+                        \(targetSection.logString): \(error); marked \
+                        waitForRelaunch for current windowID
                         """
                     )
                 }
