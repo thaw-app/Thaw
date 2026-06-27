@@ -3335,9 +3335,10 @@ extension MenuBarItemManager {
 
         var itemOrigin = try await getCurrentBounds(for: item).origin
         let targetPoints = try await getTargetPoints(forMoving: item, to: destination, on: displayID)
-        // Capture mouse location only when this call owns the cursor warp.
-        // When called from move(), the outer move() handles the single warp
-        // at the end of all attempts so the cursor doesn't oscillate per attempt.
+        // Capture mouse location only when this call owns cursor visibility.
+        // When called from move(), the outer move() handles the single hide and
+        // restore around all attempts so retries cannot shorten the watchdog.
+        let managesCursorVisibility = warpCursorAfter
         let mouseLocation: CGPoint? = warpCursorAfter ? try getMouseLocation() : nil
         let source = try getEventSource()
 
@@ -3383,7 +3384,9 @@ extension MenuBarItemManager {
                 reason: "postMoveEvents start \(item.logString) -> \(destination.logString)"
             )
         }
-        MouseHelpers.hideCursor(watchdogTimeout: watchdogTimeout)
+        if managesCursorVisibility {
+            MouseHelpers.hideCursor(watchdogTimeout: watchdogTimeout)
+        }
         if warpIsOnScreen {
             await eventSleep(for: .milliseconds(20))
         }
@@ -3419,7 +3422,9 @@ extension MenuBarItemManager {
                     reason: "postMoveEvents restore \(item.logString)"
                 )
             }
-            MouseHelpers.showCursor()
+            if managesCursorVisibility {
+                MouseHelpers.showCursor()
+            }
             lastMoveOperationTimestamp = .now
             updateMoveOperationTimeout(timeout, for: item)
         }
@@ -3628,16 +3633,13 @@ extension MenuBarItemManager {
         // during a layout reset when items required multiple attempts).
         let mouseLocation = try getMouseLocation()
         // The default 1 s cursor-hide watchdog is too short for menu
-        // bar item moves: each item can take up to ~4 s across retries
-        // (8 attempts × ~500 ms timeout), and during a full layout pass
-        // many items move sequentially. When the watchdog fires partway
-        // through, the cursor is force-shown at the synthetic event's
-        // last cursorPosition (mid-display, per the offscreen-target
-        // override below in postMoveEvents) and the user sees a brief
-        // cursor flash. 10 s is long enough to cover any single move
-        // without giving up the safety net for genuinely stuck states.
+        // bar item moves. A reconnect can leave Control Center items
+        // slow to respond across all retry attempts; if the watchdog
+        // fires mid-drag, the visible cursor can appear at the synthetic
+        // offscreen drop coordinate clamped to the Apple-menu corner.
+        // Keep one outer watchdog that spans the real retry envelope.
         if hideCursorAcrossAttempts {
-            MouseHelpers.hideCursor(watchdogTimeout: watchdogTimeout ?? .seconds(10))
+            MouseHelpers.hideCursor(watchdogTimeout: watchdogTimeout ?? .seconds(30))
         }
         defer {
             MouseHelpers.warpCursor(
