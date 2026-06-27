@@ -8,10 +8,12 @@
 
 import CoreGraphics
 import Foundation
+import AppKit
 
 /// A namespace for mouse helper operations.
 enum MouseHelpers {
     private static let diagLog = DiagLog(category: "MouseHelpers")
+    private static let disableCursorWarpKey = "MouseHelpers.DisableCursorWarp"
     private static let cursorLock = DispatchQueue(label: "MouseHelpers.cursorLock")
     /// Protected by `cursorLock` — all accesses go through `cursorLock.sync`.
     private static nonisolated(unsafe) var cursorHideCount = 0
@@ -157,6 +159,38 @@ enum MouseHelpers {
         CGEvent(source: nil)?.location
     }
 
+    private static func formattedPoint(_ point: CGPoint?) -> String {
+        guard let point else { return "nil" }
+        return String(format: "(%.1f, %.1f)", point.x, point.y)
+    }
+
+    private static func formattedRect(_ rect: CGRect) -> String {
+        String(
+            format: "(x: %.1f, y: %.1f, w: %.1f, h: %.1f)",
+            rect.origin.x,
+            rect.origin.y,
+            rect.width,
+            rect.height
+        )
+    }
+
+    private static func screenSummary(for target: CGPoint) -> String {
+        let activeDisplayID = Bridging.getActiveMenuBarDisplayID()
+        return NSScreen.screens.map { screen in
+            let frame = screen.frame
+            let cgBounds = CGDisplayBounds(screen.displayID)
+            return """
+            id=\(screen.displayID)\
+            active=\(screen.displayID == activeDisplayID)\
+            frame=\(formattedRect(frame))\
+            cgBounds=\(formattedRect(cgBounds))\
+            frameContainsTarget=\(frame.contains(target))\
+            cgContainsTarget=\(cgBounds.contains(target))
+            """
+        }
+        .joined(separator: "; ")
+    }
+
     /// Hides the mouse cursor and increments the hide cursor count.
     static func hideCursor(watchdogTimeout: DispatchTimeInterval? = nil) {
         var shouldHide = false
@@ -239,10 +273,41 @@ enum MouseHelpers {
     ///
     /// - Parameter point: The point to move the cursor to in global
     ///   display coordinates.
-    static func warpCursor(to point: CGPoint) {
+    static func warpCursor(to point: CGPoint, reason: String = "unspecified") {
+        let beforeCG = locationCoreGraphics
+        let beforeAppKit = locationAppKit
+        let screenWithMouse = NSScreen.screenWithMouse?.displayID
+        let activeDisplayID = Bridging.getActiveMenuBarDisplayID()
+        let disableCursorWarp = UserDefaults.standard.bool(forKey: disableCursorWarpKey)
+
+        diagLog.info(
+            """
+            warpCursor request reason=\(reason) target=\(formattedPoint(point)) \
+            beforeCG=\(formattedPoint(beforeCG)) beforeAppKit=\(formattedPoint(beforeAppKit)) \
+            screenWithMouse=\(screenWithMouse.map(String.init) ?? "nil") \
+            activeDisplay=\(activeDisplayID.map(String.init) ?? "nil") \
+            disabledByDefault=\(disableCursorWarp) screens=[\(screenSummary(for: point))]
+            """
+        )
+
+        if disableCursorWarp {
+            diagLog.warning(
+                """
+                warpCursor skipped reason=\(reason) target=\(formattedPoint(point)) \
+                because defaults key \(disableCursorWarpKey) is true
+                """
+            )
+            return
+        }
+
         let result = CGWarpMouseCursorPosition(point)
         if result != .success {
-            diagLog.warning("CGWarpMouseCursorPosition failed (error: \(result.rawValue)), falling back to CGEvent mouseMoved")
+            diagLog.warning(
+                """
+                CGWarpMouseCursorPosition failed reason=\(reason) \
+                target=\(formattedPoint(point)) error=\(result.rawValue); falling back to CGEvent mouseMoved
+                """
+            )
             // Posting a mouseMoved event is more reliable than warp when a
             // menu is tracking the cursor — the event updates the cursor
             // position in the Window Server even if warp is blocked.
@@ -260,6 +325,14 @@ enum MouseHelpers {
             }
             event.post(tap: .cghidEventTap)
         }
+
+        diagLog.info(
+            """
+            warpCursor completed reason=\(reason) target=\(formattedPoint(point)) \
+            afterCG=\(formattedPoint(locationCoreGraphics)) afterAppKit=\(formattedPoint(locationAppKit)) \
+            result=\(result.rawValue)
+            """
+        )
     }
 
     /// Connects or disconnects the positions of the mouse and cursor.

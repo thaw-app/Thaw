@@ -3378,7 +3378,10 @@ extension MenuBarItemManager {
             throw EventError.cannotComplete
         }
         if warpIsOnScreen {
-            MouseHelpers.warpCursor(to: warpPoint)
+            MouseHelpers.warpCursor(
+                to: warpPoint,
+                reason: "postMoveEvents start \(item.logString) -> \(destination.logString)"
+            )
         }
         MouseHelpers.hideCursor(watchdogTimeout: watchdogTimeout)
         if warpIsOnScreen {
@@ -3411,7 +3414,10 @@ extension MenuBarItemManager {
         }
         defer {
             if let mouseLocation {
-                MouseHelpers.warpCursor(to: mouseLocation)
+                MouseHelpers.warpCursor(
+                    to: mouseLocation,
+                    reason: "postMoveEvents restore \(item.logString)"
+                )
             }
             MouseHelpers.showCursor()
             lastMoveOperationTimestamp = .now
@@ -3634,7 +3640,10 @@ extension MenuBarItemManager {
             MouseHelpers.hideCursor(watchdogTimeout: watchdogTimeout ?? .seconds(10))
         }
         defer {
-            MouseHelpers.warpCursor(to: mouseLocation)
+            MouseHelpers.warpCursor(
+                to: mouseLocation,
+                reason: "move restore \(item.logString) -> \(destination.logString)"
+            )
             if hideCursorAcrossAttempts {
                 MouseHelpers.showCursor()
             }
@@ -3798,14 +3807,20 @@ extension MenuBarItemManager {
 
         // Warp the cursor to the click point so the Window Server's hit-test
         // matches the event coordinates rather than the cursor's current position.
-        MouseHelpers.warpCursor(to: clickPoint)
+        MouseHelpers.warpCursor(
+            to: clickPoint,
+            reason: "postClickEvents target \(item.logString)"
+        )
         // Small delay to let the Window Server process the warp before posting
         // the event. Without this, the event can be routed using the cursor's
         // old position (e.g. the Apple menu) instead of the warped target.
         try await Task.sleep(for: .milliseconds(10))
         MouseHelpers.hideCursor()
         defer {
-            MouseHelpers.warpCursor(to: mouseLocation)
+            MouseHelpers.warpCursor(
+                to: mouseLocation,
+                reason: "postClickEvents restore \(item.logString)"
+            )
             MouseHelpers.showCursor()
         }
 
@@ -6812,7 +6827,10 @@ extension MenuBarItemManager {
             ?? NSScreen.main
         if let screen {
             let cgY = screen.frame.origin.y + screen.frame.height - savedCursorPosition.y
-            MouseHelpers.warpCursor(to: CGPoint(x: savedCursorPosition.x, y: cgY))
+            MouseHelpers.warpCursor(
+                to: CGPoint(x: savedCursorPosition.x, y: cgY),
+                reason: "applyProfileLayout final restore"
+            )
         }
 
         // Re-fetch items after moves and update the snapshot so the
