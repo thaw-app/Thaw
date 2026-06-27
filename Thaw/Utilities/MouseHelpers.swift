@@ -157,27 +157,6 @@ enum MouseHelpers {
         CGEvent(source: nil)?.location
     }
 
-    /// Returns whether a CoreGraphics-space point is inside the supplied
-    /// display bounds.
-    static func isCoreGraphicsPoint(
-        _ point: CGPoint,
-        insideDisplayBounds displayBounds: CGRect
-    ) -> Bool {
-        guard !displayBounds.isNull, !displayBounds.isEmpty else {
-            return false
-        }
-        return displayBounds.contains(point)
-    }
-
-    /// Returns whether a CoreGraphics-space point is inside the bounds of the
-    /// given display.
-    static func isCoreGraphicsPoint(
-        _ point: CGPoint,
-        onDisplay displayID: CGDirectDisplayID
-    ) -> Bool {
-        isCoreGraphicsPoint(point, insideDisplayBounds: CGDisplayBounds(displayID))
-    }
-
     /// Hides the mouse cursor and increments the hide cursor count.
     static func hideCursor(watchdogTimeout: DispatchTimeInterval? = nil) {
         var shouldHide = false

@@ -3366,16 +3366,13 @@ extension MenuBarItemManager {
         lastMoveOperationTimestamp = .now
         // Skip the warp when the target is offscreen (negative-X items in
         // hidden/always-hidden on notch displays). CGWarpMouseCursorPosition
-        // clamps to the target display's leftmost edge, which sits under the
-        // Apple menu, and the resulting tracking events then route stray
-        // clicks there. The 20ms eventSleep that follows the warp is only
-        // needed when slow apps have to register the tracking events before
-        // the mouseDown; irrelevant offscreen.
+        // clamps to the display's leftmost edge, which sits under the Apple
+        // menu, and the resulting tracking events then route stray clicks
+        // there. The 20ms eventSleep that follows the warp is only needed
+        // when slow apps have to register the tracking events before the
+        // mouseDown; irrelevant offscreen.
         let warpPoint = targetPoints.start
-        let warpIsOnScreen = MouseHelpers.isCoreGraphicsPoint(
-            warpPoint,
-            onDisplay: displayID
-        )
+        let warpIsOnScreen = NSScreen.screens.contains { $0.frame.contains(warpPoint) }
         if shouldProceed?() == false {
             MenuBarItemManager.diagLog.debug("postMoveEvents: cancelled before cursor warp because caller state changed")
             throw EventError.cannotComplete
@@ -6355,18 +6352,8 @@ extension MenuBarItemManager {
         let isNotchedDisplay = activeScreen?.hasNotch == true && !useLCSOnNotched
 
         // Hide cursor for the entire profile apply to avoid visual jitter.
-        // Save the pointer in CoreGraphics coordinates, matching
-        // CGWarpMouseCursorPosition. AppKit coordinates are fragile across
-        // external display layouts because display origins can be offset or
-        // negative.
-        let savedCursorPosition = MouseHelpers.locationCoreGraphics
         MouseHelpers.hideCursor(watchdogTimeout: .seconds(30))
-        defer {
-            if let savedCursorPosition {
-                MouseHelpers.warpCursor(to: savedCursorPosition)
-            }
-            MouseHelpers.showCursor()
-        }
+        defer { MouseHelpers.showCursor() }
 
         if isNotchedDisplay {
             // MARK: Phase 6a: full-sort execution (notched)
