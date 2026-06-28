@@ -269,12 +269,6 @@ final class IceBarPanel: NSPanel {
             guard !Task.isCancelled else { return }
             await appState.itemManager.cacheItemsIfNeeded()
             guard !Task.isCancelled else { return }
-            if #available(macOS 27, *) {
-                if let section = await MainActor.run(body: { self?.currentSection }) {
-                    await appState.imageCache.prewarmConcealedImagesMacOS27(sections: [section])
-                }
-                guard !Task.isCancelled else { return }
-            }
             await appState.imageCache.updateCache()
         }
     }
@@ -465,8 +459,7 @@ private struct IceBarContentView: View {
     private var maxItemWidth: CGFloat {
         guard let maxHeight = itemMaxHeight, maxHeight > 0 else { return 0 }
         let widths = items.compactMap { item -> CGFloat? in
-            guard let cachedImage = imageCache.images[item.tag] else { return nil }
-            let image = cachedImage.nsImage
+            guard let image = image(for: item) else { return nil }
             guard image.size.height > 0 else { return image.size.width }
             let scale = thawBarGlyphScale(imageHeight: image.size.height, rowHeight: maxHeight)
             return image.size.width * scale
@@ -484,8 +477,7 @@ private struct IceBarContentView: View {
         return (0 ..< gridColumns).map { col in
             rows.compactMap { row in
                 guard col < row.count else { return nil }
-                guard let cachedImage = imageCache.images[row[col].tag] else { return nil }
-                let image = cachedImage.nsImage
+                guard let image = image(for: row[col]) else { return nil }
                 guard image.size.height > 0 else { return image.size.width }
                 let scale = thawBarGlyphScale(imageHeight: image.size.height, rowHeight: maxHeight)
                 return image.size.width * scale
@@ -521,6 +513,10 @@ private struct IceBarContentView: View {
         } else {
             RoundedRectangle(cornerRadius: contentHeight / 4, style: .continuous)
         }
+    }
+
+    private func image(for item: MenuBarItem) -> NSImage? {
+        imageCache.image(for: item.tag)?.nsImage
     }
 
     var body: some View {
@@ -858,10 +854,7 @@ private struct IceBarItemView: View {
     }
 
     private var image: NSImage? {
-        guard let cachedImage = imageCache.images[item.tag] else {
-            return nil
-        }
-        return cachedImage.nsImage
+        imageCache.image(for: item.tag)?.nsImage
     }
 
     private func targetSize(for image: NSImage) -> CGSize {

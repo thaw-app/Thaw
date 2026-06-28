@@ -130,6 +130,14 @@ enum MenuBarItemAXProvider {
                     accessibilityDescription: accessibilityDescription,
                     displayTitle: displayTitle
                 )
+                if isNativeOverflowChevronPlaceholder(
+                    namespace: namespace,
+                    identityTitle: identityTitle,
+                    displayTitle: displayTitle
+                ) {
+                    diagLog.debug("menuBarItems: skipping native overflow chevron placeholder title='\(identityTitle)' frame=\(frame)")
+                    continue
+                }
 
                 // Direct attribution: the owning process is the app that
                 // published this child (fall back to the element's own PID).
@@ -271,6 +279,23 @@ enum MenuBarItemAXProvider {
             .replacing(/#\s*[KMGTPE]?[Bb]/, with: "# B")
     }
 
+    /// macOS 27 can publish native menu-bar overflow chevrons as AX extras
+    /// under MenuBarAgent. They are not real status items, and managing them
+    /// makes the layout editor fill with `<` / `<<` placeholders.
+    static func isNativeOverflowChevronPlaceholder(
+        namespace: MenuBarItemTag.Namespace,
+        identityTitle: String,
+        displayTitle: String
+    ) -> Bool {
+        guard namespace == .menuBarAgent else { return false }
+
+        return [identityTitle, displayTitle].contains { title in
+            let glyphs = title.filter { !$0.isWhitespace }
+            guard !glyphs.isEmpty, glyphs.count <= 4 else { return false }
+            return glyphs.allSatisfy { NativeOverflowChevron.glyphs.contains($0) }
+        }
+    }
+
     private static func namespace(for app: NSRunningApplication) -> MenuBarItemTag.Namespace {
         namespace(forBundleIdentifier: app.bundleIdentifier, localizedName: app.localizedName)
     }
@@ -302,5 +327,12 @@ private extension String {
     /// Returns `self` when it contains non-whitespace characters, otherwise `nil`.
     var nonEmpty: String? {
         trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : self
+    }
+}
+
+@available(macOS 27, *)
+private extension MenuBarItemAXProvider {
+    enum NativeOverflowChevron {
+        static let glyphs = Set("<>‹›«»")
     }
 }
