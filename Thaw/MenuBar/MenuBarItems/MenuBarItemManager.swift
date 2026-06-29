@@ -2423,10 +2423,17 @@ extension MenuBarItemManager {
 
     /// Waits asynchronously for the user to pause input.
     private nonisolated func waitForUserToPauseInput() async throws {
+        // The pre-move input-pause window is configurable so users hit by repeated cursor
+        // "kidnapping" during menu-bar reordering can widen it. Reordering warps the real cursor,
+        // and a very short window lets warps slip through the micro-gaps between a user's own mouse
+        // moves when a churny app keeps changing its menu-bar items (see #750, #723, #736). The
+        // default preserves the previous 50 ms behaviour; override with:
+        //   defaults write com.stonerl.Thaw inputPauseThresholdMs -int <milliseconds>
+        let pauseMs = max(0, (UserDefaults.standard.object(forKey: "inputPauseThresholdMs") as? Int) ?? 50)
         let waitTask = Task {
             while true {
                 try Task.checkCancellation()
-                if hasUserPausedInput(for: .milliseconds(50)) {
+                if hasUserPausedInput(for: .milliseconds(pauseMs)) {
                     break
                 }
                 try await Task.sleep(for: .milliseconds(50))
