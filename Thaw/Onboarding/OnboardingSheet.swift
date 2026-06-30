@@ -225,7 +225,7 @@ struct OnboardingSheet: View {
 
             if !isLast {
                 Button("Skip") {
-                    withAnimation(.snappy) { currentSlide = slides.count - 1 }
+                    finishOnboarding()
                 }
                 .buttonStyle(.plain)
                 .font(.callout.weight(.medium))
