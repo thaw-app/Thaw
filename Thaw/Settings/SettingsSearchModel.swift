@@ -53,12 +53,13 @@ final class SettingsSearchModel: ObservableObject {
                 // Weight the title highest, then keywords, then the description.
                 // Lower weight values contribute less to the diff score, so a
                 // match in the title ranks above a match in the description.
-                var props = [FuseProp(entry.titleText, weight: 0.3)]
+                let weights = SearchWeights.settings
+                var props = [FuseProp(entry.titleText, weight: weights.title)]
                 if !entry.keywords.isEmpty {
-                    props.append(FuseProp(entry.keywords.joined(separator: " "), weight: 0.6))
+                    props.append(FuseProp(entry.keywords.joined(separator: " "), weight: weights.keywords))
                 }
                 if let descriptionText = entry.descriptionText {
-                    props.append(FuseProp(descriptionText, weight: 1.0))
+                    props.append(FuseProp(descriptionText, weight: weights.description))
                 }
                 return props
             }

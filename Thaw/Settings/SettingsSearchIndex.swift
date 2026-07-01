@@ -73,17 +73,10 @@ enum SettingsSearchIndex {
 
     /// Pure relevance sort: Fuse's `diffScore` is `0` for a perfect match and
     /// increases with worse matches, so the best result has the lowest score.
-    /// Extracted from the search pipeline so it can be unit-tested without
-    /// linking Ifrit into the test target.
+    /// Delegates to ``SearchRanker/sortedByRelevance(_:)``, the pipe shared
+    /// with menu bar item search, so the two surfaces can't drift apart.
     static func sortedByRelevance<T>(_ items: [(item: T, diffScore: Double)]) -> [T] {
-        items.sorted { lhs, rhs in
-            if lhs.diffScore != rhs.diffScore {
-                return lhs.diffScore < rhs.diffScore
-            }
-            // Tie-break on a stable key when the items are identifiable so
-            // equally-scored results don't shuffle between renders.
-            return false
-        }.map(\.item)
+        SearchRanker.sortedByRelevance(items)
     }
 
     // MARK: Pane Rows

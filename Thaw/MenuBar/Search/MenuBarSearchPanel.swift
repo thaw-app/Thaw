@@ -638,10 +638,9 @@ private struct MenuBarSearchContentView: View {
             let title: String
 
             var properties: [FuseProp] {
-                [FuseProp(title)]
+                [FuseProp(title, weight: SearchWeights.menuBarItem.title)]
             }
         }
-        typealias ScoredItem = (listItem: ListItem, score: Double)
 
         let advanced = itemManager.appState?.settings.advanced
         let orderedNames: [MenuBarSection.Name] = advanced?.searchSectionOrder ?? Array(MenuBarSection.Name.allCases)
@@ -700,16 +699,10 @@ private struct MenuBarSearchContentView: View {
             // Using weighted search via FuseProp
             let fuseResults = model.fuse.searchSync(model.searchText, in: selectableItems, by: \.properties)
 
-            model.displayedItems = fuseResults
-                .map { result in
-                    let item = selectableItems[result.index]
-                    let score = 1.0 - result.diffScore
-                    return ScoredItem(item.listItem, score)
-                }
-                .sorted { (lhs: ScoredItem, rhs: ScoredItem) -> Bool in
-                    lhs.score > rhs.score
-                }
-                .map(\.listItem)
+            let scored = fuseResults.map { result in
+                (item: selectableItems[result.index], diffScore: result.diffScore)
+            }
+            model.displayedItems = SearchRanker.sortedByRelevance(scored).map(\.listItem)
         }
     }
 
