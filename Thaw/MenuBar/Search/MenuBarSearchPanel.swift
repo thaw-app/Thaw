@@ -503,6 +503,7 @@ private struct MenuBarSearchContentView: View {
     @ViewBuilder
     private var searchField: some View {
         let promptText = Text("Search menu bar items…")
+        let fieldShape = Capsule(style: .continuous)
 
         VStack(spacing: 0) {
             HStack(spacing: 10) {
@@ -522,10 +523,15 @@ private struct MenuBarSearchContentView: View {
 
                 Spacer()
             }
-            .padding(15)
-
-            Divider()
-                .padding(.horizontal, 15)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 11)
+            .glassEffect(.regular.interactive(), in: fieldShape)
+            .overlay(
+                fieldShape.strokeBorder(.separator.opacity(searchFieldIsFocused ? 0.65 : 0.35), lineWidth: 0.5)
+            )
+            .padding(.horizontal, 14)
+            .padding(.top, 12)
+            .padding(.bottom, 10)
         }
     }
 

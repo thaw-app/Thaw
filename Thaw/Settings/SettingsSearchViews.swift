@@ -16,6 +16,8 @@ struct SettingsSearchField: View {
     @FocusState private var isFocused: Bool
 
     var body: some View {
+        let fieldShape = Capsule(style: .continuous)
+
         HStack(spacing: 8) {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 13, weight: .medium))
@@ -45,10 +47,10 @@ struct SettingsSearchField: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 7)
-        .background {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(.quaternary.opacity(isFocused ? 0.85 : 0.55))
-        }
+        .glassEffect(.regular.interactive(), in: fieldShape)
+        .overlay(
+            fieldShape.strokeBorder(.separator.opacity(isFocused ? 0.65 : 0.35), lineWidth: 0.5)
+        )
         .padding(.horizontal, 12)
         .padding(.top, 10)
         .padding(.bottom, 8)
