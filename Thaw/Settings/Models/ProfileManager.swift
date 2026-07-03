@@ -619,11 +619,10 @@ final class ProfileManager: ObservableObject {
         // macOS 27 stores section membership in SimpleItemHider, not the legacy
         // savedSectionOrder key. Mirror the curated cache snapshot so profiles
         // and `defaults read` reflect the full visible/hidden layout.
-        let savedSectionOrder: [String: [String]]
-        if #available(macOS 27, *) {
-            savedSectionOrder = itemOrder
+        let savedSectionOrder: [String: [String]] = if #available(macOS 27, *) {
+            itemOrder
         } else {
-            savedSectionOrder = persistedSectionOrder
+            persistedSectionOrder
         }
         let pinnedHiddenBundleIDs = UserDefaults.standard.array(
             forKey: "MenuBarItemManager.pinnedHiddenBundleIDs"

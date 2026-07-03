@@ -18,17 +18,10 @@ final class AdvancedSettings: ObservableObject {
     /// is enabled.
     @Published var enableAlwaysHiddenSection = Defaults.DefaultValue.enableAlwaysHiddenSection
 
-    /// The *effective* state of the always-hidden section. macOS 27 hides items
-    /// through the system MenuBarAgent, where hidden and always-hidden collapse
-    /// into one concealed bucket and can't be told apart — so the section is
-    /// force-disabled there regardless of the persisted preference (which is
-    /// kept intact for a downgrade to macOS 26). Route behavior through this, not
-    /// the raw ``enableAlwaysHiddenSection``, so a value carried over from
-    /// macOS 26 doesn't resurrect the section in the layout UI or item buckets.
+    /// The *effective* state of the always-hidden section. Route behavior through
+    /// this, not the raw ``enableAlwaysHiddenSection``.
     var isAlwaysHiddenSectionEnabled: Bool {
-        guard enableAlwaysHiddenSection else { return false }
-        if #available(macOS 27, *) { return false }
-        return true
+        enableAlwaysHiddenSection
     }
 
     @Published var useOptionClickToShowAlwaysHiddenSection = Defaults.DefaultValue.useOptionClickToShowAlwaysHiddenSection

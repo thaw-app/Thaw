@@ -38,7 +38,9 @@ enum LittleSnitchOrphanLog {
     }
 
     /// The Little Snitch orphan's unique identifier for the running OS.
-    static var orphanUID: String { "\(hostNamespace):Item-0" }
+    static var orphanUID: String {
+        "\(hostNamespace):Item-0"
+    }
 
     /// The fixture log. Captured on macOS 26 (Control Center hosting); on macOS
     /// 27 the orphan's namespace is rewritten to MenuBarAgent so the replay stays

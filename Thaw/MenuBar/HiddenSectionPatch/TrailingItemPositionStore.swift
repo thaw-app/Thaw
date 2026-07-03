@@ -6,7 +6,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import Foundation
+import Cocoa
 
 /// Reads and writes `TrailingItemPreferredPositions` in
 /// `com.apple.MenuBarAgent`'s preferences domain.
@@ -24,6 +24,22 @@ import Foundation
 final class TrailingItemPositionStore {
     private static let agentDomain = "com.apple.MenuBarAgent" as CFString
     private static let positionKey = "TrailingItemPreferredPositions"
+    private static let diagLog = DiagLog(category: "TrailingItemPos")
+
+    /// Injectable side effects, so tests can drive an in-memory dictionary
+    /// instead of the real `com.apple.MenuBarAgent` preferences domain.
+    @MainActor
+    struct Environment {
+        let readPositions: @MainActor () -> [String: Int]
+        let writePositions: @MainActor ([String: Int]) -> Void
+
+        static var live: Environment {
+            Environment(
+                readPositions: { TrailingItemPositionStore.readPositionsFromSystem() },
+                writePositions: { TrailingItemPositionStore.writePositionsToSystem($0) }
+            )
+        }
+    }
 
     /// The unmodified position dictionary at lock-time, before we pin visible
     /// items at their current positions. Restored when locking stops.
@@ -34,7 +50,27 @@ final class TrailingItemPositionStore {
     /// plist". Keyed by the stable plist key (not Thaw's uniqueIdentifier).
     private var hiddenPlistKeys: [String: Int] = [:]
 
-    private let diagLog = DiagLog(category: "TrailingItemPos")
+    private let environment: Environment
+    private var terminationObserver: NSObjectProtocol?
+
+    init(environment: Environment = .live, notificationCenter: NotificationCenter = .default) {
+        self.environment = environment
+        terminationObserver = notificationCenter.addObserver(
+            forName: NSApplication.willTerminateNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.restoreAll()
+            }
+        }
+    }
+
+    isolated deinit {
+        if let terminationObserver {
+            NotificationCenter.default.removeObserver(terminationObserver)
+        }
+    }
 
     /// Writes the current on-screen position of each visible item so
     /// MenuBarAgent anchors them in place during the assertion reflow. Call
@@ -49,7 +85,7 @@ final class TrailingItemPositionStore {
     ///   - allItems: The full live item list, used to read current positions.
     @discardableResult
     func lockVisiblePositions(visibleItemKeys _: Set<String>, allItems: [MenuBarItem]) -> Set<String> {
-        var positions = readPositions()
+        var positions = environment.readPositions()
         let isFirstApply = originalPositions == nil
         if isFirstApply {
             originalPositions = positions
@@ -91,8 +127,8 @@ final class TrailingItemPositionStore {
         // keys from prior title values), preventing the dictionary from
         // growing with dead keys that MenuBarAgent may still interpret.
         //
-        // Exception: keys belonging to hiding-unsupported apps (iStat Menus)
-        // are NEVER removed. These items' title churn makes exact key matching
+        // Exception: keys belonging to denylisted hiding-unsupported apps are
+        // NEVER removed. Volatile title churn makes exact key matching
         // unreliable, and removing their entries from the plist can cause
         // MenuBarAgent to drop them from the bar entirely.
         var changed = false
@@ -101,7 +137,7 @@ final class TrailingItemPositionStore {
                 key.hasPrefix("status:\(bundleID)::")
             }
             if isHidingUnsupported {
-                diagLog.debug("lock: skipping removal of hiding-unsupported key \(key)")
+                Self.diagLog.debug("lock: skipping removal of denylisted hiding-unsupported key \(key)")
                 continue
             }
             positions.removeValue(forKey: key)
@@ -110,10 +146,10 @@ final class TrailingItemPositionStore {
 
         guard changed else { return liveResolvedKeys }
 
-        writePositions(positions)
+        environment.writePositions(positions)
 
         let removedCount = (originalPositions?.count ?? positions.count) - positions.count
-        diagLog.info(
+        Self.diagLog.info(
             "lock: \(positions.count) keys after cleanup (removed \(removedCount) ghost(s)), " +
                 "preserving existing weight order"
         )
@@ -123,8 +159,8 @@ final class TrailingItemPositionStore {
     /// Restores all positions to their original values.
     func restoreAll() {
         guard let saved = originalPositions else { return }
-        writePositions(saved)
-        diagLog.info("restoreAll: restored \(saved.count) position(s)")
+        environment.writePositions(saved)
+        Self.diagLog.info("restoreAll: restored \(saved.count) position(s)")
         originalPositions = nil
         // Also restore any items hidden via the plist path.
         restoreAllHiddenItems()
@@ -136,13 +172,13 @@ final class TrailingItemPositionStore {
     /// per-item and has no per-bundle collateral damage — experimental on
     /// macOS 27 where the assertion is the primary visibility mechanism.
     ///
-    /// Items whose owning bundle is in `hidingUnsupportedBundleIDs` (iStat)
+    /// Items whose owning bundle is in ``MenuBarItemTag/hidingUnsupportedBundleIDs``
     /// are silently skipped — they can be reordered but never hidden.
     ///
     /// - Returns: The set of plist keys that were removed.
     @discardableResult
     func hideItems(_ items: [MenuBarItem]) -> Set<String> {
-        var positions = readPositions()
+        var positions = environment.readPositions()
         let existingKeys = Array(positions.keys)
         var removed = Set<String>()
 
@@ -152,7 +188,7 @@ final class TrailingItemPositionStore {
                       item.tag.namespace.description == $0
                   })
             else {
-                diagLog.debug("hideItems: skipping unsupported \(item.uniqueIdentifier)")
+                Self.diagLog.debug("hideItems: skipping unsupported \(item.uniqueIdentifier)")
                 continue
             }
 
@@ -166,7 +202,7 @@ final class TrailingItemPositionStore {
                 allItems: items
             )
             else {
-                diagLog.debug("hideItems: no plist key for \(item.uniqueIdentifier)")
+                Self.diagLog.debug("hideItems: no plist key for \(item.uniqueIdentifier)")
                 continue
             }
 
@@ -175,13 +211,13 @@ final class TrailingItemPositionStore {
             hiddenPlistKeys[plistKey] = weight
             positions.removeValue(forKey: plistKey)
             removed.insert(plistKey)
-            diagLog.debug("hideItems: removed \(plistKey) (weight=\(weight))")
+            Self.diagLog.debug("hideItems: removed \(plistKey) (weight=\(weight))")
         }
 
         guard !removed.isEmpty else { return [] }
 
-        writePositions(positions)
-        diagLog.info("hideItems: removed \(removed.count) key(s) from plist")
+        environment.writePositions(positions)
+        Self.diagLog.info("hideItems: removed \(removed.count) key(s) from plist")
         return removed
     }
 
@@ -197,7 +233,7 @@ final class TrailingItemPositionStore {
     func showItems(_ items: [MenuBarItem], allItems: [MenuBarItem]) -> Set<String> {
         guard !hiddenPlistKeys.isEmpty else { return [] }
 
-        var positions = readPositions()
+        var positions = environment.readPositions()
         let existingKeys = Array(positions.keys)
         var restored = Set<String>()
 
@@ -219,7 +255,7 @@ final class TrailingItemPositionStore {
             else { continue }
 
             // Compute a weight that places the item between its visual neighbors.
-            let weight = computeRestoreWeight(
+            let weight = Self.computeRestoreWeight(
                 for: item,
                 savedWeight: savedWeight,
                 existingKeys: existingKeys,
@@ -230,13 +266,13 @@ final class TrailingItemPositionStore {
             positions[plistKey] = weight
             hiddenPlistKeys.removeValue(forKey: plistKey)
             restored.insert(plistKey)
-            diagLog.debug("showItems: restored \(plistKey) (weight=\(weight))")
+            Self.diagLog.debug("showItems: restored \(plistKey) (weight=\(weight))")
         }
 
         guard !restored.isEmpty else { return [] }
 
-        writePositions(positions)
-        diagLog.info("showItems: restored \(restored.count) key(s) to plist")
+        environment.writePositions(positions)
+        Self.diagLog.info("showItems: restored \(restored.count) key(s) to plist")
         return restored
     }
 
@@ -248,18 +284,18 @@ final class TrailingItemPositionStore {
     /// Restores all items hidden via the plist path.
     private func restoreAllHiddenItems() {
         guard !hiddenPlistKeys.isEmpty else { return }
-        var positions = readPositions()
+        var positions = environment.readPositions()
         for (key, weight) in hiddenPlistKeys {
             positions[key] = weight
         }
-        writePositions(positions)
-        diagLog.info("restoreAllHiddenItems: restored \(hiddenPlistKeys.count) key(s)")
+        environment.writePositions(positions)
+        Self.diagLog.info("restoreAllHiddenItems: restored \(hiddenPlistKeys.count) key(s)")
         hiddenPlistKeys.removeAll()
     }
 
     /// Computes a weight for a restored item that places it between its
     /// left and right visual neighbors in the live menu bar.
-    private func computeRestoreWeight(
+    static func computeRestoreWeight(
         for item: MenuBarItem,
         savedWeight: Int,
         existingKeys: [String],
@@ -428,11 +464,27 @@ final class TrailingItemPositionStore {
 
     // MARK: Private
 
+    /// Reads the live positions dictionary. Delegates to ``environment``, so
+    /// tests can substitute an in-memory dictionary; production callers get
+    /// ``readPositionsFromSystem()`` via ``Environment/live``.
     func readPositions() -> [String: Int] {
+        environment.readPositions()
+    }
+
+    /// Writes the positions dictionary. Delegates to ``environment``, so
+    /// tests can substitute an in-memory dictionary; production callers get
+    /// ``writePositionsToSystem(_:)`` via ``Environment/live``.
+    func writePositions(_ dict: [String: Int]) {
+        environment.writePositions(dict)
+    }
+
+    /// The real `com.apple.MenuBarAgent` preferences read, used by
+    /// ``Environment/live``.
+    static func readPositionsFromSystem() -> [String: Int] {
         // Try CFPreferences with AnyHost first (matches `defaults read`).
         if let dict = CFPreferencesCopyValue(
-            Self.positionKey as CFString,
-            Self.agentDomain,
+            positionKey as CFString,
+            agentDomain,
             kCFPreferencesCurrentUser,
             kCFPreferencesAnyHost
         ) as? [String: Int] {
@@ -443,7 +495,7 @@ final class TrailingItemPositionStore {
         if let plist = NSDictionary(contentsOfFile: plistPath),
            let dict = plist[Self.positionKey] as? [String: Int]
         {
-            diagLog.debug("readPositions: read \(dict.count) entries from plist file")
+            Self.diagLog.debug("readPositions: read \(dict.count) entries from plist file")
             return dict
         }
         // Also try CurrentHost as last resort.
@@ -455,29 +507,34 @@ final class TrailingItemPositionStore {
         ) as? [String: Int] {
             return dict
         }
-        diagLog.debug("readPositions: no existing dict, starting empty")
+        Self.diagLog.debug("readPositions: no existing dict, starting empty")
         return [:]
     }
 
-    func writePositions(_ dict: [String: Int]) {
+    /// The real `com.apple.MenuBarAgent` preferences write, used by
+    /// ``Environment/live``.
+    static func writePositionsToSystem(_ dict: [String: Int]) {
         // CFPreferences path.
         CFPreferencesSetValue(
-            Self.positionKey as CFString,
+            positionKey as CFString,
             dict as CFPropertyList,
-            Self.agentDomain,
+            agentDomain,
             kCFPreferencesCurrentUser,
             kCFPreferencesAnyHost
         )
-        CFPreferencesSynchronize(
+        let synced = CFPreferencesSynchronize(
             Self.agentDomain,
             kCFPreferencesCurrentUser,
             kCFPreferencesAnyHost
         )
         // Direct plist write fallback so MenuBarAgent sees the change even
         // if CFPreferences sync doesn't propagate cross-process.
+        guard !synced else { return }
+
         let plistPath = ("~/Library/Preferences/\(Self.agentDomain as String).plist" as NSString).expandingTildeInPath
         let plist = (NSMutableDictionary(contentsOfFile: plistPath) as NSMutableDictionary?) ?? NSMutableDictionary()
         plist[Self.positionKey] = dict
         plist.write(toFile: plistPath, atomically: true)
+        Self.diagLog.warning("writePositions: CFPreferencesSynchronize failed; used direct plist fallback")
     }
 }

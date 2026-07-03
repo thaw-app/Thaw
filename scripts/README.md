@@ -66,6 +66,17 @@ The script:
 ./scripts/setup-headroom-claude.sh --skip-install   # configure, don't reinstall
 ```
 
+### Environment variables
+
+Each of these mirrors a flag; the flag takes precedence if both are set.
+
+| Variable | Flag equivalent | Default | Meaning |
+|----------|------------------|---------|---------|
+| `HEADROOM_ENV` | `--env` | `headroom` | Micromamba environment name |
+| `HEADROOM_PORT` | `--port` | `8787` | Headroom proxy port |
+| `INSTALLER` | `--installer` | `auto` | `auto` \| `micromamba` \| `pip` \| `pipx` |
+| `PIP_PYTHON` | `--python` | newest 3.10–3.13 | Python binary for pip/pipx installs |
+
 ### Daily use
 
 ```bash
@@ -74,3 +85,27 @@ claude-headroom -- --resume <session-id>
 ```
 
 Or run `claude` directly when the proxy is already up.
+
+### Stop / undo
+
+```bash
+pkill -f 'headroom proxy'    # stop the proxy
+```
+
+`headroom init claude -g` rewrites `~/.claude/settings.json` to add
+`ANTHROPIC_BASE_URL`, rerouting **all** `claude` CLI usage through the proxy
+(not just `claude-headroom`). If the proxy is stopped or the machine
+reboots while that setting is still in place, plain `claude` fails with a
+connection-refused error until it's restored.
+
+headroom does not currently ship an `init claude --undo` flag (checked via
+`headroom init claude --help`), so restore manually:
+
+1. Open `~/.claude/settings.json`
+2. Remove the `ANTHROPIC_BASE_URL` entry under `env` (and any other
+   headroom-added keys)
+3. Optionally remove the MCP registration: `claude mcp remove headroom -s user`
+
+A future `--uninstall` flag that automates this is a possible follow-up;
+for now, use the manual steps above or check headroom's own docs for a
+newer undo mechanism.

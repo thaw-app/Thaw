@@ -357,11 +357,10 @@ extension Bridging {
         // most a few hundred points wide. On pre-27 macOS where items have
         // individual windows this filter is a no-op (items are narrow).
         let allReturned = Array(list.prefix(Int(outCount)))
-        let windowIDs: [CGWindowID]
-        if skipWidthFilter {
-            windowIDs = allReturned
+        let windowIDs: [CGWindowID] = if skipWidthFilter {
+            allReturned
         } else {
-            windowIDs = allReturned.filter { wid in
+            allReturned.filter { wid in
                 guard let bounds = getWindowBounds(for: wid) else { return false }
                 return bounds.width <= 1000
             }
@@ -372,7 +371,7 @@ extension Bridging {
             let level = getWindowLevel(for: wid)
             diagLog.debug("getMenuBarWindowIDs: pid \(pid) → window \(wid) bounds=\(bounds?.debugDescription ?? "nil") level=\(level.map(String.init(describing:)) ?? "nil")")
         }
-        if !skipWidthFilter && windowIDs.isEmpty && outCount > 0 {
+        if !skipWidthFilter, windowIDs.isEmpty, outCount > 0 {
             diagLog.debug("getMenuBarWindowIDs: pid \(pid) → all \(outCount) returned windows were hosting windows, filtered out")
         }
         return windowIDs

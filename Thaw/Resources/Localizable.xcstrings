@@ -20257,6 +20257,17 @@
     "Hide or show menu bar items on demand. Drag items between sections, keep your favorites always visible, and tuck the rest away in the always-hidden section." : {
       "comment" : "Description of the menu bar management onboarding slide."
     },
+    "Hiding is unavailable on this macOS build (the required system capability was not found). Reordering still works; hiding does not." : {
+      "comment" : "Warning shown in Advanced settings when the private Assessment Mode hiding API is unavailable on macOS 27+.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hiding is unavailable on this macOS build (the required system capability was not found). Reordering still works; hiding does not."
+          }
+        }
+      }
+    },
     "Hold to Preview" : {
       "comment" : "A button that, when held, allows users to preview changes in a menu bar.",
       "localizations" : {
@@ -28015,6 +28026,11 @@
             "value" : "尚未儲存任何設定檔。請儲存目前的配置以建立一個設定檔。"
           }
         }
+      }
+    },
+    "No settings found" : {
+      "comment" : "Text shown in the settings sidebar search when no settings match the search query.",
+      "localizations" : {
       }
     },
     "No shape kind selected" : {
@@ -36098,6 +36114,11 @@
             "value" : "搜尋選單列項目⋯"
           }
         }
+      }
+    },
+    "Search settings…" : {
+      "comment" : "A placeholder text for the search field in the settings window sidebar.",
+      "localizations" : {
       }
     },
     "Section divider style" : {

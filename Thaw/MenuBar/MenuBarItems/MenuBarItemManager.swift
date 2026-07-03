@@ -144,6 +144,9 @@ final class MenuBarItemManager: ObservableObject {
     /// The current cache of menu bar items.
     @Published private(set) var itemCache = ItemCache(displayID: nil)
 
+    /// On-screen items from the most recent cache refresh AX walk.
+    @MainActor var lastOnScreenMenuBarItems: ([MenuBarItem], ContinuousClock.Instant?) = ([], nil)
+
     /// A Boolean value that indicates whether the control items for the
     /// hidden sections are missing from the menu bar.
     @Published private(set) var areControlItemsMissing = false
@@ -182,6 +185,24 @@ final class MenuBarItemManager: ObservableObject {
             return false
         }
         return lastRestrictionChange.duration(to: .now) < Self.restrictionChangeLayoutSettleWindow
+    }
+
+    private func parkedSetAndBarMidY(in items: [MenuBarItem]) -> (barMidY: CGFloat?, parkedIDs: Set<CGWindowID>) {
+        let barMidY = items.first(where: {
+            $0.tag.matchesVisibleControlItem && $0.bounds.midY <= 80
+        })?.bounds.midY
+            ?? items.first(where: {
+                $0.isControlItem && $0.bounds.width > 8 && $0.bounds.midY <= 80
+            })?.bounds.midY
+
+        let parkedIDs = Set(items.compactMap { item -> CGWindowID? in
+            guard item.bounds.width > 0, item.bounds.height > 0 else { return item.windowID }
+            if item.bounds.midY > 80 { return item.windowID }
+            guard let barMidY else { return nil }
+            return abs(item.bounds.midY - barMidY) > 48 ? item.windowID : nil
+        })
+
+        return (barMidY, parkedIDs)
     }
 
     /// Deferred repair after an assessment-mode reflow. Concealing one bundle
@@ -388,7 +409,7 @@ final class MenuBarItemManager: ObservableObject {
     /// True while `applyProfileLayout` is executing. Suppresses the
     /// late-arrival detection in `cacheItemsRegardless` to prevent
     /// false re-sort triggers during an in-flight sort.
-    private var isApplyingProfileLayout = false
+    private(set) var isApplyingProfileLayout = false
 
     /// Persisted mapping of item tag identifiers to their original section name for
     /// temporarily shown items whose apps quit before they could be rehidden. When
@@ -412,7 +433,7 @@ final class MenuBarItemManager: ObservableObject {
         let key = "MenuBarItemManager.knownItemIdentifiers"
         let defaults = UserDefaults.standard
         if let stored = defaults.array(forKey: key) as? [String] {
-            knownItemIdentifiers = Set(stored)
+            knownItemIdentifiers = Set(stored.map(MenuBarItemTag.canonicalPersistentIdentifier))
         }
     }
 
@@ -420,7 +441,10 @@ final class MenuBarItemManager: ObservableObject {
     private func persistKnownItemIdentifiers() {
         let key = "MenuBarItemManager.knownItemIdentifiers"
         let defaults = UserDefaults.standard
-        defaults.set(Array(knownItemIdentifiers), forKey: key)
+        defaults.set(
+            Array(Set(knownItemIdentifiers.map(MenuBarItemTag.canonicalPersistentIdentifier))),
+            forKey: key
+        )
     }
 
     /// Loads persisted pinned bundle identifiers.
@@ -466,7 +490,7 @@ final class MenuBarItemManager: ObservableObject {
     private func loadSavedSectionOrder() {
         let key = "MenuBarItemManager.savedSectionOrder"
         if let stored = UserDefaults.standard.dictionary(forKey: key) as? [String: [String]] {
-            savedSectionOrder = stored
+            savedSectionOrder = Self.canonicalizedSectionOrder(stored)
         }
     }
 
@@ -493,7 +517,11 @@ final class MenuBarItemManager: ObservableObject {
         if let data = Defaults.data(forKey: .newItemsPlacementData),
            let stored = try? JSONDecoder().decode(NewItemsPlacement.self, from: data)
         {
-            newItemsPlacement = stored
+            newItemsPlacement = NewItemsPlacement(
+                sectionKey: stored.sectionKey,
+                anchorIdentifier: stored.anchorIdentifier.map(MenuBarItemTag.canonicalPersistentIdentifier),
+                relation: stored.relation
+            )
             return
         }
 
@@ -509,7 +537,12 @@ final class MenuBarItemManager: ObservableObject {
     /// Persists the placement preference for newly detected menu bar items.
     private func persistNewItemsPlacementPreference() {
         Defaults.set(newItemsPlacement.sectionKey, forKey: .newItemsSection)
-        if let data = try? JSONEncoder().encode(newItemsPlacement) {
+        let placement = NewItemsPlacement(
+            sectionKey: newItemsPlacement.sectionKey,
+            anchorIdentifier: newItemsPlacement.anchorIdentifier.map(MenuBarItemTag.canonicalPersistentIdentifier),
+            relation: newItemsPlacement.relation
+        )
+        if let data = try? JSONEncoder().encode(placement) {
             Defaults.set(data, forKey: .newItemsPlacementData)
         } else {
             Defaults.removeObject(forKey: .newItemsPlacementData)
@@ -519,7 +552,14 @@ final class MenuBarItemManager: ObservableObject {
     /// Persists the current saved section order.
     private func persistSavedSectionOrder() {
         let key = "MenuBarItemManager.savedSectionOrder"
+        savedSectionOrder = Self.canonicalizedSectionOrder(savedSectionOrder)
         UserDefaults.standard.set(savedSectionOrder, forKey: key)
+    }
+
+    private static func canonicalizedSectionOrder(
+        _ order: [String: [String]]
+    ) -> [String: [String]] {
+        order.mapValues(MenuBarItemTag.canonicalPersistentIdentifiers)
     }
 
     /// Records that the assessment-mode assertion was torn down and rebuilt.
@@ -569,20 +609,48 @@ final class MenuBarItemManager: ObservableObject {
 
         var liveItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
 
-        if hider.pulseRestrictionAfterReflow(liveItems: liveItems) {
+        // Pre-pulse check: determine whether a recomposite is actually necessary.
+        // Hiding-unsupported apps can self-recover after assertion reflows.
+        // Pulsing the assertion again can trigger another reflow and re-blank
+        // them, so only pulse when supported visible items are parked off-band
+        // or still rendering blank.
+        let displayID = Bridging.getActiveMenuBarDisplayID() ?? CGMainDisplayID()
+        let pulseCandidates = liveItems.filter {
+            !$0.isControlItem &&
+                !$0.tag.isHidingUnsupported &&
+                hider.section(for: $0) == .visible
+        }
+        let (_, liveParkedIDs) = parkedSetAndBarMidY(in: liveItems)
+        let prePulseParked = pulseCandidates.filter { liveParkedIDs.contains($0.windowID) }
+        let prePulseOnBand = pulseCandidates.filter { !liveParkedIDs.contains($0.windowID) }
+        let prePulseBlank = await appState.imageCache.itemsRenderingBlank(
+            among: prePulseOnBand,
+            displayID: displayID
+        )
+        let needsPulse = !prePulseParked.isEmpty || !prePulseBlank.isEmpty
+
+        if needsPulse, hider.pulseRestrictionAfterReflow(liveItems: liveItems) {
             MenuBarItemManager.diagLog.info(
-                "post-restriction repair: pulsed assertion for MenuBarAgent re-composite"
+                "post-restriction repair: pulsed assertion for MenuBarAgent re-composite " +
+                    "(prePulseParked=\(prePulseParked.count), prePulseBlank=\(prePulseBlank.count))"
             )
             try? await Task.sleep(for: .milliseconds(800))
             liveItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+        } else if !needsPulse {
+            MenuBarItemManager.diagLog.debug(
+                "post-restriction repair: pulse skipped — no non-hiding-unsupported items parked or blank"
+            )
         }
 
+        // Denylisted hiding-unsupported items are excluded from synthetic drag
+        // and retry signals. Their glyphs may transiently blank on assertion
+        // reflows, but repeatedly pulsing can make that worse.
         let parkedVisible = liveItems.filter {
             !$0.isControlItem &&
+                !$0.tag.isHidingUnsupported &&
                 hider.section(for: $0) == .visible &&
-                $0.isParkedOffMenuBarBand(among: liveItems)
+                liveParkedIDs.contains($0.windowID)
         }
-
         if !parkedVisible.isEmpty, let anchor = unparkAnchorAmong(liveItems: liveItems, hider: hider) {
             MenuBarItemManager.diagLog.info(
                 "post-restriction repair: unparking \(parkedVisible.count) off-band item(s) " +
@@ -603,7 +671,7 @@ final class MenuBarItemManager: ObservableObject {
             }
         } else if parkedVisible.isEmpty {
             MenuBarItemManager.diagLog.debug(
-                "post-restriction repair: no off-band parked items after pulse"
+                "post-restriction repair: no off-band parked items to pulse"
             )
         }
 
@@ -612,25 +680,27 @@ final class MenuBarItemManager: ObservableObject {
         appState.hidEventManager.refreshMenuBarItemBoundsLookup()
 
         let afterItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+        let (_, afterParkedIDs) = parkedSetAndBarMidY(in: afterItems)
+        // Exclude denylisted hiding-unsupported items from stillParked and
+        // blank-glyph checks: counting transient assertion-reflow side effects
+        // as broken drives repeated pulses that can compound the problem.
         let onBandVisibleItems = afterItems.filter {
             !$0.isControlItem &&
+                !$0.tag.isHidingUnsupported &&
                 hider.section(for: $0) == .visible &&
-                !$0.isParkedOffMenuBarBand(among: afterItems)
-        }
-        let stillParked = afterItems.contains {
-            !$0.isControlItem &&
-                hider.section(for: $0) == .visible &&
-                $0.isParkedOffMenuBarBand(among: afterItems)
+                !afterParkedIDs.contains($0.windowID)
         }
 
-        // Off-band parking has its own unpark pass above; an on-band ghost
-        // (tooltip resolves it, nothing drawn) needs a different signal —
-        // the pulse already fired this call, so a fresh screenshot tells us
-        // whether it actually took. If not, returning true here feeds the
-        // SAME retry loop `noteRestrictionChange` already runs for parked
-        // items, so the next iteration pulses again instead of giving up
-        // after one attempt.
-        let displayID = Bridging.getActiveMenuBarDisplayID() ?? CGMainDisplayID()
+        // If the pre-pulse check found nothing requiring a recomposite, the
+        // post-pulse check would also find nothing — items haven't changed.
+        // Skip the second screenshot to avoid the extra capture cost.
+        guard needsPulse else {
+            return false
+        }
+
+        // Pulse fired: a fresh screenshot confirms whether the recomposite
+        // actually resolved the blanks. If not, returning true re-enters the
+        // retry loop so the next iteration can pulse again.
         let blankTags = await appState.imageCache.itemsRenderingBlank(
             among: onBandVisibleItems,
             displayID: displayID
@@ -639,6 +709,13 @@ final class MenuBarItemManager: ObservableObject {
             MenuBarItemManager.diagLog.info(
                 "post-restriction repair: \(blankTags.count) on-band item(s) still blank after pulse, will retry"
             )
+        }
+
+        let stillParked = afterItems.contains {
+            !$0.isControlItem &&
+                !$0.tag.isHidingUnsupported &&
+                hider.section(for: $0) == .visible &&
+                afterParkedIDs.contains($0.windowID)
         }
 
         return stillParked || !blankTags.isEmpty
@@ -782,7 +859,7 @@ final class MenuBarItemManager: ObservableObject {
                 // Always track base identifier so stale saved entries for
                 // transient items (Live Activities) get pruned by the
                 // isStaleInstanceIndex guard below and not re-injected.
-                let baseID = "\(item.tag.namespace):\(item.tag.title)"
+                let baseID = "\(item.tag.namespace):\(item.tag.canonicalTitle)"
                 allCurrentBaseIdentifiers.insert(baseID)
                 // Exclude transient Control Center items (Live Activities,
                 // iPhone Mirroring icons) from the identifier set so their
@@ -2226,9 +2303,14 @@ extension MenuBarItemManager {
                 )
             } else {
                 MenuBarItemManager.diagLog.warning(
-                    "Couldn't find section for caching \(item.logString) bounds=\(NSStringFromRect(item.bounds)), assigning to hidden"
+                    "Couldn't find section for caching \(item.logString) bounds=\(NSStringFromRect(item.bounds)), assigning fallback section"
                 )
-                context.cache[.hidden].append(item)
+                let experimentalSystemItemHiding = appState?.settings.advanced.enableExperimentalSystemItemHiding ?? false
+                if item.canBeHidden(experimentalSystemItemHiding: experimentalSystemItemHiding) {
+                    context.cache[.hidden].append(item)
+                } else {
+                    context.cache[.visible].append(item)
+                }
             }
         }
 
@@ -2297,12 +2379,30 @@ extension MenuBarItemManager {
                     return bounds.origin.x == -1
                 }
             }
-            if !hasBlockedItems {
-                saveSectionOrder(from: context.cache)
-            } else {
+            // Don't persist while the items straddle two displays. A cross-display
+            // cache is a menu bar relocation caught mid-flight, not a settled
+            // layout: macOS un-hides items as it moves them to the new screen, so
+            // capturing the section order now would bake those un-hidden items
+            // into the saved layout as if the user wanted them visible. Wait for
+            // the items to collapse back onto a single display.
+            let screenFrames = NSScreen.screens.map { CGDisplayBounds($0.displayID) }
+            let itemCenters = MenuBarSection.Name.allCases.flatMap { section in
+                context.cache[section].map { CGPoint(x: $0.bounds.midX, y: $0.bounds.midY) }
+            }
+            let spansDisplays = LayoutSolver.itemsSpanMultipleDisplays(
+                itemCenters: itemCenters,
+                screenFrames: screenFrames
+            )
+            if hasBlockedItems {
                 MenuBarItemManager.diagLog.debug(
                     "Skipping saveSectionOrder; blocked items detected (x=-1), will retry on next cache tick"
                 )
+            } else if spansDisplays {
+                MenuBarItemManager.diagLog.debug(
+                    "Skipping saveSectionOrder; menu bar items span multiple displays (relocation in progress)"
+                )
+            } else {
+                saveSectionOrder(from: context.cache)
             }
         }
         MenuBarItemManager.diagLog.debug("Updated menu bar item cache: visible=\(context.cache[.visible].count), hidden=\(context.cache[.hidden].count), alwaysHidden=\(context.cache[.alwaysHidden].count)")
@@ -2421,6 +2521,8 @@ extension MenuBarItemManager {
             )
         }
 
+        lastOnScreenMenuBarItems = (items.filter(\.isOnScreen), .now)
+
         MenuBarItemManager.diagLog.debug("cacheItemsRegardless: getMenuBarItems returned \(items.count) items")
 
         // Drop System Status Item Clone windows before any downstream
@@ -2493,7 +2595,7 @@ extension MenuBarItemManager {
         // "com.apple.controlcenter" namespace never enters the persisted set.
         if !previousWindowIDs.isEmpty {
             for item in items where previousWindowIDs.contains(item.windowID) && item.sourcePID != nil {
-                let identifier = "\(item.tag.namespace):\(item.tag.title)"
+                let identifier = item.uniqueIdentifier
                 if !knownItemIdentifiers.contains(identifier) {
                     knownItemIdentifiers.insert(identifier)
                 }
@@ -2576,8 +2678,9 @@ extension MenuBarItemManager {
             // every live item as .visible), so rather than clearing the cache and
             // falsely reporting the dividers as "hidden by macOS", synthesize a
             // single-section pair: a hidden divider parked at the display's
-            // leading edge (every real item sits to its right => visible) and no
-            // always-hidden divider.
+            // leading edge (every real item sits to its right => visible) and an
+            // always-hidden divider at the leading edge when the section is
+            // enabled.
             let ourPID = ProcessInfo.processInfo.processIdentifier
             let leadingX = displayID.map { CGDisplayBounds($0).minX } ?? (NSScreen.main?.frame.minX ?? 0)
             let syntheticHidden = MenuBarItem(
@@ -2589,7 +2692,24 @@ extension MenuBarItemManager {
                 title: ControlItem.Identifier.hidden.rawValue,
                 isOnScreen: false
             )
-            controlItems = ControlItemPair(hidden: syntheticHidden, alwaysHidden: nil)
+            let syntheticAlwaysHidden: MenuBarItem? = {
+                guard appState?.settings.advanced.isAlwaysHiddenSectionEnabled == true else {
+                    return nil
+                }
+                return MenuBarItem(
+                    tag: .alwaysHiddenControlItem,
+                    windowID: alwaysHiddenControlItemWID ?? 0,
+                    ownerPID: ourPID,
+                    sourcePID: ourPID,
+                    bounds: CGRect(x: leadingX, y: 0, width: 0, height: 0),
+                    title: ControlItem.Identifier.alwaysHidden.rawValue,
+                    isOnScreen: false
+                )
+            }()
+            controlItems = ControlItemPair(
+                hidden: syntheticHidden,
+                alwaysHidden: syntheticAlwaysHidden
+            )
             await MainActor.run {
                 self.areControlItemsMissing = false
             }
@@ -3982,6 +4102,24 @@ extension MenuBarItemManager {
             throw EventError.itemNotMovable(item)
         }
 
+        // Pause automated moves while the user is mid-⌘-drag. The user's
+        // drag started outside Thaw (their ``leftMouseDown`` already reached
+        // MenuBarAgent before this `move()` was dispatched), and
+        // ``MoveInputSuppression`` would swallow the user's subsequent
+        // ``leftMouseDragged`` events while our synthetic drag runs at the
+        // same coordinates. Two overlapping drag intents on macOS 27 leave
+        // MenuBarAgent holding a duplicated or stranded icon (the reported
+        // "icons multiply on drag" / Finder-crash symptom). Treat a live
+        // user drag as authoritative and bail out: the user's drop will
+        // re-publish `itemCache`, and `recordExternalMoveOperation` already
+        // arms the 5 s applySavedLayout cooldown so our work is not lost —
+        // it is deferred past the user's drag without forcing a re-entrant
+        // reorder.
+        if appState.isDraggingMenuBarItem {
+            MenuBarItemManager.diagLog.info("Skipping move for \(item.logString) - user ⌘-drag in progress")
+            throw EventError.cannotComplete
+        }
+
         // Most legacy callers target a section divider to trigger the old
         // over-wide reflow, which no longer works on macOS 27. The explicit
         // section-transition path opts in because it uses the divider as a
@@ -4098,12 +4236,14 @@ extension MenuBarItemManager {
         // items (verified by reverse-engineering), so delegate to that gesture.
         // The cursor hide/warp-back defer registered above wraps this call.
         if #available(macOS 27, *) {
-            try await moveItemViaCommandDrag(
-                item: item,
-                to: destination,
-                on: resolvedDisplayID,
-                experimentalSystemItemHiding: experimentalSystemItemHiding
-            )
+            try await MoveInputSuppression.withUserMouseInputSuppressed {
+                try await moveItemViaCommandDrag(
+                    item: item,
+                    to: destination,
+                    on: resolvedDisplayID,
+                    experimentalSystemItemHiding: experimentalSystemItemHiding
+                )
+            }
             return
         }
 
@@ -4134,12 +4274,14 @@ extension MenuBarItemManager {
                         "Position match without observable displacement on attempt \(n); treating as false positive on a zero-width control item and retrying"
                     )
                 }
-                try await postMoveEvents(
-                    item: item,
-                    destination: destination,
-                    on: resolvedDisplayID,
-                    warpCursorAfter: false // move() owns the single warp in its defer
-                )
+                try await MoveInputSuppression.withUserMouseInputSuppressed {
+                    try await postMoveEvents(
+                        item: item,
+                        destination: destination,
+                        on: resolvedDisplayID,
+                        warpCursorAfter: false // move() owns the single warp in its defer
+                    )
+                }
                 // postMoveEvents only returns without throwing when both
                 // waitForMoveEventResponse calls observed origin changes,
                 // i.e. our drag actually displaced the item.
@@ -4408,6 +4550,30 @@ extension MenuBarItemManager {
                 {
                     MenuBarItemManager.diagLog.debug(
                         "Deferring macOS 27 section order for parked \(plannedMove.item.logString)"
+                    )
+                    break
+                }
+
+                // Denylisted hiding-unsupported items rewrite their AX title
+                // frequently, so getCurrentBounds consistently fails to resolve
+                // them during the drag — warping the cursor on every attempt.
+                // The preferred-position plist path (applyOrder above) is the
+                // only reliable move vector for these items; if it didn't achieve
+                // the desired order, treat the remaining divergence as
+                // unachievable via drag and record the failure key so the 30s
+                // backoff suppresses future attempts.
+                if plannedMove.item.tag.isHidingUnsupported ||
+                    plannedMove.destination.targetItem.tag.isHidingUnsupported
+                {
+                    let failureKey = Self.macOS27MoveFailureKey(
+                        item: plannedMove.item,
+                        destination: plannedMove.destination,
+                        desiredOrder: desiredOrder
+                    )
+                    recentMacOS27MoveFailures[failureKey] = .now
+                    MenuBarItemManager.diagLog.debug(
+                        "Skipping synthetic drag for denylisted hiding-unsupported item in macOS 27 section order: " +
+                            "\(plannedMove.item.logString) → \(plannedMove.destination.logString)"
                     )
                     break
                 }
@@ -5812,7 +5978,7 @@ extension MenuBarItemManager {
             // "com.apple.controlcenter" namespace never enters the persisted set.
             let identifiers = items
                 .filter { !$0.isControlItem && $0.sourcePID != nil }
-                .map { "\($0.tag.namespace):\($0.tag.title)" }
+                .map(\.uniqueIdentifier)
             knownItemIdentifiers.formUnion(identifiers)
             persistKnownItemIdentifiers()
             suppressNextNewLeftmostItemRelocation = false
@@ -5832,7 +5998,7 @@ extension MenuBarItemManager {
             // "com.apple.controlcenter" namespace never enters the persisted set.
             let identifiers = items
                 .filter { !$0.isControlItem && $0.sourcePID != nil }
-                .map { "\($0.tag.namespace):\($0.tag.title)" }
+                .map(\.uniqueIdentifier)
             knownItemIdentifiers.formUnion(identifiers)
             persistKnownItemIdentifiers()
             return false
@@ -6210,6 +6376,29 @@ extension MenuBarItemManager {
                     "Error enforcing macOS 27 hidden divider boundary: \(error)"
                 )
             }
+
+            // Enforce always-hidden divider left of hidden divider.
+            // Skip synthetic items (off-screen); only enforce when both
+            // dividers have real geometry so the relative check is meaningful.
+            if let alwaysHidden = controlItems.alwaysHidden,
+               hidden.isOnScreen, alwaysHidden.isOnScreen,
+               hidden.bounds.maxX <= alwaysHidden.bounds.minX
+            {
+                do {
+                    MenuBarItemManager.diagLog.info(
+                        "macOS 27: moving always-hidden divider left of hidden divider"
+                    )
+                    try await move(
+                        item: alwaysHidden,
+                        to: .leftOfItem(hidden),
+                        skipInputPause: true
+                    )
+                } catch {
+                    MenuBarItemManager.diagLog.error(
+                        "Error enforcing macOS 27 always-hidden divider order: \(error)"
+                    )
+                }
+            }
             return
         }
 
@@ -6531,7 +6720,7 @@ extension MenuBarItemManager {
     /// reset. Items that can't be hidden (Clock, Control Center, …) stay visible.
     ///
     /// - Returns: Always 0 — there are no physical moves that can "fail" on 27.
-    private func resetLayoutMacOS27() async -> Int {
+    private func resetLayoutMacOS27(to target: MenuBarSection.Name = .hidden) async -> Int {
         isResettingLayout = true
         defer { isResettingLayout = false }
 
@@ -6552,7 +6741,7 @@ extension MenuBarItemManager {
         for item in itemCache.managedItems
             where SimpleItemHider.canAssign(
                 item,
-                to: .hidden,
+                to: target,
                 experimentalSystemItemHiding: experimentalSystemItemHiding
             )
         {
@@ -6563,14 +6752,14 @@ extension MenuBarItemManager {
                 skippedProtectedItems.append(item.uniqueIdentifier)
                 continue
             }
-            assignment[item.uniqueIdentifier] = .hidden
+            assignment[item.uniqueIdentifier] = target
         }
 
         hider.resetAssignment(to: assignment)
         if !skippedProtectedItems.isEmpty {
             MenuBarItemManager.diagLog.info("macOS 27 reset: skipped \(skippedProtectedItems.count) protected item(s): \(skippedProtectedItems)")
         }
-        MenuBarItemManager.diagLog.info("macOS 27 reset: swept \(assignment.count) item(s) to Hidden")
+        MenuBarItemManager.diagLog.info("macOS 27 reset: swept \(assignment.count) item(s) to \(target.rawValue)")
 
         // Rebuild the cache so the layout bars reflect the new assignment now.
         await cacheItemsRegardless(skipRecentMoveCheck: true)
@@ -6857,6 +7046,41 @@ extension MenuBarItemManager {
         }
 
         return 0
+    }
+
+    /// Moves every movable, hideable item to the always-hidden section.
+    ///
+    /// - Returns: The number of items that failed to move.
+    func resetLayoutToAlwaysHidden() async throws -> Int {
+        MenuBarItemManager.diagLog.info("Resetting menu bar layout to always-hidden")
+
+        if !MenuBarBackendFactory.current.supportsLegacySectionHiding {
+            return await resetLayoutMacOS27(to: .alwaysHidden)
+        }
+
+        // Legacy path: treat the same as reset-to-visible but then
+        // assign to alwaysHidden via SimpleItemHider.
+        let failed = try await resetLayoutToVisible()
+        guard let appState, let hider = appState.menuBarManager.simpleItemHider else {
+            return failed
+        }
+        var assignment = [String: MenuBarSection.Name]()
+        for item in itemCache.managedItems
+            where SimpleItemHider.canAssign(
+                item,
+                to: .alwaysHidden,
+                experimentalSystemItemHiding: appState.settings.advanced.enableExperimentalSystemItemHiding
+            )
+            && !SimpleItemHider.isProtectedAssignmentItem(
+                item,
+                experimentalSystemItemHiding: appState.settings.advanced.enableExperimentalSystemItemHiding
+            )
+        {
+            assignment[item.uniqueIdentifier] = .alwaysHidden
+        }
+        hider.resetAssignment(to: assignment)
+        await cacheItemsRegardless(skipRecentMoveCheck: true)
+        return failed
     }
 
     /// Moves every movable, hideable item to the visible section.
@@ -7162,7 +7386,7 @@ extension MenuBarItemManager {
     /// Phase 7 with Task.isCancelled false). If a crash, SIGKILL, or
     /// mid-apply cancellation aborts before that point, disk reflects
     /// the previous profile rather than an unexecuted intent.
-    private func armProfileState(
+    func armProfileState(
         source: ApplySource,
         pinnedHidden: Set<String>,
         pinnedAlwaysHidden: Set<String>,
@@ -7251,6 +7475,19 @@ extension MenuBarItemManager {
         updateProfileSortedSnapshot(source: source, items: items)
         guard case .profile = source else { return }
         isApplyingProfileLayout = false
+    }
+
+    /// Cleanup for a profile apply that needed no item moves: the bar was
+    /// already in the target arrangement, so the move loop is skipped and the
+    /// normal Phase 7 exit (which clears the in-flight flag) is never reached.
+    /// This early exit must run the same profile-only teardown as Phase 7,
+    /// otherwise a no-moves apply (common on a display reconnect, where the
+    /// active-display profile is re-applied onto an already-correct bar) leaks
+    /// isApplyingProfileLayout = true and permanently blocks applySavedLayout
+    /// for the rest of the session.
+    func concludeProfileApplyWithoutMoves(source: ApplySource, items: [MenuBarItem]) {
+        persistProfileStateOnSuccess(source: source)
+        clearProfileState(source: source, items: items)
     }
 
     /// Schedules the post-apply refresh sequence on a detached Task:
@@ -8099,8 +8336,7 @@ extension MenuBarItemManager {
                 } else {
                     MenuBarItemManager.diagLog.info("Profile layout: all items already in correct positions")
                 }
-                updateProfileSortedSnapshot(source: source, items: items)
-                persistProfileStateOnSuccess(source: source)
+                concludeProfileApplyWithoutMoves(source: source, items: items)
                 scheduleDeferredCacheRefresh()
                 return
             }
@@ -8378,6 +8614,19 @@ extension MenuBarItemManager {
             MenuBarItemManager.diagLog.debug("applySavedLayout: skipping, within 5s move cooldown")
             return false
         }
+        // Bail out if the user is currently ⌘-dragging an item. Running a
+        // bulk synthetic-drag apply while the user is dragging would post our
+        // synthetic events on top of the user's in-flight drag
+        // (`MoveInputSuppression` swallows the user's `leftMouseDragged` but
+        // not their already-delivered `leftMouseDown`), producing the
+        // duplicate-icon / Finder-crash symptom reported on macOS 27. The
+        // user's drop re-publishes `itemCache` (see
+        // `recordExternalMoveOperation` + the 5 s cooldown above) so the
+        // deferred apply runs naturally once the drag settles.
+        if appState?.isDraggingMenuBarItem ?? false {
+            MenuBarItemManager.diagLog.debug("applySavedLayout: skipping, user ⌘-drag in progress")
+            return false
+        }
         if let lastRestrictionChange = lastRestrictionChangeTimestamp,
            lastRestrictionChange.duration(to: .now) < Self.restrictionChangeLayoutSettleWindow
         {
@@ -8441,12 +8690,53 @@ extension MenuBarItemManager {
             return false
         }
 
+        // Geometry-readiness gate. On a notched display, if Control Center is
+        // reported at or left of the notch's right edge the menu bar geometry
+        // has not settled: a stale off-screen position reported transiently
+        // during a display reconnect or Control Center widget churn. Dispatching
+        // the bulk apply now runs the control-item placement against that
+        // geometry and mis-positions the Thaw visible icon to the far left (the
+        // notch-overflow budget guard alone only suppresses the eject, not the
+        // moves). Skip; the cache cycle falls through to a plain recache and a
+        // later tick retries once the geometry settles.
+        if let screen = NSScreen.screenWithActiveMenuBar ?? NSScreen.main,
+           screen.hasNotch,
+           let notch = screen.frameOfNotch
+        {
+            let rightBoundary = items.first(where: { $0.tag == .controlCenter })?.bounds.minX
+                ?? screen.frame.maxX
+            guard LayoutSolver.isMenuBarGeometryReady(rightBoundary: rightBoundary, notchMaxX: notch.maxX) else {
+                MenuBarItemManager.diagLog.debug(
+                    "applySavedLayout: skipping, menu bar geometry not settled (rightBoundary=\(rightBoundary), notch.maxX=\(notch.maxX))"
+                )
+                return false
+            }
+        }
+
+        // Display-spread gate. While the active menu bar is relocating to
+        // another display macOS migrates the status item windows between
+        // screens asynchronously, so the items transiently straddle two
+        // displays. A bulk apply dispatched now resolves each item's move
+        // against whichever display its window currently occupies and cannot
+        // converge, stranding items on the wrong screen where they read as
+        // un-hidden. Skip; a later tick retries once the items collapse back
+        // onto the active display. Frames come from CGDisplayBounds so they
+        // share the top-left origin coordinate space of the item bounds.
+        let screenFrames = NSScreen.screens.map { CGDisplayBounds($0.displayID) }
+        let itemCenters = items.map { CGPoint(x: $0.bounds.midX, y: $0.bounds.midY) }
+        if LayoutSolver.itemsSpanMultipleDisplays(itemCenters: itemCenters, screenFrames: screenFrames) {
+            MenuBarItemManager.diagLog.debug(
+                "applySavedLayout: skipping, menu bar items span multiple displays (relocation in progress)"
+            )
+            return false
+        }
+
         // Saved-tags intersection: skip if none of the saved items are
         // currently present. Matches the legacy restore's guard;
         // protects against running the bulk apply on a menu bar that
         // shares no widgets with the persisted layout.
-        let currentTags = Set(items.map { "\($0.tag.namespace):\($0.tag.title)" })
-        let savedTags = Set(savedSectionOrder.values.flatMap(\.self))
+        let currentTags = Set(items.map(\.uniqueIdentifier))
+        let savedTags = Set(savedSectionOrder.values.flatMap { MenuBarItemTag.canonicalPersistentIdentifiers($0) })
         guard !savedTags.isDisjoint(with: currentTags) else {
             MenuBarItemManager.diagLog.debug("applySavedLayout: skipping, no saved items currently present")
             return false
@@ -8634,6 +8924,66 @@ private extension CGEventField {
         .mouseEventWindowUnderMousePointerThatCanHandleThisEvent,
         .windowID,
     ]
+}
+
+// MARK: - MoveInputSuppression
+
+enum MoveInputSuppression {
+    private static let syntheticMoveUserData: Int64 = 0x5468_6177_4D6F_7665
+
+    static let suppressedMouseEventTypes: [CGEventType] = [
+        .leftMouseDown,
+        .leftMouseUp,
+        .rightMouseDown,
+        .rightMouseUp,
+        .mouseMoved,
+        .leftMouseDragged,
+        .rightMouseDragged,
+        .scrollWheel,
+        .otherMouseDown,
+        .otherMouseUp,
+        .otherMouseDragged,
+    ]
+
+    static func markSyntheticMoveEvent(_ event: CGEvent) {
+        event.setIntegerValueField(.eventSourceUserData, value: syntheticMoveUserData)
+    }
+
+    static func shouldSuppress(_ event: CGEvent) -> Bool {
+        guard suppressedMouseEventTypes.contains(event.type) else {
+            return false
+        }
+
+        let userData = event.getIntegerValueField(.eventSourceUserData)
+        return userData == 0
+    }
+
+    @MainActor
+    static func withUserMouseInputSuppressed<T>(
+        _ operation: () async throws -> T
+    ) async throws -> T {
+        let tap = EventTap(
+            label: "Move input suppression",
+            types: suppressedMouseEventTypes,
+            location: .hidEventTap,
+            placement: .headInsertEventTap,
+            option: .defaultTap
+        ) { _, event in
+            shouldSuppress(event) ? nil : event
+        }
+
+        if tap.isValid {
+            tap.enable()
+        } else {
+            MenuBarItemManager.diagLog.warning("Move input suppression tap could not be created")
+        }
+
+        defer {
+            tap.invalidate()
+        }
+
+        return try await operation()
+    }
 }
 
 // MARK: - CGEventFilterMask Helpers

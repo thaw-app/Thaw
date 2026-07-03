@@ -127,7 +127,15 @@ final class AppState: ObservableObject {
     }
 
     /// Presents the onboarding sheet if the user hasn't seen it yet.
+    ///
+    /// Only ever fires as a self-heal *after* first-launch setup has already
+    /// completed — during first launch itself, the dedicated `.permissions`
+    /// window owns onboarding. Without this guard, a Settings window restored
+    /// by AppKit's window-restoration at launch (e.g. after `defaults
+    /// delete`) can race with the `.permissions` window and show the tour
+    /// twice.
     func presentOnboardingIfNeeded() {
+        guard Defaults.bool(forKey: .hasCompletedFirstLaunch) else { return }
         if !Defaults.bool(forKey: .hasSeenOnboarding) {
             isOnboardingPresented = true
         }
@@ -371,6 +379,15 @@ final class AppState: ObservableObject {
     }
 
     /// Relaunches the current app instance silently.
+    ///
+    /// On macOS 27 the OS does not reliably remove status items when a process
+    /// exits, leaving ghost icons with dead menus behind. The normal
+    /// `applicationShouldTerminate` path tears down control items explicitly and
+    /// gives MenuBarAgent a moment to reclaim them before quitting — but a soft
+    /// restart calls `exit(0)` directly and previously skipped that teardown,
+    /// so the relaunched instance inherited a dead ghost icon and could not
+    /// collect clicks for the Thaw icon or hidden items. Perform the same teardown
+    /// here before exiting.
     func restartSelf() {
         guard !isRestarting else { return }
         isRestarting = true
@@ -387,6 +404,15 @@ final class AppState: ObservableObject {
         Task { @MainActor in
             do {
                 _ = try await NSWorkspace.shared.openApplication(at: Bundle.main.bundleURL, configuration: config)
+                // Restore blocked items first so the new instance doesn't start
+                // with anything stuck off-screen (no-op on macOS 27 — see
+                // `MenuBarItemManager.restoreBlockedItemsToVisible()`).
+                _ = await itemManager.restoreBlockedItemsToVisible()
+                if #available(macOS 27, *) {
+                    menuBarManager.tearDownControlItemsForTermination()
+                    diagLog.info("Restart: tore down control items, waiting for MenuBarAgent to reclaim")
+                    try? await Task.sleep(for: .milliseconds(150))
+                }
                 try? await Task.sleep(for: .milliseconds(500))
                 exit(0)
             } catch {

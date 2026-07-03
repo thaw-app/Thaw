@@ -14,6 +14,12 @@ struct SettingsView: View {
     let appState: AppState
     @ObservedObject var navigationState: AppNavigationState
 
+    @StateObject private var searchModel = SearchModel()
+
+    private var isSearching: Bool {
+        !searchModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
     var body: some View {
         NavigationSplitView {
             sidebar
@@ -25,33 +31,39 @@ struct SettingsView: View {
     }
 
     private var sidebar: some View {
-        // Use a Binding that wraps the navigation state to ensure updates happen
-        // on the main thread and avoid view update warnings.
-        let selection = Binding<SettingsNavigationIdentifier>(
-            get: { navigationState.settingsNavigationIdentifier },
-            set: { newValue in
-                if navigationState.settingsNavigationIdentifier != newValue {
-                    Task { @MainActor in
-                        navigationState.settingsNavigationIdentifier = newValue
-                    }
-                }
-            }
-        )
+        VStack(spacing: 0) {
+            SearchField(text: $searchModel.searchText)
 
-        return List(selection: selection) {
-            Section {
-                ForEach(SettingsNavigationIdentifier.allCases) { identifier in
-                    Label {
-                        Text(identifier.localized)
-                    } icon: {
-                        identifier.iconResource.view
+            Group {
+                if isSearching {
+                    if searchModel.displayedGroups.isEmpty {
+                        SearchEmptyView()
+                    } else {
+                        SearchResultsList(groups: searchModel.displayedGroups) { entry in
+                            navigate(to: entry.pane)
+                        }
                     }
-                    .tag(identifier)
+                } else {
+                    SettingsSidebarPaneList(
+                        navigationState: navigationState
+                    )
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .listStyle(.sidebar)
-        .navigationSplitViewColumnWidth(ideal: 180, max: 220)
+        .navigationSplitViewColumnWidth(ideal: 200, max: 240)
+        .onChange(of: searchModel.searchText, initial: true) {
+            searchModel.updateDisplayedItems()
+        }
+    }
+
+    /// Switches the detail pane to `pane` and clears the search query so the
+    /// normal pane list returns with the new pane selected.
+    private func navigate(to pane: SettingsNavigationIdentifier) {
+        if navigationState.settingsNavigationIdentifier != pane {
+            navigationState.settingsNavigationIdentifier = pane
+        }
+        searchModel.searchText = ""
     }
 
     @ViewBuilder
@@ -74,7 +86,43 @@ struct SettingsView: View {
         case .automation:
             AutomationSettingsPane()
         case .about:
-            AboutSettingsPane(updatesManager: appState.updatesManager)
+            AboutSettingsPane(updatesManager: appState.updatesManager) {
+                appState.isOnboardingPresented = true
+            }
         }
+    }
+}
+
+// MARK: - SettingsSidebarPaneList
+
+/// The default settings sidebar navigation list.
+private struct SettingsSidebarPaneList: View {
+    @ObservedObject var navigationState: AppNavigationState
+
+    var body: some View {
+        let selection = Binding<SettingsNavigationIdentifier>(
+            get: { navigationState.settingsNavigationIdentifier },
+            set: { newValue in
+                if navigationState.settingsNavigationIdentifier != newValue {
+                    Task { @MainActor in
+                        navigationState.settingsNavigationIdentifier = newValue
+                    }
+                }
+            }
+        )
+
+        List(selection: selection) {
+            Section {
+                ForEach(SettingsNavigationIdentifier.allCases) { identifier in
+                    Label {
+                        Text(identifier.localized)
+                    } icon: {
+                        identifier.iconResource.view
+                    }
+                    .tag(identifier)
+                }
+            }
+        }
+        .listStyle(.sidebar)
     }
 }

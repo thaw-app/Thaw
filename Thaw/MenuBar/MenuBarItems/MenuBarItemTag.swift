@@ -28,9 +28,17 @@ struct MenuBarItemTag: Hashable, CustomStringConvertible {
         /// The item is not managed by the section layout.
         case excluded
 
-        var canBeHidden: Bool { self == .hideable }
-        var isVisibleInLayout: Bool { self != .excluded }
-        var isForcedVisible: Bool { self == .forcedVisible }
+        var canBeHidden: Bool {
+            self == .hideable
+        }
+
+        var isVisibleInLayout: Bool {
+            self != .excluded
+        }
+
+        var isForcedVisible: Bool {
+            self == .forcedVisible
+        }
     }
 
     /// The namespace of the item identified by this tag.
@@ -89,16 +97,23 @@ struct MenuBarItemTag: Hashable, CustomStringConvertible {
         ControlCenterModuleManager.moduleKeysByMenuExtraTitle[title] != nil
     }
 
+    /// iStat Menus status-item bundle ID. Titles and identifiers are
+    /// canonicalized via ``canonicalIStatMetricTitle`` so live metric values do
+    /// not churn layout keys every second.
+    static let iStatMenusStatusBundleID = "com.bjango.istatmenus.status"
+
     /// Bundle identifiers whose menu bar items Thaw can reorder but cannot yet
-    /// reliably *hide* on macOS 27. iStat Menus rewrites each item's title every
-    /// second, which defeats the identity used by both the reorder re-resolution
-    /// and the assertion's bundle attribution, so a hide attempt leaves the item
-    /// as an on-band ghost (frame present, no glyph) rather than concealing it.
-    /// Such items are classified ``SectionManagementPolicy/forcedVisible`` so the
-    /// layout editor still offers reordering but refuses a drop into a hidden
-    /// section, and the experimental-system-item promotion does not lift them.
+    /// reliably hide on macOS 27. Denylisted items are forced visible in the
+    /// layout editor. Keep this empty for apps whose identities can be
+    /// canonicalized well enough to let users manage them directly.
     static let hidingUnsupportedBundleIDs: Set<String> = [
-        "com.bjango.istatmenus.status",
+        // iStat Menus identities are canonicalized above, so allow users to
+        // move/hide them from the layout UI instead of forcing them visible.
+        // iStatMenusStatusBundleID,
+    ]
+
+    private static let nativeOverflowChevronGlyphs: Set<Character> = [
+        "<", ">", "‹", "›", "«", "»",
     ]
 
     /// Whether this item's owner is in ``hidingUnsupportedBundleIDs``.
@@ -109,8 +124,23 @@ struct MenuBarItemTag: Hashable, CustomStringConvertible {
         return false
     }
 
+    /// macOS 27's native menu-bar overflow control can appear in AX as a
+    /// MenuBarAgent extra. It is a system placeholder, not a status item.
+    var isNativeOverflowPlaceholder: Bool {
+        guard namespace == .menuBarAgent else { return false }
+
+        let glyphs = title.filter { !$0.isWhitespace }
+        guard !glyphs.isEmpty, glyphs.count <= 4 else { return false }
+
+        return glyphs.allSatisfy { MenuBarItemTag.nativeOverflowChevronGlyphs.contains($0) }
+    }
+
     /// The item's authoritative section-management classification.
     var sectionManagementPolicy: SectionManagementPolicy {
+        if #available(macOS 27, *), isNativeOverflowPlaceholder {
+            return .excluded
+        }
+
         if #available(macOS 27, *),
            isHidingUnsupported ||
            isLayoutAnchoredSystemItem ||
@@ -293,7 +323,9 @@ struct MenuBarItemTag: Hashable, CustomStringConvertible {
     /// Returns a Boolean value that indicates whether the given tag
     /// matches this tag, ignoring their window identifiers.
     func matchesIgnoringWindowID(_ other: MenuBarItemTag) -> Bool {
-        namespace == other.namespace && title == other.title && instanceIndex == other.instanceIndex
+        namespace == other.namespace &&
+            canonicalTitle == other.canonicalTitle &&
+            instanceIndex == other.instanceIndex
     }
 
     /// Returns whether this tag identifies the same logical item as `other`,
@@ -310,10 +342,57 @@ struct MenuBarItemTag: Hashable, CustomStringConvertible {
     /// instance index when it is nonzero so that multiple items from
     /// the same app with the same title are distinguishable.
     var tagIdentifier: String {
+        let title = canonicalTitle
         if instanceIndex > 0 {
             return "\(namespace):\(title):\(instanceIndex)"
         }
         return "\(namespace):\(title)"
+    }
+
+    var canonicalTitle: String {
+        Self.canonicalTitle(namespace: namespace, title: title)
+    }
+
+    static func canonicalTitle(namespace: Namespace, title: String) -> String {
+        guard namespace == .string(iStatMenusStatusBundleID) else {
+            return title
+        }
+        return canonicalIStatMetricTitle(title)
+    }
+
+    static func canonicalPersistentIdentifier(_ identifier: String) -> String {
+        let prefix = "\(iStatMenusStatusBundleID):"
+        guard identifier.hasPrefix(prefix) else {
+            return identifier
+        }
+
+        let suffix = String(identifier.dropFirst(prefix.count))
+        if let separator = suffix.lastIndex(of: ":") {
+            let title = String(suffix[..<separator])
+            let instance = String(suffix[suffix.index(after: separator)...])
+            if Int(instance) != nil {
+                return "\(prefix)\(canonicalIStatMetricTitle(title)):\(instance)"
+            }
+        }
+        return "\(prefix)\(canonicalIStatMetricTitle(suffix))"
+    }
+
+    static func canonicalPersistentIdentifiers(_ identifiers: [String]) -> [String] {
+        var seen = Set<String>()
+        return identifiers.compactMap { identifier in
+            let canonical = canonicalPersistentIdentifier(identifier)
+            guard seen.insert(canonical).inserted else {
+                return nil
+            }
+            return canonical
+        }
+    }
+
+    static func canonicalIStatMetricTitle(_ raw: String) -> String {
+        raw
+            .replacing(/[-+]?\d+(?:[.,]\d+)?/, with: "#")
+            .replacing(/#\s*[KMGTPE]?[Bb]\/s/, with: "# B/s")
+            .replacing(/#\s*[KMGTPE]?[Bb]/, with: "# B")
     }
 
     /// Creates a tag with the given namespace, title, window identifier,
@@ -352,10 +431,14 @@ extension MenuBarItemTag {
     ///
     /// This list contains the "Clock", "Control Center", "Siri", and
     /// "Screen Sharing" (ssMenuAgent) items.
-    static var immovableItems: [MenuBarItemTag] { [clock, controlCenter, siri, ssMenuAgent] }
+    static var immovableItems: [MenuBarItemTag] {
+        [clock, controlCenter, siri, ssMenuAgent]
+    }
 
     /// An array of tags for items that can be moved, but cannot be hidden.
-    static var nonHideableItems: [MenuBarItemTag] { [visibleControlItem, audioVideoModule, faceTime, screenCaptureUI, gameMode] }
+    static var nonHideableItems: [MenuBarItemTag] {
+        [visibleControlItem, audioVideoModule, faceTime, screenCaptureUI, gameMode]
+    }
 
     /// An array of tags for items representing Ice's control items.
     static let controlItems = ControlItem.Identifier.allCases.map(\.tag)
@@ -400,19 +483,29 @@ extension MenuBarItemTag {
 
     /// The tag for the system item that appears in the menu bar
     /// during screen or audio capture.
-    static var audioVideoModule: MenuBarItemTag { MenuBarItemTag(namespace: systemHostNamespace, title: "AudioVideoModule") }
+    static var audioVideoModule: MenuBarItemTag {
+        MenuBarItemTag(namespace: systemHostNamespace, title: "AudioVideoModule")
+    }
 
     /// The tag for the system "Clock" item.
-    static var clock: MenuBarItemTag { MenuBarItemTag(namespace: systemHostNamespace, title: "Clock") }
+    static var clock: MenuBarItemTag {
+        MenuBarItemTag(namespace: systemHostNamespace, title: "Clock")
+    }
 
     /// The tag for the system "Control Center" item.
-    static var controlCenter: MenuBarItemTag { MenuBarItemTag(namespace: systemHostNamespace, title: "BentoBox-0") }
+    static var controlCenter: MenuBarItemTag {
+        MenuBarItemTag(namespace: systemHostNamespace, title: "BentoBox-0")
+    }
 
     /// The tag for the system "FaceTime" item.
-    static var faceTime: MenuBarItemTag { MenuBarItemTag(namespace: systemHostNamespace, title: "FaceTime") }
+    static var faceTime: MenuBarItemTag {
+        MenuBarItemTag(namespace: systemHostNamespace, title: "FaceTime")
+    }
 
     /// The tag for the system "Music Recognition" item.
-    static var musicRecognition: MenuBarItemTag { MenuBarItemTag(namespace: systemHostNamespace, title: "MusicRecognition") }
+    static var musicRecognition: MenuBarItemTag {
+        MenuBarItemTag(namespace: systemHostNamespace, title: "MusicRecognition")
+    }
 
     /// The tag for the system item that appears in the menu bar
     /// during recordings started by the macOS "Screenshot" tool.

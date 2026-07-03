@@ -301,12 +301,18 @@ final class LayoutBarContainer: NSView {
         guard let sourceView = draggingInfo.draggingSource as? LayoutBarArrangedView else {
             return []
         }
-        // Refuse a drag of a reorderable-but-not-hideable item (e.g. iStat) into
+        // Refuse a drag of a reorderable-but-not-hideable denylisted item into
         // a non-visible section: show the no-drop cursor instead of letting it
         // settle, mirroring the rejection in performDragOperation. Visible-section
         // drops (reorders) are always allowed.
         if case let .item(item) = sourceView.kind {
             let experimentalSystemItemHiding = appState?.settings.advanced.enableExperimentalSystemItemHiding ?? false
+            if item.tag.isLayoutAnchoredSystemItem,
+               sourceView.oldContainerInfo?.container === self,
+               !LayoutBarPaddingView.allowsAnchoredSystemItemReordering(appState: appState)
+            {
+                return []
+            }
             if !SimpleItemHider.canAssign(
                 item,
                 to: section,

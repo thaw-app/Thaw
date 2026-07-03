@@ -24,6 +24,7 @@ final class SettingsURIHandlerTests: XCTestCase {
         XCTAssertTrue(keys.contains("showOnHover"))
         XCTAssertTrue(keys.contains("useIceBar"))
         XCTAssertTrue(keys.contains("enableDiagnosticLogging"))
+        XCTAssertTrue(keys.contains("enableExperimentalOverflowPrevention"))
     }
 
     func testDoubleKeysNotEmpty() {
@@ -65,6 +66,20 @@ final class SettingsURIHandlerTests: XCTestCase {
         XCTAssertTrue(SettingsURIHandler.isValidSettingsKey("autoRehide"))
         XCTAssertTrue(SettingsURIHandler.isValidSettingsKey("showOnClick"))
         XCTAssertTrue(SettingsURIHandler.isValidSettingsKey("enableDiagnosticLogging"))
+        XCTAssertTrue(SettingsURIHandler.isValidSettingsKey("enableExperimentalOverflowPrevention"))
+    }
+
+    func testSetAndToggleEnableExperimentalOverflowPreventionViaURI() {
+        let original = Defaults.bool(forKey: .enableExperimentalOverflowPrevention)
+        defer {
+            Defaults.set(original, forKey: .enableExperimentalOverflowPrevention)
+        }
+
+        XCTAssertTrue(SettingsURIHandler.handleSet(key: "enableExperimentalOverflowPrevention", value: "true", sender: nil))
+        XCTAssertTrue(Defaults.bool(forKey: .enableExperimentalOverflowPrevention))
+
+        XCTAssertTrue(SettingsURIHandler.handleToggle(key: "enableExperimentalOverflowPrevention", sender: nil))
+        XCTAssertFalse(Defaults.bool(forKey: .enableExperimentalOverflowPrevention))
     }
 
     func testIsValidSettingsKeyWithDoubleKey() {
@@ -262,5 +277,63 @@ final class SettingsURIHandlerTests: XCTestCase {
             SettingsURIHandler.PerDisplayScope.specificDisplay(uuid: "UUID-1"),
             SettingsURIHandler.PerDisplayScope.activeDisplay
         )
+    }
+
+    // MARK: - resolveRevealItemIdentifier() Tests
+
+    func testResolveRevealItemIdentifierWithItemIDReturnsCanonicalIdentifier() {
+        let identifier = SettingsURIHandler.resolveRevealItemIdentifier(
+            bundle: nil,
+            itemID: "com.bjango.istatmenus.cpu:CPU",
+            sectionAssignment: [:]
+        )
+        XCTAssertEqual(identifier, "com.bjango.istatmenus.cpu:CPU")
+    }
+
+    func testResolveRevealItemIdentifierWithBundleResolvesSingleAssignedMatch() {
+        let sectionAssignment: [String: MenuBarSection.Name] = [
+            "com.example.app:MenuExtra": .hidden,
+            "com.other.app:MenuExtra": .alwaysHidden,
+        ]
+        let identifier = SettingsURIHandler.resolveRevealItemIdentifier(
+            bundle: "com.example.app",
+            itemID: nil,
+            sectionAssignment: sectionAssignment
+        )
+        XCTAssertEqual(identifier, "com.example.app:MenuExtra")
+    }
+
+    func testResolveRevealItemIdentifierRejectsAmbiguousOrMissingParams() {
+        // Neither bundle nor item-id provided.
+        XCTAssertNil(SettingsURIHandler.resolveRevealItemIdentifier(
+            bundle: nil,
+            itemID: nil,
+            sectionAssignment: [:]
+        ))
+
+        // Both bundle and item-id provided.
+        XCTAssertNil(SettingsURIHandler.resolveRevealItemIdentifier(
+            bundle: "com.example.app",
+            itemID: "com.example.app:MenuExtra",
+            sectionAssignment: [:]
+        ))
+
+        // Bundle matches zero assigned items.
+        XCTAssertNil(SettingsURIHandler.resolveRevealItemIdentifier(
+            bundle: "com.unknown.app",
+            itemID: nil,
+            sectionAssignment: ["com.example.app:MenuExtra": .hidden]
+        ))
+
+        // Bundle matches more than one assigned item (ambiguous).
+        let ambiguousAssignment: [String: MenuBarSection.Name] = [
+            "com.bjango.istatmenus.cpu:CPU": .hidden,
+            "com.bjango.istatmenus.cpu:Memory": .alwaysHidden,
+        ]
+        XCTAssertNil(SettingsURIHandler.resolveRevealItemIdentifier(
+            bundle: "com.bjango.istatmenus.cpu",
+            itemID: nil,
+            sectionAssignment: ambiguousAssignment
+        ))
     }
 }

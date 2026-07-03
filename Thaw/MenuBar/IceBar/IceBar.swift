@@ -285,6 +285,7 @@ final class IceBarPanel: NSPanel {
     }
 
     override func close() {
+        let closingSection = currentSection
         CustomTooltipPanel.shared.dismiss()
         cacheTask?.cancel()
         cacheTask = nil
@@ -293,6 +294,19 @@ final class IceBarPanel: NSPanel {
         super.close()
         currentSection = nil
         appState?.navigationState.isIceBarPresented = false
+        resetSectionStateAfterClose(closingSection)
+    }
+
+    private func resetSectionStateAfterClose(_ closingSection: MenuBarSection.Name?) {
+        guard closingSection != nil, let menuBarManager = appState?.menuBarManager else {
+            return
+        }
+
+        menuBarManager.showOnHoverAllowed = true
+        for section in menuBarManager.sections {
+            section.desiredState = .hideSection
+            section.updateControlItemState(for: nil)
+        }
     }
 
     /// Resizes the panel to match the hosting view's intrinsic content size.

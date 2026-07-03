@@ -14,6 +14,8 @@ import Combine
 /// A status item that controls a section in the menu bar.
 @MainActor
 final class ControlItem: NSObject {
+    private let diagLog = DiagLog(category: "ControlItem")
+
     /// An identifier for a control item.
     enum Identifier: String, CaseIterable {
         /// The identifier for the control item for the visible section.
@@ -244,6 +246,12 @@ final class ControlItem: NSObject {
     /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
 
+    /// Task animating a legacy section divider width change.
+    private var lengthAnimationTask: Task<Void, Never>?
+
+    /// Whether next visibility update should animate the divider width.
+    private var shouldAnimateNextVisibilityUpdate = false
+
     /// The control item's underlying status item.
     private var statusItem: NSStatusItem {
         storage.statusItem
@@ -264,6 +272,11 @@ final class ControlItem: NSObject {
     /// displayed in the menu bar.
     var isAddedToMenuBar: Bool {
         statusItem.isVisible
+    }
+
+    /// Animates next legacy divider visibility update.
+    func animateNextVisibilityUpdate() {
+        shouldAnimateNextVisibilityUpdate = true
     }
 
     /// The corresponding section name for the control item.
@@ -455,6 +468,7 @@ final class ControlItem: NSObject {
             button.isEnabled = true
             button.alphaValue = 1
             button.appearsDisabled = false
+            button.isHighlighted = false
 
             let icon = appState.settings.general.iceIcon
 
@@ -525,9 +539,15 @@ final class ControlItem: NSObject {
             return
         }
 
+        let animateLength = shouldAnimateNextVisibilityUpdate
+            && MenuBarBackendFactory.current.supportsLegacySectionHiding
+            && (identifier == .hidden || identifier == .alwaysHidden)
+            && !appState.isDraggingMenuBarItem
+        shouldAnimateNextVisibilityUpdate = false
+
         if isVisible {
             constraint?.isActive = true
-            statusItem.length = identifier.length(for: state)
+            setStatusItemLength(identifier.length(for: state), animated: animateLength)
 
             let shouldUseSpacers = MenuBarBackendFactory.current.supportsLegacySectionHiding
                 && (identifier == .hidden || identifier == .alwaysHidden)
@@ -541,13 +561,90 @@ final class ControlItem: NSObject {
             let shouldShow = showOnDrag && isDragging
 
             constraint?.isActive = false
-            statusItem.length = shouldShow ? 3 : 0
+            setStatusItemLength(shouldShow ? 3 : 0, animated: animateLength)
 
             if let window {
                 let size = withMutableCopy(of: window.frame.size) { $0.width = shouldShow ? 3 : 1 }
                 window.setContentSize(size)
             }
         }
+    }
+
+    /// Updates status item length immediately or with a short width animation.
+    private func setStatusItemLength(_ targetLength: CGFloat, animated: Bool) {
+        lengthAnimationTask?.cancel()
+
+        guard animated else {
+            lengthAnimationTask = nil
+            statusItem.length = targetLength
+            return
+        }
+
+        let resolvedTargetLength = resolvedAnimationLength(for: targetLength)
+        let startLength = resolvedCurrentLength()
+        guard abs(startLength - resolvedTargetLength) > 1 else {
+            statusItem.length = targetLength
+            return
+        }
+
+        lengthAnimationTask = Task { @MainActor [weak self] in
+            guard let self else {
+                return
+            }
+
+            let duration: TimeInterval = 0.22
+            let frameCount = 16
+
+            for frame in 1 ... frameCount {
+                guard !Task.isCancelled else {
+                    return
+                }
+
+                let progress = CGFloat(frame) / CGFloat(frameCount)
+                let eased = Self.easeInOutCubic(progress)
+                self.statusItem.length = startLength + (resolvedTargetLength - startLength) * eased
+                try? await Task.sleep(for: .milliseconds(Int(duration * 1000 / Double(frameCount))))
+            }
+
+            guard !Task.isCancelled else {
+                return
+            }
+
+            self.statusItem.length = targetLength
+            self.lengthAnimationTask = nil
+        }
+    }
+
+    /// Current status-item width suitable as animation start value.
+    private func resolvedCurrentLength() -> CGFloat {
+        if statusItem.length >= 0 {
+            return statusItem.length
+        }
+
+        if let button = statusItem.button, button.bounds.width > 0 {
+            return button.bounds.width
+        }
+
+        return identifier == .visible ? 24 : 18
+    }
+
+    /// Converts variable status-item length to an animatable normal width.
+    private func resolvedAnimationLength(for length: CGFloat) -> CGFloat {
+        guard length == NSStatusItem.variableLength else {
+            return length
+        }
+
+        return identifier == .visible ? 24 : 18
+    }
+
+    /// Smoothstep-like curve for section divider width changes.
+    private static func easeInOutCubic(_ progress: CGFloat) -> CGFloat {
+        if progress < 0.5 {
+            return 4 * progress * progress * progress
+        }
+
+        let f = -2 * progress + 2
+        return 1 - (f * f * f) / 2
     }
 
     /// Adds or removes spacer items to extend the hidden/always-hidden section width.
@@ -847,15 +944,18 @@ final class ControlItem: NSObject {
         modifierFlags: NSEvent.ModifierFlags,
         clickCount: Int,
         usesDoubleClick: Bool,
-        usesOptionClick: Bool
+        usesOptionClick: Bool,
+        diagLog: DiagLog? = nil
     ) -> PrimaryActionIntent {
-        if usesDoubleClick, clickCount > 1, identifier == .visible {
-            return .showAlwaysHidden
+        let intent: PrimaryActionIntent = if usesDoubleClick, clickCount > 1, identifier == .visible {
+            .showAlwaysHidden
+        } else if modifierFlags.contains(.option) {
+            usesOptionClick ? .toggleAlwaysHidden : .none
+        } else {
+            .toggleSection
         }
-        if modifierFlags.contains(.option) {
-            return usesOptionClick ? .toggleAlwaysHidden : .none
-        }
-        return .toggleSection
+        diagLog?.debug("menuBarAgentPrimaryActionIntent: identifier=\(identifier.rawValue), modifierFlags=\(modifierFlags), clickCount=\(clickCount), usesDoubleClick=\(usesDoubleClick), usesOptionClick=\(usesOptionClick) → \(intent)")
+        return intent
     }
 
     /// Handles macOS 27's semantic primary action for the visible control item.
@@ -874,12 +974,17 @@ final class ControlItem: NSObject {
         }
 
         let event = NSApp.currentEvent
+        let modifierFlags = event?.modifierFlags ?? []
+        let effectiveModifierFlags = modifierFlags.isEmpty
+            ? NSEvent.modifierFlags
+            : modifierFlags
         let intent = Self.menuBarAgentPrimaryActionIntent(
             identifier: identifier,
-            modifierFlags: event?.modifierFlags ?? [],
+            modifierFlags: effectiveModifierFlags,
             clickCount: event?.clickCount ?? 0,
             usesDoubleClick: appState.settings.advanced.useDoubleClickToShowAlwaysHiddenSection,
-            usesOptionClick: appState.settings.advanced.useOptionClickToShowAlwaysHiddenSection
+            usesOptionClick: appState.settings.advanced.useOptionClickToShowAlwaysHiddenSection,
+            diagLog: diagLog
         )
         let menuBarManager = appState.menuBarManager
 
@@ -894,11 +999,31 @@ final class ControlItem: NSObject {
             }
         case .showAlwaysHidden:
             if let section = menuBarManager.section(withName: .alwaysHidden), section.isEnabled {
-                section.show()
+                diagLog.debug("performPrimaryAction: showAlwaysHidden → permanent show")
+                for s in menuBarManager.sections {
+                    s.desiredState = .showSection
+                    s.updateControlItemState(for: nil)
+                }
+                menuBarManager.simpleItemHider?.show(.alwaysHidden)
+            } else {
+                diagLog.debug("performPrimaryAction: showAlwaysHidden — section found=\(menuBarManager.section(withName: .alwaysHidden) != nil), isEnabled=\(menuBarManager.section(withName: .alwaysHidden)?.isEnabled ?? false)")
             }
         case .toggleAlwaysHidden:
             if let section = menuBarManager.section(withName: .alwaysHidden), section.isEnabled {
-                section.toggle()
+                let makeVisible = section.isHidden
+                diagLog.debug("performPrimaryAction: toggleAlwaysHidden → permanent toggle, isHidden=\(section.isHidden)")
+                for s in menuBarManager.sections {
+                    s.desiredState = makeVisible ? .showSection : .hideSection
+                    s.updateControlItemState(for: nil)
+                }
+                if makeVisible {
+                    menuBarManager.simpleItemHider?.show(.alwaysHidden)
+                } else {
+                    menuBarManager.simpleItemHider?.hideRevealedSections()
+                    menuBarManager.iceBarPanel.close()
+                }
+            } else {
+                diagLog.debug("performPrimaryAction: toggleAlwaysHidden — section found=\(menuBarManager.section(withName: .alwaysHidden) != nil), isEnabled=\(menuBarManager.section(withName: .alwaysHidden)?.isEnabled ?? false)")
             }
         case .contextMenu, .none:
             break

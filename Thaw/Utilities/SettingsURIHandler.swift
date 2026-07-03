@@ -37,6 +37,7 @@ enum SettingsURIHandler {
         "iceBarLocationOnHotkey",
         "useLCSSortingOnNotchedDisplays",
         "enableMenuBarItemOverflow",
+        "enableExperimentalOverflowPrevention",
         "searchIncludeVisible",
         "searchIncludeHidden",
         "searchIncludeAlwaysHidden",
@@ -437,6 +438,53 @@ enum SettingsURIHandler {
             return true
         }
         return false
+    }
+
+    // MARK: - Reveal Item Resolution
+
+    /// Resolves the target identifier for a `thaw://reveal-item` request.
+    ///
+    /// Exactly one of `bundle` or `itemID` must be provided (non-empty).
+    /// Providing both or neither is rejected as ambiguous/missing.
+    ///
+    /// - `itemID` is canonicalized directly via
+    ///   ``MenuBarItemTag/canonicalPersistentIdentifier(_:)``.
+    /// - `bundle` is resolved against the current `sectionAssignment` (the
+    ///   same map ``SimpleItemHider/setSection(_:identifier:)`` mutates) by
+    ///   matching the `<bundleID>:` prefix of assigned identifiers. If the
+    ///   bundle has zero or more than one assigned item, the request is
+    ///   rejected as unresolvable/ambiguous rather than guessing.
+    static func resolveRevealItemIdentifier(
+        bundle: String?,
+        itemID: String?,
+        sectionAssignment: [String: MenuBarSection.Name]
+    ) -> String? {
+        let hasBundle = !(bundle?.isEmpty ?? true)
+        let hasItemID = !(itemID?.isEmpty ?? true)
+
+        guard hasBundle != hasItemID else {
+            diagLog.warning(
+                "Settings URI reveal-item: expected exactly one of bundle/item-id, got bundle=\(bundle ?? "nil"), item-id=\(itemID ?? "nil")"
+            )
+            return nil
+        }
+
+        if hasItemID, let itemID {
+            return MenuBarItemTag.canonicalPersistentIdentifier(itemID)
+        }
+
+        guard let bundle else { return nil }
+
+        let prefix = "\(bundle):"
+        let matches = sectionAssignment.keys.filter { $0.hasPrefix(prefix) }
+        guard let match = matches.first, matches.count == 1 else {
+            diagLog.warning(
+                "Settings URI reveal-item: bundle '\(bundle)' matched \(matches.count) assigned item(s), expected exactly 1"
+            )
+            return nil
+        }
+
+        return match
     }
 
     /// Handles setting a per-display configuration value.

@@ -31,6 +31,49 @@ final class LayoutBarPaddingView: NSView {
         !item.isControlItem || item.tag.matchesVisibleControlItem
     }
 
+    /// Whether anchored Apple system items may be freely reordered in the
+    /// layout editor. Without Thaw Bar, hidden anchored items still mirror the
+    /// real menu bar's trailing system-control placement.
+    static func allowsAnchoredSystemItemReordering(appState: AppState?) -> Bool {
+        guard let appState else {
+            return false
+        }
+        if let displayID = appState.itemManager.itemCache.displayID {
+            return appState.settings.displaySettings.useIceBar(for: displayID)
+        }
+        return appState.settings.displaySettings.configurationForActiveDisplay().useIceBar
+    }
+
+    private static func anchoredSystemItemsTrail(in items: [MenuBarItem]) -> [MenuBarItem] {
+        let trailingAnchors = items.filter(\.tag.isLayoutAnchoredSystemItem).sorted { lhs, rhs in
+            let lhsRank = anchoredSystemItemRank(lhs.tag)
+            let rhsRank = anchoredSystemItemRank(rhs.tag)
+            if lhsRank != rhsRank {
+                return lhsRank < rhsRank
+            }
+            return lhs.bounds.minX < rhs.bounds.minX
+        }
+        return items.filter { !$0.tag.isLayoutAnchoredSystemItem } + trailingAnchors
+    }
+
+    private static func anchoredSystemItemRank(_ tag: MenuBarItemTag) -> Int {
+        if tag.title == MenuBarItemTag.controlCenter.title ||
+            tag.title == "ControlCenter" ||
+            tag.title == "com.apple.menuextra.controlcenter"
+        {
+            return 0
+        }
+        if tag == .siri {
+            return 1
+        }
+        if tag.title == MenuBarItemTag.clock.title ||
+            tag.title == "com.apple.menuextra.clock"
+        {
+            return 2
+        }
+        return 3
+    }
+
     private func layoutWatchdogDuration() -> Duration? {
         switch MenuBarItemManager.layoutWatchdogTimeout {
         case let .seconds(s):
@@ -189,10 +232,12 @@ final class LayoutBarPaddingView: NSView {
 
             let hider = container.appState?.menuBarManager.simpleItemHider
             let sourceSection = sourceContainer?.section ?? container.section
-            let orderedItems = orderedLayoutItems()
+            let orderedItems = orderedLayoutItemsForSectionOrder()
             let experimentalSystemItemHiding = container.appState?.settings.advanced.enableExperimentalSystemItemHiding ?? false
+            let physicalOrderExperimentalSystemItemHiding = experimentalSystemItemHiding &&
+                Self.allowsAnchoredSystemItemReordering(appState: container.appState)
 
-            guard item.isPhysicallyOrderable(experimentalSystemItemHiding: experimentalSystemItemHiding) else {
+            guard item.isPhysicallyOrderable(experimentalSystemItemHiding: physicalOrderExperimentalSystemItemHiding) else {
                 guard SimpleItemHider.canAssign(
                     item,
                     to: container.section,
@@ -221,9 +266,9 @@ final class LayoutBarPaddingView: NSView {
             }
 
             if sourceSection != container.section {
-                // A physically-orderable item can still be un-hideable (e.g. iStat,
-                // which we reorder but cannot reliably conceal). Reject a drop into
-                // a non-visible section and snap it back, rather than committing a
+                // A physically-orderable item can still be un-hideable when its
+                // owner is on the hiding denylist. Reject a drop into a
+                // non-visible section and snap it back, rather than committing a
                 // hidden assignment the assertion can't honor.
                 guard SimpleItemHider.canAssign(
                     item,
@@ -268,18 +313,18 @@ final class LayoutBarPaddingView: NSView {
                         let achievableItems = LayoutPlanner.achievableOrderSegments(
                             items: liveItems,
                             desiredOrder: desiredIDs,
-                            experimentalSystemItemHiding: experimentalSystemItemHiding
-                        ).flatMap { $0 }
+                            experimentalSystemItemHiding: physicalOrderExperimentalSystemItemHiding
+                        ).flatMap(\.self)
 
                         let destination = LayoutPlanner.achievableDestination(
                             items: liveItems,
                             item: item,
                             desiredOrder: desiredIDs,
-                            experimentalSystemItemHiding: experimentalSystemItemHiding
+                            experimentalSystemItemHiding: physicalOrderExperimentalSystemItemHiding
                         ) ?? visibleThawControlNeighborDestination(
                             for: item,
                             at: index,
-                            experimentalSystemItemHiding: experimentalSystemItemHiding
+                            experimentalSystemItemHiding: physicalOrderExperimentalSystemItemHiding
                         )
 
                         if let destination {
@@ -306,13 +351,13 @@ final class LayoutBarPaddingView: NSView {
                         if let target = nearestItem(
                             toRightOf: index,
                             requiringMovable: true,
-                            experimentalSystemItemHiding: experimentalSystemItemHiding
+                            experimentalSystemItemHiding: physicalOrderExperimentalSystemItemHiding
                         ) {
                             .leftOfItem(target)
                         } else if let target = nearestItem(
                             toLeftOf: index,
                             requiringMovable: true,
-                            experimentalSystemItemHiding: experimentalSystemItemHiding
+                            experimentalSystemItemHiding: physicalOrderExperimentalSystemItemHiding
                         ) {
                             .rightOfItem(target)
                         } else {
@@ -630,6 +675,16 @@ final class LayoutBarPaddingView: NSView {
 
     private func orderedLayoutItems() -> [MenuBarItem] {
         Self.layoutItemsForPersistence(from: arrangedViews)
+    }
+
+    private func orderedLayoutItemsForSectionOrder() -> [MenuBarItem] {
+        let orderedItems = orderedLayoutItems()
+        guard container.section != .visible,
+              !Self.allowsAnchoredSystemItemReordering(appState: container.appState)
+        else {
+            return orderedItems
+        }
+        return Self.anchoredSystemItemsTrail(in: orderedItems)
     }
 
     /// Fallback move target for the visible Thaw control when the planner

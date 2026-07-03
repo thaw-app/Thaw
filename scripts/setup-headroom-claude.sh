@@ -52,6 +52,11 @@ usage() {
     printf '  --no-launcher      Do not install ~/.local/bin/claude-headroom\n'
     printf '  --check            Verify setup; do not change anything\n'
     printf '  -h, --help         Show this help\n'
+    printf '\nEnvironment variables (mirror the flags above; flags take precedence):\n'
+    printf '  HEADROOM_ENV       Micromamba environment name (default: headroom)\n'
+    printf '  HEADROOM_PORT      Headroom proxy port (default: 8787)\n'
+    printf '  INSTALLER          auto | micromamba | pip | pipx (default: auto)\n'
+    printf '  PIP_PYTHON         Python binary for pip/pipx installs (default: newest 3.10-3.13)\n'
 }
 
 say()  { printf '\033[1;36m==>\033[0m %s\n' "$*"; }
@@ -370,6 +375,28 @@ Installer: $(installer_summary)
 Note: Claude Desktop (the GUI app) does not route through Headroom in normal
 subscription mode. Use this CLI setup for compressed coding sessions.
 
+Stop / undo:
+  pkill -f 'headroom proxy'       # stop the running proxy
+
+  'headroom init claude -g' rewrote ~/.claude/settings.json to add
+  ANTHROPIC_BASE_URL=${PROXY_URL}. This reroutes ALL \`claude\` CLI usage
+  through the proxy (not just \`claude-headroom\`). If the proxy is down
+  (or the machine rebooted) and settings.json still points at it, plain
+  \`claude\` will fail with a connection-refused error until the setting
+  is restored.
+
+  headroom does not currently ship a documented 'init claude --undo' (or
+  '--uninstall') flag — verified via 'headroom init claude --help' — so
+  restore manually:
+    1. Open ~/.claude/settings.json
+    2. Remove the "ANTHROPIC_BASE_URL" entry under "env" (and any other
+       headroom-added keys there)
+    3. Optionally drop the MCP registration:
+         claude mcp remove headroom -s user
+
+  Check headroom's own docs/release notes for a future '--undo' flag
+  before relying on the manual steps above.
+
 EOF
 }
 
@@ -398,6 +425,17 @@ if $CHECK_ONLY; then
         say "proxy is healthy at ${PROXY_URL}"
     else
         warn "proxy is not reachable at ${PROXY_URL}"
+    fi
+
+    launcher="$HOME/.local/bin/claude-headroom"
+    if [[ -x "$launcher" ]]; then
+        if grep -qF "$HEADROOM_BIN" "$launcher" 2>/dev/null; then
+            say "launcher ${launcher} matches recorded HEADROOM_BIN"
+        else
+            warn "launcher ${launcher} does not reference ${HEADROOM_BIN} (stale? re-run setup)"
+        fi
+    else
+        warn "launcher ${launcher} not found (run without --no-launcher to install it)"
     fi
 
     run_doctor

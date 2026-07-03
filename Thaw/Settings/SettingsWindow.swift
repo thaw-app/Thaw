@@ -32,10 +32,11 @@ struct SettingsWindow: Scene {
                     }
                 }
                 .sheet(isPresented: $appState.isOnboardingPresented) {
-                    OnboardingSheet {
+                    ThawOnboardingView(showsCompletionScreen: false) {
                         Defaults.set(true, forKey: .hasSeenOnboarding)
                         appState.isOnboardingPresented = false
                     }
+                    .frame(width: 608, height: 480)
                 }
                 .frame(minWidth: 850, minHeight: 600)
         }

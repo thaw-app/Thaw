@@ -6,6 +6,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Combine
 import SwiftUI
 
 struct SecondsLabel: View {
@@ -30,14 +31,32 @@ struct AdvancedSettingsPane: View {
     @State private var maxSliderLabelWidth: CGFloat = 0
     @State private var currentLogFileName: String?
     @State private var isConfirmingReset = false
+    @State private var isHidingAvailable = true
 
     private var menuBarManager: MenuBarManager {
         appState.menuBarManager
     }
 
+    /// Whether to show the "hiding unsupported" warning: only relevant on
+    /// macOS 27+ (where `simpleItemHider` exists) and only when its backend
+    /// reports the private Assessment Mode API is unavailable.
+    private var isHidingUnavailable: Bool {
+        guard #available(macOS 27, *) else { return false }
+        return !isHidingAvailable
+    }
+
+    private func syncHidingAvailability() {
+        isHidingAvailable = menuBarManager.simpleItemHider?.isHidingAvailable ?? true
+    }
+
     var body: some View {
         IceForm {
             IceSection("Menu Bar Sections") {
+                if isHidingUnavailable {
+                    SettingsWarningPill(
+                        message: "Hiding is unavailable on this macOS build (the required system capability was not found). Reordering still works; hiding does not."
+                    )
+                }
                 enableAlwaysHiddenSection
                 if settings.isAlwaysHiddenSectionEnabled {
                     useOptionClickToShowAlwaysHiddenSection
@@ -85,6 +104,13 @@ struct AdvancedSettingsPane: View {
                 resetSettings
             }
         }
+        .onAppear {
+            syncHidingAvailability()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            menuBarManager.simpleItemHider?.refreshHidingAvailability()
+            syncHidingAvailability()
+        }
     }
 
     private var resetSettings: some View {
@@ -116,38 +142,11 @@ struct AdvancedSettingsPane: View {
         }
     }
 
-    /// macOS 27 hosts menu bar items through the system MenuBarAgent, where the
-    /// hidden and always-hidden tiers collapse into a single concealed bucket —
-    /// the two can't be told apart yet, so the section is disabled there until
-    /// that differentiation is rebuilt.
-    private var alwaysHiddenSectionAvailable: Bool {
-        if #available(macOS 27, *) {
-            return false
-        }
-        return true
-    }
-
-    @ViewBuilder
     private var enableAlwaysHiddenSection: some View {
-        let toggle = Toggle(
+        Toggle(
             "Enable the always-hidden section",
-            isOn: alwaysHiddenSectionAvailable
-                ? $settings.enableAlwaysHiddenSection
-                : .constant(false)
+            isOn: $settings.enableAlwaysHiddenSection
         )
-        .disabled(!alwaysHiddenSectionAvailable)
-
-        if alwaysHiddenSectionAvailable {
-            toggle
-        } else {
-            toggle.annotation {
-                HStack(spacing: 4) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.yellow)
-                    Text("Not currently available on macOS 27.")
-                }
-            }
-        }
     }
 
     private var useOptionClickToShowAlwaysHiddenSection: some View {

@@ -150,11 +150,10 @@ extension WindowInfo {
             // The wallpaper (desktop picture) window belongs to the Dock on
             // macOS 26 and earlier; macOS 27 moved it to WindowManager.
             let bundleID = window.owningApplication?.bundleIdentifier
-            let isWallpaperOwner: Bool
-            if #available(macOS 27, *) {
-                isWallpaperOwner = bundleID == "com.apple.dock" || bundleID == "com.apple.WindowManager"
+            let isWallpaperOwner: Bool = if #available(macOS 27, *) {
+                bundleID == "com.apple.dock" || bundleID == "com.apple.WindowManager"
             } else {
-                isWallpaperOwner = bundleID == "com.apple.dock"
+                bundleID == "com.apple.dock"
             }
             return isWallpaperOwner
                 && window.title?.hasPrefix("Wallpaper") == true
@@ -177,12 +176,11 @@ extension WindowInfo {
             // The menu bar backdrop window is owned by WindowServer on macOS 26 and
             // earlier. On macOS 27+, MenuBarAgent also renders the menu bar and can
             // own this window, so accept it as a backdrop owner there too.
-            let isMenuBarBackdropOwner: Bool
-            if #available(macOS 27, *) {
-                isMenuBarBackdropOwner = window.isWindowServerWindow
+            let isMenuBarBackdropOwner: Bool = if #available(macOS 27, *) {
+                window.isWindowServerWindow
                     || window.owningApplication?.bundleIdentifier == "com.apple.MenuBarAgent"
             } else {
-                isMenuBarBackdropOwner = window.isWindowServerWindow
+                window.isWindowServerWindow
             }
             return isMenuBarBackdropOwner
                 && window.isOnScreen

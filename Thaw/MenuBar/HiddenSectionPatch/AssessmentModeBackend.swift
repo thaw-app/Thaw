@@ -31,10 +31,25 @@ import Cocoa
 /// When the private API is unavailable this backend is simply inert; there is no
 /// fallback.
 @MainActor
-final class AssessmentModeBackend {
+final class AssessmentModeBackend: ObservableObject {
     /// Whether the private assertion API is present on this system.
     static var isAvailable: Bool {
         ThawAssessmentModeHidingAvailable()
+    }
+
+    /// Observable mirror of ``isAvailable``, captured at init and refreshed by
+    /// ``refreshAvailability()``. macOS can update while the app is running, so
+    /// callers should re-check on `NSApplication.didBecomeActiveNotification`
+    /// rather than trusting this forever.
+    @Published private(set) var isHidingAvailable = AssessmentModeBackend.isAvailable
+
+    /// Re-evaluates ``isAvailable`` and updates ``isHidingAvailable``. Returns
+    /// the freshly-observed value.
+    @discardableResult
+    func refreshAvailability() -> Bool {
+        let available = Self.isAvailable
+        isHidingAvailable = available
+        return available
     }
 
     /// The Apple system-item identifiers known to the Assessment Mode
@@ -107,8 +122,91 @@ final class AssessmentModeBackend {
         systemHostBundleIDs.contains(bundleID)
     }
 
+    static func resolveConcealment(
+        sectionAssignment: [String: MenuBarSection.Name],
+        allItems: [MenuBarItem],
+        knownBundleIDs: [String: String],
+        knownSystemItemIDs: [String: Int],
+        protectedBundleIDs: Set<String> = protectedBundleIDs,
+        hidingUnsupportedBundleIDs: Set<String> = MenuBarItemTag.hidingUnsupportedBundleIDs
+    ) -> (concealedBundleIDs: Set<String>, concealedSystemItemIDs: Set<Int>, allowedSystemItemSet: Set<Int>) {
+        let concealed = Set(sectionAssignment.compactMap { identifier, section -> String? in
+            switch section {
+            case .visible:
+                nil
+            case .hidden, .alwaysHidden:
+                identifier
+            }
+        })
+
+        var bundlesWithVisibleItem = Set<String>()
+        for item in allItems where !concealed.contains(item.uniqueIdentifier) {
+            if let bundleID = knownBundleIDs[item.uniqueIdentifier] ?? item.sourceApplication?.bundleIdentifier {
+                bundlesWithVisibleItem.insert(bundleID)
+            }
+        }
+
+        var concealedBundleIDs = Set(concealed.compactMap { knownBundleIDs[$0] })
+            .subtracting(bundlesWithVisibleItem)
+
+        concealedBundleIDs.subtract(protectedBundleIDs)
+        concealedBundleIDs.subtract(hidingUnsupportedBundleIDs)
+
+        let dynamicSystemHostBundleIDs = Set(concealed.compactMap { identifier -> String? in
+            guard knownSystemItemIDs[identifier] != nil else { return nil }
+            return knownBundleIDs[identifier]
+        })
+        concealedBundleIDs.subtract(dynamicSystemHostBundleIDs)
+        concealedBundleIDs.subtract(Self.systemHostBundleIDs)
+
+        let concealedSystemItemIDs = Set(concealed.compactMap { knownSystemItemIDs[$0] })
+        let allowedSystemItemSet = Self.allSystemItems.subtracting(concealedSystemItemIDs)
+        return (concealedBundleIDs, concealedSystemItemIDs, allowedSystemItemSet)
+    }
+
+    static func shouldReactivate(
+        handleIsNil: Bool,
+        concealedChanged: Bool,
+        systemItemsChanged: Bool,
+        newlyAppeared: Bool,
+        desiredAllowed: Set<String>,
+        desiredSystemItems: Set<Int>,
+        desiredConcealed: Set<String>,
+        previousConfig: (allowed: Set<String>, systemItems: Set<Int>, concealed: Set<String>, at: ContinuousClock.Instant)?,
+        lastFailed: (allowed: Set<String>, systemItems: Set<Int>)?,
+        antiFlapWindow: Duration,
+        now: ContinuousClock.Instant
+    ) -> Bool {
+        guard handleIsNil || concealedChanged || systemItemsChanged || newlyAppeared else { return false }
+
+        if !handleIsNil,
+           let previousConfig,
+           previousConfig.allowed == desiredAllowed,
+           previousConfig.systemItems == desiredSystemItems,
+           previousConfig.concealed == desiredConcealed,
+           previousConfig.at.duration(to: now) < antiFlapWindow
+        {
+            return false
+        }
+
+        if let lastFailed,
+           desiredAllowed == lastFailed.allowed,
+           desiredSystemItems == lastFailed.systemItems
+        {
+            return false
+        }
+
+        return true
+    }
+
     /// The live assertion handle, or `nil` when nothing is hidden.
     private var handle: UnsafeMutableRawPointer?
+
+    isolated deinit {
+        if let handle {
+            ThawAssessmentModeHidingInvalidate(handle)
+        }
+    }
 
     /// The concealed-app bundle IDs baked into the currently-active assertion.
     private var appliedConcealed: Set<String> = []
@@ -139,6 +237,7 @@ final class AssessmentModeBackend {
     /// configuration on the next 1s tick (which would hot-loop); any genuine
     /// change to the desired set clears it and allows another attempt.
     private var lastFailedConfiguration: (allowed: Set<String>, systemItems: Set<Int>)?
+    private var consecutiveTearDowns = 0
 
     /// The allowed system-item set baked into the currently-active assertion.
     private var appliedAllowedSystemItems = AssessmentModeBackend.allSystemItems
@@ -295,8 +394,8 @@ final class AssessmentModeBackend {
         concealedBundleIDs.subtract(dynamicSystemHostBundleIDs)
         concealedBundleIDs.subtract(Self.systemHostBundleIDs)
 
-        // Never bundle-conceal a hiding-unsupported app (iStat Menus). These
-        // items' per-second title rotation defeats the assertion's identity-based
+        // Never bundle-conceal a denylisted hiding-unsupported app. These items'
+        // volatile title rotation defeats the assertion's identity-based
         // concealment, so hiding them leaves on-band ghosts. They are kept out
         // of the concealed set unconditionally.
         concealedBundleIDs.subtract(MenuBarItemTag.hidingUnsupportedBundleIDs)
@@ -330,12 +429,12 @@ final class AssessmentModeBackend {
             allowedSet.insert(bundleID)
         }
 
-        // Hiding-unsupported bundles (e.g. iStat Menus) must never be excluded
-        // from the allowlist. These items can be reordered but cannot be
-        // reliably hidden — their per-second title rotation defeats both the
-        // assertion's bundle attribution and the identity-based concealment,
-        // leaving them as on-band ghosts. Force-include their bundle IDs
-        // unconditionally so they are never excluded from the allowlist.
+        // Denylisted hiding-unsupported bundles must never be excluded from the
+        // allowlist. These items can be reordered but cannot be reliably hidden
+        // — volatile title rotation defeats both the assertion's bundle
+        // attribution and the identity-based concealment, leaving them as
+        // on-band ghosts. Force-include their bundle IDs unconditionally so
+        // they are never excluded from the allowlist.
         for bundleID in MenuBarItemTag.hidingUnsupportedBundleIDs {
             allowedSet.insert(bundleID)
             concealedBundleIDs.remove(bundleID)
@@ -345,13 +444,6 @@ final class AssessmentModeBackend {
         // every Thaw-owned icon host? If these log `allowed=true concealed=false`
         // and the icon is still hidden, the assertion is not honoring that
         // protected owner — a mechanism limitation, not an allowlist bug.
-        for ownBundleID in protectedBundleIDs.sorted() {
-            let running = NSWorkspace.shared.runningApplications.contains {
-                $0.bundleIdentifier == ownBundleID
-            }
-            diagLog.info("self-check: \(ownBundleID) allowed=\(allowedSet.contains(ownBundleID)) concealed=\(concealedBundleIDs.contains(ownBundleID)) inRunningApps=\(running)")
-        }
-
         // Re-activating tears down and rebuilds the restriction, which reflows
         // the whole menu bar — expensive, and a churn source when called on the
         // 1s timer while apps come and go (each Xcode/helper launch is a new
@@ -366,6 +458,13 @@ final class AssessmentModeBackend {
         let systemItemsChanged = allowedSystemItemSet != appliedAllowedSystemItems
         let newlyAppeared = !allowedSet.subtracting(appliedAllowed).isEmpty
         guard handle == nil || concealedChanged || systemItemsChanged || newlyAppeared else { return false }
+
+        for ownBundleID in protectedBundleIDs.sorted() {
+            let running = NSWorkspace.shared.runningApplications.contains {
+                $0.bundleIdentifier == ownBundleID
+            }
+            diagLog.info("self-check: \(ownBundleID) allowed=\(allowedSet.contains(ownBundleID)) concealed=\(concealedBundleIDs.contains(ownBundleID)) inRunningApps=\(running)")
+        }
 
         // Anti-flap hysteresis. A dynamic-icon app whose item identity churns
         // (codexbar, iStat-style) makes the desired set oscillate A→B→A→B; each
@@ -397,9 +496,16 @@ final class AssessmentModeBackend {
            allowedSet == lastFailedConfiguration.allowed,
            allowedSystemItemSet == lastFailedConfiguration.systemItems
         {
+            if consecutiveTearDowns >= 3 {
+                diagLog.error(
+                    "apply: suppressing re-activation after \(consecutiveTearDowns) consecutive verify tear-downs; " +
+                        "concealedBundles=\(concealedBundleIDs.sorted())"
+                )
+            }
             return false
         }
         lastFailedConfiguration = nil
+        consecutiveTearDowns = 0
 
         // Re-activate with the new allowlist. The previous assertion is dropped
         // first so the server applies a single, current restriction.
@@ -493,7 +599,13 @@ final class AssessmentModeBackend {
         }
         previousAppliedConfiguration = nil
         lastFailedConfiguration = nil
+        consecutiveTearDowns = 0
         return apply(sectionAssignment: sectionAssignment, allItems: allItems)
+    }
+
+    func markExternallyTornDown() {
+        lastFailedConfiguration = (allowed: appliedAllowed, systemItems: appliedAllowedSystemItems)
+        consecutiveTearDowns += 1
     }
 
     private func reset() -> Bool {

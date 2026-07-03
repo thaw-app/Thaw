@@ -540,6 +540,10 @@ extension NSBezierPath {
     ///   - color: The color of the drawn shadow.
     ///   - radius: The radius of the drawn shadow.
     func drawShadow(color: NSColor, radius: CGFloat) {
+        guard elementCount > 0 else {
+            return
+        }
+
         guard let context = NSGraphicsContext.current else {
             return
         }

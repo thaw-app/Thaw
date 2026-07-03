@@ -6,6 +6,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import CoreGraphics
 @testable import Thaw
 import XCTest
 
@@ -149,5 +150,52 @@ final class MenuBarItemManagerRearmTests: XCTestCase {
                 supportsLegacySectionHiding: false
             )
         )
+    }
+
+    func testMoveInputSuppressionSuppressesUntaggedMouseMovement() throws {
+        let event = try XCTUnwrap(CGEvent(
+            mouseEventSource: nil,
+            mouseType: .mouseMoved,
+            mouseCursorPosition: .zero,
+            mouseButton: .left
+        ))
+
+        XCTAssertTrue(MoveInputSuppression.shouldSuppress(event))
+    }
+
+    func testMoveInputSuppressionAllowsTaggedSyntheticMovement() throws {
+        let event = try XCTUnwrap(CGEvent(
+            mouseEventSource: nil,
+            mouseType: .leftMouseDragged,
+            mouseCursorPosition: .zero,
+            mouseButton: .left
+        ))
+
+        MoveInputSuppression.markSyntheticMoveEvent(event)
+
+        XCTAssertFalse(MoveInputSuppression.shouldSuppress(event))
+    }
+
+    func testMoveInputSuppressionAllowsLegacyMenuBarEvents() throws {
+        let event = try XCTUnwrap(CGEvent(
+            mouseEventSource: nil,
+            mouseType: .leftMouseDown,
+            mouseCursorPosition: .zero,
+            mouseButton: .left
+        ))
+
+        event.setIntegerValueField(.eventSourceUserData, value: 1)
+
+        XCTAssertFalse(MoveInputSuppression.shouldSuppress(event))
+    }
+
+    func testMoveInputSuppressionIgnoresKeyboardEvents() throws {
+        let event = try XCTUnwrap(CGEvent(
+            keyboardEventSource: nil,
+            virtualKey: 0,
+            keyDown: true
+        ))
+
+        XCTAssertFalse(MoveInputSuppression.shouldSuppress(event))
     }
 }

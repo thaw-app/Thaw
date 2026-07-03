@@ -135,6 +135,12 @@ final class ControlCenterModuleManager {
         }
     }
 
+    isolated deinit {
+        if let terminationObserver {
+            NotificationCenter.default.removeObserver(terminationObserver)
+        }
+    }
+
     // MARK: Identifier helpers
 
     /// The governable menu-extra title embedded in an item `uniqueIdentifier`

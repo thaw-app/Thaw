@@ -210,7 +210,7 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
                       let pngData = bitmap.representation(using: .png, properties: [:])
                 else { return nil }
 
-                let tagString = "\(tag.namespace):\(tag.title)"
+                let tagString = tag.tagIdentifier
                 return (tagString, pngData)
             }.compactMap(\.self)
 
@@ -645,7 +645,9 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
             let isHotkeyListVisible = nav.isSettingsPresented
                 && nav.settingsNavigationIdentifier == .hotkeys
                 && isItemHotkeyListExpanded
-            if nav.isSearchPresented || isLayoutPane || isHotkeyListVisible {
+            if nav.isSearchPresented {
+                sections = [.visible]
+            } else if isLayoutPane || isHotkeyListVisible {
                 sections = MenuBarSection.Name.allCases
             } else if nav.isIceBarPresented,
                       let current = appState.menuBarManager.iceBarPanel.currentSection
@@ -968,7 +970,7 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
 
         MenuBarItemImageCache.diagLog.debug(
             "axBoundsCapture: hosting window \(composite.width)×\(composite.height)px, " +
-            "cropping \(itemsWithBounds.count) items"
+                "cropping \(itemsWithBounds.count) items"
         )
 
         var result = CaptureResult()
@@ -989,7 +991,7 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
             if !windowFrame.intersects(bounds) {
                 MenuBarItemImageCache.diagLog.debug(
                     "axBoundsCapture: \(item.logString) bounds \(bounds) outside hosting " +
-                    "window \(windowFrame); keeping prior image"
+                        "window \(windowFrame); keeping prior image"
                 )
                 result.excluded.append(item)
                 continue
@@ -1015,7 +1017,7 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
             guard !cropRect.isNull, !cropRect.isEmpty, let croppedImage = composite.cropping(to: cropRect) else {
                 MenuBarItemImageCache.diagLog.debug(
                     "axBoundsCapture: cropping failed for \(item.logString) " +
-                    "rawCropRect=\(rawCropRect) clamped=\(cropRect)"
+                        "rawCropRect=\(rawCropRect) clamped=\(cropRect)"
                 )
                 recordCaptureFailure(for: item)
                 result.excluded.append(item)
@@ -1023,6 +1025,22 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
             }
 
             guard !croppedImage.isTransparent(alphaThreshold: 0.05) else {
+                // Denylisted hiding-unsupported apps transiently render blank during
+                // Assessment Mode reflows — the assertion recomposites the whole
+                // bar, temporarily clearing their glyph until their own update
+                // cycle re-renders it. Counting those transient blanks as failures
+                // blacklists the item for 30 s, causing the layout bar to show grey
+                // boxes long after the bar has settled. Skip without recording a
+                // failure so the item retains its last good image and recovers on
+                // the next refresh cycle.
+                if item.tag.isHidingUnsupported {
+                    MenuBarItemImageCache.diagLog.debug(
+                        "axBoundsCapture: blank image for denylisted hiding-unsupported \(item.logString); " +
+                            "skipping without failure (will recover on next refresh)"
+                    )
+                    result.excluded.append(item)
+                    continue
+                }
                 MenuBarItemImageCache.diagLog.debug(
                     "axBoundsCapture: blank image for \(item.logString)"
                 )
@@ -1096,7 +1114,7 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
                     guard let liveBounds = liveBoundsByID[item.uniqueIdentifier] else {
                         MenuBarItemImageCache.diagLog.debug(
                             "captureImages: no live bounds for \(item.logString); " +
-                            "keeping prior image (skipping stale-bounds crop)"
+                                "keeping prior image (skipping stale-bounds crop)"
                         )
                         continue
                     }
@@ -1851,6 +1869,61 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
             result.append(section)
         }
 
+        // Batch prewarm when .alwaysHidden is requested: revealing .alwaysHidden
+        // also reveals .hidden items, so capture all sections in a single
+        // restriction toggle instead of two (which otherwise causes visible
+        // flickering as items appear and disappear twice).
+        if sections.contains(.alwaysHidden) {
+            await Task { @MainActor [weak self, weak appState] in
+                guard let self, let appState, let hider = appState.menuBarManager.simpleItemHider else {
+                    return
+                }
+
+                let sectionsToCapture: [MenuBarSection.Name] = if onlyMissingImages {
+                    sections.filter { section in
+                        let sectionItems = appState.itemManager.itemCache[section]
+                        guard !sectionItems.isEmpty else { return false }
+                        return sectionItems.contains { item in
+                            Self.prewarmNeedsCapture(
+                                cachedImage: self.images[item.tag],
+                                wouldAttemptCapture: self.wouldAttemptCapture(of: item)
+                            )
+                        }
+                    }
+                } else {
+                    sections.filter { section in
+                        !appState.itemManager.itemCache[section].isEmpty
+                    }
+                }
+                guard !sectionsToCapture.isEmpty else { return }
+                guard !Task.isCancelled else { return }
+
+                let previousRevealedSection = hider.revealedSection
+                hider.show(.alwaysHidden, reconcileBoundary: false)
+                defer {
+                    switch Self.PrewarmRevealRestorationAction.resolve(
+                        previous: previousRevealedSection,
+                        currentAfterShow: hider.revealedSection
+                    ) {
+                    case .hide:
+                        hider.hideRevealedSections()
+                    case .noOp:
+                        break
+                    case let .show(section):
+                        hider.show(section, reconcileBoundary: false)
+                    }
+                }
+                guard hider.revealedSection == .alwaysHidden else {
+                    return
+                }
+                try? await Task.detached {
+                    try await Task.sleep(for: Constants.MenuBarTuning.iceBarCaptureSettle)
+                }.value
+                await self.updateCacheWithoutChecks(sections: sectionsToCapture)
+            }.value
+            return
+        }
+
         for section in sections {
             await Task { @MainActor [weak self, weak appState] in
                 guard let self, let appState, let hider = appState.menuBarManager.simpleItemHider else {
@@ -2015,7 +2088,9 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
 
         var sectionsNeedingDisplay = [MenuBarSection.Name]()
 
-        if navSnapshot.isSettingsPresented || navSnapshot.isSearchPresented {
+        if navSnapshot.isSearchPresented {
+            sectionsNeedingDisplay = [.visible]
+        } else if navSnapshot.isSettingsPresented {
             sectionsNeedingDisplay = MenuBarSection.Name.allCases
         } else if navSnapshot.isIceBarPresented, let section = appState.menuBarManager.iceBarPanel
             .currentSection
@@ -2048,7 +2123,9 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
         let navSnapshot = makeNavigationStateSnapshot()
 
         var sectionsNeedingDisplay = [MenuBarSection.Name]()
-        if navSnapshot.isSettingsPresented || navSnapshot.isSearchPresented {
+        if navSnapshot.isSearchPresented {
+            sectionsNeedingDisplay = [.visible]
+        } else if navSnapshot.isSettingsPresented {
             sectionsNeedingDisplay = MenuBarSection.Name.allCases
         } else if navSnapshot.isIceBarPresented, let section = appState.menuBarManager.iceBarPanel
             .currentSection

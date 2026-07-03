@@ -26,6 +26,13 @@ struct SyntheticMoveEngine {
     let makeEventSource: @MainActor () throws -> CGEventSource
     let enumerateItems: @MainActor () async -> [MenuBarItem]
 
+    /// Posts the synthetic Command-drag gesture that physically reorders the
+    /// item. Defaults to the real CGEvent-based implementation; tests inject
+    /// a recording fake here so retry/dropX/anchoring behavior can be
+    /// characterized without posting real hardware events.
+    var postCommandDrag: @MainActor (CGPoint, CGPoint, CGEventSource) async -> Void =
+        SyntheticMoveEngine.performCommandDrag
+
     func move(
         item: MenuBarItem,
         to destination: MoveDestination,
@@ -94,7 +101,7 @@ struct SyntheticMoveEngine {
                 "Attempt \(attempt): \(item.logString) \(destination.logString); " +
                     "order=\(LayoutPlanner.orderDescription(liveItems))"
             )
-            await postCommandDrag(from: start, to: end, source: source)
+            await postCommandDrag(start, end, source)
             try await Task.sleep(for: Constants.MenuBarTuning.syntheticDragSettleDelay)
 
             // One AX walk supplies both verification and the next attempt's
@@ -127,7 +134,7 @@ struct SyntheticMoveEngine {
         throw EventError.missingItemBounds(item)
     }
 
-    private func postCommandDrag(
+    private static func performCommandDrag(
         from start: CGPoint,
         to end: CGPoint,
         source: CGEventSource
@@ -140,6 +147,7 @@ struct SyntheticMoveEngine {
                 mouseButton: .left
             ) else { return }
             event.flags = .maskCommand
+            MoveInputSuppression.markSyntheticMoveEvent(event)
             event.post(tap: .cghidEventTap)
         }
 

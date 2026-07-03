@@ -216,6 +216,26 @@ final class MenuBarSplitPillGeometryTests: XCTestCase {
         XCTAssertEqual(bounds.maxX, 676)
     }
 
+    func testLeadingBoundsFallbackWhenApplicationMenuFrameMissing() {
+        let rect = CGRect(x: 0, y: 5, width: 1512, height: 37)
+        let screenFrame = CGRect(x: 0, y: 0, width: 1512, height: 982)
+        let notchFrame = CGRect(x: 684, y: 945, width: 144, height: 37)
+
+        let bounds = MenuBarSplitPillGeometry.leadingBounds(
+            applicationMenuFrame: .zero,
+            trailingContentMinX: nil,
+            in: rect,
+            screenFrame: screenFrame,
+            trailingPadding: 12,
+            leadingMargin: 0,
+            notchFrame: notchFrame,
+            notchMargin: 8
+        )
+
+        XCTAssertEqual(bounds.minX, 0)
+        XCTAssertEqual(bounds.maxX, 676)
+    }
+
     func testTrailingBoundsClampAfterNotchAndConvertToLocalCoordinates() {
         let rect = CGRect(x: 0, y: 5, width: 1512, height: 37)
         let screenFrame = CGRect(x: 2000, y: 0, width: 1512, height: 982)

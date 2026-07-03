@@ -11,11 +11,10 @@ import Cocoa
 
 /// Hides menu-bar items by setting `AXHidden` on their AX elements.
 ///
-/// On macOS 27, where per-item CG windows no
-/// longer exist — items are rendered inside shared hosting windows, but each
-/// item still has an individual AX element. Setting `AXHidden` on that element
-/// hides the item surgically, without the whole-bar reflow triggered by the
-/// assessment-mode assertion.
+/// On macOS 27, menu bar items live in `MenuBarAgent`'s AX tree rather than
+/// each source app's `AXExtrasMenuBar`, and `AXHidden` is not settable on those
+/// hosted menu-bar items. This hider is therefore gated out on macOS 27 and
+/// retained for older or future OS paths where AX hiding works.
 ///
 /// This is a *complement* to ``CGSWindowHider``. The CGS hider runs first
 /// (handles pre-27 macOS where per-item windows exist); this hider runs second
@@ -34,6 +33,12 @@ final class AXItemHider {
             queue: .main
         ) { [weak self] _ in
             MainActor.assumeIsolated { self?.restoreAll() }
+        }
+    }
+
+    isolated deinit {
+        if let terminationObserver {
+            NotificationCenter.default.removeObserver(terminationObserver)
         }
     }
 
@@ -184,6 +189,6 @@ final class AXItemHider {
 
 private extension MenuBarItem {
     var identityDescription: String {
-        "\(tag.namespace):\(tag.title)"
+        tag.tagIdentifier
     }
 }

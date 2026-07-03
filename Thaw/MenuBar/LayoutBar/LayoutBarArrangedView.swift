@@ -83,7 +83,7 @@ extension LayoutBarArrangedView: NSDraggingSource {
         }
     }
 
-    func draggingSession(_ session: NSDraggingSession, endedAt _: NSPoint, operation: NSDragOperation) {
+    func draggingSession(_: NSDraggingSession, endedAt _: NSPoint, operation: NSDragOperation) {
         let sourceContainer = oldContainerInfo?.container
         let frozenContainer = frozenSourceContainer
         defer {

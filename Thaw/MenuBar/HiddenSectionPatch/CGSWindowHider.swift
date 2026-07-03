@@ -50,7 +50,7 @@ final class CGSWindowHider {
 
     /// X coordinate far outside any plausible display arrangement. Items moved
     /// here are off every screen but still valid windows we can move back.
-    static let offScreenX: CGFloat = -30_000
+    static let offScreenX: CGFloat = -30000
 
     private let diagLog = DiagLog(category: "CGSWindowHider")
     private let environment: Environment
@@ -72,6 +72,12 @@ final class CGSWindowHider {
             queue: .main
         ) { [weak self] _ in
             MainActor.assumeIsolated { self?.restoreAll() }
+        }
+    }
+
+    isolated deinit {
+        if let terminationObserver {
+            NotificationCenter.default.removeObserver(terminationObserver)
         }
     }
 

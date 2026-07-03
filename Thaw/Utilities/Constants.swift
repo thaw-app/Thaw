@@ -37,7 +37,7 @@ enum Constants {
     }
 
     /// Label for the macOS 27 preview build shown in About.
-    static let macOS27PreviewName = "macOS 27 Preview 3"
+    static let macOS27PreviewName = "macOS 27 Preview 4"
 
     // swiftlint:enable force_unwrapping
 
@@ -118,6 +118,22 @@ enum Constants {
         /// Slower layout-only prewarm; MenuBarAgent can publish partial AX
         /// bounds before the revealed glyph has finished recompositing.
         static let layoutPrewarmCaptureSettle: Duration = .milliseconds(800)
+
+        // MARK: Show-on-hover retention
+
+        /// Vertical slack, in points, kept below the menu bar bottom edge while
+        /// a section is revealed via show-on-hover. Without this, the hide arm
+        /// of `handleShowOnHover` runs against a 1-pixel-precise
+        /// `isMouseInsideMenuBar` boundary, so cursor micro-tremor at the edge
+        /// of an inline (non-Thaw Bar) reveal schedules a hide that survives
+        /// `rehideInterval`, fires `hide()`, and re-arms `showOnHoverAllowed`
+        /// — restarting the show→hide→show loop. The band absorbs that tremor
+        /// the same way `isMouseInsideIceBar`'s 15 pt pad and
+        /// `isMouseNearMenuBar`'s 80 pt pad already do elsewhere. Kept smaller
+        /// than the Thaw Bar pad because dipping below the menu bar toward app
+        /// content is more likely to be intentional than dipping off the
+        /// floating Thaw Bar popover.
+        static let hoverRetentionPadding: CGFloat = 8
     }
 
     /// The brightness threshold above which the menu bar is considered "bright".

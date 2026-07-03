@@ -22,6 +22,7 @@ enum PermissionsFlowStage: Equatable {
 }
 
 private struct PermissionsFlowView: View {
+    @EnvironmentObject private var appState: AppState
     @State private var stage: PermissionsFlowStage
 
     init() {
@@ -36,11 +37,17 @@ private struct PermissionsFlowView: View {
     var body: some View {
         switch stage {
         case .onboarding:
-            OnboardingSheet {
-                stage = .permissions
+            ThawOnboardingView(showsCompletionScreen: false) {
+                Defaults.set(true, forKey: .hasSeenOnboarding)
+                appState.permissions.refreshPermissionsState()
+                appState.completeFirstLaunchSetup()
             }
+            .frame(width: 608, height: 480)
         case .permissions:
-            PermissionsView<AppPermissions>()
+            ThawPermissionsView {
+                appState.completeFirstLaunchSetup()
+            }
+            .frame(width: 608, height: 480)
         }
     }
 }

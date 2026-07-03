@@ -343,6 +343,9 @@ final class MenuBarSection {
     /// Shows the section.
     func show(triggeredByHotkey: Bool = false) {
         guard let menuBarManager, isEnabled, isHidden else {
+            if name == .alwaysHidden {
+                diagLog.debug("show(alwaysHidden) aborted: menuBarManager=\(self.menuBarManager != nil), isEnabled=\(isEnabled), isHidden=\(isHidden)")
+            }
             return
         }
 
@@ -459,11 +462,13 @@ final class MenuBarSection {
         switch name {
         case .visible, .hidden:
             for section in menuBarManager.sections where section.name != .alwaysHidden {
+                section.controlItem.animateNextVisibilityUpdate()
                 section.desiredState = .showSection
                 section.updateControlItemState(for: nil)
             }
         case .alwaysHidden:
             for section in menuBarManager.sections {
+                section.controlItem.animateNextVisibilityUpdate()
                 section.desiredState = .showSection
                 section.updateControlItemState(for: nil)
             }
@@ -510,7 +515,13 @@ final class MenuBarSection {
 
     /// Hides the section.
     func hide() {
-        guard let menuBarManager, !isHidden else {
+        guard let menuBarManager else {
+            return
+        }
+
+        guard !isHidden else {
+            resetClosedPresentationState(using: menuBarManager)
+            stopRehideChecks()
             return
         }
 
@@ -532,11 +543,20 @@ final class MenuBarSection {
         menuBarManager.showOnHoverAllowed = true
 
         for section in menuBarManager.sections {
+            section.controlItem.animateNextVisibilityUpdate()
             section.desiredState = .hideSection
             section.updateControlItemState(for: nil)
         }
 
         stopRehideChecks()
+    }
+
+    private func resetClosedPresentationState(using menuBarManager: MenuBarManager) {
+        menuBarManager.showOnHoverAllowed = true
+        for section in menuBarManager.sections {
+            section.desiredState = .hideSection
+            section.updateControlItemState(for: nil)
+        }
     }
 
     /// Toggles the visibility of the section.
@@ -553,7 +573,7 @@ final class MenuBarSection {
     private func isMouseInsideActiveArea() -> Bool {
         guard let appState else { return false }
         if let screen = appState.hidEventManager.bestScreen(appState: appState),
-           appState.hidEventManager.isMouseInsideMenuBar(appState: appState, screen: screen)
+           appState.hidEventManager.isMouseInsideMenuBarHoverBand(appState: appState, screen: screen)
         {
             return true
         }

@@ -62,8 +62,11 @@ struct AssertionMenuBarBackend: MenuBarBackend {
         guard let hider else { return cache }
         return CacheRebucketter.rebucket(
             cache,
-            hider: hider,
-            allowsAlwaysHidden: allowsAlwaysHidden
+            sectionFor: { hider.section(for: $0) },
+            sectionAssignment: hider.sectionAssignment,
+            allowsAlwaysHidden: allowsAlwaysHidden,
+            retainedSnapshotFor: { hider.snapshot(for: $0) },
+            orderedItems: { hider.ordered($0, in: $1) }
         )
     }
 

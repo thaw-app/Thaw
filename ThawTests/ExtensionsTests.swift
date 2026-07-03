@@ -10,6 +10,14 @@ import SwiftUI
 @testable import Thaw
 import XCTest
 
+// MARK: - NSBezierPath.drawShadow Tests
+
+final class NSBezierPathDrawShadowTests: XCTestCase {
+    func testDrawShadowNoOpsForEmptyPath() {
+        NSBezierPath().drawShadow(color: .black, radius: 5)
+    }
+}
+
 // MARK: - Comparable.clamped Tests
 
 final class ComparableClampedTests: XCTestCase {

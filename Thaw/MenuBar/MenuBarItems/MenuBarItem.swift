@@ -97,10 +97,9 @@ struct MenuBarItem: CustomStringConvertible {
         experimentalSystemItemHiding: Bool
     ) -> MenuBarItemTag.SectionManagementPolicy {
         let basePolicy = sectionManagementPolicy
-        // Items whose hiding is not yet supported (e.g. iStat's per-second title
-        // churn) stay forced-visible even under the experimental toggle: the
-        // editor may reorder them, but they can never be assigned to a hidden
-        // section. See ``MenuBarItemTag/isHidingUnsupported``.
+        // Denylisted hiding-unsupported items stay forced-visible even under the
+        // experimental toggle: the editor may reorder them, but they can never be
+        // assigned to a hidden section. See ``MenuBarItemTag/isHidingUnsupported``.
         guard experimentalSystemItemHiding, basePolicy.isForcedVisible, !tag.isHidingUnsupported else {
             return basePolicy
         }
@@ -314,10 +313,7 @@ struct MenuBarItem: CustomStringConvertible {
     /// excluded because it is transient and changes between app restarts,
     /// which would cause persisted custom names to be lost.
     var uniqueIdentifier: String {
-        if tag.instanceIndex > 0 {
-            return "\(tag.namespace):\(tag.title):\(tag.instanceIndex)"
-        }
-        return "\(tag.namespace):\(tag.title)"
+        tag.tagIdentifier
     }
 
     /// Custom name for this item (persisted).
@@ -448,7 +444,7 @@ extension MenuBarItem {
         // caused by instanceIndex values swapping between cache cycles.
         var groups = [String: [Int]]()
         for i in 0 ..< items.count {
-            let key = "\(items[i].tag.namespace):\(items[i].tag.title)"
+            let key = "\(items[i].tag.namespace):\(items[i].tag.canonicalTitle)"
             groups[key, default: []].append(i)
         }
         for (_, indices) in groups where indices.count > 1 {

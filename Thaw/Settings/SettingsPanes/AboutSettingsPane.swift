@@ -10,6 +10,7 @@ import SwiftUI
 
 struct AboutSettingsPane: View {
     @ObservedObject var updatesManager: UpdatesManager
+    var onReplayOnboarding: () -> Void
     @Environment(\.openURL) private var openURL
 
     private static let iconSize: CGFloat = 180
@@ -115,8 +116,8 @@ struct AboutSettingsPane: View {
                         .foregroundStyle(.tertiary)
                         .help(
                             "macOS 27 support is functional with remaining limitations around Always Hidden and visual menu bar edge cases. Feature work is based on "
-                            + "\(Constants.versionString) (\(Constants.buildString)); "
-                            + "this build is not distributed through Thaw's update channels."
+                                + "\(Constants.versionString) (\(Constants.buildString)); "
+                                + "this build is not distributed through Thaw's update channels."
                         )
                 }
 
@@ -203,6 +204,7 @@ struct AboutSettingsPane: View {
                 Spacer()
 
                 HStack(spacing: 20) {
+                    Button("Replay Onboarding", action: onReplayOnboarding)
                     Button("Acknowledgements") {
                         if let url = Bundle.main.url(forResource: "Acknowledgements", withExtension: "pdf") {
                             NSWorkspace.shared.open(url)
