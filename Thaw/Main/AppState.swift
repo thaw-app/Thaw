@@ -127,7 +127,15 @@ final class AppState: ObservableObject {
     }
 
     /// Presents the onboarding sheet if the user hasn't seen it yet.
+    ///
+    /// Only ever fires as a self-heal *after* first-launch setup has already
+    /// completed — during first launch itself, the dedicated `.permissions`
+    /// window owns onboarding. Without this guard, a Settings window restored
+    /// by AppKit's window-restoration at launch (e.g. after `defaults
+    /// delete`) can race with the `.permissions` window and show the tour
+    /// twice.
     func presentOnboardingIfNeeded() {
+        guard Defaults.bool(forKey: .hasCompletedFirstLaunch) else { return }
         if !Defaults.bool(forKey: .hasSeenOnboarding) {
             isOnboardingPresented = true
         }
