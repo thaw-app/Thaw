@@ -1935,7 +1935,7 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
 
                 let itemsToCapture = sectionItems.filter { item in
                     !onlyMissingImages || Self.prewarmNeedsCapture(
-                        cachedImage: self.images[item.tag],
+                        cachedImage: self.image(for: item.tag),
                         wouldAttemptCapture: self.wouldAttemptCapture(of: item)
                     )
                 }
@@ -1968,12 +1968,10 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
                             hider.concealTemporarilyRevealedItem(item.uniqueIdentifier)
                         }
 
-                        try? await Task.detached {
-                            try await Task.sleep(for: Constants.MenuBarTuning.layoutPrewarmCaptureSettle)
-                        }.value
+                        try? await Task.sleep(for: Constants.MenuBarTuning.layoutPrewarmCaptureSettle)
 
                         let liveItems = await MenuBarItem.getMenuBarItems(
-                            on: appState.itemManager.itemCache.displayID,
+                            on: displayID,
                             option: [.onScreen, .activeSpace]
                         )
                         guard let liveItem = liveItems.first(where: {
@@ -1982,11 +1980,15 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
                             continue
                         }
 
-                        let captureResult = await self.captureImages(
-                            of: [liveItem],
+                        // Capture against the resolved displayID directly rather
+                        // than captureImages(appState:), which re-resolves the
+                        // "active" display internally and can crop bounds from
+                        // one display against another display's hosting-window
+                        // screenshot on multi-display setups.
+                        let captureResult = await self.axBoundsCapture(
+                            [(item: liveItem, bounds: liveItem.bounds)],
                             scale: scale,
-                            appState: appState,
-                            freshBounds: false
+                            displayID: displayID
                         )
                         guard let image = captureResult.images[liveItem.tag] else {
                             continue

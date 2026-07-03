@@ -284,38 +284,6 @@ final class IceBarPanel: NSPanel {
         }
     }
 
-    /// macOS 27 physically removes concealed items from MenuBarAgent, so their
-    /// glyphs can't be captured while hidden — a cold bar would show empty
-    /// slots. Briefly reveal the presented section through the assertion,
-    /// capture fresh images, then re-conceal so the popover renders real icons.
-    @available(macOS 27, *)
-    @MainActor
-    private func prewarmConcealedImagesMacOS27(appState: AppState) async {
-        guard
-            let hider = appState.menuBarManager.simpleItemHider,
-            let section = currentSection
-        else {
-            return
-        }
-        // Only flash the section when something actually needs capturing. Once
-        // every item has a cached glyph, later opens reuse the cache and the
-        // menu bar stays calm — no all-items reveal on every open. Items the
-        // cache has blacklisted after repeated capture failures are excluded too,
-        // so one stubborn glyph can't re-flash the bar on every single open.
-        let sectionItems = appState.itemManager.itemCache[section]
-        let needsCapture = sectionItems.contains {
-            appState.imageCache.images[$0.tag] == nil &&
-                appState.imageCache.wouldAttemptCapture(of: $0)
-        }
-        guard needsCapture else { return }
-
-        hider.show(section, reconcileBoundary: false)
-        // Let MenuBarAgent republish the revealed AX elements before capture.
-        try? await Task.sleep(for: Constants.MenuBarTuning.iceBarCaptureSettle)
-        await appState.imageCache.updateCacheWithoutChecks(sections: [section])
-        hider.hideRevealedSections()
-    }
-
     /// Hides the panel.
     func hide() {
         if
