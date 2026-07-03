@@ -190,6 +190,10 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
     /// Maximum age of disk cache before it's considered stale (30 seconds).
     private static let maxCacheAgeSeconds: TimeInterval = 30
 
+    /// Bump when the capture/display semantics change enough that old images
+    /// can be misleading.
+    private static let cacheVersion = 2
+
     /// Saves the image cache to disk for faster restart.
     func saveToDisk() {
         guard !images.isEmpty else { return }
@@ -217,6 +221,7 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
                 try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
 
                 let json: [String: Any] = [
+                    "version": Self.cacheVersion,
                     "timestamp": Date().timeIntervalSince1970,
                     "images": Dictionary(uniqueKeysWithValues: cacheData.map { ($0.0, $0.1.base64EncodedString()) }),
                 ]
@@ -245,6 +250,13 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
                 guard let json = try JSONSerialization.jsonObject(with: jsonData) as? [String: Any],
                       let timestamp = json["timestamp"] as? TimeInterval,
                       let imagesDict = json["images"] as? [String: String] else { return }
+
+                let version = json["version"] as? Int
+                if version != Self.cacheVersion {
+                    MenuBarItemImageCache.diagLog.debug("Disk cache version \(version ?? -1) is stale, deleting cache")
+                    try? FileManager.default.removeItem(at: url)
+                    return
+                }
 
                 // Check if cache is stale (older than 30 seconds)
                 let cacheAge = Date().timeIntervalSince1970 - timestamp
@@ -1921,15 +1933,13 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
                 let sectionItems = appState.itemManager.itemCache[section]
                 guard !sectionItems.isEmpty else { return }
 
-                if onlyMissingImages {
-                    let needsCapture = sectionItems.contains { item in
-                        Self.prewarmNeedsCapture(
-                            cachedImage: self.images[item.tag],
-                            wouldAttemptCapture: self.wouldAttemptCapture(of: item)
-                        )
-                    }
-                    guard needsCapture else { return }
+                let itemsToCapture = sectionItems.filter { item in
+                    !onlyMissingImages || Self.prewarmNeedsCapture(
+                        cachedImage: self.images[item.tag],
+                        wouldAttemptCapture: self.wouldAttemptCapture(of: item)
+                    )
                 }
+                guard !itemsToCapture.isEmpty else { return }
 
                 guard !Task.isCancelled else {
                     MenuBarItemImageCache.diagLog.debug(
@@ -1938,31 +1948,89 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
                     return
                 }
 
-                let previousRevealedSection = hider.revealedSection
-                hider.show(section, reconcileBoundary: false)
-                defer {
-                    switch Self.PrewarmRevealRestorationAction.resolve(
-                        previous: previousRevealedSection,
-                        currentAfterShow: hider.revealedSection
-                    ) {
-                    case .hide:
-                        hider.hideRevealedSections()
-                    case .noOp:
-                        break
-                    case let .show(section):
-                        hider.show(section, reconcileBoundary: false)
+                if appState.settings.advanced.enableExperimentalOverflowPrevention {
+                    // Per-item precise reveal: capture one concealed glyph at a
+                    // time instead of the whole section, so a dynamic-title
+                    // neighbor (e.g. iStat Menus) doesn't flicker or vanish
+                    // while this item's real glyph is being captured.
+                    let displayID = appState.itemManager.itemCache.displayID
+                        ?? Bridging.getActiveMenuBarDisplayID()
+                        ?? CGMainDisplayID()
+                    let scale = NSScreen.screens.first { $0.displayID == displayID }?.backingScaleFactor
+                        ?? NSScreen.main?.backingScaleFactor
+                        ?? 2
+
+                    for item in itemsToCapture {
+                        guard !Task.isCancelled else { return }
+
+                        hider.revealItemTemporarily(item.uniqueIdentifier)
+                        defer {
+                            hider.concealTemporarilyRevealedItem(item.uniqueIdentifier)
+                        }
+
+                        try? await Task.detached {
+                            try await Task.sleep(for: Constants.MenuBarTuning.layoutPrewarmCaptureSettle)
+                        }.value
+
+                        let liveItems = await MenuBarItem.getMenuBarItems(
+                            on: appState.itemManager.itemCache.displayID,
+                            option: [.onScreen, .activeSpace]
+                        )
+                        guard let liveItem = liveItems.first(where: {
+                            $0.hasSameIdentity(as: item) || $0.uniqueIdentifier == item.uniqueIdentifier
+                        }) else {
+                            continue
+                        }
+
+                        let captureResult = await self.captureImages(
+                            of: [liveItem],
+                            scale: scale,
+                            appState: appState,
+                            freshBounds: false
+                        )
+                        guard let image = captureResult.images[liveItem.tag] else {
+                            continue
+                        }
+                        if let cachedImage = self.images[item.tag],
+                           image.scaledSize.width < cachedImage.scaledSize.width * 0.75
+                        {
+                            continue
+                        }
+
+                        if !CapturedImage.isVisuallyEqual(self.images[item.tag], image) {
+                            self.images[item.tag] = image
+                            self.accessCounter += 1
+                            self.accessTimestamps[item.tag] = self.accessCounter
+                        }
                     }
+                    self.saveToDisk()
+                } else {
+                    let previousRevealedSection = hider.revealedSection
+                    hider.show(section, reconcileBoundary: false)
+                    defer {
+                        switch Self.PrewarmRevealRestorationAction.resolve(
+                            previous: previousRevealedSection,
+                            currentAfterShow: hider.revealedSection
+                        ) {
+                        case .hide:
+                            hider.hideRevealedSections()
+                        case .noOp:
+                            break
+                        case let .show(section):
+                            hider.show(section, reconcileBoundary: false)
+                        }
+                    }
+                    guard hider.revealedSection == section else {
+                        MenuBarItemImageCache.diagLog.debug(
+                            "prewarmConcealedImagesMacOS27: section not revealed for \(section.logString)"
+                        )
+                        return
+                    }
+                    try? await Task.detached {
+                        try await Task.sleep(for: Constants.MenuBarTuning.iceBarCaptureSettle)
+                    }.value
+                    await self.updateCacheWithoutChecks(sections: [section])
                 }
-                guard hider.revealedSection == section else {
-                    MenuBarItemImageCache.diagLog.debug(
-                        "prewarmConcealedImagesMacOS27: section not revealed for \(section.logString)"
-                    )
-                    return
-                }
-                try? await Task.detached {
-                    try await Task.sleep(for: Constants.MenuBarTuning.iceBarCaptureSettle)
-                }.value
-                await self.updateCacheWithoutChecks(sections: [section])
             }.value
         }
     }

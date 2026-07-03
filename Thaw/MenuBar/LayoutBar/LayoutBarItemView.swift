@@ -39,8 +39,8 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     /// The image displayed inside the view.
     private var cachedImage: MenuBarItemImageCache.CapturedImage? {
         didSet {
-            let previousSize = preferredSize(for: oldValue)
-            let newSize = preferredSize(for: cachedImage)
+            let previousSize = preferredSizeForCurrentDisplayMode(oldValue)
+            let newSize = preferredSizeForCurrentDisplayMode(cachedImage)
             setFrameSize(newSize)
             if previousSize != newSize {
                 (superview as? LayoutBarContainer)?.itemPreferredSizeDidChange(self)
@@ -82,7 +82,10 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     }
 
     override func draggingImage() -> NSImage? {
-        cachedImage?.nsImage ?? placeholderBitmapImage()
+        if shouldUsePlaceholderImage(for: cachedImage) {
+            return placeholderBitmapImage()
+        }
+        return cachedImage?.nsImage ?? placeholderBitmapImage()
     }
 
     override func updateTrackingAreas() {
@@ -166,7 +169,9 @@ final class LayoutBarItemView: LayoutBarArrangedView {
 
     override func draw(_: NSRect) {
         if !isDraggingPlaceholder {
-            if let capturedImage = cachedImage?.nsImage {
+            if shouldUsePlaceholderImage(for: cachedImage) {
+                drawPlaceholder()
+            } else if let capturedImage = cachedImage?.nsImage {
                 capturedImage.draw(
                     in: bounds,
                     from: .zero,
@@ -194,6 +199,16 @@ final class LayoutBarItemView: LayoutBarArrangedView {
                 )
             }
         }
+    }
+
+    private var shouldPreferPlaceholderImage: Bool {
+        guard #available(macOS 27, *) else { return false }
+        guard appState?.settings.advanced.enableExperimentalOverflowPrevention == true else { return false }
+        return (superview as? LayoutBarContainer)?.section != .visible
+    }
+
+    private func shouldUsePlaceholderImage(for image: MenuBarItemImageCache.CapturedImage?) -> Bool {
+        shouldPreferPlaceholderImage && image == nil
     }
 
     override func mouseDragged(with event: NSEvent) {
@@ -225,6 +240,10 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         Self.preferredSize(for: item, image: image)
     }
 
+    private func preferredSizeForCurrentDisplayMode(_ image: MenuBarItemImageCache.CapturedImage?) -> CGSize {
+        preferredSize(for: shouldUsePlaceholderImage(for: image) ? nil : image)
+    }
+
     private static func preferredSize(
         for item: MenuBarItem,
         image: MenuBarItemImageCache.CapturedImage?
@@ -246,9 +265,6 @@ final class LayoutBarItemView: LayoutBarArrangedView {
             case .showSection: icon.visible.nsImage(for: appState)
             case .hideSection: icon.hidden.nsImage(for: appState)
             }
-        }
-        if let icon = item.sourceApplication?.icon ?? item.owningApplication?.icon {
-            return icon
         }
         return NSImage(
             systemSymbolName: "menubar.rectangle",

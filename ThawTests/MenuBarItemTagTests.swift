@@ -921,6 +921,42 @@ final class MacOS27LayoutAnchorOrderingTests: XCTestCase {
         XCTAssertEqual(kilobytes, megabytes)
     }
 
+    @available(macOS 27, *)
+    func testMenuBarAgentOverflowChevronPlaceholdersAreFiltered() {
+        XCTAssertTrue(
+            MenuBarItemAXProvider.isNativeOverflowChevronPlaceholder(
+                namespace: .menuBarAgent,
+                identityTitle: "<<",
+                displayTitle: "<<"
+            )
+        )
+        XCTAssertTrue(
+            MenuBarItemAXProvider.isNativeOverflowChevronPlaceholder(
+                namespace: .menuBarAgent,
+                identityTitle: "‹ ‹",
+                displayTitle: "‹ ‹"
+            )
+        )
+    }
+
+    @available(macOS 27, *)
+    func testOverflowChevronFilterDoesNotHideRealItems() {
+        XCTAssertFalse(
+            MenuBarItemAXProvider.isNativeOverflowChevronPlaceholder(
+                namespace: .string("com.example.app"),
+                identityTitle: "<<",
+                displayTitle: "<<"
+            )
+        )
+        XCTAssertFalse(
+            MenuBarItemAXProvider.isNativeOverflowChevronPlaceholder(
+                namespace: .menuBarAgent,
+                identityTitle: "com.apple.menuextra.wifi",
+                displayTitle: "Wi-Fi"
+            )
+        )
+    }
+
     @MainActor
     func testAssignmentFromOrderClampsAlwaysHiddenIntoHiddenWhenDisabled() {
         let order: [MenuBarSection.Name: [String]] = [

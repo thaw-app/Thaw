@@ -115,6 +115,9 @@ enum Constants {
         static let iceBarPostClickSettle: Duration = .milliseconds(150)
         /// Settle before capturing the glyphs of a freshly-revealed section.
         static let iceBarCaptureSettle: Duration = .milliseconds(350)
+        /// Slower layout-only prewarm; MenuBarAgent can publish partial AX
+        /// bounds before the revealed glyph has finished recompositing.
+        static let layoutPrewarmCaptureSettle: Duration = .milliseconds(800)
 
         // MARK: Show-on-hover retention
 

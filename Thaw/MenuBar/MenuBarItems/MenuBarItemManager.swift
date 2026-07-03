@@ -1720,7 +1720,14 @@ final class MenuBarItemManager: ObservableObject {
                     return
                 }
                 Task {
-                    await self.appState?.imageCache.updateCache(sections: MenuBarSection.Name.allCases)
+                    guard let imageCache = self.appState?.imageCache else { return }
+                    if #available(macOS 27, *), self.appState?.settings.advanced.enableExperimentalOverflowPrevention == true {
+                        await imageCache.prewarmConcealedImagesMacOS27(
+                            sections: MenuBarSection.Name.allCases,
+                            onlyMissingImages: false
+                        )
+                    }
+                    await imageCache.updateCache(sections: MenuBarSection.Name.allCases)
                 }
             }
             .store(in: &c)
@@ -1739,7 +1746,14 @@ final class MenuBarItemManager: ObservableObject {
                     return
                 }
                 Task {
-                    await self.appState?.imageCache.updateCache(sections: MenuBarSection.Name.allCases)
+                    guard let imageCache = self.appState?.imageCache else { return }
+                    if #available(macOS 27, *), self.appState?.settings.advanced.enableExperimentalOverflowPrevention == true {
+                        await imageCache.prewarmConcealedImagesMacOS27(
+                            sections: MenuBarSection.Name.allCases,
+                            onlyMissingImages: false
+                        )
+                    }
+                    await imageCache.updateCache(sections: MenuBarSection.Name.allCases)
                 }
             }
             .store(in: &c)
@@ -5635,11 +5649,13 @@ extension MenuBarItemManager {
         // want a different menu) fall through to the synthetic path below.
         let identifier = item.uniqueIdentifier
         if mouseButton == .left, pressItemViaAccessibility(item) {
-            hider.revealItemTemporarily(identifier)
-            await eventSleep(for: Constants.MenuBarTuning.iceBarPostClickSettle)
-            hider.scheduleTemporaryItemConceal(identifier)
+            if appState?.settings.advanced.enableExperimentalOverflowPrevention != true {
+                hider.revealItemTemporarily(identifier)
+                await eventSleep(for: Constants.MenuBarTuning.iceBarPostClickSettle)
+                hider.scheduleTemporaryItemConceal(identifier)
+            }
             MenuBarItemManager.diagLog.info(
-                "clickConcealedItem: opened \(item.logString) via AX press; scheduled temporary reveal"
+                "clickConcealedItem: opened \(item.logString) via AX press"
             )
             return
         }
