@@ -44,7 +44,10 @@ private struct PermissionsFlowView: View {
             }
             .frame(width: 608, height: 480)
         case .permissions:
-            PermissionsView<AppPermissions>()
+            ThawPermissionsView {
+                appState.completeFirstLaunchSetup()
+            }
+            .frame(width: 608, height: 480)
         }
     }
 }

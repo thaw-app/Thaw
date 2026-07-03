@@ -14,10 +14,10 @@ import XCTest
 final class ThawTourSlideTests: XCTestCase {
     // MARK: - Ordering invariant
 
-    // The onboarding flow is a feature tour only. Permission requests are
-    // handled by the standalone permissions window after this tour finishes.
+    // The onboarding tour is feature-only. Permission requests are handled by
+    // the onboarding permissions screen after this tour finishes.
     // Lock the complete sequence so a permission slide cannot be added back
-    // accidentally.
+    // into the tour accidentally.
 
     func testWelcomeIsFirst() {
         XCTAssertEqual(ThawTourSlide.allCases.first, .welcome)

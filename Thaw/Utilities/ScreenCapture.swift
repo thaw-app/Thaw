@@ -15,6 +15,7 @@ import os.lock
 /// A namespace for screen capture operations.
 enum ScreenCapture {
     private static let diagLog = DiagLog(category: "ScreenCapture")
+    private static let cachedPermissionResult = OSAllocatedUnfairLock<Bool?>(initialState: nil)
 
     // MARK: Permissions
 
@@ -63,30 +64,53 @@ enum ScreenCapture {
     /// calls. Pass `true` to the `reset` parameter to replace the cached
     /// result with a newly computed value.
     static func cachedCheckPermissions(reset: Bool = false) -> Bool {
-        enum Context {
-            static let cachedResult = OSAllocatedUnfairLock<Bool?>(initialState: nil)
-        }
-        if !reset, let result = Context.cachedResult.withLock({ $0 }) {
+        if !reset, let result = cachedPermissionResult.withLock({ $0 }) {
             return result
         }
         let result = checkPermissions()
-        diagLog.debug("cachedCheckPermissions: computed fresh result = \(result) (reset=\(reset), wasCached=\(Context.cachedResult.withLock { $0 != nil }))")
-        Context.cachedResult.withLock { $0 = result }
+        diagLog.debug("cachedCheckPermissions: computed fresh result = \(result) (reset=\(reset), wasCached=\(cachedPermissionResult.withLock { $0 != nil }))")
+        cachedPermissionResult.withLock { $0 = result }
         return result
+    }
+
+    private static func setCachedPermissionResult(_ result: Bool?) {
+        cachedPermissionResult.withLock { $0 = result }
+    }
+
+    static func restoreActivationPolicyAfterScreenCapturePrompt(
+        currentPolicy: NSApplication.ActivationPolicy,
+        setActivationPolicy: @escaping (NSApplication.ActivationPolicy) -> Bool,
+        activate: () -> Void
+    ) -> (() -> Void)? {
+        guard currentPolicy != .regular else {
+            activate()
+            return nil
+        }
+
+        _ = setActivationPolicy(.regular)
+        activate()
+
+        return {
+            _ = setActivationPolicy(currentPolicy)
+        }
     }
 
     /// Requests screen capture permissions.
     static func requestPermissions() {
         diagLog.debug("requestPermissions: requesting screen capture access")
+        setCachedPermissionResult(nil)
 
         // Thaw is an LSUIElement (agent) app with no Dock icon. The system
         // permission prompt for Screen Recording is only reliably surfaced
         // — and the app only reliably registered in System Settings' list —
-        // when the requesting process is frontmost. Activate explicitly
-        // before asking, since clicking a button in one of our own windows
-        // doesn't always count as "frontmost" from tccd's perspective for
-        // an agent app.
-        NSApp.activate(ignoringOtherApps: true)
+        // when the requesting process is a normal frontmost app. Temporarily
+        // switch out of agent mode for the request, then restore it after the
+        // TCC request has been kicked off.
+        let restoreActivationPolicy = restoreActivationPolicyAfterScreenCapturePrompt(
+            currentPolicy: NSApp.activationPolicy(),
+            setActivationPolicy: { NSApp.setActivationPolicy($0) },
+            activate: { NSApp.activate(ignoringOtherApps: true) }
+        )
 
         // CGRequestScreenCaptureAccess() was reported broken on macOS 15
         // (didn't reliably prompt), so this used to rely solely on
@@ -97,14 +121,23 @@ enum ScreenCapture {
         // is the documented public API for adding an app to that list, and
         // SCShareableContent is kept as a fallback trigger.
         let cgResult = CGRequestScreenCaptureAccess()
+        if cgResult {
+            setCachedPermissionResult(true)
+        }
         diagLog.debug("requestPermissions: CGRequestScreenCaptureAccess() = \(cgResult)")
 
         SCShareableContent.getWithCompletionHandler { content, error in
             if let error {
                 diagLog.debug("requestPermissions: SCShareableContent request failed: \(error)")
             } else {
+                setCachedPermissionResult(true)
                 diagLog.debug("requestPermissions: SCShareableContent request succeeded (\(content?.windows.count ?? 0) windows)")
             }
+        }
+
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(1))
+            restoreActivationPolicy?()
         }
     }
 
