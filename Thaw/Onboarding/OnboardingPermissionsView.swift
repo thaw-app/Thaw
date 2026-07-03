@@ -68,12 +68,11 @@ struct ThawPermissionsView: View {
                 .buttonStyle(.glassProminent)
                 .disabled(!requiredGranted)
 
-                if !requiredGranted {
-                    Text("Accessibility required continue.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                }
+                Text("Accessibility is required to continue.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .opacity(requiredGranted ? 0 : 1)
             }
             .padding(.horizontal, 30)
             .padding(.bottom, 24)
@@ -187,6 +186,8 @@ private struct OnboardingPermissionCard: View {
                 Label("Granted", systemImage: "checkmark.circle.fill")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(.green)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 30)
             } else {
                 Button {
                     permission.performRequest()
