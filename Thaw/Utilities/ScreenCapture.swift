@@ -6,6 +6,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import AppKit
 import CoreGraphics
 import Foundation
 import os.lock
@@ -77,12 +78,33 @@ enum ScreenCapture {
     /// Requests screen capture permissions.
     static func requestPermissions() {
         diagLog.debug("requestPermissions: requesting screen capture access")
-        // CGRequestScreenCaptureAccess() is broken on newer macOS versions.
-        // Use SCShareableContent.getWithCompletionHandler to trigger the
-        // system screen capture permission prompt instead.
-        SCShareableContent.getWithCompletionHandler { _, _ in
-            // Intentionally empty: the call is only used to trigger the
-            // system screen capture permission prompt.
+
+        // Thaw is an LSUIElement (agent) app with no Dock icon. The system
+        // permission prompt for Screen Recording is only reliably surfaced
+        // — and the app only reliably registered in System Settings' list —
+        // when the requesting process is frontmost. Activate explicitly
+        // before asking, since clicking a button in one of our own windows
+        // doesn't always count as "frontmost" from tccd's perspective for
+        // an agent app.
+        NSApp.activate(ignoringOtherApps: true)
+
+        // CGRequestScreenCaptureAccess() was reported broken on macOS 15
+        // (didn't reliably prompt), so this used to rely solely on
+        // SCShareableContent to trigger the prompt. On macOS 27 that alone
+        // has been observed to leave the app entirely absent from the
+        // Screen Recording list, even after the call completes and even
+        // after a full relaunch. Call both: CGRequestScreenCaptureAccess()
+        // is the documented public API for adding an app to that list, and
+        // SCShareableContent is kept as a fallback trigger.
+        let cgResult = CGRequestScreenCaptureAccess()
+        diagLog.debug("requestPermissions: CGRequestScreenCaptureAccess() = \(cgResult)")
+
+        SCShareableContent.getWithCompletionHandler { content, error in
+            if let error {
+                diagLog.debug("requestPermissions: SCShareableContent request failed: \(error)")
+            } else {
+                diagLog.debug("requestPermissions: SCShareableContent request succeeded (\(content?.windows.count ?? 0) windows)")
+            }
         }
     }
 
