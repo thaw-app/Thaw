@@ -108,6 +108,11 @@ class Permission: ObservableObject, Identifiable {
         }
     }
 
+    /// Re-checks current system authorization immediately.
+    func refreshStatus() {
+        hasPermission = check()
+    }
+
     /// Stops running the permission check.
     func stopCheck() {
         timerCancellable?.cancel()
