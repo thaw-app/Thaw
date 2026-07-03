@@ -69,7 +69,7 @@ struct ThawPermissionsView: View {
                 .disabled(!requiredGranted)
 
                 if !requiredGranted {
-                    Text("Accessibility is required to continue.")
+                    Text("Accessibility required continue.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -127,6 +127,22 @@ struct ThawPermissionsView: View {
 private struct OnboardingPermissionCard: View {
     @ObservedObject var permission: Permission
 
+    private var displayDetails: [String] {
+        if permission is AccessibilityPermission {
+            [
+                "Detect menu bar items on your Mac and where they're positioned.",
+                "Move menu bar items to rearrange or hide them.",
+            ]
+        } else if permission is ScreenRecordingPermission {
+            [
+                "Show live previews of menu bar items.",
+                "Sample colors from the menu bar to adjust tint.",
+            ]
+        } else {
+            permission.details
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
@@ -149,7 +165,7 @@ private struct OnboardingPermissionCard: View {
             }
 
             VStack(alignment: .leading, spacing: 5) {
-                ForEach(permission.details, id: \.self) { detail in
+                ForEach(displayDetails, id: \.self) { detail in
                     HStack(alignment: .top, spacing: 6) {
                         Image(systemName: "circle.fill")
                             .font(.system(size: 3))
