@@ -21,7 +21,7 @@ struct SearchWeights {
     let description: Double
 
     /// The weighting used by the settings sidebar search
-    /// (``SettingsSearchModel``): a title match ranks above a keywords
+    /// (``SearchModel``): a title match ranks above a keywords
     /// match, which ranks above a description match.
     static let settings = SearchWeights(title: 0.3, keywords: 0.6, description: 1.0)
 
@@ -35,7 +35,7 @@ struct SearchWeights {
 // MARK: - SearchRanker
 
 /// Shared fuzzy-search ranking helpers, used by both the settings sidebar
-/// search (``SettingsSearchModel``) and menu bar item search
+/// search (``SearchModel``) and menu bar item search
 /// (``MenuBarSearchPanel``) so the two surfaces can't silently drift apart.
 ///
 /// Deliberately has no dependency on `Ifrit`/`Fuse` so it (and the tests

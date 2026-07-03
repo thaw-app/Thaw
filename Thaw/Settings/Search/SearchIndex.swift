@@ -1,5 +1,5 @@
 //
-//  SettingsSearchIndex.swift
+//  SearchIndex.swift
 //  Project: Thaw
 //
 //  Copyright (Ice) © 2023–2025 Jordan Baird
@@ -18,7 +18,7 @@ enum SettingsProperty: Hashable {
     case advanced(String)
 }
 
-// MARK: - SettingsSearchEntry
+// MARK: - SearchEntry
 
 /// One searchable row in the settings search index.
 ///
@@ -36,7 +36,7 @@ enum SettingsProperty: Hashable {
 /// conformance is safe — matching the precedent set by `SectionedListItem`.
 /// `Identifiable.id` is `String`, which is `Hashable`, so `Identifiable` is
 /// satisfied without the whole struct being `Hashable`.
-struct SettingsSearchEntry: Identifiable, @unchecked Sendable {
+struct SearchEntry: Identifiable, @unchecked Sendable {
     let id: String
     let titleKey: LocalizedStringKey
     let titleText: String
@@ -48,11 +48,11 @@ struct SettingsSearchEntry: Identifiable, @unchecked Sendable {
     let property: SettingsProperty?
 }
 
-// MARK: - SettingsSearchIndex
+// MARK: - SearchIndex
 
-enum SettingsSearchIndex {
+enum SearchIndex {
     /// All searchable settings entries, in pane order.
-    static let entries: [SettingsSearchEntry] = paneEntries + generalEntries + advancedEntries
+    static let entries: [SearchEntry] = paneEntries + generalEntries + advancedEntries
         + displayEntries + hotkeyEntries + layoutEntries
 
     /// `@Published` property names that are intentionally absent from the
@@ -67,7 +67,7 @@ enum SettingsSearchIndex {
     ]
 
     /// Returns the entries that belong to the given pane.
-    static func entries(for pane: SettingsNavigationIdentifier) -> [SettingsSearchEntry] {
+    static func entries(for pane: SettingsNavigationIdentifier) -> [SearchEntry] {
         entries.filter { $0.pane == pane }
     }
 
@@ -81,8 +81,8 @@ enum SettingsSearchIndex {
 
     // MARK: Pane Rows
 
-    private static let paneEntries: [SettingsSearchEntry] = [
-        SettingsSearchEntry(
+    private static let paneEntries: [SearchEntry] = [
+        SearchEntry(
             id: "pane.general",
             titleKey: "General",
             titleText: "General",
@@ -93,7 +93,7 @@ enum SettingsSearchIndex {
             keywords: ["general", "launch", "startup", "login", "icon", "rehide"],
             property: nil
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "pane.displays",
             titleKey: "Displays",
             titleText: "Displays",
@@ -104,7 +104,7 @@ enum SettingsSearchIndex {
             keywords: ["display", "monitor", "screen", "notch", "spacing", "ice bar", "thaw bar"],
             property: nil
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "pane.menuBarLayout",
             titleKey: "Layout",
             titleText: "Menu Bar Layout",
@@ -115,7 +115,7 @@ enum SettingsSearchIndex {
             keywords: ["layout", "arrange", "drag", "reorder", "sections", "reset", "overflow", "system items"],
             property: nil
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "pane.menuBarAppearance",
             titleKey: "Appearance",
             titleText: "Menu Bar Appearance",
@@ -126,7 +126,7 @@ enum SettingsSearchIndex {
             keywords: ["appearance", "tint", "color", "shadow", "border", "shape", "background", "dark mode"],
             property: nil
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "pane.hotkeys",
             titleKey: "Hotkeys",
             titleText: "Hotkeys",
@@ -137,7 +137,7 @@ enum SettingsSearchIndex {
             keywords: ["hotkey", "shortcut", "keyboard", "toggle", "search"],
             property: nil
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "pane.profiles",
             titleKey: "Profiles",
             titleText: "Profiles",
@@ -148,7 +148,7 @@ enum SettingsSearchIndex {
             keywords: ["profile", "preset", "layout", "snapshot"],
             property: nil
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "pane.advanced",
             titleKey: "Advanced",
             titleText: "Advanced",
@@ -159,7 +159,7 @@ enum SettingsSearchIndex {
             keywords: ["advanced", "sections", "search", "tooltips", "diagnostics", "logging", "reset", "context menu"],
             property: nil
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "pane.automation",
             titleKey: "Automation",
             titleText: "Automation",
@@ -170,7 +170,7 @@ enum SettingsSearchIndex {
             keywords: ["automation", "url", "scheme", "scripting", "xpc"],
             property: nil
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "pane.about",
             titleKey: "About",
             titleText: "About",
@@ -185,8 +185,8 @@ enum SettingsSearchIndex {
 
     // MARK: General Settings
 
-    private static let generalEntries: [SettingsSearchEntry] = [
-        SettingsSearchEntry(
+    private static let generalEntries: [SearchEntry] = [
+        SearchEntry(
             id: "general.launchAtLogin",
             titleKey: "Launch at Login",
             titleText: "Launch at Login",
@@ -197,7 +197,7 @@ enum SettingsSearchIndex {
             keywords: ["launch", "login", "startup", "auto", "start"],
             property: nil
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "general.showIceIcon",
             titleKey: "Show \(Constants.displayName) icon",
             titleText: "Show \(Constants.displayName) icon",
@@ -208,7 +208,7 @@ enum SettingsSearchIndex {
             keywords: ["icon", "show", "menu bar", "status item"],
             property: .general("showIceIcon")
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "general.iceIcon",
             titleKey: "\(Constants.displayName) icon",
             titleText: "\(Constants.displayName) icon",
@@ -219,7 +219,7 @@ enum SettingsSearchIndex {
             keywords: ["icon", "picker", "custom", "image"],
             property: .general("iceIcon")
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "general.customIceIconIsTemplate",
             titleKey: "Custom icon uses dynamic appearance",
             titleText: "Custom icon uses dynamic appearance",
@@ -230,7 +230,7 @@ enum SettingsSearchIndex {
             keywords: ["template", "monochrome", "dark mode", "custom icon"],
             property: .general("customIceIconIsTemplate")
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "general.showOnClick",
             titleKey: "Show on click",
             titleText: "Show on click",
@@ -241,7 +241,7 @@ enum SettingsSearchIndex {
             keywords: ["click", "show", "hidden"],
             property: .general("showOnClick")
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "general.showOnDoubleClick",
             titleKey: "Double-click for always-hidden",
             titleText: "Double-click for always-hidden",
@@ -252,7 +252,7 @@ enum SettingsSearchIndex {
             keywords: ["double click", "always hidden", "show"],
             property: .general("showOnDoubleClick")
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "general.showOnHover",
             titleKey: "Show on hover",
             titleText: "Show on hover",
@@ -263,7 +263,7 @@ enum SettingsSearchIndex {
             keywords: ["hover", "show", "hidden", "mouse"],
             property: .general("showOnHover")
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "general.showOnScroll",
             titleKey: "Show on scroll",
             titleText: "Show on scroll",
@@ -274,7 +274,7 @@ enum SettingsSearchIndex {
             keywords: ["scroll", "swipe", "show", "hidden", "gesture"],
             property: .general("showOnScroll")
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "general.autoRehide",
             titleKey: "Automatically rehide",
             titleText: "Automatically rehide",
@@ -285,7 +285,7 @@ enum SettingsSearchIndex {
             keywords: ["rehide", "auto", "automatic", "hide"],
             property: .general("autoRehide")
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "general.rehideStrategy",
             titleKey: "Strategy",
             titleText: "Rehide strategy",
@@ -296,7 +296,7 @@ enum SettingsSearchIndex {
             keywords: ["rehide", "strategy", "smart", "timed", "focused app"],
             property: .general("rehideStrategy")
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "general.rehideInterval",
             titleKey: "Rehide interval",
             titleText: "Rehide interval",
@@ -307,7 +307,7 @@ enum SettingsSearchIndex {
             keywords: ["rehide", "interval", "timed", "seconds", "delay"],
             property: .general("rehideInterval")
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "general.tempShowInterval",
             titleKey: "Temporarily shown item delay",
             titleText: "Temporarily shown item delay",
@@ -318,7 +318,7 @@ enum SettingsSearchIndex {
             keywords: ["temp", "temporary", "show", "delay", "seconds"],
             property: .general("tempShowInterval")
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "general.iceBarLocationOnHotkey",
             titleKey: "Show at mouse pointer on hotkey",
             titleText: "Show at mouse pointer on hotkey",
@@ -333,8 +333,8 @@ enum SettingsSearchIndex {
 
     // MARK: Advanced Settings
 
-    private static let advancedEntries: [SettingsSearchEntry] = [
-        SettingsSearchEntry(
+    private static let advancedEntries: [SearchEntry] = [
+        SearchEntry(
             id: "advanced.enableAlwaysHiddenSection",
             titleKey: "Enable the always-hidden section",
             titleText: "Enable the always-hidden section",
@@ -345,7 +345,7 @@ enum SettingsSearchIndex {
             keywords: ["always hidden", "section", "enable"],
             property: .advanced("enableAlwaysHiddenSection")
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "advanced.useOptionClickToShowAlwaysHiddenSection",
             titleKey: "Use Option-click to open always-hidden section",
             titleText: "Use Option-click to open always-hidden section",
@@ -356,7 +356,7 @@ enum SettingsSearchIndex {
             keywords: ["option", "click", "always hidden", "alt"],
             property: .advanced("useOptionClickToShowAlwaysHiddenSection")
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "advanced.useDoubleClickToShowAlwaysHiddenSection",
             titleKey: "Double-click \(Constants.displayName) icon to open always-hidden section",
             titleText: "Double-click \(Constants.displayName) icon to open always-hidden section",
@@ -367,7 +367,7 @@ enum SettingsSearchIndex {
             keywords: ["double click", "always hidden", "icon"],
             property: .advanced("useDoubleClickToShowAlwaysHiddenSection")
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "advanced.showAllSectionsOnUserDrag",
             titleKey: "Show all sections when ⌘ Command + dragging menu bar items",
             titleText: "Show all sections when Command + dragging menu bar items",
@@ -378,7 +378,7 @@ enum SettingsSearchIndex {
             keywords: ["drag", "command", "sections", "show all"],
             property: .advanced("showAllSectionsOnUserDrag")
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "advanced.sectionDividerStyle",
             titleKey: "Section divider style",
             titleText: "Section divider style",
@@ -389,7 +389,7 @@ enum SettingsSearchIndex {
             keywords: ["divider", "style", "chevron", "separator", "section"],
             property: .advanced("sectionDividerStyle")
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "advanced.searchSectionOrder",
             titleKey: "Search section ordering",
             titleText: "Search section ordering",
@@ -400,7 +400,7 @@ enum SettingsSearchIndex {
             keywords: ["search", "section", "order", "panel", "reorder"],
             property: .advanced("searchSectionOrder")
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "advanced.searchIncludeVisible",
             titleKey: "Include visible section in search",
             titleText: "Include visible section in search",
@@ -411,7 +411,7 @@ enum SettingsSearchIndex {
             keywords: ["search", "visible", "include", "section"],
             property: .advanced("searchIncludeVisible")
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "advanced.searchIncludeHidden",
             titleKey: "Include hidden section in search",
             titleText: "Include hidden section in search",
@@ -422,7 +422,7 @@ enum SettingsSearchIndex {
             keywords: ["search", "hidden", "include", "section"],
             property: .advanced("searchIncludeHidden")
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "advanced.searchIncludeAlwaysHidden",
             titleKey: "Include always-hidden section in search",
             titleText: "Include always-hidden section in search",
@@ -433,7 +433,7 @@ enum SettingsSearchIndex {
             keywords: ["search", "always hidden", "include", "section"],
             property: .advanced("searchIncludeAlwaysHidden")
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "advanced.showMenuBarTooltips",
             titleKey: "Show tooltips in the menu bar",
             titleText: "Show tooltips in the menu bar",
@@ -444,7 +444,7 @@ enum SettingsSearchIndex {
             keywords: ["tooltip", "hover", "menu bar"],
             property: .advanced("showMenuBarTooltips")
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "advanced.tooltipDelay",
             titleKey: "Tooltip delay",
             titleText: "Tooltip delay",
@@ -455,7 +455,7 @@ enum SettingsSearchIndex {
             keywords: ["tooltip", "delay", "hover", "seconds"],
             property: .advanced("tooltipDelay")
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "advanced.enableMenuBarItemOverflow",
             titleKey: "Enable menu bar item overflow",
             titleText: "Enable menu bar item overflow",
@@ -466,7 +466,7 @@ enum SettingsSearchIndex {
             keywords: ["overflow", "notch", "fit", "visible", "hidden"],
             property: .advanced("enableMenuBarItemOverflow")
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "advanced.useLCSSortingOnNotchedDisplays",
             titleKey: "Use LCS sorting on notched displays",
             titleText: "Use LCS sorting on notched displays",
@@ -477,7 +477,7 @@ enum SettingsSearchIndex {
             keywords: ["lcs", "sorting", "notch", "profile", "sort"],
             property: .advanced("useLCSSortingOnNotchedDisplays")
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "advanced.hideApplicationMenus",
             titleKey: "Hide app menus when showing menu bar items",
             titleText: "Hide app menus when showing menu bar items",
@@ -488,7 +488,7 @@ enum SettingsSearchIndex {
             keywords: ["app menus", "hide", "application", "menu bar"],
             property: .advanced("hideApplicationMenus")
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "advanced.enableSecondaryContextMenu",
             titleKey: "Enable secondary context menu",
             titleText: "Enable secondary context menu",
@@ -499,7 +499,7 @@ enum SettingsSearchIndex {
             keywords: ["context menu", "right click", "secondary"],
             property: .advanced("enableSecondaryContextMenu")
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "advanced.enableSecondaryContextMenuQuit",
             titleKey: "Enable secondary context menu quit",
             titleText: "Enable secondary context menu quit",
@@ -510,7 +510,7 @@ enum SettingsSearchIndex {
             keywords: ["context menu", "quit", "secondary"],
             property: .advanced("enableSecondaryContextMenuQuit")
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "advanced.showOnHoverDelay",
             titleKey: "Show on hover delay",
             titleText: "Show on hover delay",
@@ -521,7 +521,7 @@ enum SettingsSearchIndex {
             keywords: ["hover", "delay", "show", "seconds"],
             property: .advanced("showOnHoverDelay")
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "advanced.iconRefreshInterval",
             titleKey: "Icon refresh rate",
             titleText: "Icon refresh rate",
@@ -532,7 +532,7 @@ enum SettingsSearchIndex {
             keywords: ["icon", "refresh", "rate", "fps", "animated", "cpu"],
             property: .advanced("iconRefreshInterval")
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "advanced.enableDiagnosticLogging",
             titleKey: "Enable diagnostic logging",
             titleText: "Enable diagnostic logging",
@@ -543,7 +543,7 @@ enum SettingsSearchIndex {
             keywords: ["diagnostic", "logging", "debug", "logs", "troubleshoot"],
             property: .advanced("enableDiagnosticLogging")
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "advanced.enableExperimentalSystemItemHiding",
             titleKey: "Hide macOS system items",
             titleText: "Hide macOS system items",
@@ -551,10 +551,10 @@ enum SettingsSearchIndex {
             pane: .menuBarLayout,
             sectionKey: nil,
             sectionText: nil,
-            keywords: ["system items", "clock", "control center", "siri", "hide", "experimental", "macOS"],
+            keywords: ["system items", "clock", "control center", "siri", "hide", "macOS"],
             property: .advanced("enableExperimentalSystemItemHiding")
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "advanced.enableExperimentalOverflowPrevention",
             titleKey: "Prevent native menu bar overflow hiding (experimental)",
             titleText: "Prevent native menu bar overflow hiding (experimental)",
@@ -573,8 +573,8 @@ enum SettingsSearchIndex {
     /// templates on `DisplaySettingsManager`), not direct `@Published` toggles,
     /// so they are not covered by the drift guard. They are indexed for search
     /// discoverability.
-    private static let displayEntries: [SettingsSearchEntry] = [
-        SettingsSearchEntry(
+    private static let displayEntries: [SearchEntry] = [
+        SearchEntry(
             id: "displays.useIceBar",
             titleKey: "Use \(Constants.displayName) Bar",
             titleText: "Use \(Constants.displayName) Bar",
@@ -585,7 +585,7 @@ enum SettingsSearchIndex {
             keywords: ["ice bar", "thaw bar", "hidden", "separate bar"],
             property: nil
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "displays.alwaysShowHiddenItems",
             titleKey: "Always show hidden items",
             titleText: "Always show hidden items",
@@ -596,7 +596,7 @@ enum SettingsSearchIndex {
             keywords: ["always", "show", "hidden", "visible"],
             property: nil
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "displays.iceBarLocation",
             titleKey: "Location",
             titleText: "\(Constants.displayName) Bar location",
@@ -607,7 +607,7 @@ enum SettingsSearchIndex {
             keywords: ["ice bar", "thaw bar", "location", "mouse", "aligned"],
             property: nil
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "displays.iceBarLayout",
             titleKey: "Layout",
             titleText: "\(Constants.displayName) Bar layout",
@@ -618,7 +618,7 @@ enum SettingsSearchIndex {
             keywords: ["ice bar", "thaw bar", "layout", "horizontal", "vertical", "grid", "columns"],
             property: nil
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "displays.itemSpacing",
             titleKey: "Menu bar item spacing",
             titleText: "Menu bar item spacing",
@@ -629,7 +629,7 @@ enum SettingsSearchIndex {
             keywords: ["spacing", "padding", "menu bar", "items", "gap"],
             property: nil
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "displays.confirmSpacingRelaunch",
             titleKey: "Confirm before relaunching apps",
             titleText: "Confirm before relaunching apps",
@@ -646,8 +646,8 @@ enum SettingsSearchIndex {
 
     /// Hotkey bindings are dictionary-based on `HotkeysSettings`, not simple
     /// `@Published` toggles, so they are not covered by the drift guard.
-    private static let hotkeyEntries: [SettingsSearchEntry] = [
-        SettingsSearchEntry(
+    private static let hotkeyEntries: [SearchEntry] = [
+        SearchEntry(
             id: "hotkeys.toggleHiddenSection",
             titleKey: "Toggle the hidden section",
             titleText: "Toggle the hidden section",
@@ -658,7 +658,7 @@ enum SettingsSearchIndex {
             keywords: ["toggle", "hidden", "section", "hotkey", "shortcut"],
             property: nil
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "hotkeys.toggleAlwaysHiddenSection",
             titleKey: "Toggle the always-hidden section",
             titleText: "Toggle the always-hidden section",
@@ -669,7 +669,7 @@ enum SettingsSearchIndex {
             keywords: ["toggle", "always hidden", "section", "hotkey", "shortcut"],
             property: nil
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "hotkeys.searchMenuBarItems",
             titleKey: "Search menu bar items",
             titleText: "Search menu bar items",
@@ -680,7 +680,7 @@ enum SettingsSearchIndex {
             keywords: ["search", "menu bar items", "hotkey", "shortcut", "panel"],
             property: nil
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "hotkeys.openMenuBarItems",
             titleKey: "Open menu bar items",
             titleText: "Open menu bar items",
@@ -691,7 +691,7 @@ enum SettingsSearchIndex {
             keywords: ["open", "menu bar items", "hotkey", "per item"],
             property: nil
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "hotkeys.enableIceBar",
             titleKey: "Enable the \(Constants.displayName) Bar",
             titleText: "Enable the \(Constants.displayName) Bar",
@@ -702,7 +702,7 @@ enum SettingsSearchIndex {
             keywords: ["enable", "ice bar", "thaw bar", "hotkey", "shortcut"],
             property: nil
         ),
-        SettingsSearchEntry(
+        SearchEntry(
             id: "hotkeys.toggleApplicationMenus",
             titleKey: "Toggle application menus",
             titleText: "Toggle application menus",
@@ -717,8 +717,8 @@ enum SettingsSearchIndex {
 
     // MARK: Layout Settings
 
-    private static let layoutEntries: [SettingsSearchEntry] = [
-        SettingsSearchEntry(
+    private static let layoutEntries: [SearchEntry] = [
+        SearchEntry(
             id: "layout.resetMenuBarLayout",
             titleKey: "Reset menu bar layout",
             titleText: "Reset menu bar layout",

@@ -14,7 +14,7 @@ struct SettingsView: View {
     let appState: AppState
     @ObservedObject var navigationState: AppNavigationState
 
-    @StateObject private var searchModel = SettingsSearchModel()
+    @StateObject private var searchModel = SearchModel()
 
     private var isSearching: Bool {
         !searchModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -32,14 +32,14 @@ struct SettingsView: View {
 
     private var sidebar: some View {
         VStack(spacing: 0) {
-            SettingsSearchField(text: $searchModel.searchText)
+            SearchField(text: $searchModel.searchText)
 
             Group {
                 if isSearching {
                     if searchModel.displayedGroups.isEmpty {
-                        SettingsSearchEmptyView()
+                        SearchEmptyView()
                     } else {
-                        SettingsSearchResultsList(groups: searchModel.displayedGroups) { entry in
+                        SearchResultsList(groups: searchModel.displayedGroups) { entry in
                             navigate(to: entry.pane)
                         }
                     }

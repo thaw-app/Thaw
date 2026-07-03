@@ -12,10 +12,10 @@ import XCTest
 // MARK: - SearchRankerTests
 
 /// Covers the fuzzy-search ranking pipe shared by settings search
-/// (`SettingsSearchModel`) and menu bar item search (`MenuBarSearchPanel`).
+/// (`SearchModel`) and menu bar item search (`MenuBarSearchPanel`).
 ///
 /// `SearchRanker` has no dependency on `Ifrit`/`Fuse`, so — like
-/// `SettingsSearchIndexTests` — these tests don't need Ifrit linked into the
+/// `SearchIndexTests` — these tests don't need Ifrit linked into the
 /// test target.
 final class SearchRankerTests: XCTestCase {
     // MARK: - Relevance Sort

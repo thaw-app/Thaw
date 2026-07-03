@@ -1,5 +1,5 @@
 //
-//  SettingsSearchModel.swift
+//  SearchModel.swift
 //  Project: Thaw
 //
 //  Copyright (Ice) © 2023–2025 Jordan Baird
@@ -10,29 +10,29 @@ import Combine
 import Ifrit
 import SwiftUI
 
-// MARK: - SettingsSearchGroup
+// MARK: - SearchGroup
 
 /// A group of search results that belong to the same settings pane.
-struct SettingsSearchGroup: Identifiable {
+struct SearchGroup: Identifiable {
     let pane: SettingsNavigationIdentifier
-    let entries: [SettingsSearchEntry]
+    let entries: [SearchEntry]
 
     var id: String {
         pane.rawValue
     }
 }
 
-// MARK: - SettingsSearchModel
+// MARK: - SearchModel
 
 /// The model behind the settings sidebar search.
 ///
-/// Uses ``Fuse`` to fuzzy-match the static ``SettingsSearchIndex``, then groups
-/// the ranked results by pane into ``SettingsSearchGroup``s for
-/// ``SettingsSearchResultsList``.
+/// Uses ``Fuse`` to fuzzy-match the static ``SearchIndex``, then groups
+/// the ranked results by pane into ``SearchGroup``s for
+/// ``SearchResultsList``.
 @MainActor
-final class SettingsSearchModel: ObservableObject {
+final class SearchModel: ObservableObject {
     @Published var searchText = ""
-    @Published var displayedGroups = [SettingsSearchGroup]()
+    @Published var displayedGroups = [SearchGroup]()
 
     let fuse = Fuse(threshold: 0.5)
 
@@ -47,7 +47,7 @@ final class SettingsSearchModel: ObservableObject {
         }
 
         struct SearchItem: Searchable {
-            let entry: SettingsSearchEntry
+            let entry: SearchEntry
 
             var properties: [FuseProp] {
                 // Weight the title highest, then keywords, then the description.
@@ -65,7 +65,7 @@ final class SettingsSearchModel: ObservableObject {
             }
         }
 
-        let searchItems = SettingsSearchIndex.entries.map { SearchItem(entry: $0) }
+        let searchItems = SearchIndex.entries.map { SearchItem(entry: $0) }
 
         let fuseResults = fuse.searchSync(query, in: searchItems, by: \.properties)
 
@@ -75,9 +75,9 @@ final class SettingsSearchModel: ObservableObject {
 
         // Rank globally by relevance, then group by pane preserving the rank
         // order within each pane. Pane order follows the best-scoring entry.
-        let ranked = SettingsSearchIndex.sortedByRelevance(scored)
+        let ranked = SearchIndex.sortedByRelevance(scored)
 
-        var grouped: [SettingsNavigationIdentifier: [SettingsSearchEntry]] = [:]
+        var grouped: [SettingsNavigationIdentifier: [SearchEntry]] = [:]
         var paneOrder: [SettingsNavigationIdentifier] = []
         for item in ranked {
             let pane = item.entry.pane
@@ -88,7 +88,7 @@ final class SettingsSearchModel: ObservableObject {
         }
 
         displayedGroups = paneOrder.map { pane in
-            SettingsSearchGroup(pane: pane, entries: grouped[pane] ?? [])
+            SearchGroup(pane: pane, entries: grouped[pane] ?? [])
         }
     }
 }

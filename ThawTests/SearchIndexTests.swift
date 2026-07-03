@@ -1,5 +1,5 @@
 //
-//  SettingsSearchIndexTests.swift
+//  SearchIndexTests.swift
 //  Project: Thaw
 //
 //  Copyright (Ice) © 2023–2025 Jordan Baird
@@ -9,18 +9,18 @@
 @testable import Thaw
 import XCTest
 
-// MARK: - SettingsSearchIndexTests
+// MARK: - SearchIndexTests
 
-final class SettingsSearchIndexTests: XCTestCase {
+final class SearchIndexTests: XCTestCase {
     // MARK: - Index Integrity
 
     func testEntryIDsAreUnique() {
-        let ids = SettingsSearchIndex.entries.map(\.id)
-        XCTAssertEqual(Set(ids).count, ids.count, "SettingsSearchEntry ids must be unique")
+        let ids = SearchIndex.entries.map(\.id)
+        XCTAssertEqual(Set(ids).count, ids.count, "SearchEntry ids must be unique")
     }
 
     func testEntriesAreNonEmpty() {
-        for entry in SettingsSearchIndex.entries {
+        for entry in SearchIndex.entries {
             XCTAssertFalse(entry.titleText.isEmpty, "\(entry.id) has an empty titleText")
         }
     }
@@ -28,7 +28,7 @@ final class SettingsSearchIndexTests: XCTestCase {
     func testEveryPaneHasAtLeastOneEntry() {
         for pane in SettingsNavigationIdentifier.allCases {
             XCTAssertFalse(
-                SettingsSearchIndex.entries(for: pane).isEmpty,
+                SearchIndex.entries(for: pane).isEmpty,
                 "\(pane) has no search entries"
             )
         }
@@ -36,14 +36,14 @@ final class SettingsSearchIndexTests: XCTestCase {
 
     func testEntriesForPaneReturnsOnlyThatPane() {
         for pane in SettingsNavigationIdentifier.allCases {
-            for entry in SettingsSearchIndex.entries(for: pane) {
+            for entry in SearchIndex.entries(for: pane) {
                 XCTAssertEqual(entry.pane, pane, "entries(for:) leaked a \(entry.pane) row into \(pane)")
             }
         }
     }
 
     func testPaneEntriesCoverAllNavigationIdentifiers() {
-        let paneEntryPanes = Set(SettingsSearchIndex.entries.compactMap { $0.id.hasPrefix("pane.") ? $0.pane : nil })
+        let paneEntryPanes = Set(SearchIndex.entries.compactMap { $0.id.hasPrefix("pane.") ? $0.pane : nil })
         XCTAssertEqual(paneEntryPanes, Set(SettingsNavigationIdentifier.allCases))
     }
 
@@ -55,12 +55,12 @@ final class SettingsSearchIndexTests: XCTestCase {
             ("best", 0.1),
             ("middle", 0.5),
         ]
-        XCTAssertEqual(SettingsSearchIndex.sortedByRelevance(items), ["best", "middle", "worst"])
+        XCTAssertEqual(SearchIndex.sortedByRelevance(items), ["best", "middle", "worst"])
     }
 
     func testSortedByRelevanceHandlesEmptyInput() {
         let empty: [(item: String, diffScore: Double)] = []
-        XCTAssertEqual(SettingsSearchIndex.sortedByRelevance(empty), [])
+        XCTAssertEqual(SearchIndex.sortedByRelevance(empty), [])
     }
 
     // MARK: - Drift Guard: @Published properties ↔ index entries
@@ -72,13 +72,13 @@ final class SettingsSearchIndexTests: XCTestCase {
         XCTAssertFalse(published.isEmpty, "Expected to reflect @Published properties on GeneralSettings")
 
         for name in published {
-            if SettingsSearchIndex.nonSearchableProperties.contains(.general(name)) {
+            if SearchIndex.nonSearchableProperties.contains(.general(name)) {
                 continue
             }
-            let hasEntry = SettingsSearchIndex.entries.contains { $0.property == .general(name) }
+            let hasEntry = SearchIndex.entries.contains { $0.property == .general(name) }
             XCTAssertTrue(
                 hasEntry,
-                "GeneralSettings.\(name) has no SettingsSearchEntry. Add an entry or, if it is intentionally not searchable, add `.general(\"\(name)\")` to nonSearchableProperties."
+                "GeneralSettings.\(name) has no SearchEntry. Add an entry or, if it is intentionally not searchable, add `.general(\"\(name)\")` to nonSearchableProperties."
             )
         }
     }
@@ -90,13 +90,13 @@ final class SettingsSearchIndexTests: XCTestCase {
         XCTAssertFalse(published.isEmpty, "Expected to reflect @Published properties on AdvancedSettings")
 
         for name in published {
-            if SettingsSearchIndex.nonSearchableProperties.contains(.advanced(name)) {
+            if SearchIndex.nonSearchableProperties.contains(.advanced(name)) {
                 continue
             }
-            let hasEntry = SettingsSearchIndex.entries.contains { $0.property == .advanced(name) }
+            let hasEntry = SearchIndex.entries.contains { $0.property == .advanced(name) }
             XCTAssertTrue(
                 hasEntry,
-                "AdvancedSettings.\(name) has no SettingsSearchEntry. Add an entry or, if it is intentionally not searchable, add `.advanced(\"\(name)\")` to nonSearchableProperties."
+                "AdvancedSettings.\(name) has no SearchEntry. Add an entry or, if it is intentionally not searchable, add `.advanced(\"\(name)\")` to nonSearchableProperties."
             )
         }
     }
@@ -106,7 +106,7 @@ final class SettingsSearchIndexTests: XCTestCase {
         let generalNames = Set(Self.publishedPropertyNames(of: GeneralSettings()))
         let advancedNames = Set(Self.publishedPropertyNames(of: AdvancedSettings()))
 
-        for entry in SettingsSearchIndex.entries {
+        for entry in SearchIndex.entries {
             guard let property = entry.property else { continue }
             switch property {
             case let .general(name):
@@ -130,7 +130,7 @@ final class SettingsSearchIndexTests: XCTestCase {
         let generalNames = Set(Self.publishedPropertyNames(of: GeneralSettings()))
         let advancedNames = Set(Self.publishedPropertyNames(of: AdvancedSettings()))
 
-        for property in SettingsSearchIndex.nonSearchableProperties {
+        for property in SearchIndex.nonSearchableProperties {
             switch property {
             case let .general(name):
                 XCTAssertTrue(generalNames.contains(name), "nonSearchableProperties lists GeneralSettings.\(name), which does not exist.")

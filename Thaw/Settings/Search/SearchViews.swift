@@ -1,5 +1,5 @@
 //
-//  SettingsSearchViews.swift
+//  SearchViews.swift
 //  Project: Thaw
 //
 //  Copyright (Ice) © 2023–2025 Jordan Baird
@@ -8,10 +8,10 @@
 
 import SwiftUI
 
-// MARK: - SettingsSearchField
+// MARK: - SearchField
 
 /// Compact search field pinned above the settings sidebar content.
-struct SettingsSearchField: View {
+struct SearchField: View {
     @Binding var text: String
     @FocusState private var isFocused: Bool
 
@@ -57,12 +57,12 @@ struct SettingsSearchField: View {
     }
 }
 
-// MARK: - SettingsSearchResultsList
+// MARK: - SearchResultsList
 
 /// Scrollable, grouped search results for the settings sidebar.
-struct SettingsSearchResultsList: View {
-    let groups: [SettingsSearchGroup]
-    let onSelect: (SettingsSearchEntry) -> Void
+struct SearchResultsList: View {
+    let groups: [SearchGroup]
+    let onSelect: (SearchEntry) -> Void
 
     var body: some View {
         ScrollView {
@@ -75,7 +75,7 @@ struct SettingsSearchResultsList: View {
                             .padding(.vertical, 8)
                     }
 
-                    SettingsSearchGroupSection(group: group, onSelect: onSelect)
+                    SearchGroupSection(group: group, onSelect: onSelect)
                 }
             }
             .padding(.horizontal, 10)
@@ -85,11 +85,11 @@ struct SettingsSearchResultsList: View {
     }
 }
 
-// MARK: - SettingsSearchGroupSection
+// MARK: - SearchGroupSection
 
-private struct SettingsSearchGroupSection: View {
-    let group: SettingsSearchGroup
-    let onSelect: (SettingsSearchEntry) -> Void
+private struct SearchGroupSection: View {
+    let group: SearchGroup
+    let onSelect: (SearchEntry) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
@@ -111,7 +111,7 @@ private struct SettingsSearchGroupSection: View {
 
             VStack(spacing: 2) {
                 ForEach(group.entries) { entry in
-                    SettingsSearchResultButton(entry: entry) {
+                    SearchResultButton(entry: entry) {
                         onSelect(entry)
                     }
                 }
@@ -120,11 +120,11 @@ private struct SettingsSearchGroupSection: View {
     }
 }
 
-// MARK: - SettingsSearchResultButton
+// MARK: - SearchResultButton
 
 /// Interactive search result row with hover and pressed feedback.
-private struct SettingsSearchResultButton: View {
-    let entry: SettingsSearchEntry
+private struct SearchResultButton: View {
+    let entry: SearchEntry
     let action: () -> Void
 
     @State private var isHovering = false
@@ -135,13 +135,13 @@ private struct SettingsSearchResultButton: View {
 
     var body: some View {
         Button(action: action) {
-            SettingsSearchResultRowContent(
+            SearchResultRowContent(
                 entry: entry,
                 isHovering: isHovering
             )
         }
         .buttonStyle(
-            SettingsSearchResultButtonStyle(
+            SearchResultButtonStyle(
                 isHovering: isHovering,
                 rowShape: rowShape
             )
@@ -154,10 +154,10 @@ private struct SettingsSearchResultButton: View {
     }
 }
 
-// MARK: - SettingsSearchResultRowContent
+// MARK: - SearchResultRowContent
 
-private struct SettingsSearchResultRowContent: View {
-    let entry: SettingsSearchEntry
+private struct SearchResultRowContent: View {
+    let entry: SearchEntry
     let isHovering: Bool
 
     var body: some View {
@@ -201,9 +201,9 @@ private struct SettingsSearchResultRowContent: View {
     }
 }
 
-// MARK: - SettingsSearchResultButtonStyle
+// MARK: - SearchResultButtonStyle
 
-private struct SettingsSearchResultButtonStyle: ButtonStyle {
+private struct SearchResultButtonStyle: ButtonStyle {
     let isHovering: Bool
     let rowShape: RoundedRectangle
 
@@ -235,10 +235,10 @@ private struct SettingsSearchResultButtonStyle: ButtonStyle {
     }
 }
 
-// MARK: - SettingsSearchEmptyView
+// MARK: - SearchEmptyView
 
 /// Empty state shown when a query returns no matches.
-struct SettingsSearchEmptyView: View {
+struct SearchEmptyView: View {
     var body: some View {
         VStack(spacing: 10) {
             Image(systemName: "magnifyingglass")
