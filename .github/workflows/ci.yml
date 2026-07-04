@@ -67,6 +67,24 @@ jobs:
           restore-keys: |
             spm-${{ runner.os }}-
 
+      - name: Compute cache week
+        id: cache-week
+        run: echo "week=$(date +%Y-%U)" >> "$GITHUB_OUTPUT"
+
+      # COMPILATION_CACHE_ENABLE_CACHING = YES writes a content-addressed cache to
+      # Build/CompilationCache.noindex (the default CAS path under -derivedDataPath).
+      # Persisting it across runs turns most of the build into cache hits instead of
+      # a full recompile. Keyed by week so the cache periodically rotates rather than
+      # growing unbounded; restore-keys still reuses the prior week's cache as a base.
+      - name: Cache Swift compilation cache
+        uses: actions/cache@v5
+        with:
+          path: Build/CompilationCache.noindex
+          key: compilation-cache-${{ runner.os }}-${{ github.ref_name }}-${{ steps.cache-week.outputs.week }}
+          restore-keys: |
+            compilation-cache-${{ runner.os }}-${{ github.ref_name }}-
+            compilation-cache-${{ runner.os }}-
+
       - name: Build and Test
         run: |
           xcodebuild test \
