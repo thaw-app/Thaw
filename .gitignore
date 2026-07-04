@@ -1,5 +1,6 @@
 !.github/actions/build/  
 !.github/actions/build/** 
+.build-benchmark
 .codex-home
 .cursorrules
 .DS_Store  
