@@ -127,6 +127,26 @@ final class ControlItem: NSObject {
                 Selector,
                 UInt
             ) -> Void
+
+            // `responds(to:)` only proves the selector resolves to *some* IMP,
+            // not that it matches the (void, id, SEL, id, SEL, NSUInteger) C
+            // convention assumed below. Verify the runtime's type encoding
+            // before invoking a raw `unsafeBitCast` IMP so a future macOS 27.x
+            // point release that changes the signature fails loudly instead of
+            // corrupting the call stack.
+            guard
+                let method = class_getInstanceMethod(type(of: button), selector),
+                let encodingPointer = method_getTypeEncoding(method)
+            else {
+                assertionFailure("addTarget:action:forControlEvents: has no resolvable type encoding; refusing to bind the primary action.")
+                return false
+            }
+            let encoding = String(cString: encodingPointer)
+            guard encoding.hasPrefix("v@:@:"), encoding.hasSuffix("Q") else {
+                assertionFailure("addTarget:action:forControlEvents: signature (\(encoding)) no longer matches the assumed (void, id, SEL, id, SEL, NSUInteger) C convention; refusing to bind the primary action.")
+                return false
+            }
+
             let implementation = unsafeBitCast(button.method(for: selector), to: AddTargetImp.self)
             implementation(
                 button,
