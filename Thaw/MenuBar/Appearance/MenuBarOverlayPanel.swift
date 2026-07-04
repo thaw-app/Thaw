@@ -830,10 +830,13 @@ private final class MenuBarOverlayPanelContentView: NSView {
     /// Delay for the in-flight or next AX bounds refresh.
     private var axItemBoundsRefreshDelay: Duration = .milliseconds(200)
 
-    /// Set by publishers while an AX refresh is pending/in flight. The refresh
-    /// loop consumes this flag and performs one follow-up pass if geometry
-    /// changed during the previous pass, avoiding cancel/restart starvation.
-    private var needsAXItemBoundsRefresh = false
+    /// Incremented on every ``scheduleAXItemBoundsRefresh(delay:)`` call so a
+    /// superseded task can recognize it's stale after being cancelled. Without
+    /// this, a cancelled task's cleanup (clearing ``axItemBoundsRefreshTask``
+    /// and ``splitPillGeometryFrozen``) can run *after* a newer call has
+    /// already installed its own task, wiping out that newer task's state and
+    /// silently defeating the debounce.
+    private var axItemBoundsRefreshGeneration = 0
 
     /// In-flight confirmation task for settling the trailing item-window cache
     /// after an app switch. Cancelled and replaced whenever a new
@@ -1006,58 +1009,63 @@ private final class MenuBarOverlayPanelContentView: NSView {
         delay: Duration = .milliseconds(200)
     ) {
         axItemBoundsRefreshDelay = delay
-        needsAXItemBoundsRefresh = true
         axItemBoundsRefreshTask?.cancel()
         axItemBoundsRefreshTask = nil
+        axItemBoundsRefreshGeneration += 1
+        let generation = axItemBoundsRefreshGeneration
 
         guard let displayID = overlayPanel?.owningScreen.displayID else {
             cachedAXItemBounds = []
+            splitPillGeometryFrozen = false
             needsDisplay = true
             return
         }
 
         axItemBoundsRefreshTask = Task { @MainActor [weak self] in
             guard let self else { return }
-            while needsAXItemBoundsRefresh, !Task.isCancelled {
-                needsAXItemBoundsRefresh = false
-                let refreshDelay = axItemBoundsRefreshDelay
-                try? await Task.sleep(for: refreshDelay)
-                guard !Task.isCancelled else { break }
-
-                let displayBounds = CGDisplayBounds(displayID)
-                let (recentItems, recentAt) = overlayPanel?.appState?.itemManager.lastOnScreenMenuBarItems ?? ([], nil)
-                let items: [MenuBarItem] = if let recentAt, recentAt.duration(to: .now) < .milliseconds(200) {
-                    recentItems.filter { $0.bounds.intersects(displayBounds) }
-                } else {
-                    await MenuBarItem.getMenuBarItems(
-                        on: displayID,
-                        option: [.onScreen, .activeSpace]
-                    )
+            defer {
+                // Only clear state if a newer call hasn't already superseded
+                // this task — otherwise this cancelled task's cleanup would
+                // stomp on the newer task's in-flight state.
+                if generation == axItemBoundsRefreshGeneration {
+                    splitPillGeometryFrozen = false
+                    axItemBoundsRefreshTask = nil
                 }
-                guard !Task.isCancelled else { break }
-
-                let hider = overlayPanel?.appState?.menuBarManager.simpleItemHider
-                let context = MenuBarSplitPillGeometry.TrailingPillContext(
-                    revealedSection: hider?.revealedSection,
-                    section: { item in
-                        hider?.section(for: item) ?? .visible
-                    }
-                )
-                let bounds = MenuBarSplitPillGeometry.trailingPillBounds(
-                    from: items,
-                    context: context
-                )
-                cachedAXItemBounds = bounds
-                let isRevealingHidden = hider?.revealedSection == .hidden
-                    || hider?.revealedSection == .alwaysHidden
-                cachedChevronFrame = isRevealingHidden
-                    ? .zero
-                    : (items.first(where: { $0.tag.matchesVisibleControlItem })?.bounds ?? .zero)
                 needsDisplay = true
             }
-            splitPillGeometryFrozen = false
-            needsDisplay = true
-            axItemBoundsRefreshTask = nil
+
+            try? await Task.sleep(for: axItemBoundsRefreshDelay)
+            guard !Task.isCancelled else { return }
+
+            let displayBounds = CGDisplayBounds(displayID)
+            let (recentItems, recentAt) = overlayPanel?.appState?.itemManager.lastOnScreenMenuBarItems ?? ([], nil)
+            let items: [MenuBarItem] = if let recentAt, recentAt.duration(to: .now) < .milliseconds(200) {
+                recentItems.filter { $0.bounds.intersects(displayBounds) }
+            } else {
+                await MenuBarItem.getMenuBarItems(
+                    on: displayID,
+                    option: [.onScreen, .activeSpace]
+                )
+            }
+            guard !Task.isCancelled else { return }
+
+            let hider = overlayPanel?.appState?.menuBarManager.simpleItemHider
+            let context = MenuBarSplitPillGeometry.TrailingPillContext(
+                revealedSection: hider?.revealedSection,
+                section: { item in
+                    hider?.section(for: item) ?? .visible
+                }
+            )
+            let bounds = MenuBarSplitPillGeometry.trailingPillBounds(
+                from: items,
+                context: context
+            )
+            cachedAXItemBounds = bounds
+            let isRevealingHidden = hider?.revealedSection == .hidden
+                || hider?.revealedSection == .alwaysHidden
+            cachedChevronFrame = isRevealingHidden
+                ? .zero
+                : (items.first(where: { $0.tag.matchesVisibleControlItem })?.bounds ?? .zero)
         }
     }
 
