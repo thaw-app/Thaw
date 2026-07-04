@@ -371,8 +371,13 @@
 		};
 		1720D48F2BB9B60500A7AC63 /* SwiftLint */ = {
 			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
+			inputFileListPaths = (
+				"$(SRCROOT)/scripts/swiftlint-inputs.xcfilelist",
+			);
 			name = SwiftLint;
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/swiftlint.stamp",
+			);
 			shellPath = /bin/sh;
 			shellScript = (
 				"if [[ \"$(uname -m)\" == arm64 ]]; then",
@@ -384,6 +389,8 @@
 				"else",
 				"  echo \"warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint\"",
 				"fi",
+				"",
+				"touch \"$SCRIPT_OUTPUT_FILE_0\"",
 				"",
 			);
 		};
