@@ -712,7 +712,7 @@ private struct IceBarContentView: View {
                         let rows = stride(from: 0, to: items.count, by: gridColumns).map { start in
                             Array(items[start ..< Swift.min(start + gridColumns, items.count)])
                         }
-                        ForEach(Array(rows.enumerated()), id: \.offset) { rowIndex, rowItems in
+                        ForEach(Array(rows.enumerated()), id: \.element.first?.windowID) { rowIndex, rowItems in
                             HStack(spacing: itemSpacing) {
                                 ForEach(Array(rowItems.enumerated()), id: \.element.windowID) { colIndex, item in
                                     let itemView = IceBarItemView(
