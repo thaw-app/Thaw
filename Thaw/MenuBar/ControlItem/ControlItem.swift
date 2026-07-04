@@ -612,9 +612,17 @@ final class ControlItem: NSObject {
                 return
             }
 
-            let duration: TimeInterval = 0.22
+            let duration: Duration = .milliseconds(220)
             let frameCount = 16
+            let frameInterval = duration / Double(frameCount)
+            let clock = ContinuousClock()
+            let start = clock.now
 
+            // Schedule each frame against a wall-clock deadline (start + n *
+            // frameInterval) rather than sleeping frameInterval after the
+            // previous frame's work completed. The latter accumulates drift
+            // under main-thread load since each frame's own work time isn't
+            // subtracted from the following sleep.
             for frame in 1 ... frameCount {
                 guard !Task.isCancelled else {
                     return
@@ -623,7 +631,9 @@ final class ControlItem: NSObject {
                 let progress = CGFloat(frame) / CGFloat(frameCount)
                 let eased = Self.easeInOutCubic(progress)
                 self.statusItem.length = startLength + (resolvedTargetLength - startLength) * eased
-                try? await Task.sleep(for: .milliseconds(Int(duration * 1000 / Double(frameCount))))
+
+                let deadline = start + frameInterval * Double(frame)
+                try? await Task.sleep(until: deadline, clock: clock)
             }
 
             guard !Task.isCancelled else {
