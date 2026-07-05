@@ -358,7 +358,14 @@ struct MenuBarLayoutSettingsPane: View {
                     try await manager.resetLayoutToAlwaysHidden()
                 }
                 if failedMoves == 0 {
-                    resetStatus = target == .hidden ? .successToHidden : .successToVisible
+                    resetStatus = switch target {
+                    case .hidden:
+                        .successToHidden
+                    case .alwaysHidden:
+                        .successToAlwaysHidden
+                    case .visible:
+                        .successToVisible
+                    }
                 } else {
                     resetStatus = .partialFailure(failedMoves)
                 }
@@ -388,6 +395,7 @@ struct MenuBarLayoutSettingsPane: View {
 
     private enum ResetStatus {
         case successToHidden
+        case successToAlwaysHidden
         case successToVisible
         case partialFailure(Int)
         case failure(String)
@@ -396,6 +404,8 @@ struct MenuBarLayoutSettingsPane: View {
             switch self {
             case .successToHidden:
                 String(localized: "Layout reset. Items were moved to the Hidden section.")
+            case .successToAlwaysHidden:
+                String(localized: "Layout reset. Items were moved to the Always Hidden section.")
             case .successToVisible:
                 String(localized: "Items were moved to the Visible section.")
             case let .partialFailure(count):
@@ -409,7 +419,7 @@ struct MenuBarLayoutSettingsPane: View {
             switch self {
             case .failure, .partialFailure:
                 true
-            case .successToHidden, .successToVisible:
+            case .successToHidden, .successToAlwaysHidden, .successToVisible:
                 false
             }
         }
