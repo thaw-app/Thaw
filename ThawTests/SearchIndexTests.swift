@@ -137,6 +137,10 @@ final class SearchIndexTests: XCTestCase {
                     XCTFail("Entry \(entry.id) references AdvancedSettings.\(name), which does not exist.")
                     continue
                 }
+                XCTAssertTrue(
+                    advancedNames.contains(name),
+                    "Entry \(entry.id) references AdvancedSettings.\(name), which does not exist."
+                )
             }
         }
     }
@@ -157,6 +161,10 @@ final class SearchIndexTests: XCTestCase {
                     // macOS 27-only keys may be absent from release AdvancedSettings models.
                     continue
                 }
+                XCTAssertTrue(
+                    advancedNames.contains(name),
+                    "nonSearchableProperties lists AdvancedSettings.\(name), which does not exist."
+                )
             }
         }
     }
