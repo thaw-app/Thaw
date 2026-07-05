@@ -8,6 +8,12 @@
 
 import SwiftUI
 
+/// Shared window dimensions for onboarding and permissions flows.
+enum ThawOnboardingWindowMetrics {
+    static let width: CGFloat = 608
+    static let height: CGFloat = 480
+}
+
 /// Full first-launch experience: feature tour, then separate permissions
 /// screen, then optional completion confirmation.
 struct ThawOnboardingView: View {
@@ -30,7 +36,7 @@ struct ThawOnboardingView: View {
     ///   - onComplete: Called once the user finishes the permissions step.
     init(
         showsCompletionScreen: Bool = true,
-        onComplete: @escaping () -> Void = {}
+        onComplete: @escaping () -> Void
     ) {
         self.showsCompletionScreen = showsCompletionScreen
         self.onComplete = onComplete

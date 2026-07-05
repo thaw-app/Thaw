@@ -42,12 +42,12 @@ private struct PermissionsFlowView: View {
                 appState.permissions.refreshPermissionsState()
                 appState.completeFirstLaunchSetup()
             }
-            .frame(width: 608, height: 480)
+            .frame(width: ThawOnboardingWindowMetrics.width, height: ThawOnboardingWindowMetrics.height)
         case .permissions:
             ThawPermissionsView {
                 appState.completeFirstLaunchSetup()
             }
-            .frame(width: 608, height: 480)
+            .frame(width: ThawOnboardingWindowMetrics.width, height: ThawOnboardingWindowMetrics.height)
         }
     }
 }

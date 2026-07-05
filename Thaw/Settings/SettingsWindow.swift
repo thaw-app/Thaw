@@ -36,7 +36,7 @@ struct SettingsWindow: Scene {
                         Defaults.set(true, forKey: .hasSeenOnboarding)
                         appState.isOnboardingPresented = false
                     }
-                    .frame(width: 608, height: 480)
+                    .frame(width: ThawOnboardingWindowMetrics.width, height: ThawOnboardingWindowMetrics.height)
                 }
                 .frame(minWidth: 850, minHeight: 600)
         }

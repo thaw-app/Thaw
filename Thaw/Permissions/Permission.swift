@@ -31,6 +31,14 @@ class Permission: ObservableObject, Identifiable {
     /// Descriptive details for the permission.
     let details: [String]
 
+    /// Shorter copy for onboarding cards; falls back to ``details`` when unset.
+    let shortDetails: [String]?
+
+    /// Details shown in compact onboarding layouts.
+    var onboardingDetails: [String] {
+        shortDetails ?? details
+    }
+
     /// A Boolean value that indicates if the app can work without this permission.
     let isRequired: Bool
 
@@ -51,6 +59,7 @@ class Permission: ObservableObject, Identifiable {
     /// - Parameters:
     ///   - title: The title of the permission.
     ///   - details: Descriptive details for the permission.
+    ///   - shortDetails: Optional shorter onboarding copy.
     ///   - isRequired: A Boolean value that indicates if the app can work without this permission.
     ///   - settingsURL: The URL of the settings pane to open.
     ///   - check: A function that checks permissions.
@@ -60,6 +69,7 @@ class Permission: ObservableObject, Identifiable {
         iconName: String,
         iconColor: Color,
         details: [String],
+        shortDetails: [String]? = nil,
         isRequired: Bool,
         settingsURL: URL?,
         check: @escaping () -> Bool,
@@ -69,6 +79,7 @@ class Permission: ObservableObject, Identifiable {
         self.iconName = iconName
         self.iconColor = iconColor
         self.details = details
+        self.shortDetails = shortDetails
         self.isRequired = isRequired
         self.settingsURL = settingsURL
         self.check = check
@@ -135,6 +146,10 @@ final class AccessibilityPermission: Permission {
                 String(localized: "Move menu bar items to rearrange or hide them."),
                 String(localized: "Click menu bar items on your behalf, such as when using the search bar."),
             ],
+            shortDetails: [
+                String(localized: "Detect menu bar items on your Mac and where they're positioned."),
+                String(localized: "Move menu bar items to rearrange or hide them."),
+            ],
             isRequired: true,
             settingsURL: nil,
             check: {
@@ -163,10 +178,14 @@ final class ScreenRecordingPermission: Permission {
                 String(localized: "Sample colors from the menu bar to adjust its tint and appearance."),
                 String(localized: "Find menu bar items visually when searching."),
             ],
+            shortDetails: [
+                String(localized: "Show live previews of your menu bar items."),
+                String(localized: "Sample colors from the menu bar to adjust tint."),
+            ],
             isRequired: false,
             settingsURL: URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"),
             check: {
-                ScreenCapture.cachedCheckPermissions(reset: true)
+                ScreenCapture.cachedCheckPermissions()
             },
             request: {
                 ScreenCapture.requestPermissions()
