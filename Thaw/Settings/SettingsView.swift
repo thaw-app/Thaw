@@ -14,12 +14,6 @@ struct SettingsView: View {
     let appState: AppState
     @ObservedObject var navigationState: AppNavigationState
 
-    @StateObject private var searchModel = SearchModel()
-
-    private var isSearching: Bool {
-        !searchModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
-
     var body: some View {
         NavigationSplitView {
             sidebar
@@ -30,7 +24,56 @@ struct SettingsView: View {
         .navigationTitle(navigationState.settingsNavigationIdentifier.localized)
     }
 
+    @ViewBuilder
     private var sidebar: some View {
+        if #available(macOS 27, *) {
+            SettingsSearchSidebar(navigationState: navigationState)
+        } else {
+            SettingsSidebarPaneList(navigationState: navigationState)
+                .navigationSplitViewColumnWidth(ideal: 200, max: 240)
+        }
+    }
+
+    @ViewBuilder
+    private var settingsPane: some View {
+        switch navigationState.settingsNavigationIdentifier {
+        case .general:
+            GeneralSettingsPane(settings: appState.settings.general)
+        case .displays:
+            DisplaySettingsPane(displaySettings: appState.settings.displaySettings)
+        case .menuBarLayout:
+            MenuBarLayoutSettingsPane(itemManager: appState.itemManager)
+        case .menuBarAppearance:
+            MenuBarAppearanceSettingsPane(appearanceManager: appState.appearanceManager)
+        case .hotkeys:
+            HotkeysSettingsPane(settings: appState.settings.hotkeys)
+        case .profiles:
+            ProfileSettingsPane(profileManager: appState.profileManager)
+        case .advanced:
+            AdvancedSettingsPane(settings: appState.settings.advanced)
+        case .automation:
+            AutomationSettingsPane()
+        case .about:
+            AboutSettingsPane(updatesManager: appState.updatesManager) {
+                appState.isOnboardingPresented = true
+            }
+        }
+    }
+}
+
+// MARK: - SettingsSearchSidebar
+
+@available(macOS 27, *)
+private struct SettingsSearchSidebar: View {
+    @ObservedObject var navigationState: AppNavigationState
+
+    @StateObject private var searchModel = SearchModel()
+
+    private var isSearching: Bool {
+        !searchModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    var body: some View {
         VStack(spacing: 0) {
             SearchField(text: $searchModel.searchText)
 
@@ -64,30 +107,6 @@ struct SettingsView: View {
             navigationState.settingsNavigationIdentifier = pane
         }
         searchModel.searchText = ""
-    }
-
-    @ViewBuilder
-    private var settingsPane: some View {
-        switch navigationState.settingsNavigationIdentifier {
-        case .general:
-            GeneralSettingsPane(settings: appState.settings.general)
-        case .displays:
-            DisplaySettingsPane(displaySettings: appState.settings.displaySettings)
-        case .menuBarLayout:
-            MenuBarLayoutSettingsPane(itemManager: appState.itemManager)
-        case .menuBarAppearance:
-            MenuBarAppearanceSettingsPane(appearanceManager: appState.appearanceManager)
-        case .hotkeys:
-            HotkeysSettingsPane(settings: appState.settings.hotkeys)
-        case .profiles:
-            ProfileSettingsPane(profileManager: appState.profileManager)
-        case .advanced:
-            AdvancedSettingsPane(settings: appState.settings.advanced)
-        case .automation:
-            AutomationSettingsPane()
-        case .about:
-            AboutSettingsPane(updatesManager: appState.updatesManager)
-        }
     }
 }
 
