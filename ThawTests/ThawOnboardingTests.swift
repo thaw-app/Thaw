@@ -201,3 +201,30 @@ final class ThawProfilesMockupModelTests: XCTestCase {
         XCTAssertEqual(model.focusIndex, 0)
     }
 }
+
+// MARK: - ThawWelcomeModel
+
+@MainActor
+final class ThawWelcomeModelTests: XCTestCase {
+    func testRestartResetsToInitialState() {
+        let model = ThawWelcomeModel()
+        model.iconAppeared = true
+        model.itemsHidden = false
+
+        model.restart()
+
+        XCTAssertFalse(model.iconAppeared)
+        XCTAssertTrue(model.itemsHidden)
+    }
+
+    func testToggleFlipsHiddenState() {
+        let model = ThawWelcomeModel()
+        let initial = model.itemsHidden
+
+        model.toggle()
+        XCTAssertEqual(model.itemsHidden, !initial)
+
+        model.toggle()
+        XCTAssertEqual(model.itemsHidden, initial)
+    }
+}

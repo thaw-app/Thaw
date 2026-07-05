@@ -156,6 +156,14 @@ private struct OrbitRing: View {
                 ForEach(symbols, id: \.self) { symbol in
                     let index = symbols.firstIndex(of: symbol) ?? 0
                     let phase = Double(index) / Double(symbols.count) * 360 + phaseShift
+                    let springDuration = reduceMotion ? 0.2 : 0.5
+                    let bounce: Double = if reduceMotion {
+                        0.0
+                    } else if visible {
+                        0.4
+                    } else {
+                        0.1
+                    }
                     OrbitingGlyph(
                         symbol: symbol,
                         size: glyphSize,
@@ -166,7 +174,7 @@ private struct OrbitRing: View {
                         visible: visible
                     )
                     .animation(
-                        .spring(duration: reduceMotion ? 0.2 : 0.5, bounce: reduceMotion ? 0.0 : (visible ? 0.4 : 0.1))
+                        .spring(duration: springDuration, bounce: bounce)
                             .delay(Double(index) * 0.04),
                         value: visible
                     )
