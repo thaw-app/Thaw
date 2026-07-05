@@ -5,7 +5,7 @@
     <img src="Resources/headers/Header_Light.svg" width="400" alt="Thaw Header" />
   </picture>
 </p>
-Thaw is a powerful menu bar management tool for macOS 26. While its primary function is hiding and showing menu bar items, it aims to cover a wide variety of additional features to make it one of the most versatile menu bar tools available.
+Thaw is a powerful menu bar management tool for macOS 26 and macOS 27. While its primary function is hiding and showing menu bar items, it aims to cover a wide variety of additional features to make it one of the most versatile menu bar tools available.
 
 <br>
 
@@ -105,6 +105,8 @@ If a language you'd like to help to translate is not listed here, let us know an
 <details>
 <summary>Click to view the full features list</summary>
 
+- macOS 27 (Golden Gate) support
+
 ### Menu bar item management
 
 - Hide menu bar items
@@ -146,7 +148,6 @@ If a language you'd like to help to translate is not listed here, let us know an
 
 <br>
 
-- **macOS 27 support** — compatibility with the next macOS release.
 - **Menu bar item management** — individual spacer items; menu bar item groups; show menu bar items when trigger conditions are met
 - **Menu bar appearance** — rounded screen corners
 - **Hotkeys** — enable/disable auto rehide; temporarily show individual menu bar items
