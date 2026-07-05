@@ -114,49 +114,53 @@ struct MenuBarLayoutSettingsPane: View {
     }
 
     private var resetControls: some View {
-        IceSection {
-            HStack(alignment: .firstTextBaseline, spacing: 12) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Reset menu bar layout")
-                        .font(.headline)
-                    Text("Resets dividers and moves every movable item except the \(Constants.displayName) icon to hidden — just like a fresh install.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                Spacer(minLength: 12)
-
-                Button {
-                    isConfirmingReset = true
-                } label: {
-                    if isResettingLayout {
-                        ProgressView()
-                            .controlSize(.small)
-                    } else {
-                        Text("Reset Layout")
+        IceSection(options: [.isBordered]) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .top, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Reset menu bar layout")
+                            .font(.headline)
+                        Text("Moves every movable item except the \(Constants.displayName) icon to the selected section — just like a fresh install.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
-                }
-                .buttonStyle(.bordered)
-                .disabled(isResettingLayout || areControlItemsDisabledBySystem)
-            }
 
-            if let resetStatus {
-                Text(resetStatus.message)
-                    .font(.footnote)
-                    .foregroundStyle(resetStatus.isError ? .red : .secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    Spacer(minLength: 16)
+
+                    Button {
+                        isConfirmingReset = true
+                    } label: {
+                        if isResettingLayout {
+                            ProgressView()
+                                .controlSize(.small)
+                        } else {
+                            Text("Reset Layout…")
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(isResettingLayout || areControlItemsDisabledBySystem)
+                }
+
+                if let resetStatus {
+                    Text(resetStatus.message)
+                        .font(.footnote)
+                        .foregroundStyle(resetStatus.isError ? .red : .secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
         }
-        .alert("Reset menu bar layout?", isPresented: $isConfirmingReset) {
-            Button("Reset", role: .destructive) {
-                resetMenuBarLayout()
+        .confirmationDialog("Reset to…", isPresented: $isConfirmingReset) {
+            Button("Reset to Visible") { resetMenuBarLayout(to: .visible) }
+            Button("Reset to Hidden") { resetMenuBarLayout(to: .hidden) }
+            if appState.settings.advanced.enableAlwaysHiddenSection {
+                Button("Reset to Always Hidden") { resetMenuBarLayout(to: .alwaysHidden) }
             }
             Button("Cancel", role: .cancel) {
                 isConfirmingReset = false
             }
         } message: {
-            Text("Restores divider defaults and moves every movable item except the \(Constants.displayName) icon to Hidden. Use this if the layout looks broken or items won’t load.")
+            Text("Moves every movable item except the \(Constants.displayName) icon to the chosen section.")
         }
     }
 
@@ -204,7 +208,7 @@ struct MenuBarLayoutSettingsPane: View {
         }
     }
 
-    private func resetMenuBarLayout() {
+    private func resetMenuBarLayout(to target: LayoutResetTarget) {
         isResettingLayout = true
         resetStatus = nil
 
@@ -212,16 +216,20 @@ struct MenuBarLayoutSettingsPane: View {
 
         Task { @MainActor in
             do {
-                let failedMoves = try await manager.resetLayoutToFreshState()
+                let failedMoves = try await manager.resetLayout(to: target)
                 if failedMoves == 0 {
-                    resetStatus = .success
+                    resetStatus = switch target {
+                    case .hidden:
+                        .successToHidden
+                    case .alwaysHidden:
+                        .successToAlwaysHidden
+                    case .visible:
+                        .successToVisible
+                    }
                 } else {
                     resetStatus = .partialFailure(failedMoves)
                 }
                 isResettingLayout = false
-
-                // cacheItemsRegardless + updateCacheWithoutChecks already run
-                // inside resetLayoutToFreshState() — no need to repeat here.
             } catch {
                 resetStatus = .failure(error.localizedDescription)
                 isResettingLayout = false
@@ -246,14 +254,20 @@ struct MenuBarLayoutSettingsPane: View {
     }
 
     private enum ResetStatus {
-        case success
+        case successToHidden
+        case successToAlwaysHidden
+        case successToVisible
         case partialFailure(Int)
         case failure(String)
 
         var message: String {
             switch self {
-            case .success:
+            case .successToHidden:
                 String(localized: "Layout reset. Items were moved to the Hidden section.")
+            case .successToAlwaysHidden:
+                String(localized: "Layout reset. Items were moved to the Always Hidden section.")
+            case .successToVisible:
+                String(localized: "Items were moved to the Visible section.")
             case let .partialFailure(count):
                 String(localized: "Reset completed with \(count) item(s) that could not be moved. Check the menu bar and try again if needed.")
             case let .failure(message):
@@ -265,7 +279,7 @@ struct MenuBarLayoutSettingsPane: View {
             switch self {
             case .failure, .partialFailure:
                 true
-            case .success:
+            case .successToHidden, .successToAlwaysHidden, .successToVisible:
                 false
             }
         }

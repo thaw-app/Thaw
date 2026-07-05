@@ -34,6 +34,11 @@ final class LayoutResetErrorTests: XCTestCase {
         XCTAssertEqual(error.errorDescription, "Couldn't find section dividers in the menu bar")
     }
 
+    func testAlwaysHiddenSectionDisabledErrorDescription() {
+        let error = MenuBarItemManager.LayoutResetError.alwaysHiddenSectionDisabled
+        XCTAssertEqual(error.errorDescription, "The always-hidden section is disabled")
+    }
+
     // MARK: - Recovery Suggestion
 
     func testMissingAppStateRecoverySuggestion() {

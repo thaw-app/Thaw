@@ -126,7 +126,7 @@ final class MenuBarItemManager: ObservableObject {
     @Published private(set) var areControlItemsMissing = false
 
     /// Diagnostic logger for the menu bar item manager.
-    fileprivate static nonisolated let diagLog = DiagLog(category: "MenuBarItemManager")
+    static nonisolated let diagLog = DiagLog(category: "MenuBarItemManager")
 
     /// Semaphore to prevent overlapping event operations.
     private let eventSemaphore = SimpleSemaphore(value: 1)
@@ -5207,6 +5207,7 @@ extension MenuBarItemManager {
     enum LayoutResetError: LocalizedError {
         case missingAppState
         case missingControlItems
+        case alwaysHiddenSectionDisabled
 
         var errorDescription: String? {
             switch self {
@@ -5214,6 +5215,8 @@ extension MenuBarItemManager {
                 "Unable to access app state"
             case .missingControlItems:
                 "Couldn't find section dividers in the menu bar"
+            case .alwaysHiddenSectionDisabled:
+                "The always-hidden section is disabled"
             }
         }
 
@@ -5446,6 +5449,82 @@ extension MenuBarItemManager {
         NSScreen.invalidateMenuBarHeightCache()
 
         return failedMoves
+    }
+
+    // MARK: Layout reset helpers (LayoutResetLegacy.swift)
+
+    func layoutResetBeginUserOperation() {
+        startupSettlingTask?.cancel()
+        isInStartupSettling = false
+        settlingDeadline = nil
+        settlingExpectedBundleIDs.removeAll()
+        settlingKind = nil
+        isResettingLayout = true
+    }
+
+    func layoutResetEndUserOperation() {
+        isResettingLayout = false
+    }
+
+    func layoutResetClearPinnedSectionPreferences() {
+        pinnedHiddenBundleIDs.removeAll()
+        pinnedAlwaysHiddenBundleIDs.removeAll()
+        persistPinnedBundleIDs()
+        savedSectionOrder.removeAll()
+        persistSavedSectionOrder()
+        temporarilyShownItemContexts.removeAll()
+    }
+
+    func layoutResetControlItemPair(from items: inout [MenuBarItem]) -> ControlItemPair? {
+        guard let appState else {
+            return nil
+        }
+
+        let hiddenWID: CGWindowID? = appState.menuBarManager
+            .controlItem(withName: .hidden)?.window
+            .flatMap { CGWindowID(exactly: $0.windowNumber) }
+        let alwaysHiddenWID: CGWindowID? = appState.menuBarManager
+            .controlItem(withName: .alwaysHidden)?.window
+            .flatMap { CGWindowID(exactly: $0.windowNumber) }
+
+        return ControlItemPair(
+            items: &items,
+            hiddenControlItemWindowID: hiddenWID,
+            alwaysHiddenControlItemWindowID: alwaysHiddenWID
+        )
+    }
+
+    func layoutResetRefreshCachesAfterSectionMoves() async {
+        guard let appState else {
+            return
+        }
+
+        cacheActor.clearCachedItemWindowIDs()
+        itemCache = ItemCache(displayID: nil)
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            self.backgroundCacheContinuation = continuation
+            Task { [weak self] in
+                await self?.cacheItemsRegardless(skipRecentMoveCheck: true)
+            }
+        }
+
+        await MainActor.run {
+            appState.imageCache.clearAll()
+            appState.imageCache.performCacheCleanup()
+        }
+
+        if itemCache.displayID != nil {
+            await appState.imageCache.updateCacheWithoutChecks(sections: MenuBarSection.Name.allCases)
+        } else {
+            try? await Task.sleep(for: .milliseconds(350))
+            await appState.imageCache.updateCacheWithoutChecks(sections: MenuBarSection.Name.allCases)
+        }
+
+        await MainActor.run {
+            appState.objectWillChange.send()
+        }
+
+        NSScreen.invalidateMenuBarHeightCache()
     }
 
     /// Wrapper for UI callers; kept separate for clarity in call sites.
@@ -6712,7 +6791,7 @@ extension MenuBarItemManager {
     /// which on a notched display drifts items into always-hidden. A display
     /// switch is not a layout edit, so it must not advance the gate; the
     /// divergence check still runs and catches genuine section drift.
-    nonisolated static func windowIDsChanged(
+    static nonisolated func windowIDsChanged(
         previous: Set<CGWindowID>,
         current: Set<CGWindowID>,
         previousDisplayID: CGDirectDisplayID?,
