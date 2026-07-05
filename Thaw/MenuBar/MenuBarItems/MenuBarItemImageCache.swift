@@ -149,6 +149,14 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
     // MARK: Setup
 
     /// Sets up the cache.
+    static nonisolated func captureDisplayID(
+        itemCacheDisplayID: CGDirectDisplayID?,
+        activeMenuBarDisplayID: CGDirectDisplayID?,
+        mainDisplayID: CGDirectDisplayID
+    ) -> CGDirectDisplayID {
+        itemCacheDisplayID ?? activeMenuBarDisplayID ?? mainDisplayID
+    }
+
     @MainActor
     func performSetup(with appState: AppState) {
         self.appState = appState
@@ -1076,7 +1084,13 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
         // Skip the CGS/SkyLight path entirely and use AX-provided bounds with a
         // display-region SCK screenshot instead.
         if #available(macOS 27, *) {
-            let displayID = Bridging.getActiveMenuBarDisplayID() ?? CGMainDisplayID()
+            let displayID = await MainActor.run {
+                Self.captureDisplayID(
+                    itemCacheDisplayID: appState.itemManager.itemCache.displayID,
+                    activeMenuBarDisplayID: Bridging.getActiveMenuBarDisplayID(),
+                    mainDisplayID: CGMainDisplayID()
+                )
+            }
             let screenFrame = await MainActor.run {
                 NSScreen.screens.first { $0.displayID == displayID }?.frame
             }

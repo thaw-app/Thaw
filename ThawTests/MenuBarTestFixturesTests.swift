@@ -391,6 +391,17 @@ final class MenuBarItemCaptureSectionTests: XCTestCase {
         )
     }
 
+    func testCaptureDisplayPrefersItemCacheDisplay() {
+        XCTAssertEqual(
+            MenuBarItemImageCache.captureDisplayID(
+                itemCacheDisplayID: 42,
+                activeMenuBarDisplayID: 7,
+                mainDisplayID: 1
+            ),
+            42
+        )
+    }
+
     private func capturableSections(
         usesVisibilityRestrictions: Bool,
         revealedSection: MenuBarSection.Name?
