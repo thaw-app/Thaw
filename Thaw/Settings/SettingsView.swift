@@ -93,9 +93,6 @@ private struct SettingsSearchSidebar: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .navigationSplitViewColumnWidth(ideal: 200, max: 240)
-        .onChange(of: searchModel.searchText, initial: true) {
-            searchModel.updateDisplayedItems()
-        }
     }
 
     /// Switches the detail pane to `pane` and clears the search query so the
