@@ -98,7 +98,7 @@ struct ThawPermissionsView: View {
         .padding(.horizontal, 30)
     }
 
-    private func privacyFact(_ text: String) -> some View {
+    private func privacyFact(_ text: LocalizedStringKey) -> some View {
         HStack(alignment: .top, spacing: 8) {
             Image(systemName: "checkmark")
                 .font(.system(size: 10, weight: .bold))

@@ -54,6 +54,10 @@ class Permission: ObservableObject, Identifiable {
     /// Observer that runs on a timer to check permissions.
     private var timerCancellable: AnyCancellable?
 
+    /// Refreshes permission state when the app becomes active after opening
+    /// ``settingsURL`` (e.g. returning from System Settings).
+    private var settingsReturnCancellable: AnyCancellable?
+
     /// Creates a permission.
     ///
     /// - Parameters:
@@ -106,6 +110,8 @@ class Permission: ObservableObject, Identifiable {
                 if granted {
                     timerCancellable?.cancel()
                     timerCancellable = nil
+                    settingsReturnCancellable?.cancel()
+                    settingsReturnCancellable = nil
                 }
             }
     }
@@ -116,6 +122,13 @@ class Permission: ObservableObject, Identifiable {
         configureCancellables()
         if let settingsURL {
             NSWorkspace.shared.open(settingsURL)
+            settingsReturnCancellable?.cancel()
+            settingsReturnCancellable = NotificationCenter.default
+                .publisher(for: NSApplication.didBecomeActiveNotification)
+                .receive(on: RunLoop.main)
+                .sink { [weak self] _ in
+                    self?.refreshStatus()
+                }
         }
     }
 
@@ -128,6 +141,8 @@ class Permission: ObservableObject, Identifiable {
     func stopCheck() {
         timerCancellable?.cancel()
         timerCancellable = nil
+        settingsReturnCancellable?.cancel()
+        settingsReturnCancellable = nil
     }
 }
 
@@ -185,7 +200,7 @@ final class ScreenRecordingPermission: Permission {
             isRequired: false,
             settingsURL: URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"),
             check: {
-                ScreenCapture.cachedCheckPermissions()
+                ScreenCapture.cachedCheckPermissions(reset: true)
             },
             request: {
                 ScreenCapture.requestPermissions()
