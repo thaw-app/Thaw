@@ -147,9 +147,21 @@ enum MenuBarAgentPositionStore {
             return false
         }
 
+        if positions.contains(where: { key, value in key != movedKey && value == newValue }) {
+            diagLog.debug("Computed colliding weight \(newValue) for \(movedKey); deferring synthetic drag")
+            return false
+        }
+
         var updated = positions
         updated[movedKey] = newValue
-        environment.writePositions(updated)
+        guard writePositionsPreservingConcurrentChanges(
+            original: positions,
+            updated: updated,
+            environment: environment
+        ) else {
+            diagLog.debug("Concurrent MenuBarAgent position change while moving \(movedKey); deferring synthetic drag")
+            return false
+        }
         environment.nudgeAgent()
         diagLog.info("Wrote \(movedKey)=\(newValue) (between \(anchorValue) and \(farValue)) for \(destination.logString)")
         return true
@@ -227,7 +239,14 @@ enum MenuBarAgentPositionStore {
 
         guard !changed.isEmpty else { return [] }
 
-        environment.writePositions(updated)
+        guard writePositionsPreservingConcurrentChanges(
+            original: positions,
+            updated: updated,
+            environment: environment
+        ) else {
+            diagLog.debug("Concurrent MenuBarAgent position change during batch reorder; deferring reconcile")
+            return []
+        }
         environment.nudgeAgent()
         diagLog.info("Batch-reordered \(changed.count) item(s) via preferred positions")
         return changed
@@ -473,6 +492,35 @@ enum MenuBarAgentPositionStore {
             kCFPreferencesAnyHost
         )
         CFPreferencesSynchronize(domain, kCFPreferencesCurrentUser, kCFPreferencesAnyHost)
+    }
+
+    /// Writes this operation's changed keys onto the freshest preference
+    /// snapshot, preserving concurrent MenuBarAgent status-item adds/removes.
+    private static func writePositionsPreservingConcurrentChanges(
+        original: [String: Int],
+        updated: [String: Int],
+        environment: Environment
+    ) -> Bool {
+        let changedKeys = Set(original.keys).union(updated.keys).filter {
+            original[$0] != updated[$0]
+        }
+        guard !changedKeys.isEmpty else { return false }
+
+        let latest = environment.readPositions()
+        guard latest != original else {
+            environment.writePositions(updated)
+            return true
+        }
+
+        var merged = latest
+        for key in changedKeys {
+            guard latest[key] != nil || original[key] == nil else {
+                return false
+            }
+            merged[key] = updated[key]
+        }
+        environment.writePositions(merged)
+        return true
     }
 
     /// Makes MenuBarAgent re-read the layout. The reliable trigger is a restart:
