@@ -157,6 +157,20 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
         itemCacheDisplayID ?? activeMenuBarDisplayID ?? mainDisplayID
     }
 
+    static nonisolated func shouldUseFreshBounds(
+        for section: MenuBarSection.Name,
+        revealedSection: MenuBarSection.Name?
+    ) -> Bool {
+        switch (section, revealedSection) {
+        case (.hidden, .hidden),
+             (.hidden, .alwaysHidden),
+             (.alwaysHidden, .alwaysHidden):
+            true
+        default:
+            false
+        }
+    }
+
     @MainActor
     func performSetup(with appState: AppState) {
         self.appState = appState
@@ -1354,7 +1368,10 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
         let revealedSection = await MainActor.run {
             appState.menuBarManager.simpleItemHider?.revealedSection
         }
-        let shouldUseFreshBounds = section != .visible && revealedSection == section
+        let shouldUseFreshBounds = Self.shouldUseFreshBounds(
+            for: section,
+            revealedSection: revealedSection
+        )
         let captureResult = await captureImages(
             of: items,
             scale: scale,

@@ -402,6 +402,39 @@ final class MenuBarItemCaptureSectionTests: XCTestCase {
         )
     }
 
+    func testFreshBoundsMatchAssertionRevealSemantics() {
+        XCTAssertTrue(
+            MenuBarItemImageCache.shouldUseFreshBounds(
+                for: .hidden,
+                revealedSection: .hidden
+            )
+        )
+        XCTAssertTrue(
+            MenuBarItemImageCache.shouldUseFreshBounds(
+                for: .hidden,
+                revealedSection: .alwaysHidden
+            )
+        )
+        XCTAssertTrue(
+            MenuBarItemImageCache.shouldUseFreshBounds(
+                for: .alwaysHidden,
+                revealedSection: .alwaysHidden
+            )
+        )
+        XCTAssertFalse(
+            MenuBarItemImageCache.shouldUseFreshBounds(
+                for: .alwaysHidden,
+                revealedSection: .hidden
+            )
+        )
+        XCTAssertFalse(
+            MenuBarItemImageCache.shouldUseFreshBounds(
+                for: .visible,
+                revealedSection: .alwaysHidden
+            )
+        )
+    }
+
     private func capturableSections(
         usesVisibilityRestrictions: Bool,
         revealedSection: MenuBarSection.Name?
