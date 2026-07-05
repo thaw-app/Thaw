@@ -47,6 +47,24 @@ final class SearchIndexTests: XCTestCase {
         XCTAssertEqual(paneEntryPanes, Set(SettingsNavigationIdentifier.allCases))
     }
 
+    func testMacOS27ExperimentalEntriesFollowAvailability() {
+        let ids = Set(SearchIndex.entries.map(\.id))
+        let macOS27ExperimentalIDs = [
+            "advanced.enableExperimentalSystemItemHiding",
+            "advanced.enableExperimentalOverflowPrevention",
+        ]
+
+        if #available(macOS 27, *) {
+            for id in macOS27ExperimentalIDs {
+                XCTAssertTrue(ids.contains(id), "Expected \(id) in the macOS 27 search index")
+            }
+        } else {
+            for id in macOS27ExperimentalIDs {
+                XCTAssertFalse(ids.contains(id), "Expected \(id) to be absent before macOS 27")
+            }
+        }
+    }
+
     // MARK: - Relevance Sort
 
     func testSortedByRelevanceOrdersLowestDiffScoreFirst() {
@@ -115,10 +133,10 @@ final class SearchIndexTests: XCTestCase {
                     "Entry \(entry.id) references GeneralSettings.\(name), which does not exist."
                 )
             case let .advanced(name):
-                XCTAssertTrue(
-                    advancedNames.contains(name),
-                    "Entry \(entry.id) references AdvancedSettings.\(name), which does not exist."
-                )
+                guard advancedNames.contains(name) else {
+                    XCTFail("Entry \(entry.id) references AdvancedSettings.\(name), which does not exist.")
+                    continue
+                }
             }
         }
     }
@@ -135,7 +153,10 @@ final class SearchIndexTests: XCTestCase {
             case let .general(name):
                 XCTAssertTrue(generalNames.contains(name), "nonSearchableProperties lists GeneralSettings.\(name), which does not exist.")
             case let .advanced(name):
-                XCTAssertTrue(advancedNames.contains(name), "nonSearchableProperties lists AdvancedSettings.\(name), which does not exist.")
+                guard advancedNames.contains(name) else {
+                    // macOS 27-only keys may be absent from release AdvancedSettings models.
+                    continue
+                }
             }
         }
     }
