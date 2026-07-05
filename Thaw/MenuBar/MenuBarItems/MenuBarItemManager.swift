@@ -6811,6 +6811,28 @@ extension MenuBarItemManager {
         return !previous.isSubset(of: current)
     }
 
+    /// Builds the current windowID set that `applySavedLayout` diffs against
+    /// the previous cycle's stored window list.
+    ///
+    /// ControlItemPair discovery removes the hidden and always-hidden control
+    /// items from the items array, but the stored list from the previous cycle
+    /// still contains their windowIDs. They must be unioned back in; otherwise
+    /// the control items read as "missing" on every cycle, `windowIDsChanged`
+    /// is permanently true, and any recache (an app launching, a transient
+    /// Control Center item appearing) dispatches a spurious full bulk apply
+    /// that re-moves items and warps the cursor.
+    static nonisolated func currentWindowIDSet(
+        items: [MenuBarItem],
+        controlItems: ControlItemPair
+    ) -> Set<CGWindowID> {
+        var windowIDs = Set(items.map(\.windowID))
+        windowIDs.insert(controlItems.hidden.windowID)
+        if let alwaysHidden = controlItems.alwaysHidden {
+            windowIDs.insert(alwaysHidden.windowID)
+        }
+        return windowIDs
+    }
+
     func applySavedLayout(
         items: [MenuBarItem],
         previousWindowIDs: [CGWindowID],
@@ -6870,7 +6892,7 @@ extension MenuBarItemManager {
         // Divergence is computed lazily: only consulted when
         // windowIDsChanged didn't already advance the gate, so the
         // happy path on app quit/relaunch pays nothing.
-        let currentWindowIDSet = Set(items.map(\.windowID))
+        let currentWindowIDSet = Self.currentWindowIDSet(items: items, controlItems: controlItems)
         let previousWindowIDSet = Set(previousWindowIDs)
         let windowIDsChanged = Self.windowIDsChanged(
             previous: previousWindowIDSet,
