@@ -355,6 +355,17 @@ enum SearchIndex {
             property: .general("rehideInterval")
         ),
         SearchEntry(
+            id: "general.tempShowInterval",
+            titleKey: "Temporarily shown item delay",
+            titleText: "Temporarily shown item delay",
+            descriptionText: "The amount of time to wait before hiding temporarily shown menu bar items.",
+            pane: .general,
+            sectionKey: nil,
+            sectionText: nil,
+            keywords: ["temp", "temporary", "show", "delay", "seconds"],
+            property: .general("tempShowInterval")
+        ),
+        SearchEntry(
             id: "general.iceBarLocationOnHotkey",
             titleKey: "Show at mouse pointer on hotkey",
             titleText: "Show at mouse pointer on hotkey",
@@ -578,28 +589,6 @@ enum SearchIndex {
             sectionText: "Diagnostics",
             keywords: ["diagnostic", "logging", "debug", "logs", "troubleshoot"],
             property: .advanced("enableDiagnosticLogging")
-        ),
-        SearchEntry(
-            id: "advanced.enableExperimentalSystemItemHiding",
-            titleKey: "Hide macOS system items",
-            titleText: "Hide macOS system items",
-            descriptionText: "Allows items such as Clock, Control Center, and Siri to be moved into hidden sections.",
-            pane: .menuBarLayout,
-            sectionKey: nil,
-            sectionText: nil,
-            keywords: ["system items", "clock", "control center", "siri", "hide", "macOS"],
-            property: .advanced("enableExperimentalSystemItemHiding")
-        ),
-        SearchEntry(
-            id: "advanced.enableExperimentalOverflowPrevention",
-            titleKey: "Prevent native menu bar overflow hiding (experimental)",
-            titleText: "Prevent native menu bar overflow hiding (experimental)",
-            descriptionText: "On notched displays, macOS may collapse items behind a chevron when the menu bar is full. This writes hidden items' position weights to extreme values so the native overflow collapses them first, keeping visible items on screen.",
-            pane: .menuBarLayout,
-            sectionKey: nil,
-            sectionText: nil,
-            keywords: ["overflow", "native", "chevron", "notch", "experimental", "prevent"],
-            property: .advanced("enableExperimentalOverflowPrevention")
         ),
     ]
 
