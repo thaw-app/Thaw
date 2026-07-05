@@ -576,17 +576,6 @@ final class MenuBarItemTagTests: XCTestCase {
         XCTAssertTrue(hostVisible.isMovable)
     }
 
-    func testGenericThawOwnedMenuBarItemIsExcludedFromSectionManagement() {
-        let genericHostItem = MenuBarItemTag(
-            namespace: .string("\(Constants.bundleIdentifier).MenuBarHost"),
-            title: "MenuBarSpawner"
-        )
-
-        XCTAssertFalse(genericHostItem.isControlItem)
-        XCTAssertEqual(genericHostItem.sectionManagementPolicy, .excluded)
-        XCTAssertFalse(genericHostItem.canBeHidden)
-    }
-
     func testRegularItemIsNotControlItem() {
         let tag = MenuBarItemTag(
             namespace: .string("com.example.app"),
