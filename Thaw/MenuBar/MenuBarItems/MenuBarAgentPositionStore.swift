@@ -217,7 +217,7 @@ enum MenuBarAgentPositionStore {
             // direction inferred from current geometry: ascending slot values to
             // the desired sequence when smaller weights currently sit left.
             let slots = resolvable.map(\.weight).sorted()
-            let assignment = ascendingAxis(for: resolvable) ? slots : slots.reversed()
+            let assignment = ascendingAxis(for: resolvable.map { ($0.item, $0.weight) }) ? slots : slots.reversed()
 
             for (target, weight) in zip(resolvable, assignment) where target.weight != weight {
                 updated[target.key] = weight
@@ -233,14 +233,17 @@ enum MenuBarAgentPositionStore {
         return changed
     }
 
-    /// Whether the segment's weight axis ascends left-to-right (smaller weight =
-    /// further left), read from the resolvable items' current geometry. A flat or
-    /// single-extent segment defaults to ascending (the observed system default,
-    /// e.g. Clock = 0 at the leading edge).
+    /// Whether a weight axis ascends left-to-right (smaller weight = further
+    /// left), read from the given items' current geometry. A flat or
+    /// single-extent input defaults to ascending (the observed system default,
+    /// e.g. Clock = 0 at the leading edge). The axis is a single global sort
+    /// key shared by the whole bar, so this is valid whether the pairs come
+    /// from one reorder segment (``applyOrder``) or from unrelated items
+    /// scattered across the bar (``resolvePositionalKey``).
     private static func ascendingAxis(
-        for resolvable: [(item: MenuBarItem, key: String, weight: Int)]
+        for pairs: [(item: MenuBarItem, weight: Int)]
     ) -> Bool {
-        let byPosition = resolvable.sorted { $0.item.bounds.midX < $1.item.bounds.midX }
+        let byPosition = pairs.sorted { $0.item.bounds.midX < $1.item.bounds.midX }
         guard let leftmost = byPosition.first, let rightmost = byPosition.last,
               leftmost.weight != rightmost.weight
         else { return true }
@@ -318,6 +321,26 @@ enum MenuBarAgentPositionStore {
         positions: [String: Int] = [:],
         liveItems: [MenuBarItem] = []
     ) -> String? {
+        if let key = titleTierKey(for: item, existingKeys: existingKeys) {
+            return key
+        }
+
+        // Every title-based tier failed outright. Apps like iStat Menus rewrite
+        // their item's AX title every second ("CPU 10%" → "CPU 9%" → …), but
+        // register their MenuBarAgent key under a stable internal identifier
+        // instead (e.g. "com.bjango.istatmenus.cpu") that never appears in the
+        // live title, so no title-based tier can ever match it. When the item
+        // has sibling items from the same owning app, the bar's left-to-right
+        // order is the last stable signal: pair the Nth sibling by X position
+        // with the Nth sibling key by weight.
+        return resolvePositionalKey(for: item, existingKeys: existingKeys, positions: positions, liveItems: liveItems)
+    }
+
+    /// Title-based key resolution — the tiers ``resolveKey`` tries before
+    /// falling back to ``resolvePositionalKey``. Factored out so
+    /// ``resolvePositionalKey`` can also use it, on *other* live items, to
+    /// infer the store's weight axis without recursing into itself.
+    private static func titleTierKey(for item: MenuBarItem, existingKeys: [String]) -> String? {
         let title = item.tag.title
         guard !title.isEmpty else { return nil }
 
@@ -351,28 +374,22 @@ enum MenuBarAgentPositionStore {
                 return match
             }
         }
-
-        // Every title-based tier failed outright. Apps like iStat Menus rewrite
-        // their item's AX title every second ("CPU 10%" → "CPU 9%" → …), but
-        // register their MenuBarAgent key under a stable internal identifier
-        // instead (e.g. "com.bjango.istatmenus.cpu") that never appears in the
-        // live title, so no title-based tier can ever match it. When the item
-        // has sibling items from the same owning app, the bar's left-to-right
-        // order is the last stable signal: pair the Nth sibling by X position
-        // with the Nth sibling key by weight.
-        return resolvePositionalKey(for: item, existingKeys: existingKeys, positions: positions, liveItems: liveItems)
+        return nil
     }
 
     /// Last-resort key resolution for items whose title never matches their
     /// store key (see ``resolveKey(for:existingKeys:positions:liveItems:)``).
     /// Requires the owning app's family of live items and the family's keys in
     /// the store to be the same size — an exact count match is the only way to
-    /// pair them without guessing at which sibling is which. The pairing
-    /// assumes the weight axis ascends left-to-right, matching the convention
-    /// the OS uses elsewhere (e.g. `module:Clock` = 0 at the leading edge); a
-    /// reversed axis pairs items backwards, but the caller verifies the
-    /// resulting live order and falls back to the synthetic drag when it
-    /// doesn't hold, so a wrong guess here is self-correcting, not destructive.
+    /// pair them without guessing at which sibling is which. The weight axis
+    /// (does smaller weight mean further left, or further right?) is inferred
+    /// from other live items elsewhere in the bar that resolve unambiguously by
+    /// title — the axis is one global sort key shared by the whole bar, so any
+    /// such reference pair determines it — rather than assumed to be ascending.
+    /// Without a reference pair this still defaults to ascending (the observed
+    /// system default, e.g. `module:Clock` = 0 at the leading edge); the caller
+    /// verifies the resulting live order and falls back to synthetic drag when
+    /// it doesn't hold, so a remaining wrong guess is self-correcting.
     private static func resolvePositionalKey(
         for item: MenuBarItem,
         existingKeys: [String],
@@ -398,7 +415,20 @@ enum MenuBarAgentPositionStore {
         }
         guard familyKeys.count == family.count else { return nil }
 
-        let orderedKeys = familyKeys.sorted { (positions[$0] ?? 0) < (positions[$1] ?? 0) }
+        let referencePairs: [(item: MenuBarItem, weight: Int)] = liveItems.compactMap { candidate in
+            guard
+                let key = titleTierKey(for: candidate, existingKeys: existingKeys),
+                let weight = positions[key]
+            else { return nil }
+            return (candidate, weight)
+        }
+        let ascending = ascendingAxis(for: referencePairs)
+
+        let orderedKeys = familyKeys.sorted { key1, key2 in
+            let weight1 = positions[key1] ?? 0
+            let weight2 = positions[key2] ?? 0
+            return ascending ? weight1 < weight2 : weight1 > weight2
+        }
         return orderedKeys[itemIndex]
     }
 

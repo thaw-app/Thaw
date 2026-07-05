@@ -135,6 +135,68 @@ final class MenuBarAgentPositionStoreTests: XCTestCase {
         )
     }
 
+    func testResolvePositionalKeyInfersDescendingAxisFromUnrelatedReferenceItems() {
+        // Same iStat-style family as above, but this bar's weight axis
+        // descends left-to-right (unlike the ascending default). Two
+        // unrelated, title-resolvable reference items elsewhere in the bar
+        // carry the only evidence of that: the left one has the larger
+        // weight, the right one the smaller. Resolution must read the axis
+        // from those references rather than assuming ascending, or it pairs
+        // every sibling in this family backwards.
+        let referenceLeft = MenuBarItem.fixture(
+            tag: .appItem(bundleID: "com.foo.Left", title: "Marker"),
+            windowID: 20,
+            bounds: CGRect(x: 0, y: 0, width: 40, height: 22)
+        )
+        let referenceRight = MenuBarItem.fixture(
+            tag: .appItem(bundleID: "com.foo.Right", title: "Marker"),
+            windowID: 21,
+            bounds: CGRect(x: 200, y: 0, width: 40, height: 22)
+        )
+        let cpu = MenuBarItem.fixture(
+            tag: .appItem(bundleID: "com.bjango.istatmenus", title: "CPU 9%"),
+            windowID: 10,
+            bounds: CGRect(x: 50, y: 0, width: 40, height: 22)
+        )
+        let mem = MenuBarItem.fixture(
+            tag: .appItem(bundleID: "com.bjango.istatmenus", title: "MEM 51%"),
+            windowID: 11,
+            bounds: CGRect(x: 100, y: 0, width: 40, height: 22)
+        )
+        let net = MenuBarItem.fixture(
+            tag: .appItem(bundleID: "com.bjango.istatmenus", title: "12.3 KB/s"),
+            windowID: 12,
+            bounds: CGRect(x: 150, y: 0, width: 40, height: 22)
+        )
+        let positions = [
+            "status:com.foo.Left::Marker": 300,
+            "status:com.foo.Right::Marker": 100,
+            "status:com.bjango.istatmenus::com.bjango.istatmenus.cpu": 50,
+            "status:com.bjango.istatmenus::com.bjango.istatmenus.memory": 30,
+            "status:com.bjango.istatmenus::com.bjango.istatmenus.network": 10,
+        ]
+        let liveItems = [referenceLeft, cpu, mem, net, referenceRight]
+
+        XCTAssertEqual(
+            MenuBarAgentPositionStore.resolveKey(
+                for: cpu,
+                existingKeys: Array(positions.keys),
+                positions: positions,
+                liveItems: liveItems
+            ),
+            "status:com.bjango.istatmenus::com.bjango.istatmenus.cpu"
+        )
+        XCTAssertEqual(
+            MenuBarAgentPositionStore.resolveKey(
+                for: net,
+                existingKeys: Array(positions.keys),
+                positions: positions,
+                liveItems: liveItems
+            ),
+            "status:com.bjango.istatmenus::com.bjango.istatmenus.network"
+        )
+    }
+
     func testResolvePositionalKeyNilWhenFamilyCountMismatch() {
         // Only two keys for a family of three live items — no safe pairing.
         let cpu = MenuBarItem.fixture(
