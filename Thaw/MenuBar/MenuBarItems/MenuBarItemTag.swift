@@ -141,6 +141,10 @@ struct MenuBarItemTag: Hashable, CustomStringConvertible {
             return .excluded
         }
 
+        if isThawOwnedNamespace, !isControlItem {
+            return .excluded
+        }
+
         if #available(macOS 27, *),
            isHidingUnsupported ||
            isLayoutAnchoredSystemItem ||
