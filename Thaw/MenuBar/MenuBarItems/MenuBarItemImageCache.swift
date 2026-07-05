@@ -96,6 +96,15 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
     private static let maxFailuresBeforeBlacklist = 3
     private static let blacklistCooldownSeconds: TimeInterval = 30 // 30 seconds
 
+    /// Minimum time that must pass since the last recorded failure before a
+    /// new capture failure counts as an additional strike. A single reflow
+    /// blip (e.g. a restriction-reflow repair retry) can produce several
+    /// blank captures only tens of milliseconds apart; without this floor
+    /// those all count as independent failures and blow through
+    /// `maxFailuresBeforeBlacklist` in well under a second, blacklisting an
+    /// item for the full cooldown over what was really one transient glitch.
+    private static let minimumFailureSpacingSeconds: TimeInterval = 0.5
+
     /// Queue to run cache operations.
     private let queue = DispatchQueue(
         label: "MenuBarItemImageCache",
@@ -1372,6 +1381,9 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
             for: section,
             revealedSection: revealedSection
         )
+        if shouldUseFreshBounds {
+            clearCaptureFailures(for: items)
+        }
         let captureResult = await captureImages(
             of: items,
             scale: scale,
@@ -1430,17 +1442,29 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
             let existing = dict[item.tag]
 
             if let existing {
-                let newCount = existing.failureCount + 1
-                dict[item.tag] = FailedCapture(
-                    tag: item.tag,
-                    failureCount: newCount,
-                    lastFailureTime: now
-                )
-
-                if newCount == Self.maxFailuresBeforeBlacklist {
-                    MenuBarItemImageCache.diagLog.info(
-                        "Item blacklisted after \(newCount) failures: \(item.logString) (will retry after \(Self.blacklistCooldownSeconds)s cooldown)"
+                let sinceLastFailure = now.timeIntervalSince(existing.lastFailureTime)
+                if sinceLastFailure < Self.minimumFailureSpacingSeconds {
+                    // Same reflow blip as the last recorded failure — refresh
+                    // the timestamp so the blacklist cutoff still tracks the
+                    // most recent glitch, but don't count it as a new strike.
+                    dict[item.tag] = FailedCapture(
+                        tag: item.tag,
+                        failureCount: existing.failureCount,
+                        lastFailureTime: now
                     )
+                } else {
+                    let newCount = existing.failureCount + 1
+                    dict[item.tag] = FailedCapture(
+                        tag: item.tag,
+                        failureCount: newCount,
+                        lastFailureTime: now
+                    )
+
+                    if newCount == Self.maxFailuresBeforeBlacklist {
+                        MenuBarItemImageCache.diagLog.info(
+                            "Item blacklisted after \(newCount) failures: \(item.logString) (will retry after \(Self.blacklistCooldownSeconds)s cooldown)"
+                        )
+                    }
                 }
             } else {
                 dict[item.tag] = FailedCapture(
@@ -1466,6 +1490,14 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
             MenuBarItemImageCache.diagLog.info(
                 "Item recovered after \(existing.failureCount) previous failures: \(item.logString)"
             )
+        }
+    }
+
+    private func clearCaptureFailures(for items: [MenuBarItem]) {
+        failedCapturesLock.withLock { dict in
+            for item in items {
+                dict.removeValue(forKey: item.tag)
+            }
         }
     }
 
