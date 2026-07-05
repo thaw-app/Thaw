@@ -125,9 +125,6 @@ final class CGSWindowHider {
                     continue
                 }
                 hiddenOrigins[windowID] = origin
-            } else if let origin = environment.windowOrigin(windowID), origin.x > Self.offScreenX / 2 {
-                // The window server reflowed it back on-screen; keep the
-                // ORIGINAL origin we already stored and just move it off again.
             }
             let target = CGPoint(x: Self.offScreenX, y: hiddenOrigins[windowID]?.y ?? 0)
             if environment.moveWindow(windowID, target) {
