@@ -1,5 +1,5 @@
 //
-//  ThawOnboardingView.swift
+//  OnboardingView.swift
 //  Project: Thaw
 //
 //  Copyright (Ice) © 2023–2025 Jordan Baird

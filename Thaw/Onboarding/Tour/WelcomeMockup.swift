@@ -1,5 +1,5 @@
 //
-//  ThawWelcomeMockup.swift
+//  WelcomeMockup.swift
 //  Project: Thaw
 //
 //  Copyright (Ice) © 2023–2025 Jordan Baird
