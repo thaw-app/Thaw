@@ -21,8 +21,21 @@ enum AXHelpers {
         queue.sync { checkIsProcessTrusted(prompt: prompt) }
     }
 
+    /// Bounds the systemwide hit-test's AX round trip the same way
+    /// `application(for:)` bounds per-app round trips. Without this, hitting a
+    /// hung third-party menu-bar app under the cursor blocks
+    /// `elementAtPosition` — and therefore the caller's thread — indefinitely,
+    /// which for `element(at:)`'s callers is Thaw's main thread during click
+    /// handling.
+    private static let systemWideMessagingTimeoutSet: Void = {
+        AXUIElementSetMessagingTimeout(systemWideElement.element, 0.25)
+    }()
+
     static func element(at point: CGPoint) -> UIElement? {
-        queue.sync { try? systemWideElement.elementAtPosition(Float(point.x), Float(point.y)) }
+        queue.sync {
+            systemWideMessagingTimeoutSet
+            return try? systemWideElement.elementAtPosition(Float(point.x), Float(point.y))
+        }
     }
 
     static func application(for runningApp: NSRunningApplication) -> Application? {
