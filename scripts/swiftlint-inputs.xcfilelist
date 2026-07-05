@@ -88,6 +88,10 @@ $(SRCROOT)/Thaw/Settings/Models/ProfileManager.swift
 $(SRCROOT)/Thaw/Settings/Models/RehideStrategy.swift
 $(SRCROOT)/Thaw/Settings/Models/SectionDividerStyle.swift
 $(SRCROOT)/Thaw/Settings/Models/SettingsResetter.swift
+$(SRCROOT)/Thaw/Settings/Search/SearchIndex.swift
+$(SRCROOT)/Thaw/Settings/Search/SearchModel.swift
+$(SRCROOT)/Thaw/Settings/Search/SearchRanker.swift
+$(SRCROOT)/Thaw/Settings/Search/SearchViews.swift
 $(SRCROOT)/Thaw/Settings/SettingsPanes/AboutSettingsPane.swift
 $(SRCROOT)/Thaw/Settings/SettingsPanes/AdvancedSettingsPane.swift
 $(SRCROOT)/Thaw/Settings/SettingsPanes/AutomationSettingsPane.swift
