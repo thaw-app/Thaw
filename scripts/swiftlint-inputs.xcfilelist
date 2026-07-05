@@ -52,6 +52,7 @@ $(SRCROOT)/Thaw/MenuBar/LayoutBar/LayoutBarPaddingView.swift
 $(SRCROOT)/Thaw/MenuBar/LayoutBar/LayoutBarScrollView.swift
 $(SRCROOT)/Thaw/MenuBar/LayoutBar/NotchIndicatorOverlay.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/LayoutReconciler.swift
+$(SRCROOT)/Thaw/MenuBar/MenuBarItems/LayoutResetLegacy.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/LayoutSolver.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItem.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemImageCache.swift
