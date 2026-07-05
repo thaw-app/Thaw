@@ -1347,11 +1347,6 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
         }
 
         let preferredDisplayID = appState.itemManager.itemCache.displayID
-        guard preferredDisplayID != nil else {
-            MenuBarItemImageCache.diagLog.warning("updateCacheWithoutChecks: itemCache.displayID is nil, aborting")
-            return
-        }
-
         guard let resolvedScreen = Self.resolveScreen(preferredDisplayID: preferredDisplayID) else {
             MenuBarItemImageCache.diagLog.warning("updateCacheWithoutChecks: no connected screens available, aborting")
             return

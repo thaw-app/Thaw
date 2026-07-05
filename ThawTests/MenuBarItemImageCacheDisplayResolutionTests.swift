@@ -33,6 +33,17 @@ final class ImageCacheDisplayResolutionTests: XCTestCase {
         XCTAssertEqual(resolution, .init(displayID: 300, usedFallback: true))
     }
 
+    func testNilPreferredDisplayFallsBackToActiveWithoutStaleDisplayFallback() {
+        let resolution = MenuBarItemImageCache.resolveDisplayID(
+            preferredDisplayID: nil,
+            availableDisplayIDs: [100, 200, 300],
+            activeMenuBarDisplayID: 300,
+            mainDisplayID: 100
+        )
+
+        XCTAssertEqual(resolution, .init(displayID: 300, usedFallback: false))
+    }
+
     func testFallsBackToMainDisplayWhenPreferredAndActiveAreStale() {
         let resolution = MenuBarItemImageCache.resolveDisplayID(
             preferredDisplayID: 999,
