@@ -385,6 +385,16 @@ struct MenuBarLayoutSettingsPane: View {
 
         diagLog.debug("Preload: itemCache after cacheItemsRegardless: managedItems=\(self.itemManager.itemCache.managedItems.count), visible=\(self.itemManager.itemCache[.visible].count), hidden=\(self.itemManager.itemCache[.hidden].count), alwaysHidden=\(self.itemManager.itemCache[.alwaysHidden].count)")
 
+        if #available(macOS 27, *) {
+            await appState.imageCache.prewarmConcealedImagesMacOS27(
+                sections: [.hidden, .alwaysHidden],
+                onlyMissingImages: true
+            )
+            guard !Task.isCancelled else {
+                return
+            }
+        }
+
         await appState.imageCache.updateCacheWithoutChecks(sections: MenuBarSection.Name.allCases)
         guard !Task.isCancelled else {
             return
