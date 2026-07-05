@@ -353,7 +353,12 @@ final class AssessmentModeBackend: ObservableObject {
                 bundlesWithVisibleItem.formUnion(protectedBundleIDs)
                 continue
             }
-            if let bundleID = item.sourceApplication?.bundleIdentifier {
+            // Fall back to the sticky learned map when sourceApplication
+            // transiently fails to resolve (PID reuse / AX hiccup) — without
+            // this, a momentary nil here drops a genuinely-visible item's
+            // bundle out of the protection set and lets it get concealed
+            // alongside its hidden-assigned sibling below.
+            if let bundleID = item.sourceApplication?.bundleIdentifier ?? knownBundleIDs[item.uniqueIdentifier] {
                 bundlesWithVisibleItem.insert(bundleID)
             }
         }
