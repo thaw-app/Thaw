@@ -54,9 +54,7 @@ struct SettingsView: View {
         case .automation:
             AutomationSettingsPane()
         case .about:
-            AboutSettingsPane(updatesManager: appState.updatesManager) {
-                appState.isOnboardingPresented = true
-            }
+            AboutSettingsPane(updatesManager: appState.updatesManager)
         }
     }
 }
