@@ -1468,8 +1468,9 @@ extension MenuBarItemManager {
     }
 
     /// Returns menu bar items with transient System Status Item Clone windows
-    /// removed before callers plan or execute moves against the live bar.
-    private static func getMenuBarItemsDroppingSystemClones(
+    /// and ghost control item windows removed before callers plan or execute
+    /// moves against the live bar.
+    private func getMenuBarItemsDroppingSystemClones(
         on display: CGDirectDisplayID? = nil,
         option: MenuBarItem.ListOption,
         resolveSourcePID: Bool = true,
@@ -1480,7 +1481,8 @@ extension MenuBarItemManager {
             option: option,
             resolveSourcePID: resolveSourcePID
         )
-        dropSystemClones(from: &items, context: context)
+        Self.dropSystemClones(from: &items, context: context)
+        dropGhostControlItemWindows(from: &items, context: context)
         return items
     }
 
@@ -1497,6 +1499,79 @@ extension MenuBarItemManager {
             "\(context): dropping \(cloneItems.count) system clone window(s): \(cloneDescriptions)"
         )
         items.removeAll(where: \.isSystemClone)
+    }
+
+    /// Identifies windows that impersonate this instance's control items.
+    ///
+    /// On macOS 26 every status item window is hosted by Control Center, so
+    /// windows created for another Thaw instance — or left behind by one
+    /// that crashed — outlive their owning process and keep reporting our
+    /// control item autosave names as their window titles. They read as
+    /// ordinary items (their tags carry an instance index), get planned via
+    /// planUnmanagedPlacement, and are then moved around the bar; in the
+    /// worst case this instance parks its own chevron offscreen because the
+    /// foreign window won the lower-windowID instance index.
+    ///
+    /// `ownWindowIDsByTitle` maps control item autosave names to the
+    /// windowIDs of the NSStatusItem windows this process created. A window
+    /// is a ghost when its title claims a control item whose authoritative
+    /// window is ALSO present in `items` under a different windowID.
+    /// Requiring the authoritative window's presence makes the check
+    /// self-validating: if a window number is ever wrong, or the list is
+    /// filtered such that our window is absent, nothing is dropped and
+    /// behavior is unchanged.
+    static nonisolated func ghostControlItemWindowIDs(
+        in items: [MenuBarItem],
+        ownWindowIDsByTitle: [String: CGWindowID]
+    ) -> Set<CGWindowID> {
+        guard !ownWindowIDsByTitle.isEmpty else { return [] }
+        var ghostIDs = Set<CGWindowID>()
+        for (title, ownWindowID) in ownWindowIDsByTitle {
+            guard items.contains(where: { $0.windowID == ownWindowID }) else { continue }
+            for item in items where item.title == title && item.windowID != ownWindowID {
+                ghostIDs.insert(item.windowID)
+            }
+        }
+        return ghostIDs
+    }
+
+    /// Maps this instance's control item autosave names (also their CG window
+    /// titles) to the windowIDs of their NSStatusItem windows. Titles whose
+    /// window doesn't currently exist are omitted.
+    private func ownControlItemWindowIDsByTitle() -> [String: CGWindowID] {
+        guard let menuBarManager = appState?.menuBarManager else { return [:] }
+        var ownWindowIDs = [String: CGWindowID]()
+        for name in MenuBarSection.Name.allCases {
+            guard let controlItem = menuBarManager.controlItem(withName: name),
+                  let window = controlItem.window,
+                  window.windowNumber > 0,
+                  let windowID = CGWindowID(exactly: window.windowNumber)
+            else { continue }
+            ownWindowIDs[controlItem.identifier.rawValue] = windowID
+        }
+        return ownWindowIDs
+    }
+
+    /// Drops ghost control item windows (see `ghostControlItemWindowIDs`)
+    /// from an in-flight item list and returns the dropped windowIDs.
+    @discardableResult
+    private func dropGhostControlItemWindows(
+        from items: inout [MenuBarItem],
+        context: String
+    ) -> Set<CGWindowID> {
+        let ghostIDs = Self.ghostControlItemWindowIDs(
+            in: items,
+            ownWindowIDsByTitle: ownControlItemWindowIDsByTitle()
+        )
+        guard !ghostIDs.isEmpty else { return [] }
+        let ghostDescriptions = items
+            .filter { ghostIDs.contains($0.windowID) }
+            .map(\.tag.description)
+        MenuBarItemManager.diagLog.warning(
+            "\(context): dropping \(ghostIDs.count) ghost control item window(s) not owned by this instance: \(ghostDescriptions)"
+        )
+        items.removeAll { ghostIDs.contains($0.windowID) }
+        return ghostIDs
     }
 
     /// Cache for menu bar items.
@@ -1602,27 +1677,55 @@ extension MenuBarItemManager {
 
         /// Creates a control item pair from a list of menu bar items.
         ///
-        /// The initializer first attempts a tag-based lookup (namespace + title).
-        /// If that fails it falls back to matching by the current process PID and
-        /// known control-item titles, and finally to matching by known window IDs.
+        /// The initializer first attempts to match by the window IDs obtained
+        /// from the ControlItem objects themselves — the `NSStatusItem` windows
+        /// this process created are the only authoritative signal. Tag and
+        /// title lookups run as fallbacks: when duplicate control-item windows
+        /// exist (another Thaw instance, or windows left behind by a crashed
+        /// one), the un-suffixed tag is assigned to the lowest windowID
+        /// (`assignStableInstanceIndices`), so a tag-first lookup can anchor
+        /// this instance's layout to a window it doesn't own.
         ///
         /// On macOS 26 (Tahoe), all menu bar item windows are owned by Control
         /// Center and the item title reported by `kCGWindowName` may differ from
         /// the `NSStatusItem` autosaveName used to build the expected tag, so the
-        /// primary lookup can fail.
+        /// tag-based lookup can also fail outright.
         init?(
             items: inout [MenuBarItem],
             hiddenControlItemWindowID: CGWindowID? = nil,
             alwaysHiddenControlItemWindowID: CGWindowID? = nil
         ) {
-            // Primary lookup: match by tag (namespace + title).
+            // Primary lookup: match by the authoritative window IDs.
+            if let hiddenWID = hiddenControlItemWindowID,
+               let idx = items.firstIndex(where: { $0.windowID == hiddenWID })
+            {
+                self.hidden = items.remove(at: idx)
+                if let ahWID = alwaysHiddenControlItemWindowID {
+                    // The authoritative ID is known: a window found under a
+                    // different ID is by definition not ours, so do not fall
+                    // back to the tag lookup (it could select a duplicate
+                    // from another instance).
+                    if let ahIdx = items.firstIndex(where: { $0.windowID == ahWID }) {
+                        self.alwaysHidden = items.remove(at: ahIdx)
+                    } else {
+                        self.alwaysHidden = nil
+                    }
+                } else {
+                    // Window number unknown (section disabled or the window
+                    // not yet created): the tag lookup is the only signal.
+                    self.alwaysHidden = items.removeFirst(matching: .alwaysHiddenControlItem)
+                }
+                return
+            }
+
+            // Fallback 1: match by tag (namespace + title).
             if let hidden = items.removeFirst(matching: .hiddenControlItem) {
                 self.hidden = hidden
                 self.alwaysHidden = items.removeFirst(matching: .alwaysHiddenControlItem)
                 return
             }
 
-            // Fallback 1: match by sourcePID (our own process) + known title.
+            // Fallback 2: match by sourcePID (our own process) + known title.
             let ourPID = ProcessInfo.processInfo.processIdentifier
             let hiddenTitle = ControlItem.Identifier.hidden.rawValue
             let alwaysHiddenTitle = ControlItem.Identifier.alwaysHidden.rawValue
@@ -1630,23 +1733,6 @@ extension MenuBarItemManager {
             if let idx = items.firstIndex(where: { $0.sourcePID == ourPID && $0.title == hiddenTitle }) {
                 self.hidden = items.remove(at: idx)
                 if let ahIdx = items.firstIndex(where: { $0.sourcePID == ourPID && $0.title == alwaysHiddenTitle }) {
-                    self.alwaysHidden = items.remove(at: ahIdx)
-                } else {
-                    self.alwaysHidden = nil
-                }
-                return
-            }
-
-            // Fallback 2: match by known window IDs obtained from the ControlItem
-            // objects themselves. This handles the case where both the tag and the
-            // window title are unreliable on macOS 26.
-            if let hiddenWID = hiddenControlItemWindowID,
-               let idx = items.firstIndex(where: { $0.windowID == hiddenWID })
-            {
-                self.hidden = items.remove(at: idx)
-                if let ahWID = alwaysHiddenControlItemWindowID,
-                   let ahIdx = items.firstIndex(where: { $0.windowID == ahWID })
-                {
                     self.alwaysHidden = items.remove(at: ahIdx)
                 } else {
                     self.alwaysHidden = nil
@@ -2040,6 +2126,16 @@ extension MenuBarItemManager {
             items.removeAll(where: \.isSystemClone)
         }
 
+        // Drop ghost control item windows (another Thaw instance's, or
+        // leftovers of a crashed one) for the same reasons as the clones
+        // above. Their IDs are excluded from the stored window list below
+        // and merged into the ignored-window set so their presence or
+        // churn can't retrigger cacheItemsIfNeeded on every tick.
+        let ghostControlWindowIDs = dropGhostControlItemWindows(
+            from: &items,
+            context: "cacheItemsRegardless"
+        )
+
         // Reconcile resolved sourcePIDs against previously known values to
         // prevent transient resolution errors (e.g. stale AX data after item
         // moves) from corrupting item identities. SourcePIDCache does spatial
@@ -2134,14 +2230,16 @@ extension MenuBarItemManager {
         }
 
         // currentItemWindowIDs comes straight from the bridging window
-        // list and may still contain clone IDs; items has already been
-        // filtered, so strip any clone IDs to keep the stored set in sync
-        // with the managed item set. The fallback branch is clone-free
-        // because items is filtered.
+        // list and may still contain clone or ghost IDs; items has already
+        // been filtered, so strip both to keep the stored set in sync with
+        // the managed item set. The fallback branch is clone- and
+        // ghost-free because items is filtered. Ghost IDs are merged into
+        // the clone set: both are "ignore this window" markers that
+        // cacheItemsIfNeeded strips from the raw list before comparing.
         let itemWindowIDs = (currentItemWindowIDs ?? items.reversed().map(\.windowID))
-            .filter { !cloneWindowIDs.contains($0) }
+            .filter { !cloneWindowIDs.contains($0) && !ghostControlWindowIDs.contains($0) }
         cacheActor.updateCachedItemWindowIDs(itemWindowIDs)
-        cacheActor.updateCachedCloneWindowIDs(cloneWindowIDs)
+        cacheActor.updateCachedCloneWindowIDs(cloneWindowIDs.union(ghostControlWindowIDs))
 
         await MainActor.run {
             MenuBarItemTag.Namespace.pruneUUIDCache(keeping: Set(itemWindowIDs))
@@ -5531,7 +5629,7 @@ extension MenuBarItemManager {
         // Prevent the first post-reset cache pass from treating the freshly reset items as "new".
         suppressNextNewLeftmostItemRelocation = true
 
-        var items = await Self.getMenuBarItemsDroppingSystemClones(
+        var items = await getMenuBarItemsDroppingSystemClones(
             option: .activeSpace,
             context: "resetLayout"
         )
@@ -5558,7 +5656,7 @@ extension MenuBarItemManager {
                 appState.settings.advanced.enableAlwaysHiddenSection = true
                 try? await Task.sleep(for: .milliseconds(150))
 
-                items = await Self.getMenuBarItemsDroppingSystemClones(
+                items = await getMenuBarItemsDroppingSystemClones(
                     option: .activeSpace,
                     context: "resetLayout(retry)"
                 )
@@ -5628,7 +5726,7 @@ extension MenuBarItemManager {
         // right of the hidden control item) as well as items stuck in the
         // always-hidden section (to the left of the always-hidden control
         // item) when that section is enabled.
-        var refreshedItems = await Self.getMenuBarItemsDroppingSystemClones(
+        var refreshedItems = await getMenuBarItemsDroppingSystemClones(
             option: .activeSpace,
             context: "resetLayout(refresh)"
         )
@@ -6072,7 +6170,7 @@ extension MenuBarItemManager {
         }
 
         // Discover current items and build current flat sequence (right-to-left).
-        var items = await Self.getMenuBarItemsDroppingSystemClones(
+        var items = await getMenuBarItemsDroppingSystemClones(
             option: .activeSpace,
             context: "applyProfileLayout"
         )
@@ -6443,7 +6541,7 @@ extension MenuBarItemManager {
             for uid in fullSequence {
                 guard !Task.isCancelled else { break }
 
-                let freshItems = await Self.getMenuBarItemsDroppingSystemClones(
+                let freshItems = await getMenuBarItemsDroppingSystemClones(
                     option: .activeSpace,
                     context: "applyProfileLayout(full sort)"
                 )
@@ -6574,7 +6672,7 @@ extension MenuBarItemManager {
                     "Profile layout: \(crossSectionMoves) items would change hidden↔alwaysHidden, moving AH_ctrl instead"
                 )
 
-                let allFreshItems = await Self.getMenuBarItemsDroppingSystemClones(
+                let allFreshItems = await getMenuBarItemsDroppingSystemClones(
                     option: .activeSpace,
                     context: "applyProfileLayout(AH control)"
                 )
@@ -6633,7 +6731,7 @@ extension MenuBarItemManager {
                 // or .rightOfItem(AH_ctrl) puts them on the correct
                 // side. The LCS within-section reorder pass below
                 // handles intra-section ordering.
-                let freshItems = await Self.getMenuBarItemsDroppingSystemClones(
+                let freshItems = await getMenuBarItemsDroppingSystemClones(
                     option: .activeSpace,
                     context: "applyProfileLayout(AH fallback)"
                 )
@@ -6739,7 +6837,7 @@ extension MenuBarItemManager {
             if movedCount > 0 {
                 // Re-fetch items and rebuild section assignments after
                 // the control item move changed section boundaries.
-                items = await Self.getMenuBarItemsDroppingSystemClones(
+                items = await getMenuBarItemsDroppingSystemClones(
                     option: .activeSpace,
                     context: "applyProfileLayout(rebuild after controls)"
                 )
@@ -6807,7 +6905,7 @@ extension MenuBarItemManager {
             for planned in plannedMoves {
                 guard !Task.isCancelled else { break }
 
-                let allFreshItems = await Self.getMenuBarItemsDroppingSystemClones(
+                let allFreshItems = await getMenuBarItemsDroppingSystemClones(
                     option: .activeSpace,
                     context: "applyProfileLayout(planned move)"
                 )
@@ -6871,7 +6969,7 @@ extension MenuBarItemManager {
         // Profile-only: the profile-sorted snapshot and
         // isApplyingProfileLayout flag are only meaningful when a
         // profile is active; the savedOrder source leaves them alone.
-        items = await Self.getMenuBarItemsDroppingSystemClones(
+        items = await getMenuBarItemsDroppingSystemClones(
             option: .activeSpace,
             context: "applyProfileLayout(finalize)"
         )
@@ -7201,7 +7299,7 @@ extension MenuBarItemManager {
             return .deferred
         }
 
-        var items = await Self.getMenuBarItemsDroppingSystemClones(
+        var items = await getMenuBarItemsDroppingSystemClones(
             option: .activeSpace,
             context: "moveItem(trigger)"
         )
@@ -7322,7 +7420,7 @@ extension MenuBarItemManager {
         }
 
         // Get current items
-        var items = await Self.getMenuBarItemsDroppingSystemClones(
+        var items = await getMenuBarItemsDroppingSystemClones(
             option: .activeSpace,
             context: "restoreBlockedItemsToVisible"
         )

@@ -40,6 +40,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         #endif
 
+        // Enforce a single running instance. Two live instances each
+        // register their own control items and fight over the same menu
+        // bar: both apply their saved layouts on their own cadence, and
+        // each classifies the other's control item windows as ordinary
+        // items to be relocated — including parking the other instance's
+        // chevron offscreen. LaunchServices doesn't prevent this when the
+        // binary is launched directly (e.g. an Xcode debug session while
+        // a copy launched at login is still running). The newest instance
+        // wins so restart and update flows keep working.
+        terminateOtherInstances()
+
         // Initial chore work.
         NSSplitViewItem.swizzle()
         MigrationManager(appState: appState).migrateAll()
@@ -164,6 +175,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     // MARK: Other Methods
+
+    /// Terminates any other running instances of this app, escalating to a
+    /// force-terminate if an instance ignores the polite request.
+    private func terminateOtherInstances() {
+        // Never enforce single-instance under XCTest: parallel testing
+        // launches several host app instances that would kill each other,
+        // failing the run with "test runner exited before establishing
+        // connection".
+        guard NSClassFromString("XCTestCase") == nil else { return }
+        guard let bundleID = Bundle.main.bundleIdentifier else { return }
+        let currentPID = ProcessInfo.processInfo.processIdentifier
+        let otherInstances = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
+            .filter { $0.processIdentifier != currentPID }
+        for other in otherInstances {
+            appState.diagLog.warning(
+                "Another instance is already running (PID \(other.processIdentifier)); terminating it"
+            )
+            if !other.terminate() {
+                other.forceTerminate()
+                continue
+            }
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(3))
+                if !other.isTerminated {
+                    self.appState.diagLog.warning(
+                        "Other instance (PID \(other.processIdentifier)) did not terminate; force-terminating"
+                    )
+                    other.forceTerminate()
+                }
+            }
+        }
+    }
 
     /// Handles `kAEGetURL` Apple Events and forwards `thaw://` URLs to `handleURL(_:senderBundleId:)`.
     @objc private func handleURLAppleEvent(
