@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 # Regenerates scripts/swiftlint-inputs.xcfilelist from tracked Swift sources
 # in the same modules SwiftLint lints (see .swiftlint.yml).
 set -euo pipefail
