@@ -729,7 +729,8 @@ final class MenuBarSection {
         interval: TimeInterval
     ) async -> Bool {
         let pollInterval: TimeInterval = 0.25
-        var eligibleSince = Date()
+        let clock = ContinuousClock()
+        var eligibleSince = clock.now
 
         while !Task.isCancelled {
             try? await Task.sleep(for: .seconds(pollInterval))
@@ -740,11 +741,11 @@ final class MenuBarSection {
             }
 
             if await appState.itemManager.isAnyMenuBarItemMenuOpen() {
-                eligibleSince = Date()
+                eligibleSince = clock.now
                 continue
             }
 
-            if Date().timeIntervalSince(eligibleSince) >= interval {
+            if eligibleSince.duration(to: clock.now) >= .seconds(interval) {
                 return true
             }
         }
