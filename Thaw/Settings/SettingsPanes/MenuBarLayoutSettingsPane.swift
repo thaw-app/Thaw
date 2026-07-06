@@ -120,7 +120,7 @@ struct MenuBarLayoutSettingsPane: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Reset menu bar layout")
                             .font(.headline)
-                        Text("Moves every movable item except the \(Constants.displayName) icon to the selected section — just like a fresh install.")
+                        Text("Moves every movable item except the \(Constants.displayName) icon to the section you select.")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -160,7 +160,7 @@ struct MenuBarLayoutSettingsPane: View {
                 isConfirmingReset = false
             }
         } message: {
-            Text("Moves every movable item except the \(Constants.displayName) icon to the chosen section.")
+            Text("Moves every movable item except the \(Constants.displayName) icon to the section you select.")
         }
     }
 
@@ -267,7 +267,7 @@ struct MenuBarLayoutSettingsPane: View {
             case .successToAlwaysHidden:
                 String(localized: "Layout reset. Items were moved to the Always Hidden section.")
             case .successToVisible:
-                String(localized: "Items were moved to the Visible section.")
+                String(localized: "Layout reset. Items were moved to the Visible section.")
             case let .partialFailure(count):
                 String(localized: "Reset completed with \(count) item(s) that could not be moved. Check the menu bar and try again if needed.")
             case let .failure(message):

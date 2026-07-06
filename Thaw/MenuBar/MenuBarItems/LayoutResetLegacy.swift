@@ -181,8 +181,6 @@ extension MenuBarItemManager {
             appState.hidEventManager.startAll()
         }
 
-        let hiddenControlBounds = Bridging.getWindowBounds(for: controlItems.hidden.windowID)
-            ?? controlItems.hidden.bounds
         let alwaysHiddenControlBounds = Bridging.getWindowBounds(for: alwaysHiddenControl.windowID)
             ?? alwaysHiddenControl.bounds
 
@@ -194,9 +192,7 @@ extension MenuBarItemManager {
                     return false
                 }
                 let bounds = Bridging.getWindowBounds(for: item.windowID) ?? item.bounds
-                let inAlwaysHiddenBand = bounds.minX >= alwaysHiddenControlBounds.maxX
-                    && bounds.maxX <= hiddenControlBounds.minX
-                return !inAlwaysHiddenBand
+                return bounds.maxX > alwaysHiddenControlBounds.minX
             }
         }
 
@@ -227,8 +223,6 @@ extension MenuBarItemManager {
             let refreshedControls = layoutResetControlItemPair(from: &refreshedItems),
             let refreshedAlwaysHidden = refreshedControls.alwaysHidden
         {
-            let refreshedHiddenBounds = Bridging.getWindowBounds(for: refreshedControls.hidden.windowID)
-                ?? refreshedControls.hidden.bounds
             let refreshedAlwaysHiddenBounds = Bridging.getWindowBounds(for: refreshedAlwaysHidden.windowID)
                 ?? refreshedAlwaysHidden.bounds
             let notYetInAlwaysHidden = refreshedItems.filter { item in
@@ -238,9 +232,7 @@ extension MenuBarItemManager {
                     return false
                 }
                 let bounds = Bridging.getWindowBounds(for: item.windowID) ?? item.bounds
-                let inAlwaysHiddenBand = bounds.minX >= refreshedAlwaysHiddenBounds.maxX
-                    && bounds.maxX <= refreshedHiddenBounds.minX
-                return !inAlwaysHiddenBand
+                return bounds.maxX > refreshedAlwaysHiddenBounds.minX
             }
             if !notYetInAlwaysHidden.isEmpty {
                 MenuBarItemManager.diagLog.debug("Reset-to-always-hidden pass 2: \(notYetInAlwaysHidden.count) items not yet in always-hidden section")

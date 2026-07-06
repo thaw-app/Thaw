@@ -97,6 +97,7 @@ final class LayoutResetErrorTests: XCTestCase {
         let allCases: [MenuBarItemManager.LayoutResetError] = [
             .missingAppState,
             .missingControlItems,
+            .alwaysHiddenSectionDisabled,
         ]
 
         for error in allCases {
@@ -109,6 +110,7 @@ final class LayoutResetErrorTests: XCTestCase {
         let allCases: [MenuBarItemManager.LayoutResetError] = [
             .missingAppState,
             .missingControlItems,
+            .alwaysHiddenSectionDisabled,
         ]
 
         for error in allCases {
@@ -124,6 +126,8 @@ final class LayoutResetErrorTests: XCTestCase {
         case (.missingAppState, .missingAppState):
             return true
         case (.missingControlItems, .missingControlItems):
+            return true
+        case (.alwaysHiddenSectionDisabled, .alwaysHiddenSectionDisabled):
             return true
         default:
             return false
