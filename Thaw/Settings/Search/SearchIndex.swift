@@ -55,7 +55,7 @@ enum SearchIndex {
     private static let sharedEntries: [SearchEntry] = paneEntries + generalEntries + advancedEntries
         + displayEntries + hotkeyEntries + layoutEntries
 
-    /// macOS 27-only settings rows, appended when the sidebar search UI is available.
+    /// macOS 27-only settings rows, appended at runtime on macOS 27+.
     private static let macOS27Entries: [SearchEntry] = [
         SearchEntry(
             id: "advanced.enableExperimentalSystemItemHiding",

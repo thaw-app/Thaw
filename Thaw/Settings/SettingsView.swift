@@ -24,14 +24,8 @@ struct SettingsView: View {
         .navigationTitle(navigationState.settingsNavigationIdentifier.localized)
     }
 
-    @ViewBuilder
     private var sidebar: some View {
-        if #available(macOS 27, *) {
-            SettingsSearchSidebar(navigationState: navigationState)
-        } else {
-            SettingsSidebarPaneList(navigationState: navigationState)
-                .navigationSplitViewColumnWidth(ideal: 200, max: 240)
-        }
+        SettingsSearchSidebar(navigationState: navigationState)
     }
 
     @ViewBuilder
@@ -61,7 +55,6 @@ struct SettingsView: View {
 
 // MARK: - SettingsSearchSidebar
 
-@available(macOS 27, *)
 private struct SettingsSearchSidebar: View {
     @ObservedObject var navigationState: AppNavigationState
 
