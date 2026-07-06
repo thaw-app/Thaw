@@ -579,6 +579,17 @@ enum LayoutSolver {
     /// Returns an empty array when the current order already matches the
     /// desired order (no moves needed) or when desired is empty.
     ///
+    /// Items that already sit in the correct relative order at the left of
+    /// the bar are trimmed from the front of the sequence: because every
+    /// unmoved item keeps its position and every replayed item lands at the
+    /// far right in sequence order, the final order is (current physical
+    /// order minus replayed items) followed by the replayed suffix. The
+    /// longest prefix of the target sequence whose members appear in
+    /// increasing physical order therefore never needs to move. Without the
+    /// trim, a single out-of-place item — Control Center's transient
+    /// Now Playing widget reappearing in the visible section — replayed the
+    /// whole bar with one synthetic drag per item.
+    ///
     /// Pure over its inputs. The orchestrator handles per-item live
     /// fetching, the move() loop, and control-item state restoration.
     static nonisolated func planFullSortSequence(
@@ -614,7 +625,65 @@ enum LayoutSolver {
         fullSequence.append(contentsOf: hiddenUIDs)
         fullSequence.append(hiddenCtrlUID)
         fullSequence.append(contentsOf: visibleUIDs)
-        return fullSequence
+
+        // Reconstruct the current physical (left-to-right) order.
+        // currentFlat is flattened visible-first (visible, hidden ctrl,
+        // hidden, AH ctrl, alwaysHidden) with each section block already
+        // left-to-right, so the physical order is the blocks reversed with
+        // intra-block order preserved. Split at the control UIDs.
+        var visibleBlock = [String]()
+        var hiddenBlock = [String]()
+        var ahBlock = [String]()
+        var blockIndex = 0
+        var sawHiddenCtrl = false
+        var sawAHCtrl = false
+        for uid in currentFlat {
+            if uid == hiddenCtrlUID {
+                blockIndex = 1
+                sawHiddenCtrl = true
+                continue
+            }
+            if let ahCtrlUID, uid == ahCtrlUID {
+                blockIndex = 2
+                sawAHCtrl = true
+                continue
+            }
+            switch blockIndex {
+            case 0: visibleBlock.append(uid)
+            case 1: hiddenBlock.append(uid)
+            default: ahBlock.append(uid)
+            }
+        }
+        // Control UIDs join the physical order only when currentFlat
+        // actually contained them; fabricating positions for absent
+        // dividers would let the trim keep sequence members that have no
+        // known physical location.
+        var physicalOrder = ahBlock
+        if sawAHCtrl, let ahCtrlUID { physicalOrder.append(ahCtrlUID) }
+        physicalOrder.append(contentsOf: hiddenBlock)
+        if sawHiddenCtrl { physicalOrder.append(hiddenCtrlUID) }
+        physicalOrder.append(contentsOf: visibleBlock)
+
+        var positionByUID = [String: Int]()
+        for (offset, uid) in physicalOrder.enumerated() where positionByUID[uid] == nil {
+            positionByUID[uid] = offset
+        }
+
+        // Trim the longest prefix of the target sequence whose members
+        // appear in increasing physical order. Non-sequence items (e.g.
+        // unresolved generic Control Center widgets that are deliberately
+        // not repositioned) may interleave with the untouched prefix; they
+        // are never moved on either path, so they don't affect the managed
+        // items' relative order. An item missing from the physical order is
+        // treated as the divergence point.
+        var lastPosition = -1
+        var untouchedPrefixCount = 0
+        for uid in fullSequence {
+            guard let position = positionByUID[uid], position > lastPosition else { break }
+            lastPosition = position
+            untouchedPrefixCount += 1
+        }
+        return Array(fullSequence.dropFirst(untouchedPrefixCount))
     }
 
     // MARK: - Saved-position lookup
