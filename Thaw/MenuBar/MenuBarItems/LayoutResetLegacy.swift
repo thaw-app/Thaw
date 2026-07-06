@@ -84,7 +84,6 @@ extension MenuBarItemManager {
         }
 
         return try await layoutResetMoveItemsToAlwaysHidden(
-            controlItems: controlItems,
             alwaysHiddenControl: alwaysHiddenControl,
             items: items
         )
@@ -166,7 +165,6 @@ extension MenuBarItemManager {
     }
 
     private func layoutResetMoveItemsToAlwaysHidden(
-        controlItems: ControlItemPair,
         alwaysHiddenControl: MenuBarItem,
         items: [MenuBarItem]
     ) async throws -> Int {
