@@ -8,14 +8,57 @@
 
 import SwiftUI
 
-/// The window that hosts the permissions decision — either the first-launch
-/// onboarding tour or, on later launches, the standalone permissions view.
+enum PermissionsFlowStage: Equatable {
+    case onboarding
+    case permissions
+
+    init(hasSeenOnboarding: Bool, hasCompletedFirstLaunch: Bool) {
+        self = if !hasSeenOnboarding, !hasCompletedFirstLaunch {
+            .onboarding
+        } else {
+            .permissions
+        }
+    }
+}
+
+private struct PermissionsFlowView: View {
+    @EnvironmentObject private var appState: AppState
+    @State private var stage: PermissionsFlowStage
+
+    init() {
+        _stage = State(
+            initialValue: PermissionsFlowStage(
+                hasSeenOnboarding: Defaults.bool(forKey: .hasSeenOnboarding),
+                hasCompletedFirstLaunch: Defaults.bool(forKey: .hasCompletedFirstLaunch)
+            )
+        )
+    }
+
+    var body: some View {
+        switch stage {
+        case .onboarding:
+            ThawOnboardingView(showsCompletionScreen: false) {
+                Defaults.set(true, forKey: .hasSeenOnboarding)
+                appState.permissions.refreshPermissionsState()
+                appState.completeFirstLaunchSetup()
+            }
+            .frame(width: ThawOnboardingWindowMetrics.width, height: ThawOnboardingWindowMetrics.height)
+        case .permissions:
+            ThawPermissionsView {
+                appState.completeFirstLaunchSetup()
+            }
+            .frame(width: ThawOnboardingWindowMetrics.width, height: ThawOnboardingWindowMetrics.height)
+        }
+    }
+}
+
+/// The window that hosts the permissions decision.
 struct PermissionsWindow: Scene {
     @ObservedObject var appState: AppState
 
     var body: some Scene {
         IceWindow(id: .permissions) {
-            permissionsContent
+            PermissionsFlowView()
                 .onWindowChange { window in
                     guard let window else {
                         return
@@ -38,20 +81,5 @@ struct PermissionsWindow: Scene {
         .windowStyle(.hiddenTitleBar)
         .environmentObject(appState)
         .environmentObject(appState.permissions)
-    }
-
-    /// During first launch, permissions are requested as the final step of
-    /// onboarding. Later on — say, if permissions get revoked — this window
-    /// shows the standalone permissions view instead, so re-granting access
-    /// doesn't send the user through the whole tour again.
-    @ViewBuilder
-    private var permissionsContent: some View {
-        if Defaults.bool(forKey: .hasCompletedFirstLaunch) {
-            PermissionsView<AppPermissions>()
-        } else {
-            OnboardingSheet {
-                Defaults.set(true, forKey: .hasSeenOnboarding)
-            }
-        }
     }
 }

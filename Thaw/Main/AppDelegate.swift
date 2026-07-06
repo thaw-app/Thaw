@@ -93,13 +93,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             appState.performSetup(hasPermissions: false)
         }
 
-        // On first launch, walk the user through onboarding — its final step
-        // is where they decide whether to grant permissions, so there's no
-        // separate need to surface the permissions window here (PermissionsWindow
-        // shows the onboarding tour until first launch completes). Afterward,
-        // only resurface the plain permissions window if required permissions
-        // are missing (e.g. they were revoked), so a reset doesn't drag the
-        // user back through onboarding.
+        // If required permissions are already granted despite this looking
+        // like a first launch by our own bookkeeping (e.g. after `defaults
+        // delete`, which wipes our UserDefaults but not the system's TCC
+        // grants), the user has clearly used Thaw before — skip the
+        // onboarding tour and only resurface the permissions screen.
+        if isFirstLaunch, appState.permissions.permissionsState != .missing {
+            Defaults.set(true, forKey: .hasSeenOnboarding)
+        }
+
+        // On first launch, show the feature onboarding and then request
+        // permissions in the same window. Later, resurface this window only
+        // when required permissions have been revoked.
         if isFirstLaunch || appState.permissions.permissionsState == .missing {
             appState.openWindow(.permissions)
         }
