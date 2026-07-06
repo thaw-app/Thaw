@@ -1,6 +1,6 @@
 $(SRCROOT)/MenuBarItemService/Listener.swift
-$(SRCROOT)/MenuBarItemService/main.swift
 $(SRCROOT)/MenuBarItemService/SourcePIDCache.swift
+$(SRCROOT)/MenuBarItemService/main.swift
 $(SRCROOT)/Shared/Bridging/Bridging.swift
 $(SRCROOT)/Shared/Bridging/Shims.swift
 $(SRCROOT)/Shared/Services/MenuBarItemService.swift
@@ -39,8 +39,8 @@ $(SRCROOT)/Thaw/MenuBar/Appearance/MenuBarOverlayPanel.swift
 $(SRCROOT)/Thaw/MenuBar/ControlItem/ControlItem.swift
 $(SRCROOT)/Thaw/MenuBar/ControlItem/ControlItemImage.swift
 $(SRCROOT)/Thaw/MenuBar/ControlItem/ControlItemImageSet.swift
-$(SRCROOT)/Thaw/MenuBar/HiddenSectionPatch/AssessmentModeBackend.swift
 $(SRCROOT)/Thaw/MenuBar/HiddenSectionPatch/AXItemHider.swift
+$(SRCROOT)/Thaw/MenuBar/HiddenSectionPatch/AssessmentModeBackend.swift
 $(SRCROOT)/Thaw/MenuBar/HiddenSectionPatch/CGSWindowHider.swift
 $(SRCROOT)/Thaw/MenuBar/HiddenSectionPatch/ControlCenterModuleManager.swift
 $(SRCROOT)/Thaw/MenuBar/HiddenSectionPatch/SimpleItemHider.swift
@@ -127,10 +127,10 @@ $(SRCROOT)/Thaw/UI/IceUI/IceSection.swift
 $(SRCROOT)/Thaw/UI/IceUI/IceSlider.swift
 $(SRCROOT)/Thaw/UI/IceUI/IceWindow.swift
 $(SRCROOT)/Thaw/UI/Modifiers/LocalEventMonitorModifier.swift
-$(SRCROOT)/Thaw/UI/Modifiers/Once.swift
 $(SRCROOT)/Thaw/UI/Modifiers/OnFrameChange.swift
 $(SRCROOT)/Thaw/UI/Modifiers/OnKeyDown.swift
 $(SRCROOT)/Thaw/UI/Modifiers/OnWindowChange.swift
+$(SRCROOT)/Thaw/UI/Modifiers/Once.swift
 $(SRCROOT)/Thaw/UI/Shapes/AnyInsettableShape.swift
 $(SRCROOT)/Thaw/UI/Utilities/IceColor.swift
 $(SRCROOT)/Thaw/UI/Utilities/IceGradient.swift

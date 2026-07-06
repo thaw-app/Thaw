@@ -1,5 +1,3 @@
-!.github/actions/build/  
-!.github/actions/build/** 
 .build-benchmark
 .codex-home
 .cursorrules
@@ -10,6 +8,8 @@
 *.dSYM
 *.ipa
 build/  
+!.github/actions/build/  
+!.github/actions/build/** 
 plans/
 DerivedData/
 Sparkle
