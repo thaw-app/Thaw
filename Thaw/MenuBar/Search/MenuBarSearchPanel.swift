@@ -503,6 +503,7 @@ private struct MenuBarSearchContentView: View {
     @ViewBuilder
     private var searchField: some View {
         let promptText = Text("Search menu bar items…")
+        let fieldShape = Capsule(style: .continuous)
 
         VStack(spacing: 0) {
             HStack(spacing: 10) {
@@ -522,10 +523,15 @@ private struct MenuBarSearchContentView: View {
 
                 Spacer()
             }
-            .padding(15)
-
-            Divider()
-                .padding(.horizontal, 15)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 11)
+            .glassEffect(.regular.interactive(), in: fieldShape)
+            .overlay(
+                fieldShape.strokeBorder(.separator.opacity(searchFieldIsFocused ? 0.65 : 0.35), lineWidth: 0.5)
+            )
+            .padding(.horizontal, 14)
+            .padding(.top, 12)
+            .padding(.bottom, 10)
         }
     }
 
@@ -638,10 +644,9 @@ private struct MenuBarSearchContentView: View {
             let title: String
 
             var properties: [FuseProp] {
-                [FuseProp(title)]
+                [FuseProp(title, weight: SearchWeights.menuBarItem.title)]
             }
         }
-        typealias ScoredItem = (listItem: ListItem, score: Double)
 
         let advanced = itemManager.appState?.settings.advanced
         let orderedNames: [MenuBarSection.Name] = advanced?.searchSectionOrder ?? Array(MenuBarSection.Name.allCases)
@@ -700,16 +705,10 @@ private struct MenuBarSearchContentView: View {
             // Using weighted search via FuseProp
             let fuseResults = model.fuse.searchSync(model.searchText, in: selectableItems, by: \.properties)
 
-            model.displayedItems = fuseResults
-                .map { result in
-                    let item = selectableItems[result.index]
-                    let score = 1.0 - result.diffScore
-                    return ScoredItem(item.listItem, score)
-                }
-                .sorted { (lhs: ScoredItem, rhs: ScoredItem) -> Bool in
-                    lhs.score > rhs.score
-                }
-                .map(\.listItem)
+            let scored = fuseResults.map { result in
+                (item: selectableItems[result.index], diffScore: result.diffScore)
+            }
+            model.displayedItems = SearchRanker.sortedByRelevance(scored).map(\.listItem)
         }
     }
 

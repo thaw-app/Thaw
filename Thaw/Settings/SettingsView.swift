@@ -14,22 +14,6 @@ struct SettingsView: View {
     let appState: AppState
     @ObservedObject var navigationState: AppNavigationState
 
-    private var allSections: [SettingsNavigationIdentifier] {
-        SettingsNavigationIdentifier.allCases
-    }
-
-    private var currentSectionIndex: Int? {
-        allSections.firstIndex(of: navigationState.settingsNavigationIdentifier)
-    }
-
-    private var isFirstSection: Bool {
-        currentSectionIndex == 0
-    }
-
-    private var isLastSection: Bool {
-        currentSectionIndex == allSections.count - 1
-    }
-
     var body: some View {
         NavigationSplitView {
             sidebar
@@ -38,52 +22,10 @@ struct SettingsView: View {
                 .id(navigationState.settingsNavigationIdentifier)
         }
         .navigationTitle(navigationState.settingsNavigationIdentifier.localized)
-        .toolbar {
-            ToolbarItem(placement: .navigation) {
-                ControlGroup {
-                    Button(action: navigateBack) {
-                        Label("Back", systemImage: "chevron.left")
-                    }
-                    .disabled(isFirstSection)
-
-                    Button(action: navigateForward) {
-                        Label("Forward", systemImage: "chevron.right")
-                    }
-                    .disabled(isLastSection)
-                }
-                .controlGroupStyle(.navigation)
-            }
-        }
     }
 
     private var sidebar: some View {
-        // Use a Binding that wraps the navigation state to ensure updates happen
-        // on the main thread and avoid view update warnings.
-        let selection = Binding<SettingsNavigationIdentifier>(
-            get: { navigationState.settingsNavigationIdentifier },
-            set: { newValue in
-                if navigationState.settingsNavigationIdentifier != newValue {
-                    Task { @MainActor in
-                        navigationState.settingsNavigationIdentifier = newValue
-                    }
-                }
-            }
-        )
-
-        return List(selection: selection) {
-            Section {
-                ForEach(SettingsNavigationIdentifier.allCases) { identifier in
-                    Label {
-                        Text(identifier.localized)
-                    } icon: {
-                        identifier.iconResource.view
-                    }
-                    .tag(identifier)
-                }
-            }
-        }
-        .listStyle(.sidebar)
-        .navigationSplitViewColumnWidth(ideal: 180, max: 220)
+        SettingsSearchSidebar(navigationState: navigationState)
     }
 
     @ViewBuilder
@@ -109,14 +51,83 @@ struct SettingsView: View {
             AboutSettingsPane(updatesManager: appState.updatesManager)
         }
     }
+}
 
-    private func navigateBack() {
-        guard let index = currentSectionIndex, index > 0 else { return }
-        navigationState.settingsNavigationIdentifier = allSections[index - 1]
+// MARK: - SettingsSearchSidebar
+
+private struct SettingsSearchSidebar: View {
+    @ObservedObject var navigationState: AppNavigationState
+
+    @StateObject private var searchModel = SearchModel()
+
+    private var isSearching: Bool {
+        !searchModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    private func navigateForward() {
-        guard let index = currentSectionIndex, index < allSections.count - 1 else { return }
-        navigationState.settingsNavigationIdentifier = allSections[index + 1]
+    var body: some View {
+        VStack(spacing: 0) {
+            SearchField(text: $searchModel.searchText)
+
+            Group {
+                if isSearching {
+                    if searchModel.displayedGroups.isEmpty {
+                        SearchEmptyView()
+                    } else {
+                        SearchResultsList(groups: searchModel.displayedGroups) { entry in
+                            navigate(to: entry.pane)
+                        }
+                    }
+                } else {
+                    SettingsSidebarPaneList(
+                        navigationState: navigationState
+                    )
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .navigationSplitViewColumnWidth(ideal: 200, max: 240)
+    }
+
+    /// Switches the detail pane to `pane` and clears the search query so the
+    /// normal pane list returns with the new pane selected.
+    private func navigate(to pane: SettingsNavigationIdentifier) {
+        if navigationState.settingsNavigationIdentifier != pane {
+            navigationState.settingsNavigationIdentifier = pane
+        }
+        searchModel.searchText = ""
+    }
+}
+
+// MARK: - SettingsSidebarPaneList
+
+/// The default settings sidebar navigation list.
+private struct SettingsSidebarPaneList: View {
+    @ObservedObject var navigationState: AppNavigationState
+
+    var body: some View {
+        let selection = Binding<SettingsNavigationIdentifier>(
+            get: { navigationState.settingsNavigationIdentifier },
+            set: { newValue in
+                if navigationState.settingsNavigationIdentifier != newValue {
+                    Task { @MainActor in
+                        navigationState.settingsNavigationIdentifier = newValue
+                    }
+                }
+            }
+        )
+
+        List(selection: selection) {
+            Section {
+                ForEach(SettingsNavigationIdentifier.allCases) { identifier in
+                    Label {
+                        Text(identifier.localized)
+                    } icon: {
+                        identifier.iconResource.view
+                    }
+                    .tag(identifier)
+                }
+            }
+        }
+        .listStyle(.sidebar)
     }
 }

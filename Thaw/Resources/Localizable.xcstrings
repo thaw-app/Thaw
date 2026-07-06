@@ -27993,6 +27993,11 @@
         }
       }
     },
+    "No settings found" : {
+      "comment" : "Text shown in the settings sidebar search when no settings match the search query.",
+      "localizations" : {
+      }
+    },
     "No shape kind selected" : {
       "comment" : "A message displayed when the user hasn't selected a shape kind for the menu bar.",
       "localizations" : {
@@ -36074,6 +36079,11 @@
             "value" : "搜尋選單列項目⋯"
           }
         }
+      }
+    },
+    "Search settings…" : {
+      "comment" : "A placeholder text for the search field in the settings window sidebar.",
+      "localizations" : {
       }
     },
     "Section divider style" : {
