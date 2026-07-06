@@ -202,7 +202,7 @@ extension MenuBarItemManager {
                 do {
                     try await move(
                         item: item,
-                        to: .rightOfItem(alwaysHiddenControl),
+                        to: .leftOfItem(alwaysHiddenControl),
                         skipInputPause: true,
                         watchdogTimeout: Self.layoutWatchdogTimeout
                     )
