@@ -6,7 +6,6 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import Combine
 import SwiftUI
 
 /// Permission step used by both first-launch onboarding and later
@@ -17,8 +16,6 @@ struct ThawPermissionsView: View {
     var onContinue: () -> Void
 
     @State private var appeared = false
-
-    private let pollTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     private var requiredGranted: Bool {
         appState.permissions.requiredPermissions.allSatisfy(\.hasPermission)
@@ -81,13 +78,10 @@ struct ThawPermissionsView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(VisualEffectBackground())
         .onAppear {
-            refreshStatuses()
+            appState.permissions.refreshPermissionsState()
             withAnimation(.spring(duration: 0.6, bounce: 0.3)) {
                 appeared = true
             }
-        }
-        .onReceive(pollTimer) { _ in
-            refreshStatuses()
         }
     }
 
@@ -104,7 +98,7 @@ struct ThawPermissionsView: View {
         .padding(.horizontal, 30)
     }
 
-    private func privacyFact(_ text: String) -> some View {
+    private func privacyFact(_ text: LocalizedStringKey) -> some View {
         HStack(alignment: .top, spacing: 8) {
             Image(systemName: "checkmark")
                 .font(.system(size: 10, weight: .bold))
@@ -117,30 +111,10 @@ struct ThawPermissionsView: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
-
-    private func refreshStatuses() {
-        appState.permissions.refreshPermissionsState()
-    }
 }
 
 private struct OnboardingPermissionCard: View {
     @ObservedObject var permission: Permission
-
-    private var displayDetails: [String] {
-        if permission is AccessibilityPermission {
-            [
-                "Detect menu bar items on your Mac and where they're positioned.",
-                "Move menu bar items to rearrange or hide them.",
-            ]
-        } else if permission is ScreenRecordingPermission {
-            [
-                "Show live previews of menu bar items.",
-                "Sample colors from the menu bar to adjust tint.",
-            ]
-        } else {
-            permission.details
-        }
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -164,7 +138,7 @@ private struct OnboardingPermissionCard: View {
             }
 
             VStack(alignment: .leading, spacing: 5) {
-                ForEach(displayDetails, id: \.self) { detail in
+                ForEach(permission.onboardingDetails, id: \.self) { detail in
                     HStack(alignment: .top, spacing: 6) {
                         Image(systemName: "circle.fill")
                             .font(.system(size: 3))

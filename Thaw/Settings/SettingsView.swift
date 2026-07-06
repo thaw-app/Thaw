@@ -14,12 +14,6 @@ struct SettingsView: View {
     let appState: AppState
     @ObservedObject var navigationState: AppNavigationState
 
-    @StateObject private var searchModel = SearchModel()
-
-    private var isSearching: Bool {
-        !searchModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
-
     var body: some View {
         NavigationSplitView {
             sidebar
@@ -30,40 +24,14 @@ struct SettingsView: View {
         .navigationTitle(navigationState.settingsNavigationIdentifier.localized)
     }
 
+    @ViewBuilder
     private var sidebar: some View {
-        VStack(spacing: 0) {
-            SearchField(text: $searchModel.searchText)
-
-            Group {
-                if isSearching {
-                    if searchModel.displayedGroups.isEmpty {
-                        SearchEmptyView()
-                    } else {
-                        SearchResultsList(groups: searchModel.displayedGroups) { entry in
-                            navigate(to: entry.pane)
-                        }
-                    }
-                } else {
-                    SettingsSidebarPaneList(
-                        navigationState: navigationState
-                    )
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        if #available(macOS 27, *) {
+            SettingsSearchSidebar(navigationState: navigationState)
+        } else {
+            SettingsSidebarPaneList(navigationState: navigationState)
+                .navigationSplitViewColumnWidth(ideal: 200, max: 240)
         }
-        .navigationSplitViewColumnWidth(ideal: 200, max: 240)
-        .onChange(of: searchModel.searchText, initial: true) {
-            searchModel.updateDisplayedItems()
-        }
-    }
-
-    /// Switches the detail pane to `pane` and clears the search query so the
-    /// normal pane list returns with the new pane selected.
-    private func navigate(to pane: SettingsNavigationIdentifier) {
-        if navigationState.settingsNavigationIdentifier != pane {
-            navigationState.settingsNavigationIdentifier = pane
-        }
-        searchModel.searchText = ""
     }
 
     @ViewBuilder
@@ -90,6 +58,52 @@ struct SettingsView: View {
                 appState.isOnboardingPresented = true
             }
         }
+    }
+}
+
+// MARK: - SettingsSearchSidebar
+
+@available(macOS 27, *)
+private struct SettingsSearchSidebar: View {
+    @ObservedObject var navigationState: AppNavigationState
+
+    @StateObject private var searchModel = SearchModel()
+
+    private var isSearching: Bool {
+        !searchModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            SearchField(text: $searchModel.searchText)
+
+            Group {
+                if isSearching {
+                    if searchModel.displayedGroups.isEmpty {
+                        SearchEmptyView()
+                    } else {
+                        SearchResultsList(groups: searchModel.displayedGroups) { entry in
+                            navigate(to: entry.pane)
+                        }
+                    }
+                } else {
+                    SettingsSidebarPaneList(
+                        navigationState: navigationState
+                    )
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .navigationSplitViewColumnWidth(ideal: 200, max: 240)
+    }
+
+    /// Switches the detail pane to `pane` and clears the search query so the
+    /// normal pane list returns with the new pane selected.
+    private func navigate(to pane: SettingsNavigationIdentifier) {
+        if navigationState.settingsNavigationIdentifier != pane {
+            navigationState.settingsNavigationIdentifier = pane
+        }
+        searchModel.searchText = ""
     }
 }
 

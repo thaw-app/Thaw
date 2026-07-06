@@ -203,6 +203,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
 
     private var shouldPreferPlaceholderImage: Bool {
         guard #available(macOS 27, *) else { return false }
+        guard appState?.settings.advanced.enableExperimentalOverflowPrevention == true else { return false }
         return (superview as? LayoutBarContainer)?.section != .visible
     }
 

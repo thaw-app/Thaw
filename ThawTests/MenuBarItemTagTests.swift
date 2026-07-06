@@ -533,6 +533,7 @@ final class MenuBarItemTagTests: XCTestCase {
 
         let spotlight = MenuBarItemTag(namespace: .string("com.apple.campo"), title: "Spotlight")
         let wifi = MenuBarItemTag(namespace: .menuBarAgent, title: "com.apple.menuextra.wifi")
+        let weather = MenuBarItemTag(namespace: .menuBarAgent, title: "com.apple.menuextra.weather")
         let app = MenuBarItemTag.appItem(bundleID: "com.example.app", title: "Status")
 
         XCTAssertEqual(spotlight.sectionManagementPolicy, .forcedVisible)
@@ -541,6 +542,8 @@ final class MenuBarItemTagTests: XCTestCase {
 
         XCTAssertEqual(wifi.sectionManagementPolicy, .hideable)
         XCTAssertTrue(wifi.canBeHidden)
+        XCTAssertEqual(weather.sectionManagementPolicy, .hideable)
+        XCTAssertTrue(weather.canBeHidden)
 
         XCTAssertEqual(app.sectionManagementPolicy, .hideable)
         XCTAssertTrue(app.canBeHidden)

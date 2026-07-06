@@ -1721,7 +1721,7 @@ final class MenuBarItemManager: ObservableObject {
                 }
                 Task {
                     guard let imageCache = self.appState?.imageCache else { return }
-                    if #available(macOS 27, *) {
+                    if #available(macOS 27, *), self.appState?.settings.advanced.enableExperimentalOverflowPrevention == true {
                         await imageCache.prewarmConcealedImagesMacOS27(
                             sections: MenuBarSection.Name.allCases,
                             onlyMissingImages: false
@@ -1747,7 +1747,7 @@ final class MenuBarItemManager: ObservableObject {
                 }
                 Task {
                     guard let imageCache = self.appState?.imageCache else { return }
-                    if #available(macOS 27, *) {
+                    if #available(macOS 27, *), self.appState?.settings.advanced.enableExperimentalOverflowPrevention == true {
                         await imageCache.prewarmConcealedImagesMacOS27(
                             sections: MenuBarSection.Name.allCases,
                             onlyMissingImages: false
@@ -2556,14 +2556,30 @@ extension MenuBarItemManager {
                    let currentPID = item.sourcePID,
                    currentPID != prevPID
                 {
+                    // Only revert while prevPID's process is still actually
+                    // running. If it's gone (e.g. the app quit and a *new*
+                    // process now legitimately owns this window), reverting
+                    // would freeze the cache on a dead PID forever: every
+                    // subsequent cycle persists prevPID again (below), so
+                    // previousPIDs never advances and this branch fires on
+                    // every single cache cycle from then on — a permanent
+                    // tug-of-war between this guard and SourcePIDCache's
+                    // correct re-resolution, observed as an unbounded stream
+                    // of "SourcePID changed" warnings after any menu-bar-item
+                    // helper relaunches mid-session.
+                    let prevRunningApp = NSRunningApplication(processIdentifier: prevPID)
+                    guard let prevRunningApp, !prevRunningApp.isTerminated else {
+                        MenuBarItemManager.diagLog.debug(
+                            "SourcePID changed for windowID \(item.windowID): \(prevPID) -> \(currentPID), previous PID's process is gone, accepting new PID"
+                        )
+                        continue
+                    }
+
                     MenuBarItemManager.diagLog.warning(
                         "SourcePID changed for windowID \(item.windowID): \(prevPID) -> \(currentPID), reverting to previous PID"
                     )
-                    // Rebuild the namespace from the previous PID. If the bundle
-                    // ID is not available (app no longer running), keep the
-                    // original tag namespace as a safe fallback.
-                    let prevBundleID = NSRunningApplication(processIdentifier: prevPID)?.bundleIdentifier
-                    let correctedNamespace: MenuBarItemTag.Namespace = if let prevBundleID {
+                    // Rebuild the namespace from the previous PID.
+                    let correctedNamespace: MenuBarItemTag.Namespace = if let prevBundleID = prevRunningApp.bundleIdentifier {
                         .string(prevBundleID)
                     } else {
                         item.tag.namespace
@@ -5649,6 +5665,11 @@ extension MenuBarItemManager {
         // want a different menu) fall through to the synthetic path below.
         let identifier = item.uniqueIdentifier
         if mouseButton == .left, pressItemViaAccessibility(item) {
+            if appState?.settings.advanced.enableExperimentalOverflowPrevention != true {
+                hider.revealItemTemporarily(identifier)
+                await eventSleep(for: Constants.MenuBarTuning.iceBarPostClickSettle)
+                hider.scheduleTemporaryItemConceal(identifier)
+            }
             MenuBarItemManager.diagLog.info(
                 "clickConcealedItem: opened \(item.logString) via AX press"
             )

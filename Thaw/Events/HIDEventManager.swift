@@ -78,6 +78,9 @@ final class HIDEventManager: ObservableObject {
     /// The display hosting the current protected region.
     private var showOnClickGuardDisplayID: CGDirectDisplayID?
 
+    /// Fallback teardown when the paired mouse-up never arrives.
+    private var showOnClickGuardDeferredDisarmTask: Task<Void, Never>?
+
     /// Tracks the state of the swallow/disarm lifecycle for the click guard tap.
     enum GuardMouseUpState {
         /// No mouse-down has been swallowed; guard tap is idle between clicks.
@@ -1072,6 +1075,7 @@ extension HIDEventManager {
             showOnClickGuardDisplayID = nil
             clickTask = nil
             clickTaskToken = nil
+            scheduleDeferredShowOnClickGuardDisarm()
             return
         }
 
@@ -1085,17 +1089,33 @@ extension HIDEventManager {
         let deferredState = Self.nextGuardState(from: guardMouseUpState, given: .disarmRequested)
         if deferredState != .idle {
             guardMouseUpState = deferredState
+            scheduleDeferredShowOnClickGuardDisarm()
             return
         }
 
         clickTask?.cancel()
         clickTask = nil
         clickTaskToken = nil
+        showOnClickGuardDeferredDisarmTask?.cancel()
+        showOnClickGuardDeferredDisarmTask = nil
         showOnClickGuardDeadline = nil
         showOnClickGuardRegion = nil
         showOnClickGuardDisplayID = nil
         guardMouseUpState = .idle
         showOnClickGuardTap.stop()
+    }
+
+    private func scheduleDeferredShowOnClickGuardDisarm() {
+        showOnClickGuardDeferredDisarmTask?.cancel()
+        showOnClickGuardDeferredDisarmTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(1))
+            await MainActor.run {
+                guard self?.guardMouseUpState == .swallowingThenDisarm else { return }
+                self?.showOnClickGuardDeferredDisarmTask = nil
+                self?.guardMouseUpState = .idle
+                self?.disarmShowOnClickGuard()
+            }
+        }
     }
 
     /// Tears down the guard if its deadline has passed. Call this before

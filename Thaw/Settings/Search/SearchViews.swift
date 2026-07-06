@@ -120,6 +120,12 @@ private struct SearchGroupSection: View {
     }
 }
 
+// MARK: - SearchResultRowAppearance
+
+private enum SearchResultRowAppearance {
+    static let shape = RoundedRectangle(cornerRadius: 8, style: .continuous)
+}
+
 // MARK: - SearchResultButton
 
 /// Interactive search result row with hover and pressed feedback.
@@ -128,10 +134,6 @@ private struct SearchResultButton: View {
     let action: () -> Void
 
     @State private var isHovering = false
-
-    private var rowShape: RoundedRectangle {
-        RoundedRectangle(cornerRadius: 8, style: .continuous)
-    }
 
     var body: some View {
         Button(action: action) {
@@ -143,7 +145,7 @@ private struct SearchResultButton: View {
         .buttonStyle(
             SearchResultButtonStyle(
                 isHovering: isHovering,
-                rowShape: rowShape
+                rowShape: SearchResultRowAppearance.shape
             )
         )
         .onHover { hovering in
@@ -193,11 +195,7 @@ private struct SearchResultRowContent: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .contentShape(rowShape)
-    }
-
-    private var rowShape: RoundedRectangle {
-        RoundedRectangle(cornerRadius: 8, style: .continuous)
+        .contentShape(SearchResultRowAppearance.shape)
     }
 }
 

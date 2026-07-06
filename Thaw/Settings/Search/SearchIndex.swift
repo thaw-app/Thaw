@@ -51,20 +51,67 @@ struct SearchEntry: Identifiable, @unchecked Sendable {
 // MARK: - SearchIndex
 
 enum SearchIndex {
-    /// All searchable settings entries, in pane order.
-    static let entries: [SearchEntry] = paneEntries + generalEntries + advancedEntries
+    /// Entries indexed on every supported macOS release.
+    private static let sharedEntries: [SearchEntry] = paneEntries + generalEntries + advancedEntries
         + displayEntries + hotkeyEntries + layoutEntries
+
+    /// macOS 27-only settings rows, appended when the sidebar search UI is available.
+    private static let macOS27Entries: [SearchEntry] = [
+        SearchEntry(
+            id: "advanced.enableExperimentalSystemItemHiding",
+            titleKey: "Hide macOS system items",
+            titleText: "Hide macOS system items",
+            descriptionText: "Allows items such as Clock, Control Center, and Siri to be moved into hidden sections.",
+            pane: .menuBarLayout,
+            sectionKey: nil,
+            sectionText: nil,
+            keywords: ["system items", "clock", "control center", "siri", "hide", "macOS"],
+            property: .advanced("enableExperimentalSystemItemHiding")
+        ),
+        SearchEntry(
+            id: "advanced.enableExperimentalOverflowPrevention",
+            titleKey: "Prevent native menu bar overflow hiding (experimental)",
+            titleText: "Prevent native menu bar overflow hiding (experimental)",
+            descriptionText: "On notched displays, macOS may collapse items behind a chevron when the menu bar is full. This writes hidden items' position weights to extreme values so the native overflow collapses them first, keeping visible items on screen.",
+            pane: .menuBarLayout,
+            sectionKey: nil,
+            sectionText: nil,
+            keywords: ["overflow", "native", "chevron", "notch", "experimental", "prevent"],
+            property: .advanced("enableExperimentalOverflowPrevention")
+        ),
+    ]
+
+    /// All searchable settings entries, in pane order.
+    static var entries: [SearchEntry] {
+        if #available(macOS 27, *) {
+            return sharedEntries + macOS27Entries
+        }
+        return sharedEntries
+    }
 
     /// `@Published` property names that are intentionally absent from the
     /// index because they are deprecated, internal, or currently commented out
     /// of the UI. The drift-guard test allows these.
-    static let nonSearchableProperties: Set<SettingsProperty> = [
+    private static let baseNonSearchableProperties: Set<SettingsProperty> = [
         .general("lastCustomIceIcon"),
         .general("useIceBar"),
         .general("useIceBarOnlyOnNotchedDisplay"),
         .general("iceBarLocation"),
-        .advanced("enableExperimentalWindowHiding"),
     ]
+
+    /// Advanced settings that only participate in search on macOS 27.
+    private static let macOS27AdvancedNonSearchableProperties: Set<SettingsProperty> = [
+        .advanced("enableExperimentalWindowHiding"),
+        .advanced("enableExperimentalSystemItemHiding"),
+        .advanced("enableExperimentalOverflowPrevention"),
+    ]
+
+    static var nonSearchableProperties: Set<SettingsProperty> {
+        if #available(macOS 27, *) {
+            return baseNonSearchableProperties.union([.advanced("enableExperimentalWindowHiding")])
+        }
+        return baseNonSearchableProperties.union(macOS27AdvancedNonSearchableProperties)
+    }
 
     /// Returns the entries that belong to the given pane.
     static func entries(for pane: SettingsNavigationIdentifier) -> [SearchEntry] {
@@ -542,28 +589,6 @@ enum SearchIndex {
             sectionText: "Diagnostics",
             keywords: ["diagnostic", "logging", "debug", "logs", "troubleshoot"],
             property: .advanced("enableDiagnosticLogging")
-        ),
-        SearchEntry(
-            id: "advanced.enableExperimentalSystemItemHiding",
-            titleKey: "Hide macOS system items",
-            titleText: "Hide macOS system items",
-            descriptionText: "Allows items such as Clock, Control Center, and Siri to be moved into hidden sections.",
-            pane: .menuBarLayout,
-            sectionKey: nil,
-            sectionText: nil,
-            keywords: ["system items", "clock", "control center", "siri", "hide", "macOS"],
-            property: .advanced("enableExperimentalSystemItemHiding")
-        ),
-        SearchEntry(
-            id: "advanced.enableExperimentalOverflowPrevention",
-            titleKey: "Prevent native menu bar overflow hiding (experimental)",
-            titleText: "Prevent native menu bar overflow hiding (experimental)",
-            descriptionText: "On notched displays, macOS may collapse items behind a chevron when the menu bar is full. This writes hidden items' position weights to extreme values so the native overflow collapses them first, keeping visible items on screen.",
-            pane: .menuBarLayout,
-            sectionKey: nil,
-            sectionText: nil,
-            keywords: ["overflow", "native", "chevron", "notch", "experimental", "prevent"],
-            property: .advanced("enableExperimentalOverflowPrevention")
         ),
     ]
 

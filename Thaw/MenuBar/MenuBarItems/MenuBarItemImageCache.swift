@@ -96,6 +96,15 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
     private static let maxFailuresBeforeBlacklist = 3
     private static let blacklistCooldownSeconds: TimeInterval = 30 // 30 seconds
 
+    /// Minimum time that must pass since the last recorded failure before a
+    /// new capture failure counts as an additional strike. A single reflow
+    /// blip (e.g. a restriction-reflow repair retry) can produce several
+    /// blank captures only tens of milliseconds apart; without this floor
+    /// those all count as independent failures and blow through
+    /// `maxFailuresBeforeBlacklist` in well under a second, blacklisting an
+    /// item for the full cooldown over what was really one transient glitch.
+    private static let minimumFailureSpacingSeconds: TimeInterval = 0.5
+
     /// Queue to run cache operations.
     private let queue = DispatchQueue(
         label: "MenuBarItemImageCache",
@@ -149,6 +158,28 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
     // MARK: Setup
 
     /// Sets up the cache.
+    static nonisolated func captureDisplayID(
+        itemCacheDisplayID: CGDirectDisplayID?,
+        activeMenuBarDisplayID: CGDirectDisplayID?,
+        mainDisplayID: CGDirectDisplayID
+    ) -> CGDirectDisplayID {
+        itemCacheDisplayID ?? activeMenuBarDisplayID ?? mainDisplayID
+    }
+
+    static nonisolated func shouldUseFreshBounds(
+        for section: MenuBarSection.Name,
+        revealedSection: MenuBarSection.Name?
+    ) -> Bool {
+        switch (section, revealedSection) {
+        case (.hidden, .hidden),
+             (.hidden, .alwaysHidden),
+             (.alwaysHidden, .alwaysHidden):
+            true
+        default:
+            false
+        }
+    }
+
     @MainActor
     func performSetup(with appState: AppState) {
         self.appState = appState
@@ -1076,7 +1107,13 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
         // Skip the CGS/SkyLight path entirely and use AX-provided bounds with a
         // display-region SCK screenshot instead.
         if #available(macOS 27, *) {
-            let displayID = Bridging.getActiveMenuBarDisplayID() ?? CGMainDisplayID()
+            let displayID = await MainActor.run {
+                Self.captureDisplayID(
+                    itemCacheDisplayID: appState.itemManager.itemCache.displayID,
+                    activeMenuBarDisplayID: Bridging.getActiveMenuBarDisplayID(),
+                    mainDisplayID: CGMainDisplayID()
+                )
+            }
             let screenFrame = await MainActor.run {
                 NSScreen.screens.first { $0.displayID == displayID }?.frame
             }
@@ -1340,7 +1377,13 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
         let revealedSection = await MainActor.run {
             appState.menuBarManager.simpleItemHider?.revealedSection
         }
-        let shouldUseFreshBounds = section != .visible && revealedSection == section
+        let shouldUseFreshBounds = Self.shouldUseFreshBounds(
+            for: section,
+            revealedSection: revealedSection
+        )
+        if shouldUseFreshBounds {
+            clearCaptureFailures(for: items)
+        }
         let captureResult = await captureImages(
             of: items,
             scale: scale,
@@ -1399,17 +1442,29 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
             let existing = dict[item.tag]
 
             if let existing {
-                let newCount = existing.failureCount + 1
-                dict[item.tag] = FailedCapture(
-                    tag: item.tag,
-                    failureCount: newCount,
-                    lastFailureTime: now
-                )
-
-                if newCount == Self.maxFailuresBeforeBlacklist {
-                    MenuBarItemImageCache.diagLog.info(
-                        "Item blacklisted after \(newCount) failures: \(item.logString) (will retry after \(Self.blacklistCooldownSeconds)s cooldown)"
+                let sinceLastFailure = now.timeIntervalSince(existing.lastFailureTime)
+                if sinceLastFailure < Self.minimumFailureSpacingSeconds {
+                    // Same reflow blip as the last recorded failure — refresh
+                    // the timestamp so the blacklist cutoff still tracks the
+                    // most recent glitch, but don't count it as a new strike.
+                    dict[item.tag] = FailedCapture(
+                        tag: item.tag,
+                        failureCount: existing.failureCount,
+                        lastFailureTime: now
                     )
+                } else {
+                    let newCount = existing.failureCount + 1
+                    dict[item.tag] = FailedCapture(
+                        tag: item.tag,
+                        failureCount: newCount,
+                        lastFailureTime: now
+                    )
+
+                    if newCount == Self.maxFailuresBeforeBlacklist {
+                        MenuBarItemImageCache.diagLog.info(
+                            "Item blacklisted after \(newCount) failures: \(item.logString) (will retry after \(Self.blacklistCooldownSeconds)s cooldown)"
+                        )
+                    }
                 }
             } else {
                 dict[item.tag] = FailedCapture(
@@ -1435,6 +1490,14 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
             MenuBarItemImageCache.diagLog.info(
                 "Item recovered after \(existing.failureCount) previous failures: \(item.logString)"
             )
+        }
+    }
+
+    private func clearCaptureFailures(for items: [MenuBarItem]) {
+        failedCapturesLock.withLock { dict in
+            for item in items {
+                dict.removeValue(forKey: item.tag)
+            }
         }
     }
 
@@ -1948,59 +2011,91 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
                     return
                 }
 
-                let displayID = appState.itemManager.itemCache.displayID
-                    ?? Bridging.getActiveMenuBarDisplayID()
-                    ?? CGMainDisplayID()
-                let scale = NSScreen.screens.first { $0.displayID == displayID }?.backingScaleFactor
-                    ?? NSScreen.main?.backingScaleFactor
-                    ?? 2
+                if appState.settings.advanced.enableExperimentalOverflowPrevention {
+                    // Per-item precise reveal: capture one concealed glyph at a
+                    // time instead of the whole section, so a dynamic-title
+                    // neighbor (e.g. iStat Menus) doesn't flicker or vanish
+                    // while this item's real glyph is being captured.
+                    let displayID = appState.itemManager.itemCache.displayID
+                        ?? Bridging.getActiveMenuBarDisplayID()
+                        ?? CGMainDisplayID()
+                    let scale = NSScreen.screens.first { $0.displayID == displayID }?.backingScaleFactor
+                        ?? NSScreen.main?.backingScaleFactor
+                        ?? 2
 
-                for item in itemsToCapture {
-                    guard !Task.isCancelled else { return }
+                    for item in itemsToCapture {
+                        guard !Task.isCancelled else { return }
 
-                    hider.revealItemTemporarily(item.uniqueIdentifier)
+                        hider.revealItemTemporarily(item.uniqueIdentifier)
+                        defer {
+                            hider.concealTemporarilyRevealedItem(item.uniqueIdentifier)
+                        }
+
+                        try? await Task.sleep(for: Constants.MenuBarTuning.layoutPrewarmCaptureSettle)
+
+                        let liveItems = await MenuBarItem.getMenuBarItems(
+                            on: displayID,
+                            option: [.onScreen, .activeSpace]
+                        )
+                        guard let liveItem = liveItems.first(where: {
+                            $0.hasSameIdentity(as: item) || $0.uniqueIdentifier == item.uniqueIdentifier
+                        }) else {
+                            continue
+                        }
+
+                        // Capture against the resolved displayID directly rather
+                        // than captureImages(appState:), which re-resolves the
+                        // "active" display internally and can crop bounds from
+                        // one display against another display's hosting-window
+                        // screenshot on multi-display setups.
+                        let captureResult = await self.axBoundsCapture(
+                            [(item: liveItem, bounds: liveItem.bounds)],
+                            scale: scale,
+                            displayID: displayID
+                        )
+                        guard let image = captureResult.images[liveItem.tag] else {
+                            continue
+                        }
+                        if let cachedImage = self.images[item.tag],
+                           image.scaledSize.width < cachedImage.scaledSize.width * 0.75
+                        {
+                            continue
+                        }
+
+                        if !CapturedImage.isVisuallyEqual(self.images[item.tag], image) {
+                            self.images[item.tag] = image
+                            self.accessCounter += 1
+                            self.accessTimestamps[item.tag] = self.accessCounter
+                        }
+                    }
+                    self.saveToDisk()
+                } else {
+                    let previousRevealedSection = hider.revealedSection
+                    hider.show(section, reconcileBoundary: false)
                     defer {
-                        hider.concealTemporarilyRevealedItem(item.uniqueIdentifier)
+                        switch Self.PrewarmRevealRestorationAction.resolve(
+                            previous: previousRevealedSection,
+                            currentAfterShow: hider.revealedSection
+                        ) {
+                        case .hide:
+                            hider.hideRevealedSections()
+                        case .noOp:
+                            break
+                        case let .show(section):
+                            hider.show(section, reconcileBoundary: false)
+                        }
                     }
-
-                    try? await Task.sleep(for: Constants.MenuBarTuning.layoutPrewarmCaptureSettle)
-
-                    let liveItems = await MenuBarItem.getMenuBarItems(
-                        on: displayID,
-                        option: [.onScreen, .activeSpace]
-                    )
-                    guard let liveItem = liveItems.first(where: {
-                        $0.hasSameIdentity(as: item) || $0.uniqueIdentifier == item.uniqueIdentifier
-                    }) else {
-                        continue
+                    guard hider.revealedSection == section else {
+                        MenuBarItemImageCache.diagLog.debug(
+                            "prewarmConcealedImagesMacOS27: section not revealed for \(section.logString)"
+                        )
+                        return
                     }
-
-                    // Capture against the resolved displayID directly rather than
-                    // captureImages(appState:), which re-resolves the "active"
-                    // display internally and can crop bounds from one display
-                    // against another display's hosting-window screenshot on
-                    // multi-display setups.
-                    let captureResult = await self.axBoundsCapture(
-                        [(item: liveItem, bounds: liveItem.bounds)],
-                        scale: scale,
-                        displayID: displayID
-                    )
-                    guard let image = captureResult.images[liveItem.tag] else {
-                        continue
-                    }
-                    if let cachedImage = self.images[item.tag],
-                       image.scaledSize.width < cachedImage.scaledSize.width * 0.75
-                    {
-                        continue
-                    }
-
-                    if !CapturedImage.isVisuallyEqual(self.images[item.tag], image) {
-                        self.images[item.tag] = image
-                        self.accessCounter += 1
-                        self.accessTimestamps[item.tag] = self.accessCounter
-                    }
+                    try? await Task.detached {
+                        try await Task.sleep(for: Constants.MenuBarTuning.iceBarCaptureSettle)
+                    }.value
+                    await self.updateCacheWithoutChecks(sections: [section])
                 }
-                self.saveToDisk()
             }.value
         }
     }

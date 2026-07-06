@@ -269,6 +269,17 @@ final class IceBarPanel: NSPanel {
             guard !Task.isCancelled else { return }
             await appState.itemManager.cacheItemsIfNeeded()
             guard !Task.isCancelled else { return }
+            // When the experimental overflow-prevention path is off, fall back
+            // to the legacy whole-section reveal so cold glyphs still populate
+            // on open. With it on, per-item prewarming elsewhere keeps the
+            // cache warm, so opening Thaw Bar no longer needs to flash the
+            // whole hidden section.
+            if #available(macOS 27, *), !appState.settings.advanced.enableExperimentalOverflowPrevention {
+                if let section = await MainActor.run(body: { self?.currentSection }) {
+                    await appState.imageCache.prewarmConcealedImagesMacOS27(sections: [section])
+                }
+                guard !Task.isCancelled else { return }
+            }
             await appState.imageCache.updateCache()
         }
     }
@@ -701,7 +712,7 @@ private struct IceBarContentView: View {
                         let rows = stride(from: 0, to: items.count, by: gridColumns).map { start in
                             Array(items[start ..< Swift.min(start + gridColumns, items.count)])
                         }
-                        ForEach(Array(rows.enumerated()), id: \.offset) { rowIndex, rowItems in
+                        ForEach(Array(rows.enumerated()), id: \.element.first?.windowID) { rowIndex, rowItems in
                             HStack(spacing: itemSpacing) {
                                 ForEach(Array(rowItems.enumerated()), id: \.element.windowID) { colIndex, item in
                                     let itemView = IceBarItemView(

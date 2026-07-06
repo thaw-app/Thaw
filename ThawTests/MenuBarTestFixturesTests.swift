@@ -391,6 +391,50 @@ final class MenuBarItemCaptureSectionTests: XCTestCase {
         )
     }
 
+    func testCaptureDisplayPrefersItemCacheDisplay() {
+        XCTAssertEqual(
+            MenuBarItemImageCache.captureDisplayID(
+                itemCacheDisplayID: 42,
+                activeMenuBarDisplayID: 7,
+                mainDisplayID: 1
+            ),
+            42
+        )
+    }
+
+    func testFreshBoundsMatchAssertionRevealSemantics() {
+        XCTAssertTrue(
+            MenuBarItemImageCache.shouldUseFreshBounds(
+                for: .hidden,
+                revealedSection: .hidden
+            )
+        )
+        XCTAssertTrue(
+            MenuBarItemImageCache.shouldUseFreshBounds(
+                for: .hidden,
+                revealedSection: .alwaysHidden
+            )
+        )
+        XCTAssertTrue(
+            MenuBarItemImageCache.shouldUseFreshBounds(
+                for: .alwaysHidden,
+                revealedSection: .alwaysHidden
+            )
+        )
+        XCTAssertFalse(
+            MenuBarItemImageCache.shouldUseFreshBounds(
+                for: .alwaysHidden,
+                revealedSection: .hidden
+            )
+        )
+        XCTAssertFalse(
+            MenuBarItemImageCache.shouldUseFreshBounds(
+                for: .visible,
+                revealedSection: .alwaysHidden
+            )
+        )
+    }
+
     private func capturableSections(
         usesVisibilityRestrictions: Bool,
         revealedSection: MenuBarSection.Name?

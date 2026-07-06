@@ -84,7 +84,7 @@ final class TrailingItemPositionStore {
     ///     that should stay anchored.
     ///   - allItems: The full live item list, used to read current positions.
     @discardableResult
-    func lockVisiblePositions(visibleItemKeys _: Set<String>, allItems: [MenuBarItem]) -> Set<String> {
+    func lockVisiblePositions(visibleItemKeys: Set<String>, allItems: [MenuBarItem]) -> Set<String> {
         var positions = environment.readPositions()
         let isFirstApply = originalPositions == nil
         if isFirstApply {
@@ -133,6 +133,9 @@ final class TrailingItemPositionStore {
         // MenuBarAgent to drop them from the bar entirely.
         var changed = false
         for key in positions.keys where !liveResolvedKeys.contains(key) {
+            if hiddenPlistKeys.isEmpty || visibleItemKeys.contains(key) {
+                continue
+            }
             let isHidingUnsupported = MenuBarItemTag.hidingUnsupportedBundleIDs.contains { bundleID in
                 key.hasPrefix("status:\(bundleID)::")
             }

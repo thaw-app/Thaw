@@ -76,7 +76,7 @@ final class AXItemHider {
 
         // Hide desired items.
         for (windowID, (element, pid)) in desiredHidden {
-            if hiddenElements[windowID] === element {
+            if hiddenElements[windowID] != nil {
                 continue // Already hidden.
             }
             do {

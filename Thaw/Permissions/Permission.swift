@@ -31,6 +31,14 @@ class Permission: ObservableObject, Identifiable {
     /// Descriptive details for the permission.
     let details: [String]
 
+    /// Shorter copy for onboarding cards; falls back to ``details`` when unset.
+    let shortDetails: [String]?
+
+    /// Details shown in compact onboarding layouts.
+    var onboardingDetails: [String] {
+        shortDetails ?? details
+    }
+
     /// A Boolean value that indicates if the app can work without this permission.
     let isRequired: Bool
 
@@ -46,11 +54,16 @@ class Permission: ObservableObject, Identifiable {
     /// Observer that runs on a timer to check permissions.
     private var timerCancellable: AnyCancellable?
 
+    /// Refreshes permission state when the app becomes active after opening
+    /// ``settingsURL`` (e.g. returning from System Settings).
+    private var settingsReturnCancellable: AnyCancellable?
+
     /// Creates a permission.
     ///
     /// - Parameters:
     ///   - title: The title of the permission.
     ///   - details: Descriptive details for the permission.
+    ///   - shortDetails: Optional shorter onboarding copy.
     ///   - isRequired: A Boolean value that indicates if the app can work without this permission.
     ///   - settingsURL: The URL of the settings pane to open.
     ///   - check: A function that checks permissions.
@@ -60,6 +73,7 @@ class Permission: ObservableObject, Identifiable {
         iconName: String,
         iconColor: Color,
         details: [String],
+        shortDetails: [String]? = nil,
         isRequired: Bool,
         settingsURL: URL?,
         check: @escaping () -> Bool,
@@ -69,6 +83,7 @@ class Permission: ObservableObject, Identifiable {
         self.iconName = iconName
         self.iconColor = iconColor
         self.details = details
+        self.shortDetails = shortDetails
         self.isRequired = isRequired
         self.settingsURL = settingsURL
         self.check = check
@@ -95,6 +110,8 @@ class Permission: ObservableObject, Identifiable {
                 if granted {
                     timerCancellable?.cancel()
                     timerCancellable = nil
+                    settingsReturnCancellable?.cancel()
+                    settingsReturnCancellable = nil
                 }
             }
     }
@@ -105,6 +122,13 @@ class Permission: ObservableObject, Identifiable {
         configureCancellables()
         if let settingsURL {
             NSWorkspace.shared.open(settingsURL)
+            settingsReturnCancellable?.cancel()
+            settingsReturnCancellable = NotificationCenter.default
+                .publisher(for: NSApplication.didBecomeActiveNotification)
+                .receive(on: RunLoop.main)
+                .sink { [weak self] _ in
+                    self?.refreshStatus()
+                }
         }
     }
 
@@ -117,6 +141,8 @@ class Permission: ObservableObject, Identifiable {
     func stopCheck() {
         timerCancellable?.cancel()
         timerCancellable = nil
+        settingsReturnCancellable?.cancel()
+        settingsReturnCancellable = nil
     }
 }
 
@@ -134,6 +160,10 @@ final class AccessibilityPermission: Permission {
                 String(localized: "Detect the menu bar items on your Mac and where they're positioned."),
                 String(localized: "Move menu bar items to rearrange or hide them."),
                 String(localized: "Click menu bar items on your behalf, such as when using the search bar."),
+            ],
+            shortDetails: [
+                String(localized: "Detect menu bar items on your Mac and where they're positioned."),
+                String(localized: "Move menu bar items to rearrange or hide them."),
             ],
             isRequired: true,
             settingsURL: nil,
@@ -162,6 +192,10 @@ final class ScreenRecordingPermission: Permission {
                 String(localized: "Show live previews of your menu bar items."),
                 String(localized: "Sample colors from the menu bar to adjust its tint and appearance."),
                 String(localized: "Find menu bar items visually when searching."),
+            ],
+            shortDetails: [
+                String(localized: "Show live previews of your menu bar items."),
+                String(localized: "Sample colors from the menu bar to adjust tint."),
             ],
             isRequired: false,
             settingsURL: URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"),

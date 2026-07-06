@@ -36,6 +36,16 @@ final class SearchModel: ObservableObject {
 
     let fuse = Fuse(threshold: 0.5)
 
+    private var cancellables = Set<AnyCancellable>()
+
+    init() {
+        $searchText
+            .sink { [weak self] _ in
+                self?.updateDisplayedItems()
+            }
+            .store(in: &cancellables)
+    }
+
     /// Rebuilds `displayedGroups` from the current `searchText`.
     func updateDisplayedItems() {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)

@@ -144,7 +144,7 @@ struct MenuBarItemTag: Hashable, CustomStringConvertible {
         if #available(macOS 27, *),
            isHidingUnsupported ||
            isLayoutAnchoredSystemItem ||
-           (isNonConcealableSystemItem && !isControlCenterGovernable)
+           (namespace != .menuBarAgent && isNonConcealableSystemItem && !isControlCenterGovernable)
         {
             return .forcedVisible
         }

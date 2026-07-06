@@ -127,6 +127,26 @@ final class ControlItem: NSObject {
                 Selector,
                 UInt
             ) -> Void
+
+            // `responds(to:)` only proves the selector resolves to *some* IMP,
+            // not that it matches the (void, id, SEL, id, SEL, NSUInteger) C
+            // convention assumed below. Verify the runtime's type encoding
+            // before invoking a raw `unsafeBitCast` IMP so a future macOS 27.x
+            // point release that changes the signature fails loudly instead of
+            // corrupting the call stack.
+            guard
+                let method = class_getInstanceMethod(type(of: button), selector),
+                let encodingPointer = method_getTypeEncoding(method)
+            else {
+                assertionFailure("addTarget:action:forControlEvents: has no resolvable type encoding; refusing to bind the primary action.")
+                return false
+            }
+            let encoding = String(cString: encodingPointer)
+            guard encoding.hasPrefix("v@:@:"), encoding.hasSuffix("Q") else {
+                assertionFailure("addTarget:action:forControlEvents: signature (\(encoding)) no longer matches the assumed (void, id, SEL, id, SEL, NSUInteger) C convention; refusing to bind the primary action.")
+                return false
+            }
+
             let implementation = unsafeBitCast(button.method(for: selector), to: AddTargetImp.self)
             implementation(
                 button,
@@ -592,9 +612,17 @@ final class ControlItem: NSObject {
                 return
             }
 
-            let duration: TimeInterval = 0.22
+            let duration: Duration = .milliseconds(220)
             let frameCount = 16
+            let frameInterval = duration / Double(frameCount)
+            let clock = ContinuousClock()
+            let start = clock.now
 
+            // Schedule each frame against a wall-clock deadline (start + n *
+            // frameInterval) rather than sleeping frameInterval after the
+            // previous frame's work completed. The latter accumulates drift
+            // under main-thread load since each frame's own work time isn't
+            // subtracted from the following sleep.
             for frame in 1 ... frameCount {
                 guard !Task.isCancelled else {
                     return
@@ -603,7 +631,9 @@ final class ControlItem: NSObject {
                 let progress = CGFloat(frame) / CGFloat(frameCount)
                 let eased = Self.easeInOutCubic(progress)
                 self.statusItem.length = startLength + (resolvedTargetLength - startLength) * eased
-                try? await Task.sleep(for: .milliseconds(Int(duration * 1000 / Double(frameCount))))
+
+                let deadline = start + frameInterval * Double(frame)
+                try? await Task.sleep(until: deadline, clock: clock)
             }
 
             guard !Task.isCancelled else {
