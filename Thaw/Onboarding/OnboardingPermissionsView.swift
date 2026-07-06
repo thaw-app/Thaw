@@ -11,18 +11,18 @@ import SwiftUI
 /// Permission step used by both first-launch onboarding and later
 /// missing-permission startup recovery.
 struct ThawPermissionsView: View {
-    @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var permissions: AppPermissions
 
     var onContinue: () -> Void
 
     @State private var appeared = false
 
     private var requiredGranted: Bool {
-        appState.permissions.requiredPermissions.allSatisfy(\.hasPermission)
+        permissions.permissionsState != .missing
     }
 
     private var allGranted: Bool {
-        appState.permissions.allPermissions.allSatisfy(\.hasPermission)
+        permissions.permissionsState == .hasAll
     }
 
     var body: some View {
@@ -43,7 +43,7 @@ struct ThawPermissionsView: View {
             .opacity(appeared ? 1 : 0)
 
             HStack(alignment: .top, spacing: 14) {
-                ForEach(appState.permissions.allPermissions) { permission in
+                ForEach(permissions.allPermissions) { permission in
                     OnboardingPermissionCard(permission: permission)
                 }
             }
@@ -54,7 +54,7 @@ struct ThawPermissionsView: View {
 
             VStack(spacing: 12) {
                 Button {
-                    appState.permissions.refreshPermissionsState()
+                    permissions.refreshPermissionsState()
                     onContinue()
                 } label: {
                     Text(requiredGranted && !allGranted ? "Continue in Limited Mode" : "Continue")
@@ -78,7 +78,7 @@ struct ThawPermissionsView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(VisualEffectBackground())
         .onAppear {
-            appState.permissions.refreshPermissionsState()
+            permissions.refreshPermissionsState()
             withAnimation(.spring(duration: 0.6, bounce: 0.3)) {
                 appeared = true
             }

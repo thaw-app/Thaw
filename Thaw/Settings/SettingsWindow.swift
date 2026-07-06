@@ -37,6 +37,7 @@ struct SettingsWindow: Scene {
                         appState.isOnboardingPresented = false
                     }
                     .frame(width: ThawOnboardingWindowMetrics.width, height: ThawOnboardingWindowMetrics.height)
+                    .environmentObject(appState.permissions)
                 }
                 .frame(minWidth: 850, minHeight: 600)
         }

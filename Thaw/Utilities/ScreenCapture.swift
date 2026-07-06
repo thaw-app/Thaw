@@ -96,6 +96,7 @@ enum ScreenCapture {
     }
 
     /// Requests screen capture permissions.
+    @MainActor
     static func requestPermissions() {
         diagLog.debug("requestPermissions: requesting screen capture access")
         setCachedPermissionResult(nil)

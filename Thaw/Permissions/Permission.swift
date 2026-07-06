@@ -114,27 +114,33 @@ class Permission: ObservableObject, Identifiable {
                     settingsReturnCancellable = nil
                 }
             }
+
+        settingsReturnCancellable?.cancel()
+        settingsReturnCancellable = NotificationCenter.default
+            .publisher(for: NSApplication.didBecomeActiveNotification)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.refreshStatus()
+            }
     }
 
     /// Performs the request and opens the System Settings app to the appropriate pane.
     func performRequest() {
         request()
+        stopCheck()
         configureCancellables()
         if let settingsURL {
             NSWorkspace.shared.open(settingsURL)
-            settingsReturnCancellable?.cancel()
-            settingsReturnCancellable = NotificationCenter.default
-                .publisher(for: NSApplication.didBecomeActiveNotification)
-                .receive(on: RunLoop.main)
-                .sink { [weak self] _ in
-                    self?.refreshStatus()
-                }
         }
     }
 
     /// Re-checks current system authorization immediately.
     func refreshStatus() {
-        hasPermission = check()
+        let granted = check()
+        hasPermission = granted
+        if granted {
+            stopCheck()
+        }
     }
 
     /// Stops running the permission check.
