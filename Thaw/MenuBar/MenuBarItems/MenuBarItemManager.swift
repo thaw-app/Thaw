@@ -7001,17 +7001,18 @@ extension MenuBarItemManager {
     /// when an entry guard rejects the call (no saved layout, profile
     /// apply in flight, cooldown active, no detected change to react
     /// to, no saved items currently present).
-    /// Detects whether the current bar layout differs from
-    /// `savedSectionOrder` in section membership. Returns true if any
-    /// movable, hideable item whose baseID appears in the saved order
-    /// is currently in a different section than where it was saved.
+    /// Detects items whose current section differs from the one recorded
+    /// in `savedSectionOrder`. Returns every movable, hideable item whose
+    /// baseID appears in the saved order but currently sits in a different
+    /// section, paired with the section it should be in.
     ///
     /// Used as a secondary trigger for `applySavedLayout`: the windowID
     /// gate fires on app quit/relaunch, but ambient drift (third-party
     /// menu bar tools, Stage Manager toggles, macOS re-spawning the
     /// bar without churning windowIDs) leaves windowIDs intact while
-    /// the layout drifts. This check catches that case so the bulk
-    /// apply still reasserts the saved order.
+    /// the layout drifts. This check catches that case so the saved
+    /// order can be reasserted — via targeted moves when the divergence
+    /// is small, or the bulk apply otherwise.
     ///
     /// Lightweight by design: item bounds are read from the supplied
     /// items array (already populated by the caller's
@@ -7023,10 +7024,10 @@ extension MenuBarItemManager {
     /// false-positive when a single app has instances split across
     /// sections in `savedSectionOrder`, but the bulk apply
     /// early-returns when no moves are needed, so the cost is minor.
-    private func currentLayoutDivergesFromSaved(
+    private func divergentItemsFromSaved(
         items: [MenuBarItem],
         controlItems: ControlItemPair
-    ) -> Bool {
+    ) -> [(item: MenuBarItem, expectedSection: MenuBarSection.Name)] {
         var savedSectionByBaseID = [String: MenuBarSection.Name]()
         for (sectionKey, ids) in savedSectionOrder {
             guard let section = sectionName(for: sectionKey) else { continue }
@@ -7036,12 +7037,13 @@ extension MenuBarItemManager {
                 savedSectionByBaseID[baseID] = section
             }
         }
-        guard !savedSectionByBaseID.isEmpty else { return false }
+        guard !savedSectionByBaseID.isEmpty else { return [] }
 
         let hiddenMinX = controlItems.hidden.bounds.minX
         let hiddenMaxX = controlItems.hidden.bounds.maxX
         let ahBounds = controlItems.alwaysHidden?.bounds
 
+        var divergent = [(item: MenuBarItem, expectedSection: MenuBarSection.Name)]()
         for item in items where !item.isControlItem && item.canBeHidden && item.isMovable {
             let baseID = "\(item.tag.namespace):\(item.tag.title)"
             guard let expectedSection = savedSectionByBaseID[baseID] else {
@@ -7064,16 +7066,83 @@ extension MenuBarItemManager {
             if currentSection != expectedSection {
                 MenuBarItemManager.diagLog.info(
                     """
-                    currentLayoutDivergesFromSaved: \(item.diagnosticLogString) \
+                    divergentItemsFromSaved: \(item.diagnosticLogString) \
                     expectedSection=\(expectedSection.logString) currentSection=\(currentSection.logString) \
                     hiddenControlBounds=\(NSStringFromRect(controlItems.hidden.bounds)) \
                     alwaysHiddenBounds=\(controlItems.alwaysHidden.map { NSStringFromRect($0.bounds) } ?? "nil")
                     """
                 )
-                return true
+                divergent.append((item, expectedSection))
             }
         }
-        return false
+        return divergent
+    }
+
+    /// The maximum number of divergent items `applySavedLayout` resolves
+    /// with targeted single-item moves before escalating to the bulk apply.
+    /// Sized for the common trigger — a transient Control Center widget
+    /// (Now Playing, Sound) respawning in the visible section — while
+    /// anything that looks like real layout drift still gets the full
+    /// restore.
+    private static let maxTargetedDivergenceMoves = 2
+
+    /// Moves each divergent item to the inner edge of its saved section.
+    ///
+    /// Returns true only when every move succeeded (move() verifies the
+    /// final position before returning); any failure means the caller
+    /// should fall back to the bulk apply. Edge placement instead of the
+    /// exact saved index is deliberate: the divergence trigger is
+    /// section-based and has never enforced intra-section order, and for
+    /// the common respawn case (the widget was saved adjacent to its
+    /// section's divider) the edge IS the saved position.
+    private func applyTargetedSectionMoves(
+        _ divergentItems: [(item: MenuBarItem, expectedSection: MenuBarSection.Name)],
+        controlItems: ControlItemPair
+    ) async -> Bool {
+        // Mirror the bulk apply's guard so saveSectionOrder can't capture
+        // an intermediate mid-move state as the user's intended layout.
+        isRestoringItemOrder = true
+        isRestoringItemOrderTimestamp = Date()
+        defer {
+            isRestoringItemOrder = false
+            isRestoringItemOrderTimestamp = nil
+        }
+
+        for (item, expectedSection) in divergentItems {
+            let destination: MoveDestination
+            switch expectedSection {
+            case .visible:
+                destination = .rightOfItem(controlItems.hidden)
+            case .hidden:
+                destination = .leftOfItem(controlItems.hidden)
+            case .alwaysHidden:
+                guard let ahControl = controlItems.alwaysHidden else {
+                    MenuBarItemManager.diagLog.debug(
+                        "applyTargetedSectionMoves: no always-hidden control item for \(item.logString); falling back to bulk apply"
+                    )
+                    return false
+                }
+                destination = .leftOfItem(ahControl)
+            }
+
+            do {
+                try await move(
+                    item: item,
+                    to: destination,
+                    skipInputPause: true,
+                    watchdogTimeout: MenuBarItemManager.layoutWatchdogTimeout
+                )
+                MenuBarItemManager.diagLog.info(
+                    "applyTargetedSectionMoves: moved \(item.logString) to \(expectedSection.logString)"
+                )
+            } catch {
+                MenuBarItemManager.diagLog.warning(
+                    "applyTargetedSectionMoves: move failed for \(item.logString) (\(error)); falling back to bulk apply"
+                )
+                return false
+            }
+        }
+        return true
     }
 
     /// Decides whether a windowID-set difference between two cache cycles is a
@@ -7204,9 +7273,10 @@ extension MenuBarItemManager {
             previousDisplayID: previousDisplayID,
             currentDisplayID: currentDisplayID
         )
-        let layoutDiverged = windowIDsChanged
-            ? false
-            : currentLayoutDivergesFromSaved(items: items, controlItems: controlItems)
+        let divergentItems = windowIDsChanged
+            ? []
+            : divergentItemsFromSaved(items: items, controlItems: controlItems)
+        let layoutDiverged = !divergentItems.isEmpty
         guard windowIDsChanged || layoutDiverged else {
             MenuBarItemManager.diagLog.debug("applySavedLayout: skipping, no windowID change and saved layout matches current")
             return false
@@ -7221,6 +7291,27 @@ extension MenuBarItemManager {
         guard !savedIdentifiers.isDisjoint(with: currentIdentifiers) else {
             MenuBarItemManager.diagLog.debug("applySavedLayout: skipping, no saved items currently present")
             return false
+        }
+
+        // Targeted fast path: a small, purely sectional divergence — the
+        // classic case is Control Center's transient Now Playing widget
+        // respawning in the visible section with a fresh windowID while
+        // the saved layout wants it hidden — doesn't need the bulk apply,
+        // which on notched displays replays a large part of the bar with
+        // one synthetic drag per item. Move just the divergent items and
+        // schedule the same deferred refresh the bulk path uses; the
+        // caller stops its cycle (return true) so the pre-move item
+        // snapshot is never cached or persisted. Any failure falls
+        // through to the bulk apply below.
+        if !windowIDsChanged,
+           divergentItems.count <= Self.maxTargetedDivergenceMoves,
+           await applyTargetedSectionMoves(divergentItems, controlItems: controlItems)
+        {
+            MenuBarItemManager.diagLog.info(
+                "applySavedLayout: resolved \(divergentItems.count) divergent item(s) with targeted moves"
+            )
+            scheduleDeferredCacheRefresh()
+            return true
         }
 
         // Build itemSectionMap from savedSectionOrder. Each identifier
