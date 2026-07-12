@@ -2413,7 +2413,7 @@ extension MenuBarItemManager {
     /// paused input for at least the given duration.
     ///
     /// - Parameter duration: The duration that certain types of input
-    ///   events must not have occured within in order to return `true`.
+    ///   events must not have occurred within in order to return `true`.
     private nonisolated func hasUserPausedInput(for duration: Duration) -> Bool {
         NSEvent.modifierFlags.isEmpty &&
             !MouseHelpers.lastMovementOccurred(within: duration) &&
