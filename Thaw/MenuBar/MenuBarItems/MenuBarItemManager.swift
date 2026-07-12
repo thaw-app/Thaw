@@ -2946,6 +2946,23 @@ extension MenuBarItemManager {
             }
         }
 
+        /// Returns the drag point for placing an item relative to the target bounds.
+        ///
+        /// Targets parked beyond the display's left edge use their vertical
+        /// midpoint so a synthetic event clamped to the edge cannot land on a
+        /// top Hot Corner. On-screen targets retain the existing top-edge
+        /// coordinate to avoid changing normal cursor-warp behavior.
+        func targetPoint(in targetBounds: CGRect, on displayBounds: CGRect) -> CGPoint {
+            let targetIsParkedOffscreen = targetBounds.maxX <= displayBounds.minX
+            let targetY = targetIsParkedOffscreen ? targetBounds.midY : targetBounds.minY
+            return switch self {
+            case .leftOfItem:
+                CGPoint(x: targetBounds.minX, y: targetY)
+            case .rightOfItem:
+                CGPoint(x: targetBounds.maxX, y: targetY)
+            }
+        }
+
         /// A string to use for logging purposes.
         var logString: String {
             switch self {
@@ -2953,6 +2970,18 @@ extension MenuBarItemManager {
             case let .rightOfItem(item): "right of \(item.logString)"
             }
         }
+    }
+
+    /// Returns a safe location for an off-screen move's initial mouse-down.
+    ///
+    /// `NSScreen` frames use AppKit coordinates, while `CGEvent` locations use
+    /// Core Graphics coordinates. Their horizontal axes align, so the notch
+    /// supplies only the x-coordinate; the target supplies the event's y-coordinate.
+    static nonisolated func notchMouseDownPoint(
+        notchFrameAppKit: CGRect,
+        targetPointCoreGraphics: CGPoint
+    ) -> CGPoint {
+        CGPoint(x: notchFrameAppKit.midX, y: targetPointCoreGraphics.y)
     }
 
     /// Returns the default timeout for move operations associated
@@ -3045,17 +3074,11 @@ extension MenuBarItemManager {
         let itemBounds = try await getCurrentBounds(for: item)
         let targetBounds = try await getCurrentBounds(for: destination.targetItem)
 
-        let start: CGPoint
-        let end: CGPoint
-
-        switch destination {
-        case .leftOfItem:
-            start = CGPoint(x: targetBounds.minX, y: targetBounds.minY)
-        case .rightOfItem:
-            start = CGPoint(x: targetBounds.maxX, y: targetBounds.minY)
-        }
-
-        end = start
+        let start = destination.targetPoint(
+            in: targetBounds,
+            on: CGDisplayBounds(displayID)
+        )
+        let end = start
 
         MenuBarItemManager.diagLog.debug(
             "Move points: startX=\(start.x) endX=\(end.x) startY=\(start.y) targetMinX=\(targetBounds.minX) itemMinX=\(itemBounds.minX) targetTag=\(destination.targetItem.tag) itemTag=\(item.tag) display=\(displayID)"
@@ -3209,7 +3232,9 @@ extension MenuBarItemManager {
         // when slow apps have to register the tracking events before the
         // mouseDown; irrelevant offscreen.
         let warpPoint = targetPoints.start
-        let warpIsOnScreen = NSScreen.screens.contains { $0.frame.contains(warpPoint) }
+        let warpIsOnScreen = NSScreen.screens.contains {
+            CGDisplayBounds($0.displayID).contains(warpPoint)
+        }
         if warpIsOnScreen {
             MouseHelpers.warpCursor(to: warpPoint)
         }
@@ -3218,13 +3243,15 @@ extension MenuBarItemManager {
             await eventSleep(for: .milliseconds(20))
         }
         // For notched displays, when the target is offscreen, redirect
-        // mouseDown's hit-test location into the notch itself. The
-        // notch is hardware with no clickable UI, so the OS hit-test
-        // there has nothing to dismiss, no menu to open, and no app
-        // window to surface a click against. mouseUp keeps its
-        // original location (the drop position the receiving app
-        // uses to place the item). For non-notched displays the
-        // original behaviour is preserved (no override).
+        // mouseDown's horizontal hit-test location into the notch itself. The
+        // notch is hardware with no clickable UI, so the OS hit-test there has
+        // nothing to dismiss, no menu to open, and no app window to surface a
+        // click against. Keep the Core Graphics y-coordinate inside the menu
+        // bar; frameOfNotch is in AppKit coordinates and its y-coordinate would
+        // instead point near the bottom of the display. mouseUp keeps its
+        // original location (the drop position the receiving app uses to place
+        // the item). For non-notched displays the original behaviour is
+        // preserved (no override).
         if !warpIsOnScreen {
             let activeScreen = NSScreen.screens.first(where: { $0.displayID == displayID })
                 ?? NSScreen.main
@@ -3232,9 +3259,9 @@ extension MenuBarItemManager {
                activeScreen.hasNotch,
                let notch = activeScreen.frameOfNotch
             {
-                mouseDown.location = CGPoint(
-                    x: notch.midX,
-                    y: notch.midY
+                mouseDown.location = Self.notchMouseDownPoint(
+                    notchFrameAppKit: notch,
+                    targetPointCoreGraphics: targetPoints.start
                 )
             }
         }
