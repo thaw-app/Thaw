@@ -46,9 +46,6 @@ class Permission: ObservableObject, Identifiable {
     /// Observer that runs on a timer to check permissions.
     private var timerCancellable: AnyCancellable?
 
-    /// Observer that observes the ``hasPermission`` property.
-    private var hasPermissionCancellable: AnyCancellable?
-
     /// Creates a permission.
     ///
     /// - Parameters:
@@ -110,34 +107,10 @@ class Permission: ObservableObject, Identifiable {
         }
     }
 
-    /// Asynchronously waits for the app to be granted this permission.
-    func waitForPermission() async {
-        hasPermissionCancellable?.cancel()
-        configureCancellables()
-        guard !hasPermission else {
-            return
-        }
-        await withCheckedContinuation { continuation in
-            hasPermissionCancellable = $hasPermission.sink { [weak self] hasPermission in
-                guard self != nil else {
-                    continuation.resume()
-                    return
-                }
-                if hasPermission {
-                    continuation.resume()
-                }
-            }
-        }
-        hasPermissionCancellable?.cancel()
-        hasPermissionCancellable = nil
-    }
-
     /// Stops running the permission check.
     func stopCheck() {
         timerCancellable?.cancel()
         timerCancellable = nil
-        hasPermissionCancellable?.cancel()
-        hasPermissionCancellable = nil
     }
 }
 
@@ -157,7 +130,9 @@ final class AccessibilityPermission: Permission {
                 String(localized: "Click menu bar items on your behalf, such as when using the search bar."),
             ],
             isRequired: true,
-            settingsURL: nil,
+            // Keep an explicit settings URL so every click can recover the
+            // flow if the user closes System Settings before granting access.
+            settingsURL: URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"),
             check: {
                 AXHelpers.isProcessTrusted()
             },
