@@ -48,7 +48,11 @@ enum MouseHelpers {
         }
     }
 
-    private static func scheduleAutoShow(after timeout: DispatchTimeInterval = defaultWatchdogTimeout, generation: UInt64) {
+    private static func scheduleAutoShow(
+        after timeout: DispatchTimeInterval = defaultWatchdogTimeout,
+        generation: UInt64,
+        allowShorten: Bool = false
+    ) {
         if case .never = timeout {
             diagLog.debug("Cursor watchdog disabled")
             return
@@ -62,10 +66,21 @@ enum MouseHelpers {
                 return
             }
 
+            // Keep the watchdog at the latest (longest) active deadline for this
+            // generation. A nested hide with a shorter timeout (e.g. scrombleEvent's
+            // default 1s nested inside a move's 2s hide) must not shrink the
+            // watchdog, or it fires mid-operation and flashes the cursor visible at
+            // the wrong location. Only extend the deadline, never shorten it.
+            //
+            // `allowShorten` is set by the show-failure fast-retry paths: when a
+            // CGDisplayShowCursor call fails we want to retry showing in ~250ms
+            // regardless of any longer hide watchdog still armed, so the cursor
+            // doesn't stay hidden up to the outer window on a failed show.
             if
+                !allowShorten,
                 autoShowGeneration == generation,
                 let autoShowDeadline,
-                autoShowDeadline.uptimeNanoseconds <= deadline.uptimeNanoseconds
+                autoShowDeadline.uptimeNanoseconds >= deadline.uptimeNanoseconds
             {
                 return
             }
@@ -107,6 +122,38 @@ enum MouseHelpers {
         }
     }
 
+    /// Forces the WindowServer to re-render the cursor sprite after a
+    /// hide/show cycle performed from the background.
+    ///
+    /// `CGDisplayShowCursor` rebalances the connection's hide count, but
+    /// when the show comes from a background connection (Thaw sets
+    /// `SetsCursorInBackground`) after the pointer was warped around by a
+    /// synthetic drag, the sprite is not always repainted: the cursor
+    /// stays invisible — clicks land correctly, nothing is drawn — until
+    /// some app re-asserts a cursor image (hovering the Dock is the
+    /// classic manual recovery). Physical mouse movement doesn't reliably
+    /// recover it because the frontmost app only sets a new cursor when
+    /// the pointer crosses a cursor rect. Posting a synthetic mouseMoved
+    /// at the current position makes the app under the pointer reset its
+    /// cursor rect immediately, which repaints the sprite.
+    private static func reassertCursorAfterShow() {
+        guard
+            let position = locationCoreGraphics,
+            let source = CGEventSource(stateID: .hidSystemState),
+            let event = CGEvent(
+                mouseEventSource: source,
+                mouseType: .mouseMoved,
+                mouseCursorPosition: position,
+                mouseButton: .left
+            )
+        else {
+            diagLog.warning("reassertCursorAfterShow: failed to create mouseMoved event")
+            return
+        }
+        event.post(tap: .cghidEventTap)
+        diagLog.debug("Posted cursor-reassert mouseMoved at \(formattedPoint(position))")
+    }
+
     private static func forceShowCursor(reason: String, generation: UInt64, watchdogID: UInt64) {
         var shouldShow = false
         cursorLock.sync {
@@ -130,7 +177,7 @@ enum MouseHelpers {
         let result = CGDisplayShowCursor(CGMainDisplayID())
         if result != .success {
             diagLog.error("Force show cursor failed (reason: \(reason), error: \(result.rawValue))")
-            scheduleAutoShow(after: .milliseconds(250), generation: generation)
+            scheduleAutoShow(after: .milliseconds(250), generation: generation, allowShorten: true)
         } else {
             cursorLock.sync {
                 guard cursorHideGeneration == generation else { return }
@@ -142,6 +189,7 @@ enum MouseHelpers {
                 autoShowID = nil
             }
             diagLog.info("Cursor force-shown (reason: \(reason))")
+            reassertCursorAfterShow()
         }
     }
 
@@ -258,13 +306,14 @@ enum MouseHelpers {
         let result = CGDisplayShowCursor(CGMainDisplayID())
         if result != .success {
             diagLog.error("CGDisplayShowCursor failed with error code \(result.rawValue)")
-            scheduleAutoShow(after: .milliseconds(250), generation: generation)
+            scheduleAutoShow(after: .milliseconds(250), generation: generation, allowShorten: true)
         } else {
             cursorLock.sync {
                 guard cursorHideGeneration == generation, cursorHideCount > 0 else { return }
                 cursorHideCount = 0
             }
             cancelAutoShow(generation: generation)
+            reassertCursorAfterShow()
         }
     }
 

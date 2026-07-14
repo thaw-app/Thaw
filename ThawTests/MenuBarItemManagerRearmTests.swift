@@ -19,6 +19,109 @@ import XCTest
 /// the reversion that dragged items back into Always-Hidden in the field logs.
 @MainActor
 final class MenuBarItemManagerRearmTests: XCTestCase {
+    func testOnlyReleasedItemsWithSavedPositionsRequireTriggerRestoration() {
+        let savedOrder = [
+            "hidden": ["com.example.saved:Item"],
+        ]
+
+        let restorationIDs = MenuBarItemManager.triggerReleaseIdentifiersRequiringRestoration(
+            ["com.example.saved:Item", "com.example.unsaved:Item"],
+            savedSectionOrder: savedOrder
+        )
+
+        XCTAssertEqual(restorationIDs, ["com.example.saved:Item"])
+    }
+
+    func testReleasedSuffixDriftRetainsRestoreShieldWhenLiveBaseIsKnown() {
+        let restorationIDs = MenuBarItemManager.triggerReleaseIdentifiersRequiringRestoration(
+            ["com.example.app:Status:1"],
+            savedSectionOrder: ["hidden": ["com.example.app:Status"]],
+            knownBaseIdentifiers: ["com.example.app:Status"]
+        )
+
+        XCTAssertEqual(restorationIDs, ["com.example.app:Status:1"])
+    }
+
+    func testTriggerProtectionSurvivesAnUnambiguousInstanceIndexChange() {
+        XCTAssertTrue(
+            MenuBarItemManager.isTriggerProtected(
+                "com.example.app:Status:1",
+                by: ["com.example.app:Status"],
+                knownBaseIdentifiers: ["com.example.app:Status"]
+            )
+        )
+    }
+
+    func testTriggerProtectionDoesNotCollapseTwoSameTitleTargets() {
+        XCTAssertFalse(
+            MenuBarItemManager.isTriggerProtected(
+                "com.example.app:Status:2",
+                by: ["com.example.app:Status", "com.example.app:Status:1"],
+                knownBaseIdentifiers: ["com.example.app:Status"]
+            )
+        )
+    }
+
+    func testTriggerProtectionKeepsColonBearingTitlesDistinct() {
+        XCTAssertFalse(
+            MenuBarItemManager.isTriggerProtected(
+                "com.example.app:CPU: 20%",
+                by: ["com.example.app:CPU: 10%:1"],
+                knownBaseIdentifiers: ["com.example.app:CPU: 10%", "com.example.app:CPU: 20%"]
+            )
+        )
+        XCTAssertTrue(
+            MenuBarItemManager.isTriggerProtected(
+                "com.example.app:CPU: 10%:2",
+                by: ["com.example.app:CPU: 10%:1"],
+                knownBaseIdentifiers: ["com.example.app:CPU: 10%"]
+            )
+        )
+    }
+
+    func testReleasedTriggerRestorationFindsUnambiguousFreshSuffix() {
+        XCTAssertEqual(
+            MenuBarItemManager.unambiguousLiveIdentifier(
+                matching: "com.example.app:Status",
+                in: ["com.example.app:Status:1"],
+                knownBaseIdentifiers: ["com.example.app:Status"]
+            ),
+            "com.example.app:Status:1"
+        )
+    }
+
+    func testReactivatedSuffixDriftClearsPendingReleaseShield() {
+        XCTAssertEqual(
+            MenuBarItemManager.releasedTriggerRestorationIdentifiersToClear(
+                reactivatedIdentifiers: ["com.example.app:Status:1"],
+                pendingRestorationIdentifiers: ["com.example.app:Status"],
+                knownBaseIdentifiers: ["com.example.app:Status"]
+            ),
+            ["com.example.app:Status"]
+        )
+    }
+
+    func testActiveSuffixDriftIsNotClassifiedAsRelease() {
+        XCTAssertEqual(
+            MenuBarItemManager.releasedTriggerIdentifiers(
+                previousIdentifiers: ["com.example.app:Status"],
+                currentIdentifiers: ["com.example.app:Status:1"],
+                knownBaseIdentifiers: ["com.example.app:Status"]
+            ),
+            []
+        )
+    }
+
+    func testNumericColonTitleIsNotCollapsedIntoItsPrefixItem() {
+        XCTAssertFalse(
+            MenuBarItemManager.isTriggerProtected(
+                "com.example.app:Meeting:30",
+                by: ["com.example.app:Meeting"],
+                knownBaseIdentifiers: ["com.example.app:Meeting", "com.example.app:Meeting:30"]
+            )
+        )
+    }
+
     /// Re-arming on a fresh manager refreshes both the cached layout and the
     /// flattened identifier set the late-arrival detector consults.
     func testRearmRefreshesCachedLayoutAndIdentifiers() {

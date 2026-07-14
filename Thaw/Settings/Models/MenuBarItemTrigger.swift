@@ -191,11 +191,13 @@ enum TriggerCondition: Codable, Hashable {
         case .microphoneInUse:
             return state.isMicrophoneInUse
         case let .scriptResult(path, expectedOutput):
-            guard let outcome = state.scriptOutcomes[path] else { return false }
+            let normalizedPath = path.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard let outcome = state.scriptOutcomes[normalizedPath] else { return false }
             if expectedOutput.isEmpty {
                 return outcome.exitCode == 0
             }
-            return outcome.output.localizedCaseInsensitiveContains(expectedOutput)
+            return outcome.matchedExpectedOutputs.contains(expectedOutput) ||
+                outcome.output.localizedCaseInsensitiveContains(expectedOutput)
         case let .imageChanged(itemIdentifier, referenceHash):
             guard let referenceHash, let current = state.imageHashes[itemIdentifier] else { return false }
             return ImageHashing.hammingDistance(current, referenceHash) > ImageHashing.changeThreshold
@@ -754,10 +756,15 @@ extension TriggerCondition {
 struct TriggerTargetItem: Codable, Hashable {
     var identifier: String
     var displayName: String
+    /// Stable namespace/title identity captured from the selected live tag.
+    /// Lets a trigger safely follow an instance-index change without parsing
+    /// a free-form title string.
+    var baseIdentifier: String?
 
-    init(identifier: String = "", displayName: String = "") {
+    init(identifier: String = "", displayName: String = "", baseIdentifier: String? = nil) {
         self.identifier = identifier
         self.displayName = displayName
+        self.baseIdentifier = baseIdentifier
     }
 }
 
@@ -803,6 +810,10 @@ struct MenuBarItemTrigger: Codable, Hashable, Identifiable {
     var isEnabled: Bool
     var itemIdentifier: String
     var itemDisplayName: String
+    /// Stable namespace/title identity captured with the primary target.
+    /// Older persisted triggers decode this as nil and remain exact-match only
+    /// until the user selects the item again.
+    var itemBaseIdentifier: String?
 
     /// Additional items moved alongside the primary item (advanced option).
     var additionalItems: [TriggerTargetItem]
@@ -835,6 +846,7 @@ struct MenuBarItemTrigger: Codable, Hashable, Identifiable {
         isEnabled: Bool = true,
         itemIdentifier: String = "",
         itemDisplayName: String = "",
+        itemBaseIdentifier: String? = nil,
         additionalItems: [TriggerTargetItem] = [],
         revealSection: MenuBarSection.Name = .visible,
         hideSection: MenuBarSection.Name = .hidden,
@@ -850,6 +862,7 @@ struct MenuBarItemTrigger: Codable, Hashable, Identifiable {
         self.isEnabled = isEnabled
         self.itemIdentifier = itemIdentifier
         self.itemDisplayName = itemDisplayName
+        self.itemBaseIdentifier = itemBaseIdentifier
         self.additionalItems = additionalItems
         self.revealSection = revealSection
         self.hideSection = hideSection
@@ -862,7 +875,7 @@ struct MenuBarItemTrigger: Codable, Hashable, Identifiable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, name, isEnabled, itemIdentifier, itemDisplayName
+        case id, name, isEnabled, itemIdentifier, itemDisplayName, itemBaseIdentifier
         case revealSection, hideSection, condition, invert
         case additionalConditions, combinator
         case notifyOnReveal, settleSecondsOverride
@@ -879,6 +892,7 @@ struct MenuBarItemTrigger: Codable, Hashable, Identifiable {
         isEnabled = try container.decode(Bool.self, forKey: .isEnabled)
         itemIdentifier = try container.decode(String.self, forKey: .itemIdentifier)
         itemDisplayName = try container.decode(String.self, forKey: .itemDisplayName)
+        itemBaseIdentifier = try container.decodeIfPresent(String.self, forKey: .itemBaseIdentifier)
         revealSection = try container.decode(MenuBarSection.Name.self, forKey: .revealSection)
         hideSection = try container.decode(MenuBarSection.Name.self, forKey: .hideSection)
         condition = try container.decode(TriggerCondition.self, forKey: .condition)
@@ -893,6 +907,18 @@ struct MenuBarItemTrigger: Codable, Hashable, Identifiable {
     /// All target item identifiers (primary first), excluding empties.
     var allItemIdentifiers: [String] {
         ([itemIdentifier] + additionalItems.map(\.identifier)).filter { !$0.isEmpty }
+    }
+
+    /// Target identifiers paired with the base identity captured at selection
+    /// time. The primary target remains first for priority ordering.
+    var allTargetItems: [TriggerTargetItem] {
+        [
+            TriggerTargetItem(
+                identifier: itemIdentifier,
+                displayName: itemDisplayName,
+                baseIdentifier: itemBaseIdentifier
+            ),
+        ] + additionalItems.filter { !$0.identifier.isEmpty }
     }
 
     /// All conditions, primary first.

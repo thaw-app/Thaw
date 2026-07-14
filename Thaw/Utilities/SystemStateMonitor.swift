@@ -24,6 +24,9 @@ import SystemConfiguration
 struct ScriptOutcome: Equatable {
     var exitCode: Int32
     var output: String
+    /// Expected script-result tokens detected while output was streamed. This
+    /// preserves condition semantics even when diagnostic output is capped.
+    var matchedExpectedOutputs: Set<String> = []
 }
 
 // MARK: - SystemState

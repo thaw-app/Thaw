@@ -55,11 +55,18 @@ enum MenuBarItemTriggerRuntimeStatus: Equatable {
 /// after a short debounce, so brief fluctuations do not thrash the menu bar.
 @MainActor
 final class MenuBarItemTriggersManager: ObservableObject {
+    /// Whether mutations should be written to the app's shared defaults.
+    /// Tests disable this so fixture triggers can never replace the user's
+    /// real automation rules.
+    private let persistenceEnabled: Bool
+
     /// The user's configured triggers.
     @Published var triggers: [MenuBarItemTrigger] {
         didSet {
             guard !suppressPersist else { return }
-            persist()
+            if persistenceEnabled {
+                persist()
+            }
             // A trigger may have been added, edited, or re-enabled; drop the
             // memoized state so the next evaluation re-applies. (The actual
             // move is still a no-op when the item is already in the right
@@ -172,9 +179,15 @@ final class MenuBarItemTriggersManager: ObservableObject {
         return state
     }
 
-    init() {
+    init(persistenceEnabled: Bool? = nil) {
+        // Thaw's unit tests are hosted inside the app and therefore otherwise
+        // share its production UserDefaults domain. Default to an isolated,
+        // empty manager whenever XCTest is loaded, including managers created
+        // indirectly by AppSettings before an individual test begins.
+        let persistenceEnabled = persistenceEnabled ?? (NSClassFromString("XCTestCase") == nil)
+        self.persistenceEnabled = persistenceEnabled
         suppressPersist = true
-        triggers = Self.load()
+        triggers = persistenceEnabled ? Self.load() : []
         suppressPersist = false
     }
 
@@ -184,12 +197,53 @@ final class MenuBarItemTriggersManager: ObservableObject {
 
         systemMonitor.start(flags: featureFlags)
 
+        // Item-manager setup follows settings setup. Claim configured targets
+        // up front so its initial cache cannot restore a persisted pre-trigger
+        // position before the first live evaluation establishes the action.
+        let configuredTargetIdentifiers = Set(
+            triggers
+                .filter { $0.isEnabled && isAvailable($0) }
+                .flatMap(\.allItemIdentifiers)
+        )
+        appState.itemManager.setTriggerControlledItemIdentifiers(configuredTargetIdentifiers)
+
         // Re-evaluate on every distinct system state change.
         systemMonitor.$state
+            // The monitor is seeded before the item manager has populated
+            // its cache. Ignoring this replay keeps the configured targets
+            // claimed above until the cache observer below can build a plan
+            // from real items; otherwise that empty-cache evaluation would
+            // immediately release them and let initial saved-layout restore
+            // race the trigger's first move.
+            .dropFirst()
             .removeDuplicates()
             .sink { [weak self] _ in
                 guard let self else { return }
                 self.evaluate(for: self.evaluationState, force: false)
+            }
+            .store(in: &cancellables)
+
+        // A cache update is the authoritative signal that an item moved to a
+        // different section. Watching it lets triggers repair a manual or
+        // external move promptly, rather than trusting a stale Boolean memo
+        // until the condition itself happens to flip.
+        appState.itemManager.$itemCache
+            .dropFirst()
+            .debounce(for: .milliseconds(150), scheduler: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.scheduleEvaluation(after: .milliseconds(150))
+            }
+            .store(in: &cancellables)
+
+        // Always-Hidden may be requested by a trigger while the section is
+        // disabled. Re-evaluate immediately when that capability changes so
+        // a previous hidden fallback migrates to Always-Hidden (and vice
+        // versa) without waiting for the next condition flip.
+        appState.settings.advanced.$enableAlwaysHiddenSection
+            .removeDuplicates()
+            .dropFirst()
+            .sink { [weak self] _ in
+                self?.scheduleEvaluation(after: .milliseconds(150))
             }
             .store(in: &cancellables)
 
@@ -349,6 +403,15 @@ final class MenuBarItemTriggersManager: ObservableObject {
     private func evaluate(for state: SystemState, force: Bool) {
         guard let appState else { return }
 
+        // Setup claims configured trigger targets before ItemManager's first
+        // live cache. Never turn that claim into an empty plan while the cache
+        // is still unpopulated: doing so briefly releases the saved-layout
+        // shield and lets startup restore fight the first trigger move.
+        guard !appState.itemManager.itemCache.managedItems.isEmpty else {
+            diagLog.debug("Skipping trigger evaluation until the first non-empty item cache")
+            return
+        }
+
         let liveIDs = Set(triggers.map(\.id))
         lastAppliedReveal = lastAppliedReveal.filter { liveIDs.contains($0.key) }
         lastAppliedItemIdentifiers = lastAppliedItemIdentifiers.filter { liveIDs.contains($0.key) }
@@ -360,9 +423,24 @@ final class MenuBarItemTriggersManager: ObservableObject {
             pendingApplyTasks[id] = nil
         }
 
-        let presentIdentifiers = Set(appState.itemManager.itemCache.managedItems.map(\.tag.tagIdentifier))
+        let presentItems = appState.itemManager.itemCache.managedItems
+        let presentIdentifiers = Set(presentItems.map(\.tag.tagIdentifier))
+        let presentIdentifierBases = Dictionary(
+            presentItems.map { ($0.tag.tagIdentifier, $0.tag.stableIdentifierBase) },
+            uniquingKeysWith: { first, _ in first }
+        )
         let now = Date()
-        let plan = priorityPlan(for: state, presentIdentifiers: presentIdentifiers, now: now)
+        let plan = priorityPlan(
+            for: state,
+            presentIdentifiers: presentIdentifiers,
+            presentIdentifierBases: presentIdentifierBases,
+            now: now
+        )
+        // Keep the durable layout separate from sections temporarily owned by
+        // trigger actions. This includes both reveal and hide actions, and
+        // naturally handles partial multi-item ownership.
+        let triggerControlledIdentifiers = Set(plan.actions.values.flatMap(\.identifiers))
+        appState.itemManager.setTriggerControlledItemIdentifiers(triggerControlledIdentifiers)
 
         for trigger in triggers where trigger.isEnabled {
             guard !trigger.allItemIdentifiers.isEmpty else { continue }
@@ -372,15 +450,11 @@ final class MenuBarItemTriggersManager: ObservableObject {
                 continue
             }
 
-            if let names = plan.overriddenBy[trigger.id] {
-                clearApplyState(for: trigger.id)
-                setRuntimeStatus(.overridden(by: names), for: trigger.id)
-                continue
-            }
-
             guard let action = plan.actions[trigger.id] else {
                 clearApplyState(for: trigger.id)
-                if plan.unavailableTriggerIDs.contains(trigger.id) {
+                if let names = plan.overriddenBy[trigger.id] {
+                    setRuntimeStatus(.overridden(by: names), for: trigger.id)
+                } else if plan.unavailableTriggerIDs.contains(trigger.id) {
                     setRuntimeStatus(.unavailable, for: trigger.id)
                 } else {
                     setRuntimeStatus(.idle, for: trigger.id)
@@ -388,7 +462,9 @@ final class MenuBarItemTriggersManager: ObservableObject {
                 continue
             }
 
-            if appliedActionMatches(action, for: trigger.id) {
+            if appliedActionMatches(action, for: trigger.id),
+               actionMatchesCurrentPlacement(action, for: trigger, appState: appState)
+            {
                 pendingApplyTasks[trigger.id]?.cancel()
                 pendingApplyTasks[trigger.id] = nil
                 setRuntimeStatus(action.reveal ? .active : .idle, for: trigger.id)
@@ -434,6 +510,7 @@ final class MenuBarItemTriggersManager: ObservableObject {
     func priorityPlan(
         for state: SystemState,
         presentIdentifiers: Set<String>,
+        presentIdentifierBases: [String: String] = [:],
         now: Date = Date()
     ) -> TriggerPriorityPlan {
         var plan = TriggerPriorityPlan()
@@ -443,7 +520,17 @@ final class MenuBarItemTriggersManager: ObservableObject {
         for trigger in triggers where trigger.isEnabled {
             guard !trigger.allItemIdentifiers.isEmpty, isAvailable(trigger) else { continue }
 
-            let presentTargets = trigger.allItemIdentifiers.filter { presentIdentifiers.contains($0) }
+            var presentTargets = [String]()
+            for target in trigger.allTargetItems where !target.identifier.isEmpty {
+                guard let resolvedIdentifier = resolvedPresentIdentifier(
+                    for: target.identifier,
+                    capturedBaseIdentifier: target.baseIdentifier,
+                    presentIdentifiers: presentIdentifiers,
+                    presentIdentifierBases: presentIdentifierBases
+                ), !presentTargets.contains(resolvedIdentifier)
+                else { continue }
+                presentTargets.append(resolvedIdentifier)
+            }
             guard !presentTargets.isEmpty else {
                 plan.unavailableTriggerIDs.insert(trigger.id)
                 continue
@@ -486,6 +573,29 @@ final class MenuBarItemTriggersManager: ObservableObject {
         return plan
     }
 
+    /// Resolves an older trigger target after a stable instance index changed.
+    /// Exact identifiers always win. The fallback receives bases from actual
+    /// live tags captured when the user selects the target. Older triggers
+    /// without that stored identity remain exact-match only, so a title such
+    /// as "Meeting:30" can never be mistaken for instance 30.
+    private func resolvedPresentIdentifier(
+        for configuredIdentifier: String,
+        capturedBaseIdentifier: String?,
+        presentIdentifiers: Set<String>,
+        presentIdentifierBases: [String: String]
+    ) -> String? {
+        if presentIdentifiers.contains(configuredIdentifier) {
+            return configuredIdentifier
+        }
+        guard let capturedBaseIdentifier else {
+            return nil
+        }
+        let candidates = presentIdentifierBases.compactMap { identifier, base in
+            base == capturedBaseIdentifier ? identifier : nil
+        }
+        return candidates.count == 1 ? candidates[0] : nil
+    }
+
     /// Schedules a debounced apply, re-checking the live state when the
     /// debounce elapses so a decision that flipped back is never acted on.
     /// The settle interval is per-condition (long for battery thresholds,
@@ -522,27 +632,39 @@ final class MenuBarItemTriggersManager: ObservableObject {
                 )
                 return
             }
-            let presentIdentifiers = Set(self.appState?.itemManager.itemCache.managedItems.map(\.tag.tagIdentifier) ?? [])
-            let plan = self.priorityPlan(for: self.evaluationState, presentIdentifiers: presentIdentifiers)
-            if let names = plan.overriddenBy[triggerID] {
-                self.setRuntimeStatus(.overridden(by: names), for: triggerID)
-                self.clearApplyState(for: triggerID)
-                self.diagLog.debug(
-                    "Trigger \(trigger.displayName) pending apply expired after "
-                        + "\(self.formattedElapsed(since: scheduledAt)); overridden by \(names.joined(separator: ", "))"
-                )
-                return
-            }
+            let presentItems = self.appState?.itemManager.itemCache.managedItems ?? []
+            let presentIdentifiers = Set(presentItems.map(\.tag.tagIdentifier))
+            let presentIdentifierBases = Dictionary(
+                presentItems.map { ($0.tag.tagIdentifier, $0.tag.stableIdentifierBase) },
+                uniquingKeysWith: { first, _ in first }
+            )
+            let plan = self.priorityPlan(
+                for: self.evaluationState,
+                presentIdentifiers: presentIdentifiers,
+                presentIdentifierBases: presentIdentifierBases
+            )
+            let triggerControlledIdentifiers = Set(plan.actions.values.flatMap(\.identifiers))
+            self.appState?.itemManager.setTriggerControlledItemIdentifiers(triggerControlledIdentifiers)
             guard let action = plan.actions[triggerID] else {
                 self.clearApplyState(for: triggerID)
-                self.setRuntimeStatus(plan.unavailableTriggerIDs.contains(triggerID) ? .unavailable : .idle, for: triggerID)
+                if let names = plan.overriddenBy[triggerID] {
+                    self.setRuntimeStatus(.overridden(by: names), for: triggerID)
+                    self.diagLog.debug(
+                        "Trigger \(trigger.displayName) pending apply expired after "
+                            + "\(self.formattedElapsed(since: scheduledAt)); overridden by \(names.joined(separator: ", "))"
+                    )
+                } else {
+                    self.setRuntimeStatus(plan.unavailableTriggerIDs.contains(triggerID) ? .unavailable : .idle, for: triggerID)
+                }
                 self.diagLog.debug(
                     "Trigger \(trigger.displayName) pending apply expired after "
                         + "\(self.formattedElapsed(since: scheduledAt)); no priority action remains"
                 )
                 return
             }
-            guard !self.appliedActionMatches(action, for: triggerID) else {
+            guard !(self.appliedActionMatches(action, for: triggerID)
+                && self.appState.map { self.actionMatchesCurrentPlacement(action, for: trigger, appState: $0) } == true)
+            else {
                 self.setRuntimeStatus(action.reveal ? .active : .idle, for: triggerID)
                 self.diagLog.debug(
                     "Trigger \(trigger.displayName) pending apply expired after "
@@ -604,9 +726,17 @@ final class MenuBarItemTriggersManager: ObservableObject {
             return false
         }
 
-        let presentIDs = Set(appState?.itemManager.itemCache.managedItems.map(\.tag.tagIdentifier) ?? [])
-        guard current.allItemIdentifiers.contains(where: presentIDs.contains) else { return false }
-        let plan = priorityPlan(for: evaluationState, presentIdentifiers: presentIDs)
+        let presentItems = appState?.itemManager.itemCache.managedItems ?? []
+        let presentIDs = Set(presentItems.map(\.tag.tagIdentifier))
+        let presentIdentifierBases = Dictionary(
+            presentItems.map { ($0.tag.tagIdentifier, $0.tag.stableIdentifierBase) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        let plan = priorityPlan(
+            for: evaluationState,
+            presentIdentifiers: presentIDs,
+            presentIdentifierBases: presentIdentifierBases
+        )
         guard let currentAction = plan.actions[current.id] else { return false }
         return currentAction.reveal == queuedAction.reveal && currentAction.identifierSet == queuedAction.identifierSet
     }
@@ -785,6 +915,43 @@ final class MenuBarItemTriggersManager: ObservableObject {
         scheduleEvaluation(after: .seconds(1))
     }
 
+    /// Returns whether every target in an applied action is physically in the
+    /// section the trigger currently requests. The Boolean/identifier memo is
+    /// only a record of a past move; it is not proof that a user, macOS, or a
+    /// different layout operation has not moved the icon since then.
+    private func actionMatchesCurrentPlacement(
+        _ action: TriggerPriorityAction,
+        for trigger: MenuBarItemTrigger,
+        appState: AppState
+    ) -> Bool {
+        let requestedSection = action.reveal ? trigger.revealSection : trigger.hideSection
+        let effectiveSection: MenuBarSection.Name?
+        switch requestedSection {
+        case .visible, .hidden:
+            effectiveSection = requestedSection
+        case .alwaysHidden:
+            if !appState.settings.advanced.enableAlwaysHiddenSection {
+                // moveItem intentionally falls back to Hidden while this
+                // section is disabled. The Advanced-settings subscription
+                // forces a re-evaluation when it becomes available.
+                effectiveSection = .hidden
+            } else if appState.menuBarManager.controlItem(withName: .alwaysHidden)?.window != nil {
+                effectiveSection = .alwaysHidden
+            } else {
+                // The section is configured but its control item has not
+                // appeared yet. Keep retrying instead of memoizing the
+                // temporary Hidden fallback as the requested destination.
+                effectiveSection = nil
+            }
+        }
+
+        guard let effectiveSection else { return false }
+        let identifiersInSection = Set(
+            appState.itemManager.itemCache[effectiveSection].map(\.tag.tagIdentifier)
+        )
+        return action.identifierSet.isSubset(of: identifiersInSection)
+    }
+
     private func appliedActionMatches(_ action: TriggerPriorityAction, for triggerID: UUID) -> Bool {
         lastAppliedReveal[triggerID] == action.reveal &&
             lastAppliedItemIdentifiers[triggerID] == action.identifierSet
@@ -830,15 +997,18 @@ final class MenuBarItemTriggersManager: ObservableObject {
         guard featureFlags.isEnabled(.scriptResult), !isRunningScripts else { return }
 
         // Collect distinct, non-empty script paths in use by enabled triggers.
-        var paths = Set<String>()
+        var expectedOutputsByPath = [String: Set<String>]()
         for trigger in triggers where trigger.isEnabled {
             for condition in trigger.allConditions {
-                if case let .scriptResult(path, _) = condition {
+                if case let .scriptResult(path, expectedOutput) = condition {
                     let trimmed = path.trimmingCharacters(in: .whitespacesAndNewlines)
-                    if !trimmed.isEmpty { paths.insert(trimmed) }
+                    if !trimmed.isEmpty {
+                        expectedOutputsByPath[trimmed, default: []].insert(expectedOutput)
+                    }
                 }
             }
         }
+        let paths = Set(expectedOutputsByPath.keys)
 
         // Drop cached outcomes for paths no longer referenced.
         let removed = Set(scriptOutcomes.keys).subtracting(paths)
@@ -861,7 +1031,10 @@ final class MenuBarItemTriggersManager: ObservableObject {
 
             var changed = removedAny
             for path in paths {
-                let outcome = await TriggerScriptRunner.run(path: path)
+                let outcome = await TriggerScriptRunner.run(
+                    path: path,
+                    expectedOutputs: expectedOutputsByPath[path] ?? []
+                )
                 let resolved = outcome ?? ScriptOutcome(exitCode: -1, output: "")
                 if self.scriptOutcomes[path] != resolved {
                     self.scriptOutcomes[path] = resolved
@@ -961,14 +1134,89 @@ final class MenuBarItemTriggersManager: ObservableObject {
         Defaults.set(data, forKey: .menuBarItemTriggers)
     }
 
+    /// Wrapper that decodes its element if possible, otherwise yields `nil`
+    /// instead of failing the whole array decode.
+    private struct FailableTrigger: Decodable {
+        let value: MenuBarItemTrigger?
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.singleValueContainer()
+            value = try? container.decode(MenuBarItemTrigger.self)
+        }
+    }
+
     private static func load() -> [MenuBarItemTrigger] {
         guard let data = Defaults.data(forKey: .menuBarItemTriggers) else {
             return []
         }
-        do {
-            return try JSONDecoder().decode([MenuBarItemTrigger].self, from: data)
-        } catch {
+        let decoder = JSONDecoder()
+        // Healthy path: strict decode of the whole array.
+        if let triggers = try? decoder.decode([MenuBarItemTrigger].self, from: data) {
+            return repairAndPersistLegacyIdentifiers(in: triggers)
+        }
+        // A strict decode failed. Recover per element so a single corrupt or
+        // forward-incompatible trigger doesn't discard every other trigger —
+        // the next mutation would otherwise persist the empty array and make
+        // the loss permanent.
+        guard let lenient = try? decoder.decode([FailableTrigger].self, from: data) else {
+            DiagLog(category: "MenuBarItemTriggers").error(
+                "Failed to decode menu bar item triggers; leaving persisted data untouched"
+            )
             return []
         }
+        let recovered = lenient.compactMap(\.value)
+        let dropped = lenient.count - recovered.count
+        if dropped > 0 {
+            DiagLog(category: "MenuBarItemTriggers").error(
+                "Dropped \(dropped) undecodable menu bar item trigger(s); recovered \(recovered.count)"
+            )
+        }
+        return repairAndPersistLegacyIdentifiers(in: recovered)
+    }
+
+    /// Repairs the fake identifier used by early trigger-manager tests. Those
+    /// tests previously instantiated the production manager and accidentally
+    /// persisted their fixtures into the app's real defaults, replacing a
+    /// valid Battery selection with `battery-item`. A real menu bar tag always
+    /// has a namespace and title separated by a colon, so this exact value can
+    /// never identify a live item.
+    static func repairingLegacyTestFixtureIdentifiers(
+        in triggers: [MenuBarItemTrigger]
+    ) -> [MenuBarItemTrigger] {
+        let legacyBatteryIdentifier = "battery-item"
+        let batteryIdentifier = MenuBarItemTag(
+            namespace: .controlCenter,
+            title: "Battery"
+        ).tagIdentifier
+
+        return triggers.map { trigger in
+            var repaired = trigger
+            if repaired.itemIdentifier == legacyBatteryIdentifier {
+                repaired.itemIdentifier = batteryIdentifier
+                if repaired.itemDisplayName.isEmpty || repaired.itemDisplayName == legacyBatteryIdentifier {
+                    repaired.itemDisplayName = "Battery"
+                }
+            }
+            repaired.additionalItems = repaired.additionalItems.map { item in
+                guard item.identifier == legacyBatteryIdentifier else { return item }
+                return TriggerTargetItem(identifier: batteryIdentifier, displayName: "Battery")
+            }
+            return repaired
+        }
+    }
+
+    private static func repairAndPersistLegacyIdentifiers(
+        in triggers: [MenuBarItemTrigger]
+    ) -> [MenuBarItemTrigger] {
+        let repaired = repairingLegacyTestFixtureIdentifiers(in: triggers)
+        guard repaired != triggers else { return triggers }
+
+        if let data = try? JSONEncoder().encode(repaired) {
+            Defaults.set(data, forKey: .menuBarItemTriggers)
+            DiagLog(category: "MenuBarItemTriggers").notice(
+                "Repaired legacy battery-item trigger identifier"
+            )
+        }
+        return repaired
     }
 }

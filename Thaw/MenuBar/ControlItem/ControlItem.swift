@@ -168,6 +168,20 @@ final class ControlItem {
         statusItem.isVisible
     }
 
+    /// The current WindowServer ID for this status item, read directly from
+    /// AppKit. `window` is published through KVO and can briefly remain nil
+    /// after a status item has already been registered, especially for the
+    /// off-screen section dividers. Cache discovery needs the live value so
+    /// it can recognize those windows as belonging to this Thaw instance.
+    var currentWindowID: CGWindowID? {
+        guard let appKitWindow = statusItem.button?.window ?? window,
+              appKitWindow.windowNumber > 0
+        else {
+            return nil
+        }
+        return CGWindowID(exactly: appKitWindow.windowNumber)
+    }
+
     /// The corresponding section name for the control item.
     var sectionName: MenuBarSection.Name {
         switch identifier {

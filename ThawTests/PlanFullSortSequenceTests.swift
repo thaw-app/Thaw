@@ -18,6 +18,18 @@ final class PlanFullSortSequenceTests: XCTestCase {
     private let hiddenCtrl = "thaw:HiddenControlItem"
     private let ahCtrl = "thaw:AlwaysHiddenControlItem"
 
+    func testEmptyDesiredSequenceIsNoOpEvenWithControlItemsAvailable() {
+        let sequence = LayoutSolver.planFullSortSequence(
+            currentFlat: [],
+            desiredFiltered: [],
+            sectionMap: [:],
+            hiddenCtrlUID: hiddenCtrl,
+            ahCtrlUID: ahCtrl
+        )
+
+        XCTAssertTrue(sequence.isEmpty)
+    }
+
     /// Items group by section in the order AH → AH ctrl → hidden → hidden
     /// ctrl → visible. Control items land at the section boundaries.
     func testItemsGroupAlwaysHiddenThenHiddenThenVisible() {

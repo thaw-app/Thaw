@@ -251,9 +251,15 @@ final class SourcePIDCache {
 
             // Carry unexpired negative windowID entries across the rebuild;
             // dropping them here would let the next request from a
-            // known-unresolvable window trigger a full scan again.
+            // known-unresolvable window trigger a full scan again. Entries
+            // whose window no longer exists are dropped regardless of TTL:
+            // a destroyed window's verdict must not be inherited if the
+            // WindowServer ever recycles its ID for a new, resolvable item.
             let now = ContinuousClock.now
-            let carriedNegativeUntil = state.negativeUntil.filter { $0.value > now }
+            let liveWindowIDs = Set(windowIDs)
+            let carriedNegativeUntil = state.negativeUntil.filter {
+                $0.value > now && liveWindowIDs.contains($0.key)
+            }
 
             // Create a new state that matches the current running apps.
             state = runningApps.reduce(into: State()) { result, app in
@@ -419,15 +425,7 @@ final class SourcePIDCache {
                 let children = AXHelpers.children(for: bar)
                 for child in children {
                     totalChildrenChecked += 1
-                    // Skip only children the app marks explicitly disabled. A
-                    // missing AXEnabled attribute (nil) is treated as enabled:
-                    // some status items hosted by Control Center (The Clock's
-                    // among them) never publish AXEnabled, and treating absent as
-                    // disabled would drop an otherwise exact positional match and
-                    // leave the item unresolved.
-                    guard AXHelpers.enabledAttribute(child) != false,
-                          let childFrame = AXHelpers.frame(for: child)
-                    else {
+                    guard let childFrame = AXHelpers.frame(for: child) else {
                         continue
                     }
 
@@ -449,11 +447,25 @@ final class SourcePIDCache {
                     // Center normally.
                     if let matchedWindow = allWindows.first(where: {
                         $0.bounds.center.distance(to: childCenter) <= 1
-                    }), !MarkerPairResolver.isCCHostedGenericSlot(
-                        appBundleID: app.bundleIdentifier,
-                        windowTitle: matchedWindow.title,
-                        ccBundleID: ccBundleID
-                    ) {
+                    }) {
+                        // Divider controls are explicitly disabled in Thaw's
+                        // AX extras bar. They are still the only reliable
+                        // process-level identity for the equivalent
+                        // Control-Center-hosted CG window, so admit this one
+                        // narrow disabled case. Other disabled children stay
+                        // excluded; they cannot safely claim a menu bar item.
+                        let isThawControlDivider = AXHelpers.enabledAttribute(child) == false
+                            && app.bundleIdentifier == "com.stonerl.Thaw"
+                            && matchedWindow.title?.hasPrefix("Thaw.ControlItem.") == true
+                        guard AXHelpers.enabledAttribute(child) != false || isThawControlDivider,
+                              !MarkerPairResolver.isCCHostedGenericSlot(
+                                  appBundleID: app.bundleIdentifier,
+                                  windowTitle: matchedWindow.title,
+                                  ccBundleID: ccBundleID
+                              )
+                        else {
+                            continue
+                        }
                         totalMatchesFound += 1
                         unresolvedWindows.remove(matchedWindow.windowID)
                         let pid = app.processIdentifier

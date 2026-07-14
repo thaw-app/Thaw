@@ -194,15 +194,14 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
         let snapshot = images
 
         Task.detached(priority: .background) {
-            let cacheData = snapshot.map { tag, image -> (String, Data)? in
+            let cacheData = snapshot.map { tag, image -> (MenuBarItemTag, Data)? in
                 let nsImage = NSImage(cgImage: image.cgImage, size: image.scaledSize)
                 guard let tiffData = nsImage.tiffRepresentation,
                       let bitmap = NSBitmapImageRep(data: tiffData),
                       let pngData = bitmap.representation(using: .png, properties: [:])
                 else { return nil }
 
-                let tagString = "\(tag.namespace):\(tag.title)"
-                return (tagString, pngData)
+                return (tag, pngData)
             }.compactMap(\.self)
 
             guard cacheData.count == snapshot.count else { return }
@@ -213,7 +212,28 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
 
                 let json: [String: Any] = [
                     "timestamp": Date().timeIntervalSince1970,
-                    "images": Dictionary(uniqueKeysWithValues: cacheData.map { ($0.0, $0.1.base64EncodedString()) }),
+                    // This used to be a dictionary keyed only by namespace
+                    // and title. Two same-title instances then supplied the
+                    // same key and `Dictionary(uniqueKeysWithValues:)`
+                    // trapped while saving the cache. Store explicit records
+                    // so each stable instance index survives a restart.
+                    "images": cacheData.map { tag, data -> [String: Any] in
+                        var record: [String: Any] = [
+                            "namespace": tag.namespace.description,
+                            "title": tag.title,
+                            "instanceIndex": tag.instanceIndex,
+                            "data": data.base64EncodedString(),
+                        ]
+                        switch tag.namespace {
+                        case .null:
+                            record["namespaceKind"] = "null"
+                        case .string:
+                            record["namespaceKind"] = "string"
+                        case .uuid:
+                            record["namespaceKind"] = "uuid"
+                        }
+                        return record
+                    },
                 ]
                 let jsonData = try JSONSerialization.data(withJSONObject: json, options: [])
                 try jsonData.write(to: url)
@@ -238,8 +258,7 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
             do {
                 let jsonData = try Data(contentsOf: url)
                 guard let json = try JSONSerialization.jsonObject(with: jsonData) as? [String: Any],
-                      let timestamp = json["timestamp"] as? TimeInterval,
-                      let imagesDict = json["images"] as? [String: String] else { return }
+                      let timestamp = json["timestamp"] as? TimeInterval else { return }
 
                 // Check if cache is stale (older than 30 seconds)
                 let cacheAge = Date().timeIntervalSince1970 - timestamp
@@ -251,19 +270,46 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
 
                 var loadedImages = [MenuBarItemTag: CapturedImage]()
 
-                for (tagString, base64) in imagesDict {
-                    guard let data = Data(base64Encoded: base64),
+                let imageRecords: [(namespace: String, namespaceKind: String?, title: String, instanceIndex: Int, data: String)]
+                if let records = json["images"] as? [[String: Any]] {
+                    imageRecords = records.compactMap { record in
+                        guard let namespace = record["namespace"] as? String,
+                              let title = record["title"] as? String,
+                              let instanceIndex = record["instanceIndex"] as? Int,
+                              let data = record["data"] as? String
+                        else { return nil }
+                        return (namespace, record["namespaceKind"] as? String, title, instanceIndex, data)
+                    }
+                } else if let legacyImages = json["images"] as? [String: String] {
+                    // A 30-second legacy cache can still exist across an app
+                    // update. Load it as the original unsuffixed instance;
+                    // the next save writes the collision-safe record format.
+                    imageRecords = legacyImages.compactMap { tagString, data in
+                        let parts = tagString.split(separator: ":", maxSplits: 1)
+                        guard parts.count == 2 else { return nil }
+                        return (String(parts[0]), nil, String(parts[1]), 0, data)
+                    }
+                } else {
+                    return
+                }
+
+                for record in imageRecords {
+                    guard let data = Data(base64Encoded: record.data),
                           let image = NSImage(data: data),
                           let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil)
                     else { continue }
 
-                    let parts = tagString.split(separator: ":", maxSplits: 1)
-                    guard parts.count == 2 else { continue }
-
-                    let namespace = String(parts[0])
-                    let title = String(parts[1])
-                    let tag = MenuBarItemTag(namespace: .string(namespace), title: title, windowID: nil)
-
+                    let namespace: MenuBarItemTag.Namespace = switch record.namespaceKind {
+                    case "null": .null
+                    case "uuid": UUID(uuidString: record.namespace).map(MenuBarItemTag.Namespace.uuid) ?? .string(record.namespace)
+                    default: .string(record.namespace)
+                    }
+                    let tag = MenuBarItemTag(
+                        namespace: namespace,
+                        title: record.title,
+                        windowID: nil,
+                        instanceIndex: record.instanceIndex
+                    )
                     let captured = CapturedImage(cgImage: cgImage, scale: image.size.width > 0 ? CGFloat(cgImage.width) / image.size.width : 1.0)
                     loadedImages[tag] = captured
                 }

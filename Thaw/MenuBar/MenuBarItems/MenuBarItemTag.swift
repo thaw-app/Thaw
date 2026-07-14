@@ -25,6 +25,36 @@ struct MenuBarItemTag: Hashable, CustomStringConvertible {
     /// The index of the item within its (namespace, title) group.
     let instanceIndex: Int
 
+    /// The exact namespace-and-title identity for this live tag. Unlike the
+    /// persisted string form, it is never ambiguous when a title ends in a
+    /// colon followed by a number.
+    var stableIdentifierBase: String {
+        "\(namespace):\(title)"
+    }
+
+    /// Resolves a persisted identifier to a base only when live tag data makes
+    /// the instance suffix unambiguous. String identifiers use the legacy
+    /// `namespace:title[:index]` form, and titles are free-form; blindly
+    /// stripping a numeric suffix could turn the title "Meeting:30" into the
+    /// unrelated item "Meeting".
+    static func resolvedBaseIdentifier(
+        for uniqueIdentifier: String,
+        knownBaseIdentifiers: Set<String>
+    ) -> String? {
+        if knownBaseIdentifiers.contains(uniqueIdentifier) {
+            return uniqueIdentifier
+        }
+        guard
+            let suffixStart = uniqueIdentifier.lastIndex(of: ":"),
+            let instanceIndex = Int(uniqueIdentifier[uniqueIdentifier.index(after: suffixStart)...]),
+            instanceIndex > 0,
+            knownBaseIdentifiers.contains(String(uniqueIdentifier[..<suffixStart]))
+        else {
+            return nil
+        }
+        return String(uniqueIdentifier[..<suffixStart])
+    }
+
     /// A Boolean value that indicates whether the item identified
     /// by this tag is a system item.
     var isSystemItem: Bool {

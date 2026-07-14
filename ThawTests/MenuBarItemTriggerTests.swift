@@ -12,6 +12,11 @@ import XCTest
 final class MenuBarItemTriggerTests: XCTestCase {
     // MARK: - Helpers
 
+    @MainActor
+    private func makeManager() -> MenuBarItemTriggersManager {
+        MenuBarItemTriggersManager(persistenceEnabled: false)
+    }
+
     private func state(
         battery: Double? = nil,
         onAC: Bool = false,
@@ -428,7 +433,7 @@ final class MenuBarItemTriggerTests: XCTestCase {
 
     @MainActor
     func testRuntimeStatusForDisabledTrigger() {
-        let manager = MenuBarItemTriggersManager()
+        let manager = makeManager()
         let trigger = MenuBarItemTrigger(
             isEnabled: false,
             itemIdentifier: "com.example.StatusItem",
@@ -439,8 +444,33 @@ final class MenuBarItemTriggerTests: XCTestCase {
     }
 
     @MainActor
-    func testRuntimeStatusForUnappliedRevealDecision() {
+    func testDefaultManagerDoesNotPersistFixturesUnderXCTest() {
+        let original = Defaults.data(forKey: .menuBarItemTriggers)
+        defer {
+            if Defaults.data(forKey: .menuBarItemTriggers) != original {
+                if let original {
+                    Defaults.set(original, forKey: .menuBarItemTriggers)
+                } else {
+                    Defaults.removeObject(forKey: .menuBarItemTriggers)
+                }
+            }
+        }
+
         let manager = MenuBarItemTriggersManager()
+        manager.triggers = [
+            MenuBarItemTrigger(
+                name: "Test fixture",
+                itemIdentifier: "test-only-item",
+                condition: .onACPower
+            ),
+        ]
+
+        XCTAssertEqual(Defaults.data(forKey: .menuBarItemTriggers), original)
+    }
+
+    @MainActor
+    func testRuntimeStatusForUnappliedRevealDecision() {
+        let manager = makeManager()
         let trigger = MenuBarItemTrigger(
             itemIdentifier: "com.example.StatusItem",
             condition: .onACPower
@@ -451,7 +481,7 @@ final class MenuBarItemTriggerTests: XCTestCase {
 
     @MainActor
     func testRuntimeStatusForFalseCondition() {
-        let manager = MenuBarItemTriggersManager()
+        let manager = makeManager()
         let trigger = MenuBarItemTrigger(
             itemIdentifier: "com.example.StatusItem",
             condition: .batteryBelow(percentage: 20)
@@ -462,7 +492,7 @@ final class MenuBarItemTriggerTests: XCTestCase {
 
     @MainActor
     func testPriorityPlanLetsLowerMetTriggerWinWhenHigherTriggerIsUnmet() {
-        let manager = MenuBarItemTriggersManager()
+        let manager = makeManager()
         let higher = MenuBarItemTrigger(
             name: "Battery low",
             itemIdentifier: "battery-item",
@@ -489,7 +519,7 @@ final class MenuBarItemTriggerTests: XCTestCase {
 
     @MainActor
     func testPriorityPlanMarksLowerMetTriggerOverriddenByHigherMetTrigger() {
-        let manager = MenuBarItemTriggersManager()
+        let manager = makeManager()
         let higher = MenuBarItemTrigger(
             name: "Top trigger",
             itemIdentifier: "battery-item",
@@ -516,8 +546,40 @@ final class MenuBarItemTriggerTests: XCTestCase {
     }
 
     @MainActor
+    func testPriorityPlanKeepsUnconflictedTargetsWhenMultiItemTriggerIsPartiallyOverridden() {
+        let manager = makeManager()
+        let higher = MenuBarItemTrigger(
+            name: "Top trigger",
+            itemIdentifier: "shared-item",
+            condition: .onACPower
+        )
+        let lower = MenuBarItemTrigger(
+            name: "Lower trigger",
+            itemIdentifier: "shared-item",
+            additionalItems: [TriggerTargetItem(identifier: "independent-item", displayName: "Independent")],
+            condition: .onACPower
+        )
+        manager.triggers = [higher, lower]
+
+        let plan = manager.priorityPlan(
+            for: state(onAC: true),
+            presentIdentifiers: ["shared-item", "independent-item"]
+        )
+
+        XCTAssertEqual(
+            plan.actions[higher.id],
+            MenuBarItemTriggersManager.TriggerPriorityAction(reveal: true, identifiers: ["shared-item"])
+        )
+        XCTAssertEqual(
+            plan.actions[lower.id],
+            MenuBarItemTriggersManager.TriggerPriorityAction(reveal: true, identifiers: ["independent-item"])
+        )
+        XCTAssertEqual(plan.overriddenBy[lower.id], ["Top trigger"])
+    }
+
+    @MainActor
     func testPriorityPlanUsesHighestTriggerAsFallbackWhenNoneAreMet() {
-        let manager = MenuBarItemTriggersManager()
+        let manager = makeManager()
         let higher = MenuBarItemTrigger(
             name: "Battery below 75",
             itemIdentifier: "battery-item",
@@ -543,8 +605,53 @@ final class MenuBarItemTriggerTests: XCTestCase {
     }
 
     @MainActor
+    func testPriorityPlanReacquiresUnambiguousSuffixDriftFromLiveTagBases() {
+        let manager = makeManager()
+        let trigger = MenuBarItemTrigger(
+            itemIdentifier: "com.example.app:Status:1",
+            itemBaseIdentifier: "com.example.app:Status",
+            condition: .onACPower
+        )
+        manager.triggers = [trigger]
+
+        let plan = manager.priorityPlan(
+            for: state(onAC: true),
+            presentIdentifiers: ["com.example.app:Status:2"],
+            presentIdentifierBases: ["com.example.app:Status:2": "com.example.app:Status"]
+        )
+
+        XCTAssertEqual(
+            plan.actions[trigger.id],
+            MenuBarItemTriggersManager.TriggerPriorityAction(
+                reveal: true,
+                identifiers: ["com.example.app:Status:2"]
+            )
+        )
+        XCTAssertFalse(plan.unavailableTriggerIDs.contains(trigger.id))
+    }
+
+    @MainActor
+    func testPriorityPlanDoesNotTreatLegacyNumericTitleAsAnInstanceSuffix() {
+        let manager = makeManager()
+        let trigger = MenuBarItemTrigger(
+            itemIdentifier: "com.example.app:Meeting:30",
+            condition: .onACPower
+        )
+        manager.triggers = [trigger]
+
+        let plan = manager.priorityPlan(
+            for: state(onAC: true),
+            presentIdentifiers: ["com.example.app:Meeting"],
+            presentIdentifierBases: ["com.example.app:Meeting": "com.example.app:Meeting"]
+        )
+
+        XCTAssertNil(plan.actions[trigger.id])
+        XCTAssertTrue(plan.unavailableTriggerIDs.contains(trigger.id))
+    }
+
+    @MainActor
     func testMoveTriggerReordersPriority() {
-        let manager = MenuBarItemTriggersManager()
+        let manager = makeManager()
         let first = MenuBarItemTrigger(name: "First")
         let second = MenuBarItemTrigger(name: "Second")
         let third = MenuBarItemTrigger(name: "Third")
@@ -710,6 +817,30 @@ final class MenuBarItemTriggerTests: XCTestCase {
     func testAutoTitleWithoutItemName() {
         let trigger = MenuBarItemTrigger(itemDisplayName: "", condition: .onACPower)
         XCTAssertEqual(trigger.autoTitle, "Connected to power")
+    }
+
+    @MainActor
+    func testRepairsPersistedBatteryItemTestFixtureIdentifier() {
+        let fixtures = [
+            MenuBarItemTrigger(
+                itemIdentifier: "battery-item",
+                additionalItems: [
+                    TriggerTargetItem(identifier: "battery-item", displayName: "battery-item"),
+                    TriggerTargetItem(identifier: "com.example:Other", displayName: "Other"),
+                ],
+                condition: .batteryBelow(percentage: 75)
+            ),
+        ]
+
+        let repaired = MenuBarItemTriggersManager.repairingLegacyTestFixtureIdentifiers(in: fixtures)
+
+        XCTAssertEqual(repaired[0].itemIdentifier, "com.apple.controlcenter:Battery")
+        XCTAssertEqual(repaired[0].itemDisplayName, "Battery")
+        XCTAssertEqual(repaired[0].additionalItems[0], TriggerTargetItem(
+            identifier: "com.apple.controlcenter:Battery",
+            displayName: "Battery"
+        ))
+        XCTAssertEqual(repaired[0].additionalItems[1], fixtures[0].additionalItems[1])
     }
 
     func testCodableRoundTrip() throws {

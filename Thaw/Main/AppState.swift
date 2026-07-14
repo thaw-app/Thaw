@@ -193,6 +193,18 @@ final class AppState: ObservableObject {
     private func configureCancellables() {
         var c = Set<AnyCancellable>()
 
+        // Screen Recording can be changed in System Settings while Thaw is
+        // inactive. Refresh both the feature gate and the observable
+        // permission model before the user returns to a settings pane that
+        // depends on them.
+        NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                _ = ScreenCapture.cachedCheckPermissions(reset: true)
+                self?.permissions.refreshAllPermissions()
+            }
+            .store(in: &c)
+
         // Listen for changes to the active space. We need handle some special
         // cases that NSWorkspace.shared.notificationCenter seems to miss.
         //

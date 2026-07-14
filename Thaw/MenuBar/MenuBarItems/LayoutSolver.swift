@@ -169,6 +169,54 @@ enum LayoutSolver {
         return result
     }
 
+    /// Reconstructs the physical left-to-right screen order from a flat
+    /// sequence produced by `flattenCurrentSections`.
+    ///
+    /// The inverse of `flattenCurrentSections`: that helper concatenates
+    /// blocks in `[visible][hiddenCtrl][hidden][ahCtrl][alwaysHidden]` order,
+    /// which is right-to-left on screen (visible sits nearest Control Center
+    /// at the right edge). This returns the same items in
+    /// `[alwaysHidden][ahCtrl][hidden][hiddenCtrl][visible]` order — the
+    /// left-to-right order the full-sort executor places items in. A control
+    /// UID joins the result only if `currentFlat` actually contained it, so a
+    /// caller reconstructing from partial data never gets a fabricated
+    /// divider position.
+    static nonisolated func physicalOrderFromFlat(
+        _ currentFlat: [String],
+        hiddenCtrlUID: String,
+        ahCtrlUID: String?
+    ) -> [String] {
+        var visibleBlock = [String]()
+        var hiddenBlock = [String]()
+        var ahBlock = [String]()
+        var blockIndex = 0
+        var sawHiddenCtrl = false
+        var sawAHCtrl = false
+        for uid in currentFlat {
+            if uid == hiddenCtrlUID {
+                blockIndex = 1
+                sawHiddenCtrl = true
+                continue
+            }
+            if let ahCtrlUID, uid == ahCtrlUID {
+                blockIndex = 2
+                sawAHCtrl = true
+                continue
+            }
+            switch blockIndex {
+            case 0: visibleBlock.append(uid)
+            case 1: hiddenBlock.append(uid)
+            default: ahBlock.append(uid)
+            }
+        }
+        var physicalOrder = ahBlock
+        if sawAHCtrl, let ahCtrlUID { physicalOrder.append(ahCtrlUID) }
+        physicalOrder.append(contentsOf: hiddenBlock)
+        if sawHiddenCtrl { physicalOrder.append(hiddenCtrlUID) }
+        physicalOrder.append(contentsOf: visibleBlock)
+        return physicalOrder
+    }
+
     // MARK: - Unmanaged partition
 
     /// Returns the subset of currentFlat that should be routed through
@@ -599,12 +647,10 @@ enum LayoutSolver {
         hiddenCtrlUID: String,
         ahCtrlUID: String?
     ) -> [String] {
-        // Skip if current order already matches the desired order.
-        let desiredSet = Set(desiredFiltered)
-        let currentFiltered = currentFlat.filter { desiredSet.contains($0) }
-        if currentFiltered == desiredFiltered {
-            return []
-        }
+        // There is no requested layout to replay. In particular, do not emit
+        // synthetic control-item moves merely because an always-hidden
+        // divider is available to the caller.
+        guard !desiredFiltered.isEmpty else { return [] }
 
         var controlSet: Set<String> = [hiddenCtrlUID]
         if let ahUID = ahCtrlUID { controlSet.insert(ahUID) }
@@ -626,43 +672,17 @@ enum LayoutSolver {
         fullSequence.append(hiddenCtrlUID)
         fullSequence.append(contentsOf: visibleUIDs)
 
-        // Reconstruct the current physical (left-to-right) order.
-        // currentFlat is flattened visible-first (visible, hidden ctrl,
-        // hidden, AH ctrl, alwaysHidden) with each section block already
-        // left-to-right, so the physical order is the blocks reversed with
-        // intra-block order preserved. Split at the control UIDs.
-        var visibleBlock = [String]()
-        var hiddenBlock = [String]()
-        var ahBlock = [String]()
-        var blockIndex = 0
-        var sawHiddenCtrl = false
-        var sawAHCtrl = false
-        for uid in currentFlat {
-            if uid == hiddenCtrlUID {
-                blockIndex = 1
-                sawHiddenCtrl = true
-                continue
-            }
-            if let ahCtrlUID, uid == ahCtrlUID {
-                blockIndex = 2
-                sawAHCtrl = true
-                continue
-            }
-            switch blockIndex {
-            case 0: visibleBlock.append(uid)
-            case 1: hiddenBlock.append(uid)
-            default: ahBlock.append(uid)
-            }
-        }
-        // Control UIDs join the physical order only when currentFlat
-        // actually contained them; fabricating positions for absent
-        // dividers would let the trim keep sequence members that have no
-        // known physical location.
-        var physicalOrder = ahBlock
-        if sawAHCtrl, let ahCtrlUID { physicalOrder.append(ahCtrlUID) }
-        physicalOrder.append(contentsOf: hiddenBlock)
-        if sawHiddenCtrl { physicalOrder.append(hiddenCtrlUID) }
-        physicalOrder.append(contentsOf: visibleBlock)
+        // Reconstruct the current physical (left-to-right) order via the
+        // named inverse of flattenCurrentSections. The prefix-trim below
+        // subsumes the old `currentFiltered == desiredFiltered` no-op
+        // early-return: when the order already matches, every fullSequence
+        // member appears in increasing physical order, so the whole
+        // sequence trims away to [].
+        let physicalOrder = physicalOrderFromFlat(
+            currentFlat,
+            hiddenCtrlUID: hiddenCtrlUID,
+            ahCtrlUID: ahCtrlUID
+        )
 
         var positionByUID = [String: Int]()
         for (offset, uid) in physicalOrder.enumerated() where positionByUID[uid] == nil {
@@ -708,31 +728,41 @@ enum LayoutSolver {
     /// Looks up the saved position for the given identifier, falling back
     /// to baseID matching when the exact instanceIndex differs.
     ///
-    /// Multi-instance apps may receive a different :N suffix on relaunch
-    /// (instance indices are reassigned by windowID sort order after each
-    /// assignStableInstanceIndices pass). This variant first tries an
-    /// exact-identifier match, then a baseID-prefix match against any
-    /// instance saved for the same namespace:title. Returns the first
-    /// baseID match found.
+    /// Multi-instance apps may receive a different :N suffix on relaunch.
+    /// This variant first tries an exact identifier, then uses an explicitly
+    /// supplied set of live namespace/title bases to resolve a suffix only
+    /// when it is unambiguous. Without live tags, legacy strings alone cannot
+    /// distinguish an instance suffix from a title ending in `:number`.
     static nonisolated func savedPositionByBaseID(
         for uid: String,
-        in savedSectionOrder: [String: [String]]
+        in savedSectionOrder: [String: [String]],
+        knownBaseIdentifiers: Set<String> = []
     ) -> SavedPosition? {
         if let exact = savedPosition(for: uid, in: savedSectionOrder) {
             return exact
         }
-        let baseID = uid.split(separator: ":", maxSplits: 2).prefix(2).joined(separator: ":")
-        guard baseID.contains(":") else { return nil }
+        guard let baseID = baseID(forIdentifier: uid, knownBaseIdentifiers: knownBaseIdentifiers) else {
+            return nil
+        }
+        var fallback: SavedPosition?
+        var matchingSections = Set<MenuBarSection.Name>()
         for (sectionKeyString, identifiers) in savedSectionOrder {
             guard let section = sectionName(forPersistedKey: sectionKeyString) else { continue }
             for (index, identifier) in identifiers.enumerated() {
-                let savedBaseID = identifier.split(separator: ":", maxSplits: 2).prefix(2).joined(separator: ":")
+                guard let savedBaseID = Self.baseID(
+                    forIdentifier: identifier,
+                    knownBaseIdentifiers: knownBaseIdentifiers
+                ) else { continue }
                 if savedBaseID == baseID {
-                    return SavedPosition(section: section, index: index)
+                    matchingSections.insert(section)
+                    if fallback == nil {
+                        fallback = SavedPosition(section: section, index: index)
+                    }
                 }
             }
         }
-        return nil
+        guard matchingSections.count == 1 else { return nil }
+        return fallback
     }
 
     // MARK: - Unmanaged placement
@@ -751,14 +781,19 @@ enum LayoutSolver {
         unmanagedUIDs: [String],
         savedSectionOrder: [String: [String]],
         newItemsPlacement: MenuBarItemManager.NewItemsPlacement,
-        currentUIDs: Set<String>
+        currentUIDs: Set<String>,
+        currentBaseIdentifiers: Set<String> = []
     ) -> [String: UnmanagedPlacement] {
         var result = [String: UnmanagedPlacement]()
         let newItemsSection = sectionName(forPersistedKey: newItemsPlacement.sectionKey) ?? .hidden
 
         for uid in unmanagedUIDs {
             // 1. Saved-position lookup (exact then baseID).
-            if let position = savedPositionByBaseID(for: uid, in: savedSectionOrder) {
+            if let position = savedPositionByBaseID(
+                for: uid,
+                in: savedSectionOrder,
+                knownBaseIdentifiers: currentBaseIdentifiers
+            ) {
                 result[uid] = .saved(section: position.section, index: position.index)
                 continue
             }
@@ -877,9 +912,10 @@ enum LayoutSolver {
             // Stale instance index: the app is back with a different
             // :N suffix. The cache already has it under its new uid;
             // drop the stale saved entry.
-            let base = savedUID.split(separator: ":", maxSplits: 2)
-                .prefix(2).joined(separator: ":")
-            if allCurrentBaseIdentifiers.contains(base) {
+            if let base = baseID(
+                forIdentifier: savedUID,
+                knownBaseIdentifiers: allCurrentBaseIdentifiers
+            ), allCurrentBaseIdentifiers.contains(base) {
                 continue
             }
 
@@ -957,9 +993,16 @@ enum LayoutSolver {
         return result
     }
 
-    /// Extracts the baseID (namespace:title) prefix from a uniqueIdentifier.
-    private static nonisolated func baseID(forIdentifier id: String) -> String {
-        id.split(separator: ":", maxSplits: 2).prefix(2).joined(separator: ":")
+    /// Resolves a legacy identifier against known live tag bases. See
+    /// MenuBarItemTag.resolvedBaseIdentifier for the ambiguity contract.
+    private static nonisolated func baseID(
+        forIdentifier id: String,
+        knownBaseIdentifiers: Set<String>
+    ) -> String? {
+        MenuBarItemTag.resolvedBaseIdentifier(
+            for: id,
+            knownBaseIdentifiers: knownBaseIdentifiers
+        )
     }
 
     /// Maps a persisted section key string to its enum value.

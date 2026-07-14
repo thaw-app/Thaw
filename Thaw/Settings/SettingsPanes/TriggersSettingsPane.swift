@@ -19,6 +19,7 @@ import UniformTypeIdentifiers
 struct TriggerItemOption: Hashable {
     let id: String
     let name: String
+    let baseIdentifier: String
 }
 
 /// A running application offered in the app-condition picker.
@@ -293,7 +294,11 @@ struct TriggersSettingsPane: View {
         var options = items.map { item -> TriggerItemOption in
             let base = item.displayName
             let name = (nameCounts[base] ?? 0) > 1 ? "\(base) — \(item.tag.tagIdentifier)" : base
-            return TriggerItemOption(id: item.tag.tagIdentifier, name: name)
+            return TriggerItemOption(
+                id: item.tag.tagIdentifier,
+                name: name,
+                baseIdentifier: item.tag.stableIdentifierBase
+            )
         }
         options.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
 
@@ -388,6 +393,7 @@ struct TriggersSettingsPane: View {
         let trigger = MenuBarItemTrigger(
             itemIdentifier: firstItem?.id ?? "",
             itemDisplayName: firstItem?.name ?? "",
+            itemBaseIdentifier: firstItem?.baseIdentifier,
             revealSection: .visible,
             hideSection: .hidden,
             condition: .batteryBelow(percentage: 20)
@@ -767,7 +773,12 @@ private struct TriggerRow: View {
             set: { newValue in
                 guard index < trigger.additionalItems.count else { return }
                 let name = itemOptions.first(where: { $0.id == newValue })?.name ?? ""
-                trigger.additionalItems[index] = TriggerTargetItem(identifier: newValue, displayName: name)
+                let baseIdentifier = itemOptions.first(where: { $0.id == newValue })?.baseIdentifier
+                trigger.additionalItems[index] = TriggerTargetItem(
+                    identifier: newValue,
+                    displayName: name,
+                    baseIdentifier: baseIdentifier
+                )
             }
         )
     }
@@ -1121,6 +1132,9 @@ private struct TriggerRow: View {
                 trigger.itemIdentifier = newValue
                 if let match = itemOptions.first(where: { $0.id == newValue }) {
                     trigger.itemDisplayName = match.name
+                    trigger.itemBaseIdentifier = match.baseIdentifier
+                } else {
+                    trigger.itemBaseIdentifier = nil
                 }
             }
         )

@@ -96,4 +96,13 @@ final class AppPermissions: ObservableObject, PermissionsManaging {
             permission.stopCheck()
         }
     }
+
+    /// Refreshes permission state when the app becomes active again. This
+    /// catches grants and revocations made in System Settings while Thaw was
+    /// in the background.
+    func refreshAllPermissions() {
+        for permission in allPermissions {
+            permission.refresh()
+        }
+    }
 }

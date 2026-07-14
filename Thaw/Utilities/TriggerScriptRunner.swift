@@ -10,19 +10,139 @@ import Darwin
 import Foundation
 
 private final class ScriptOutputAccumulator: @unchecked Sendable {
-    private let lock = NSLock()
+    private static let maximumRetainedOutputBytes = 1_000_000
+    private static let truncationNotice = "\n[Trigger script output truncated]\n"
+
+    private let condition = NSCondition()
     private var data = Data()
+    private var acceptsReads = true
+    private var activeReads = 0
+    private var outputWasTruncated = false
+    private let expectedOutputs: Set<String>
+    private let searchTailLength: Int
+    private var searchTail = ""
+    private var matchedExpectedOutputs = Set<String>()
+    private var undecodedSearchBytes = Data()
+
+    init(expectedOutputs: Set<String>) {
+        self.expectedOutputs = expectedOutputs.filter { !$0.isEmpty }
+        self.searchTailLength = self.expectedOutputs.map(\.count).max() ?? 0
+    }
+
+    func beginRead() -> Bool {
+        condition.lock()
+        defer { condition.unlock() }
+        guard acceptsReads else { return false }
+        activeReads += 1
+        return true
+    }
+
+    func endRead() {
+        condition.lock()
+        activeReads -= 1
+        if activeReads == 0 {
+            condition.broadcast()
+        }
+        condition.unlock()
+    }
+
+    func stopAcceptingReadsAndWait() {
+        condition.lock()
+        acceptsReads = false
+        while activeReads > 0 {
+            condition.wait()
+        }
+        condition.unlock()
+    }
 
     func append(_ newData: Data) {
-        lock.lock()
-        defer { lock.unlock() }
-        data.append(newData)
+        condition.lock()
+        defer { condition.unlock() }
+        let remainingCapacity = Self.maximumRetainedOutputBytes - data.count
+        if remainingCapacity > 0 {
+            data.append(newData.prefix(remainingCapacity))
+        }
+        if newData.count > remainingCapacity {
+            outputWasTruncated = true
+        }
+
+        guard !expectedOutputs.isEmpty else { return }
+        let searchableText = searchTail + consumeSearchableText(from: newData)
+        for expectedOutput in expectedOutputs
+            where searchableText.localizedCaseInsensitiveContains(expectedOutput)
+        {
+            matchedExpectedOutputs.insert(expectedOutput)
+        }
+        searchTail = searchTailLength > 0
+            ? String(searchableText.suffix(searchTailLength))
+            : ""
     }
 
     var collectedData: Data {
-        lock.lock()
-        defer { lock.unlock() }
-        return data
+        condition.lock()
+        defer { condition.unlock() }
+        var result = data
+        if outputWasTruncated {
+            result.append(Data(Self.truncationNotice.utf8))
+        }
+        return result
+    }
+
+    var streamedExpectedOutputs: Set<String> {
+        condition.lock()
+        defer { condition.unlock() }
+        return matchedExpectedOutputs
+    }
+
+    /// Decodes arbitrary pipe chunks while retaining only a valid, incomplete
+    /// UTF-8 suffix. This keeps Unicode matching independent of kernel read
+    /// boundaries without allowing a malformed byte earlier in the chunk to
+    /// block later valid text.
+    private func consumeSearchableText(from newData: Data) -> String {
+        undecodedSearchBytes.append(newData)
+        let bytes = [UInt8](undecodedSearchBytes)
+        let incompleteSuffixLength = Self.incompleteUTF8SuffixLength(in: bytes)
+        undecodedSearchBytes = Data(bytes.suffix(incompleteSuffixLength))
+        // swiftlint:disable:next optional_data_string_conversion
+        return String(decoding: bytes.dropLast(incompleteSuffixLength), as: UTF8.self)
+    }
+
+    /// Returns the length of a trailing byte sequence that is a syntactically
+    /// valid prefix of a multi-byte UTF-8 scalar, or zero when the tail is
+    /// complete or malformed. At most three bytes can be incomplete.
+    private static func incompleteUTF8SuffixLength(in bytes: [UInt8]) -> Int {
+        for length in stride(from: min(3, bytes.count), through: 1, by: -1) {
+            let suffix = bytes.suffix(length)
+            guard let leadingByte = suffix.first else { continue }
+
+            let expectedLength: Int
+            switch leadingByte {
+            case 0xC2 ... 0xDF: expectedLength = 2
+            case 0xE0 ... 0xEF: expectedLength = 3
+            case 0xF0 ... 0xF4: expectedLength = 4
+            default: continue
+            }
+
+            guard length < expectedLength,
+                  suffix.dropFirst().allSatisfy({ 0x80 ... 0xBF ~= $0 })
+            else { continue }
+
+            if let secondByte = suffix.dropFirst().first {
+                switch leadingByte {
+                case 0xE0 where secondByte < 0xA0,
+                     0xED where secondByte > 0x9F,
+                     0xF0 where secondByte < 0x90,
+                     0xF4 where secondByte > 0x8F:
+                    continue
+                default:
+                    break
+                }
+            }
+
+            return length
+        }
+
+        return 0
     }
 }
 
@@ -40,20 +160,23 @@ enum TriggerScriptRunner {
     /// Runs the script at `path`, returning its outcome, or `nil` on launch
     /// failure. Times out after `timeout` seconds (the process is terminated
     /// and a non-zero exit code is reported).
-    static func run(path: String, timeout: Double = 10) async -> ScriptOutcome? {
+    static func run(
+        path: String,
+        timeout: Double = 10,
+        expectedOutputs: Set<String> = []
+    ) async -> ScriptOutcome? {
         let trimmed = path.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, FileManager.default.fileExists(atPath: trimmed) else {
             return nil
         }
 
-        let process = Process()
         let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = pipe
 
-        let outputAccumulator = ScriptOutputAccumulator()
+        let outputAccumulator = ScriptOutputAccumulator(expectedOutputs: expectedOutputs)
         let outputHandle = pipe.fileHandleForReading
         outputHandle.readabilityHandler = { handle in
+            guard outputAccumulator.beginRead() else { return }
+            defer { outputAccumulator.endRead() }
             let data = handle.availableData
             guard !data.isEmpty else {
                 return
@@ -62,17 +185,31 @@ enum TriggerScriptRunner {
         }
 
         let ext = (trimmed as NSString).pathExtension.lowercased()
+        let executablePath: String
+        let arguments: [String]
         if appleScriptExtensions.contains(ext) {
-            process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-            process.arguments = [trimmed]
+            executablePath = "/usr/bin/osascript"
+            arguments = [trimmed]
         } else {
-            process.executableURL = URL(fileURLWithPath: trimmed)
+            executablePath = trimmed
+            arguments = []
         }
 
+        let process: HookRunner.HookProcess
         do {
-            try process.run()
+            process = try HookRunner.HookProcess.launch(
+                executablePath: executablePath,
+                arguments: arguments,
+                environment: ProcessInfo.processInfo.environment,
+                combinedOutput: pipe
+            )
+            // The child inherited this descriptor. Closing our writer makes
+            // EOF available after ordinary scripts exit, while detached-child
+            // handling below never waits for that EOF.
+            pipe.fileHandleForWriting.closeFile()
         } catch {
             outputHandle.readabilityHandler = nil
+            outputAccumulator.stopAcceptingReadsAndWait()
             diagLog.warning("Failed to launch trigger script \(trimmed): \(error.localizedDescription)")
             return nil
         }
@@ -95,25 +232,55 @@ enum TriggerScriptRunner {
             return first
         }
 
-        if timedOut, process.isRunning {
+        if timedOut {
             process.terminate()
             diagLog.warning("Trigger script timed out after \(timeout)s: \(trimmed)")
             try? await Task.sleep(for: .milliseconds(500))
-            if process.isRunning {
-                _ = kill(process.processIdentifier, SIGKILL)
-                diagLog.warning("Force-killed trigger script after timeout grace period: \(trimmed)")
-            }
+            // The direct shell may have exited from TERM while a background
+            // descendant remains. Continue escalating the process group so
+            // timeout means no script descendants survive.
+            process.interrupt()
+            try? await Task.sleep(for: .milliseconds(100))
+            process.kill()
+            diagLog.warning("Force-killed trigger script process group after timeout: \(trimmed)")
         }
 
-        process.waitUntilExit()
-        outputHandle.readabilityHandler = nil
-        let tailData = outputHandle.availableData
-        if !tailData.isEmpty {
-            outputAccumulator.append(tailData)
+        while process.isRunning {
+            try? await Task.sleep(for: .milliseconds(25))
         }
+        outputHandle.readabilityHandler = nil
+        outputAccumulator.stopAcceptingReadsAndWait()
+        drainAvailableBytes(from: outputHandle, into: outputAccumulator)
         let data = outputAccumulator.collectedData
-        let output = String(data: data, encoding: .utf8) ?? ""
+        // swiftlint:disable:next optional_data_string_conversion
+        let output = String(decoding: [UInt8](data), as: UTF8.self)
         let exitCode = timedOut ? -1 : process.terminationStatus
-        return ScriptOutcome(exitCode: exitCode, output: output)
+        return ScriptOutcome(
+            exitCode: exitCode,
+            output: output,
+            matchedExpectedOutputs: outputAccumulator.streamedExpectedOutputs
+        )
+    }
+
+    /// Captures a final buffered tail without blocking on a background child
+    /// that inherited the script pipe and intentionally remains alive.
+    private static func drainAvailableBytes(from handle: FileHandle, into accumulator: ScriptOutputAccumulator) {
+        let fileDescriptor = handle.fileDescriptor
+        let originalFlags = fcntl(fileDescriptor, F_GETFL)
+        guard originalFlags >= 0 else { return }
+        guard fcntl(fileDescriptor, F_SETFL, originalFlags | O_NONBLOCK) >= 0 else { return }
+        defer { _ = fcntl(fileDescriptor, F_SETFL, originalFlags) }
+
+        var buffer = [UInt8](repeating: 0, count: 16 * 1024)
+        for _ in 0 ..< 64 {
+            let bytesRead = buffer.withUnsafeMutableBytes { buffer in
+                Darwin.read(fileDescriptor, buffer.baseAddress, buffer.count)
+            }
+            if bytesRead > 0 {
+                accumulator.append(Data(buffer.prefix(Int(bytesRead))))
+                continue
+            }
+            guard bytesRead < 0, errno == EINTR else { return }
+        }
     }
 }

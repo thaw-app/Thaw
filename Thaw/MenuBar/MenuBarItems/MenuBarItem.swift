@@ -300,6 +300,62 @@ extension MenuBarItem {
         return windows
     }
 
+    /// The result of a raw item fetch after foreign control windows have been
+    /// filtered. ItemManager retains the discarded IDs for cache-change
+    /// bookkeeping, while ordinary callers only need the safe item list.
+    struct FetchedMenuBarItems {
+        let items: [MenuBarItem]
+        let ghostControlItemWindowIDs: Set<CGWindowID>
+    }
+
+    /// Fetches menu bar items together with the foreign control-window IDs
+    /// removed from the returned item list.
+    @MainActor
+    static func fetchMenuBarItems(
+        on display: CGDirectDisplayID? = nil,
+        option: ListOption,
+        resolveSourcePID: Bool = true
+    ) async -> FetchedMenuBarItems {
+        // Refresh before the PID-resolution pass so a recreated divider is
+        // still attributed to this process rather than briefly becoming an
+        // unresolved Control Center item. This also gives every direct caller
+        // the same ghost filtering previously limited to ItemManager paths.
+        // Refresh once before resolving source PIDs, then again after the
+        // asynchronous window query. A control item can be recreated while
+        // the query is suspended; filtering with the pre-await snapshot would
+        // discard the new window as a foreign duplicate and keep the stale
+        // one instead.
+        _ = currentOwnControlItemWindowIDsByTitle()
+        diagLog.debug(
+            "fetchMenuBarItems: starting (resolveSourcePID=\(resolveSourcePID))"
+        )
+        let rawItems = await getMenuBarItemsExperimental(
+            on: display,
+            option: option,
+            resolveSourcePID: resolveSourcePID
+        )
+        let ownWindowIDsByTitle = currentOwnControlItemWindowIDsByTitle()
+        let inactiveControlTitles = ownControlItemWindowIDsProvider == nil
+            ? []
+            : knownControlItemTitles.subtracting(currentEnabledControlItemTitles())
+        let ghostIDs = ghostControlItemWindowIDs(
+            in: rawItems,
+            ownWindowIDsByTitle: ownWindowIDsByTitle,
+            knownInactiveControlTitles: inactiveControlTitles
+        )
+        let items = rawItems.filter { !ghostIDs.contains($0.windowID) }
+        if !ghostIDs.isEmpty {
+            diagLog.warning(
+                "fetchMenuBarItems: dropped \(ghostIDs.count) foreign control-item window(s) from raw fetch"
+            )
+        }
+        diagLog.debug("fetchMenuBarItems: returned \(items.count) items")
+        return FetchedMenuBarItems(
+            items: items,
+            ghostControlItemWindowIDs: ghostIDs
+        )
+    }
+
     /// Creates and returns a list of menu bar items for the given display.
     ///
     /// - Parameters:
@@ -342,6 +398,120 @@ extension MenuBarItem {
         }
     }
 
+    /// Window IDs of the control item windows this process created.
+    ///
+    /// MenuBarManager provides a synchronous snapshot on every item fetch so
+    /// all consumers, including those outside MenuBarItemManager, can reject
+    /// a stale instance's control windows before planning moves or relaunches.
+    ///
+    /// Control Center hosts every Thaw instance's status items, so the
+    /// "Thaw.ControlItem." title prefix alone cannot distinguish this
+    /// instance's control items from another instance's (or a crashed
+    /// instance's leftovers). Attributing our own PID by title would stamp
+    /// a ghost window with a false identity that downstream consumers of
+    /// `sourcePID` could trust. Empty until the manager first computes the
+    /// authoritative IDs — attribution falls back to the title check then.
+    @MainActor static var ownControlItemWindowIDs = Set<CGWindowID>()
+
+    /// The authoritative control-window mapping, keyed by the status item's
+    /// stable autosave name (which is also its CG window title).
+    @MainActor private static var ownControlItemWindowIDsByTitle = [String: CGWindowID]()
+
+    /// Every control-item title Thaw may create. Once MenuBarManager has
+    /// installed its provider, a title missing from the provider's live map
+    /// represents a disabled control item, so a window bearing that title can
+    /// only belong to another (or defunct) Thaw instance.
+    private static let knownControlItemTitles = Set(MenuBarItemTag.controlItems.map(\.title))
+
+    /// Installed by MenuBarManager once it owns the control items. Keeping
+    /// the provider weak avoids making this low-level item type retain the
+    /// app state graph.
+    @MainActor private static var ownControlItemWindowIDsProvider: (() -> [String: CGWindowID])?
+
+    /// Reports enabled controls independently of whether AppKit has supplied
+    /// a usable NSStatusItem window number yet. A recreated enabled status
+    /// item can briefly have no window; it must not be mistaken for a disabled
+    /// foreign control window during that registration interval.
+    @MainActor private static var enabledControlItemTitlesProvider: (() -> Set<String>)?
+
+    /// Installs the live control-window provider used to refresh the
+    /// authoritative mapping before every fetch.
+    @MainActor
+    static func setOwnControlItemWindowIDsProvider(
+        _ provider: @escaping () -> [String: CGWindowID],
+        enabledControlItemTitlesProvider: @escaping () -> Set<String>
+    ) {
+        ownControlItemWindowIDsProvider = provider
+        self.enabledControlItemTitlesProvider = enabledControlItemTitlesProvider
+        refreshOwnControlItemWindowIDs()
+    }
+
+    /// Returns the current authoritative mapping after refreshing it from the
+    /// live NSStatusItem windows when the app has finished setting them up.
+    @MainActor
+    static func currentOwnControlItemWindowIDsByTitle() -> [String: CGWindowID] {
+        refreshOwnControlItemWindowIDs()
+        return ownControlItemWindowIDsByTitle
+    }
+
+    @MainActor
+    private static func currentEnabledControlItemTitles() -> Set<String> {
+        enabledControlItemTitlesProvider?() ?? []
+    }
+
+    @MainActor
+    private static func refreshOwnControlItemWindowIDs() {
+        guard let ownControlItemWindowIDsProvider else { return }
+        let mapping = ownControlItemWindowIDsProvider()
+        ownControlItemWindowIDsByTitle = mapping
+        ownControlItemWindowIDs = Set(mapping.values)
+    }
+
+    /// Identifies duplicate control windows that belong to another Thaw
+    /// instance. The authoritative window must be present in this particular
+    /// fetch before a duplicate is discarded, preserving the existing safe
+    /// fallback for startup, stale window numbers, and display-filtered lists.
+    static nonisolated func ghostControlItemWindowIDs(
+        in items: [MenuBarItem],
+        ownWindowIDsByTitle: [String: CGWindowID],
+        knownInactiveControlTitles: Set<String> = []
+    ) -> Set<CGWindowID> {
+        var ghostIDs = Set<CGWindowID>()
+        for (title, ownWindowID) in ownWindowIDsByTitle {
+            guard items.contains(where: { $0.windowID == ownWindowID }) else { continue }
+            for item in items where item.title == title && item.windowID != ownWindowID {
+                ghostIDs.insert(item.windowID)
+            }
+        }
+        for item in items where item.title.map(knownInactiveControlTitles.contains) == true {
+            ghostIDs.insert(item.windowID)
+        }
+        return ghostIDs
+    }
+
+    /// Whether a control-item-titled window is verifiably owned by this
+    /// process. Control Center hosts every Thaw instance on macOS 26, so its
+    /// owner PID or bundle ID alone cannot establish this identity.
+    static nonisolated func isOwnControlItemWindow(
+        title: String?,
+        ownerPID: pid_t,
+        sourcePID: pid_t?
+    ) -> Bool {
+        guard title?.hasPrefix("Thaw.ControlItem.") == true else { return false }
+        let ownPID = ProcessInfo.processInfo.processIdentifier
+        return sourcePID == ownPID || ownerPID == ownPID
+    }
+
+    /// Whether our own PID may be attributed to a control-item-titled
+    /// window: it must be verifiably ours, or the authoritative set must
+    /// not be known yet.
+    @MainActor
+    private static func canAttributeOwnPID(to window: WindowInfo) -> Bool {
+        window.ownerPID == ProcessInfo.processInfo.processIdentifier ||
+            ownControlItemWindowIDsProvider == nil ||
+            ownControlItemWindowIDs.contains(window.windowID)
+    }
+
     @available(macOS 26.0, *)
     @MainActor
     private static func makeItemsWithoutResolvingSourcePID(
@@ -350,8 +520,10 @@ extension MenuBarItem {
         var items = windows.map { window in
             if let title = window.title, title.hasPrefix("Thaw.ControlItem.") {
                 let ccBundleID = "com.apple.controlcenter"
-                if window.owningApplication?.bundleIdentifier == ccBundleID ||
-                    window.ownerPID == ProcessInfo.processInfo.processIdentifier
+                if (
+                    window.owningApplication?.bundleIdentifier == ccBundleID ||
+                        window.ownerPID == ProcessInfo.processInfo.processIdentifier
+                ) && canAttributeOwnPID(to: window)
                 {
                     return MenuBarItem(
                         uncheckedItemWindow: window,
@@ -398,13 +570,15 @@ extension MenuBarItem {
                 windows[i].ownerPID == ownPID
         })
 
-        // Our own control item windows are excluded from the XPC request:
-        // their PID is known locally, and the service can never resolve them
-        // anyway (their AX children are disabled divider elements). Including
-        // them made every batch a guaranteed cache miss that triggered a full
-        // AX traversal of every running app's extras menu bar on every cache
-        // cycle — the dominant cost of source PID resolution.
-        let indicesToResolve = windows.indices.filter { !controlItemIndices.contains($0) }
+        // Known-own control windows are excluded from the XPC request because
+        // their PID is already authoritative. When AppKit cannot publish a
+        // window number for a Control-Center-hosted divider, though, ask the
+        // service to resolve it through the matching disabled AX child. That
+        // preserves ownership without adopting a same-titled divider left by
+        // another Thaw process.
+        let indicesToResolve = windows.indices.filter {
+            !controlItemIndices.contains($0) || !canAttributeOwnPID(to: windows[$0])
+        }
         let resolvedPIDs: [pid_t?] = if indicesToResolve.isEmpty {
             []
         } else {
@@ -425,7 +599,15 @@ extension MenuBarItem {
         }
 
         var items = windows.enumerated().map { index, window in
-            let pid: pid_t? = controlItemIndices.contains(index) ? ownPID : pids[index]
+            // Control-titled windows use the authoritative local PID when it
+            // is available. Otherwise the service may have resolved a disabled
+            // AX divider to its actual Thaw process; an unrelated ghost remains
+            // nil rather than receiving a false identity.
+            let pid: pid_t? = if controlItemIndices.contains(index) {
+                canAttributeOwnPID(to: window) ? ownPID : pids[index]
+            } else {
+                pids[index]
+            }
             return MenuBarItem(uncheckedItemWindow: window, sourcePID: pid)
         }
 
@@ -518,16 +700,11 @@ extension MenuBarItem {
         option: ListOption,
         resolveSourcePID: Bool = true
     ) async -> [MenuBarItem] {
-        diagLog.debug(
-            "getMenuBarItems: starting (resolveSourcePID=\(resolveSourcePID))"
-        )
-        let items = await getMenuBarItemsExperimental(
+        await fetchMenuBarItems(
             on: display,
             option: option,
             resolveSourcePID: resolveSourcePID
-        )
-        diagLog.debug("getMenuBarItems: returned \(items.count) items")
-        return items
+        ).items
     }
 }
 
@@ -642,16 +819,16 @@ extension MenuBarItemTag.Namespace {
     /// and the source pid belongs to the application that created it.
     @MainActor
     init(uncheckedItemWindow itemWindow: WindowInfo, sourcePID: pid_t?) {
-        // Check for our own control items by title and owner.
-        // On macOS 26, these are owned by Control Center.
-        if let title = itemWindow.title, title.hasPrefix("Thaw.ControlItem.") {
-            let ccBundleID = "com.apple.controlcenter"
-            if itemWindow.owningApplication?.bundleIdentifier == ccBundleID ||
-                itemWindow.ownerPID == ProcessInfo.processInfo.processIdentifier
-            {
-                self = .thaw
-                return
-            }
+        // Check for our own control items by title and verified source.
+        // On macOS 26, Control Center hosts every Thaw instance's status
+        // windows, so its bundle ID alone cannot establish ownership.
+        if MenuBarItem.isOwnControlItemWindow(
+            title: itemWindow.title,
+            ownerPID: itemWindow.ownerPID,
+            sourcePID: sourcePID
+        ) {
+            self = .thaw
+            return
         }
 
         // Most apps have a bundle ID, but we should be able to handle apps

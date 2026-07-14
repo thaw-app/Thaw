@@ -17,6 +17,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var terminationAttemptID = UUID()
     private var terminationTimeoutTask: Task<Void, Never>?
 
+    /// Set when this process discovers that a newer Thaw instance already
+    /// owns the menu bar. Termination is asynchronous, so lifecycle callbacks
+    /// can still arrive before the process exits; every launch path must
+    /// observe this flag and avoid initializing a competing instance.
+    private var isYieldingToNewerInstance = false
+
     #if DEBUG
         /// Whether the app is running as an Xcode preview/playground.
         ///
@@ -49,7 +55,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // binary is launched directly (e.g. an Xcode debug session while
         // a copy launched at login is still running). The newest instance
         // wins so restart and update flows keep working.
-        terminateOtherInstances()
+        guard terminateOtherInstances() else {
+            return
+        }
 
         // Initial chore work.
         NSSplitViewItem.swizzle()
@@ -67,6 +75,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_: Notification) {
+        // `NSApp.terminate` is asynchronous when the delegate returns
+        // `.terminateLater`, so did-finish can be delivered before the
+        // termination reply. Never start setup in the instance that yielded.
+        guard !isYieldingToNewerInstance else {
+            return
+        }
+
         // Hide the main menu's items to add additional space to the
         // menu bar when we are the focused app.
         for item in NSApp.mainMenu?.items ?? [] {
@@ -135,6 +150,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        // This instance has not initialized its menu-bar controls yet. Reply
+        // immediately so a newer instance does not have to wait for a
+        // pointless blocked-item restore from a process that is yielding.
+        if isYieldingToNewerInstance {
+            return .terminateNow
+        }
+
         guard !isPreparingForTermination else {
             return .terminateLater
         }
@@ -176,36 +198,92 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: Other Methods
 
-    /// Terminates any other running instances of this app, escalating to a
-    /// force-terminate if an instance ignores the polite request.
-    private func terminateOtherInstances() {
+    /// Returns true when `other` launched before this process, so "newest
+    /// instance wins" has an actual ordering to act on. Falls back to PID
+    /// comparison when either launch date is unavailable (PIDs aren't
+    /// guaranteed monotonic, but combined with the bundle-ID filter this is
+    /// only ever a tie-break between two live copies of this app).
+    private func isOlderInstance(_ other: NSRunningApplication) -> Bool {
+        let ourLaunchDate = NSRunningApplication.current.launchDate
+        if let otherDate = other.launchDate, let ourDate = ourLaunchDate {
+            if otherDate != ourDate {
+                return otherDate < ourDate
+            }
+            // Identical timestamps: fall through to the PID tie-break.
+        }
+        return other.processIdentifier < ProcessInfo.processInfo.processIdentifier
+    }
+
+    /// Terminates any older running instances of this app and waits (bounded)
+    /// for them to exit before returning, escalating to a force-terminate if
+    /// an instance ignores the polite request.
+    ///
+    /// Only OLDER instances are terminated — the newest instance wins, so two
+    /// copies launching simultaneously can't kill each other and leave zero
+    /// running (each computes the same ordering; exactly one survives). If a
+    /// NEWER instance is already running, this instance bows out instead:
+    /// that's the restart/update flow arriving from the other side.
+    ///
+    /// The bounded wait matters as much as the terminate: the old instance's
+    /// applicationShouldTerminate runs an async restore for up to 2 seconds,
+    /// during which it still moves its own menu bar items. Proceeding into
+    /// migration and menu bar setup while that's in flight recreates the
+    /// two-instances-fighting race this guard exists to prevent, so we spin
+    /// the run loop until the others are gone (or a ~3.5s budget expires,
+    /// after which they're force-terminated and we proceed).
+    /// - Returns: `false` when this instance yielded to a newer copy and must
+    ///   not continue launch setup.
+    private func terminateOtherInstances() -> Bool {
         // Never enforce single-instance under XCTest: parallel testing
         // launches several host app instances that would kill each other,
         // failing the run with "test runner exited before establishing
         // connection".
-        guard NSClassFromString("XCTestCase") == nil else { return }
-        guard let bundleID = Bundle.main.bundleIdentifier else { return }
+        guard NSClassFromString("XCTestCase") == nil else { return true }
+        guard let bundleID = Bundle.main.bundleIdentifier else { return true }
         let currentPID = ProcessInfo.processInfo.processIdentifier
         let otherInstances = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
             .filter { $0.processIdentifier != currentPID }
+        guard !otherInstances.isEmpty else { return true }
+
+        if let newer = otherInstances.first(where: { !isOlderInstance($0) }) {
+            appState.diagLog.warning(
+                "A newer instance is already running (PID \(newer.processIdentifier)); terminating this one"
+            )
+            isYieldingToNewerInstance = true
+            NSApp.terminate(nil)
+            return false
+        }
+
         for other in otherInstances {
             appState.diagLog.warning(
-                "Another instance is already running (PID \(other.processIdentifier)); terminating it"
+                "An older instance is already running (PID \(other.processIdentifier)); terminating it"
             )
             if !other.terminate() {
                 other.forceTerminate()
-                continue
-            }
-            Task { @MainActor in
-                try? await Task.sleep(for: .seconds(3))
-                if !other.isTerminated {
-                    self.appState.diagLog.warning(
-                        "Other instance (PID \(other.processIdentifier)) did not terminate; force-terminating"
-                    )
-                    other.forceTerminate()
-                }
             }
         }
+
+        // Bounded wait for the older instances to actually exit. Their
+        // termination flow (blocked-item restore) takes up to 2s by design;
+        // budget slightly more, then force-terminate stragglers and give
+        // them a final moment to die.
+        let politeDeadline = Date(timeIntervalSinceNow: 2.5)
+        while otherInstances.contains(where: { !$0.isTerminated }), Date() < politeDeadline {
+            RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.05))
+        }
+        let stragglers = otherInstances.filter { !$0.isTerminated }
+        guard !stragglers.isEmpty else { return true }
+        for straggler in stragglers {
+            appState.diagLog.warning(
+                "Older instance (PID \(straggler.processIdentifier)) did not terminate in time; force-terminating"
+            )
+            straggler.forceTerminate()
+        }
+        let forceDeadline = Date(timeIntervalSinceNow: 1.0)
+        while stragglers.contains(where: { !$0.isTerminated }), Date() < forceDeadline {
+            RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.05))
+        }
+        return true
     }
 
     /// Handles `kAEGetURL` Apple Events and forwards `thaw://` URLs to `handleURL(_:senderBundleId:)`.

@@ -114,6 +114,15 @@ final class MenuBarManager: ObservableObject {
         for section in sections {
             section.performSetup(with: appState)
         }
+        // Do not install the authoritative provider until every section has
+        // created its enabled status item. Before that point, an empty map is
+        // indistinguishable from deliberately disabled controls and could make
+        // an existing control window disappear during startup.
+        MenuBarItem.setOwnControlItemWindowIDsProvider { [weak self] in
+            self?.controlItemWindowIDsByTitle() ?? [:]
+        } enabledControlItemTitlesProvider: { [weak self] in
+            self?.enabledControlItemTitles() ?? []
+        }
         rebuildItemHotkeys()
     }
 
@@ -454,9 +463,23 @@ final class MenuBarManager: ObservableObject {
                             abs(item.bounds.origin.y - menuBarY) < 50
                         }
 
-                        // Get the control items for this screen
-                        let hiddenControlItem = screenItems.first { $0.tag == .hiddenControlItem }
-                        let alwaysHiddenControlItem = screenItems.first { $0.tag == .alwaysHiddenControlItem }
+                        // Resolve our dividers by their authoritative AppKit
+                        // window IDs. Foreign Thaw windows can occupy the
+                        // lower instance index before fetch filtering, so the
+                        // surviving real divider is not guaranteed to carry
+                        // the un-suffixed control-item tag.
+                        let hiddenControlWindowID = self.controlItem(withName: .hidden)?.currentWindowID
+                        let alwaysHiddenControlWindowID = self.controlItem(withName: .alwaysHidden)?.currentWindowID
+                        let hiddenControlItem = Self.controlItem(
+                            in: screenItems,
+                            authoritativeWindowID: hiddenControlWindowID,
+                            fallbackTag: .hiddenControlItem
+                        )
+                        let alwaysHiddenControlItem = Self.controlItem(
+                            in: screenItems,
+                            authoritativeWindowID: alwaysHiddenControlWindowID,
+                            fallbackTag: .alwaysHiddenControlItem
+                        )
 
                         // Approximate hidden items width from control item positions.
 
@@ -874,6 +897,54 @@ final class MenuBarManager: ObservableObject {
     /// Returns the control item for the menu bar section with the given name.
     func controlItem(withName name: MenuBarSection.Name) -> ControlItem? {
         section(withName: name)?.controlItem
+    }
+
+    /// Resolves one of this process's control items from a raw menu-bar fetch.
+    /// The window ID remains correct when stable-instance assignment happened
+    /// before foreign control windows were filtered; the tag is retained only
+    /// as a fallback while AppKit has not exposed the status-item window yet.
+    nonisolated static func controlItem(
+        in items: [MenuBarItem],
+        authoritativeWindowID: CGWindowID?,
+        fallbackTag: MenuBarItemTag
+    ) -> MenuBarItem? {
+        if let authoritativeWindowID,
+           let item = items.first(where: { $0.windowID == authoritativeWindowID })
+        {
+            return item
+        }
+        return items.first { $0.tag == fallbackTag }
+    }
+
+    /// Current CG window IDs for the control status items this process owns.
+    /// These IDs are ephemeral (the system may recreate a status-item window),
+    /// so MenuBarItem asks for a fresh snapshot before every raw menu-bar
+    /// fetch instead of relying on a cache from the last ItemManager pass.
+    private func controlItemWindowIDsByTitle() -> [String: CGWindowID] {
+        var windowIDs = [String: CGWindowID]()
+        for name in MenuBarSection.Name.allCases {
+            guard let controlItem = controlItem(withName: name),
+                  controlItem.isAddedToMenuBar,
+                  let windowID = controlItem.currentWindowID
+            else { continue }
+            windowIDs[controlItem.identifier.rawValue] = windowID
+        }
+        return windowIDs
+    }
+
+    /// Enabled controls may temporarily have no NSWindow while AppKit
+    /// registers or recreates their status item. Keep that state distinct
+    /// from an intentionally disabled section so MenuBarItem never filters
+    /// the soon-to-be-owned divider as a foreign ghost.
+    private func enabledControlItemTitles() -> Set<String> {
+        Set(
+            MenuBarSection.Name.allCases.compactMap {
+                guard let controlItem = controlItem(withName: $0),
+                      controlItem.isAddedToMenuBar
+                else { return nil }
+                return controlItem.identifier.rawValue
+            }
+        )
     }
 
     // MARK: - Per-Item Hotkeys

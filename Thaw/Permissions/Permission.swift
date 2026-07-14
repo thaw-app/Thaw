@@ -86,9 +86,9 @@ class Permission: ObservableObject, Identifiable {
     /// point the timer cancels itself — there's no need to keep checking once
     /// the app already has what it needs.
     private func configureCancellables() {
+        guard !hasPermission else { return }
         timerCancellable = Timer.publish(every: 3, tolerance: 0.5, on: .main, in: .default)
             .autoconnect()
-            .merge(with: Just(.now))
             .sink { [weak self] _ in
                 guard let self else {
                     return
@@ -100,6 +100,20 @@ class Permission: ObservableObject, Identifiable {
                     timerCancellable = nil
                 }
             }
+    }
+
+    /// Rechecks a permission after the app returns to the foreground.
+    ///
+    /// Permissions may be revoked while Thaw is in System Settings. When a
+    /// formerly granted permission is now missing, resume the existing
+    /// low-frequency poll so a subsequent grant is observed without requiring
+    /// an app relaunch.
+    func refresh() {
+        let granted = check()
+        hasPermission = granted
+        if !granted, timerCancellable == nil {
+            configureCancellables()
+        }
     }
 
     /// Performs the request and opens the System Settings app to the appropriate pane.
@@ -119,13 +133,20 @@ class Permission: ObservableObject, Identifiable {
         }
         await withCheckedContinuation { continuation in
             hasPermissionCancellable = $hasPermission.sink { [weak self] hasPermission in
-                guard self != nil else {
+                guard let self else {
                     continuation.resume()
                     return
                 }
-                if hasPermission {
-                    continuation.resume()
+                guard hasPermission else {
+                    return
                 }
+                // Tear the subscription down before resuming. @Published does
+                // not dedupe, so a repeated `hasPermission = true` would emit
+                // again and resume this continuation a second time — a fatal
+                // double-resume. Cancelling first guarantees a single resume.
+                self.hasPermissionCancellable?.cancel()
+                self.hasPermissionCancellable = nil
+                continuation.resume()
             }
         }
         hasPermissionCancellable?.cancel()

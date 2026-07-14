@@ -12,6 +12,23 @@ import XCTest
 // MARK: - MenuBarItemTag.Namespace Tests
 
 final class MenuBarItemTagNamespaceTests: XCTestCase {
+    func testForeignControlCenterHostedThawControlIsNotTaggedAsOurs() {
+        XCTAssertFalse(
+            MenuBarItem.isOwnControlItemWindow(
+                title: "Thaw.ControlItem.Hidden",
+                ownerPID: 999_999,
+                sourcePID: nil
+            )
+        )
+        XCTAssertTrue(
+            MenuBarItem.isOwnControlItemWindow(
+                title: "Thaw.ControlItem.Hidden",
+                ownerPID: 999_999,
+                sourcePID: ProcessInfo.processInfo.processIdentifier
+            )
+        )
+    }
+
     // MARK: - Initialization Tests
 
     func testNullNamespace() {

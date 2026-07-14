@@ -41,22 +41,53 @@ enum ScreenCapture {
         return preflightResult
     }
 
+    /// How long a `cachedCheckPermissions` result is trusted before the
+    /// permission is re-probed. Bounds the cost of the relatively expensive
+    /// window-title probe on hot callers while observing both grants and
+    /// revocations during a running session.
+    private static let permissionTTL: DispatchTimeInterval = .milliseconds(1000)
+
+    /// Cached permission state for ``cachedCheckPermissions(reset:)``.
+    private struct CachedPermission {
+        /// The most recently observed permission state, or `nil` when unknown.
+        var granted: Bool?
+        /// When the latest probe ran, used to expire either cached result.
+        var lastProbe: DispatchTime?
+    }
+
+    private static let cachedPermission = OSAllocatedUnfairLock(initialState: CachedPermission())
+
     /// Returns a Boolean value that indicates whether the app has screen
     /// capture permissions.
     ///
-    /// This function caches its initial result and returns it on subsequent
-    /// calls. Pass `true` to the `reset` parameter to replace the cached
-    /// result with a newly computed value.
+    /// Both results are cached only briefly (``permissionTTL``). Screen
+    /// Recording can be granted or revoked while Thaw is running, and a
+    /// session-long positive cache otherwise keeps capture-only features
+    /// available after the user has withdrawn access.
+    /// Pass `true` to `reset` to discard the cached result and recompute.
     static func cachedCheckPermissions(reset: Bool = false) -> Bool {
-        enum Context {
-            static let cachedResult = OSAllocatedUnfairLock<Bool?>(initialState: nil)
+        let cached: Bool? = cachedPermission.withLock { state in
+            if reset {
+                state = CachedPermission()
+            }
+            if let granted = state.granted,
+               let lastProbe = state.lastProbe,
+               DispatchTime.now() < lastProbe + permissionTTL
+            {
+                return granted
+            }
+            return nil
         }
-        if !reset, let result = Context.cachedResult.withLock({ $0 }) {
-            return result
+        if let cached {
+            return cached
         }
+
         let result = checkPermissions()
-        diagLog.debug("cachedCheckPermissions: computed fresh result = \(result) (reset=\(reset), wasCached=\(Context.cachedResult.withLock { $0 != nil }))")
-        Context.cachedResult.withLock { $0 = result }
+        diagLog.debug("cachedCheckPermissions: computed fresh result = \(result) (reset=\(reset))")
+        cachedPermission.withLock { state in
+            state.granted = result
+            state.lastProbe = DispatchTime.now()
+        }
         return result
     }
 

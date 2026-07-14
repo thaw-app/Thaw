@@ -26,9 +26,10 @@ final class GhostControlItemWindowTests: XCTestCase {
     private func item(
         tag: MenuBarItemTag,
         windowID: CGWindowID,
-        title: String
+        title: String,
+        sourcePID: pid_t? = 1234
     ) -> MenuBarItem {
-        MenuBarItem.fixture(tag: tag, windowID: windowID, title: title)
+        MenuBarItem.fixture(tag: tag, windowID: windowID, sourcePID: sourcePID, title: title)
     }
 
     // MARK: ControlItemPair authoritative windowID lookup
@@ -65,6 +66,26 @@ final class GhostControlItemWindowTests: XCTestCase {
         XCTAssertEqual(items.map(\.windowID), [364, 366])
     }
 
+    func testMenuBarManagerControlLookupUsesAuthoritativeWindowIDAfterGhostFiltering() {
+        // Stable instance assignment sees the foreign lower ID first, leaving
+        // our real divider at :1 even though the foreign item was removed
+        // before this later UI-only fetch reaches MenuBarManager.
+        let ownWindowID: CGWindowID = 21_542
+        let shiftedOwnControl = item(
+            tag: .appItem(bundleID: "com.stonerl.Thaw", title: hiddenTitle, instanceIndex: 1),
+            windowID: ownWindowID,
+            title: hiddenTitle
+        )
+
+        let resolved = MenuBarManager.controlItem(
+            in: [shiftedOwnControl],
+            authoritativeWindowID: ownWindowID,
+            fallbackTag: .hiddenControlItem
+        )
+
+        XCTAssertEqual(resolved?.windowID, ownWindowID)
+    }
+
     /// Without authoritative windowIDs the tag lookup remains the fallback.
     func testControlItemPairFallsBackToTagLookup() {
         var items = [
@@ -77,6 +98,35 @@ final class GhostControlItemWindowTests: XCTestCase {
         XCTAssertEqual(pair?.hidden.windowID, 364)
         XCTAssertEqual(pair?.alwaysHidden?.windowID, 366)
         XCTAssertTrue(items.isEmpty)
+    }
+
+    /// Tahoe can leave the NSStatusItem window number unavailable even though
+    /// the matching disabled AX divider resolves to this process. That identity
+    /// must win over an older same-titled divider with the un-suffixed tag.
+    func testControlItemPairPrefersResolvedOwnPIDWhenWindowIDUnavailable() {
+        let ownPID = ProcessInfo.processInfo.processIdentifier
+        var items = [
+            item(tag: .hiddenControlItem, windowID: 364, title: hiddenTitle),
+            item(tag: .alwaysHiddenControlItem, windowID: 366, title: alwaysHiddenTitle),
+            item(
+                tag: .appItem(bundleID: "com.stonerl.Thaw", title: hiddenTitle, instanceIndex: 1),
+                windowID: 21_542,
+                title: hiddenTitle,
+                sourcePID: ownPID
+            ),
+            item(
+                tag: .appItem(bundleID: "com.stonerl.Thaw", title: alwaysHiddenTitle, instanceIndex: 1),
+                windowID: 21_543,
+                title: alwaysHiddenTitle,
+                sourcePID: ownPID
+            ),
+        ]
+
+        let pair = MenuBarItemManager.ControlItemPair(items: &items)
+
+        XCTAssertEqual(pair?.hidden.windowID, 21_542)
+        XCTAssertEqual(pair?.alwaysHidden?.windowID, 21_543)
+        XCTAssertEqual(items.map(\.windowID), [364, 366])
     }
 
     /// An authoritative hidden windowID that is missing from the list (stale
@@ -171,6 +221,46 @@ final class GhostControlItemWindowTests: XCTestCase {
         )
     }
 
+    /// Once the manager has finished setting up its controls, a missing title
+    /// means that control is disabled. A stale window with that title belongs
+    /// to another instance and must not become an unmanaged divider.
+    func testGhostDetectionDropsDisabledControlTitle() {
+        let staleAlwaysHiddenWindow: CGWindowID = 366
+        let items = [
+            item(tag: .alwaysHiddenControlItem, windowID: staleAlwaysHiddenWindow, title: alwaysHiddenTitle),
+        ]
+
+        let ghosts = MenuBarItem.ghostControlItemWindowIDs(
+            in: items,
+            ownWindowIDsByTitle: [hiddenTitle: 21_542],
+            knownInactiveControlTitles: [alwaysHiddenTitle]
+        )
+
+        XCTAssertEqual(ghosts, [staleAlwaysHiddenWindow])
+    }
+
+    /// The provider map must be refreshed after an async fetch. Given the
+    /// current window ID, only the old same-title window is a ghost.
+    func testGhostDetectionKeepsRecreatedCurrentControlWindow() {
+        let staleWindow: CGWindowID = 364
+        let currentWindow: CGWindowID = 21_542
+        let items = [
+            item(tag: .hiddenControlItem, windowID: staleWindow, title: hiddenTitle),
+            item(
+                tag: .appItem(bundleID: "com.stonerl.Thaw", title: hiddenTitle, instanceIndex: 1),
+                windowID: currentWindow,
+                title: hiddenTitle
+            ),
+        ]
+
+        let ghosts = MenuBarItem.ghostControlItemWindowIDs(
+            in: items,
+            ownWindowIDsByTitle: [hiddenTitle: currentWindow]
+        )
+
+        XCTAssertEqual(ghosts, [staleWindow])
+    }
+
     /// Ordinary items never match control item titles and are never dropped.
     func testGhostDetectionIgnoresOrdinaryItems() {
         let items = [
@@ -185,5 +275,26 @@ final class GhostControlItemWindowTests: XCTestCase {
         )
 
         XCTAssertTrue(ghosts.isEmpty)
+    }
+
+    /// The cache compares raw WindowServer IDs, so filtering the item list
+    /// alone is insufficient. A foreign divider must stay in the ignored set
+    /// even though its raw ID remains in the original window list.
+    func testCacheWindowIDsExcludeForeignControlWindowFromRawList() {
+        let ownWindowID: CGWindowID = 21_542
+        let ghostWindowID: CGWindowID = 364
+        let normalWindowID: CGWindowID = 850
+        let items = [
+            item(tag: .hiddenControlItem, windowID: ownWindowID, title: hiddenTitle),
+            item(tag: .appItem(bundleID: "com.apple.controlcenter", title: "Battery"), windowID: normalWindowID, title: "Battery"),
+        ]
+
+        let cacheIDs = MenuBarItemManager.cacheWindowIDs(
+            rawWindowIDs: [ghostWindowID, ownWindowID, normalWindowID],
+            filteredItems: items,
+            ignoredWindowIDs: [ghostWindowID]
+        )
+
+        XCTAssertEqual(cacheIDs, [ownWindowID, normalWindowID])
     }
 }

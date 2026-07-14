@@ -16,6 +16,7 @@ final class IceBarColorManager: ObservableObject {
     private weak var iceBarPanel: IceBarPanel?
 
     private var windowImage: CGImage?
+    private var windowImageDisplayID: CGDirectDisplayID?
 
     /// Monotonically incremented by updateWindowImage and clearWindowImage.
     /// A capture in flight stamps the value it observed; on completion it only
@@ -41,13 +42,17 @@ final class IceBarColorManager: ObservableObject {
             iceBarPanel.publisher(for: \.screen)
                 .receive(on: DispatchQueue.main)
                 .sink { [weak self] screen in
+                    // Adapt to whichever screen the Thaw Bar is shown on, not
+                    // only the primary display — with "Displays have separate
+                    // Spaces" the active menu bar can be on a secondary screen.
+                    // updateWindowImage no-ops on displays without a menu bar.
                     guard
                         let self,
-                        let screen,
-                        screen == .main
+                        let screen
                     else {
                         return
                     }
+                    self.clearWindowImage()
                     Task { [weak self] in
                         guard let self else { return }
                         await self.updateWindowImage(for: screen)
@@ -62,8 +67,7 @@ final class IceBarColorManager: ObservableObject {
                         let self,
                         let iceBarPanel,
                         let screen = iceBarPanel.screen,
-                        iceBarPanel.isVisible,
-                        screen == .main
+                        iceBarPanel.isVisible
                     else {
                         return
                     }
@@ -96,8 +100,7 @@ final class IceBarColorManager: ObservableObject {
                 guard
                     let iceBarPanel,
                     iceBarPanel.isVisible,
-                    let screen = iceBarPanel.screen,
-                    screen == .main
+                    let screen = iceBarPanel.screen
                 else {
                     return
                 }
@@ -124,7 +127,7 @@ final class IceBarColorManager: ObservableObject {
                         // update isn't stale. Awaiting inside a Task so
                         // updateColorInfo reads the fresh capture, not the
                         // previous cycle's leftover.
-                        if let iceBarPanel, let screen = iceBarPanel.screen, screen == .main {
+                        if let iceBarPanel, let screen = iceBarPanel.screen {
                             let frame = iceBarPanel.frame
                             Task { [weak self] in
                                 guard let self else { return }
@@ -153,8 +156,7 @@ final class IceBarColorManager: ObservableObject {
                     let self,
                     let iceBarPanel,
                     iceBarPanel.isVisible,
-                    let screen = iceBarPanel.screen,
-                    screen == .main
+                    let screen = iceBarPanel.screen
                 else {
                     return
                 }
@@ -177,46 +179,65 @@ final class IceBarColorManager: ObservableObject {
         clearWindowImage()
     }
 
-    /// Clears windowImage and invalidates any in-flight capture. Use whenever
-    /// callers want a synchronous nil state that an outstanding async capture
-    /// must not be allowed to overwrite.
+    /// Clears the captured image/color and invalidates any in-flight capture.
+    /// Use whenever callers want a synchronous nil state that an outstanding
+    /// async capture must not be allowed to overwrite.
     private func clearWindowImage() {
         windowImageGeneration += 1
         windowImage = nil
+        windowImageDisplayID = nil
+        colorInfo = nil
     }
 
     private func updateWindowImage(for screen: NSScreen) async {
-        let windows = WindowInfo.createWindows(option: .onScreen)
+        // Invalidate the previous display's image before any lookup or capture
+        // work. A secondary display can temporarily have no menu-bar/window
+        // entry; in that case retaining the old display's colors is worse than
+        // falling back to the normal un-tinted appearance.
+        windowImageGeneration += 1
+        let generation = windowImageGeneration
         let displayID = screen.displayID
+        if windowImageDisplayID != displayID {
+            windowImage = nil
+            windowImageDisplayID = nil
+            colorInfo = nil
+        }
+        let windows = WindowInfo.createWindows(option: .onScreen)
 
         guard
             let menuBarWindow = WindowInfo.menuBarWindow(from: windows, for: displayID),
             let wallpaperWindow = WindowInfo.wallpaperWindow(from: windows, for: displayID)
         else {
+            windowImage = nil
+            windowImageDisplayID = nil
+            colorInfo = nil
             return
         }
 
         let windowIDs = [menuBarWindow.windowID, wallpaperWindow.windowID]
         let bounds = withMutableCopy(of: wallpaperWindow.bounds) { $0.size.height = 1 }
 
-        // Stamp our generation before suspending. If the counter advances while
-        // we await (a clearWindowImage, a stopPeriodicRefresh, or a newer
-        // updateWindowImage call), our completion is stale and must skip the
-        // write so we don't undo intentional clears or clobber a fresher image.
-        windowImageGeneration += 1
-        let generation = windowImageGeneration
-
         let image = await ScreenCapture.captureWindowsAsync(
             with: windowIDs,
             screenBounds: bounds,
             option: .nominalResolution
         )
-        guard generation == windowImageGeneration, let image else { return }
+        // If the counter advanced while we awaited (a clearWindowImage, a
+        // stopPeriodicRefresh, or a newer updateWindowImage call), this result
+        // is stale and must not overwrite the newer screen's state.
+        guard generation == windowImageGeneration else { return }
+        guard let image else {
+            windowImage = nil
+            windowImageDisplayID = nil
+            colorInfo = nil
+            return
+        }
         windowImage = image
+        windowImageDisplayID = displayID
     }
 
     private func updateColorInfo(with frame: CGRect, screen: NSScreen) {
-        guard let image = windowImage else {
+        guard let image = windowImage, windowImageDisplayID == screen.displayID else {
             return
         }
 
