@@ -101,6 +101,9 @@ class Permission: ObservableObject, Identifiable {
 
     /// Performs the request and opens the System Settings app to the appropriate pane.
     func performRequest() {
+        // Setup stops background permission polling once the app is running.
+        // Restart it for every explicit request so later grants are observed.
+        configureCancellables()
         request()
         if let settingsURL {
             NSWorkspace.shared.open(settingsURL)
