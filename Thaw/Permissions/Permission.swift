@@ -43,6 +43,9 @@ class Permission: ObservableObject, Identifiable {
     /// The function that requests permissions.
     private let request: () -> Void
 
+    /// The function that opens a System Settings URL.
+    private let openSettings: (URL) -> Bool
+
     /// Observer that runs on a timer to check permissions.
     private var timerCancellable: AnyCancellable?
 
@@ -55,6 +58,7 @@ class Permission: ObservableObject, Identifiable {
     ///   - settingsURL: The URL of the settings pane to open.
     ///   - check: A function that checks permissions.
     ///   - request: A function that requests permissions.
+    ///   - openSettings: A function that opens the settings URL.
     init(
         title: String,
         iconName: String,
@@ -63,7 +67,8 @@ class Permission: ObservableObject, Identifiable {
         isRequired: Bool,
         settingsURL: URL?,
         check: @escaping () -> Bool,
-        request: @escaping () -> Void
+        request: @escaping () -> Void,
+        openSettings: @escaping (URL) -> Bool = { NSWorkspace.shared.open($0) }
     ) {
         self.title = title
         self.iconName = iconName
@@ -73,6 +78,7 @@ class Permission: ObservableObject, Identifiable {
         self.settingsURL = settingsURL
         self.check = check
         self.request = request
+        self.openSettings = openSettings
         self.hasPermission = check()
         configureCancellables()
     }
@@ -106,7 +112,7 @@ class Permission: ObservableObject, Identifiable {
         configureCancellables()
         request()
         if let settingsURL {
-            NSWorkspace.shared.open(settingsURL)
+            _ = openSettings(settingsURL)
         }
     }
 

@@ -15,20 +15,30 @@ import XCTest
 
 @MainActor
 final class PermissionTests: XCTestCase {
-    func testPerformRequestRestartsPollingAfterChecksStop() {
+    func testPerformRequestRestartsPollingAfterChecksStop() throws {
         var isGranted = false
         var requestCount = 0
+        var openedSettingsURLs = [URL]()
+        let settingsURL = try XCTUnwrap(
+            URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")
+        )
         let permission = Permission(
             title: "Test Permission",
             iconName: "checkmark",
             iconColor: .blue,
             details: [],
             isRequired: false,
-            settingsURL: nil,
+            settingsURL: settingsURL,
             check: { isGranted },
-            request: { requestCount += 1 }
+            request: { requestCount += 1 },
+            openSettings: { url in
+                openedSettingsURLs.append(url)
+                return true
+            }
         )
 
+        permission.stopCheck()
+        permission.performRequest()
         permission.stopCheck()
         permission.performRequest()
         isGranted = true
@@ -40,7 +50,8 @@ final class PermissionTests: XCTestCase {
 
         wait(for: [granted], timeout: 5)
 
-        XCTAssertEqual(requestCount, 1)
+        XCTAssertEqual(requestCount, 2)
+        XCTAssertEqual(openedSettingsURLs, [settingsURL, settingsURL])
         XCTAssertTrue(permission.hasPermission)
         withExtendedLifetime(cancellable) {}
     }
