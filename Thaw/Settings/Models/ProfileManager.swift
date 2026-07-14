@@ -271,8 +271,8 @@ final class ProfileManager: ObservableObject {
         let pinnedHidden = Set(profile.menuBarLayout.pinnedHiddenBundleIDs)
         let pinnedAlwaysHidden = Set(profile.menuBarLayout.pinnedAlwaysHiddenBundleIDs)
         let sectionOrder = profile.menuBarLayout.savedSectionOrder
-        let itemSectionMap = profile.menuBarLayout.itemSectionMap ?? [:]
-        let itemOrder = profile.menuBarLayout.itemOrder ?? [:]
+        let itemSectionMap = profile.menuBarLayout.resolvedItemSectionMap
+        let itemOrder = profile.menuBarLayout.resolvedItemOrder
 
         // Snapshot hook config before entering the task. Resolving
         // global hooks inside the Task would still work; doing it now
@@ -755,8 +755,8 @@ final class ProfileManager: ObservableObject {
             pinnedHidden: Set(layout.pinnedHiddenBundleIDs),
             pinnedAlwaysHidden: Set(layout.pinnedAlwaysHiddenBundleIDs),
             sectionOrder: layout.savedSectionOrder,
-            itemSectionMap: layout.itemSectionMap ?? [:],
-            itemOrder: layout.itemOrder ?? [:]
+            itemSectionMap: layout.resolvedItemSectionMap,
+            itemOrder: layout.resolvedItemOrder
         )
     }
 

@@ -60,4 +60,20 @@ final class ProfileApplyInFlightFlagTests: XCTestCase {
 
         XCTAssertFalse(manager.isApplyingProfileLayout)
     }
+
+    /// An empty profile layout has no moves to run, but it still must release
+    /// the profile-apply gate so a later saved-layout restore can proceed.
+    func testEmptyProfileApplyClearsInFlightFlag() async {
+        let manager = MenuBarItemManager()
+
+        await manager.applyProfileLayout(
+            pinnedHidden: [],
+            pinnedAlwaysHidden: [],
+            sectionOrder: makeOrder(),
+            itemSectionMap: [:],
+            itemOrder: [:]
+        )
+
+        XCTAssertFalse(manager.isApplyingProfileLayout)
+    }
 }
