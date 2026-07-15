@@ -303,7 +303,7 @@ final class MenuBarItemManager: ObservableObject {
     /// True while `applyProfileLayout` is executing. Suppresses the
     /// late-arrival detection in `cacheItemsRegardless` to prevent
     /// false re-sort triggers during an in-flight sort.
-    private var isApplyingProfileLayout = false
+    private(set) var isApplyingProfileLayout = false
 
     /// Persisted mapping of item tag identifiers to their original section name for
     /// temporarily shown items whose apps quit before they could be rehidden. When
@@ -1820,12 +1820,30 @@ extension MenuBarItemManager {
                     return bounds.origin.x == -1
                 }
             }
-            if !hasBlockedItems {
-                saveSectionOrder(from: context.cache)
-            } else {
+            // Don't persist while the items straddle two displays. A cross-display
+            // cache is a menu bar relocation caught mid-flight, not a settled
+            // layout: macOS un-hides items as it moves them to the new screen, so
+            // capturing the section order now would bake those un-hidden items
+            // into the saved layout as if the user wanted them visible. Wait for
+            // the items to collapse back onto a single display.
+            let screenFrames = NSScreen.screens.map { CGDisplayBounds($0.displayID) }
+            let itemCenters = MenuBarSection.Name.allCases.flatMap { section in
+                context.cache[section].map { CGPoint(x: $0.bounds.midX, y: $0.bounds.midY) }
+            }
+            let spansDisplays = LayoutSolver.itemsSpanMultipleDisplays(
+                itemCenters: itemCenters,
+                screenFrames: screenFrames
+            )
+            if hasBlockedItems {
                 MenuBarItemManager.diagLog.debug(
                     "Skipping saveSectionOrder; blocked items detected (x=-1), will retry on next cache tick"
                 )
+            } else if spansDisplays {
+                MenuBarItemManager.diagLog.debug(
+                    "Skipping saveSectionOrder; menu bar items span multiple displays (relocation in progress)"
+                )
+            } else {
+                saveSectionOrder(from: context.cache)
             }
         }
         MenuBarItemManager.diagLog.debug("Updated menu bar item cache: visible=\(context.cache[.visible].count), hidden=\(context.cache[.hidden].count), alwaysHidden=\(context.cache[.alwaysHidden].count)")
@@ -2395,7 +2413,7 @@ extension MenuBarItemManager {
     /// paused input for at least the given duration.
     ///
     /// - Parameter duration: The duration that certain types of input
-    ///   events must not have occured within in order to return `true`.
+    ///   events must not have occurred within in order to return `true`.
     private nonisolated func hasUserPausedInput(for duration: Duration) -> Bool {
         NSEvent.modifierFlags.isEmpty &&
             !MouseHelpers.lastMovementOccurred(within: duration) &&
@@ -5579,7 +5597,7 @@ extension MenuBarItemManager {
     /// Phase 7 with Task.isCancelled false). If a crash, SIGKILL, or
     /// mid-apply cancellation aborts before that point, disk reflects
     /// the previous profile rather than an unexecuted intent.
-    private func armProfileState(
+    func armProfileState(
         source: ApplySource,
         pinnedHidden: Set<String>,
         pinnedAlwaysHidden: Set<String>,
@@ -5668,6 +5686,19 @@ extension MenuBarItemManager {
         updateProfileSortedSnapshot(source: source, items: items)
         guard case .profile = source else { return }
         isApplyingProfileLayout = false
+    }
+
+    /// Cleanup for a profile apply that needed no item moves: the bar was
+    /// already in the target arrangement, so the move loop is skipped and the
+    /// normal Phase 7 exit (which clears the in-flight flag) is never reached.
+    /// This early exit must run the same profile-only teardown as Phase 7,
+    /// otherwise a no-moves apply (common on a display reconnect, where the
+    /// active-display profile is re-applied onto an already-correct bar) leaks
+    /// isApplyingProfileLayout = true and permanently blocks applySavedLayout
+    /// for the rest of the session.
+    func concludeProfileApplyWithoutMoves(source: ApplySource, items: [MenuBarItem]) {
+        persistProfileStateOnSuccess(source: source)
+        clearProfileState(source: source, items: items)
     }
 
     /// Schedules the post-apply refresh sequence on a detached Task:
@@ -6503,8 +6534,7 @@ extension MenuBarItemManager {
                 } else {
                     MenuBarItemManager.diagLog.info("Profile layout: all items already in correct positions")
                 }
-                updateProfileSortedSnapshot(source: source, items: items)
-                persistProfileStateOnSuccess(source: source)
+                concludeProfileApplyWithoutMoves(source: source, items: items)
                 scheduleDeferredCacheRefresh()
                 return
             }
@@ -6774,6 +6804,47 @@ extension MenuBarItemManager {
             : currentLayoutDivergesFromSaved(items: items, controlItems: controlItems)
         guard windowIDsChanged || layoutDiverged else {
             MenuBarItemManager.diagLog.debug("applySavedLayout: skipping, no windowID change and saved layout matches current")
+            return false
+        }
+
+        // Geometry-readiness gate. On a notched display, if Control Center is
+        // reported at or left of the notch's right edge the menu bar geometry
+        // has not settled: a stale off-screen position reported transiently
+        // during a display reconnect or Control Center widget churn. Dispatching
+        // the bulk apply now runs the control-item placement against that
+        // geometry and mis-positions the Thaw visible icon to the far left (the
+        // notch-overflow budget guard alone only suppresses the eject, not the
+        // moves). Skip; the cache cycle falls through to a plain recache and a
+        // later tick retries once the geometry settles.
+        if let screen = NSScreen.screenWithActiveMenuBar ?? NSScreen.main,
+           screen.hasNotch,
+           let notch = screen.frameOfNotch
+        {
+            let rightBoundary = items.first(where: { $0.tag == .controlCenter })?.bounds.minX
+                ?? screen.frame.maxX
+            guard LayoutSolver.isMenuBarGeometryReady(rightBoundary: rightBoundary, notchMaxX: notch.maxX) else {
+                MenuBarItemManager.diagLog.debug(
+                    "applySavedLayout: skipping, menu bar geometry not settled (rightBoundary=\(rightBoundary), notch.maxX=\(notch.maxX))"
+                )
+                return false
+            }
+        }
+
+        // Display-spread gate. While the active menu bar is relocating to
+        // another display macOS migrates the status item windows between
+        // screens asynchronously, so the items transiently straddle two
+        // displays. A bulk apply dispatched now resolves each item's move
+        // against whichever display its window currently occupies and cannot
+        // converge, stranding items on the wrong screen where they read as
+        // un-hidden. Skip; a later tick retries once the items collapse back
+        // onto the active display. Frames come from CGDisplayBounds so they
+        // share the top-left origin coordinate space of the item bounds.
+        let screenFrames = NSScreen.screens.map { CGDisplayBounds($0.displayID) }
+        let itemCenters = items.map { CGPoint(x: $0.bounds.midX, y: $0.bounds.midY) }
+        if LayoutSolver.itemsSpanMultipleDisplays(itemCenters: itemCenters, screenFrames: screenFrames) {
+            MenuBarItemManager.diagLog.debug(
+                "applySavedLayout: skipping, menu bar items span multiple displays (relocation in progress)"
+            )
             return false
         }
 

@@ -17,7 +17,7 @@ jobs:
       - uses: actions/checkout@v7
 
       # Issues with other Xcode versions, so we need to specify the version explicitly
-      - run: sudo xcode-select -s /Applications/Xcode_26.5.app/Contents/Developer
+      - run: sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
 
       - name: Configure signing
         uses: ./.github/actions/configure-signing
