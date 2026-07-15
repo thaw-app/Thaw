@@ -47,7 +47,10 @@ struct MenuBarItemTag: Hashable, CustomStringConvertible {
         guard
             let suffixStart = uniqueIdentifier.lastIndex(of: ":"),
             let instanceIndex = Int(uniqueIdentifier[uniqueIdentifier.index(after: suffixStart)...]),
-            instanceIndex > 0,
+            // Current tags omit the zero suffix, but older persisted layouts
+            // may contain an explicit `:0`. Once the live namespace/title
+            // base is known, both forms identify that same first instance.
+            instanceIndex >= 0,
             knownBaseIdentifiers.contains(String(uniqueIdentifier[..<suffixStart]))
         else {
             return nil

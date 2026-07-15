@@ -574,7 +574,11 @@ enum HookRunner {
         // conditioning escalation on the direct child's state would then
         // leak it past the hook's timeout.
         process.terminate()
-        try? await Task.sleep(for: .seconds(1))
+        // A timed-out hook should not be able to complete work while we wait
+        // for a polite shutdown. This matches the trigger-script cleanup
+        // grace period and leaves time for TERM handlers without allowing a
+        // short-lived detached descendant to outrun SIGKILL.
+        try? await Task.sleep(for: .milliseconds(500))
         process.interrupt()
         try? await Task.sleep(for: .milliseconds(100))
         process.kill()

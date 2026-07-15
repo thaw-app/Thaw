@@ -245,6 +245,16 @@ final class MenuBarItemTagTests: XCTestCase {
         XCTAssertFalse(tag.tagIdentifier.hasSuffix(":0"))
     }
 
+    func testResolvedBaseIdentifierAcceptsLegacyZeroSuffixWhenBaseIsKnown() {
+        XCTAssertEqual(
+            MenuBarItemTag.resolvedBaseIdentifier(
+                for: "com.example.app:TestItem:0",
+                knownBaseIdentifiers: ["com.example.app:TestItem"]
+            ),
+            "com.example.app:TestItem"
+        )
+    }
+
     // MARK: - System Item Tests
 
     func testIsSystemItemForControlCenter() {

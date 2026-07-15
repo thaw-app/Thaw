@@ -6695,7 +6695,8 @@ extension MenuBarItemManager {
             let placements = LayoutReconciler.unmanagedPlacementPlan(
                 desired: desiredForUnmanaged,
                 unmanagedUIDs: unmanagedUIDs,
-                currentUIDs: Set(currentFlat)
+                currentUIDs: Set(currentFlat),
+                currentBaseIdentifiers: Set(items.map(\.tag.stableIdentifierBase))
             )
 
             // Per-uid decision trace. Shows which item was deemed

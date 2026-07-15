@@ -99,7 +99,8 @@ final class PlanUnmanagedPlacementTests: XCTestCase {
             unmanagedUIDs: ["com.example.app:Status:7"],
             savedSectionOrder: saved,
             newItemsPlacement: placement,
-            currentUIDs: ["com.example.app:Status:7"]
+            currentUIDs: ["com.example.app:Status:7"],
+            currentBaseIdentifiers: ["com.example.app:Status"]
         )
 
         XCTAssertEqual(result["com.example.app:Status:7"], .saved(section: .hidden, index: 0),
