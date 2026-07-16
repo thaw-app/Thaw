@@ -6732,6 +6732,22 @@ extension MenuBarItemManager {
         return !previous.isSubset(of: current)
     }
 
+
+    /// Whether enough menu bar items are missing a resolved source PID that
+    /// bulk-applying the saved layout would act on unmatchable identities.
+    ///
+    /// When the MenuBarItemService XPC connection fails (service cold start,
+    /// connection interruption), most third-party items resolve to a nil
+    /// sourcePID and collapse to ambiguous Control-Center-owned identifiers.
+    /// A bulk apply dispatched in that state rearranges items it cannot match
+    /// to the saved layout. A few system items (WiFi, Clock, BentoBox) and
+    /// notch-hidden stragglers legitimately resolve to nil, so a minority
+    /// share is normal; only a majority signals a resolution failure. The
+    /// item-count floor keeps degenerate tiny sets from tripping the gate.
+    nonisolated static func majorityOfSourcePIDsUnresolved(unresolvedCount: Int, itemCount: Int) -> Bool {
+        itemCount >= 4 && unresolvedCount * 2 > itemCount
+    }
+
     func applySavedLayout(
         items: [MenuBarItem],
         previousWindowIDs: [CGWindowID],
@@ -6844,6 +6860,21 @@ extension MenuBarItemManager {
         if LayoutSolver.itemsSpanMultipleDisplays(itemCenters: itemCenters, screenFrames: screenFrames) {
             MenuBarItemManager.diagLog.debug(
                 "applySavedLayout: skipping, menu bar items span multiple displays (relocation in progress)"
+            )
+            return false
+        }
+
+        // Identity-resolution gate. When the XPC sourcePID resolution fails
+        // (service cold start or connection failure), third-party items
+        // collapse to ambiguous Control-Center-owned identifiers that cannot
+        // be matched against the saved layout, and the bulk apply rearranges
+        // them blindly. Skip and let a later cache tick retry once identities
+        // resolve — mirrors relocateNewLeftmostItems's unresolved-sourcePID
+        // noop.
+        let unresolvedSourcePIDCount = items.filter { $0.sourcePID == nil }.count
+        if Self.majorityOfSourcePIDsUnresolved(unresolvedCount: unresolvedSourcePIDCount, itemCount: items.count) {
+            MenuBarItemManager.diagLog.info(
+                "applySavedLayout: skipping, \(unresolvedSourcePIDCount)/\(items.count) items have unresolved sourcePIDs (XPC resolution likely failed)"
             )
             return false
         }
