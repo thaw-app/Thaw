@@ -28,9 +28,7 @@ struct AboutSettingsPane: View {
         VStack(spacing: 24) {
             Spacer(minLength: 0)
             appIconAndCopyrightContent
-            if #unavailable(macOS 27) {
-                updatesSection
-            }
+            updatesSection
             Spacer(minLength: 0)
             bottomBar
         }
@@ -133,8 +131,8 @@ struct AboutSettingsPane: View {
                         .foregroundStyle(.tertiary)
                         .help(
                             "macOS 27 support is functional with remaining limitations around Always Hidden and visual menu bar edge cases. Feature work is based on "
-                                + "\(Constants.versionString) (\(Constants.buildString)); "
-                                + "this build is not distributed through Thaw's update channels."
+                                + "\(Constants.versionString) (\(Constants.buildString)). "
+                                + "Preview builds ship on the Nightly (alpha) update channel."
                         )
                 }
 
@@ -177,9 +175,16 @@ struct AboutSettingsPane: View {
         HStack {
             Text("Update channel")
             Spacer()
-            Picker("Update channel", selection: $updatesManager.allowsBetaUpdates) {
-                Text("Stable").tag(false)
-                Text("Development").tag(true)
+            Picker(
+                "Update channel",
+                selection: Binding(
+                    get: { updatesManager.updateChannel },
+                    set: { updatesManager.updateChannel = $0 }
+                )
+            ) {
+                Text("Stable").tag(UpdateChannel.stable)
+                Text("Development").tag(UpdateChannel.beta)
+                Text("Nightly").tag(UpdateChannel.alpha)
             }
             .pickerStyle(.segmented)
             .labelsHidden()

@@ -28,12 +28,12 @@ enum Constants {
     /// The app's display name.
     static let displayName = Bundle.main.displayName
 
-    /// Sparkle update checks are disabled on the macOS 27 preview build.
+    /// Sparkle update checks are available on all supported OS versions.
+    ///
+    /// macOS 27 preview builds use the `alpha` channel by default; Stable and
+    /// Development remain available when those appcast items apply.
     static var supportsSparkleUpdates: Bool {
-        if #available(macOS 27, *) {
-            return false
-        }
-        return true
+        true
     }
 
     /// Label for the macOS 27 preview build shown in About.
