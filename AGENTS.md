@@ -12,10 +12,10 @@ Targets are macOS 26+. macOS 27 "Golden Gate" support is in development on the
 
 ## Prerequisites
 
-- Xcode 26+ on macOS 26+.
-- CI pins `/Applications/Xcode_26.6.app` (must match the `prk-bin` XCFramework toolchain).
+- Xcode 27+ on macOS 26+ (matches the `prk-bin` XCFramework toolchain).
+- CI uses the `xcode-27` runner and pins `/Applications/Xcode_27.0.app`.
 - `PlatformRuntimeKit` is a **public** binary Swift package
-  (`thaw-app/prk-bin`, minimum **0.0.3** on `feat/macos-27-experimental`). Xcode resolves the XCFramework from
+  (`thaw-app/prk-bin`, minimum **0.0.4** on `feat/macos-27-experimental`). Xcode resolves the XCFramework from
   GitHub Releases with no authentication. Local kit work: check out the private
   source repo as a sibling (`../PlatformRuntimeKit`), then open
   `ThawDev.xcworkspace` or run `./scripts/thaw-devrun.sh` (symlinks the sibling

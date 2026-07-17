@@ -56,13 +56,13 @@ jobs:
             swiftlint --strict
 
   build:
-    runs-on: macos-26
+    runs-on: xcode-27
     needs: static_analysis
     env:
       HOMEBREW_NO_AUTO_UPDATE: 1
     steps:
       - uses: actions/checkout@v7
-      - run: sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
+      - run: sudo xcode-select -s /Applications/Xcode_27.0.app/Contents/Developer
 
       - name: Cache SwiftPM
         uses: actions/cache@v5

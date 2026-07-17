@@ -13,7 +13,7 @@ on:
 
 jobs:
   release:
-    runs-on: macos-26
+    runs-on: xcode-27
     permissions:
       contents: write
     env:
@@ -34,7 +34,7 @@ jobs:
             echo "Invalid tag name format. Must be in the form 1.2.3"
             exit 1
           fi
-      - run: sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
+      - run: sudo xcode-select -s /Applications/Xcode_27.0.app/Contents/Developer
       - name: Configure signing
         uses: ./.github/actions/configure-signing
         with:
