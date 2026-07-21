@@ -62,9 +62,9 @@ jobs:
           channel="$CHANNEL_INPUT"
           if [[ "$channel" == "auto" ]]; then
             shopt -s nocasematch
-            if [[ "$TAG_NAME" == *alpha* || "$TAG_NAME" == *nightly* ]]; then
+            if [[ "$TAG_NAME" =~ -(alpha|nightly)(\.|$) ]]; then
               channel="alpha"
-            elif [[ "$TAG_NAME" == *beta* || "$TAG_NAME" == *rc* ]]; then
+            elif [[ "$TAG_NAME" =~ -(beta|rc)(\.|$) ]]; then
               channel="beta"
             else
               channel="stable"

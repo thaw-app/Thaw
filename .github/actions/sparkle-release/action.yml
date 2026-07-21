@@ -61,7 +61,8 @@ runs:
         fi
 
         # Ticket from DMG notarization applies to the same CDHash.
-        xcrun stapler staple "$app_path" || true
+        xcrun stapler staple "$app_path"
+        xcrun stapler validate "$app_path"
 
         zip_name="Thaw_${TAG}.zip"
         zip_path="build/$zip_name"
@@ -191,6 +192,12 @@ runs:
         esac
 
         "$SPARKLE_BIN/generate_appcast" "${args[@]}" "$SPARKLE_ARCHIVES"
+
+        # generate_appcast applies one --download-url-prefix to every archive.
+        # Rewrite enclosure URLs so each Thaw_<tag>.zip resolves under that tag.
+        perl -i -pe \
+          's#(url="https://github.com/\Q'"$REPOSITORY"'\E/releases/download/)[^/]+/(Thaw_([^"]+)\.zip")#$1$3/$2#g' \
+          "$SPARKLE_PAGES/appcast.xml"
 
         rm -f "$key_file"
 
