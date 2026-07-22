@@ -1088,7 +1088,8 @@ final class MacOS27LayoutAnchorOrderingTests: XCTestCase {
     }
 
     @MainActor
-    func testInvalidAssignmentIdentifiersRejectsProtectedLiveItems() {
+    func testInvalidAssignmentIdentifiersRejectsProtectedLiveItems() throws {
+        try XCTSkipUnless(isRunningOnMacOS27OrLater)
         let clock = MenuBarItem.fixture(
             tag: .appItem(bundleID: "com.apple.systemuiserver", title: "Clock"),
             windowID: 1900
@@ -2262,7 +2263,8 @@ final class MacOS27LayoutAnchorOrderingTests: XCTestCase {
         )
     }
 
-    func testExperimentalSystemItemHidingAllowsOrderAcrossFixedAnchors() {
+    func testExperimentalSystemItemHidingAllowsOrderAcrossFixedAnchors() throws {
+        try XCTSkipUnless(isRunningOnMacOS27OrLater)
         let alpha = appItem(bundleID: "com.example.alpha", title: "Alpha", x: 0, windowID: 70)
         let clock = item(tag: .clock, x: 24, windowID: 71)
         let beta = appItem(bundleID: "com.example.beta", title: "Beta", x: 48, windowID: 72)
@@ -2377,7 +2379,8 @@ final class MacOS27LayoutAnchorOrderingTests: XCTestCase {
         XCTAssertEqual(destination, .rightOfItem(beta))
     }
 
-    func testExperimentalSystemItemHidingTargetsAnchorNeighbor() {
+    func testExperimentalSystemItemHidingTargetsAnchorNeighbor() throws {
+        try XCTSkipUnless(isRunningOnMacOS27OrLater)
         let alpha = appItem(bundleID: "com.example.alpha", title: "Alpha", x: 0, windowID: 80)
         let beta = appItem(bundleID: "com.example.beta", title: "Beta", x: 24, windowID: 81)
         let clock = item(tag: .clock, x: 48, windowID: 82)

@@ -142,7 +142,8 @@ final class RuntimePositionStoreTests: XCTestCase {
         XCTAssertEqual(written?["status:A::C"], 101)
     }
 
-    func testExperimentalMoveCanTargetMenuBarAgentSystemItem() {
+    func testExperimentalMoveCanTargetMenuBarAgentSystemItem() throws {
+        try XCTSkipUnless(isRunningOnMacOS27OrLater)
         let a = item("A", x: 0)
         let clock = MenuBarItem.fixture(
             tag: .clock,

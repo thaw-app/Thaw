@@ -92,7 +92,8 @@ final class MenuBarItemImageCacheFreshBoundsTests: XCTestCase {
         )
     }
 
-    func testLittleSnitchUnresolvedMenuBarAgentSlotIsExcludedFromCapture() {
+    func testLittleSnitchUnresolvedMenuBarAgentSlotIsExcludedFromCapture() throws {
+        try XCTSkipUnless(isRunningOnMacOS27OrLater)
         let item = makeItem(
             tag: MenuBarItemTag(namespace: .menuBarAgent, title: "Item-0")
         )
@@ -118,7 +119,8 @@ final class MenuBarItemImageCacheFreshBoundsTests: XCTestCase {
         )
     }
 
-    func testOpaqueIdentitiesAreRemovedFromEveryCaptureRequest() {
+    func testOpaqueIdentitiesAreRemovedFromEveryCaptureRequest() throws {
+        try XCTSkipUnless(isRunningOnMacOS27OrLater)
         let resolved = makeItem(
             tag: .appItem(bundleID: "at.obdev.littlesnitch.agent", title: "Item-0")
         )
@@ -389,7 +391,8 @@ final class MenuBarItemImageCacheFreshBoundsTests: XCTestCase {
     }
 
     @available(macOS 27, *)
-    func testPrefersDisplayStripCaptureForThirdPartyAndThaw() {
+    func testPrefersDisplayStripCaptureForThirdPartyAndThaw() throws {
+        try XCTSkipUnless(isRunningOnMacOS27OrLater)
         let thirdParty = MenuBarItemTag(namespace: .string("com.openai.chat"), title: "Item-0")
         let menuBarAgent = MenuBarItemTag(namespace: .menuBarAgent, title: "Clock")
         let thaw = MenuBarItemTag(namespace: .thaw, title: "Thaw.ControlItem.Visible")
