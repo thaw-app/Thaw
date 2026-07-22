@@ -9,11 +9,11 @@
 # item as `nil`, so the visibility-restriction allowlist can't protect it and
 # Thaw's own icon vanishes whenever anything is hidden.
 #
-# The Debug configuration uses bundle id `com.stonerl.Thaw.debug` (cleanly owned
-# by the building developer's own team — no conflict with the Developer-ID
-# `com.stonerl.Thaw`, which only the release signer can use). This script builds
-# it, quits any running 'Thaw Debug' (the app AND its XPC service), deletes the
-# old `/Applications/Thaw Debug.app`, installs the fresh build, and launches it —
+# Debug/CI builds use `com.stonerl.Thaw`. This script alone applies
+# `THAW_BUNDLE_ID_SUFFIX=.debug` so the /Applications install is
+# `com.stonerl.Thaw.debug` (cleanly owned by the building developer's team —
+# no conflict with the Developer-ID `com.stonerl.Thaw`). It quits any running
+# 'Thaw Debug', replaces `/Applications/Thaw Debug.app`, and launches it —
 # no manual quitting or trashing needed, no Developer-ID cert and no release.
 #
 # Usage:
@@ -133,12 +133,16 @@ quit_thaw_debug() {
     sleep 1
 }
 
-say "Building ${CONFIG}…"
+say "Building ${CONFIG} (bundle id ${DEBUG_BUNDLE_ID})…"
+# THAW_BUNDLE_ID_SUFFIX is only honored by the Thaw Debug target; MenuBarItemService
+# and ThawTests keep their normal identifiers.
 xcodebuild "${XCODE_ROOT_ARGS[@]}" -scheme "$SCHEME" -configuration "$CONFIG" \
-    -destination 'platform=macOS' "${PACKAGE_RESOLUTION_ARGS[@]}" build
+    -destination 'platform=macOS' "${PACKAGE_RESOLUTION_ARGS[@]}" \
+    THAW_BUNDLE_ID_SUFFIX=.debug build
 
 PRODUCTS_DIR=$(xcodebuild "${XCODE_ROOT_ARGS[@]}" -scheme "$SCHEME" -configuration "$CONFIG" \
-    "${PACKAGE_RESOLUTION_ARGS[@]}" -showBuildSettings 2>/dev/null | awk -F' = ' '/ BUILT_PRODUCTS_DIR /{print $2; exit}')
+    "${PACKAGE_RESOLUTION_ARGS[@]}" THAW_BUNDLE_ID_SUFFIX=.debug \
+    -showBuildSettings 2>/dev/null | awk -F' = ' '/ BUILT_PRODUCTS_DIR /{print $2; exit}')
 APP="${PRODUCTS_DIR}/Thaw.app"
 [ -d "$APP" ] || { echo "Build product not found: $APP"; exit 1; }
 
