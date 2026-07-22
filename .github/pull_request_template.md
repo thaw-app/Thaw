@@ -8,14 +8,32 @@ Closes: (issue number, or 'N/A')
 
 ## PR Type
 
-- [ ] Bugfix
+Describe **what this change does** (not the linked issue’s request kind). Bug *reports* use `bug` on issues; bug *fixes* use `fix` on PRs.
+
+- [ ] Bug fix
 - [ ] CI/CD
 - [ ] Documentation
 - [ ] Feature
+- [ ] Enhancement
 - [ ] Performance improvement
 - [ ] Refactor
 - [ ] Test addition or update
 - [ ] Other (please describe)
+
+## Area
+
+Check the product area(s) this PR touches (path-based labeling also applies).
+
+- [ ] menubar
+- [ ] icebar
+- [ ] layout
+- [ ] appearance
+- [ ] settings
+- [ ] onboarding
+- [ ] permissions
+- [ ] profiles
+- [ ] hotkeys
+- [ ] updates
 
 ## Does this PR introduce a breaking change?
 

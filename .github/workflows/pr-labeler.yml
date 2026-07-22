@@ -8,10 +8,11 @@ jobs:
   label:
     runs-on: ubuntu-slim
     permissions:
+      contents: read
       pull-requests: write
       issues: write
     steps:
-      - name: Apply labels from PR template
+      - name: Apply labels from PR template and changed paths
         uses: actions/github-script@v9
         with:
           script: |
@@ -20,19 +21,60 @@ jobs:
             if (!pr) return;
 
             const body = pr.body || '';
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
 
-            // Map "PR Type" checkbox text to repo labels.
+            // PR change kinds — never map Bug fix to `bug` (that label is issue-only).
             const typeLabels = {
-              'Bugfix': ['bug'],
+              'Bug fix': ['fix'],
               'CI/CD': ['ci', 'cd'],
               'Documentation': ['docs'],
               'Feature': ['feature'],
+              'Enhancement': ['enhancement'],
               'Refactor': ['refactor'],
               'Performance improvement': ['performance'],
               'Test addition or update': ['test'],
+              'Other (please describe)': ['chore'],
             };
 
-            // Extract the contents of a "## <heading>" section.
+            const areaLabels = [
+              'menubar',
+              'icebar',
+              'layout',
+              'appearance',
+              'settings',
+              'onboarding',
+              'permissions',
+              'profiles',
+              'hotkeys',
+              'updates',
+            ];
+
+            // First matching rule wins per path; settings is a fallback when nothing else matched.
+            const pathAreaRules = [
+              { label: 'icebar', test: (p) => p.startsWith('Thaw/MenuBar/IceBar/') },
+              { label: 'layout', test: (p) =>
+                p.startsWith('Thaw/MenuBar/LayoutBar/') ||
+                /MenuBarLayout/i.test(p) ||
+                /SavedLayout/i.test(p)
+              },
+              { label: 'appearance', test: (p) =>
+                p.startsWith('Thaw/MenuBar/Appearance/') ||
+                /MenuBarAppearance/i.test(p)
+              },
+              { label: 'menubar', test: (p) => p.startsWith('Thaw/MenuBar/') },
+              { label: 'onboarding', test: (p) => p.startsWith('Thaw/Onboarding/') },
+              { label: 'permissions', test: (p) => p.startsWith('Thaw/Permissions/') },
+              { label: 'profiles', test: (p) => /Profile/i.test(p) },
+              { label: 'hotkeys', test: (p) => /Hotkey/i.test(p) },
+              { label: 'updates', test: (p) =>
+                /Sparkle/i.test(p) ||
+                /\/Update/i.test(p) ||
+                /appcast/i.test(p)
+              },
+              { label: 'settings', test: (p) => p.startsWith('Thaw/Settings/') },
+            ];
+
             const getSection = (heading) => {
               const re = new RegExp(`##\\s*${heading}\\s*\\n([\\s\\S]*?)(?=\\n##\\s|$)`, 'i');
               const match = body.match(re);
@@ -46,44 +88,86 @@ jobs:
             };
 
             const prTypeSection = getSection('PR Type');
+            const areaSection = getSection('Area');
             const breakingSection = getSection('Does this PR introduce a breaking change\\?');
 
-            const toAdd = [];
-            const toRemove = [];
+            const toAdd = new Set();
+            const toRemove = new Set();
+
             for (const [text, labels] of Object.entries(typeLabels)) {
               if (isChecked(prTypeSection, text)) {
-                toAdd.push(...labels);
+                for (const label of labels) toAdd.add(label);
               } else {
-                toRemove.push(...labels);
+                for (const label of labels) toRemove.add(label);
               }
             }
 
             if (isChecked(breakingSection, 'Yes')) {
-              toAdd.push('breaking-change');
+              toAdd.add('breaking-change');
             } else {
-              toRemove.push('breaking-change');
+              toRemove.add('breaking-change');
             }
 
+            // Issue-only: never leave `bug` on a PR.
+            toRemove.add('bug');
+
+            // Path-based areas.
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner,
+              repo,
+              pull_number: pr.number,
+              per_page: 100,
+            });
+
+            const pathAreas = new Set();
+            for (const file of files) {
+              const path = file.filename;
+              for (const rule of pathAreaRules) {
+                if (rule.test(path)) {
+                  pathAreas.add(rule.label);
+                  break;
+                }
+              }
+            }
+
+            // Prefer specific areas over settings when both matched.
+            if (pathAreas.size > 1 && pathAreas.has('settings')) {
+              pathAreas.delete('settings');
+            }
+
+            for (const label of pathAreas) toAdd.add(label);
+
+            // Manual Area checkboxes only add (do not remove path-applied areas).
+            for (const label of areaLabels) {
+              if (isChecked(areaSection, label)) {
+                toAdd.add(label);
+              }
+            }
+
+            // Do not remove a change-kind label we are also adding.
+            for (const label of toAdd) toRemove.delete(label);
+
             const existing = (await github.paginate(github.rest.issues.listLabelsOnIssue, {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
+              owner,
+              repo,
               issue_number: pr.number,
             })).map(l => l.name);
 
-            if (toAdd.length > 0) {
+            const addList = [...toAdd].filter(l => !existing.includes(l));
+            if (addList.length > 0) {
               await github.rest.issues.addLabels({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
+                owner,
+                repo,
                 issue_number: pr.number,
-                labels: toAdd,
+                labels: addList,
               });
             }
 
             for (const label of toRemove) {
               if (existing.includes(label)) {
                 await github.rest.issues.removeLabel({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
+                  owner,
+                  repo,
                   issue_number: pr.number,
                   name: label,
                 });
