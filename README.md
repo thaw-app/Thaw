@@ -14,6 +14,7 @@
   <a href="https://github.com/stonerl/Thaw/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/stonerl/Thaw?style=flat-square&label=latest&color=555555" /></a>
   <a href="https://github.com/stonerl/Thaw/releases"><img alt="Beta / pre-release" src="https://img.shields.io/github/v/release/stonerl/Thaw?include_prereleases&style=flat-square&label=beta&color=555555" /></a>
   <a href="https://github.com/stonerl/Thaw/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/stonerl/Thaw/ci.yml?style=flat-square&label=CI" /></a>
+  <a href="https://sonarcloud.io/summary/new_code?id=stonerl_Thaw"><img alt="SonarCloud Quality Gate" src="https://sonarcloud.io/api/project_badges/measure?project=stonerl_Thaw&metric=alert_status" /></a>
   <a href="https://www.bestpractices.dev/projects/13303"><img alt="OpenSSF Best Practices" src="https://img.shields.io/cii/summary/13303?style=flat-square&label=OpenSSF" /></a>
   <img alt="Requirements" src="https://img.shields.io/badge/macOS-26%2B-555555?style=flat-square" />
   <a href="https://github.com/sponsors/stonerl"><img alt="Sponsor" src="https://img.shields.io/badge/Sponsor-%E2%9D%A4-555555?style=flat-square" /></a>
@@ -22,7 +23,9 @@
 </p>
 
 <p align="center">
-  <a href="https://sonarcloud.io/summary/new_code?id=stonerl_Thaw"><img alt="SonarQube Cloud" src="https://sonarcloud.io/images/project_badges/sonarcloud-highlight.svg" /></a>
+  <a href="https://www.raycast.com/diazdesandi/thaw"><img alt="Works with Raycast" src="Resources/badges/works-with-raycast.png" height="56" /></a>
+  &nbsp;&nbsp;
+  <a href="https://github.com/iordv/Droppy"><img alt="Works with Droppy" src="Resources/badges/works-with-droppy.png" height="56" /></a>
 </p>
 
 <p align="center">
@@ -64,6 +67,13 @@ Install the latest **beta** (or stable, whichever is newer):
 ```sh
 brew install thaw@beta
 ```
+
+### Integrations
+
+- **[Raycast](https://www.raycast.com/diazdesandi/thaw)** — toggle hidden sections and search the menu bar from the keyboard
+- **[Droppy](https://github.com/iordv/Droppy)** — install Thaw as a Droplet and keep it updated automatically
+
+For `thaw://` actions and settings automation, see [URI schemes](docs/URI_SCHEMES.md).
 
 Having trouble after installing? Check [Frequent Issues](FREQUENT_ISSUES.md) before opening a new report.
 
