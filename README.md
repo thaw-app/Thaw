@@ -23,9 +23,9 @@
 </p>
 
 <p align="center">
-  <a href="https://www.raycast.com/diazdesandi/thaw"><img alt="Works with Raycast" src="Resources/badges/works-with-raycast.png" height="56" /></a>
+  <a href="https://www.raycast.com/diazdesandi/thaw"><img alt="Works with Raycast" src="Resources/badges/works-with-raycast.svg" height="28" /></a>
   &nbsp;&nbsp;
-  <a href="https://github.com/iordv/Droppy"><img alt="Works with Droppy" src="Resources/badges/works-with-droppy.png" height="56" /></a>
+  <a href="https://getdroppy.app/"><img alt="Works with Droppy" src="Resources/badges/works-with-droppy.svg" height="28" /></a>
 </p>
 
 <p align="center">
