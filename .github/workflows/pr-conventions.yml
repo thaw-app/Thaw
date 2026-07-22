@@ -1,0 +1,115 @@
+name: PR Conventions
+
+# Lightweight shape checks so contributors get fast feedback before review.
+# Size is warn-only; base branch, title, and Closes: are required.
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+jobs:
+  conventions:
+    runs-on: ubuntu-slim
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: write
+    steps:
+      - name: Check PR conventions
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            if (!pr) return;
+
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const title = pr.title || '';
+            const body = pr.body || '';
+            const base = pr.base?.ref || '';
+            const association = pr.author_association || '';
+            const maintainerAssociations = new Set(['OWNER', 'MEMBER', 'COLLABORATOR']);
+
+            const failures = [];
+            const warnings = [];
+
+            // External contributors must not target main.
+            if (base === 'main' && !maintainerAssociations.has(association)) {
+              failures.push(
+                `Base branch is \`main\`. External PRs must target \`development\` (see CONTRIBUTING).`,
+              );
+            }
+
+            // Conventional commit title (type optional scope).
+            const titleRe = /^(feat|fix|chore|docs|ci|test|refactor|perf|build|style|revert)(\(.+\))?!?: .+/;
+            if (!titleRe.test(title)) {
+              failures.push(
+                `Title must match conventional commits, e.g. \`fix(menubar): …\` or \`feat(settings): …\`. Got: \`${title}\`.`,
+              );
+            }
+
+            // Template requires a Closes: line (issue number or N/A).
+            if (!/\bCloses:\s*\S+/i.test(body)) {
+              failures.push(
+                `PR body must include a \`Closes:\` line (e.g. \`Closes: #123\` or \`Closes: N/A\`).`,
+              );
+            }
+
+            const changedFiles = pr.changed_files || 0;
+            const churn = (pr.additions || 0) + (pr.deletions || 0);
+            if (changedFiles > 30 || churn > 1000) {
+              warnings.push(
+                `This PR looks large (${changedFiles} files, ${churn} lines changed). Consider splitting if possible (see CONTRIBUTING: aim ≤20 files / ≤500 LOC).`,
+              );
+            }
+
+            const marker = '<!-- thaw-pr-conventions -->';
+            const existing = await github.paginate(github.rest.issues.listComments, {
+              owner,
+              repo,
+              issue_number: pr.number,
+              per_page: 100,
+            });
+            const prior = existing.find(
+              (c) => c.user?.type === 'Bot' && (c.body || '').includes(marker),
+            );
+
+            if (warnings.length > 0) {
+              const warnBody = [
+                marker,
+                '### PR size heads-up',
+                '',
+                ...warnings.map((w) => `- ${w}`),
+                '',
+                '_This check is informational and does not block merge._',
+              ].join('\n');
+
+              if (prior) {
+                await github.rest.issues.updateComment({
+                  owner,
+                  repo,
+                  comment_id: prior.id,
+                  body: warnBody,
+                });
+              } else {
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: pr.number,
+                  body: warnBody,
+                });
+              }
+            } else if (prior) {
+              // Clear stale size warning when the PR shrinks.
+              await github.rest.issues.deleteComment({
+                owner,
+                repo,
+                comment_id: prior.id,
+              });
+            }
+
+            if (failures.length > 0) {
+              core.setFailed(failures.join('\n'));
+            } else {
+              core.info('PR conventions checks passed.');
+            }

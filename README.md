@@ -5,14 +5,14 @@
     <img src="Resources/headers/Header_Light.svg" width="400" alt="Thaw Header" />
   </picture>
 </p>
-Thaw is a powerful menu bar management tool for macOS 26 and macOS 27. While its primary function is hiding and showing menu bar items, it aims to cover a wide variety of additional features to make it one of the most versatile menu bar tools available.
+Thaw is a powerful menu bar management tool for macOS. Stable releases target **macOS 26+**. macOS 27 (Golden Gate) support is in preview — see the tracking issue below. While its primary function is hiding and showing menu bar items, it aims to cover a wide variety of additional features to make it one of the most versatile menu bar tools available.
 
 <br>
 
 <p align="center">
   <strong>
     <a href="https://github.com/stonerl/Thaw/issues/687">
-      For macOS 27 (Golden Gate) status and preview builds, click here
+      macOS 27 (Golden Gate) status and preview builds
     </a>
   </strong>
 </p>
@@ -59,6 +59,29 @@ To get the latest beta (or stable, whichever is newer):
 brew install thaw@beta
 ```
 
+Having trouble after installing? Check [Frequent Issues](FREQUENT_ISSUES.md) before opening a new report.
+
+## Build from source
+
+1. Install **Xcode 26+** on **macOS 26+**
+2. Clone the repo and open the project:
+
+   ```sh
+   git clone https://github.com/stonerl/Thaw.git
+   cd Thaw
+   open Thaw.xcodeproj
+   ```
+
+3. Build and run (`Cmd+R`)
+
+For lint, format, tests, and PR conventions, see [Contributing](.github/CONTRIBUTING.md).
+
+## Contributing
+
+Pull requests are welcome. Please open them against the **`development`** branch (not `main`), follow the PR template, and read [Contributing](.github/CONTRIBUTING.md).
+
+**Translations** are managed on [Crowdin](https://crowdin.com/project/thaw) — translation PRs are not accepted in this repo.
+
 ## Translations
 
 Thaw is currently available in the following languages:
@@ -96,9 +119,9 @@ Thaw is currently available in the following languages:
 
 _Note: languages marked with (\*) are currently only available in the development branch._
 
-Help translate Thaw via [Crowdin](https://crowdin.com/project/thaw)
+Help translate Thaw via [Crowdin](https://crowdin.com/project/thaw).
 
-If a language you'd like to help to translate is not listed here, let us know and we will add it on Crowdin. 
+If a language you'd like to help translate is not listed here, let us know and we will add it on Crowdin.
 
 ## Features
 
