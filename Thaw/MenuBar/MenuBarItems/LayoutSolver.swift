@@ -244,10 +244,17 @@ enum LayoutSolver {
         // Items sitting left of the hidden divider. The Thaw icon is a
         // control item but must always be visible, so we admit it here.
         let leftmostItems = items
-            .filter {
-                $0.bounds.maxX <= observation.hiddenBounds.minX &&
-                    $0.isMovable &&
-                    (!$0.isControlItem || $0.tag == .visibleControlItem)
+            .filter { item in
+                // Generic Control Center placeholders are not draggable, but
+                // the planner must still see them so the unresolved-sourcePID
+                // safety path below can defer relocation without acting on an
+                // unstable identifier.
+                let isUnresolvedControlCenterPlaceholder =
+                    item.tag.isControlCenterGenericItem && item.sourcePID == nil
+
+                return item.bounds.maxX <= observation.hiddenBounds.minX &&
+                    (item.isMovable || isUnresolvedControlCenterPlaceholder) &&
+                    (!item.isControlItem || item.tag == .visibleControlItem)
             }
             .sorted { $0.bounds.minX < $1.bounds.minX }
 
