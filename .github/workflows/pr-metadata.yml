@@ -12,9 +12,8 @@ jobs:
     runs-on: ubuntu-slim
     permissions:
       contents: read
-      pull-requests: write
+      pull-requests: read
       issues: write
-      checks: write
     steps:
       - name: Apply labels from PR template and changed paths
         uses: actions/github-script@v9
@@ -145,8 +144,22 @@ jobs:
             }
 
             // Prefer specific product areas over the settings fallback when both matched.
-            // Keep `ops` alongside product areas when a PR also touches repo tooling.
-            if (pathAreas.size > 1 && pathAreas.has('settings')) {
+            // Keep `ops` alongside `settings` when those are the only matched areas.
+            const productAreasExcludingSettings = [
+              'menubar',
+              'icebar',
+              'layout',
+              'appearance',
+              'onboarding',
+              'permissions',
+              'profiles',
+              'hotkeys',
+              'updates',
+            ];
+            if (
+              pathAreas.has('settings') &&
+              productAreasExcludingSettings.some((label) => pathAreas.has(label))
+            ) {
               pathAreas.delete('settings');
             }
 
@@ -223,7 +236,7 @@ jobs:
             }
 
             // Template requires a Closes: line (issue number or N/A).
-            if (!/\bCloses:\s*\S+/i.test(body)) {
+            if (!/\bCloses:\s*(?:#\d+|N\/A)\b/i.test(body)) {
               failures.push(
                 `PR body must include a \`Closes:\` line (e.g. \`Closes: #123\` or \`Closes: N/A\`).`,
               );

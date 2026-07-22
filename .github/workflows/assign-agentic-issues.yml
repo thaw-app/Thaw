@@ -10,8 +10,7 @@ on:
 
 jobs:
   assign:
-    if: >
-      contains(join(github.event.issue.labels.*.name, ','), 'agentic-workflows')
+    if: contains(github.event.issue.labels.*.name, 'agentic-workflows')
     runs-on: ubuntu-slim
     permissions:
       issues: write
