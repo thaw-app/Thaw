@@ -1,8 +1,8 @@
 ---
 description: "Triages new issues: labels by type and priority, identifies duplicates, and asks clarifying questions ONLY when required fields are missing."
+model: gpt-5-mini
 engine:
   id: copilot
-  model: gpt-5-mini
 on:
   issues:
     types: [opened]
