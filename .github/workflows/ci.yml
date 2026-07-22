@@ -120,6 +120,12 @@ jobs:
 
       - name: Build and Test Thaw
         run: |
+          # Debug locally uses com.stonerl.Thaw.debug; CI must use the
+          # production id. Override only the app target — a global
+          # PRODUCT_BUNDLE_IDENTIFIER would also rewrite MenuBarItemService
+          # and ThawTests and break XPC / test hosting.
+          sed -i '' 's/PRODUCT_BUNDLE_IDENTIFIER = com.stonerl.Thaw.debug;/PRODUCT_BUNDLE_IDENTIFIER = com.stonerl.Thaw;/' \
+            Thaw.xcodeproj/project.pbxproj
           xcodebuild test \
             -project Thaw.xcodeproj \
             -scheme Thaw \
@@ -128,8 +134,7 @@ jobs:
             -enableCodeCoverage YES \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            PRODUCT_BUNDLE_IDENTIFIER=com.stonerl.Thaw
+            CODE_SIGNING_ALLOWED=NO
 
       - name: Convert coverage to XML
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
