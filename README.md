@@ -5,7 +5,7 @@
     <img src="Resources/headers/Header_Light.svg" width="400" alt="Thaw Header" />
   </picture>
 </p>
-Thaw is a powerful menu bar management tool for macOS. Stable releases target **macOS 26+**. macOS 27 (Golden Gate) support is in preview — see the tracking issue below. While its primary function is hiding and showing menu bar items, it aims to cover a wide variety of additional features to make it one of the most versatile menu bar tools available.
+Thaw is a powerful menu bar management tool for macOS. While its primary function is hiding and showing menu bar items, it aims to cover a wide variety of additional features to make it one of the most versatile menu bar tools available.
 
 <br>
 
@@ -63,7 +63,7 @@ Having trouble after installing? Check [Frequent Issues](FREQUENT_ISSUES.md) bef
 
 ## Contributing
 
-Pull requests are welcome. Please open them against the **`development`** branch (not `main`), follow the PR template, and read [Contributing](.github/CONTRIBUTING.md).
+Pull requests are welcome. Please open them against the **`development`** branch, follow the PR template, and read [Contributing](.github/CONTRIBUTING.md).
 
 **Translations** are managed on [Crowdin](https://crowdin.com/project/thaw) — translation PRs are not accepted in this repo.
 
@@ -112,8 +112,6 @@ If a language you'd like to help translate is not listed here, let us know and w
 
 <details>
 <summary>Click to view the full features list</summary>
-
-- macOS 27 (Golden Gate) support
 
 ### Menu bar item management
 
