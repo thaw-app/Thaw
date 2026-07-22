@@ -285,9 +285,10 @@ struct ManagementScreen: View {
                     Color.clear.frame(width: 22, height: 24)
                     MenuBarDividerDot(tint: tint.label.opacity(0.85))
                 }
+                .padding(.horizontal, 2)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .padding(.horizontal, 2)
 
             MenuBarClockGroup(tint: tint.label.opacity(0.9))
                 .padding(.trailing, 8)
@@ -450,16 +451,19 @@ struct AppearanceHUD: View {
         ControlHUD {
             HStack(spacing: 0) {
                 ForEach(Array(AppearanceMockupModel.styleLabels.enumerated()), id: \.offset) { i, label in
-                    Button(label) {
+                    Button {
                         model.selectStyle(i)
+                    } label: {
+                        Text(label)
+                            .font(.system(size: 11, weight: model.styleIndex == i ? .semibold : .regular))
+                            .foregroundStyle(model.styleIndex == i ? Color.white : Color.white.opacity(0.5))
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 3)
+                            .background(model.styleIndex == i ? Color.white.opacity(0.15) : Color.clear)
+                            .clipShape(Capsule())
+                            .contentShape(Capsule())
                     }
                     .buttonStyle(.plain)
-                    .font(.system(size: 11, weight: model.styleIndex == i ? .semibold : .regular))
-                    .foregroundStyle(model.styleIndex == i ? Color.white : Color.white.opacity(0.5))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 3)
-                    .background(model.styleIndex == i ? Color.white.opacity(0.15) : Color.clear)
-                    .clipShape(Capsule())
                 }
             }
         }

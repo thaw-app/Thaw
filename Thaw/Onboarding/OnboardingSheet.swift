@@ -344,17 +344,20 @@ struct OnboardingSheet: View {
                 .frame(maxWidth: 440)
             }
 
-            Button(isLast ? "Get Started" : "Continue") {
+            Button {
                 if isLast { finishOnboarding() } else { advance() }
+            } label: {
+                Text(isLast ? "Get Started" : "Continue")
+                    .font(.body.bold())
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                    .background(Color.accentColor)
+                    .clipShape(Capsule())
+                    .contentShape(Capsule())
             }
             .keyboardShortcut(.defaultAction)
             .buttonStyle(.plain)
-            .font(.body.bold())
-            .foregroundStyle(.white)
-            .frame(maxWidth: .infinity)
-            .frame(height: 44)
-            .background(Color.accentColor)
-            .clipShape(Capsule())
         }
     }
 

@@ -34,6 +34,17 @@ final class DisplaySettingsManager: ObservableObject {
     /// re-connect the display first.
     @Published var knownDisplays: [String: KnownDisplay] = [:]
 
+    /// Whether Thaw asks for confirmation before a spacing change relaunches
+    /// menu bar apps. When true, the automatic display-transition path shows
+    /// a just-in-time prompt and the Displays pane shows its Apply/global
+    /// confirmation alerts. When false, both apply without asking.
+    @Published var confirmSpacingRelaunch = Defaults.DefaultValue.confirmSpacingRelaunch
+
+    /// When confirmSpacingRelaunch is off and a profile is active, selects
+    /// whether an applied spacing change is saved to the active profile only
+    /// or to every profile.
+    @Published var unconfirmedSpacingProfileScope = Defaults.DefaultValue.unconfirmedSpacingProfileScope
+
     /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
 
@@ -168,6 +179,12 @@ final class DisplaySettingsManager: ObservableObject {
             } catch {
                 diagLog.error("Failed to decode known display cache: \(error)")
             }
+        }
+        Defaults.ifPresent(key: .confirmSpacingRelaunch, assign: &confirmSpacingRelaunch)
+        if let raw = Defaults.string(forKey: .unconfirmedSpacingProfileScope),
+           let scope = SpacingProfileSaveScope(rawValue: raw)
+        {
+            unconfirmedSpacingProfileScope = scope
         }
     }
 
@@ -338,6 +355,13 @@ final class DisplaySettingsManager: ObservableObject {
             }
             .store(in: &c)
 
+        $confirmSpacingRelaunch.persistToDefaults(key: .confirmSpacingRelaunch, in: &c)
+        $unconfirmedSpacingProfileScope.persistToDefaults(
+            key: .unconfirmedSpacingProfileScope,
+            transform: \.rawValue,
+            in: &c
+        )
+
         cancellables = c
     }
 
@@ -366,8 +390,23 @@ final class DisplaySettingsManager: ObservableObject {
     /// moving them.
     private func applyActiveDisplaySpacing(reason: String) {
         guard let appState else { return }
-        lastAppliedActiveDisplayUUID = Bridging.getActiveMenuBarDisplayUUID()
         let desired = Int(configurationForActiveDisplay().itemSpacingOffset.rounded())
+        // A display transition can fire the relaunch wave with no warning.
+        // When confirmations are enabled and this apply would actually
+        // relaunch apps, ask the user first. Declining keeps the current
+        // on-disk spacing and leaves lastAppliedActiveDisplayUUID untouched
+        // so the next genuine transition re-prompts. The in-pane Apply and
+        // global broadcast carry their own confirmations, so only the
+        // automatic path is gated here.
+        if reason == "screenParametersChanged",
+           confirmSpacingRelaunch,
+           appState.spacingManager.willRelaunch(forOffset: desired),
+           !presentSpacingRelaunchConfirmation()
+        {
+            diagLog.info("User declined the spacing relaunch confirmation for a display transition; skipping apply")
+            return
+        }
+        lastAppliedActiveDisplayUUID = Bridging.getActiveMenuBarDisplayUUID()
         appState.spacingManager.offset = desired
         Task { [weak self] in
             guard let self else { return }
@@ -401,6 +440,28 @@ final class DisplaySettingsManager: ObservableObject {
                 diagLog.error("applyActiveDisplaySpacing(\(reason)) failed: \(error)")
             }
         }
+    }
+
+    /// Presents an app-modal confirmation before a display transition fires
+    /// the relaunch wave. Returns true when the user approves the relaunch,
+    /// false when they cancel. Runs modally so it surfaces even with the
+    /// Settings window closed; ticking the suppression checkbox while pressing
+    /// Apply turns confirmSpacingRelaunch off so future transitions apply
+    /// silently. Cancelling never changes that setting.
+    private func presentSpacingRelaunchConfirmation() -> Bool {
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.messageText = String(localized: "Apply menu bar spacing change?")
+        alert.informativeText = String(localized: "When a display transition requires Thaw to apply a different menu bar spacing, Thaw relaunches apps with menu bar items. Relaunching apps may cause unsaved input, progress, or transient app state to be lost.")
+        alert.addButton(withTitle: String(localized: "Apply"))
+        alert.addButton(withTitle: String(localized: "Cancel"))
+        alert.showsSuppressionButton = true
+        alert.suppressionButton?.title = String(localized: "Don't ask again")
+        let apply = alert.runModal() == .alertFirstButtonReturn
+        if apply, alert.suppressionButton?.state == .on {
+            confirmSpacingRelaunch = false
+        }
+        return apply
     }
 
     /// Handles per-display settings changed externally via Settings URI scheme.
@@ -835,4 +896,11 @@ final class DisplaySettingsManager: ObservableObject {
 struct KnownDisplay: Codable, Equatable {
     let name: String
     let hasNotch: Bool
+}
+
+/// Destination for an applied spacing change when the relaunch confirmation
+/// is disabled and a profile is active.
+enum SpacingProfileSaveScope: String, CaseIterable, Codable {
+    case activeProfile
+    case allProfiles
 }

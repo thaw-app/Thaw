@@ -32,7 +32,7 @@ Regardless of the type of contribution, you'll need a GitHub account and a fork 
    git checkout -b your-branch-name
    ```
 
-5. When ready, open a pull request against `stonerl/Thaw:main`
+5. When ready, open a pull request against `stonerl/Thaw:development`
 
 ## Non-technical contributions
 
@@ -105,4 +105,4 @@ Open a pull request via the [Thaw pull requests page][pr] and select the [approp
 [fq]: ../FREQUENT_ISSUES.md
 [it]: https://github.com/stonerl/Thaw/issues
 [pr]: https://github.com/stonerl/Thaw/pulls
-[prt]: https://github.com/stonerl/Thaw/blob/main/.github/pull_request_template.md
+[prt]: https://github.com/stonerl/Thaw/blob/development/.github/pull_request_template.md

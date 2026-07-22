@@ -419,4 +419,40 @@ final class PlanNotchOverflowTests: XCTestCase {
 
         XCTAssertFalse(result.overflowUIDs.isEmpty, "a genuinely full bar (positive budget) must still overflow")
     }
+
+    /// The visible control item is never ejected, but it must also keep its
+    /// saved position when an overflow rebuild runs. The field layout puts the
+    /// Thaw icon near the end of the visible section (items after it), not at
+    /// the front. Here the chevron sits mid-section; when a profile item
+    /// overflows, the chevron must stay between its neighbours rather than jump
+    /// to index 0. Red before the fix, which prepended the chevron.
+    func testChevronKeepsSavedPositionAcrossOverflow() {
+        // visible order left-to-right: a, b, chevron, c (chevron mid-list).
+        let desired = makeSequence(
+            chevron: nil,
+            visible: ["a", "b", chevron, "c"],
+            hiddenCtrl: hiddenCtrl,
+            ahCtrl: ahCtrl
+        )
+        let widths: [String: CGFloat] = [chevron: 24, "a": 24, "b": 24, "c": 24]
+        let sectionMap = ["a": "visible", "b": "visible", "c": "visible"]
+
+        // profileBaseline = chevron + a + b + c = 96 > 80, so one item overflows.
+        let result = LayoutSolver.planNotchOverflow(
+            desiredFiltered: desired,
+            unmanagedUIDs: [],
+            controlUIDs: ControlUIDs(visible: chevron, hidden: hiddenCtrl, alwaysHidden: ahCtrl),
+            sectionMap: sectionMap,
+            uidWidths: widths,
+            availableWidth: 80
+        )
+
+        XCTAssertEqual(result.overflowUIDs, ["a"], "leftmost profile item overflows first")
+        XCTAssertEqual(
+            result.updatedDesiredFiltered,
+            ["b", chevron, "c", hiddenCtrl, "a", ahCtrl],
+            "the chevron must stay between b and c, not be relocated to the front"
+        )
+        XCTAssertEqual(result.updatedSectionMap["a"], "hidden")
+    }
 }

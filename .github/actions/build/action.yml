@@ -21,6 +21,14 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Cache SwiftPM
+      uses: actions/cache@v5
+      with:
+        path: ~/Library/Caches/org.swift.swiftpm
+        key: spm-${{ runner.os }}-${{ hashFiles('**/Package.resolved') }}
+        restore-keys: |
+          spm-${{ runner.os }}-
+
     - name: xcodebuild archive
       shell: bash
       env:

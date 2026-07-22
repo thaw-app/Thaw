@@ -347,6 +347,7 @@ final class SourcePIDCache {
             return state.apps
         }
 
+        let ccBundleID = "com.apple.controlcenter"
         var appsChecked = 0
         var appsWithBar = 0
         var totalChildrenChecked = 0
@@ -380,10 +381,27 @@ final class SourcePIDCache {
 
                     let childCenter = childFrame.center
 
-                    // Match this child to ANY window in our list.
+                    // Match this child to ANY window in our list, but skip
+                    // Control-Center-hosted generic slots. Control Center is the
+                    // CG owner for every CC-hosted NSStatusItem. When the matched
+                    // app is Control Center and the window title is a generic
+                    // Item-N slot, the spatial match only confirms the window is
+                    // CC-hosted; it does not identify the owning app. Writing
+                    // Control Center's PID would tag the item as a transient CC
+                    // widget (isTransientControlCenterItem true, canBeHidden
+                    // false), hiding it from profile management and the
+                    // virtual-display provoke's orphan scan. Leaving it
+                    // unresolved lets the marker-pair pass below supply the real
+                    // owner PID; named CC items (BentoBox-0, Clock, WiFi,
+                    // NowPlaying) carry non-generic titles and resolve to Control
+                    // Center normally.
                     if let matchedWindow = allWindows.first(where: {
                         $0.bounds.center.distance(to: childCenter) <= 1
-                    }) {
+                    }), !MarkerPairResolver.isCCHostedGenericSlot(
+                        appBundleID: app.bundleIdentifier,
+                        windowTitle: matchedWindow.title,
+                        ccBundleID: ccBundleID
+                    ) {
                         totalMatchesFound += 1
                         unresolvedWindows.remove(matchedWindow.windowID)
                         let pid = app.processIdentifier
@@ -473,7 +491,6 @@ final class SourcePIDCache {
         // never be attributed to a third-party widget.
         if !unresolvedWindows.isEmpty {
             let thawBundleID = "com.stonerl.Thaw"
-            let ccBundleID = "com.apple.controlcenter"
             let markers = MarkerPairResolver.extractMarkers(
                 from: allWindows.map { win in
                     (

@@ -326,6 +326,61 @@ enum LayoutSolver {
         return .newHideableItem(candidate, identifierToMark: identifierToMark)
     }
 
+    // MARK: - Geometry readiness
+
+    /// Whether the menu bar geometry is settled enough to run a layout pass on
+    /// a notched display.
+    ///
+    /// `rightBoundary` is Control Center's left edge (or the screen's right edge
+    /// when Control Center is absent), the same value the notch-overflow budget
+    /// is derived from. A finite value to the right of the notch's right edge is
+    /// a valid layout anchor. A value at or left of the notch (or non-finite)
+    /// means Control Center was reported at a stale off-screen position, which
+    /// happens transiently during a display reconnect or Control Center widget
+    /// churn. Running the placement and move logic against that geometry
+    /// mis-positions the control items (the Thaw visible icon jumps to the far
+    /// left), so the pass must be deferred until the geometry settles.
+    static nonisolated func isMenuBarGeometryReady(
+        rightBoundary: CGFloat,
+        notchMaxX: CGFloat
+    ) -> Bool {
+        rightBoundary.isFinite && rightBoundary > notchMaxX
+    }
+
+    /// Whether the given menu bar items currently occupy more than one display.
+    ///
+    /// Each center is matched to the screen frame that contains it. Frames and
+    /// centers are expected in the global CoreGraphics coordinate space
+    /// (top-left origin), so a secondary display above the main one has a
+    /// negative y origin. Centers that fall on no screen are intentionally
+    /// parked off-screen hidden items (the control item shoves them thousands
+    /// of points to the left) and are ignored. When the remaining on-screen
+    /// items resolve to more than one distinct screen the active menu bar is
+    /// relocating between displays: macOS migrates the status item windows
+    /// asynchronously, so for a window of time some items sit on the old screen
+    /// and some on the new one. A bulk apply dispatched then resolves each
+    /// move against a different display and cannot converge, leaving items
+    /// stranded where they read as un-hidden; a section order persisted then
+    /// bakes that transition artifact into the saved layout. Both callers defer
+    /// until the items collapse back onto a single display.
+    static nonisolated func itemsSpanMultipleDisplays(
+        itemCenters: [CGPoint],
+        screenFrames: [CGRect]
+    ) -> Bool {
+        guard screenFrames.count > 1 else { return false }
+        var hitScreens = Set<Int>()
+        for center in itemCenters {
+            guard let index = screenFrames.firstIndex(where: { $0.contains(center) }) else {
+                continue
+            }
+            hitScreens.insert(index)
+            if hitScreens.count > 1 {
+                return true
+            }
+        }
+        return false
+    }
+
     // MARK: - Notch overflow
 
     /// Decides which visible items must overflow into hidden to fit the
@@ -455,13 +510,16 @@ enum LayoutSolver {
             .filter { !controlSet.contains($0) }
 
         let overflowSet = Set(overflowUIDs)
-        let remainingNonChevron = nonChevronUIDs.filter { !overflowSet.contains($0) }
+        // Keep the visible items in their saved order and drop only the
+        // overflowed ones. The visible control item is never in overflowSet, so
+        // filtering preserves its saved position instead of forcing it to the
+        // front of the visible section. Prepending the chevron relocated the
+        // always-visible Thaw icon to the leftmost slot on every overflow even
+        // though it was never the item that overflowed.
+        let remainingVisible = visibleUIDs.filter { !overflowSet.contains($0) }
 
         var rebuilt = [String]()
-        if let chevron = controlUIDs.visible {
-            rebuilt.append(chevron)
-        }
-        rebuilt.append(contentsOf: remainingNonChevron)
+        rebuilt.append(contentsOf: remainingVisible)
         rebuilt.append(controlUIDs.hidden)
         rebuilt.append(contentsOf: existingHidden)
         rebuilt.append(contentsOf: overflowUIDs)

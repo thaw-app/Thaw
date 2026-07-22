@@ -56,8 +56,11 @@ struct DisplaySettingsPane: View {
             IceSection {
                 globalSection()
             }
+            IceSection {
+                confirmSpacingRelaunchControls
+            }
             CalloutBox(systemImage: "exclamationmark.triangle.fill", font: .callout, foregroundStyle: Color.warning) {
-                Text("Connecting a display whose spacing differs from the current spacing relaunches every menu bar app. Keep spacing consistent across displays to avoid relaunches.")
+                Text("When a display transition requires Thaw to apply a different menu bar spacing, Thaw relaunches apps with menu bar items. Relaunching apps may cause unsaved input, progress, or transient app state to be lost.")
             }
             ForEach(displaySettings.allDisplays()) { display in
                 IceSection {
@@ -89,6 +92,23 @@ struct DisplaySettingsPane: View {
             Button("OK") { errorMessage = nil }
         } message: {
             if let errorMessage { Text(errorMessage) }
+        }
+    }
+
+    @ViewBuilder
+    private var confirmSpacingRelaunchControls: some View {
+        Toggle("Confirm before relaunching apps", isOn: $displaySettings.confirmSpacingRelaunch)
+            .annotation("Before a display change or spacing edit relaunches your menu bar apps, Thaw asks you to confirm. Turn this off to apply spacing changes and relaunch apps without confirmation.")
+
+        if !displaySettings.confirmSpacingRelaunch {
+            IcePicker(
+                "Without confirmation, save spacing to",
+                selection: $displaySettings.unconfirmedSpacingProfileScope
+            ) {
+                Text("Active profile").tag(SpacingProfileSaveScope.activeProfile)
+                Text("All profiles").tag(SpacingProfileSaveScope.allProfiles)
+            }
+            .annotation("When a profile is active, choose whether spacing changes save to just the active profile or to every profile.")
         }
     }
 
@@ -315,6 +335,17 @@ struct DisplaySettingsPane: View {
             return
         }
 
+        // Confirmations disabled: apply directly, saving to the profile
+        // target the user picked instead of staging the alert.
+        if !displaySettings.confirmSpacingRelaunch {
+            commitSpacingWithoutConfirmation(
+                displayID: display.id,
+                offset: offset,
+                activeProfileID: activeID
+            )
+            return
+        }
+
         let activeName = activeID.flatMap { id in
             appState.profileManager.profiles.first(where: { $0.id == id })?.name
         }
@@ -337,6 +368,39 @@ struct DisplaySettingsPane: View {
         draftSpacing[displayID] = CGFloat(offset)
         displaySettings.updateConfiguration(forDisplayUUID: displayID) { config in
             config.withItemSpacingOffset(offset)
+        }
+    }
+
+    /// Commits the spacing and, when a profile is active, persists it to the
+    /// profile target chosen by unconfirmedSpacingProfileScope. Used when
+    /// confirmations are disabled; mirrors the spacingConfirmationButtons
+    /// actions including the rollback on a failed profile save.
+    private func commitSpacingWithoutConfirmation(
+        displayID: String,
+        offset: Double,
+        activeProfileID: UUID?
+    ) {
+        let previousOffset = displaySettings.configuration(forUUID: displayID).itemSpacingOffset
+        commitSpacing(displayID: displayID, offset: offset)
+        guard let id = activeProfileID else { return }
+        do {
+            switch displaySettings.unconfirmedSpacingProfileScope {
+            case .activeProfile:
+                try appState.profileManager.updateProfile(
+                    id: id,
+                    scope: .configurationOnly,
+                    appState: appState
+                )
+            case .allProfiles:
+                try appState.profileManager.updateAllProfilesItemSpacingOffset(
+                    displayUUID: displayID,
+                    offset: offset
+                )
+            }
+        } catch {
+            commitSpacing(displayID: displayID, offset: previousOffset)
+            errorMessage = error.localizedDescription
+            showingError = true
         }
     }
 
@@ -408,7 +472,7 @@ struct DisplaySettingsPane: View {
         switch (pending.isActiveDisplay, pending.activeProfileID != nil) {
         case (true, true):
             return String(
-                format: String(localized: "Applying this spacing change will briefly relaunch all apps with menu bar items. Save the new spacing to the active profile \"%@\", or save it to every profile."),
+                format: String(localized: "Applying this spacing change will relaunch each app with a menu bar item. Relaunching apps may cause unsaved input, progress, or transient app state to be lost. Save the new spacing to the active profile \"%@\", or save it to every profile."),
                 profileName
             )
         case (false, true):
@@ -417,7 +481,7 @@ struct DisplaySettingsPane: View {
                 profileName
             )
         case (true, false):
-            return String(localized: "Applying this spacing change will briefly relaunch all apps with menu bar items.")
+            return String(localized: "Applying this spacing change will relaunch each app with a menu bar item. Relaunching apps may cause unsaved input, progress, or transient app state to be lost.")
         case (false, false):
             return ""
         }
@@ -616,6 +680,14 @@ struct DisplaySettingsPane: View {
     private func requestGlobalApply() {
         let displayCount = displaySettings.allDisplays().count
         let activeID = appState.profileManager.activeProfileID
+
+        // Confirmations disabled: broadcast directly, saving to the chosen
+        // profile target instead of staging the alert.
+        if !displaySettings.confirmSpacingRelaunch {
+            commitGlobalApplyWithoutConfirmation(activeProfileID: activeID)
+            return
+        }
+
         let activeName = activeID.flatMap { id in
             appState.profileManager.profiles.first(where: { $0.id == id })?.name
         }
@@ -632,6 +704,35 @@ struct DisplaySettingsPane: View {
     /// for the active display on the next main-queue dispatch.
     private func commitGlobalApply() {
         displaySettings.applyGlobalToAllKnownDisplays()
+    }
+
+    /// Broadcasts the global template and, when a profile is active,
+    /// persists it to the profile target chosen by
+    /// unconfirmedSpacingProfileScope. Used when confirmations are disabled;
+    /// mirrors the globalConfirmationButtons actions including rollback.
+    private func commitGlobalApplyWithoutConfirmation(activeProfileID: UUID?) {
+        let previousConfigurations = displaySettings.configurations
+        commitGlobalApply()
+        guard let id = activeProfileID else { return }
+        do {
+            switch displaySettings.unconfirmedSpacingProfileScope {
+            case .activeProfile:
+                try appState.profileManager.updateProfile(
+                    id: id,
+                    scope: .configurationOnly,
+                    appState: appState
+                )
+            case .allProfiles:
+                try appState.profileManager.updateAllProfilesGlobalConfiguration(
+                    displaySettings.globalConfiguration,
+                    propagateToDisplays: true
+                )
+            }
+        } catch {
+            displaySettings.configurations = previousConfigurations
+            errorMessage = error.localizedDescription
+            showingError = true
+        }
     }
 
     @ViewBuilder
@@ -685,7 +786,7 @@ struct DisplaySettingsPane: View {
 
     private func globalConfirmationMessage(for pending: PendingGlobalApply) -> String {
         let profileName = pending.activeProfileName ?? ""
-        let displayMessage = String(localized: "This will overwrite the settings of \(pending.displayCount) display with the global template and may briefly relaunch apps with menu bar items.")
+        let displayMessage = String(localized: "This will overwrite the settings of \(pending.displayCount) display with the global template. If the active display's spacing changes, Thaw will relaunch each app with a menu bar item. Relaunching apps may cause unsaved input, progress, or transient app state to be lost.")
         if pending.activeProfileID != nil {
             let profileInstruction = String(localized: "Save the global template to the active profile \"\(profileName)\", or save it to every profile.")
             return "\(displayMessage) \(profileInstruction)"

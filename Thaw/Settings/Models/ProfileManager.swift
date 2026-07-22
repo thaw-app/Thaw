@@ -215,6 +215,8 @@ final class ProfileManager: ObservableObject {
                 hotkeys: Defaults.dictionary(forKey: .hotkeys) as? [String: Data] ?? [:],
                 displayConfigurations: appState.settings.displaySettings.configurations,
                 globalDisplayConfiguration: appState.settings.displaySettings.globalConfiguration,
+                confirmSpacingRelaunch: appState.settings.displaySettings.confirmSpacingRelaunch,
+                unconfirmedSpacingProfileScope: appState.settings.displaySettings.unconfirmedSpacingProfileScope,
                 appearanceConfiguration: appState.appearanceManager.configuration,
                 menuBarLayout: captureCurrentLayout(from: appState.itemManager)
             )
@@ -450,6 +452,10 @@ final class ProfileManager: ObservableObject {
         // Apply global display configuration template
         appState.settings.displaySettings.globalConfiguration = profile.globalDisplayConfiguration
 
+        // Apply the spacing-relaunch confirmation preferences
+        appState.settings.displaySettings.confirmSpacingRelaunch = profile.confirmSpacingRelaunch
+        appState.settings.displaySettings.unconfirmedSpacingProfileScope = profile.unconfirmedSpacingProfileScope
+
         // Apply appearance configuration
         appState.appearanceManager.configuration = profile.appearanceConfiguration
 
@@ -654,6 +660,8 @@ final class ProfileManager: ObservableObject {
         profile.hotkeys = Defaults.dictionary(forKey: .hotkeys) as? [String: Data] ?? [:]
         profile.displayConfigurations = appState.settings.displaySettings.configurations
         profile.globalDisplayConfiguration = appState.settings.displaySettings.globalConfiguration
+        profile.confirmSpacingRelaunch = appState.settings.displaySettings.confirmSpacingRelaunch
+        profile.unconfirmedSpacingProfileScope = appState.settings.displaySettings.unconfirmedSpacingProfileScope
         profile.appearanceConfiguration = appState.appearanceManager.configuration
     }
 

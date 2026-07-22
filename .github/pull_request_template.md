@@ -1,47 +1,38 @@
-## What does this PR do?
+# Summary
 
 A brief description of the changes proposed in this pull request.
+
+> **External contributors:** before opening a PR for a bug fix or new feature, please make sure there's a corresponding issue in the [issue tracker](https://github.com/stonerl/Thaw/issues). PRs that fix or change things that haven't been reported/agreed on may be closed without review.
+
+Closes: (issue number, or 'N/A')
 
 ## PR Type
 
 - [ ] Bugfix
-- [ ] CI/CD related changes
-- [ ] Code style update (formatting, renaming)
+- [ ] CI/CD
 - [ ] Documentation
 - [ ] Feature
-- [ ] Refactor
 - [ ] Performance improvement
+- [ ] Refactor
 - [ ] Test addition or update
-- [ ] Other (please describe):
+- [ ] Other (please describe)
 
 ## Does this PR introduce a breaking change?
 
-- [ ] Yes
+- [ ] Yes - if yes, please describe the impact and migration path
 - [ ] No
-
-If yes, please describe the impact and migration path:
-
-## What is the current behavior?
-
-What is happening now?
-Issue Number: (if applicable, otherwise remove this line or write 'N/A')
 
 ## What is the new behavior?
 
-What does this PR change or add?
+What does this PR change or add, and why?
 
 ## PR Checklist
 
-- [ ] I’ve built and run the app locally
-- [ ] I’ve checked for console errors or crashes
-- [ ] I've run relevant tests and they pass
-- [ ] I've added or updated tests (if applicable)
+- [ ] I've built and run the app locally and verified that it works as expected.
+- [ ] I've run `swiftformat .` to keep the code style consistent.
+- [ ] I've added tests for new behavior (if applicable)
 - [ ] I've updated documentation as needed
 
 ## Other information
 
-Screenshots, notes, links to related issues/PRs, or anything useful for reviewers.
-
-### Notes for reviewers
-
-Anything you’d like reviewers to focus on.
+Screenshots, notes, or anything useful for reviewers.
