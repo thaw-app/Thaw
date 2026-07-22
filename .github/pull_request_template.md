@@ -26,7 +26,10 @@ If you tick **Feature** or **Refactor** and touch more than ~20 files, please me
 
 ## Area
 
-Check the product area(s) this PR touches (path-based labeling also applies).
+**Product surfaces** (optional when the change is not about the app UI). Path-based labeling also applies.
+
+- Use **PR Type** for *what* changed (`CI/CD`, `Documentation`, `Other` / chore, etc.).
+- Use **`ops`** for *where* when it is repo operations: CI, release, GitHub hygiene, scripts, lint/sonar config — not a product surface.
 
 - [ ] menubar
 - [ ] icebar
@@ -38,6 +41,7 @@ Check the product area(s) this PR touches (path-based labeling also applies).
 - [ ] profiles
 - [ ] hotkeys
 - [ ] updates
+- [ ] ops
 
 ## Does this PR introduce a breaking change?
 

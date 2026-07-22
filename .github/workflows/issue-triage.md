@@ -24,7 +24,7 @@ safe-outputs:
     hide-older-comments: true
   add-labels:
     max: 7
-    allowed: [bug, docs, duplicate, enhancement, feature, invalid, needs-info, question, regression, upstream, wontfix, macos-14, macos-15, macos-26, macos-27, P0, P1, P2, P3, P4, P5, unsupported, menubar, icebar, layout, appearance, settings, onboarding, permissions, profiles, hotkeys, updates]
+    allowed: [bug, docs, duplicate, enhancement, feature, invalid, needs-info, question, regression, upstream, wontfix, macos-14, macos-15, macos-26, macos-27, P0, P1, P2, P3, P4, P5, unsupported, menubar, icebar, layout, appearance, settings, onboarding, permissions, profiles, hotkeys, updates, ops]
   update-issue:
     max: 1
   close-issue:
@@ -50,7 +50,7 @@ Start by fetching the full issue details (body, author, existing labels) using t
 
 - **Request kind** (`bug`, `feature`, `enhancement`, …) describes what was *filed*. `bug` means a defect **report**. Bug **fixes** live on PRs as `fix` — never apply `fix`, `refactor`, `performance`, `test`, `ci`, `cd`, `chore`, or `breaking-change` to issues.
 - **Priority** (`P0`–`P5`) and **OS** (`macos-*`) are issue-only.
-- **Area** (`menubar`, `icebar`, …) is shared with PRs and names the product surface.
+- **Area** (`menubar`, `icebar`, `ops`, …) names the product surface **or** repo operations (`ops` = CI/GitHub/scripts). Skip when unclear.
 
 ## Critical rule: do NOT ask for information that is already present
 
@@ -161,6 +161,7 @@ Apply **exactly one** area label when the report clearly maps to a product surfa
 | `profiles` | Profiles and layout snapshots |
 | `hotkeys` | Hotkey recording and bindings |
 | `updates` | Sparkle / release channels / appcast |
+| `ops` | CI, release, GitHub hygiene, scripts, lint/sonar — not a product surface |
 
 ### 6. Detect Duplicates
 
@@ -212,6 +213,6 @@ Do not assign issues automatically. Leave assignment decisions to maintainers.
 - **Be concise and firm** when redirecting ignored tracking issues (especially #687). Do not spend tokens on lengthy sympathy for reports that skipped the pinned issue / README.
 - **Do not spam**. Only post a comment if you have something useful to say (clarifying questions, duplicate/redirect, or unsupported). Never post a generic "I've triaged your issue" comment.
 - **Respect existing labels** already applied by issue templates — do not remove or duplicate them.
-- **Only use labels from the allowed list**: `bug`, `docs`, `duplicate`, `enhancement`, `feature`, `invalid`, `needs-info`, `question`, `regression`, `upstream`, `wontfix`, `unsupported`, `macos-14`, `macos-15`, `macos-26`, `macos-27`, `P0`, `P1`, `P2`, `P3`, `P4`, `P5`, `menubar`, `icebar`, `layout`, `appearance`, `settings`, `onboarding`, `permissions`, `profiles`, `hotkeys`, `updates`.
+- **Only use labels from the allowed list**: `bug`, `docs`, `duplicate`, `enhancement`, `feature`, `invalid`, `needs-info`, `question`, `regression`, `upstream`, `wontfix`, `unsupported`, `macos-14`, `macos-15`, `macos-26`, `macos-27`, `P0`, `P1`, `P2`, `P3`, `P4`, `P5`, `menubar`, `icebar`, `layout`, `appearance`, `settings`, `onboarding`, `permissions`, `profiles`, `hotkeys`, `updates`, `ops`.
 - **One comment at a time** — combine any clarifying questions and duplicate notice into a single comment if both apply.
 - **Always complete with a safe-output call**: You must always call at least one safe-output tool (`add_labels`, `add_comment`, `update_issue`, `close_issue`, `noop`, `missing_tool`, or `missing_data`) to indicate you finished.

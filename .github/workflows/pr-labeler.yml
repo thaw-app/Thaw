@@ -48,9 +48,10 @@ jobs:
               'profiles',
               'hotkeys',
               'updates',
+              'ops',
             ];
 
-            // First matching rule wins per path; settings is a fallback when nothing else matched.
+            // First matching rule wins per path; settings/ops are fallbacks when nothing else matched.
             const pathAreaRules = [
               { label: 'icebar', test: (p) => p.startsWith('Thaw/MenuBar/IceBar/') },
               { label: 'layout', test: (p) =>
@@ -73,6 +74,16 @@ jobs:
                 /appcast/i.test(p)
               },
               { label: 'settings', test: (p) => p.startsWith('Thaw/Settings/') },
+              { label: 'ops', test: (p) =>
+                p.startsWith('.github/') ||
+                p.startsWith('scripts/') ||
+                p === 'AGENTS.md' ||
+                p === 'FREQUENT_ISSUES.md' ||
+                p === 'README.md' ||
+                p === '.swiftformat' ||
+                p === '.swiftlint.yml' ||
+                p === 'sonar-project.properties'
+              },
             ];
 
             const getSection = (heading) => {
@@ -130,7 +141,8 @@ jobs:
               }
             }
 
-            // Prefer specific areas over settings when both matched.
+            // Prefer specific product areas over the settings fallback when both matched.
+            // Keep `ops` alongside product areas when a PR also touches repo tooling.
             if (pathAreas.size > 1 && pathAreas.has('settings')) {
               pathAreas.delete('settings');
             }
