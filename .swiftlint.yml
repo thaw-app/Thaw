@@ -1,7 +1,22 @@
 included:
+  - MenuBarHost
   - MenuBarItemService
+  - MenuBarModel
   - Shared
   - Thaw
+  - ThawCapture
+  - ThawCtl
+
+excluded:
+  - MenuBarHost/.build
+  - MenuBarModel/.build
+  - ThawCapture/.build
+  - ThawCtl/.build
+  - ThawTests
+  - MenuBarHost/Package.swift
+  - MenuBarModel/Package.swift
+  - ThawCapture/Package.swift
+  - ThawCtl/Package.swift
 
 disabled_rules:
   - cyclomatic_complexity

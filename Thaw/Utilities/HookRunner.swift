@@ -154,7 +154,7 @@ enum HookRunner {
             "THAW_PREVIOUS_PROFILE_NAME": context.previousProfileName ?? "",
         ])
 
-        let clamped = max(1.0, min(hook.timeoutSeconds, 300.0))
+        let clamped = hook.timeoutSeconds.clamped(to: 1.0 ... 300.0)
 
         // On timeout or outer-task cancellation, Subprocess runs this
         // teardown sequence against the child before this call returns,

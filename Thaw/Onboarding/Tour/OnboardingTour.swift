@@ -34,6 +34,10 @@ struct ThawOnboardingTour: View {
     @State private var navigationTask: Task<Void, Never>?
     @State private var autoAdvanceTask: Task<Void, Never>?
 
+    /// Which edge the next slide should enter from, set just before
+    /// `currentSlide` changes so the transition below can read it.
+    @State private var slideEdge: Edge = .trailing
+
     @State private var welcomeModel = ThawWelcomeModel()
     @State private var managementModel = ThawManagementMockupModel()
     @State private var appearanceModel = ThawAppearanceMockupModel()
@@ -76,7 +80,7 @@ struct ThawOnboardingTour: View {
                 }
                 .frame(height: 272)
                 .frame(maxWidth: .infinity)
-                .transition(.opacity)
+                .transition(reduceMotion ? .opacity : slideTransition)
                 .id(currentSlide)
 
                 pageDots
@@ -99,6 +103,7 @@ struct ThawOnboardingTour: View {
                 let index = slide.rawValue
                 Button {
                     guard beginNavigation() else { return }
+                    slideEdge = index > currentSlide ? .trailing : .leading
                     withAnimation(navigationAnimation) {
                         currentSlide = index
                     }
@@ -210,6 +215,7 @@ struct ThawOnboardingTour: View {
     /// Steps to the next slide, wrapping back to the first looping slide
     /// (not the welcome slide) once the last one finishes.
     private func advanceOrLoop() {
+        slideEdge = .trailing
         withAnimation(navigationAnimation) {
             if currentSlide == slides.count - 1 {
                 currentSlide = firstLoopingIndex
@@ -221,5 +227,12 @@ struct ThawOnboardingTour: View {
 
     private var navigationAnimation: Animation? {
         reduceMotion ? nil : .snappy
+    }
+
+    private var slideTransition: AnyTransition {
+        .asymmetric(
+            insertion: .opacity.combined(with: .move(edge: slideEdge)),
+            removal: .opacity.combined(with: .move(edge: slideEdge == .trailing ? .leading : .trailing))
+        )
     }
 }

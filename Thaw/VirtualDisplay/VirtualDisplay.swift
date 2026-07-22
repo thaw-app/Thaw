@@ -107,7 +107,7 @@ final class VirtualDisplay {
         ThawVirtualDisplayDestroy(handle)
     }
 
-    deinit {
+    isolated deinit {
         if isValid {
             ThawVirtualDisplayDestroy(handle)
         }

@@ -2,49 +2,13 @@
 
 Helper scripts for local Thaw development and Claude Code tooling.
 
-## `thaw-build-dmg.sh`
-
-Local-only mirror of the **Build DMG** workflow. It reads signing and
-notarization configuration from the environment, so a clean checkout needs no
-tracked-file edits. The notarization password lives in your login keychain via
-`notarytool` (never commit app-specific passwords).
-
-One-time:
-
-```bash
-export THAW_TEAM_ID="YOUR_TEAM_ID"
-export THAW_APPLE_ID="you@example.com"
-export THAW_NOTARY_PROFILE="thaw-notary"
-export THAW_SIGN_IDENTITY="Developer ID Application: Your Name (YOUR_TEAM_ID)"
-
-xcrun notarytool store-credentials "$THAW_NOTARY_PROFILE" \
-  --apple-id "$THAW_APPLE_ID" \
-  --team-id "$THAW_TEAM_ID" \
-  --password "<app-specific-password>"
-```
-
-Add the four `export` lines to an untracked local shell profile if desired.
-`--skip-notarize` does not require `THAW_APPLE_ID` or
-`THAW_NOTARY_PROFILE`; signing still requires `THAW_TEAM_ID` and
-`THAW_SIGN_IDENTITY`.
-
-Then:
-
-```bash
-./scripts/thaw-build-dmg.sh
-./scripts/thaw-build-dmg.sh --skip-notarize   # sign only
-./scripts/thaw-build-dmg.sh --dmg-name Thaw-test.dmg
-```
-
-Requires a **Developer ID Application** certificate. Output: `build/Thaw-dev.dmg`.
-
 ## `thaw-devrun.sh`
 
 Builds the **Debug** configuration and runs it from `/Applications/Thaw Debug.app`.
 
 On macOS 27, menu bar items need a clean code identity and a canonical `/Applications` install path. Running straight from DerivedData can cause Thaw’s own icon to disappear when items are hidden. This script:
 
-1. Optionally symlinks sibling local packages into `.swiftpm-overrides/` (falls back to published packages when absent)
+1. Optionally mirrors sibling local packages into `.swiftpm-overrides/` (falls back to published packages when absent)
 2. Resolves Swift package dependencies (`xcodebuild -resolvePackageDependencies`)
 3. Builds the Debug scheme (uses your Xcode project signing settings)
 4. Quits any running Thaw Debug instance (app + XPC service)
@@ -61,7 +25,7 @@ sibling is missing, the script removes any stale override and builds via
 
 | Sibling checkout | Override path | Behavior |
 |------------------|---------------|----------|
-| `../PlatformRuntimeKit` | `.swiftpm-overrides/prk-bin` → `../../PlatformRuntimeKit` | Optional — local kit if present, else published |
+| `../PlatformRuntimeKit` | `.swiftpm-overrides/prk-bin` source mirror | Optional — local kit if present, else published |
 
 `.swiftpm-overrides/` is gitignored. CI always uses published packages via
 `Thaw.xcodeproj`.

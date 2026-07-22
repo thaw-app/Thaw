@@ -424,6 +424,57 @@ final class PlanNotchOverflowTests: XCTestCase {
         XCTAssertFalse(result.overflowUIDs.isEmpty, "a genuinely full bar (positive budget) must still overflow")
     }
 
+    // MARK: - Collapsed-bounds width flooring (macOS 27 native overflow)
+
+    /// macOS 27 collapses hidden/overflowed item bounds to ~2pt. The budget
+    /// helper must charge those a nominal width so the profile baseline reflects
+    /// the real rendered bar; trustworthy measured widths pass through.
+    func testBudgetWidthFloorsCollapsedBounds() {
+        XCTAssertEqual(MenuBarItemManager.budgetWidth(forMeasuredWidth: 2), MenuBarItemManager.nominalStatusItemWidth)
+        XCTAssertEqual(MenuBarItemManager.budgetWidth(forMeasuredWidth: 0), MenuBarItemManager.nominalStatusItemWidth)
+        // A genuine, trustworthy width is preserved.
+        XCTAssertEqual(MenuBarItemManager.budgetWidth(forMeasuredWidth: 40), 40)
+    }
+
+    /// With collapsed (2pt) bounds the raw sum looks tiny and the planner would
+    /// wrongly conclude the profile fits — leaving the native overflow control
+    /// visible. Once floored, the profile baseline exceeds a tight budget and
+    /// the leftmost items overflow.
+    func testFlooredCollapsedWidthsDriveOverflow() {
+        let desired = makeSequence(
+            chevron: chevron,
+            visible: ["a", "b", "c", "d"],
+            hiddenCtrl: hiddenCtrl,
+            ahCtrl: ahCtrl
+        )
+        // Simulate what MenuBarItemManager builds: collapsed 2pt bounds floored
+        // to the nominal width.
+        let nominal = MenuBarItemManager.nominalStatusItemWidth
+        let widths: [String: CGFloat] = [
+            chevron: 24,
+            "a": MenuBarItemManager.budgetWidth(forMeasuredWidth: 2),
+            "b": MenuBarItemManager.budgetWidth(forMeasuredWidth: 2),
+            "c": MenuBarItemManager.budgetWidth(forMeasuredWidth: 2),
+            "d": MenuBarItemManager.budgetWidth(forMeasuredWidth: 2),
+        ]
+        let sectionMap = ["a": "visible", "b": "visible", "c": "visible", "d": "visible"]
+
+        // profileBaseline = 24 + 4 * nominal. Budget fits chevron + 1 item.
+        let result = LayoutSolver.planNotchOverflow(
+            desiredFiltered: desired,
+            unmanagedUIDs: [],
+            controlUIDs: ControlUIDs(visible: chevron, hidden: hiddenCtrl, alwaysHidden: ahCtrl),
+            sectionMap: sectionMap,
+            uidWidths: widths,
+            availableWidth: 24 + nominal + 1
+        )
+
+        XCTAssertFalse(result.overflowUIDs.isEmpty, "floored widths must make the over-full bar overflow")
+        // Leftmost-first: "a" is the first to go.
+        XCTAssertTrue(result.overflowUIDs.contains("a"))
+        XCTAssertEqual(result.updatedSectionMap["d"], "visible")
+    }
+
     /// The visible control item is never ejected, but it must also keep its
     /// saved position when an overflow rebuild runs. The field layout puts the
     /// Thaw icon near the end of the visible section (items after it), not at

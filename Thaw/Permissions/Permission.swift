@@ -226,7 +226,7 @@ final class ScreenRecordingPermission: Permission {
             isRequired: false,
             settingsURL: URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"),
             check: {
-                ScreenCapture.cachedCheckPermissions(reset: true)
+                ScreenCapture.recomputeCachedScreenRecordingPermission()
             },
             asyncCheck: {
                 await ScreenCapture.refreshPermissions()

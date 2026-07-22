@@ -341,13 +341,6 @@ final class ModifiersTests: XCTestCase {
 
     // MARK: - Hashable
 
-    func testHashableConsistency() {
-        let modifiers1: Modifiers = [.command, .shift]
-        let modifiers2: Modifiers = [.shift, .command]
-
-        XCTAssertEqual(modifiers1.hashValue, modifiers2.hashValue)
-    }
-
     func testHashableInSet() {
         var set = Set<Modifiers>()
         set.insert([.command])

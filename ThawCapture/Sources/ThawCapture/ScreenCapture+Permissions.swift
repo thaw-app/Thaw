@@ -9,7 +9,7 @@
 import AppKit
 import CoreGraphics
 import MenuBarModel
-@preconcurrency import ScreenCaptureKit
+import ScreenCaptureKit
 
 public extension ScreenCapture {
     // MARK: Permissions
@@ -52,18 +52,25 @@ public extension ScreenCapture {
         preflightResult || windowTitles.contains { $0 != nil }
     }
 
-    /// Returns a Boolean value that indicates whether the app has screen
-    /// capture permissions.
+    /// A Boolean value that indicates whether the app has screen capture
+    /// permissions.
     ///
-    /// This function caches its initial result and returns it on subsequent
-    /// calls. Pass `true` to the `reset` parameter to replace the cached
-    /// result with a newly computed value.
-    static func cachedCheckPermissions(reset: Bool = false) -> Bool {
-        if !reset, let result = cachedPermissionResult.withLock({ $0 }) {
+    /// This property caches its initial result and returns it on subsequent
+    /// reads. Call ``recomputeCachedScreenRecordingPermission()`` to replace
+    /// the cached result with a newly computed value.
+    static var hasCachedScreenRecordingPermission: Bool {
+        if let result = cachedPermissionResult.withLock({ $0 }) {
             return result
         }
+        return recomputeCachedScreenRecordingPermission()
+    }
+
+    /// Recomputes and caches the current screen capture permission state,
+    /// replacing any previously cached result.
+    @discardableResult
+    static func recomputeCachedScreenRecordingPermission() -> Bool {
         let result = checkPermissions()
-        diagLog.debug("cachedCheckPermissions: computed fresh result = \(result) (reset=\(reset), wasCached=\(cachedPermissionResult.withLock { $0 != nil }))")
+        diagLog.debug("recomputeCachedScreenRecordingPermission: computed fresh result = \(result) (wasCached=\(cachedPermissionResult.withLock { $0 != nil }))")
         cachedPermissionResult.withLock { $0 = result }
         return result
     }

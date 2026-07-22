@@ -32,11 +32,11 @@ struct MenuBarLayoutSettingsPane: View {
     }
 
     var body: some View {
-        let hasScreenRecordingPermission = ScreenCapture.cachedCheckPermissions()
+        let hasScreenRecordingPermission = ScreenCapture.hasCachedScreenRecordingPermission
         let canArrangeLayout = hasScreenRecordingPermission
             && !appState.menuBarManager.isMenuBarHiddenBySystemUserDefaults
 
-        IceForm(spacing: 20) {
+        IceForm {
             if !hasScreenRecordingPermission {
                 MissingLayoutPermissionView()
             } else if !canArrangeLayout {
@@ -131,7 +131,8 @@ private struct LayoutSectionOptions: View {
         IceSection("Sections") {
             if isHidingUnavailable {
                 SettingsWarningPill(
-                    message: "Hiding is unavailable on this macOS build (the required system capability was not found). Reordering still works; hiding does not."
+                    title: "Hiding unavailable",
+                    message: "This macOS build is missing the system capability Thaw needs to hide items. Reordering still works; hiding does not."
                 )
             }
             Toggle(
@@ -210,7 +211,7 @@ private struct LayoutBarsSection: View {
                     if itemManager.areControlItemsMissing {
                         Text("One or more section dividers are hidden by macOS")
                         Text("Check System Settings > Menu Bar and enable \(Constants.displayName)")
-                            .font(.calloutBox)
+                            .font(.callout)
                             .foregroundStyle(.secondary)
                     } else {
                         Text("Unable to load menu bar items")
@@ -233,9 +234,9 @@ private struct LayoutBarsSection: View {
 
     private func loadItemsIfNeeded() async {
         loadDeadlineReached = false
-        guard !hasItems, ScreenCapture.cachedCheckPermissions() else { return }
+        guard !hasItems, ScreenCapture.hasCachedScreenRecordingPermission else { return }
 
-        diagLog.debug("Preloading menu bar layout caches (hasItems=\(self.hasItems), screenRecording=\(ScreenCapture.cachedCheckPermissions()))")
+        diagLog.debug("Preloading menu bar layout caches (hasItems=\(self.hasItems), screenRecording=\(ScreenCapture.hasCachedScreenRecordingPermission))")
         async let preloadCaches: Void = preloadLayoutCaches()
         try? await Task.sleep(for: .seconds(3))
 
@@ -251,9 +252,11 @@ private struct LayoutBarsSection: View {
         guard !Task.isCancelled else { return }
 
         if #available(macOS 27, *) {
+            // Fill gaps only so opening Layout cannot overwrite settled
+            // Hidden glyphs with native overflow chevron («») crops.
             await appState.imageCache.prewarmConcealedImagesMacOS27(
                 sections: [.hidden, .alwaysHidden],
-                onlyMissingImages: false
+                onlyMissingImages: true
             )
             guard !Task.isCancelled else { return }
         }
@@ -288,61 +291,45 @@ struct LayoutAdvancedControls: View {
     @ObservedObject var settings: AdvancedSettings
     @ObservedObject var navigationState: AppNavigationState
     @State private var isExpanded = false
-    @State private var hasConnectedNotchedDisplay = NSScreen.managedScreens.contains(where: \.hasNotch)
-
-    static let defaultsExpanded = false
 
     var body: some View {
+        // Disclosure as a form row (Hotkeys pattern) — not nested mini-sections
+        // inside the card, which read as double chrome.
         IceSection {
             DisclosureGroup("Advanced layout controls", isExpanded: $isExpanded) {
-                VStack(alignment: .leading, spacing: 18) {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Overflow handling")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.secondary)
+                Toggle(
+                    "Move items that don't fit into Hidden",
+                    isOn: $settings.enableMenuBarItemOverflow
+                )
+                .annotation(
+                    "Move menu bar items from Visible into Hidden when they don't fit beside the notch. Disable to keep the saved profile layout exactly as authored."
+                )
 
-                        Toggle(
-                            "Move items that don't fit into Hidden",
-                            isOn: $settings.enableMenuBarItemOverflow
-                        )
-                        .annotation(
-                            "Move menu bar items from Visible into Hidden when they don't fit beside the notch. Disable to keep the saved profile layout exactly as authored."
-                        )
-                    }
+                Toggle(
+                    "Use LCS sorting on notched displays",
+                    isOn: $settings.useLCSSortingOnNotchedDisplays
+                )
+                .annotation(
+                    "Use the faster LCS algorithm for profile sorting on notched displays. It minimises moves but may be less reliable at smaller resolutions."
+                )
 
-                    Divider()
+                if #available(macOS 27, *) {
+                    Toggle(
+                        "Use app icons instead of live previews",
+                        isOn: $settings.alwaysUseAppIconForMenuBarItems
+                    )
+                    .annotation(
+                        "Show each item's app icon in the Thaw Bar and layout editor instead of a live screenshot. Use this if macOS 27's native overflow control bleeds into the captured previews. The real menu bar is unaffected."
+                    )
 
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Compatibility and performance")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.secondary)
-
-                        Toggle(
-                            "Use LCS sorting on notched displays",
-                            isOn: $settings.useLCSSortingOnNotchedDisplays
-                        )
-                        .annotation(
-                            "Use the faster LCS algorithm for profile sorting on notched displays. It minimises moves but may be less reliable at smaller resolutions."
-                        )
-
-                        if #available(macOS 27, *) {
-                            LabeledContent("Reorder timeout") {
-                                IceSlider(value: $settings.menuBarOrderFulfillmentTimeout, in: 1 ... 15, step: 0.5) {
-                                    SecondsLabel(value: settings.menuBarOrderFulfillmentTimeout)
-                                }
-                            }
-                            .annotation("How long Thaw waits for macOS to apply a menu bar reorder before continuing with any remaining layout work.")
-
-                            Toggle("Use live icon capture", isOn: $settings.useContinuousMenuBarCapture)
-                                .annotation("Live capture can keep animated previews up to date, but may show the screen recording indicator and reflow the menu bar.")
+                    LabeledContent("Reorder timeout") {
+                        IceSlider(value: $settings.menuBarOrderFulfillmentTimeout, in: 1 ... 15, step: 0.5) {
+                            SecondsLabel(value: settings.menuBarOrderFulfillmentTimeout)
                         }
                     }
+                    .annotation("How long Thaw waits for macOS to apply a menu bar reorder before continuing with any remaining layout work.")
                 }
-                .padding(.top, 10)
             }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didChangeScreenParametersNotification)) { _ in
-            hasConnectedNotchedDisplay = NSScreen.managedScreens.contains(where: \.hasNotch)
         }
         .onChange(of: navigationState.requestedSettingsDisclosure, initial: true) { _, _ in
             guard SettingsSearchNavigation.consumeDisclosure(
@@ -457,7 +444,7 @@ private struct LayoutResetControls: View {
             case .success(.hidden): String(localized: "Layout reset. Items were moved to the Hidden section.")
             case .success(.alwaysHidden): String(localized: "Layout reset. Items were moved to the Always Hidden section.")
             case .success(.visible): String(localized: "Items were moved to the Visible section.")
-            case let .partialFailure(count): String(localized: "Reset completed with \(count) item(s) that could not be moved. Check the menu bar and try again if needed.")
+            case let .partialFailure(count): String(localized: "Reset completed with \(count) items that could not be moved. Check the menu bar and try again if needed.")
             case let .failure(message): String(localized: "Reset failed: \(message)")
             }
         }

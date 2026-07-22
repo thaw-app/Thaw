@@ -8,10 +8,11 @@
 
 import Foundation
 import MenuBarModel
+import os.lock
 import XPC
 
 /// A wrapper around an XPC listener object.
-final class Listener: @unchecked Sendable {
+final class Listener: Sendable {
     private let diagLog = DiagLog(category: "Listener")
     /// The shared listener.
     static let shared = Listener()
@@ -19,8 +20,9 @@ final class Listener: @unchecked Sendable {
     /// The service name.
     private let name = MenuBarItemService.name
 
-    /// The underlying XPC listener object.
-    private var xpcListener: XPCListener?
+    /// The underlying XPC listener object, behind a lock since `activate()`
+    /// and `cancel()` are not guaranteed to be called from the same thread.
+    private let xpcListenerLock = OSAllocatedUnfairLock<XPCListener?>(uncheckedState: nil)
 
     /// Creates the shared listener.
     private init() {
@@ -64,16 +66,18 @@ final class Listener: @unchecked Sendable {
     /// with the requirement that session peers must be signed with the
     /// same team identifier as the service process.
     private func uncheckedActivateWithSameTeamRequirement() throws {
-        xpcListener = try XPCListener(service: name, requirement: .isFromSameTeam()) { request in
+        let listener = try XPCListener(service: name, requirement: .isFromSameTeam()) { request in
             request.accept { [self] message in
                 self.handleMessage(message)
             }
         }
+        xpcListenerLock.withLock { $0 = listener }
     }
 
     /// Activates the listener.
     func activate() {
-        guard xpcListener == nil else {
+        let alreadyActive = xpcListenerLock.withLock { $0 != nil }
+        guard !alreadyActive else {
             diagLog.notice("Listener is already active")
             return
         }
@@ -90,6 +94,10 @@ final class Listener: @unchecked Sendable {
     /// Cancels the listener.
     func cancel() {
         diagLog.debug("Canceling listener")
-        xpcListener.take()?.cancel()
+        let listener = xpcListenerLock.withLock { listener -> XPCListener? in
+            defer { listener = nil }
+            return listener
+        }
+        listener?.cancel()
     }
 }

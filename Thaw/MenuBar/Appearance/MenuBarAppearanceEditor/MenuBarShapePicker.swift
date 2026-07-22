@@ -110,7 +110,7 @@ struct MenuBarShapePicker: View {
     }
 }
 
-private struct MenuBarFullShapePicker: View, @preconcurrency Equatable {
+private struct MenuBarFullShapePicker: View, @MainActor Equatable {
     @Environment(\.colorScheme) private var colorScheme
     @Binding var info: MenuBarFullShapeInfo
     @Binding var leftMargin: Double
@@ -238,7 +238,7 @@ private struct MenuBarFullShapePicker: View, @preconcurrency Equatable {
     }
 }
 
-private struct MenuBarSplitShapePicker: View, @preconcurrency Equatable {
+private struct MenuBarSplitShapePicker: View, @MainActor Equatable {
     @Binding var info: MenuBarSplitShapeInfo
     @Binding var leftMargin: Double
     @Binding var rightMargin: Double

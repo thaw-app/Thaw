@@ -25,6 +25,7 @@ final class SettingsURIHandlerTests: XCTestCase {
         XCTAssertTrue(keys.contains("useIceBar"))
         XCTAssertTrue(keys.contains("enableDiagnosticLogging"))
         XCTAssertTrue(keys.contains("enableExperimentalOverflowPrevention"))
+        XCTAssertTrue(keys.contains("alwaysUseAppIconForMenuBarItems"))
     }
 
     func testDoubleKeysNotEmpty() {

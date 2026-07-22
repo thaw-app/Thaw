@@ -19,7 +19,7 @@ typealias MenuBarItem = MenuBarModel.MenuBarItem
 
 extension MenuBarItem {
     /// A name associated with the item, suited for display.
-    var displayName: String {
+    nonisolated var displayName: String {
         // Custom name takes precedence over auto-detected name
         if let custom = customName, !custom.trimmingCharacters(in: .whitespaces).isEmpty {
             return custom
@@ -33,7 +33,7 @@ extension MenuBarItem {
     /// Keyed by ``uniqueIdentifier`` (`namespace:title:index`) — windowID is
     /// intentionally excluded because it is transient and changes between
     /// app restarts, which would cause persisted custom names to be lost.
-    var customName: String? {
+    nonisolated var customName: String? {
         get {
             let names = Defaults.dictionary(forKey: .menuBarItemCustomNames) as? [String: String] ?? [:]
             return names[uniqueIdentifier]

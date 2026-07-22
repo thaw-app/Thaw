@@ -68,7 +68,7 @@ extension AppSettings {
         advanced.enableExperimentalSystemItemHiding = Defaults.DefaultValue.enableExperimentalSystemItemHiding
         advanced.enableExperimentalWindowHiding = Defaults.DefaultValue.enableExperimentalWindowHiding
         advanced.enableExperimentalOverflowPrevention = Defaults.DefaultValue.enableExperimentalOverflowPrevention
-        advanced.useContinuousMenuBarCapture = Defaults.DefaultValue.useContinuousMenuBarCapture
+        advanced.alwaysUseAppIconForMenuBarItems = Defaults.DefaultValue.alwaysUseAppIconForMenuBarItems
         advanced.searchSectionOrder = AdvancedSettings.sanitizedSearchSectionOrder(
             from: Defaults.DefaultValue.searchSectionOrder
         )

@@ -133,7 +133,8 @@ final class CustomTooltipPanel: NSPanel {
 ///
 /// Each `NSView` that wants custom-delayed tooltips should own an
 /// instance of this controller.
-final class CustomTooltipController: @unchecked Sendable {
+@MainActor
+final class CustomTooltipController {
     private var timer: Timer?
     private weak var view: NSView?
 
@@ -148,7 +149,7 @@ final class CustomTooltipController: @unchecked Sendable {
         self.view = view
     }
 
-    deinit {
+    isolated deinit {
         timer?.invalidate()
     }
 

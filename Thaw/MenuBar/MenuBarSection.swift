@@ -43,14 +43,14 @@ final class MenuBarSection {
         guard let appState else { return false }
         let screen = screenForIceBar
         let displayID = screen?.displayID ?? CGMainDisplayID()
-        return appState.settings.displaySettings.useIceBar(for: displayID)
+        return appState.menuBarManager.shouldUseIceBar(for: displayID)
     }
 
     /// The gap that macOS leaves to the left and right of the notch (in points).
-    static nonisolated let notchGap: CGFloat = 24
+    static nonisolated let notchGap = MenuBarCapacitySnapshot.notchGap
 
     /// The preferred way to present the section on the menu bar.
-    enum PresentationMode: Equatable {
+    nonisolated enum PresentationMode: Equatable {
         /// Show the items inline without modifying the application menus.
         case inline
         /// Show the items inline, but only after hiding the application menus.
@@ -59,43 +59,19 @@ final class MenuBarSection {
         case iceBar
     }
 
-    /// Calculates the usable inline width for menu bar items on a screen.
-    static nonisolated func usableInlineWidth(
-        from appMenuRightEdge: CGFloat?,
-        screenFrameMinX: CGFloat,
-        screenVisibleMaxX: CGFloat,
-        notchFrame: CGRect?
-    ) -> CGFloat {
-        let clampedAppMenuRightEdge = max(screenFrameMinX, appMenuRightEdge ?? screenFrameMinX)
-
-        if let notchFrame {
-            let usableLeftOfNotch = notchFrame.minX - notchGap
-            let usableRightOfNotchStart = notchFrame.maxX + notchGap
-            let leftWidth = max(0, usableLeftOfNotch - clampedAppMenuRightEdge)
-            let rightWidth = max(0, screenVisibleMaxX - usableRightOfNotchStart)
-            return leftWidth + rightWidth
-        }
-
-        return max(0, screenVisibleMaxX - clampedAppMenuRightEdge)
-    }
-
     /// Decides whether inline presentation fits, optionally allowing the app
     /// menus to be hidden to recover more space.
     static nonisolated func presentationMode(
         totalItemsWidth: CGFloat,
-        appMenuRightEdge: CGFloat?,
-        screenFrameMinX: CGFloat,
-        screenVisibleMaxX: CGFloat,
-        notchFrame: CGRect?,
+        capacity: MenuBarCapacitySnapshot,
+        reservedBounds: [CGRect] = [],
         allowHidingApplicationMenus: Bool
     ) -> PresentationMode {
-        let inlineWidth = usableInlineWidth(
-            from: appMenuRightEdge,
-            screenFrameMinX: screenFrameMinX,
-            screenVisibleMaxX: screenVisibleMaxX,
-            notchFrame: notchFrame
-        )
-        if totalItemsWidth <= inlineWidth {
+        if let inlineWidth = capacity.availableWidth(
+            in: .inline,
+            applicationMenus: .visible,
+            reserving: reservedBounds
+        ), totalItemsWidth <= inlineWidth {
             return .inline
         }
 
@@ -103,13 +79,11 @@ final class MenuBarSection {
             return .iceBar
         }
 
-        let inlineWidthWithoutAppMenus = usableInlineWidth(
-            from: screenFrameMinX,
-            screenFrameMinX: screenFrameMinX,
-            screenVisibleMaxX: screenVisibleMaxX,
-            notchFrame: notchFrame
-        )
-        if totalItemsWidth <= inlineWidthWithoutAppMenus {
+        if let inlineWidthWithoutAppMenus = capacity.availableWidth(
+            in: .inline,
+            applicationMenus: .hidden,
+            reserving: reservedBounds
+        ), totalItemsWidth <= inlineWidthWithoutAppMenus {
             return .inlineHidingApplicationMenus
         }
 
@@ -123,6 +97,7 @@ final class MenuBarSection {
 
         let hiddenItems = appState.itemManager.itemCache[Name.hidden]
         let visibleItems = appState.itemManager.itemCache[Name.visible]
+            .filter { $0.tag != .controlCenter }
         let hiddenWidth = hiddenItems.reduce(0) { acc, item in acc + item.bounds.width }
         let visibleWidth = visibleItems.reduce(0) { acc, item in acc + item.bounds.width }
 
@@ -137,16 +112,20 @@ final class MenuBarSection {
     }
 
     /// Chooses how the section should be presented on the given screen.
-    private func presentationMode(on screen: NSScreen) -> PresentationMode {
+    func presentationMode(on screen: NSScreen) -> PresentationMode {
         guard let appState else { return .iceBar }
-        let appMenuFrame = screen.getApplicationMenuFrame()
+        let items = appState.itemManager.itemCache.managedItems
+        let overflowBounds = appState.menuBarManager.sectionController?
+            .nativeOverflowControlBounds(on: screen.displayID) ?? []
+        let capacity = MenuBarCapacitySnapshot.capture(
+            on: screen,
+            items: items,
+            overflowControlBounds: overflowBounds
+        )
 
         return Self.presentationMode(
             totalItemsWidth: totalItemsWidthToShow(),
-            appMenuRightEdge: appMenuFrame?.maxX,
-            screenFrameMinX: screen.frame.minX,
-            screenVisibleMaxX: screen.visibleFrame.maxX,
-            notchFrame: screen.frameOfNotch,
+            capacity: capacity,
             allowHidingApplicationMenus: appState.settings.advanced.hideApplicationMenus
         )
     }
@@ -294,7 +273,7 @@ final class MenuBarSection {
         }
 
         let displaySettings = appState.settings.displaySettings
-        let useIceBar = displaySettings.useIceBar(for: activeScreen.displayID)
+        let useIceBar = appState.menuBarManager.shouldUseIceBar(for: activeScreen.displayID)
 
         // only apply alwaysShowHiddenItems when mouse + active menu bar on same screen
         let alwaysShow: Bool = if let menuBarScreen = NSScreen.screenWithActiveMenuBar,
@@ -461,8 +440,9 @@ final class MenuBarSection {
             : [.visible, .hidden]
 
         Task { @MainActor [weak appState] in
-            // Let MenuBarAgent republish the revealed AX elements and allow the
-            // boundary reconciliation pass to settle their final coordinates.
+            // Let MenuBarAgent republish the revealed AX elements before capture.
+            // Boundary repair is intentionally not run on reveal (it rewrites
+            // preferred positions and invalidates the Thaw icon's hit target).
             try? await Task.sleep(for: .milliseconds(500))
             guard
                 let appState,

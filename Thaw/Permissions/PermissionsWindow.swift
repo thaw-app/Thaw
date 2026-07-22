@@ -8,7 +8,7 @@
 
 import SwiftUI
 
-enum PermissionsFlowStage: Equatable {
+nonisolated enum PermissionsFlowStage: Equatable {
     case onboarding
     case permissions
 

@@ -62,7 +62,7 @@ final class LayoutBarContainer: NSView {
         }
     }
 
-    /// The contaner's arranged views.
+    /// The container's arranged views.
     ///
     /// The views are laid out from left to right in the order that they
     /// appear in the array. The ``spacing`` property determines the amount
@@ -193,7 +193,7 @@ final class LayoutBarContainer: NSView {
         }
     }
 
-    /// Relayouts the container after one arranged view changed size.
+    /// Re-runs layout for the container after one arranged view changed size.
     ///
     /// This avoids subscribing the whole container to every image cache update.
     func itemPreferredSizeDidChange(_ itemView: LayoutBarArrangedView) {
@@ -344,8 +344,13 @@ final class LayoutBarContainer: NSView {
                 .clamped(to: newViews.startIndex ... newViews.endIndex)
             newViews.insert(opaqueView, at: insertionIndex)
         }
+        var newlyCreatedBadgeView: LayoutBarNewItemsBadgeView?
         if let badgeIndex {
-            let badgeView = arrangedViews.first(where: { $0.isNewItemsBadge }) ?? LayoutBarNewItemsBadgeView()
+            let existingBadgeView = arrangedViews.first(where: { $0.isNewItemsBadge })
+            let badgeView = existingBadgeView as? LayoutBarNewItemsBadgeView ?? LayoutBarNewItemsBadgeView()
+            if existingBadgeView == nil {
+                newlyCreatedBadgeView = badgeView
+            }
             badgeView.averageColorInfo = appState.menuBarManager.averageColorInfo
             let opaqueIndex = newViews.firstIndex {
                 if case .opaqueSlot = $0.kind {
@@ -362,6 +367,7 @@ final class LayoutBarContainer: NSView {
             newViews.insert(badgeView, at: insertionIndex)
         }
         arrangedViews = newViews
+        newlyCreatedBadgeView?.animateAppearance()
     }
 
     /// Updates the positions of the container's arranged views using the

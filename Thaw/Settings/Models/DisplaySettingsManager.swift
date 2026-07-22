@@ -14,8 +14,8 @@ import MenuBarModel
 /// Manages per-display Thaw Bar configuration.
 ///
 /// Configurations are keyed by display UUID string (via `Bridging.getDisplayUUIDString(for:)`).
-/// When a display has no explicit configuration, `DisplayIceBarConfiguration.defaultConfiguration`
-/// is returned.
+/// When a display has no explicit configuration, the global display template
+/// is returned so profiles remain portable across machines and display UUIDs.
 @MainActor
 final class DisplaySettingsManager: ObservableObject {
     private let diagLog = DiagLog(category: "DisplaySettingsManager")
@@ -629,9 +629,8 @@ final class DisplaySettingsManager: ObservableObject {
 
     /// Toggles useIceBar for a specific display UUID.
     private func toggleUseIceBar(forDisplayUUID uuid: String) {
-        let current = configurations[uuid] ?? .defaultConfiguration
         updateConfiguration(forDisplayUUID: uuid) { config in
-            config.withUseIceBar(!current.useIceBar)
+            config.withUseIceBar(!config.useIceBar)
         }
     }
 
@@ -641,7 +640,7 @@ final class DisplaySettingsManager: ObservableObject {
             // Update all displays that have IceBar enabled
             for screen in NSScreen.managedScreens {
                 guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else { continue }
-                let config = configurations[uuid] ?? .defaultConfiguration
+                let config = configuration(forUUID: uuid)
                 if config.useIceBar {
                     updateConfiguration(forDisplayUUID: uuid) { $0.withIceBarLocation(location) }
                 }
@@ -663,7 +662,7 @@ final class DisplaySettingsManager: ObservableObject {
         if scope == .allEnabledDisplays {
             for screen in NSScreen.managedScreens {
                 guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else { continue }
-                let config = configurations[uuid] ?? .defaultConfiguration
+                let config = configuration(forUUID: uuid)
                 if config.useIceBar {
                     updateConfiguration(forDisplayUUID: uuid) { $0.withIceBarLayout(layout) }
                 }
@@ -685,7 +684,7 @@ final class DisplaySettingsManager: ObservableObject {
         if scope == .allEnabledDisplays {
             for screen in NSScreen.managedScreens {
                 guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else { continue }
-                let config = configurations[uuid] ?? .defaultConfiguration
+                let config = configuration(forUUID: uuid)
                 if config.useIceBar {
                     updateConfiguration(forDisplayUUID: uuid) { $0.withGridColumns(columns) }
                 }
@@ -708,7 +707,7 @@ final class DisplaySettingsManager: ObservableObject {
             // Update all displays that do NOT have IceBar enabled
             for screen in NSScreen.managedScreens {
                 guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else { continue }
-                let config = configurations[uuid] ?? .defaultConfiguration
+                let config = configuration(forUUID: uuid)
                 if !config.useIceBar {
                     updateConfiguration(forDisplayUUID: uuid) { $0.withAlwaysShowHiddenItems(value) }
                 }
@@ -724,7 +723,7 @@ final class DisplaySettingsManager: ObservableObject {
             // Toggle on all displays that do NOT have IceBar enabled
             for screen in NSScreen.managedScreens {
                 guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else { continue }
-                let config = configurations[uuid] ?? .defaultConfiguration
+                let config = configuration(forUUID: uuid)
                 if !config.useIceBar {
                     updateConfiguration(forDisplayUUID: uuid) { $0.withAlwaysShowHiddenItems(!$0.alwaysShowHiddenItems) }
                 }
@@ -743,9 +742,8 @@ final class DisplaySettingsManager: ObservableObject {
 
     /// Toggles alwaysShowHiddenItems for a specific display UUID.
     private func toggleAlwaysShowHiddenItems(forDisplayUUID uuid: String) {
-        let current = configurations[uuid] ?? .defaultConfiguration
         updateConfiguration(forDisplayUUID: uuid) { config in
-            config.withAlwaysShowHiddenItems(!current.alwaysShowHiddenItems)
+            config.withAlwaysShowHiddenItems(!config.alwaysShowHiddenItems)
         }
     }
 
@@ -753,18 +751,28 @@ final class DisplaySettingsManager: ObservableObject {
 
     /// Returns the configuration for a given display ID.
     func configuration(for displayID: CGDirectDisplayID) -> DisplayIceBarConfiguration {
-        guard let uuid = Bridging.getDisplayUUIDString(for: displayID) else {
-            return .defaultConfiguration
-        }
-        return configurations[uuid] ?? .defaultConfiguration
+        Self.resolvedConfiguration(
+            displayUUID: Bridging.getDisplayUUIDString(for: displayID),
+            configurations: configurations,
+            globalConfiguration: globalConfiguration
+        )
     }
 
     /// Returns the configuration for the display with the active menu bar.
     func configurationForActiveDisplay() -> DisplayIceBarConfiguration {
         guard let displayID = Bridging.getActiveMenuBarDisplayID() else {
-            return .defaultConfiguration
+            return globalConfiguration
         }
         return configuration(for: displayID)
+    }
+
+    static func resolvedConfiguration(
+        displayUUID: String?,
+        configurations: [String: DisplayIceBarConfiguration],
+        globalConfiguration: DisplayIceBarConfiguration
+    ) -> DisplayIceBarConfiguration {
+        guard let displayUUID else { return globalConfiguration }
+        return configurations[displayUUID] ?? globalConfiguration
     }
 
     /// Whether the Thaw Bar is enabled for the given display.
@@ -794,12 +802,12 @@ final class DisplaySettingsManager: ObservableObject {
 
     /// Whether any connected display has the Thaw Bar enabled.
     var isIceBarEnabledOnAnyDisplay: Bool {
-        configurations.values.contains { $0.useIceBar }
+        connectedDisplays().contains { configuration(forUUID: $0.id).useIceBar }
     }
 
     /// Whether any connected display has "Always show hidden items" enabled.
     var isAlwaysShowEnabledOnAnyDisplay: Bool {
-        configurations.values.contains { $0.alwaysShowHiddenItems }
+        connectedDisplays().contains { configuration(forUUID: $0.id).alwaysShowHiddenItems }
     }
 
     // MARK: - Mutation (Immutable Pattern)
@@ -810,7 +818,7 @@ final class DisplaySettingsManager: ObservableObject {
         forDisplayUUID uuid: String,
         transform: (DisplayIceBarConfiguration) -> DisplayIceBarConfiguration
     ) {
-        let current = configurations[uuid] ?? .defaultConfiguration
+        let current = configuration(forUUID: uuid)
         let updated = transform(current)
         var newConfigurations = configurations
         newConfigurations[uuid] = updated
@@ -824,7 +832,7 @@ final class DisplaySettingsManager: ObservableObject {
     /// applyActiveDisplaySpacing each fire once.
     @discardableResult
     func applyGlobalToAllKnownDisplays() -> [String] {
-        let targets = allDisplays().map(\.id)
+        let targets = displays.map(\.id)
         guard !targets.isEmpty else { return [] }
         var updated = configurations
         for uuid in targets {
@@ -870,7 +878,7 @@ final class DisplaySettingsManager: ObservableObject {
             // Skip transient blank-name screens (mirrored slave, GPU
             // sleep transition) so connectedDisplays stays consistent
             // with captureCurrentlyConnectedDisplays, the persistence
-            // loader, and allDisplays' disconnected branch.
+            // loader, and displays' disconnected branch.
             let trimmed = screen.localizedName.trimmingCharacters(in: .whitespaces)
             guard !trimmed.isEmpty else { return nil }
             return DisplayInfo(
@@ -895,7 +903,11 @@ final class DisplaySettingsManager: ObservableObject {
     /// is retained in storage; if such a display reconnects, its name is
     /// captured into knownDisplays and it appears normally on subsequent
     /// renders.
-    func allDisplays() -> [DisplayInfo] {
+    ///
+    /// - Complexity: O(n) in the number of connected screens plus known
+    ///   displays; walks `NSScreen.managedScreens` and the stored profile
+    ///   data on every access.
+    var displays: [DisplayInfo] {
         let connected = connectedDisplays()
         let connectedIDs = Set(connected.map(\.id))
 
@@ -917,9 +929,13 @@ final class DisplaySettingsManager: ObservableObject {
     }
 
     /// Returns the configuration for a given display UUID, falling back to
-    /// the default when no explicit configuration exists.
+    /// the global profile template when no explicit configuration exists.
     func configuration(forUUID uuid: String) -> DisplayIceBarConfiguration {
-        configurations[uuid] ?? .defaultConfiguration
+        Self.resolvedConfiguration(
+            displayUUID: uuid,
+            configurations: configurations,
+            globalConfiguration: globalConfiguration
+        )
     }
 }
 

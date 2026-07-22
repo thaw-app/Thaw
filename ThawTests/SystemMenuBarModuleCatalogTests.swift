@@ -75,6 +75,14 @@ final class SystemMenuBarModuleCatalogTests: XCTestCase {
             SystemMenuBarModuleCatalog.trailingPositionsModuleKey(forTitle: "WiFi"),
             "module:WiFi"
         )
+        XCTAssertEqual(
+            SystemMenuBarModuleCatalog.trailingPositionsModuleKey(forTitle: "com.apple.menuextra.display"),
+            "module:Display"
+        )
+        XCTAssertEqual(
+            SystemMenuBarModuleCatalog.trailingPositionsModuleKey(forTitle: "com.apple.menuextra.sound"),
+            "module:Sound"
+        )
     }
 
     func testEveryAssessmentIndexZeroThroughEightIsRepresentedOnce() {

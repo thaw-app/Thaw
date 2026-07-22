@@ -15,7 +15,7 @@
 /// every search surface has all three fields — menu bar item search, for
 /// example, has no keywords or description — so callers simply omit the
 /// `FuseProp` for any field they don't have.
-struct SearchWeights {
+nonisolated struct SearchWeights {
     let title: Double
     let keywords: Double
     let description: Double
@@ -43,19 +43,12 @@ struct SearchWeights {
 /// search surface still owns its own `Fuse` instance and `Searchable`
 /// conformance; this only standardizes the weighting recipe and the
 /// relevance sort applied to Fuse's results.
-enum SearchRanker {
+nonisolated enum SearchRanker {
     /// Pure relevance sort: Fuse's `diffScore` is `0` for a perfect match and
     /// increases with worse matches, so the best result has the lowest score.
     /// Extracted from the search pipeline so it can be unit-tested without
     /// linking Ifrit into the test target.
     static func sortedByRelevance<T>(_ items: [(item: T, diffScore: Double)]) -> [T] {
-        items.sorted { lhs, rhs in
-            if lhs.diffScore != rhs.diffScore {
-                return lhs.diffScore < rhs.diffScore
-            }
-            // Tie-break on a stable key when the items are identifiable so
-            // equally-scored results don't shuffle between renders.
-            return false
-        }.map(\.item)
+        items.sorted { $0.diffScore < $1.diffScore }.map(\.item)
     }
 }

@@ -12,7 +12,7 @@ import MenuBarModel
 import PlatformRuntimeKit
 import ScreenCaptureKit
 
-enum MenuBarSplitPillGeometry {
+nonisolated enum MenuBarSplitPillGeometry {
     static func leadingBounds(
         applicationMenuFrame: CGRect,
         trailingContentMinX: CGFloat?,
@@ -84,7 +84,7 @@ enum MenuBarSplitPillGeometry {
 
     /// Section/reveal state used when deciding which AX frames belong in the
     /// split trailing pill.
-    struct TrailingPillContext {
+    nonisolated struct TrailingPillContext {
         var revealedSection: MenuBarSection.Name?
         var section: (MenuBarItem) -> MenuBarSection.Name
     }
@@ -284,7 +284,13 @@ enum MenuBarSplitPillGeometry {
 // MARK: - Overlay Panel
 
 /// A subclass of `NSPanel` that sits atop the menu bar to alter its appearance.
-final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
+///
+/// Constructed only from `MenuBarAppearanceManager` (`@MainActor`), and has
+/// no `nonisolated` members of its own, so it is main-actor-confined like
+/// every other `NSPanel` subclass; `@MainActor` makes it implicitly
+/// `Sendable` without an `@unchecked` escape hatch.
+@MainActor
+final class MenuBarOverlayPanel: NSPanel {
     private let diagLog = DiagLog(category: "MenuBarOverlayPanel")
     /// Flags representing the updatable components of a panel.
     enum UpdateFlag: String, CustomStringConvertible {

@@ -23,6 +23,12 @@ final class AppSettings: ObservableObject {
     /// The model for per-display Thaw Bar settings.
     let displaySettings = DisplaySettingsManager()
 
+    /// The model for the app's Settings URI automation whitelist.
+    let automation = AutomationSettings()
+
+    /// The model for the app's global profile hooks.
+    let automationHook = AutomationHookSettings()
+
     /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
 
@@ -58,6 +64,16 @@ final class AppSettings: ObservableObject {
             }
             .store(in: &c)
         displaySettings.objectWillChange
+            .sink { [weak self] in
+                self?.objectWillChange.send()
+            }
+            .store(in: &c)
+        automation.objectWillChange
+            .sink { [weak self] in
+                self?.objectWillChange.send()
+            }
+            .store(in: &c)
+        automationHook.objectWillChange
             .sink { [weak self] in
                 self?.objectWillChange.send()
             }

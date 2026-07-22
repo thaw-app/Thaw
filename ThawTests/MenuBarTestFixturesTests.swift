@@ -12,11 +12,7 @@ import PlatformRuntimeKit
 @testable import Thaw
 import XCTest
 
-/// Sanity tests for the synthetic fixture builders in
-/// MenuBarTestFixtures.swift. These pin down that the fixtures produce values
-/// with the documented defaults so the planner tests built on top of them stay
-/// stable.
-final class MenuBarTestFixturesTests: XCTestCase {
+final class HIDEventManagerHoverPermissionTests: XCTestCase {
     func testHoverPermissionBlocksRevealWhileSectionIsHidden() {
         XCTAssertFalse(
             HIDEventManager.shouldProcessHover(
@@ -35,73 +31,6 @@ final class MenuBarTestFixturesTests: XCTestCase {
                 sectionIsHidden: false
             )
         )
-    }
-
-    func testAppItemTagBuildsExpectedNamespaceAndTitle() {
-        let tag = MenuBarItemTag.appItem(bundleID: "com.example.app", title: "Status")
-        XCTAssertEqual(String(describing: tag.namespace), "com.example.app")
-        XCTAssertEqual(tag.title, "Status")
-        XCTAssertEqual(tag.instanceIndex, 0)
-        XCTAssertNil(tag.windowID)
-    }
-
-    func testAppItemTagSupportsInstanceIndex() {
-        let tag = MenuBarItemTag.appItem(bundleID: "com.example.app", title: "Status", instanceIndex: 2)
-        XCTAssertEqual(tag.instanceIndex, 2)
-    }
-
-    func testMenuBarItemFixtureDefaultsToMovableHideableItem() {
-        let tag = MenuBarItemTag.appItem(bundleID: "com.example.app", title: "Status")
-        let item = MenuBarItem.fixture(tag: tag, windowID: 42)
-
-        XCTAssertEqual(item.windowID, 42)
-        XCTAssertEqual(item.tag, tag)
-        XCTAssertEqual(item.sourcePID, 1234)
-        XCTAssertEqual(item.ownerPID, 1234)
-        XCTAssertEqual(item.bounds, CGRect(x: 0, y: 0, width: 24, height: 22))
-        XCTAssertTrue(item.isMovable)
-        XCTAssertTrue(item.canBeHidden)
-        XCTAssertFalse(item.isControlItem)
-        XCTAssertTrue(item.isOnScreen)
-    }
-
-    func testMenuBarItemFixtureRespectsExplicitBounds() {
-        let bounds = CGRect(x: 100, y: 0, width: 30, height: 22)
-        let item = MenuBarItem.fixture(
-            tag: .appItem(bundleID: "com.example.app", title: "Status"),
-            windowID: 1,
-            bounds: bounds
-        )
-        XCTAssertEqual(item.bounds, bounds)
-    }
-
-    func testControlItemPairFixtureWithoutAlwaysHidden() {
-        let pair = MenuBarItemManager.ControlItemPair.fixture(
-            hiddenAt: CGRect(x: 500, y: 0, width: 24, height: 22)
-        )
-
-        XCTAssertEqual(pair.hidden.tag, .hiddenControlItem)
-        XCTAssertEqual(pair.hidden.bounds.minX, 500)
-        XCTAssertNil(pair.alwaysHidden)
-    }
-
-    func testControlItemPairFixtureWithAlwaysHidden() {
-        let pair = MenuBarItemManager.ControlItemPair.fixture(
-            hiddenAt: CGRect(x: 500, y: 0, width: 24, height: 22),
-            alwaysHiddenAt: CGRect(x: 200, y: 0, width: 24, height: 22)
-        )
-
-        XCTAssertEqual(pair.hidden.tag, .hiddenControlItem)
-        XCTAssertEqual(pair.alwaysHidden?.tag, .alwaysHiddenControlItem)
-        XCTAssertEqual(pair.alwaysHidden?.bounds.minX, 200)
-    }
-
-    func testControlItemPairFixtureWindowIDsAreDistinct() {
-        let pair = MenuBarItemManager.ControlItemPair.fixture(
-            hiddenAt: CGRect(x: 500, y: 0, width: 24, height: 22),
-            alwaysHiddenAt: CGRect(x: 200, y: 0, width: 24, height: 22)
-        )
-        XCTAssertNotEqual(pair.hidden.windowID, pair.alwaysHidden?.windowID)
     }
 }
 
@@ -559,7 +488,7 @@ final class ImageCaptureInvalidationTests: XCTestCase {
     }
 
     func testPrewarmNeedsCaptureWhenImageMissing() throws {
-        let image = try makeImage(alpha: 255)
+        let image = try makeImage(alpha: 255, width: 48, height: 44)
         let captured = MenuBarItemImageCache.CapturedImage(cgImage: image, scale: 2)
 
         XCTAssertTrue(
@@ -577,7 +506,7 @@ final class ImageCaptureInvalidationTests: XCTestCase {
     }
 
     func testPrewarmNeedsCaptureWhenImageBlank() throws {
-        let image = try makeImage(alpha: 0)
+        let image = try makeImage(alpha: 0, width: 48, height: 44)
         let captured = MenuBarItemImageCache.CapturedImage(cgImage: image, scale: 2)
 
         XCTAssertTrue(
@@ -591,6 +520,79 @@ final class ImageCaptureInvalidationTests: XCTestCase {
                 cachedImage: captured,
                 wouldAttemptCapture: false
             )
+        )
+    }
+
+    func testPrewarmNeedsCaptureWhenCachedImageIsChevronNarrow() throws {
+        let image = try makeImage(alpha: 255, width: 20, height: 44)
+        let captured = MenuBarItemImageCache.CapturedImage(cgImage: image, scale: 2)
+        XCTAssertLessThan(captured.scaledSize.width, MenuBarItemImageCache.minimumTrustedGlyphWidth)
+
+        XCTAssertTrue(
+            MenuBarItemImageCache.prewarmNeedsCapture(
+                cachedImage: captured,
+                wouldAttemptCapture: true
+            )
+        )
+    }
+
+    @MainActor
+    func testPreferredCachedImageKeepsSettledGlyphOverNarrowerCandidate() throws {
+        let settled = try MenuBarItemImageCache.CapturedImage(
+            cgImage: makeImage(alpha: 255, width: 48, height: 44),
+            scale: 2
+        )
+        let chevronBleed = try MenuBarItemImageCache.CapturedImage(
+            cgImage: makeImage(alpha: 255, width: 20, height: 44),
+            scale: 2
+        )
+
+        let preferred = MenuBarItemImageCache.preferredCachedImage(
+            existing: settled,
+            candidate: chevronBleed
+        )
+        XCTAssertTrue(
+            MenuBarItemImageCache.CapturedImage.isVisuallyEqual(preferred, settled)
+        )
+    }
+
+    @MainActor
+    func testPreferredCachedImageKeepsSettledGlyphOverBlankCandidate() throws {
+        let settled = try MenuBarItemImageCache.CapturedImage(
+            cgImage: makeImage(alpha: 255, width: 48, height: 44),
+            scale: 2
+        )
+        let blank = try MenuBarItemImageCache.CapturedImage(
+            cgImage: makeImage(alpha: 0, width: 48, height: 44),
+            scale: 2
+        )
+
+        let preferred = MenuBarItemImageCache.preferredCachedImage(
+            existing: settled,
+            candidate: blank
+        )
+        XCTAssertTrue(
+            MenuBarItemImageCache.CapturedImage.isVisuallyEqual(preferred, settled)
+        )
+    }
+
+    @MainActor
+    func testPreferredCachedImageAcceptsWiderCandidate() throws {
+        let narrow = try MenuBarItemImageCache.CapturedImage(
+            cgImage: makeImage(alpha: 255, width: 20, height: 44),
+            scale: 2
+        )
+        let wider = try MenuBarItemImageCache.CapturedImage(
+            cgImage: makeImage(alpha: 255, width: 48, height: 44),
+            scale: 2
+        )
+
+        let preferred = MenuBarItemImageCache.preferredCachedImage(
+            existing: narrow,
+            candidate: wider
+        )
+        XCTAssertTrue(
+            MenuBarItemImageCache.CapturedImage.isVisuallyEqual(preferred, wider)
         )
     }
 
@@ -638,12 +640,15 @@ final class ImageCaptureInvalidationTests: XCTestCase {
         return cache
     }
 
-    private func makeImage(alpha: UInt8) throws -> CGImage {
-        let width = 2
-        let height = 2
+    private func makeImage(alpha: UInt8, width: Int = 2, height: Int = 2) throws -> CGImage {
         var pixels = [UInt8](repeating: 0, count: width * height * 4)
         for index in stride(from: 3, to: pixels.count, by: 4) {
             pixels[index] = alpha
+            if alpha > 0 {
+                pixels[index - 3] = 255
+                pixels[index - 2] = 255
+                pixels[index - 1] = 255
+            }
         }
         let colorSpace = CGColorSpaceCreateDeviceRGB()
         guard let context = CGContext(

@@ -247,6 +247,36 @@ final class MenuBarSectionControllerTests: XCTestCase {
         )
     }
 
+    func testHidingUnsupportedVisibilityFailuresIncludesAbsentBundle() {
+        let failures = MenuBarSectionController.hidingUnsupportedVisibilityFailures(
+            items: [],
+            bundleIDs: ["com.example.denylisted"]
+        )
+
+        XCTAssertTrue(failures.invisibleItems.isEmpty)
+        XCTAssertEqual(failures.absentBundleIDs, ["com.example.denylisted"])
+    }
+
+    func testHidingUnsupportedVisibilityFailuresIgnoresVisibleBundle() {
+        let item = MenuBarItem(
+            tag: .appItem(bundleID: "com.example.denylisted", title: "Item"),
+            windowID: 40,
+            ownerPID: 100,
+            sourcePID: 100,
+            bounds: CGRect(x: 120, y: 0, width: 24, height: 22),
+            title: "Item",
+            isOnScreen: true
+        )
+
+        let failures = MenuBarSectionController.hidingUnsupportedVisibilityFailures(
+            items: [item],
+            bundleIDs: ["com.example.denylisted"]
+        )
+
+        XCTAssertTrue(failures.invisibleItems.isEmpty)
+        XCTAssertTrue(failures.absentBundleIDs.isEmpty)
+    }
+
     func testRecoverySnapshotUsesProvidedLiveItemsWithoutAXRefresh() {
         let controlled = MenuBarItem(
             tag: .appItem(bundleID: "com.test.hidden", title: "Hidden"),
@@ -588,12 +618,100 @@ final class MenuBarSectionControllerTests: XCTestCase {
         XCTAssertEqual(backend.applyCallCount, 0)
     }
 
+    func testRefreshSignatureStableWhenConcealedItemDropsFromCache() {
+        // Regression: a third-party item we conceal via the assertion drops
+        // out of the live `allItems` cache as a side effect of our own hiding.
+        // The refresh dedup signature must NOT change when that happens; if it
+        // did, refresh() would re-apply the assertion on the next 1 Hz tick and
+        // re-composite the whole bar — the 2-3s "Always Hidden items flicker
+        // then vanish and never come back" loop.
+        let controller = makeController()
+        let item = MenuBarItem(
+            tag: .appItem(bundleID: "com.test.AlwaysHidden", title: "Item-0"),
+            windowID: 91,
+            ownerPID: 300,
+            sourcePID: 300,
+            bounds: CGRect(x: 100, y: 0, width: 24, height: 22),
+            title: "Item-0",
+            isOnScreen: true
+        )
+        controller.setSection(.alwaysHidden, identifier: item.uniqueIdentifier)
+
+        let signatureWhilePresent = controller.refreshSignature(
+            allItems: [item],
+            experimentalSystemItemHiding: false,
+            experimentalWindowHiding: false
+        )
+        let signatureAfterConcealed = controller.refreshSignature(
+            allItems: [],
+            experimentalSystemItemHiding: false,
+            experimentalWindowHiding: false
+        )
+
+        XCTAssertEqual(signatureWhilePresent, signatureAfterConcealed)
+    }
+
+    func testRefreshSignatureChangesWhenNonConcealedItemAppears() {
+        // The dedup must still fire for genuine external changes: an unmanaged
+        // (visible) item appearing has to move the signature so refresh() can
+        // react. Guards against over-broadening the concealed-item
+        // stabilization above into "never notice new items".
+        let controller = makeController()
+        let item = MenuBarItem(
+            tag: .appItem(bundleID: "com.test.Visible", title: "Item-0"),
+            windowID: 92,
+            ownerPID: 301,
+            sourcePID: 301,
+            bounds: CGRect(x: 140, y: 0, width: 24, height: 22),
+            title: "Item-0",
+            isOnScreen: true
+        )
+
+        let signatureEmpty = controller.refreshSignature(
+            allItems: [],
+            experimentalSystemItemHiding: false,
+            experimentalWindowHiding: false
+        )
+        let signatureWithItem = controller.refreshSignature(
+            allItems: [item],
+            experimentalSystemItemHiding: false,
+            experimentalWindowHiding: false
+        )
+
+        XCTAssertNotEqual(signatureEmpty, signatureWithItem)
+    }
+
     func testShow_RevealsOnlyRequestedSection() {
         let controller = makeController()
 
         controller.show(.hidden)
 
         XCTAssertEqual(controller.revealedSection, .hidden)
+    }
+
+    func testShow_DefaultSchedulesBatchOrderSynchronization() {
+        let controller = makeController()
+
+        controller.show(.alwaysHidden)
+
+        XCTAssertEqual(controller.revealedSection, .alwaysHidden)
+        XCTAssertTrue(controller.hasPendingRevealOrderSynchronization)
+        controller.hideRevealedSections()
+        XCTAssertNil(controller.revealedSection)
+        XCTAssertFalse(controller.hasPendingRevealOrderSynchronization)
+    }
+
+    func testShow_CaptureRevealDoesNotScheduleOrderSynchronization() {
+        let controller = makeController()
+
+        controller.show(
+            .alwaysHidden,
+            reconcileBoundary: false,
+            synchronizeOrder: false
+        )
+
+        XCTAssertEqual(controller.revealedSection, .alwaysHidden)
+        XCTAssertFalse(controller.hasPendingRevealOrderSynchronization)
     }
 
     func testShow_IsIdempotentForSameSection() {
@@ -697,5 +815,144 @@ final class MenuBarSectionControllerTests: XCTestCase {
         // Control-item identifiers can never be assigned a section — they're
         // the dividers themselves, not hideable app items.
         XCTAssertEqual(controller.section(for: controlItemIdentifier), .visible)
+    }
+
+    // MARK: - Native-overflow temporary-presentation gating (macOS 27)
+
+    /// Regression: Ice Bar being open must NOT gate native-overflow probing
+    /// — otherwise once overflow forces Ice Bar via `shouldUseIceBar`, the
+    /// probe that could observe overflow-absent and let Ice Bar's fallback
+    /// end can never run again (sticky Ice Bar).
+    func testIceBarAloneDoesNotGateProbing() {
+        let gates = MenuBarSectionController.nativeOverflowTemporaryPresentationGates(
+            hasRevealedSection: false,
+            hasTemporarilyRevealedIDs: false,
+            isClockActivationBridgeActive: false,
+            isIceBarShowing: true,
+            isMenuBarHiddenBySystem: false,
+            shouldDeferMacOS27MenuBarMutation: false
+        )
+
+        XCTAssertFalse(gates.probeGate, "Ice Bar alone must not block probing")
+        XCTAssertTrue(gates.drainGate, "Ice Bar must still block rebalancing (moving items)")
+    }
+
+    /// Every other temporary-presentation reason must still gate both
+    /// probing and rebalancing exactly as before this fix.
+    func testOtherTemporaryPresentationReasonsGateBothProbeAndDrain() {
+        let reasons: [(String, () -> (probeGate: Bool, drainGate: Bool))] = [
+            ("revealedSection", {
+                MenuBarSectionController.nativeOverflowTemporaryPresentationGates(
+                    hasRevealedSection: true,
+                    hasTemporarilyRevealedIDs: false,
+                    isClockActivationBridgeActive: false,
+                    isIceBarShowing: false,
+                    isMenuBarHiddenBySystem: false,
+                    shouldDeferMacOS27MenuBarMutation: false
+                )
+            }),
+            ("temporarilyRevealedIDs", {
+                MenuBarSectionController.nativeOverflowTemporaryPresentationGates(
+                    hasRevealedSection: false,
+                    hasTemporarilyRevealedIDs: true,
+                    isClockActivationBridgeActive: false,
+                    isIceBarShowing: false,
+                    isMenuBarHiddenBySystem: false,
+                    shouldDeferMacOS27MenuBarMutation: false
+                )
+            }),
+            ("clockActivationBridge", {
+                MenuBarSectionController.nativeOverflowTemporaryPresentationGates(
+                    hasRevealedSection: false,
+                    hasTemporarilyRevealedIDs: false,
+                    isClockActivationBridgeActive: true,
+                    isIceBarShowing: false,
+                    isMenuBarHiddenBySystem: false,
+                    shouldDeferMacOS27MenuBarMutation: false
+                )
+            }),
+            ("menuBarHiddenBySystem", {
+                MenuBarSectionController.nativeOverflowTemporaryPresentationGates(
+                    hasRevealedSection: false,
+                    hasTemporarilyRevealedIDs: false,
+                    isClockActivationBridgeActive: false,
+                    isIceBarShowing: false,
+                    isMenuBarHiddenBySystem: true,
+                    shouldDeferMacOS27MenuBarMutation: false
+                )
+            }),
+            ("deferMacOS27MenuBarMutation", {
+                MenuBarSectionController.nativeOverflowTemporaryPresentationGates(
+                    hasRevealedSection: false,
+                    hasTemporarilyRevealedIDs: false,
+                    isClockActivationBridgeActive: false,
+                    isIceBarShowing: false,
+                    isMenuBarHiddenBySystem: false,
+                    shouldDeferMacOS27MenuBarMutation: true
+                )
+            }),
+        ]
+
+        for (name, makeGates) in reasons {
+            let gates = makeGates()
+            XCTAssertTrue(gates.probeGate, "\(name) must gate probing")
+            XCTAssertTrue(gates.drainGate, "\(name) must gate rebalancing")
+        }
+    }
+
+    /// With no temporary-presentation reason active at all, neither gate
+    /// should block.
+    func testNoTemporaryPresentationReasonGatesNothing() {
+        let gates = MenuBarSectionController.nativeOverflowTemporaryPresentationGates(
+            hasRevealedSection: false,
+            hasTemporarilyRevealedIDs: false,
+            isClockActivationBridgeActive: false,
+            isIceBarShowing: false,
+            isMenuBarHiddenBySystem: false,
+            shouldDeferMacOS27MenuBarMutation: false
+        )
+
+        XCTAssertFalse(gates.probeGate)
+        XCTAssertFalse(gates.drainGate)
+    }
+
+    // MARK: - Stale native-overflow display pruning (macOS 27)
+
+    /// Regression: a display that was once overflowing but has since lost
+    /// menu-bar focus must be pruned even though it's still connected — the
+    /// probe only ever samples the active display, so a merely-inactive
+    /// display would otherwise be tracked as overflowing forever and keep
+    /// forcing Ice Bar via `shouldUseIceBar(for:)`.
+    func testStaleNativeOverflowDisplayIDsPrunesInactiveButConnectedDisplay() {
+        let stale = MenuBarSectionController.staleNativeOverflowDisplayIDs(
+            tracked: [1, 2],
+            activeDisplayID: 1,
+            connectedDisplayIDs: [1, 2]
+        )
+
+        XCTAssertEqual(stale, [2])
+    }
+
+    /// A disconnected display must be pruned even if it happens to match the
+    /// (now-stale) active display ID reading.
+    func testStaleNativeOverflowDisplayIDsPrunesDisconnectedDisplay() {
+        let stale = MenuBarSectionController.staleNativeOverflowDisplayIDs(
+            tracked: [1, 2],
+            activeDisplayID: 2,
+            connectedDisplayIDs: [2]
+        )
+
+        XCTAssertEqual(stale, [1])
+    }
+
+    /// The active, connected display must never be pruned.
+    func testStaleNativeOverflowDisplayIDsKeepsActiveConnectedDisplay() {
+        let stale = MenuBarSectionController.staleNativeOverflowDisplayIDs(
+            tracked: [1],
+            activeDisplayID: 1,
+            connectedDisplayIDs: [1]
+        )
+
+        XCTAssertTrue(stale.isEmpty)
     }
 }

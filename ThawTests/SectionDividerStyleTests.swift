@@ -10,47 +10,15 @@
 import XCTest
 
 final class SectionDividerStyleTests: XCTestCase {
-    // MARK: - Raw Value Tests
+    func testCasesAndRawValuesRemainStable() {
+        let expected: [(SectionDividerStyle, Int)] = [(.noDivider, 0), (.chevron, 1)]
 
-    func testNoDividerRawValue() {
-        XCTAssertEqual(SectionDividerStyle.noDivider.rawValue, 0)
-    }
-
-    func testChevronRawValue() {
-        XCTAssertEqual(SectionDividerStyle.chevron.rawValue, 1)
-    }
-
-    // MARK: - Init from Raw Value Tests
-
-    func testInitFromRawValueZero() {
-        XCTAssertEqual(SectionDividerStyle(rawValue: 0), .noDivider)
-    }
-
-    func testInitFromRawValueOne() {
-        XCTAssertEqual(SectionDividerStyle(rawValue: 1), .chevron)
-    }
-
-    func testInitFromInvalidRawValue() {
+        XCTAssertEqual(SectionDividerStyle.allCases, expected.map(\.0))
+        for (style, rawValue) in expected {
+            XCTAssertEqual(style.rawValue, rawValue)
+            XCTAssertEqual(SectionDividerStyle(rawValue: rawValue), style)
+        }
         XCTAssertNil(SectionDividerStyle(rawValue: 2))
         XCTAssertNil(SectionDividerStyle(rawValue: -1))
-    }
-
-    // MARK: - Identifiable Tests
-
-    func testIdMatchesRawValue() {
-        for style in SectionDividerStyle.allCases {
-            XCTAssertEqual(style.id, style.rawValue)
-        }
-    }
-
-    // MARK: - CaseIterable Tests
-
-    func testAllCasesCount() {
-        XCTAssertEqual(SectionDividerStyle.allCases.count, 2)
-    }
-
-    func testAllCasesContainsAllStyles() {
-        XCTAssertTrue(SectionDividerStyle.allCases.contains(.noDivider))
-        XCTAssertTrue(SectionDividerStyle.allCases.contains(.chevron))
     }
 }

@@ -11,7 +11,7 @@ import CoreImage
 import CoreMedia
 import Foundation
 import os.lock
-@preconcurrency import ScreenCaptureKit
+import ScreenCaptureKit
 
 extension ScreenCapture {
     /// - Returns: The captured image, or nil if capture failed.
@@ -104,37 +104,107 @@ extension ScreenCapture {
         return image
     }
 
-    /// Helper to get shareable content using async wrapper
-    static func getShareableContent() async throws -> SCShareableContent {
+    /// Helper to get shareable content using ScreenCaptureKit's async API.
+    ///
+    /// One capture tick issues 2-3 independent calls (hosting-window capture,
+    /// display-strip capture, the hosting frame probe), each a full
+    /// window/display enumeration. `ShareableContentCache` coalesces calls
+    /// within `maxAge` of each other into a single underlying fetch.
+    static func getShareableContent(maxAge: Duration = .milliseconds(150)) async throws -> SCShareableContent {
+        let snapshot = try await shareableContentCache.content(
+            maxAge: maxAge,
+            fetch: fetchShareableContentUncached
+        )
+        return snapshot.content
+    }
+
+    private static let shareableContentCache = ShareableContentCache()
+
+    /// `SCShareableContent.current` is the async form of
+    /// `getShareableContentWithCompletionHandler:`. It has no built-in
+    /// cancellation, so it runs inside a child task that races a
+    /// `withTaskCancellationHandler` resume: a cancelled caller aborts promptly
+    /// instead of proceeding to a wasted capture, while a late framework result
+    /// is discarded because the continuation has already been taken.
+    private static func fetchShareableContentUncached() async throws -> ShareableContentSnapshot {
         let box = ContinuationBox<SCShareableContent, any Error>()
-        return try await withTaskCancellationHandler {
+        let content = try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
                 box.setContinuation(continuation)
-                SCShareableContent.getWithCompletionHandler(makeShareableContentCompletion(box: box))
+                Task {
+                    do {
+                        let content = try await SCShareableContent.current
+                        box.takeContinuation()?.resume(returning: content)
+                    } catch {
+                        box.takeContinuation()?.resume(throwing: error)
+                    }
+                }
             }
         } onCancel: {
-            // Resume with cancellation error if still pending
-            if let continuation = box.takeContinuation() {
-                continuation.resume(throwing: CancellationError())
-            }
+            // Resume with cancellation error if still pending.
+            box.takeContinuation()?.resume(throwing: CancellationError())
+        }
+        return ShareableContentSnapshot(content: content)
+    }
+}
+
+/// Coalesces concurrent/rapid `getShareableContent()` calls into one fetch.
+///
+/// Holds the most recent result plus an in-flight fetch task. Callers that
+/// arrive while a fetch is already running await that same task rather than
+/// starting a second enumeration; only the caller that started the task
+/// records the result and clears `inFlightTask`, so joiners never race each
+/// other over cache bookkeeping.
+actor ShareableContentCache {
+    private var cached: (content: ShareableContentSnapshot, timestamp: ContinuousClock.Instant)?
+    private var inFlightTask: Task<ShareableContentSnapshot, any Error>?
+
+    fileprivate func content(
+        maxAge: Duration,
+        fetch: @Sendable @escaping () async throws -> ShareableContentSnapshot
+    ) async throws -> ShareableContentSnapshot {
+        if let cached, ContinuousClock.now - cached.timestamp < maxAge {
+            return cached.content
+        }
+
+        if let inFlightTask {
+            return try await awaitWithoutCancelling(inFlightTask)
+        }
+
+        let task = Task<ShareableContentSnapshot, any Error> {
+            try await fetch()
+        }
+        inFlightTask = task
+        do {
+            let content = try await awaitWithoutCancelling(task)
+            cached = (content, .now)
+            inFlightTask = nil
+            return content
+        } catch {
+            inFlightTask = nil
+            throw error
         }
     }
 
-    /// Creates a completion handler for SCShareableContent request
-    private static func makeShareableContentCompletion(
-        box: ContinuationBox<SCShareableContent, any Error>
-    ) -> @Sendable (SCShareableContent?, Error?) -> Void {
-        { content, error in
-            guard let continuation = box.takeContinuation() else { return }
-            if let error {
-                continuation.resume(throwing: error)
-            } else if let content {
-                continuation.resume(returning: content)
-            } else {
-                continuation.resume(throwing: ScreenCaptureError.noContent)
-            }
-        }
+    /// A caller cancelling must not cancel the shared task — other callers
+    /// may still be awaiting its result.
+    private func awaitWithoutCancelling(
+        _ task: Task<ShareableContentSnapshot, any Error>
+    ) async throws -> ShareableContentSnapshot {
+        try await withTaskCancellationHandler {
+            try await task.value
+        } onCancel: {}
     }
+}
+
+/// An immutable ScreenCaptureKit snapshot passed across the cache actor.
+///
+/// `SCShareableContent` is an Objective-C reference type without a Sendable
+/// annotation. It is returned as a completed framework snapshot and this
+/// wrapper never mutates or exposes any mutable state, so sharing that
+/// reference among the capture readers is safe.
+private struct ShareableContentSnapshot: @unchecked Sendable {
+    let content: SCShareableContent
 }
 
 // MARK: - Helper Types
@@ -155,6 +225,14 @@ final class ContinuationBox<T, E: Error>: Sendable {
     }
 }
 
+/// `SCStream` delivers `stream(_:didOutputSampleBuffer:of:)`/
+/// `stream(_:didStopWithError:)` callbacks on `sampleHandlerQueue`, a
+/// background serial queue — not on any actor. `ciContext` just returns the
+/// `static let sharedCIContext`, an immutable, process-wide `CIContext`. The
+/// only mutable state (`continuation`, `bufferedImage`) lives in `lock`, an
+/// `OSAllocatedUnfairLock`, and is only ever read or written under that
+/// lock, which is how the background-queue callback safely hands a frame
+/// back to the awaiting caller.
 final class FrameCaptor: NSObject, SCStreamOutput, SCStreamDelegate, @unchecked Sendable {
     /// Shared serial queue for all SCStream sample buffer handlers.
     static let sampleHandlerQueue = DispatchQueue(label: "com.stonerl.Thaw.screencapture")

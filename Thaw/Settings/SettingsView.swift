@@ -17,6 +17,7 @@ struct SettingsView: View {
 
     let appState: AppState
     @ObservedObject var navigationState: AppNavigationState
+    @State private var settingsWindow: NSWindow?
 
     var body: some View {
         NavigationSplitView {
@@ -25,13 +26,32 @@ struct SettingsView: View {
             settingsPane
                 .id(navigationState.settingsNavigationIdentifier)
                 .transition(paneTransition)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .buttonStyle(.settingsGlass)
-                .glassEffect(paneGlass, in: Rectangle())
-                .scrollEdgeEffectStyle(.soft, for: .top)
+                .environment(\.settingsPaneTitle, paneTitle)
+                // Fill the detail column so the Form's scrollbar sits on the
+                // window/detail trailing edge — not on a 680pt content column.
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                // Draw under the transparent toolbar so the page title isn't pushed
+                // down by the ~60pt title-bar safe area.
+                .ignoresSafeArea(.container, edges: .top)
+                // Dark panes use a solid Music-like surface. Light bumps vibrancy
+                // with under-window materials instead of the denser `.sidebar` fill.
+                .background {
+                    detailSurface
+                        .ignoresSafeArea(.container, edges: .top)
+                }
         }
-        .navigationTitle(navigationState.settingsNavigationIdentifier.localized)
-        .toolbarBackgroundVisibility(.visible, for: .windowToolbar)
+        // Keep the window titled for Mission Control; omit the toolbar label so
+        // it does not fight the in-pane header while scrolling.
+        .navigationTitle("")
+        .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
+        .onWindowChange { window in
+            settingsWindow = window
+            configureSettingsWindowChrome(window)
+        }
+        .onChange(of: colorScheme) { _, _ in
+            configureSettingsWindowChrome(settingsWindow)
+        }
         .transaction { transaction in
             if reduceMotion {
                 transaction.animation = nil
@@ -40,12 +60,68 @@ struct SettingsView: View {
         }
     }
 
+    private var paneTitle: LocalizedStringKey? {
+        // About is a centered identity layout; a page title would be redundant.
+        // Title sits above IceForm (outside grouped cards) and stays put while
+        // the form scrolls in the remaining space.
+        navigationState.settingsNavigationIdentifier == .about
+            ? nil
+            : navigationState.settingsNavigationIdentifier.localized
+    }
+
     private var paneTransition: AnyTransition {
         reduceMotion ? .identity : .opacity.animation(.easeOut(duration: 0.14))
     }
 
-    private var paneGlass: Glass {
-        colorScheme == .dark ? .identity : .regular
+    private var prefersExtremeVibrancy: Bool {
+        colorScheme == .dark
+    }
+
+    /// Dense behind-window vibrancy for the sidebar (and About) in both appearances.
+    private var sidebarMaterial: NSVisualEffectView.Material {
+        .hudWindow
+    }
+
+    private var sharedSidebarSurface: some View {
+        BehindWindowMaterialBackground(material: sidebarMaterial)
+    }
+
+    private func configureSettingsWindowChrome(_ window: NSWindow?) {
+        guard let window else {
+            return
+        }
+        // Let pane/sidebar materials own the title-bar band and suppress the
+        // system separator drawn over the detail pane.
+        window.styleMask.insert(.fullSizeContentView)
+        window.titlebarAppearsTransparent = true
+        window.titlebarSeparatorStyle = .none
+        // Clear chrome in both appearances so `.hudWindow` / under-window
+        // materials can sample the desktop the same way. Light detail keeps
+        // its own under-window + glass stack for readability; dark detail
+        // stays a solid Music-like fill.
+        window.isOpaque = false
+        window.backgroundColor = .clear
+    }
+
+    @ViewBuilder
+    private var detailSurface: some View {
+        let isAbout = navigationState.settingsNavigationIdentifier == .about
+        if isAbout {
+            sharedSidebarSurface
+        } else if prefersExtremeVibrancy {
+            // Apple Music–style solid page: no Liquid Glass veil over content.
+            Rectangle()
+                .fill(Color(nsColor: .windowBackgroundColor))
+        } else {
+            // Light panes: under-window vibrancy + glass for a touch more life
+            // than glass alone, without the muddy dark-mode double stack.
+            ZStack {
+                BehindWindowMaterialBackground(material: .underWindowBackground)
+                Rectangle()
+                    .fill(.clear)
+                    .glassEffect(.regular, in: Rectangle())
+            }
+        }
     }
 
     private var sidebar: some View {
@@ -58,7 +134,8 @@ struct SettingsView: View {
             }
         }
         .background {
-            SidebarTranslucencyBackground()
+            sharedSidebarSurface
+                .ignoresSafeArea(.container, edges: .top)
         }
     }
 
@@ -83,7 +160,10 @@ struct SettingsView: View {
         case .advanced:
             AdvancedSettingsPane(settings: appState.settings.advanced)
         case .automation:
-            AutomationSettingsPane()
+            AutomationSettingsPane(
+                settings: appState.settings.automation,
+                hookSettings: appState.settings.automationHook
+            )
         case .tools:
             ToolsSettingsPane(settings: appState.settings.advanced)
         case .about:
@@ -92,11 +172,30 @@ struct SettingsView: View {
     }
 }
 
-// MARK: - SidebarTranslucencyBackground
+// MARK: - SettingsDetailLayout
 
-/// Uses behind-window blending so the sidebar samples the desktop rather than
-/// the system-owned `NavigationSplitView` backdrop beneath the SwiftUI layer.
-private struct SidebarTranslucencyBackground: NSViewRepresentable {
+enum SettingsDetailLayout {
+    /// Comfortable reading width for settings groups. Title and form share this
+    /// column so they stay aligned when the window grows.
+    static let columnMaxWidth: CGFloat = 680
+    /// Offset from the window top under the transparent unified toolbar.
+    /// Intentionally well below the ~60pt safe-area push.
+    static let titleTopInset: CGFloat = 28
+    /// Leading inset aligned with grouped form section cards / headers.
+    static let titleHorizontalInset: CGFloat = 28
+}
+
+extension EnvironmentValues {
+    @Entry var settingsPaneTitle: LocalizedStringKey?
+}
+
+// MARK: - BehindWindowMaterialBackground
+
+/// Behind-window vibrancy so surfaces sample the desktop rather than the
+/// system-owned `NavigationSplitView` backdrop beneath the SwiftUI layer.
+private struct BehindWindowMaterialBackground: NSViewRepresentable {
+    let material: NSVisualEffectView.Material
+
     func makeNSView(context _: Context) -> NSVisualEffectView {
         let view = NSVisualEffectView()
         configure(view)
@@ -108,7 +207,7 @@ private struct SidebarTranslucencyBackground: NSViewRepresentable {
     }
 
     private func configure(_ view: NSVisualEffectView) {
-        view.material = .underWindowBackground
+        view.material = material
         view.blendingMode = .behindWindow
         view.state = .active
         view.isEmphasized = false

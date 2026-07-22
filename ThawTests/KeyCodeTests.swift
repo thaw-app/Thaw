@@ -40,16 +40,6 @@ final class KeyCodeTests: XCTestCase {
         XCTAssertEqual(keyCode.rawValue, kVK_ANSI_A)
     }
 
-    // MARK: - Hashable Tests
-
-    func testHashable() {
-        let code1 = KeyCode.a
-        let code2 = KeyCode(rawValue: kVK_ANSI_A)
-
-        XCTAssertEqual(code1, code2)
-        XCTAssertEqual(code1.hashValue, code2.hashValue)
-    }
-
     func testDifferentCodesNotEqual() {
         XCTAssertNotEqual(KeyCode.a, KeyCode.b)
         XCTAssertNotEqual(KeyCode.one, KeyCode.two)

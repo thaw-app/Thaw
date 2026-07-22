@@ -6,7 +6,14 @@ on:
   pull_request:
     paths:
       - ".github/workflows/ci.yml"
-      - "Package.swift"
+      - "**/Package.swift"
+      - "**/Package.resolved"
+      - ".swiftlint.yml"
+      - ".swiftlint-tests.yml"
+      - ".swiftformat"
+      - "Thaw.xcodeproj/**"
+      - "ThawDev.xcworkspace/**"
+      - "scripts/**"
       - "**/*.swift"
       - "**/*.xcstrings"
   push:
@@ -15,7 +22,14 @@ on:
       - development
     paths:
       - ".github/workflows/ci.yml"
-      - "Package.swift"
+      - "**/Package.swift"
+      - "**/Package.resolved"
+      - ".swiftlint.yml"
+      - ".swiftlint-tests.yml"
+      - ".swiftformat"
+      - "Thaw.xcodeproj/**"
+      - "ThawDev.xcworkspace/**"
+      - "scripts/**"
       - "**/*.swift"
       - "**/*.xcstrings"
   workflow_dispatch:
@@ -55,14 +69,20 @@ jobs:
             ghcr.io/realm/swiftlint:0.63.3 \
             swiftlint --strict
 
+      - name: Run SwiftLint for tests
+        run: |
+          docker run --rm -v "$PWD:/work" -w /work \
+            ghcr.io/realm/swiftlint:0.63.3 \
+            swiftlint lint --strict --config .swiftlint.yml --config .swiftlint-tests.yml ThawTests
+
   build:
-    runs-on: macos-26
+    runs-on: xcode-27
     needs: static_analysis
     env:
       HOMEBREW_NO_AUTO_UPDATE: 1
     steps:
       - uses: actions/checkout@v7
-      - run: sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
+      - run: sudo xcode-select -s /Applications/Xcode_27.0.app/Contents/Developer
 
       - name: Cache SwiftPM
         uses: actions/cache@v5
@@ -92,7 +112,13 @@ jobs:
             compilation-cache-${{ runner.os }}-${{ github.ref_name }}-
             compilation-cache-${{ runner.os }}-
 
-      - name: Build and Test
+      - name: Test MenuBarModel
+        run: swift test --package-path MenuBarModel
+
+      - name: Test ThawCapture
+        run: swift test --package-path ThawCapture
+
+      - name: Build and Test Thaw
         run: |
           xcodebuild test \
             -project Thaw.xcodeproj \

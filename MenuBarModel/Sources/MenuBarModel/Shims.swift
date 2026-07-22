@@ -207,6 +207,11 @@ private func dlerrorMessage() -> String {
 public enum SkyLightAPI {
     private static let diagLog = DiagLog(category: "SkyLightAPI")
 
+    // `UnsafeMutableRawPointer` isn't `Sendable`, so this `static let` can't be
+    // plain `Sendable`-checked despite being effectively immutable. Swift
+    // guarantees thread-safe, run-once initialization of `static let`
+    // properties, and this handle is never reassigned or `dlclose`d after
+    // that, so there's nothing to race on.
     private static nonisolated(unsafe) let handle: UnsafeMutableRawPointer? = {
         let handle = dlopen(SharedConstants.skyLightFrameworkPath, RTLD_NOW)
         if handle == nil {

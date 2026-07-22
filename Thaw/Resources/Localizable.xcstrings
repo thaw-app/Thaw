@@ -47116,6 +47116,75 @@
     },
     "You're All Set" : {
 
+    },
+    "Reset completed with %lld items that could not be moved. Check the menu bar and try again if needed." : {
+      "comment" : "A message describing the result of a menu bar layout reset, including the number of items that could not be moved.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Reset completed with %lld item that could not be moved. Check the menu bar and try again if needed."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Reset completed with %lld items that could not be moved. Check the menu bar and try again if needed."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Failed to update configuration on %lld profiles." : {
+      "comment" : "A message indicating that a configuration update failed on some profiles.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Failed to update configuration on %lld profile."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Failed to update configuration on %lld profiles."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "This will overwrite the settings of %lld displays with the global template. If the active display's spacing changes, Thaw will relaunch each app with a menu bar item. Relaunching apps may cause unsaved input, progress, or transient app state to be lost." : {
+      "comment" : "A confirmation message shown when the user is prompted to apply the global template. The argument is the number of displays that will be affected.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "This will overwrite the settings of %lld display with the global template. If the active display's spacing changes, Thaw will relaunch each app with a menu bar item. Relaunching apps may cause unsaved input, progress, or transient app state to be lost."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "This will overwrite the settings of %lld displays with the global template. If the active display's spacing changes, Thaw will relaunch each app with a menu bar item. Relaunching apps may cause unsaved input, progress, or transient app state to be lost."
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "version" : "1.1"

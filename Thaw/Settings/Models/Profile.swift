@@ -11,7 +11,7 @@ import Foundation
 // MARK: - ProfileMetadata
 
 /// Lightweight struct for listing profiles without loading full data.
-struct ProfileMetadata: Codable, Identifiable, Hashable {
+nonisolated struct ProfileMetadata: Codable, Identifiable, Hashable {
     let id: UUID
     var name: String
     var createdAt: Date
@@ -25,7 +25,7 @@ struct ProfileMetadata: Codable, Identifiable, Hashable {
 // MARK: - GeneralSettingsSnapshot
 
 /// A codable snapshot of all General settings properties.
-struct GeneralSettingsSnapshot: Codable {
+nonisolated struct GeneralSettingsSnapshot: Codable {
     var showIceIcon: Bool
     var iceIcon: ControlItemImageSet
     var lastCustomIceIcon: ControlItemImageSet?
@@ -186,7 +186,7 @@ struct GeneralSettingsSnapshot: Codable {
 // MARK: - AdvancedSettingsSnapshot
 
 /// A codable snapshot of all Advanced settings properties.
-struct AdvancedSettingsSnapshot: Codable {
+nonisolated struct AdvancedSettingsSnapshot: Codable {
     var enableAlwaysHiddenSection: Bool
     var showAllSectionsOnUserDrag: Bool
     var sectionDividerStyle: Int
@@ -428,7 +428,7 @@ struct AdvancedSettingsSnapshot: Codable {
 // MARK: - MenuBarLayoutSnapshot
 
 /// A codable snapshot of the menu bar item layout.
-struct MenuBarLayoutSnapshot: Codable {
+nonisolated struct MenuBarLayoutSnapshot: Codable {
     var savedSectionOrder: [String: [String]]
     var pinnedHiddenBundleIDs: [String]
     var pinnedAlwaysHiddenBundleIDs: [String]
@@ -458,7 +458,7 @@ struct MenuBarLayoutSnapshot: Codable {
 // MARK: - ProfileContent
 
 /// Groups all settings data for a profile, used to reduce init parameter count.
-struct ProfileContent {
+nonisolated struct ProfileContent {
     var generalSettings: GeneralSettingsSnapshot
     var advancedSettings: AdvancedSettingsSnapshot
     var hotkeys: [String: Data]
@@ -498,7 +498,7 @@ struct ProfileContent {
 // MARK: - Profile
 
 /// A complete settings profile that can be saved to and restored from disk.
-struct Profile: Codable, Identifiable {
+nonisolated struct Profile: Codable, Identifiable {
     let id: UUID
     var name: String
     var createdAt: Date
@@ -689,14 +689,14 @@ struct Profile: Codable, Identifiable {
 
 /// A single profile bundled with its metadata for export/import.
 /// Preserves display associations that live on the manifest.
-struct ProfileExportEntry: Codable {
+nonisolated struct ProfileExportEntry: Codable {
     var profile: Profile
     var associatedDisplayUUID: String?
     var associatedDisplayName: String?
 }
 
 /// Wrapper for exporting multiple profiles as a single file.
-struct ProfileExportBundle: Codable {
+nonisolated struct ProfileExportBundle: Codable {
     var version: Int = 1
     var entries: [ProfileExportEntry]
 }

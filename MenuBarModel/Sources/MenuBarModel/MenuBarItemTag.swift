@@ -97,6 +97,22 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable {
         SystemMenuBarModuleCatalog.controlCenterKeysByMenuExtraTitle[title] != nil
     }
 
+    /// A MenuBarAgent-hosted item that must remain in Visible. macOS 27 owns
+    /// these children as one system-hosted family; assignment hiding is not a
+    /// reliable per-child operation. Movable children still participate in
+    /// physical preferred-position reordering within Visible.
+    public var isMenuBarAgentItemForcedVisible: Bool {
+        namespace == .menuBarAgent
+    }
+
+    /// Whether a persisted `namespace:title[:instance]` identifier names a
+    /// MenuBarAgent child. This lets assignment migration reject stale Hidden
+    /// entries before the live AX child has appeared.
+    public static func isMenuBarAgentForcedVisibleIdentifier(_ identifier: String) -> Bool {
+        let prefix = "\(Namespace.menuBarAgent.description):"
+        return identifier.hasPrefix(prefix)
+    }
+
     /// iStat Menus status-item bundle ID. Titles and identifiers are
     /// canonicalized via ``canonicalIStatMetricTitle`` so live metric values do
     /// not churn layout keys every second.
@@ -144,6 +160,7 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable {
         if #available(macOS 27, *),
            isHidingUnsupported ||
            isLayoutAnchoredSystemItem ||
+           isMenuBarAgentItemForcedVisible ||
            (namespace != .menuBarAgent && isNonConcealableSystemItem && !isControlCenterGovernable)
         {
             return .forcedVisible
@@ -237,7 +254,7 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable {
         case .thaw:
             return true
         case let .string(bundleID):
-            return Constants.isThawOwnedBundleIdentifier(bundleID)
+            return ThawMenuBarIdentity.owns(bundleIdentifier: bundleID)
         case .null, .uuid:
             return false
         }
@@ -634,7 +651,7 @@ public extension MenuBarItemTag {
 
 public extension MenuBarItemTag.Namespace {
     /// The namespace for the "Thaw" process.
-    static let thaw = string(Constants.bundleIdentifier)
+    static let thaw = string(ThawMenuBarIdentity.bundleIdentifier)
 
     /// The namespace for the "Control Center" process.
     static let controlCenter = string("com.apple.controlcenter")

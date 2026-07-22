@@ -11,8 +11,12 @@ import Combine
 import MenuBarModel
 import os.lock
 
-struct EventMonitor {
+nonisolated struct EventMonitor {
     private static let diagLog = DiagLog(category: "EventMonitor")
+    /// `monitor` is only ever written by `start()`/`stop()`/`restart()`, which are
+    /// invoked exclusively through `EventMonitor`'s `OSAllocatedUnfairLock<State>`.
+    /// The AppKit closure captured in `start()` only reads the immutable `mask`
+    /// and `handler` lets, so it is safe to run outside the lock.
     private final class LocalMonitorState: @unchecked Sendable {
         private let mask: NSEvent.EventTypeMask
         private let handler: (NSEvent) -> NSEvent?
@@ -63,6 +67,8 @@ struct EventMonitor {
         }
     }
 
+    /// Same invariant as `LocalMonitorState`: `monitor` is only written under
+    /// `EventMonitor`'s lock; the AppKit closure only reads immutable lets.
     private final class GlobalMonitorState: @unchecked Sendable {
         private let mask: NSEvent.EventTypeMask
         private let handler: (NSEvent) -> Void
@@ -113,6 +119,8 @@ struct EventMonitor {
         }
     }
 
+    /// Same invariant as `LocalMonitorState`: `monitors` is only written under
+    /// `EventMonitor`'s lock; the AppKit closures only read immutable lets.
     private final class UniversalMonitorState: @unchecked Sendable {
         private let mask: NSEvent.EventTypeMask
         private let localHandler: (NSEvent) -> NSEvent?
@@ -194,6 +202,9 @@ struct EventMonitor {
         }
     }
 
+    /// Wraps one of the `@unchecked Sendable` monitor state classes above; the
+    /// enum itself is only ever read or replaced from within `EventMonitor`'s
+    /// `OSAllocatedUnfairLock<State>`, so it inherits their safety.
     private enum State: @unchecked Sendable {
         case local(LocalMonitorState)
         case global(GlobalMonitorState)

@@ -115,7 +115,7 @@ public enum SystemMenuBarModuleCatalog {
         ),
         SystemMenuBarModule(
             name: "Displays",
-            assessmentTitleAliases: ["Displays", "Display", "com.apple.menuextra.displays"],
+            assessmentTitleAliases: ["Displays", "Display", "com.apple.menuextra.display", "com.apple.menuextra.displays"],
             assessmentSystemItemID: 3,
             controlCenterMenuExtraTitle: nil,
             controlCenterPrefKey: nil
@@ -129,7 +129,7 @@ public enum SystemMenuBarModuleCatalog {
         ),
         SystemMenuBarModule(
             name: "Sound",
-            assessmentTitleAliases: ["Sound", "Volume", "com.apple.menuextra.volume"],
+            assessmentTitleAliases: ["Sound", "Volume", "com.apple.menuextra.sound", "com.apple.menuextra.volume"],
             assessmentSystemItemID: 5,
             controlCenterMenuExtraTitle: nil,
             controlCenterPrefKey: nil
@@ -171,9 +171,33 @@ public enum SystemMenuBarModuleCatalog {
         return nil
     }
 
+    /// User-facing module name when `title` matches a known Apple system item.
+    ///
+    /// Accepts live AX titles (`Wi-Fi`), assessment aliases (`Clock`), menu-extra
+    /// identifiers (`com.apple.menuextra.wifi`), and Control Center preference
+    /// keys (`WiFi`). Returns the catalog's stable `name` (e.g. `WiFi`).
+    public static func moduleName(matching title: String) -> String? {
+        guard !title.isEmpty else { return nil }
+        for module in all {
+            if module.name == title ||
+                module.assessmentTitleAliases.contains(title) ||
+                module.controlCenterMenuExtraTitle == title ||
+                module.controlCenterPrefKey == title
+            {
+                return module.name
+            }
+        }
+        return nil
+    }
+
     /// Canonical ``TrailingItemPreferredPositions`` key for a MenuBarAgent-hosted
     /// Apple module (e.g. `module:WiFi`).
     public static func trailingPositionsModuleKey(forTitle title: String) -> String {
-        "module:\(title)"
+        // AX publishes menu-extra identifiers while MenuBarAgent sorts the
+        // corresponding `module:` key. Display is the one known module whose
+        // persisted key is singular even though its catalog name is plural.
+        let catalogName = moduleName(matching: title) ?? title
+        let persistedName = catalogName == "Displays" ? "Display" : catalogName
+        return "module:\(persistedName)"
     }
 }

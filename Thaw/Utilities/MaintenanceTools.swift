@@ -19,10 +19,10 @@ import Subprocess
 /// These operate on the current user's Library and TCC entries for Thaw's own
 /// bundle identifier. They are intentionally narrow: no sudo, no other apps'
 /// preferences beyond Control Center's menu-bar state plists.
-enum MaintenanceTools {
+nonisolated enum MaintenanceTools {
     private static let legacyCacheDirectoryName = "com.stonerl.thaw"
 
-    enum ToolError: LocalizedError {
+    nonisolated enum ToolError: LocalizedError {
         case commandFailed(String, Int32, String)
 
         var errorDescription: String? {
@@ -39,6 +39,7 @@ enum MaintenanceTools {
 
     /// Quits Control Center and deletes its user preference plists so menu bar
     /// item order/visibility can be rebuilt from a clean Control Center state.
+    @concurrent
     static func resetControlCenterPreferences() async throws {
         // Best-effort: Control Center may not be running.
         try? await run(path: "/usr/bin/killall", arguments: ["ControlCenter"])
@@ -48,9 +49,7 @@ enum MaintenanceTools {
         let preferences = home.appending(path: "Library/Preferences", directoryHint: .isDirectory)
 
         let mainPlist = preferences.appending(path: "com.apple.controlcenter.plist")
-        if fileManager.fileExists(atPath: mainPlist.path(percentEncoded: false)) {
-            try fileManager.removeItem(at: mainPlist)
-        }
+        try removeItemIfExists(at: mainPlist, using: fileManager)
 
         let byHost = preferences.appending(path: "ByHost", directoryHint: .isDirectory)
         guard fileManager.fileExists(atPath: byHost.path(percentEncoded: false)) else {
@@ -85,10 +84,16 @@ enum MaintenanceTools {
     ) throws {
         for directoryName in appCacheDirectoryNames(bundleIdentifier: bundleIdentifier) {
             let cacheDirectory = cachesDirectory.appending(path: directoryName, directoryHint: .isDirectory)
-            if fileManager.fileExists(atPath: cacheDirectory.path(percentEncoded: false)) {
-                try fileManager.removeItem(at: cacheDirectory)
-            }
+            try removeItemIfExists(at: cacheDirectory, using: fileManager)
         }
+    }
+
+    /// Removes the item at `url` when it exists. Any removal error propagates.
+    private static func removeItemIfExists(at url: URL, using fileManager: FileManager) throws {
+        guard fileManager.fileExists(atPath: url.path(percentEncoded: false)) else {
+            return
+        }
+        try fileManager.removeItem(at: url)
     }
 
     static func appCacheDirectoryNames(bundleIdentifier: String) -> [String] {
@@ -101,12 +106,14 @@ enum MaintenanceTools {
 
     /// Resets Accessibility and Screen Recording TCC decisions for Thaw so the
     /// user can re-grant them on the next launch.
+    @concurrent
     static func resetAppPermissions() async throws {
         let bundleID = Constants.bundleIdentifier
         try await run(path: "/usr/bin/tccutil", arguments: ["reset", "Accessibility", bundleID])
         try await run(path: "/usr/bin/tccutil", arguments: ["reset", "ScreenCapture", bundleID])
     }
 
+    @concurrent
     private static func run(path: String, arguments: [String]) async throws {
         let result = try await Subprocess.run(
             .path(FilePath(path)),

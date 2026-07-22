@@ -187,6 +187,76 @@ final class MenuBarItemManagerRearmTests: XCTestCase {
         XCTAssertFalse(MoveInputSuppression.shouldSuppress(event))
     }
 
+    // MARK: - Overflow rebalance force-coalescing (macOS 27)
+
+    /// Regression: a force-rebalance request that arrives just before a
+    /// default (non-force) cache-driven schedule must not have its force
+    /// intent dropped by the coalesced replacement task — otherwise
+    /// `rebalanceMacOS27OverflowIfNeeded`'s 2-second debounce silently
+    /// no-ops the rebalance the force caller was counting on.
+    func testForcePendingSurvivesCoalescingWithLaterNonForceSchedule() {
+        let pendingAfterForce = MenuBarItemManager.nextOverflowRebalanceForcePending(
+            currentlyPending: false,
+            requestedForce: true
+        )
+        XCTAssertTrue(pendingAfterForce)
+
+        let pendingAfterCoalescedDefault = MenuBarItemManager.nextOverflowRebalanceForcePending(
+            currentlyPending: pendingAfterForce,
+            requestedForce: false
+        )
+        XCTAssertTrue(
+            pendingAfterCoalescedDefault,
+            "A later force:false schedule must not clear a still-pending force intent"
+        )
+    }
+
+    /// Two non-force requests in a row must not spuriously synthesize force
+    /// intent — the normal debounced path is unaffected by this fix.
+    func testForcePendingStaysFalseWithoutAnyForceRequest() {
+        let pending = MenuBarItemManager.nextOverflowRebalanceForcePending(
+            currentlyPending: false,
+            requestedForce: false
+        )
+
+        XCTAssertFalse(pending)
+    }
+
+    /// Once a rebalance actually runs with the pending force intent, the
+    /// manager resets the flag (`scheduleMacOS27OverflowRebalance` clears
+    /// `overflowRebalanceForcePending` right before consuming it); a fresh
+    /// non-force request afterward must not resurrect the old intent.
+    func testForcePendingDoesNotPersistAfterBeingConsumed() {
+        let consumedBackToFalse = false // simulates the post-run reset
+        let pendingAfterFreshDefault = MenuBarItemManager.nextOverflowRebalanceForcePending(
+            currentlyPending: consumedBackToFalse,
+            requestedForce: false
+        )
+
+        XCTAssertFalse(pendingAfterFreshDefault)
+    }
+
+    /// Integration characterization: `scheduleMacOS27OverflowRebalance`
+    /// itself, not just the pure OR helper, must keep `force: true` pending
+    /// across a coalesced-away `force: true` call followed by a default
+    /// `force: false` call — reproducing the controller's force-rebalance
+    /// racing the cache path's default schedule.
+    func testScheduleOverflowRebalancePreservesForceAcrossCoalescedDefaultCall() {
+        let manager = MenuBarItemManager()
+        XCTAssertFalse(manager.overflowRebalanceForcePending)
+
+        manager.scheduleMacOS27OverflowRebalance(force: true)
+        XCTAssertTrue(manager.overflowRebalanceForcePending)
+
+        // Cancels the still-pending in-flight task above and replaces it, as
+        // the environment-driven cache path does with its default argument.
+        manager.scheduleMacOS27OverflowRebalance()
+        XCTAssertTrue(
+            manager.overflowRebalanceForcePending,
+            "The coalesced replacement task must still see the earlier force intent"
+        )
+    }
+
     func testMoveInputSuppressionIgnoresKeyboardEvents() throws {
         let event = try XCTUnwrap(CGEvent(
             keyboardEventSource: nil,

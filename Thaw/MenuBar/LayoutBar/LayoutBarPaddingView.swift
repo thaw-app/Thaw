@@ -130,15 +130,34 @@ final class LayoutBarPaddingView: NSView {
     }
 
     /// Re-enables cache-driven layout updates when a drag ends without a
-    /// successful drop (cancelled or rejected). `performDragOperation` resets
-    /// the flag on success; without this, a cancelled drag leaves every
-    /// container frozen and the bars stop accepting moves.
+    /// successful drop (cancelled or rejected). `performDragOperation` (or the
+    /// async `move()` task it spawns) resets the flag on success; without
+    /// this, a cancelled drag leaves every container frozen and the bars stop
+    /// accepting moves. Also runs after successful drops (`draggingEnded`
+    /// fires unconditionally), so `finishDrag` must stay idempotent.
     private func restoreArrangedViewsAfterDrag(from draggingInfo: NSDraggingInfo) {
         guard let draggingSource = draggingInfo.draggingSource as? LayoutBarArrangedView else {
             container.canSetArrangedViews = true
             return
         }
-        let sourceContainer = draggingSource.oldContainerInfo?.container
+        finishDrag(draggingSource, sourceContainer: draggingSource.oldContainerInfo?.container)
+    }
+
+    /// Restores drag-cleanup state on the destination container and, if
+    /// different, the source container, and clears the dragged view's stale
+    /// container info. Centralizes the cleanup triple every
+    /// `performDragOperation` exit path (and `move()`'s own exit paths) used
+    /// to hand-write, which is what let past return paths forget a piece and
+    /// leave a container permanently frozen.
+    ///
+    /// `source` is optional so this can be called from contexts (like the
+    /// async `move()` task) that only know the source *container*, not the
+    /// dragged view itself.
+    private func finishDrag(
+        _ source: LayoutBarArrangedView?,
+        sourceContainer: LayoutBarContainer?
+    ) {
+        source?.oldContainerInfo = nil
         container.canSetArrangedViews = true
         if sourceContainer !== container {
             sourceContainer?.canSetArrangedViews = true
@@ -149,6 +168,14 @@ final class LayoutBarPaddingView: NSView {
         guard let draggingSource = sender.draggingSource as? LayoutBarArrangedView else {
             container.canSetArrangedViews = true
             return false
+        }
+
+        let sourceContainer = draggingSource.oldContainerInfo?.container
+        var cleanupDeferredToMoveTask = false
+        defer {
+            if !cleanupDeferredToMoveTask {
+                finishDrag(draggingSource, sourceContainer: sourceContainer)
+            }
         }
 
         if case let .item(draggingItem) = draggingSource.kind,
@@ -169,7 +196,6 @@ final class LayoutBarPaddingView: NSView {
             container.updateArrangedViewsForDrag(with: sender, phase: .exited)
             draggingSource.hasContainer = false
 
-            container.canSetArrangedViews = true
             return false
         }
 
@@ -179,14 +205,10 @@ final class LayoutBarPaddingView: NSView {
         // assignment after AX order verifies the physical transition.
         if !MenuBarBackendProvider.current.supportsLegacySectionHiding {
             if draggingSource.isNewItemsBadge {
-                let sourceContainer = draggingSource.oldContainerInfo?.container
                 container.appState?.itemManager.updateNewItemsPlacement(
                     section: container.section,
                     arrangedViews: arrangedViews
                 )
-                draggingSource.oldContainerInfo = nil
-                container.canSetArrangedViews = true
-                sourceContainer?.canSetArrangedViews = true
                 if let appState = container.appState {
                     sourceContainer?.setArrangedViews(items: appState.itemManager.itemCache.managedItems(for: sourceContainer?.section ?? container.section))
                     if sourceContainer !== container {
@@ -196,13 +218,9 @@ final class LayoutBarPaddingView: NSView {
                 return true
             }
 
-            let sourceContainer = draggingSource.oldContainerInfo?.container
             guard case let .item(item) = draggingSource.kind,
                   Self.acceptsLayoutDrag(of: item)
             else {
-                container.canSetArrangedViews = true
-                sourceContainer?.canSetArrangedViews = true
-                draggingSource.oldContainerInfo = nil
                 return false
             }
 
@@ -224,9 +242,6 @@ final class LayoutBarPaddingView: NSView {
                     Self.diagLog.warning("Ignoring drag for anchored system item \(item.logString)")
                     container.updateArrangedViewsForDrag(with: sender, phase: .exited)
                     draggingSource.hasContainer = false
-                    draggingSource.oldContainerInfo = nil
-                    container.canSetArrangedViews = true
-                    sourceContainer?.canSetArrangedViews = true
                     return false
                 }
 
@@ -235,9 +250,6 @@ final class LayoutBarPaddingView: NSView {
                 if let appState = container.appState {
                     Task { await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true) }
                 }
-                draggingSource.oldContainerInfo = nil
-                container.canSetArrangedViews = true
-                sourceContainer?.canSetArrangedViews = true
                 return true
             }
 
@@ -254,9 +266,6 @@ final class LayoutBarPaddingView: NSView {
                     Self.diagLog.warning("Refusing to assign non-hideable \(item.logString) to \(container.section.logString)")
                     container.updateArrangedViewsForDrag(with: sender, phase: .exited)
                     draggingSource.hasContainer = false
-                    draggingSource.oldContainerInfo = nil
-                    container.canSetArrangedViews = true
-                    sourceContainer?.canSetArrangedViews = true
                     return false
                 }
 
@@ -273,9 +282,6 @@ final class LayoutBarPaddingView: NSView {
                 if let appState = container.appState {
                     Task { await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true) }
                 }
-                draggingSource.oldContainerInfo = nil
-                container.canSetArrangedViews = true
-                sourceContainer?.canSetArrangedViews = true
                 return true
             }
 
@@ -304,6 +310,8 @@ final class LayoutBarPaddingView: NSView {
                         )
 
                         if let destination {
+                            draggingSource.oldContainerInfo = nil
+                            cleanupDeferredToMoveTask = true
                             move(
                                 item: item,
                                 to: destination,
@@ -316,10 +324,7 @@ final class LayoutBarPaddingView: NSView {
                             // projection so reconciliation cannot retry forever.
                             controller?.setSectionOrder(from: achievableItems, for: .visible)
                             Task { await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true) }
-                            container.canSetArrangedViews = true
-                            sourceContainer?.canSetArrangedViews = true
                         }
-                        draggingSource.oldContainerInfo = nil
                         return true
                     }
 
@@ -340,13 +345,14 @@ final class LayoutBarPaddingView: NSView {
                             nil
                         }
                     if let destination {
+                        draggingSource.oldContainerInfo = nil
+                        cleanupDeferredToMoveTask = true
                         move(
                             item: item,
                             to: destination,
                             sourceContainer: sourceContainer,
                             sectionOrderToCommit: orderedItems
                         )
-                        draggingSource.oldContainerInfo = nil
                         return true
                     }
                 }
@@ -359,27 +365,17 @@ final class LayoutBarPaddingView: NSView {
                 if let appState = container.appState {
                     Task { await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true) }
                 }
-                draggingSource.oldContainerInfo = nil
-                container.canSetArrangedViews = true
-                sourceContainer?.canSetArrangedViews = true
                 return true
             }
 
-            draggingSource.oldContainerInfo = nil
-            container.canSetArrangedViews = true
-            sourceContainer?.canSetArrangedViews = true
             return false
         }
 
         if draggingSource.isNewItemsBadge {
-            let sourceContainer = draggingSource.oldContainerInfo?.container
             container.appState?.itemManager.updateNewItemsPlacement(
                 section: container.section,
                 arrangedViews: arrangedViews
             )
-            draggingSource.oldContainerInfo = nil
-            container.canSetArrangedViews = true
-            sourceContainer?.canSetArrangedViews = true
             if let appState = container.appState {
                 sourceContainer?.setArrangedViews(items: appState.itemManager.itemCache.managedItems(for: sourceContainer?.section ?? container.section))
                 if sourceContainer !== container {
@@ -389,54 +385,49 @@ final class LayoutBarPaddingView: NSView {
             return true
         }
 
-        var willMove = false
-        let sourceContainer = draggingSource.oldContainerInfo?.container
-
         if let index = arrangedViews.firstIndex(of: draggingSource) {
             if arrangedViews.count == 1 {
-                willMove = true
+                cleanupDeferredToMoveTask = true
                 Task {
                     guard case let .item(item) = draggingSource.kind else {
-                        self.container.canSetArrangedViews = true
-                        sourceContainer?.canSetArrangedViews = true
+                        self.finishDrag(draggingSource, sourceContainer: sourceContainer)
                         return
                     }
                     if let destination = await self.liveFallbackDestinationForDraggedItem() {
+                        draggingSource.oldContainerInfo = nil
                         self.move(item: item, to: destination, sourceContainer: sourceContainer)
                     } else {
                         Self.diagLog.error("No target item for layout bar drag")
-                        self.container.canSetArrangedViews = true
-                        sourceContainer?.canSetArrangedViews = true
+                        self.finishDrag(draggingSource, sourceContainer: sourceContainer)
                     }
                 }
             } else if case let .item(item) = draggingSource.kind {
                 if let targetItem = nearestItem(toRightOf: index) {
-                    willMove = true
+                    cleanupDeferredToMoveTask = true
+                    draggingSource.oldContainerInfo = nil
                     move(item: item, to: .leftOfItem(targetItem), sourceContainer: sourceContainer)
                 } else if let targetItem = nearestItem(toLeftOf: index) {
-                    willMove = true
+                    cleanupDeferredToMoveTask = true
+                    draggingSource.oldContainerInfo = nil
                     move(item: item, to: .rightOfItem(targetItem), sourceContainer: sourceContainer)
                 } else if !arrangedViews.isEmpty {
-                    willMove = true
+                    cleanupDeferredToMoveTask = true
                     Task {
                         if let destination = await self.liveFallbackDestinationForDraggedItem() {
+                            draggingSource.oldContainerInfo = nil
                             self.move(item: item, to: destination, sourceContainer: sourceContainer)
                         } else {
                             Self.diagLog.error("No target item for layout bar drag")
-                            self.container.canSetArrangedViews = true
-                            sourceContainer?.canSetArrangedViews = true
+                            self.finishDrag(draggingSource, sourceContainer: sourceContainer)
                         }
                     }
                 }
             }
         }
 
-        // Only re-enable view updates here if no move was initiated.
-        // When a move IS initiated, the move() Task re-enables after stabilization.
-        if !willMove {
-            container.canSetArrangedViews = true
-        }
-
+        // If a move was initiated above, `cleanupDeferredToMoveTask` is set and
+        // the top-level `defer` skips its cleanup — the move() Task re-enables
+        // view updates itself after stabilization.
         return true
     }
 
@@ -453,13 +444,12 @@ final class LayoutBarPaddingView: NSView {
             guard let self, let appState else { return }
             guard !isStabilizing else {
                 await MainActor.run {
-                    self.container.canSetArrangedViews = true
-                    sourceContainer?.canSetArrangedViews = true
+                    self.finishDrag(nil, sourceContainer: sourceContainer)
                 }
                 return
             }
             isStabilizing = true
-            await MainActor.run { self.showOverlay(true) }
+            await MainActor.run { self.setDimmed(true) }
             // Increased delay to allow macOS to settle after operations like Reset Layout.
             // Prevents transient errors when dragging items immediately after reset.
             do {
@@ -467,9 +457,8 @@ final class LayoutBarPaddingView: NSView {
             } catch {
                 await MainActor.run {
                     self.isStabilizing = false
-                    self.showOverlay(false)
-                    self.container.canSetArrangedViews = true
-                    sourceContainer?.canSetArrangedViews = true
+                    self.setDimmed(false)
+                    self.finishDrag(nil, sourceContainer: sourceContainer)
                 }
                 return
             }
@@ -484,7 +473,7 @@ final class LayoutBarPaddingView: NSView {
                 if #available(macOS 27, *) {
                     await appState.imageCache.prewarmConcealedImagesMacOS27(
                         sections: MenuBarSection.Name.allCases,
-                        onlyMissingImages: false
+                        onlyMissingImages: true
                     )
                 }
                 await appState.imageCache.updateCacheWithoutChecks(sections: MenuBarSection.Name.allCases)
@@ -543,13 +532,13 @@ final class LayoutBarPaddingView: NSView {
             }
             await MainActor.run {
                 self.isStabilizing = false
-                self.showOverlay(false)
+                self.setDimmed(false)
                 // Update the badge anchor BEFORE re-enabling view updates, using
                 // the current visual arrangement from the drag. This ensures the
                 // didSet refresh uses the correct anchor position.
                 // Only update if this section actually contains the badge.
                 if let appState = self.container.appState,
-                   self.containsNewItemsBadge()
+                   self.container.arrangedViews.contains(where: \.isNewItemsBadge)
                 {
                     appState.itemManager.updateNewItemsPlacement(
                         section: self.container.section,
@@ -561,10 +550,7 @@ final class LayoutBarPaddingView: NSView {
                 // the dragging session). Without resetting the source, its
                 // arrangedViews would stay frozen at the mid-drag snapshot
                 // until the next drag originated from that container.
-                self.container.canSetArrangedViews = true
-                if sourceContainer !== self.container {
-                    sourceContainer?.canSetArrangedViews = true
-                }
+                self.finishDrag(nil, sourceContainer: sourceContainer)
             }
         }
     }
@@ -601,20 +587,13 @@ final class LayoutBarPaddingView: NSView {
     private func resetStabilizingStateIfNeeded() async {
         if isStabilizing {
             isStabilizing = false
-            showOverlay(false)
+            setDimmed(false)
             container.canSetArrangedViews = true
         }
     }
 
-    private func showOverlay(_ visible: Bool) {
+    private func setDimmed(_ visible: Bool) {
         container.alphaValue = visible ? 0.6 : 1.0
-    }
-
-    private func containsNewItemsBadge() -> Bool {
-        for arrangedView in container.arrangedViews where arrangedView.isNewItemsBadge {
-            return true
-        }
-        return false
     }
 
     /// Whether items in the section currently have live AX elements to reorder.
@@ -785,7 +764,7 @@ final class LayoutBarPaddingView: NSView {
         if #available(macOS 27, *) {
             await appState.imageCache.prewarmConcealedImagesMacOS27(
                 sections: MenuBarSection.Name.allCases,
-                onlyMissingImages: false
+                onlyMissingImages: true
             )
         }
         await appState.imageCache.updateCacheWithoutChecks(sections: MenuBarSection.Name.allCases)

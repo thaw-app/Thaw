@@ -12,13 +12,13 @@ import MenuBarModel
 /// The subset of WindowServer reads that ``MenuBarItemImageCache`` performs.
 /// Exists so tests can substitute a fake and characterize the cache's
 /// orchestration without a live WindowServer connection.
-protocol WindowServerReading: Sendable {
+nonisolated protocol WindowServerReading: Sendable {
     func activeMenuBarDisplayID() -> CGDirectDisplayID?
     func windowBounds(for windowID: CGWindowID) -> CGRect?
 }
 
 /// Live WindowServer reads delegated through ``Bridging``.
-struct LiveWindowServerReader: WindowServerReading {
+nonisolated struct LiveWindowServerReader: WindowServerReading {
     func activeMenuBarDisplayID() -> CGDirectDisplayID? {
         Bridging.getActiveMenuBarDisplayID()
     }

@@ -8,52 +8,30 @@
 
 import SwiftUI
 
-struct IceSectionOptions: OptionSet {
-    let rawValue: Int
-
-    static let isBordered = IceSectionOptions(rawValue: 1 << 0)
-    static let hasDividers = IceSectionOptions(rawValue: 1 << 1)
-
-    static let plain: IceSectionOptions = []
-    static let defaultValue: IceSectionOptions = [.isBordered, .hasDividers]
-}
-
 struct IceSection<Header: View, Content: View, Footer: View>: View {
     private let header: Header
     private let content: Content
     private let footer: Footer
-    private let spacing: CGFloat
-    private let options: IceSectionOptions
-
-    private var isBordered: Bool {
-        options.contains(.isBordered)
-    }
-
-    private var hasDividers: Bool {
-        options.contains(.hasDividers)
-    }
+    private let isBordered: Bool
 
     init(
-        spacing: CGFloat = .iceSectionDefaultSpacing,
-        options: IceSectionOptions = .defaultValue,
+        isBordered: Bool = true,
         @ViewBuilder header: () -> Header,
         @ViewBuilder content: () -> Content,
         @ViewBuilder footer: () -> Footer
     ) {
-        self.spacing = spacing
-        self.options = options
+        self.isBordered = isBordered
         self.header = header()
         self.content = content()
         self.footer = footer()
     }
 
     init(
-        spacing: CGFloat = .iceSectionDefaultSpacing,
-        options: IceSectionOptions = .defaultValue,
+        isBordered: Bool = true,
         @ViewBuilder content: () -> Content,
         @ViewBuilder footer: () -> Footer
     ) where Header == EmptyView {
-        self.init(spacing: spacing, options: options) {
+        self.init(isBordered: isBordered) {
             EmptyView()
         } content: {
             content()
@@ -63,12 +41,11 @@ struct IceSection<Header: View, Content: View, Footer: View>: View {
     }
 
     init(
-        spacing: CGFloat = .iceSectionDefaultSpacing,
-        options: IceSectionOptions = .defaultValue,
+        isBordered: Bool = true,
         @ViewBuilder header: () -> Header,
         @ViewBuilder content: () -> Content
     ) where Footer == EmptyView {
-        self.init(spacing: spacing, options: options) {
+        self.init(isBordered: isBordered) {
             header()
         } content: {
             content()
@@ -78,11 +55,10 @@ struct IceSection<Header: View, Content: View, Footer: View>: View {
     }
 
     init(
-        spacing: CGFloat = .iceSectionDefaultSpacing,
-        options: IceSectionOptions = .defaultValue,
+        isBordered: Bool = true,
         @ViewBuilder content: () -> Content
     ) where Header == EmptyView, Footer == EmptyView {
-        self.init(spacing: spacing, options: options) {
+        self.init(isBordered: isBordered) {
             EmptyView()
         } content: {
             content()
@@ -93,11 +69,10 @@ struct IceSection<Header: View, Content: View, Footer: View>: View {
 
     init(
         _ title: LocalizedStringKey,
-        spacing: CGFloat = .iceSectionDefaultSpacing,
-        options: IceSectionOptions = .defaultValue,
+        isBordered: Bool = true,
         @ViewBuilder content: () -> Content
     ) where Header == Text, Footer == EmptyView {
-        self.init(spacing: spacing, options: options) {
+        self.init(isBordered: isBordered) {
             // No explicit font — the native grouped Section header styles it.
             Text(title)
         } content: {
@@ -107,9 +82,8 @@ struct IceSection<Header: View, Content: View, Footer: View>: View {
 
     var body: some View {
         // Native grouped Section. The OS provides the glass card, row insets,
-        // and separators between rows (so `hasDividers` needs no custom layout).
-        // `.plain` (`!isBordered`) opts out of the card via a cleared row
-        // background.
+        // and separators between rows. `isBordered == false` opts out of the
+        // card via a cleared row background.
         if isBordered {
             nativeSection
         } else {
@@ -142,9 +116,4 @@ struct IceSection<Header: View, Content: View, Footer: View>: View {
             footer
         }
     }
-}
-
-extension CGFloat {
-    /// The default spacing for an ``IceSection``.
-    static let iceSectionDefaultSpacing: CGFloat = 8
 }

@@ -23,13 +23,13 @@ final class ControlItem: NSObject {
     typealias Identifier = ControlItemIdentifier
 
     /// A hiding state for a control item.
-    enum HidingState {
+    nonisolated enum HidingState {
         case showSection
         case hideSection
     }
 
     /// The visual treatment for a hidden/always-hidden section divider.
-    enum SectionDividerPresentation: Equatable {
+    nonisolated enum SectionDividerPresentation: Equatable {
         /// Collapse the status item because the user selected no divider.
         case hidden
         /// Show the small, interactive chevron between sections.
@@ -221,7 +221,7 @@ final class ControlItem: NSObject {
             }
         }
 
-        deinit {
+        isolated deinit {
             removeStatusItem()
         }
 
@@ -692,7 +692,17 @@ final class ControlItem: NSObject {
     /// updates `TrailingItemPreferredPositions`. The temporary length matches
     /// the button's rendered width, so this does not hide the item, flash the
     /// compositor, or move the pointer.
+    ///
+    /// Skipped while a section is revealed: nudging the Visible control item's
+    /// length during reveal/hide reflow is what made rehide clicks miss for a
+    /// few seconds (the icon's hit target keeps getting invalidated while
+    /// boundary repair rewrites preferred positions).
     func requestMenuBarAgentPositionRefresh() {
+        if appState?.menuBarManager.sectionController?.revealedSection != nil {
+            diagLog.debug("Skipping MenuBarAgent position refresh while a section is revealed")
+            return
+        }
+
         menuBarAgentLayoutNudgeGeneration += 1
         let generation = menuBarAgentLayoutNudgeGeneration
         menuBarAgentLayoutNudgeTask?.cancel()
@@ -709,6 +719,13 @@ final class ControlItem: NSObject {
             guard let self, !Task.isCancelled,
                   generation == menuBarAgentLayoutNudgeGeneration
             else { return }
+
+            // Re-check: a reveal may have started during the settle delay.
+            if appState?.menuBarManager.sectionController?.revealedSection != nil {
+                diagLog.debug("Skipping MenuBarAgent position refresh; section revealed during settle")
+                menuBarAgentLayoutNudgeTask = nil
+                return
+            }
 
             let baseline = statusItem.length
             guard let temporaryLength = Self.menuBarAgentLayoutNudgeLength(
@@ -1042,7 +1059,7 @@ final class ControlItem: NSObject {
     }
 
     /// The semantic action produced by primary status-button activation.
-    enum PrimaryActionIntent: Equatable {
+    nonisolated enum PrimaryActionIntent: Equatable {
         case toggleSection
         case showAlwaysHidden
         case toggleAlwaysHidden
@@ -1135,6 +1152,18 @@ final class ControlItem: NSObject {
             }
         case .showAlwaysHidden:
             if let section = menuBarManager.section(withName: .alwaysHidden), section.isEnabled {
+                // Already revealing Always Hidden: treat as hide (stale
+                // clickCount>1 / double-click intent must not no-op).
+                if menuBarManager.sectionController?.revealedSection == .alwaysHidden {
+                    diagLog.debug("performPrimaryAction: showAlwaysHidden while revealed → hide")
+                    for s in menuBarManager.sections {
+                        s.desiredState = .hideSection
+                        s.updateControlItemState(for: nil)
+                    }
+                    menuBarManager.sectionController?.hideRevealedSections()
+                    menuBarManager.iceBarPanel.close()
+                    break
+                }
                 diagLog.debug("performPrimaryAction: showAlwaysHidden → permanent show")
                 for s in menuBarManager.sections {
                     s.desiredState = .showSection
@@ -1146,8 +1175,10 @@ final class ControlItem: NSObject {
             }
         case .toggleAlwaysHidden:
             if let section = menuBarManager.section(withName: .alwaysHidden), section.isEnabled {
-                let makeVisible = section.isHidden
-                diagLog.debug("performPrimaryAction: toggleAlwaysHidden → permanent toggle, isHidden=\(section.isHidden)")
+                // Prefer the controller's reveal flag over `section.isHidden`,
+                // which can briefly lag across Ice Bar / desiredState edges.
+                let makeVisible = menuBarManager.sectionController?.revealedSection != .alwaysHidden
+                diagLog.debug("performPrimaryAction: toggleAlwaysHidden → permanent toggle, makeVisible=\(makeVisible)")
                 for s in menuBarManager.sections {
                     s.desiredState = makeVisible ? .showSection : .hideSection
                     s.updateControlItemState(for: nil)
@@ -1442,7 +1473,7 @@ extension ControlItem.Identifier {
 
 /// Proxy getters and setters for a control item's stored
 /// UserDefaults values.
-enum ControlItemDefaults {
+nonisolated enum ControlItemDefaults {
     /// Accesses the value associated with the specified key
     /// and autosave name.
     static subscript<Value>(key: Key<Value>, autosaveName: String) -> Value? {
@@ -1478,6 +1509,7 @@ enum ControlItemDefaults {
 
     /// Performs some initial required setup work before the
     /// creation of a control item.
+    @MainActor
     fileprivate static func preflightSetup(for controlItem: ControlItem) {
         let autosaveName = controlItem.identifier.rawValue
 
@@ -1575,9 +1607,9 @@ enum ControlItemDefaults {
 
 // MARK: - ControlItemDefaults.Key
 
-extension ControlItemDefaults {
+nonisolated extension ControlItemDefaults {
     /// Keys used to look up UserDefaults values for control items.
-    struct Key<Value> {
+    nonisolated struct Key<Value> {
         /// The raw value of the key.
         let rawValue: String
 
@@ -1595,14 +1627,14 @@ extension ControlItemDefaults {
 
 // MARK: ControlItemDefaults.Key<CGFloat>
 
-extension ControlItemDefaults.Key<CGFloat> {
+nonisolated extension ControlItemDefaults.Key<CGFloat> {
     /// String key: "NSStatusItem Preferred Position autosaveName"
     static let preferredPosition = Self(rawValue: "Preferred Position")
 }
 
 // MARK: ControlItemDefaults.Key<Bool>
 
-extension ControlItemDefaults.Key<Bool> {
+nonisolated extension ControlItemDefaults.Key<Bool> {
     /// String key: "NSStatusItem Visible autosaveName"
     static let visible = Self(rawValue: "Visible")
 

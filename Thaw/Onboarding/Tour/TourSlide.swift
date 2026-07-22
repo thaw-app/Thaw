@@ -10,7 +10,7 @@ import Foundation
 
 /// A single page of the onboarding tour, in the order it's presented.
 /// Titles and descriptions mirror the real Thaw app's onboarding copy.
-enum ThawTourSlide: Int, CaseIterable, Identifiable {
+nonisolated enum ThawTourSlide: Int, CaseIterable, Identifiable {
     case welcome
     case menuBarManagement
     case menuBarAppearance

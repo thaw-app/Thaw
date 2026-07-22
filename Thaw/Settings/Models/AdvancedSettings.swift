@@ -95,14 +95,17 @@ final class AdvancedSettings: ObservableObject {
     /// that collapses items when space runs out) by pushing hidden items'
     /// position weights to extreme values so they are collapsed first, keeping
     /// visible items on screen. Only applies on macOS 27+ notched displays.
+    ///
+    /// Experimental and URI/Defaults-only: intentionally has no Settings UI
+    /// and no search entry (see `SearchIndex.baseNonSearchableProperties`).
     @Published var enableExperimentalOverflowPrevention = Defaults.DefaultValue.enableExperimentalOverflowPrevention
 
-    /// A Boolean value that indicates whether menu bar item images are captured
-    /// from a persistent ScreenCaptureKit stream (macOS 27) instead of one-shot
-    /// screenshots. The stream is lighter per frame on some setups but keeps the
-    /// macOS screen-recording indicator lit while a capture surface is open,
-    /// which reflows the bar; one-shot capture (the default) avoids the indicator.
-    @Published var useContinuousMenuBarCapture = Defaults.DefaultValue.useContinuousMenuBarCapture
+    /// A Boolean value that makes Thaw render menu bar items from their owning
+    /// app's icon instead of the live screenshot crop, in the Thaw Bar and the
+    /// layout editor. On macOS 27 the native overflow control can bleed into the
+    /// hosting-window capture; this prevents that capture from being displayed.
+    /// The real system menu bar is unaffected. macOS 27+ only.
+    @Published var alwaysUseAppIconForMenuBarItems = Defaults.DefaultValue.alwaysUseAppIconForMenuBarItems
 
     /// Maximum time to wait for MenuBarAgent to apply a preferred-position
     /// reorder before Thaw continues with residual reconciliation.
@@ -156,7 +159,7 @@ final class AdvancedSettings: ObservableObject {
         Defaults.ifPresent(key: .enableExperimentalSystemItemHiding, assign: &enableExperimentalSystemItemHiding)
         Defaults.ifPresent(key: .enableExperimentalWindowHiding, assign: &enableExperimentalWindowHiding)
         Defaults.ifPresent(key: .enableExperimentalOverflowPrevention, assign: &enableExperimentalOverflowPrevention)
-        Defaults.ifPresent(key: .useContinuousMenuBarCapture, assign: &useContinuousMenuBarCapture)
+        Defaults.ifPresent(key: .alwaysUseAppIconForMenuBarItems, assign: &alwaysUseAppIconForMenuBarItems)
         Defaults.ifPresent(key: .menuBarOrderFulfillmentTimeout, assign: &menuBarOrderFulfillmentTimeout)
         Defaults.ifPresent(key: .searchIncludeVisible, assign: &searchIncludeVisible)
         Defaults.ifPresent(key: .searchIncludeHidden, assign: &searchIncludeHidden)
@@ -238,7 +241,7 @@ final class AdvancedSettings: ObservableObject {
         $enableExperimentalSystemItemHiding.persistToDefaults(key: .enableExperimentalSystemItemHiding, in: &c)
         $enableExperimentalWindowHiding.persistToDefaults(key: .enableExperimentalWindowHiding, in: &c)
         $enableExperimentalOverflowPrevention.persistToDefaults(key: .enableExperimentalOverflowPrevention, in: &c)
-        $useContinuousMenuBarCapture.persistToDefaults(key: .useContinuousMenuBarCapture, in: &c)
+        $alwaysUseAppIconForMenuBarItems.persistToDefaults(key: .alwaysUseAppIconForMenuBarItems, in: &c)
         $menuBarOrderFulfillmentTimeout.persistToDefaults(key: .menuBarOrderFulfillmentTimeout, in: &c)
         $searchSectionOrder.persistToDefaults(
             key: .searchSectionOrder,
@@ -298,8 +301,8 @@ final class AdvancedSettings: ObservableObject {
                 enableExperimentalWindowHiding = boolValue
             case "enableExperimentalOverflowPrevention":
                 enableExperimentalOverflowPrevention = boolValue
-            case "useContinuousMenuBarCapture":
-                useContinuousMenuBarCapture = boolValue
+            case "alwaysUseAppIconForMenuBarItems":
+                alwaysUseAppIconForMenuBarItems = boolValue
             case "searchIncludeVisible":
                 searchIncludeVisible = boolValue
             case "searchIncludeHidden":

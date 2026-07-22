@@ -15,6 +15,11 @@ struct ProfileEntity: AppEntity {
         "Menu Bar Profile"
     }
 
+    // `AppEntity.defaultQuery` is a framework requirement: `AppEntity`
+    // declares it as a nonisolated, mutable `static var`, so this can't be
+    // made `let` or actor-isolated without breaking the protocol conformance.
+    // `ProfileEntityQuery` itself has no stored state (see below), so there
+    // is nothing to race on.
     static nonisolated(unsafe) var defaultQuery = ProfileEntityQuery()
 
     var id: String
@@ -63,6 +68,11 @@ struct ProfileEntityQuery: EntityQuery {
 /// Focus Filter that applies a Thaw profile when a Focus mode activates.
 /// Appears in System Settings → Focus → [mode] → Focus Filters → Add "Thaw".
 struct ThawFocusFilter: SetFocusFilterIntent {
+    // `AppIntent.title`/`.description` are framework requirements: `AppIntent`
+    // declares both as nonisolated, mutable `static var`s so the App Intents
+    // framework can read them for metadata reflection outside any actor.
+    // Both are set once here to a fixed literal and never reassigned, so
+    // there is nothing to race on despite the `var`.
     static nonisolated(unsafe) var title: LocalizedStringResource = "Set Menu Bar Profile"
     static nonisolated(unsafe) var description: IntentDescription? = IntentDescription(
         "Apply a Thaw menu bar profile when this Focus activates.",

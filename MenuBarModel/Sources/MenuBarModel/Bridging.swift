@@ -8,7 +8,7 @@
 
 import Cocoa
 import os
-@preconcurrency import ScreenCaptureKit
+import ScreenCaptureKit
 
 // MARK: - Bridging
 

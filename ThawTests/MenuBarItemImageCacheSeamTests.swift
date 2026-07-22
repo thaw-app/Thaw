@@ -11,6 +11,7 @@ import CoreGraphics
 import XCTest
 
 final class MenuBarItemImageCacheSeamTests: XCTestCase {
+    @MainActor
     func testDisplayIDFallsBackToMainDisplayWhenWindowServerHasNoActiveDisplay() {
         let windowServer = FakeWindowServerReader()
         let cache = MenuBarItemImageCache(windowServer: windowServer)
@@ -21,6 +22,7 @@ final class MenuBarItemImageCacheSeamTests: XCTestCase {
         XCTAssertEqual(windowServer.activeDisplayQueries, 1)
     }
 
+    @MainActor
     func testMissingWindowBoundsReturnsNilAndRecordsTheQuery() {
         let windowServer = FakeWindowServerReader()
         let cache = MenuBarItemImageCache(windowServer: windowServer)
@@ -29,6 +31,7 @@ final class MenuBarItemImageCacheSeamTests: XCTestCase {
         XCTAssertEqual(windowServer.boundsQueries, [7])
     }
 
+    @MainActor
     func testScriptedWindowBoundsFlowThroughTheSeam() {
         let expectedBounds = CGRect(x: 10, y: 20, width: 30, height: 40)
         let windowServer = FakeWindowServerReader(boundsByWindowID: [9: expectedBounds])

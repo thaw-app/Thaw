@@ -23,6 +23,64 @@ final class DisplayIceBarConfigurationTests: XCTestCase {
         XCTAssertEqual(config.itemSpacingOffset, 0)
     }
 
+    @MainActor
+    func testMissingDisplayConfigurationUsesGlobalTemplate() {
+        let global = DisplayIceBarConfiguration.defaultConfiguration
+            .withUseIceBar(true)
+            .withIceBarLocation(.mousePointer)
+
+        XCTAssertEqual(
+            DisplaySettingsManager.resolvedConfiguration(
+                displayUUID: "current-display",
+                configurations: ["other-display": .defaultConfiguration],
+                globalConfiguration: global
+            ),
+            global
+        )
+        XCTAssertEqual(
+            DisplaySettingsManager.resolvedConfiguration(
+                displayUUID: nil,
+                configurations: [:],
+                globalConfiguration: global
+            ),
+            global
+        )
+    }
+
+    @MainActor
+    func testExplicitDisplayConfigurationOverridesGlobalTemplate() {
+        let global = DisplayIceBarConfiguration.defaultConfiguration.withUseIceBar(true)
+        let explicit = DisplayIceBarConfiguration.defaultConfiguration.withIceBarLocation(.mousePointer)
+
+        XCTAssertEqual(
+            DisplaySettingsManager.resolvedConfiguration(
+                displayUUID: "current-display",
+                configurations: ["current-display": explicit],
+                globalConfiguration: global
+            ),
+            explicit
+        )
+    }
+
+    @MainActor
+    func testFirstDisplayMutationPreservesGlobalTemplateValues() {
+        let manager = DisplaySettingsManager()
+        manager.globalConfiguration = DisplayIceBarConfiguration.defaultConfiguration
+            .withUseIceBar(true)
+            .withIceBarLocation(.mousePointer)
+            .withGridColumns(7)
+
+        manager.updateConfiguration(forDisplayUUID: "new-machine-display") {
+            $0.withAlwaysShowHiddenItems(true)
+        }
+
+        let updated = manager.configuration(forUUID: "new-machine-display")
+        XCTAssertTrue(updated.useIceBar)
+        XCTAssertEqual(updated.iceBarLocation, .mousePointer)
+        XCTAssertEqual(updated.gridColumns, 7)
+        XCTAssertTrue(updated.alwaysShowHiddenItems)
+    }
+
     // MARK: - Initialization Tests
 
     func testCustomInitialization() {

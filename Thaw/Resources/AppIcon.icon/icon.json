@@ -1,5 +1,9 @@
 {
   "color-space-for-untagged-svg-colors" : "display-p3",
+  "features" : [
+    "refractivity",
+    "specular-location"
+  ],
   "fill-specializations" : [
     {
       "value" : {
@@ -41,7 +45,7 @@
   ],
   "groups" : [
     {
-      "blur-material" : 0.5,
+      "blur-material" : 0.7,
       "layers" : [
         {
           "blend-mode" : "normal",
@@ -108,11 +112,16 @@
       "lighting" : "combined",
       "name" : "Group",
       "opacity" : 0.9,
+      "refractivity" : {
+        "depth" : 1,
+        "enabled" : true,
+        "strength" : 0.6538671875
+      },
       "shadow" : {
-        "kind" : "layer-color",
+        "kind" : "none",
         "opacity" : 0.5
       },
-      "specular" : true,
+      "specular" : "inside",
       "translucency" : {
         "enabled" : true,
         "value" : 0.6
@@ -216,7 +225,7 @@
       ],
       "specular-specializations" : [
         {
-          "value" : true
+          "value" : "inside"
         },
         {
           "appearance" : "dark",

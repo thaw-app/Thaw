@@ -147,18 +147,22 @@ struct ContentView: View {
     }
 
     private var booleanKeys: [String] {
-        ["autoRehide", "showOnClick", "showOnDoubleClick", "showOnHover", "showOnScroll",
-         "useIceBarOnlyOnNotchedDisplay", "hideApplicationMenus", "enableAlwaysHiddenSection",
-         "useOptionClickToShowAlwaysHiddenSection", "useDoubleClickToShowAlwaysHiddenSection",
-         "enableSecondaryContextMenu", "showAllSectionsOnUserDrag", "showMenuBarTooltips",
-         "enableDiagnosticLogging", "customIceIconIsTemplate", "showIceIcon",
-         "iceBarLocationOnHotkey", "useLCSSortingOnNotchedDisplays"]
+        [
+            "autoRehide", "showOnClick", "showOnDoubleClick", "showOnHover", "showOnScroll",
+            "useIceBarOnlyOnNotchedDisplay", "hideApplicationMenus", "enableAlwaysHiddenSection",
+            "useOptionClickToShowAlwaysHiddenSection", "useDoubleClickToShowAlwaysHiddenSection",
+            "enableSecondaryContextMenu", "showAllSectionsOnUserDrag", "showMenuBarTooltips",
+            "enableDiagnosticLogging", "customIceIconIsTemplate", "showIceIcon",
+            "iceBarLocationOnHotkey", "useLCSSortingOnNotchedDisplays",
+        ]
     }
 
     private var getKeys: [String] {
-        ["all"] + booleanKeys + ["rehideInterval", "showOnHoverDelay", "tooltipDelay",
-                                 "iconRefreshInterval", "rehideStrategy", "useIceBar", "iceBarLocation",
-                                 "alwaysShowHiddenItems", "iceBarLayout", "gridColumns", "version", "displays"]
+        ["all"] + booleanKeys + [
+            "rehideInterval", "showOnHoverDelay", "tooltipDelay",
+            "iconRefreshInterval", "rehideStrategy", "useIceBar", "iceBarLocation",
+            "alwaysShowHiddenItems", "iceBarLayout", "gridColumns", "version", "displays",
+        ]
     }
 
     // MARK: - Response Panel

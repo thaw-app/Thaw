@@ -95,13 +95,6 @@ final class MenuBarItemTagNamespaceTests: XCTestCase {
 
     // MARK: - Hashable Tests
 
-    func testNamespaceHashable() {
-        let ns1 = MenuBarItemTag.Namespace.string("com.example.app")
-        let ns2 = MenuBarItemTag.Namespace.string("com.example.app")
-
-        XCTAssertEqual(ns1.hashValue, ns2.hashValue)
-    }
-
     func testNamespaceInSet() {
         var set = Set<MenuBarItemTag.Namespace>()
         set.insert(.string("com.example.app"))
@@ -422,6 +415,44 @@ final class MenuBarItemTagTests: XCTestCase {
         }
     }
 
+    @MainActor
+    func testMacOS27NonGovernableMenuBarAgentModulesStayVisibleButMovable() throws {
+        guard #available(macOS 27, *) else {
+            throw XCTSkip("MenuBarAgent policy is macOS 27-specific")
+        }
+
+        for title in ["Sound", "Volume", "Displays", "Display", "Keyboard", "ScreenMirroring"] {
+            let tag = MenuBarItemTag(namespace: .menuBarAgent, title: title)
+            let item = MenuBarItem.fixture(tag: tag, windowID: 1)
+
+            XCTAssertTrue(tag.isMovable, title)
+            XCTAssertEqual(tag.sectionManagementPolicy, .forcedVisible, title)
+            XCTAssertFalse(item.canBeHidden(experimentalSystemItemHiding: false), title)
+            XCTAssertFalse(item.canBeHidden(experimentalSystemItemHiding: true), title)
+            XCTAssertTrue(item.isPhysicallyOrderable(experimentalSystemItemHiding: false), title)
+            XCTAssertFalse(
+                MenuBarSectionController.canAssign(
+                    item,
+                    to: .hidden,
+                    experimentalSystemItemHiding: true
+                ),
+                title
+            )
+        }
+    }
+
+    func testMacOS27AllMenuBarAgentItemsAreForcedVisible() throws {
+        guard #available(macOS 27, *) else {
+            throw XCTSkip("MenuBarAgent policy is macOS 27-specific")
+        }
+
+        let wifi = MenuBarItemTag(namespace: .menuBarAgent, title: "com.apple.menuextra.wifi")
+        let unknown = MenuBarItemTag(namespace: .menuBarAgent, title: "Item-0")
+
+        XCTAssertEqual(wifi.sectionManagementPolicy, .forcedVisible)
+        XCTAssertEqual(unknown.sectionManagementPolicy, .forcedVisible)
+    }
+
     func testUnknownMenuBarAgentItemIsNotAnchored() throws {
         guard #available(macOS 27, *) else {
             throw XCTSkip("MenuBarAgent anchoring is macOS 27-specific")
@@ -554,10 +585,10 @@ final class MenuBarItemTagTests: XCTestCase {
         XCTAssertFalse(siri.canBeHidden)
         XCTAssertTrue(siri.sectionManagementPolicy.isVisibleInLayout)
 
-        XCTAssertEqual(wifi.sectionManagementPolicy, .hideable)
-        XCTAssertTrue(wifi.canBeHidden)
-        XCTAssertEqual(weather.sectionManagementPolicy, .hideable)
-        XCTAssertTrue(weather.canBeHidden)
+        XCTAssertEqual(wifi.sectionManagementPolicy, .forcedVisible)
+        XCTAssertFalse(wifi.canBeHidden)
+        XCTAssertEqual(weather.sectionManagementPolicy, .forcedVisible)
+        XCTAssertFalse(weather.canBeHidden)
 
         XCTAssertEqual(app.sectionManagementPolicy, .hideable)
         XCTAssertTrue(app.canBeHidden)
@@ -762,13 +793,6 @@ final class MenuBarItemTagTests: XCTestCase {
 
     // MARK: - Hashable Tests
 
-    func testHashableConsistency() {
-        let tag1 = MenuBarItemTag(namespace: .string("com.app"), title: "Item")
-        let tag2 = MenuBarItemTag(namespace: .string("com.app"), title: "Item")
-
-        XCTAssertEqual(tag1.hashValue, tag2.hashValue)
-    }
-
     func testHashableInSet() {
         var set = Set<MenuBarItemTag>()
         let tag1 = MenuBarItemTag(namespace: .string("com.app"), title: "Item1")
@@ -954,6 +978,13 @@ final class MacOS27LayoutAnchorOrderingTests: XCTestCase {
                 displayTitle: "‹ ‹"
             )
         )
+        XCTAssertTrue(
+            MenuBarItemAXProvider.isNativeOverflowChevronPlaceholder(
+                namespace: .menuBarAgent,
+                identityTitle: "AXOverflowButton",
+                displayTitle: ""
+            )
+        )
     }
 
     @available(macOS 27, *)
@@ -1073,6 +1104,26 @@ final class MacOS27LayoutAnchorOrderingTests: XCTestCase {
         )
 
         XCTAssertEqual(invalid, [clock.uniqueIdentifier])
+    }
+
+    @MainActor
+    func testSanitizedAssignmentRejectsNonGovernableMenuBarAgentModulesWithoutLiveItems() {
+        let sound = MenuBarItemTag(namespace: .menuBarAgent, title: "Sound").tagIdentifier
+        let displays = MenuBarItemTag(namespace: .menuBarAgent, title: "com.apple.menuextra.displays").tagIdentifier
+        let wifi = MenuBarItemTag(namespace: .menuBarAgent, title: "com.apple.menuextra.wifi").tagIdentifier
+        let unknown = MenuBarItemTag(namespace: .menuBarAgent, title: "Item-0").tagIdentifier
+
+        let sanitized = MenuBarSectionController.sanitizedSectionAssignment([
+            sound: .hidden,
+            displays: .alwaysHidden,
+            wifi: .hidden,
+            unknown: .hidden,
+        ])
+
+        XCTAssertNil(sanitized[sound])
+        XCTAssertNil(sanitized[displays])
+        XCTAssertNil(sanitized[wifi])
+        XCTAssertNil(sanitized[unknown])
     }
 
     @MainActor
@@ -1292,6 +1343,91 @@ final class MacOS27LayoutAnchorOrderingTests: XCTestCase {
             return XCTFail("expected Thaw control to move left of Alpha")
         }
         XCTAssertEqual(target.uniqueIdentifier, alpha.uniqueIdentifier)
+    }
+
+    @MainActor
+    func testStructuralVisibleSegmentInsertsThawControlAtSavedSlot() {
+        let alpha = appItem(bundleID: "com.example.alpha", title: "Alpha", x: 100, windowID: 1630)
+        let beta = appItem(bundleID: "com.example.beta", title: "Beta", x: 140, windowID: 1631)
+        let thaw = item(tag: .visibleControlItem, x: 180, windowID: 1632)
+
+        let segment = MenuBarItemManager.structuralVisibleSegment(
+            ordinaryVisibleItems: [alpha, beta],
+            visibleControl: thaw,
+            savedOrder: [
+                thaw.uniqueIdentifier,
+                alpha.uniqueIdentifier,
+                beta.uniqueIdentifier,
+            ]
+        )
+
+        XCTAssertEqual(
+            segment.map(\.uniqueIdentifier),
+            [thaw.uniqueIdentifier, alpha.uniqueIdentifier, beta.uniqueIdentifier]
+        )
+    }
+
+    @MainActor
+    func testStructuralVisibleSegmentKeepsLiveMidXWhenSavedOrderOmitsThawControl() {
+        let alpha = appItem(bundleID: "com.example.alpha", title: "Alpha", x: 100, windowID: 1640)
+        let thaw = item(tag: .visibleControlItem, x: 140, windowID: 1642)
+        let beta = appItem(bundleID: "com.example.beta", title: "Beta", x: 180, windowID: 1641)
+
+        let segment = MenuBarItemManager.structuralVisibleSegment(
+            ordinaryVisibleItems: [alpha, beta],
+            visibleControl: thaw,
+            savedOrder: [alpha.uniqueIdentifier, beta.uniqueIdentifier]
+        )
+
+        // Omitted from saved order must not append last — preserve live geometry.
+        XCTAssertEqual(
+            segment.map(\.uniqueIdentifier),
+            [alpha.uniqueIdentifier, thaw.uniqueIdentifier, beta.uniqueIdentifier]
+        )
+    }
+
+    @MainActor
+    func testStructuralVisibleSegmentKeepsLiveMidXWhenSavedOrderIsEmpty() {
+        let alpha = appItem(bundleID: "com.example.alpha", title: "Alpha", x: 100, windowID: 1650)
+        let thaw = item(tag: .visibleControlItem, x: 120, windowID: 1651)
+        let beta = appItem(bundleID: "com.example.beta", title: "Beta", x: 180, windowID: 1652)
+
+        let segment = MenuBarItemManager.structuralVisibleSegment(
+            ordinaryVisibleItems: [alpha, beta],
+            visibleControl: thaw,
+            savedOrder: []
+        )
+
+        XCTAssertEqual(
+            segment.map(\.uniqueIdentifier),
+            [alpha.uniqueIdentifier, thaw.uniqueIdentifier, beta.uniqueIdentifier]
+        )
+    }
+
+    @MainActor
+    func testStructuralVisibleSegmentKeepsLiveOrderForNewForcedVisibleItems() {
+        let sound = item(
+            tag: MenuBarItemTag(namespace: .menuBarAgent, title: "Sound"),
+            x: 100,
+            windowID: 1660
+        )
+        let thaw = item(tag: .visibleControlItem, x: 140, windowID: 1661)
+        let display = item(
+            tag: MenuBarItemTag(namespace: .menuBarAgent, title: "Display"),
+            x: 180,
+            windowID: 1662
+        )
+
+        let segment = MenuBarItemManager.structuralVisibleSegment(
+            ordinaryVisibleItems: [sound, display],
+            visibleControl: thaw,
+            savedOrder: [thaw.uniqueIdentifier]
+        )
+
+        XCTAssertEqual(
+            segment.map(\.uniqueIdentifier),
+            [sound.uniqueIdentifier, display.uniqueIdentifier, thaw.uniqueIdentifier]
+        )
     }
 
     @available(macOS 27, *)

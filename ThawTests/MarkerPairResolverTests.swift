@@ -325,7 +325,7 @@ final class MarkerPairResolverTests: XCTestCase {
             title: "com.example.widget",
             size: CGSize(width: 117, height: 33),
             owningPID: 100
-        )]
+        ),]
         let result = MarkerPairResolver.resolve(
             unresolvedIcons: icons,
             markers: markers,

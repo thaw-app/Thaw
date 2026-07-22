@@ -6,7 +6,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-@preconcurrency import LaunchAtLogin
+import LaunchAtLogin
 import SwiftUI
 
 struct GeneralSettingsPane: View {
@@ -19,8 +19,8 @@ struct GeneralSettingsPane: View {
     @State private var maxSliderLabelWidth: CGFloat = 0
 
     private var rehideIntervalKey: LocalizedStringKey {
-        let count = Int(settings.rehideInterval)
-        return LocalizedStringKey(String(localized: "\(count) seconds"))
+        let number = settings.rehideInterval.formatted(.number.precision(.fractionLength(0 ... 1)))
+        return LocalizedStringKey(String(localized: "\(number) seconds"))
     }
 
     var body: some View {
@@ -40,6 +40,9 @@ struct GeneralSettingsPane: View {
             IceSection("After revealing") {
                 rehideOptions
             }
+        }
+        .onAppear {
+            maxSliderLabelWidth = 0
         }
     }
 

@@ -14,7 +14,7 @@ import OSLog
 /// debug logs for troubleshooting without requiring a debug build.
 ///
 /// Log files are written to `~/Library/Logs/Thaw/`.
-public final class DiagnosticLogger: @unchecked Sendable {
+public final class DiagnosticLogger: Sendable {
     /// The shared diagnostic logger instance.
     public static let shared = DiagnosticLogger()
 
@@ -88,19 +88,24 @@ public final class DiagnosticLogger: @unchecked Sendable {
     )
 
     /// Date formatter for log timestamps.
-    private let timestampFormatter: DateFormatter = {
+    ///
+    /// `DateFormatter` is not thread-safe for concurrent use — `log(level:category:message:)`
+    /// can be called from any thread or actor, so the formatter is kept
+    /// behind its own lock rather than shared as a bare `let`.
+    private let timestampFormatterLock: OSAllocatedUnfairLock<DateFormatter> = {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd HH:mm:ss.SSS"
         formatter.locale = Locale(identifier: "en_US_POSIX")
-        return formatter
+        return OSAllocatedUnfairLock(uncheckedState: formatter)
     }()
 
-    /// Date formatter for log file names.
-    private let fileNameFormatter: DateFormatter = {
+    /// Date formatter for log file names. Same thread-safety rationale as
+    /// `timestampFormatterLock`.
+    private let fileNameFormatterLock: OSAllocatedUnfairLock<DateFormatter> = {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd_HH-mm-ss"
         formatter.locale = Locale(identifier: "en_US_POSIX")
-        return formatter
+        return OSAllocatedUnfairLock(uncheckedState: formatter)
     }()
 
     /// Serial queue for file I/O.
@@ -149,7 +154,7 @@ public final class DiagnosticLogger: @unchecked Sendable {
             return
         }
 
-        let fileName = "thaw_\(fileNameFormatter.string(from: Date())).log"
+        let fileName = "thaw_\(fileNameFormatterLock.withLock { $0.string(from: Date()) }).log"
         openLogFile(at: dir.appendingPathComponent(fileName))
     }
 
@@ -204,7 +209,7 @@ public final class DiagnosticLogger: @unchecked Sendable {
         let header = """
         ========================================
         Thaw Diagnostic Log
-        Started: \(timestampFormatter.string(from: Date()))
+        Started: \(timestampFormatterLock.withLock { $0.string(from: Date()) })
         Process: \(ProcessInfo.processInfo.processName)
         Version: \(version) (\(build)) commit \(sha)
         macOS: \(ProcessInfo.processInfo.operatingSystemVersionString)
@@ -224,7 +229,7 @@ public final class DiagnosticLogger: @unchecked Sendable {
     private func closeLogFile() {
         fileHandleLock.withLock { handle in
             if let handle {
-                let ts = timestampFormatter.string(from: Date())
+                let ts = timestampFormatterLock.withLock { $0.string(from: Date()) }
                 let footer = "\n\(ts) [DiagnosticLogger] Diagnostic logging stopped\n"
                 if let data = footer.data(using: .utf8) {
                     handle.write(data)
@@ -289,7 +294,7 @@ public final class DiagnosticLogger: @unchecked Sendable {
     func log(level: Level, category: String, message: String) {
         guard isEnabled else { return }
 
-        let timestamp = timestampFormatter.string(from: Date())
+        let timestamp = timestampFormatterLock.withLock { $0.string(from: Date()) }
         let line = "\(timestamp) [\(level.rawValue)] [\(category)] \(message)\n"
 
         guard let data = line.data(using: .utf8) else { return }

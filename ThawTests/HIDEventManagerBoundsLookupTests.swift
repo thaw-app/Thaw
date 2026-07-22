@@ -70,6 +70,60 @@ final class HIDEventManagerBoundsLookupTests: XCTestCase {
         )
     }
 
+    func testClockActivationBridgeMatchesSystemClockAtClickLocation() throws {
+        guard #available(macOS 27, *) else {
+            throw XCTSkip("MenuBarAgent Clock identity is macOS 27-specific")
+        }
+
+        let bounds = CGRect(x: 1180, y: 0, width: 140, height: 22)
+        let clock = MenuBarItem.fixture(
+            tag: MenuBarItemTag(namespace: .menuBarAgent, title: "com.apple.menuextra.clock"),
+            windowID: 9_000_030,
+            bounds: bounds
+        )
+
+        XCTAssertEqual(
+            HIDEventManager.systemClockItem(
+                at: CGPoint(x: bounds.midX, y: bounds.midY),
+                in: [clock]
+            )?.windowID,
+            clock.windowID
+        )
+        XCTAssertNil(
+            HIDEventManager.systemClockItem(
+                at: CGPoint(x: bounds.minX - 1, y: bounds.midY),
+                in: [clock]
+            )
+        )
+    }
+
+    func testClockActivationBridgeRejectsThirdPartyClockTitle() {
+        let item = MenuBarItem.fixture(
+            tag: .appItem(bundleID: "com.example.clock", title: "Clock"),
+            windowID: 9_000_031,
+            bounds: CGRect(x: 1000, y: 0, width: 40, height: 22)
+        )
+
+        XCTAssertFalse(HIDEventManager.isSystemClockItem(item))
+    }
+
+    func testNotificationCenterPanelBoundsMatchDisplayWithinTolerance() {
+        let display = CGRect(x: 0, y: 0, width: 1512, height: 982)
+
+        XCTAssertTrue(
+            HIDEventManager.matchesDisplayBounds(
+                CGRect(x: 1, y: -1, width: 1511, height: 984),
+                displays: [display]
+            )
+        )
+        XCTAssertFalse(
+            HIDEventManager.matchesDisplayBounds(
+                CGRect(x: 0, y: 0, width: 500, height: 600),
+                displays: [display]
+            )
+        )
+    }
+
     func testShouldExcludeNativeOverflowPlaceholder() throws {
         guard #available(macOS 27, *) else {
             throw XCTSkip("Native overflow placeholders are macOS 27-specific")

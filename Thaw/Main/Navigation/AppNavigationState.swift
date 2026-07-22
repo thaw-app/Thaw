@@ -11,7 +11,7 @@ import Combine
 /// The model for app-wide navigation.
 @MainActor
 final class AppNavigationState: ObservableObject {
-    enum SettingsDisclosure: Hashable {
+    nonisolated enum SettingsDisclosure: Hashable {
         case advancedLayoutControls
     }
 

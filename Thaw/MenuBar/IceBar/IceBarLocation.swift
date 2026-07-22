@@ -9,7 +9,7 @@
 import SwiftUI
 
 /// Locations where the Thaw Bar can appear.
-enum IceBarLocation: Int, CaseIterable, Codable, Identifiable {
+nonisolated enum IceBarLocation: Int, CaseIterable, Codable, Identifiable {
     /// The Thaw Bar will appear in different locations based on context.
     case dynamic = 0
 

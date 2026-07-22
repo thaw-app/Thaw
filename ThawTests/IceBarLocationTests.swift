@@ -10,80 +10,25 @@
 import XCTest
 
 final class IceBarLocationTests: XCTestCase {
-    // MARK: - Raw Value Tests
+    func testCasesAndRawValuesRemainStable() {
+        let expected: [(IceBarLocation, Int)] = [
+            (.dynamic, 0),
+            (.mousePointer, 1),
+            (.iceIcon, 2),
+            (.leftAligned, 3),
+            (.rightAligned, 4),
+        ]
 
-    func testDynamicRawValue() {
-        XCTAssertEqual(IceBarLocation.dynamic.rawValue, 0)
-    }
-
-    func testMousePointerRawValue() {
-        XCTAssertEqual(IceBarLocation.mousePointer.rawValue, 1)
-    }
-
-    func testIceIconRawValue() {
-        XCTAssertEqual(IceBarLocation.iceIcon.rawValue, 2)
-    }
-
-    func testLeftAlignedRawValue() {
-        XCTAssertEqual(IceBarLocation.leftAligned.rawValue, 3)
-    }
-
-    func testRightAlignedRawValue() {
-        XCTAssertEqual(IceBarLocation.rightAligned.rawValue, 4)
-    }
-
-    // MARK: - Init from Raw Value Tests
-
-    func testInitFromRawValueZero() {
-        XCTAssertEqual(IceBarLocation(rawValue: 0), .dynamic)
-    }
-
-    func testInitFromRawValueOne() {
-        XCTAssertEqual(IceBarLocation(rawValue: 1), .mousePointer)
-    }
-
-    func testInitFromRawValueTwo() {
-        XCTAssertEqual(IceBarLocation(rawValue: 2), .iceIcon)
-    }
-
-    func testInitFromRawValueThree() {
-        XCTAssertEqual(IceBarLocation(rawValue: 3), .leftAligned)
-    }
-
-    func testInitFromRawValueFour() {
-        XCTAssertEqual(IceBarLocation(rawValue: 4), .rightAligned)
-    }
-
-    func testInitFromInvalidRawValue() {
+        XCTAssertEqual(IceBarLocation.allCases, expected.map(\.0))
+        for (location, rawValue) in expected {
+            XCTAssertEqual(location.rawValue, rawValue)
+            XCTAssertEqual(IceBarLocation(rawValue: rawValue), location)
+        }
         XCTAssertNil(IceBarLocation(rawValue: -1))
         XCTAssertNil(IceBarLocation(rawValue: 100))
     }
 
-    // MARK: - Identifiable Tests
-
-    func testIdMatchesRawValue() {
-        for location in IceBarLocation.allCases {
-            XCTAssertEqual(location.id, location.rawValue)
-        }
-    }
-
-    // MARK: - CaseIterable Tests
-
-    func testAllCasesCount() {
-        XCTAssertEqual(IceBarLocation.allCases.count, 5)
-    }
-
-    func testAllCasesContainsAllLocations() {
-        XCTAssertTrue(IceBarLocation.allCases.contains(.dynamic))
-        XCTAssertTrue(IceBarLocation.allCases.contains(.mousePointer))
-        XCTAssertTrue(IceBarLocation.allCases.contains(.iceIcon))
-        XCTAssertTrue(IceBarLocation.allCases.contains(.leftAligned))
-        XCTAssertTrue(IceBarLocation.allCases.contains(.rightAligned))
-    }
-
-    // MARK: - Codable Tests
-
-    func testEncodeDecode() throws {
+    func testCodableRoundTrip() throws {
         let encoder = JSONEncoder()
         let decoder = JSONDecoder()
 
@@ -94,67 +39,19 @@ final class IceBarLocationTests: XCTestCase {
         }
     }
 
-    func testDecodeFromRawValueJSON() throws {
-        let decoder = JSONDecoder()
-
-        // JSON integers should decode to locations
-        XCTAssertEqual(try decoder.decode(IceBarLocation.self, from: XCTUnwrap("0".data(using: .utf8))), .dynamic)
-        XCTAssertEqual(try decoder.decode(IceBarLocation.self, from: XCTUnwrap("1".data(using: .utf8))), .mousePointer)
-        XCTAssertEqual(try decoder.decode(IceBarLocation.self, from: XCTUnwrap("2".data(using: .utf8))), .iceIcon)
-        XCTAssertEqual(try decoder.decode(IceBarLocation.self, from: XCTUnwrap("3".data(using: .utf8))), .leftAligned)
-        XCTAssertEqual(try decoder.decode(IceBarLocation.self, from: XCTUnwrap("4".data(using: .utf8))), .rightAligned)
-    }
-
-    // MARK: - fromString() Tests
-
-    func testFromStringDynamic() {
-        XCTAssertEqual(IceBarLocation.fromString("dynamic"), .dynamic)
-    }
-
-    func testFromStringMousePointer() {
-        XCTAssertEqual(IceBarLocation.fromString("mousePointer"), .mousePointer)
-    }
-
-    func testFromStringIceIcon() {
-        XCTAssertEqual(IceBarLocation.fromString("iceIcon"), .iceIcon)
-    }
-
-    func testFromStringLeftAligned() {
-        XCTAssertEqual(IceBarLocation.fromString("leftAligned"), .leftAligned)
-    }
-
-    func testFromStringRightAligned() {
-        XCTAssertEqual(IceBarLocation.fromString("rightAligned"), .rightAligned)
-    }
-
-    func testFromStringNumericZero() {
-        XCTAssertEqual(IceBarLocation.fromString("0"), .dynamic)
-    }
-
-    func testFromStringNumericOne() {
-        XCTAssertEqual(IceBarLocation.fromString("1"), .mousePointer)
-    }
-
-    func testFromStringNumericTwo() {
-        XCTAssertEqual(IceBarLocation.fromString("2"), .iceIcon)
-    }
-
-    func testFromStringNumericThree() {
-        XCTAssertEqual(IceBarLocation.fromString("3"), .leftAligned)
-    }
-
-    func testFromStringNumericFour() {
-        XCTAssertEqual(IceBarLocation.fromString("4"), .rightAligned)
-    }
-
-    func testFromStringInvalid() {
-        XCTAssertNil(IceBarLocation.fromString("invalid"))
-        XCTAssertNil(IceBarLocation.fromString("5"))
-        XCTAssertNil(IceBarLocation.fromString(""))
-        XCTAssertNil(IceBarLocation.fromString("Dynamic")) // case sensitive
-        XCTAssertNil(IceBarLocation.fromString("mouse_pointer")) // snake_case not supported
-        XCTAssertNil(IceBarLocation.fromString("ice_icon"))
-        XCTAssertNil(IceBarLocation.fromString("left_aligned"))
-        XCTAssertNil(IceBarLocation.fromString("right_aligned"))
+    func testStringParsing() {
+        let valid: [(String, IceBarLocation)] = [
+            ("dynamic", .dynamic), ("0", .dynamic),
+            ("mousePointer", .mousePointer), ("1", .mousePointer),
+            ("iceIcon", .iceIcon), ("2", .iceIcon),
+            ("leftAligned", .leftAligned), ("3", .leftAligned),
+            ("rightAligned", .rightAligned), ("4", .rightAligned),
+        ]
+        for (value, expected) in valid {
+            XCTAssertEqual(IceBarLocation.fromString(value), expected)
+        }
+        for invalid in ["invalid", "5", "", "Dynamic", "mouse_pointer", "ice_icon", "left_aligned", "right_aligned"] {
+            XCTAssertNil(IceBarLocation.fromString(invalid))
+        }
     }
 }

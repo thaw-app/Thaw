@@ -25,11 +25,16 @@ import os
 /// Accessibility are thread blocking, we do most of the heavy lifting
 /// in a dedicated XPC service, which we then call asynchronously from
 /// the main app.
-final class SourcePIDCache {
+final class SourcePIDCache: Sendable {
     private static let diagLog = DiagLog(category: "SourcePIDCache")
     /// An object that contains a running application and provides an
     /// interface to access relevant information, such as its process
     /// identifier and extras menu bar.
+    ///
+    /// `runningApp` is an immutable `let` reference to a system object;
+    /// its queried properties (`processIdentifier`, `bundleIdentifier`,
+    /// etc.) are safe to read concurrently. All mutable state lives in
+    /// `State` and is only ever read or written through `lock`.
     private final class CachedApplication: @unchecked Sendable {
         private let runningApp: NSRunningApplication
 
@@ -157,7 +162,7 @@ final class SourcePIDCache {
     }
 
     /// The shared cache.
-    static nonisolated(unsafe) let shared = SourcePIDCache()
+    static let shared = SourcePIDCache()
 
     /// The cache's protected state.
     private let state = OSAllocatedUnfairLock(initialState: State())
@@ -165,20 +170,11 @@ final class SourcePIDCache {
     /// Lock to prevent multiple concurrent full scans of all applications.
     private let scanLock = OSAllocatedUnfairLock(initialState: ())
 
-    /// Observer for running applications.
-    private lazy var cancellable: AnyCancellable = {
-        let runningAppsPublisher = NSWorkspace.shared.publisher(for: \.runningApplications)
-            .map { _ in () }
-
-        let timerPublisher = Timer.publish(every: 300, on: .main, in: .default)
-            .autoconnect()
-            .map { _ in () }
-
-        return Publishers.Merge(runningAppsPublisher, timerPublisher)
-            .sink { [weak self] in
-                self?.performCleanup()
-            }
-    }()
+    /// Observer for running applications, created on first call to `start()`.
+    /// `AnyCancellable` isn't `Sendable`, so it lives behind its own lock
+    /// rather than as a plain `lazy var`, which would not be safe to
+    /// initialize from more than one thread.
+    private let cancellableLock = OSAllocatedUnfairLock<AnyCancellable?>(uncheckedState: nil)
 
     /// Creates the shared cache.
     private init() {
@@ -263,7 +259,23 @@ final class SourcePIDCache {
     /// Starts the observers for the cache.
     func start() {
         SourcePIDCache.diagLog.debug("Starting observers for source PID cache")
-        _ = cancellable
+        cancellableLock.withLock { cancellable in
+            guard cancellable == nil else {
+                return
+            }
+
+            let runningAppsPublisher = NSWorkspace.shared.publisher(for: \.runningApplications)
+                .map { _ in () }
+
+            let timerPublisher = Timer.publish(every: 300, on: .main, in: .default)
+                .autoconnect()
+                .map { _ in () }
+
+            cancellable = Publishers.Merge(runningAppsPublisher, timerPublisher)
+                .sink { [weak self] in
+                    self?.performCleanup()
+                }
+        }
     }
 
     /// Returns the cached process identifier for the given window,

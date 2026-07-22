@@ -44,6 +44,7 @@ struct MaintenanceToolsCacheTests {
     }
 
     @Test("Cache reset suspends future disk persistence")
+    @MainActor
     func cacheResetSuspendsDiskPersistence() async {
         let cache = MenuBarItemImageCache()
 
@@ -55,6 +56,7 @@ struct MaintenanceToolsCacheTests {
     }
 
     @Test("Failed cache reset resumes disk persistence")
+    @MainActor
     func failedCacheResetResumesDiskPersistence() async {
         let cache = MenuBarItemImageCache()
         await cache.suspendDiskPersistenceForReset()

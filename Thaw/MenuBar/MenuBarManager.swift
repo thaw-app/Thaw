@@ -107,7 +107,7 @@ final class MenuBarManager: ObservableObject {
     var shouldDeferMacOS27MenuBarMutation: Bool {
         guard #available(macOS 27, *) else { return false }
         guard let nativeMenuBarStateChangedAt else { return false }
-        return nativeMenuBarStateChangedAt.duration(to: .now) < .milliseconds(900)
+        return nativeMenuBarStateChangedAt.duration(to: .now) < Constants.MenuBarTuning.nativeMenuBarMutationSettle
     }
 
     /// The managed sections in the menu bar.
@@ -121,6 +121,14 @@ final class MenuBarManager: ObservableObject {
     /// sections is visible.
     var hasVisibleSection: Bool {
         sections.contains { !$0.isHidden }
+    }
+
+    /// Effective section presentation policy. Native overflow can force a
+    /// temporary Thaw Bar fallback without mutating the user's per-display
+    /// preference.
+    func shouldUseIceBar(for displayID: CGDirectDisplayID) -> Bool {
+        appState?.settings.displaySettings.useIceBar(for: displayID) == true
+            || sectionController?.isNativeOverflowActive(on: displayID) == true
     }
 
     /// Performs the initial setup of the menu bar manager.
@@ -442,7 +450,9 @@ final class MenuBarManager: ObservableObject {
                 //   * The settings window is visible.
                 guard
                     appState.settings.advanced.hideApplicationMenus,
-                    !appState.settings.displaySettings.configurationForActiveDisplay().useIceBar,
+                    !self.shouldUseIceBar(
+                        for: (NSScreen.screenWithActiveMenuBar ?? NSScreen.main)?.displayID ?? CGMainDisplayID()
+                    ),
                     !isMenuBarHiddenBySystem,
                     !appState.activeSpace.isFullscreen,
                     !appState.navigationState.isSettingsPresented
@@ -463,71 +473,23 @@ final class MenuBarManager: ObservableObject {
                     guard let screen = NSScreen.screenWithActiveMenuBar ?? NSScreen.main else {
                         return
                     }
+                    let displayID = screen.displayID
+                    let shownSection = isShowingAlwaysHiddenSection ? alwaysHiddenSection : hiddenSection
 
                     Task {
                         // The window server needs time to update window positions after expansion.
                         try? await Task.sleep(for: .milliseconds(50))
-
-                        // Get the app menu frame for this screen
-                        guard let appMenuFrame = screen.getApplicationMenuFrame() else {
+                        guard !Task.isCancelled,
+                              NSScreen.screenWithActiveMenuBar?.displayID == displayID,
+                              let shownSection
+                        else {
                             return
                         }
 
-                        // Get ALL menu bar items
-                        let allItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
-
-                        // Filter to items on THIS screen by comparing Y coordinate with app menu's Y
-                        let menuBarY = appMenuFrame.origin.y
-                        let screenItems = allItems.filter { item in
-                            abs(item.bounds.origin.y - menuBarY) < 50
-                        }
-
-                        // Get the control items for this screen
-                        let hiddenControlItem = screenItems.first { $0.tag == .hiddenControlItem }
-                        let alwaysHiddenControlItem = screenItems.first { $0.tag == .alwaysHiddenControlItem }
-
-                        // Approximate hidden items width from control item positions.
-
-                        // Get control item bounds and hidden items width
-                        var controlBounds: CGRect = .zero
-                        var hiddenItemsWidth: CGFloat = 0
-
-                        if isShowingAlwaysHiddenSection, let ahControl = alwaysHiddenControlItem {
-                            controlBounds = ahControl.bounds
-                            if let appState = self.appState {
-                                hiddenItemsWidth = appState.itemManager.itemCache[.alwaysHidden].reduce(0) { $0 + $1.bounds.width }
-                            }
-                        } else if isShowingHiddenSection, let hControl = hiddenControlItem {
-                            controlBounds = hControl.bounds
-                            if let appState = self.appState {
-                                hiddenItemsWidth = appState.itemManager.itemCache[.hidden].reduce(0) { $0 + $1.bounds.width }
-                            }
-                        }
-
-                        // The hidden section expands by replacing control item with hidden items
-                        // New rightmost = where hidden items end = control.minX + hiddenItemsWidth
-                        let newRightmostPos = controlBounds.minX + hiddenItemsWidth
-
-                        // Use the actual app menu frame for needed space
-                        let appMenuRightStart = appMenuFrame.maxX
-
-                        // Available space: if app menu extends into notch, add notch width; otherwise use visible frame
-                        let spaceAvailableFromAppMenuEnd: CGFloat = if let notch = screen.frameOfNotch {
-                            if appMenuRightStart > notch.minX {
-                                // App menu extends into notch, items get moved past notch
-                                (notch.minX - appMenuRightStart) + (screen.visibleFrame.maxX - notch.maxX)
-                            } else {
-                                // App menu doesn't extend into notch
-                                screen.visibleFrame.maxX - appMenuRightStart
-                            }
-                        } else {
-                            screen.visibleFrame.maxX - appMenuRightStart
-                        }
-
-                        let spaceNeededFromAppMenuEnd = newRightmostPos - appMenuRightStart
-
-                        // If items would extend past screen edge, hide the app menu
-                        if spaceNeededFromAppMenuEnd > spaceAvailableFromAppMenuEnd {
+                        switch shownSection.presentationMode(on: screen) {
+                        case .inline:
+                            break
+                        case .inlineHidingApplicationMenus, .iceBar:
                             self.hideApplicationMenus()
                         }
                     }
@@ -916,7 +878,7 @@ final class MenuBarManager: ObservableObject {
 
         let settings = appState?.settings.displaySettings
         let shouldAlwaysShow = settings?.alwaysShowHiddenItems(for: screen.displayID) == true
-            && settings?.useIceBar(for: screen.displayID) == false
+            && !shouldUseIceBar(for: screen.displayID)
 
         if shouldAlwaysShow {
             if sectionController.revealedSection == nil {
@@ -941,7 +903,11 @@ final class MenuBarManager: ObservableObject {
 
     /// Invalidates MenuBarAgent's live layout after a preferred-position write
     /// without restarting its compositor or synthesizing pointer input.
+    ///
+    /// No-ops while a section is revealed so reveal/hide clicks on the Thaw
+    /// icon stay hittable (see ``ControlItem/requestMenuBarAgentPositionRefresh()``).
     func requestMenuBarAgentPositionRefresh() {
+        guard sectionController?.revealedSection == nil else { return }
         controlItem(withName: .visible)?.requestMenuBarAgentPositionRefresh()
     }
 

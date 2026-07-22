@@ -9,7 +9,7 @@
 import MenuBarModel
 import SwiftUI
 
-extension MenuBarSectionName {
+nonisolated extension MenuBarSectionName {
     /// Localized string key representation.
     var localized: LocalizedStringKey {
         switch self {

@@ -11,7 +11,7 @@ import CoreGraphics
 /// Geometry thresholds for classifying menu bar items that macOS 27 parks
 /// off the visible bar band (concealed items retain phantom AX frames far
 /// below the bar, or the transient `x == -1` sentinel).
-enum MenuBarItemGeometry {
+nonisolated enum MenuBarItemGeometry {
     /// Maximum mid-Y an item's bounds may have to count as "on the bar band".
     static let maxOnBarMidY: CGFloat = 80
 

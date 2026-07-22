@@ -50,8 +50,8 @@ final class SearchIndexTests: XCTestCase {
     func testMacOS27ExperimentalEntriesFollowAvailability() {
         let ids = Set(SearchIndex.entries.map(\.id))
         let macOS27ExperimentalIDs = [
+            "advanced.alwaysUseAppIconForMenuBarItems",
             "advanced.enableExperimentalSystemItemHiding",
-            "advanced.enableExperimentalOverflowPrevention",
         ]
 
         if #available(macOS 27, *) {
@@ -65,14 +65,11 @@ final class SearchIndexTests: XCTestCase {
         }
     }
 
-    @available(macOS 27, *)
-    func testLiveCaptureResolvesAdvancedLayoutDisclosure() throws {
-        let liveCapture = try XCTUnwrap(SearchIndex.entries.first { $0.id == "advanced.useContinuousMenuBarCapture" })
-
-        XCTAssertEqual(liveCapture.titleText, "Use live icon capture")
-        XCTAssertEqual(liveCapture.pane, .menuBarLayout)
-        XCTAssertEqual(liveCapture.sectionText, "Advanced layout controls")
-        XCTAssertEqual(liveCapture.disclosure, .advancedLayoutControls)
+    /// `enableExperimentalOverflowPrevention` is intentionally URI/Defaults-only
+    /// (no Settings UI), so it must never gain a search entry on any OS version.
+    func testExperimentalOverflowPreventionHasNoSearchEntryOnAnyOS() {
+        let ids = Set(SearchIndex.entries.map(\.id))
+        XCTAssertFalse(ids.contains("advanced.enableExperimentalOverflowPrevention"))
     }
 
     func testIconRefreshRateRoutesToLayoutWithoutDisclosure() throws {
@@ -93,16 +90,13 @@ final class SearchIndexTests: XCTestCase {
         XCTAssertEqual(lcsSorting.disclosure, .advancedLayoutControls)
 
         if #available(macOS 27, *) {
+            let appIcons = try XCTUnwrap(SearchIndex.entries.first { $0.id == "advanced.alwaysUseAppIconForMenuBarItems" })
             let timeout = try XCTUnwrap(SearchIndex.entries.first { $0.id == "advanced.menuBarOrderFulfillmentTimeout" })
-            let liveCapture = try XCTUnwrap(SearchIndex.entries.first { $0.id == "advanced.useContinuousMenuBarCapture" })
+            XCTAssertEqual(appIcons.titleText, "Use app icons instead of live previews")
+            XCTAssertEqual(appIcons.disclosure, .advancedLayoutControls)
             XCTAssertEqual(timeout.titleText, "Reorder timeout")
             XCTAssertEqual(timeout.disclosure, .advancedLayoutControls)
-            XCTAssertEqual(liveCapture.disclosure, .advancedLayoutControls)
         }
-    }
-
-    func testDisclosuresDefaultCollapsed() {
-        XCTAssertFalse(LayoutAdvancedControls.defaultsExpanded)
     }
 
     // MARK: - Relevance Sort

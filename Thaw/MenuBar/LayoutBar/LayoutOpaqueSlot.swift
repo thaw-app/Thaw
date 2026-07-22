@@ -20,7 +20,7 @@ extension NSRunningApplication: LayoutOpaqueSlotApplication {}
 
 /// A presentation-only slot for a running status item that cannot provide a
 /// reliable AX glyph. It never enters MenuBarItemCache or persisted ordering.
-struct LayoutOpaqueSlotDescriptor: Equatable {
+nonisolated struct LayoutOpaqueSlotDescriptor: Equatable {
     static let littleSnitchBundleIdentifier = "at.obdev.littlesnitch.agent"
     static let littleSnitchRuntimePositionKey = "status:at.obdev.littlesnitch.agent::Item-0"
 

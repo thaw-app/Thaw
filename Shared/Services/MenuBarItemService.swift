@@ -9,19 +9,19 @@
 import Foundation
 import MenuBarModel
 
-enum MenuBarItemService {
+nonisolated enum MenuBarItemService {
     static let name = "com.stonerl.Thaw.MenuBarItemService"
 }
 
 extension MenuBarItemService {
-    enum Request: Codable {
+    nonisolated enum Request: Codable {
         case start
         case configureLogging(filePath: String)
         case sourcePID(WindowInfo)
         case sourcePIDs([WindowInfo])
     }
 
-    enum Response: Codable {
+    nonisolated enum Response: Codable {
         case start
         case configureLogging
         case sourcePID(pid_t?)

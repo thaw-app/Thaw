@@ -377,7 +377,6 @@ final class MenuBarSearchPanel: NSPanel {
 
         let keyString = "\(Defaults.Key.menuBarSearchPanelFrameWithConfig.rawValue)\(uuidString)"
         UserDefaults.standard.set(relativeFrame.dictionaryRepresentation as NSDictionary, forKey: keyString)
-        UserDefaults.standard.synchronize()
     }
 
     /// Loads the saved frame for a specific display.
@@ -448,6 +447,13 @@ private struct MenuBarSearchContentView: View {
     let panel: MenuBarSearchPanel
     let closePanel: () -> Void
 
+    private struct SearchScope: Equatable {
+        let sectionOrder: [MenuBarSection.Name]
+        let includesVisible: Bool
+        let includesHidden: Bool
+        let includesAlwaysHidden: Bool
+    }
+
     private var hasItems: Bool {
         !itemManager.itemCache.managedItems.isEmpty
     }
@@ -458,6 +464,16 @@ private struct MenuBarSearchContentView: View {
 
     private var bottomBarHorizontalPadding: CGFloat {
         4
+    }
+
+    private var searchScope: SearchScope {
+        let advanced = appState.settings.advanced
+        return SearchScope(
+            sectionOrder: advanced.searchSectionOrder,
+            includesVisible: advanced.searchIncludeVisible,
+            includesHidden: advanced.searchIncludeHidden,
+            includesAlwaysHidden: advanced.searchIncludeAlwaysHidden
+        )
     }
 
     var body: some View {
@@ -495,19 +511,7 @@ private struct MenuBarSearchContentView: View {
                     selectFirstDisplayedItem()
                 }
             }
-            .onChange(of: appState.settings.advanced.searchSectionOrder) {
-                updateDisplayedItems()
-                ensureValidSelection()
-            }
-            .onChange(of: appState.settings.advanced.searchIncludeVisible) {
-                updateDisplayedItems()
-                ensureValidSelection()
-            }
-            .onChange(of: appState.settings.advanced.searchIncludeHidden) {
-                updateDisplayedItems()
-                ensureValidSelection()
-            }
-            .onChange(of: appState.settings.advanced.searchIncludeAlwaysHidden) {
+            .onChange(of: searchScope) {
                 updateDisplayedItems()
                 ensureValidSelection()
             }
@@ -558,7 +562,7 @@ private struct MenuBarSearchContentView: View {
 
     @ViewBuilder
     private var mainContent: some View {
-        if !ScreenCapture.cachedCheckPermissions() {
+        if !ScreenCapture.hasCachedScreenRecordingPermission {
             VStack(spacing: 16) {
                 Image(systemName: "exclamationmark.triangle")
                     .font(.system(size: 32))
@@ -749,23 +753,11 @@ private struct EditNameButton: View {
                 Text(String(localized: "Edit Name"))
                     .padding(.leading, 5)
 
-                HStack(spacing: 0) {
-                    Text(verbatim: "⌘")
-                }
-                .padding(.horizontal, 4)
-                .padding(.vertical, 2)
-                .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
-                .foregroundStyle(.secondary)
+                KeyCapView(text: "⌘")
 
                 Text(verbatim: "+")
 
-                HStack(spacing: 0) {
-                    Text(verbatim: "E")
-                }
-                .padding(.horizontal, 4)
-                .padding(.vertical, 2)
-                .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
-                .foregroundStyle(.secondary)
+                KeyCapView(text: "E")
             }
         }
     }
@@ -782,15 +774,7 @@ private struct EditConfirmButton: View {
                 )
                 .padding(.leading, 5)
 
-                Image(systemName: "return")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 11, height: 11)
-                    .foregroundStyle(.secondary)
-                    .bold()
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 5)
-                    .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+                KeyCapView(systemImage: "return")
             }
         }
     }
@@ -807,11 +791,7 @@ private struct EditDiscardButton: View {
                 )
                 .padding(.leading, 5)
 
-                Text(verbatim: "⎋")
-                    .font(.system(size: 12))
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 2)
-                    .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+                KeyCapView(text: "⎋", font: .system(size: 12))
             }
         }
     }
@@ -845,15 +825,7 @@ private struct ShowItemButton: View {
                 )
                 .padding(.leading, 5)
 
-                Image(systemName: "return")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 11, height: 11)
-                    .foregroundStyle(.secondary)
-                    .bold()
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 5)
-                    .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+                KeyCapView(systemImage: "return")
             }
         }
     }
@@ -870,7 +842,13 @@ private struct BottomBarButtonStyle: ButtonStyle {
 }
 
 @MainActor
-private let controlCenterIcon: NSImage? = {
+private var cachedControlCenterIcon: NSImage?
+
+@MainActor
+private func controlCenterIcon() -> NSImage? {
+    if let cachedControlCenterIcon {
+        return cachedControlCenterIcon
+    }
     guard
         let app =
         NSRunningApplication
@@ -881,8 +859,9 @@ private let controlCenterIcon: NSImage? = {
     else {
         return nil
     }
-    return app.icon
-}()
+    cachedControlCenterIcon = app.icon
+    return cachedControlCenterIcon
+}
 
 enum MenuBarSearchListContent: View {
     case header(MenuBarSection.Name)
@@ -922,7 +901,7 @@ private struct MenuBarSearchItemView: View {
         }
         switch item.tag.namespace {
         case .controlCenter, .systemUIServer, .textInputMenuAgent:
-            return controlCenterIcon
+            return controlCenterIcon()
         default:
             return app.icon
         }

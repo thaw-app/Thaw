@@ -10,7 +10,7 @@ import Foundation
 
 /// App-specific constants for the main Thaw target.
 /// System-framework paths shared with XPC targets live in `SharedConstants`.
-enum Constants {
+nonisolated enum Constants {
     // swiftlint:disable force_unwrapping
 
     /// The version string in the app's bundle.
@@ -121,6 +121,23 @@ enum Constants {
         /// screenshot, so MenuBarAgent finishes compositing the revealed glyph.
         /// Without this the crop captures a partially-rendered icon.
         static let layoutPrewarmRenderSettle: Duration = .milliseconds(200)
+        /// Window after a native menu-bar visibility change during which Thaw
+        /// defers its own mutations, letting the system settle the new layout
+        /// before Thaw reorders or reveals items on top of it.
+        static let nativeMenuBarMutationSettle: Duration = .milliseconds(900)
+
+        /// How long a differing macOS 27 item signature must persist, unchanged,
+        /// before the autonomous cache tick treats it as a real layout change and
+        /// recaches. macOS 27 enumeration flaps — an app's AX subtree drops and
+        /// re-adds an item across passes, or a marker/clone window blinks — and
+        /// the cache poll runs several times a second, so a plain "seen twice"
+        /// gate confirms a flap almost immediately and drives a recache →
+        /// `applySavedLayout` → preferred-position rewrite that visibly reorders
+        /// icons. Requiring the difference to hold for this whole window instead
+        /// lets a transient drop/re-add revert (the signature returns to the
+        /// cached value and the gate clears) without ever reordering, while a
+        /// genuine add/remove still persists past it and recaches promptly.
+        static let signatureStabilityGrace: Duration = .seconds(3)
 
         /// Interval between polls while waiting for MenuBarAgent to relaunch and
         /// re-sort after a preferred-position write (batch reorder or single

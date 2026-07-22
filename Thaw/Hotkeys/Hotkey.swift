@@ -113,7 +113,7 @@ extension Hotkey {
             self.id = id
         }
 
-        deinit {
+        isolated deinit {
             invalidate()
         }
 

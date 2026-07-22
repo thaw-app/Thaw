@@ -110,4 +110,62 @@ final class PlanFullSortSequenceTests: XCTestCase {
         XCTAssertEqual(sequence, [],
                        "no sequence when current already matches desired after filtering")
     }
+
+    func testPostLCSComparisonDetectsSectionMismatchWithNoItemOnlyMoves() {
+        let current = ["a", hiddenCtrl, "b"]
+        let desired = ["a", "b", hiddenCtrl]
+        let lcsMoves = LayoutSolver.planLCSMoveSequence(
+            currentNoControls: current.filter { $0 != hiddenCtrl },
+            desiredNoControls: desired.filter { $0 != hiddenCtrl },
+            sectionMap: ["a": "visible", "b": "visible"]
+        )
+
+        XCTAssertTrue(lcsMoves.isEmpty)
+        XCTAssertFalse(
+            LayoutSolver.comparePresentLayout(
+                currentFlat: current,
+                desiredFiltered: desired
+            ).matches
+        )
+    }
+
+    func testPostLCSComparisonDetectsWithinSectionOrderMismatch() {
+        let comparison = LayoutSolver.comparePresentLayout(
+            currentFlat: ["b", "a", hiddenCtrl],
+            desiredFiltered: ["a", "b", hiddenCtrl]
+        )
+
+        XCTAssertFalse(comparison.matches)
+    }
+
+    func testPostLCSComparisonAcceptsExactLayout() {
+        let layout = ["a", hiddenCtrl, "b", ahCtrl, "c"]
+
+        XCTAssertTrue(
+            LayoutSolver.comparePresentLayout(
+                currentFlat: layout,
+                desiredFiltered: layout
+            ).matches
+        )
+    }
+
+    func testPostLCSComparisonIgnoresItemsThatAppearOrDisappearDuringApply() {
+        let comparison = LayoutSolver.comparePresentLayout(
+            currentFlat: ["new", "a", hiddenCtrl, "b"],
+            desiredFiltered: ["a", hiddenCtrl, "b", "gone"]
+        )
+
+        XCTAssertEqual(comparison.actual, ["a", hiddenCtrl, "b"])
+        XCTAssertEqual(comparison.desired, ["a", hiddenCtrl, "b"])
+        XCTAssertTrue(comparison.matches)
+    }
+
+    func testPostLCSComparisonUsesPostOverflowTargetSection() {
+        let comparison = LayoutSolver.comparePresentLayout(
+            currentFlat: ["a", hiddenCtrl, "overflowed"],
+            desiredFiltered: ["a", hiddenCtrl, "overflowed"]
+        )
+
+        XCTAssertTrue(comparison.matches)
+    }
 }

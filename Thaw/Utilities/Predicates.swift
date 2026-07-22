@@ -6,7 +6,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-@preconcurrency import AppKit
+import AppKit
 
 /// A namespace for predicates.
 enum Predicates<Input> {

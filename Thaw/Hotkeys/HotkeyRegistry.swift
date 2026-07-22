@@ -127,7 +127,10 @@ final class HotkeyRegistry {
     @MainActor
     func register(hotkey: Hotkey, eventKind: EventKind, handler: @escaping () -> Void) -> UInt32? {
         enum Context {
-            static nonisolated(unsafe) var currentID: UInt32 = 0
+            // Only ever read/written from this @MainActor function; explicit
+            // main-actor isolation (rather than `nonisolated(unsafe)`) is the
+            // compiler-checked equivalent.
+            @MainActor static var currentID: UInt32 = 0
         }
 
         defer {

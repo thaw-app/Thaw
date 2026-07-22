@@ -2,6 +2,10 @@
 
 # Never format Xcode/SwiftPM generated sources or dependency checkouts.
 --exclude Build
+--exclude MenuBarHost/.build
+--exclude MenuBarModel/.build
+--exclude ThawCapture/.build
+--exclude ThawCtl/.build
 
 # --swift-version: Specify Swift version to enable all formatting features.
 --swift-version 6.0

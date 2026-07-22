@@ -6,7 +6,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-extension MenuBarItem {
+nonisolated extension MenuBarItem {
     static func sortByLeadingEdge(_ items: [MenuBarItem]) -> [MenuBarItem] {
         items.sorted { $0.bounds.minX < $1.bounds.minX }
     }

@@ -9,7 +9,7 @@
 import Carbon.HIToolbox
 
 /// Representation of a physical key on a keyboard.
-struct KeyCode: Codable, Hashable, RawRepresentable {
+nonisolated struct KeyCode: Codable, Hashable, RawRepresentable {
     let rawValue: Int
 
     // MARK: Letters

@@ -7,9 +7,10 @@
 //  Licensed under the GNU GPLv3
 
 import Cocoa
-@preconcurrency import Combine
+import Combine
+import os.lock
 
-final class RunLoopLocalEventMonitor {
+final nonisolated class RunLoopLocalEventMonitor {
     private let runLoop = CFRunLoopGetCurrent()
     private let mask: NSEvent.EventTypeMask
     private let mode: RunLoop.Mode
@@ -121,21 +122,53 @@ extension RunLoopLocalEventMonitor {
 }
 
 extension RunLoopLocalEventMonitor.RunLoopLocalEventPublisher {
-    private final class RunLoopLocalEventSubscription<S: Subscriber<Output, Failure> & Sendable>: Subscription, @unchecked Sendable {
+    /// `mask`/`mode` are immutable value-type `let`s. `box`'s mutable state is
+    /// behind its own `OSAllocatedUnfairLock` (see `SubscriberBox` below).
+    /// `monitor` is a `let` reference whose only mutation entry points,
+    /// `start()`/`stop()`, wrap `CFRunLoopAddObserver`/`CFRunLoopRemoveObserver`,
+    /// which are documented thread-safe by CoreFoundation — `RunLoopLocalEventMonitor`
+    /// itself doesn't need to be `Sendable` for that to be safe.
+    private final nonisolated class RunLoopLocalEventSubscription<S: Subscriber<Output, Failure> & Sendable>: Subscription, @unchecked Sendable {
+        private final nonisolated class SubscriberBox: Sendable {
+            /// `OSAllocatedUnfairLock.withLock` requires a `Sendable` closure.
+            /// The callback is synchronous, so the event cannot outlive or cross
+            /// an isolation boundary through this wrapper.
+            private nonisolated struct SynchronousEvent: @unchecked Sendable {
+                let value: NSEvent
+            }
+
+            private let subscriber: OSAllocatedUnfairLock<S?>
+
+            init(_ subscriber: S) {
+                self.subscriber = OSAllocatedUnfairLock(initialState: subscriber)
+            }
+
+            func receive(_ event: NSEvent) {
+                let event = SynchronousEvent(value: event)
+                subscriber.withLock { _ = $0?.receive(event.value) }
+            }
+
+            func cancel() {
+                subscriber.withLock { $0 = nil }
+            }
+        }
+
         let mask: NSEvent.EventTypeMask
         let mode: RunLoop.Mode
-        private var subscriber: S?
-
-        private lazy var monitor = RunLoopLocalEventMonitor(mask: mask, mode: mode) { [weak self] event in
-            _ = self?.subscriber?.receive(event)
-            return event
-        }
+        private let box: SubscriberBox
+        private let monitor: RunLoopLocalEventMonitor
 
         init(mask: NSEvent.EventTypeMask, mode: RunLoop.Mode, subscriber: S) {
             self.mask = mask
             self.mode = mode
-            self.subscriber = subscriber
-            self.monitor.start()
+            let box = SubscriberBox(subscriber)
+            self.box = box
+            let monitor = RunLoopLocalEventMonitor(mask: mask, mode: mode) { [weak box] event in
+                box?.receive(event)
+                return event
+            }
+            self.monitor = monitor
+            monitor.start()
         }
 
         func request(_: Subscribers.Demand) {
@@ -144,7 +177,7 @@ extension RunLoopLocalEventMonitor.RunLoopLocalEventPublisher {
 
         func cancel() {
             monitor.stop()
-            subscriber = nil
+            box.cancel()
         }
     }
 }

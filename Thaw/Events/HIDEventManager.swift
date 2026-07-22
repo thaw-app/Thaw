@@ -8,7 +8,7 @@
 
 import AXSwift6
 import Cocoa
-@preconcurrency import Combine
+import Combine
 import MenuBarModel
 import os
 import ThawCapture
@@ -39,7 +39,7 @@ final class HIDEventManager: ObservableObject {
 
     /// Timer that periodically checks whether the event tap is still
     /// valid and attempts to recreate it if the Mach port was invalidated.
-    private nonisolated(unsafe) var healthCheckTimer: Timer?
+    private var healthCheckTimer: Timer?
 
     /// The currently pending show-on-hover delay task.
     private var hoverTask: Task<Void, any Error>?
@@ -65,6 +65,15 @@ final class HIDEventManager: ObservableObject {
     /// The pending task that clears the temporary show-on-click guard.
     private var clickTask: Task<Void, Never>?
 
+    /// Temporarily releases the macOS 27 visibility assertion while the system
+    /// Clock's Notification Center panel is open.
+    private var clockActivationTask: Task<Void, Never>?
+    private var clockActivationTaskToken: UUID?
+    private var clockMouseUpPending = false
+    private var clockActivationDidPressClock = false
+    private var clockClickBounds: CGRect?
+    private var clockActivationCancelledByDrag = false
+
     /// Identity token for the current click task so a late/re-armed task
     /// cannot call expireShowOnClickGuard after it has been superseded.
     private var clickTaskToken: UUID?
@@ -84,7 +93,7 @@ final class HIDEventManager: ObservableObject {
     private var showOnClickGuardDeferredDisarmTask: Task<Void, Never>?
 
     /// Tracks the state of the swallow/disarm lifecycle for the click guard tap.
-    enum GuardMouseUpState {
+    nonisolated enum GuardMouseUpState {
         /// No mouse-down has been swallowed; guard tap is idle between clicks.
         case idle
         /// A mouse-down was swallowed; swallow the matching mouse-up but keep
@@ -98,7 +107,7 @@ final class HIDEventManager: ObservableObject {
     /// The input driving a `GuardMouseUpState` transition. Each case
     /// corresponds to one of the state-changing call sites around the guard
     /// tap and its arm/expire/disarm helpers.
-    enum GuardMouseUpSignal {
+    nonisolated enum GuardMouseUpSignal {
         /// A `leftMouseUp` arrived while the guard tap was armed.
         case mouseUp
         /// A `leftMouseDown` landed in the guard region and should be
@@ -433,6 +442,111 @@ final class HIDEventManager: ObservableObject {
         return nil
     }
 
+    /// Active tap that replaces a Clock click while an assessment restriction
+    /// is held. The native click cannot open Notification Center in that state,
+    /// so the tap consumes the physical pair and replays the activation after
+    /// the section controller has temporarily released only the assertion.
+    private(set) lazy var clockActivationTap = EventTap(
+        label: "clockActivationTap",
+        types: [.leftMouseDown, .leftMouseUp, .leftMouseDragged],
+        location: .sessionEventTap,
+        placement: .headInsertEventTap,
+        option: .defaultTap
+    ) { [weak self] _, event in
+        guard let self else { return event }
+
+        // If the tap disappeared after swallowing a Clock mouse-down, its
+        // matching mouse-up may never reach us. Do not let that stale state
+        // consume the next unrelated click's mouse-up.
+        if event.type == .leftMouseDown,
+           clockMouseUpPending,
+           clockActivationTask == nil
+        {
+            Self.diagLog.warning("Clock activation bridge discarded a stale pending mouse-up")
+            clockMouseUpPending = false
+            clockClickBounds = nil
+            clockActivationCancelledByDrag = false
+        }
+
+        if event.type == .leftMouseDragged, clockMouseUpPending {
+            if let clockClickBounds,
+               !clockClickBounds.insetBy(dx: -4, dy: -4).contains(event.location)
+            {
+                clockActivationCancelledByDrag = true
+            }
+            return nil
+        }
+
+        if event.type == .leftMouseUp, clockMouseUpPending {
+            if let clockClickBounds,
+               !clockClickBounds.insetBy(dx: -4, dy: -4).contains(event.location)
+            {
+                clockActivationCancelledByDrag = true
+            }
+            clockMouseUpPending = false
+            return nil
+        }
+
+        // Preserve a balanced event pair if the user holds or repeats the
+        // physical click before the replacement AX press. Once Clock has been
+        // pressed, later clicks pass through so the user can close the panel.
+        if event.type == .leftMouseDown,
+           clockMouseUpPending || (clockActivationTask != nil && !clockActivationDidPressClock),
+           let appState,
+           Self.systemClockItem(
+               at: event.location,
+               in: appState.itemManager.lastOnScreenMenuBarItems.0 + appState.itemManager.itemCache.managedItems
+           ) != nil
+        {
+            clockMouseUpPending = true
+            return nil
+        }
+
+        guard event.type == .leftMouseDown,
+              isEnabled,
+              clockActivationTask == nil,
+              let appState,
+              let controller = appState.menuBarManager.sectionController,
+              controller.shouldBridgeClockActivation
+        else {
+            return event
+        }
+
+        let recentItems = appState.itemManager.lastOnScreenMenuBarItems.0
+        let cachedItems = appState.itemManager.itemCache.managedItems
+        guard let clickedClock = Self.systemClockItem(at: event.location, in: recentItems + cachedItems),
+              controller.beginClockActivationBridge()
+        else {
+            return event
+        }
+
+        clockMouseUpPending = true
+        clockActivationDidPressClock = false
+        clockClickBounds = clickedClock.bounds
+        clockActivationCancelledByDrag = false
+        let displayID = Self.displayID(
+            containing: clickedClock.bounds.center,
+            fallback: appState.itemManager.itemCache.displayID
+        )
+        let token = UUID()
+        clockActivationTaskToken = token
+        clockActivationTask = Task { @MainActor [weak self, controller] in
+            defer {
+                controller.endClockActivationBridge()
+                if self?.clockActivationTaskToken == token {
+                    self?.clockActivationTask = nil
+                    self?.clockActivationTaskToken = nil
+                    self?.clockActivationDidPressClock = false
+                    self?.clockClickBounds = nil
+                    self?.clockActivationCancelledByDrag = false
+                }
+            }
+            guard let self else { return }
+            await performClockActivationBridge(displayID: displayID)
+        }
+        return nil
+    }
+
     // MARK: All Monitors
 
     /// All monitors maintained by the manager.
@@ -449,6 +563,7 @@ final class HIDEventManager: ObservableObject {
     func performSetup(with appState: AppState) {
         self.appState = appState
         startAll()
+        clockActivationTap.start()
         configureCancellables()
     }
 
@@ -502,6 +617,33 @@ final class HIDEventManager: ObservableObject {
             }
         }
         return false
+    }
+
+    /// Finds the system Clock at a Core Graphics click location. Requiring both
+    /// the anchored-system classification and Clock's assessment identifier
+    /// avoids intercepting a third-party item that happens to be titled Clock.
+    static nonisolated func systemClockItem(
+        at location: CGPoint,
+        in items: [MenuBarItem]
+    ) -> MenuBarItem? {
+        items.first { item in
+            item.isOnScreen
+                && !item.bounds.isEmpty
+                && item.bounds.contains(location)
+                && isSystemClockItem(item)
+        }
+    }
+
+    static nonisolated func isSystemClockItem(_ item: MenuBarItem) -> Bool {
+        item.isNonConcealableSystemItem
+            && SystemMenuBarModuleCatalog.assessmentSystemItemID(forTitle: item.tag.title) == 2
+    }
+
+    static func displayID(
+        containing point: CGPoint,
+        fallback: CGDirectDisplayID?
+    ) -> CGDirectDisplayID? {
+        NSScreen.screens.first { CGDisplayBounds($0.displayID).contains(point) }?.displayID ?? fallback
     }
 
     /// Returns whether an item's bounds should participate in show-on-click,
@@ -775,14 +917,16 @@ final class HIDEventManager: ObservableObject {
         // macOS can invalidate the Mach port under resource pressure or
         // when accessibility permissions change. If it becomes invalid,
         // ensureValid() will recreate it.
+        // Interval matches the stuck-disable recovery threshold so a leaked
+        // stopAll is noticed within ~10s (not one 30s tick later).
         healthCheckTimer?.invalidate()
-        healthCheckTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
+        healthCheckTimer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [weak self] _ in
             guard let self else { return }
             Task { @MainActor in
                 self.performHealthCheck()
             }
         }
-        healthCheckTimer?.tolerance = 5
+        healthCheckTimer?.tolerance = 2
     }
 
     /// Checks the health of event monitors and taps, and attempts
@@ -792,9 +936,12 @@ final class HIDEventManager: ObservableObject {
         // been disabled for longer than any legitimate operation would
         // take (e.g. a move or click), the count is likely imbalanced
         // due to a cancelled Task or unexpected error. Force recovery.
-        if !isEnabled, disableCount > 0, let lastStop = lastStopTimestamp {
+        if !isEnabled, disableCount > 1, let lastStop = lastStopTimestamp {
             let elapsed = ContinuousClock.now - lastStop
-            if elapsed > .seconds(30) {
+            // Nested stopAll (count>1) held past the settle window is almost
+            // certainly a leaked pause (IamWJC log: stuck 37s at disableCount=2).
+            // A single in-flight move (count==1) is left alone.
+            if elapsed > .seconds(10) {
                 Self.diagLog.error(
                     """
                     Event manager stuck in disabled state for \
@@ -806,6 +953,13 @@ final class HIDEventManager: ObservableObject {
                 isEnabled = true
                 lastStopTimestamp = nil
             }
+        }
+
+        // Keep this tap alive while ordinary HID monitors are paused by a
+        // synthetic click/move. It may still owe the system a swallowed mouse-up
+        // from the physical Clock click that started the bridge.
+        if clockActivationTap.ensureValid(), !clockActivationTap.isEnabled {
+            clockActivationTap.start()
         }
 
         guard isEnabled else { return }
@@ -860,14 +1014,125 @@ final class HIDEventManager: ObservableObject {
         dismissMenuBarTooltip()
     }
 
-    deinit {
+    isolated deinit {
         healthCheckTimer?.invalidate()
+        clockActivationTask?.cancel()
     }
 }
 
 // MARK: - Handler Methods
 
 extension HIDEventManager {
+    private func performClockActivationBridge(displayID: CGDirectDisplayID?) async {
+        // Do not synthesize the replacement activation while the physical mouse
+        // button is still down; Clock can otherwise immediately dismiss it on
+        // the swallowed mouse-up.
+        guard await waitForClockMouseUp() else {
+            Self.diagLog.warning("Clock activation bridge timed out waiting for mouse-up")
+            return
+        }
+        guard !clockActivationCancelledByDrag else {
+            Self.diagLog.info("Clock activation bridge cancelled by drag")
+            return
+        }
+
+        guard await pressSystemClock(displayID: displayID) else {
+            Self.diagLog.error("Clock activation bridge AX press failed")
+            return
+        }
+        clockActivationDidPressClock = true
+        Self.diagLog.info("Clock activation bridge pressed Clock; waiting for Notification Center")
+
+        var panelWindowIDs = Set<CGWindowID>()
+        for _ in 0 ..< 20 {
+            guard !Task.isCancelled else { return }
+            panelWindowIDs = notificationCenterPanelWindowIDs()
+            if !panelWindowIDs.isEmpty {
+                break
+            }
+            try? await Task.sleep(for: .milliseconds(100))
+        }
+        guard !panelWindowIDs.isEmpty else {
+            Self.diagLog.warning("Clock activation bridge did not observe Notification Center")
+            return
+        }
+
+        // Match Lounge's bounded menu-dismiss wait: keep the assertion released
+        // while the panel is visible, but never strand it after an observation
+        // failure or a panel that remains open indefinitely.
+        var closedSamples = 0
+        for _ in 0 ..< 300 {
+            guard !Task.isCancelled else { return }
+            panelWindowIDs = notificationCenterPanelWindowIDs()
+            if panelWindowIDs.isEmpty {
+                closedSamples += 1
+                if closedSamples >= 3 {
+                    return
+                }
+            } else {
+                closedSamples = 0
+            }
+            try? await Task.sleep(for: .milliseconds(100))
+        }
+        Self.diagLog.warning("Clock activation bridge reached its 30s safety timeout")
+    }
+
+    private func pressSystemClock(displayID: CGDirectDisplayID?) async -> Bool {
+        guard #available(macOS 27, *) else { return false }
+
+        for _ in 0 ..< 10 {
+            guard !Task.isCancelled, !clockActivationCancelledByDrag else { return false }
+            if MenuBarItemAXProvider.pressSystemClock(on: displayID) {
+                return true
+            }
+            try? await Task.sleep(for: .milliseconds(100))
+        }
+        return false
+    }
+
+    private func waitForClockMouseUp() async -> Bool {
+        for _ in 0 ..< 100 {
+            guard !Task.isCancelled else { return false }
+            if !clockMouseUpPending {
+                return true
+            }
+            try? await Task.sleep(for: .milliseconds(20))
+        }
+        return !clockMouseUpPending
+    }
+
+    private func notificationCenterPanelWindowIDs() -> Set<CGWindowID> {
+        let pids = Set(
+            NSRunningApplication.runningApplications(
+                withBundleIdentifier: "com.apple.notificationcenterui"
+            ).map(\.processIdentifier)
+        )
+        guard !pids.isEmpty else { return [] }
+        let displayBounds = NSScreen.screens.map { CGDisplayBounds($0.displayID) }
+        return Set(WindowInfo.createWindows(option: .onScreen).compactMap { window in
+            guard pids.contains(window.ownerPID),
+                  window.isOnScreen,
+                  Self.matchesDisplayBounds(window.bounds, displays: displayBounds)
+            else {
+                return nil
+            }
+            return window.windowID
+        })
+    }
+
+    static nonisolated func matchesDisplayBounds(
+        _ windowBounds: CGRect,
+        displays displayBounds: [CGRect],
+        tolerance: CGFloat = 2
+    ) -> Bool {
+        displayBounds.contains { display in
+            abs(display.minX - windowBounds.minX) <= tolerance
+                && abs(display.minY - windowBounds.minY) <= tolerance
+                && abs(display.width - windowBounds.width) <= tolerance
+                && abs(display.height - windowBounds.height) <= tolerance
+        }
+    }
+
     private func isMouseNearMenuBar(screen: NSScreen, verticalPadding: CGFloat = 80) -> Bool {
         guard
             let mouseLocation = MouseHelpers.locationAppKit,
@@ -1742,7 +2007,7 @@ extension HIDEventManager {
     ) {
         guard
             appState.settings.general.showOnHover,
-            !appState.settings.displaySettings.useIceBar(for: screen.displayID)
+            !appState.menuBarManager.shouldUseIceBar(for: screen.displayID)
         else {
             return
         }
@@ -1830,7 +2095,7 @@ extension HIDEventManager {
 
     /// Shows a tooltip for the menu bar item under the cursor, if enabled.
     private func handleMenuBarTooltip(appState: AppState, screen: NSScreen) {
-        guard ScreenCapture.cachedCheckPermissions() else {
+        guard ScreenCapture.hasCachedScreenRecordingPermission else {
             return
         }
 

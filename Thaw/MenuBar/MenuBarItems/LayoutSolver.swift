@@ -24,7 +24,7 @@ import CoreGraphics
 /// anchors stored across cycles). The boundary follows the council's
 /// temporality split: LayoutSolver decides over the current snapshot,
 /// PendingLedger decides over per-entry retry state.
-enum LayoutSolver {
+nonisolated enum LayoutSolver {
     // MARK: - Result types
 
     /// A decision emitted by the leftmost-item relocation planner.
@@ -634,6 +634,32 @@ enum LayoutSolver {
     }
 
     // MARK: - Full-sort sequence
+
+    struct PresentLayoutComparison: Equatable {
+        let actual: [String]
+        let desired: [String]
+
+        var matches: Bool {
+            actual == desired
+        }
+    }
+
+    /// Compares the currently present portion of a layout with its target.
+    /// Divider identifiers remain in both sequences, so this detects section
+    /// membership drift as well as within-section ordering drift. Items that
+    /// appeared or disappeared during the apply are ignored for this pass.
+    static nonisolated func comparePresentLayout(
+        currentFlat: [String],
+        desiredFiltered: [String]
+    ) -> PresentLayoutComparison {
+        let currentSet = Set(currentFlat)
+        let desired = desiredFiltered.filter { currentSet.contains($0) }
+        let desiredSet = Set(desired)
+        return PresentLayoutComparison(
+            actual: currentFlat.filter { desiredSet.contains($0) },
+            desired: desired
+        )
+    }
 
     /// Plans the full-sort sequence used on notched displays.
     ///

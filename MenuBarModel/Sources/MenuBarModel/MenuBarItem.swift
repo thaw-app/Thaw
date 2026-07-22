@@ -104,7 +104,11 @@ public struct MenuBarItem: CustomStringConvertible, Sendable {
         // Denylisted hiding-unsupported items stay forced-visible even under the
         // experimental toggle: the editor may reorder them, but they can never be
         // assigned to a hidden section. See ``MenuBarItemTag/isHidingUnsupported``.
-        guard experimentalSystemItemHiding, basePolicy.isForcedVisible, !tag.isHidingUnsupported else {
+        guard experimentalSystemItemHiding,
+              basePolicy.isForcedVisible,
+              !tag.isHidingUnsupported,
+              !tag.isMenuBarAgentItemForcedVisible
+        else {
             return basePolicy
         }
         return .hideable
@@ -260,18 +264,57 @@ public struct MenuBarItem: CustomStringConvertible, Sendable {
         }
 
         guard !isControlItem else {
-            return Constants.displayName
+            return ThawMenuBarIdentity.displayName
         }
 
         lazy var fallbackName = "Menu Bar Item"
 
+        /// Prefers the AX child / catalog name (Wi‑Fi, Clock, …) over the
+        /// MenuBarAgent process name that otherwise wins via `sourceApplication`.
+        func menuBarAgentDisplayName(preferredTitle: String?) -> String {
+            func significant(_ value: String?) -> String? {
+                guard let value else { return nil }
+                let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+                return trimmed.isEmpty ? nil : trimmed
+            }
+
+            let candidates = [preferredTitle, tag.title].compactMap(significant)
+            for candidate in candidates {
+                if let moduleName = SystemMenuBarModuleCatalog.moduleName(matching: candidate) {
+                    // Keep human AX titles ("Wi-Fi"); map opaque IDs to catalog names.
+                    let useCatalogName = candidate.hasPrefix("com.apple.") || candidate.hasPrefix("BentoBox")
+                    return toTitleCase(useCatalogName ? moduleName : candidate)
+                }
+            }
+            if let preferredTitle, let match = preferredTitle.prefixMatch(of: /Hearing/) {
+                return toTitleCase(match.output)
+            }
+            if let preferredTitle = significant(preferredTitle) {
+                if preferredTitle.hasPrefix("com.apple.menuextra.") {
+                    let suffix = preferredTitle.dropFirst("com.apple.menuextra.".count)
+                    return toTitleCase(suffix.replacing("-", with: " "))
+                }
+                return toTitleCase(preferredTitle)
+            }
+            if let identity = significant(tag.title) {
+                return toTitleCase(identity)
+            }
+            return fallbackName
+        }
+
         guard let sourceApplication else {
+            if tag.namespace == .menuBarAgent {
+                return menuBarAgentDisplayName(preferredTitle: title)
+            }
             return fallbackName
         }
 
         lazy var sourceName = sourceApplication.localizedName ?? sourceApplication.bundleIdentifier
 
         guard let title else {
+            if tag.namespace == .menuBarAgent {
+                return menuBarAgentDisplayName(preferredTitle: nil)
+            }
             return sourceName ?? fallbackName
         }
 
@@ -279,6 +322,11 @@ public struct MenuBarItem: CustomStringConvertible, Sendable {
 
         guard !isBentoBox else {
             if tag == .controlCenter {
+                // On macOS 27 the host process is MenuBarAgent; prefer the
+                // catalog name ("Control Center") over that process label.
+                if tag.namespace == .menuBarAgent {
+                    return menuBarAgentDisplayName(preferredTitle: title)
+                }
                 return bestName
             }
             return title
@@ -287,6 +335,8 @@ public struct MenuBarItem: CustomStringConvertible, Sendable {
         let displayName = switch tag.namespace {
         case .passwords, .weather, .textInputMenuAgent:
             toTitleCase(bestName.replacing(/Menu.*/, with: ""))
+        case .menuBarAgent:
+            menuBarAgentDisplayName(preferredTitle: title)
         case .controlCenter:
             if let match = title.prefixMatch(of: /Hearing/) {
                 toTitleCase(match.output)

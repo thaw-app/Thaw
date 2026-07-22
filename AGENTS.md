@@ -12,13 +12,13 @@ Targets are macOS 26+. macOS 27 "Golden Gate" support is in development on the
 
 ## Prerequisites
 
-- Xcode 26+ on macOS 26+.
-- CI pins `/Applications/Xcode_26.6.app` (must match the `prk-bin` XCFramework toolchain).
+- Xcode 27+ on macOS 26+ (matches the `prk-bin` XCFramework toolchain).
+- CI uses the `xcode-27` runner and pins `/Applications/Xcode_27.0.app`.
 - `PlatformRuntimeKit` is a **public** binary Swift package
-  (`thaw-app/prk-bin`, minimum **0.0.3** on `feat/macos-27-experimental`). Xcode resolves the XCFramework from
+  (`thaw-app/prk-bin`, minimum **0.0.8** on `feat/macos-27-experimental`). Xcode resolves the XCFramework from
   GitHub Releases with no authentication. Local kit work: check out the private
   source repo as a sibling (`../PlatformRuntimeKit`), then open
-  `ThawDev.xcworkspace` or run `./scripts/thaw-devrun.sh` (symlinks the sibling
+  `ThawDev.xcworkspace` or run `./scripts/thaw-devrun.sh` (mirrors the sibling
   into `.swiftpm-overrides/prk-bin`). Without that sibling, `thaw-devrun.sh`
   falls back to `Thaw.xcodeproj` and the published packages. CI always uses the
   published binary. Alternately set `PRK_DEVELOPMENT=1` in the
@@ -37,6 +37,9 @@ OS policy is split so macOS 26 can be retired without cluttering the app:
 Thaw selects the backend via `MenuBarBackendProvider` in
 `Thaw/MenuBar/Backends/`. The XCFramework dynamically links
 `MenuBarModel` (shipped as a dynamic library product from this repo).
+Published PlatformRuntimeKit binaries can import public `MenuBarModel` symbols.
+Before removing or renaming that public surface, inspect the shipped framework's
+imports and retain forwarding compatibility symbols for anything it references.
 
 ## Build And Test
 
@@ -48,12 +51,21 @@ xcodebuild test -project Thaw.xcodeproj -scheme Thaw -derivedDataPath Build/ -de
 
 `CODE_SIGNING_ALLOWED=NO` is required for CI-style local builds.
 
+Run the first-party package tests separately; Xcode does not include package
+test targets in the `Thaw` scheme:
+
+```bash
+swift test --package-path MenuBarModel
+swift test --package-path ThawCapture
+```
+
 ## Lint And Format
 
 SwiftLint must pass in strict mode, matching CI:
 
 ```bash
 swiftlint --strict
+swiftlint lint --strict --config .swiftlint.yml --config .swiftlint-tests.yml ThawTests
 ```
 
 CI runs SwiftLint with `ghcr.io/realm/swiftlint:0.63.3`. Config lives in
@@ -118,8 +130,8 @@ Before touching menu bar hiding code, preserve these invariants:
   section's temporary reveal behavior as a shortcut for the other.
 - Capture paths should preserve display identity from the item cache when
   available, instead of recomputing the active menu bar display mid-capture.
-- Masked backend work should prefer overlay concealment and avoid rewriting
-  MenuBarAgent positions during reveal or hide cycles.
+- Masked backend reveal may perform one cancellable batch preferred-position
+  restore after settling; never run per-item reorder loops during reveal/hide.
 
 ## Maintenance
 

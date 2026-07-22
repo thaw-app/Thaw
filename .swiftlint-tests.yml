@@ -1,0 +1,23 @@
+included:
+  - ThawTests
+
+excluded:
+  - MenuBarHost
+  - MenuBarItemService
+  - MenuBarModel
+  - Shared
+  - Thaw
+  - ThawCapture
+  - ThawCtl
+
+disabled_rules:
+  - comma
+  - force_try
+  - force_unwrapping
+  - implicitly_unwrapped_optional
+  - multiline_arguments
+  - multiline_arguments_brackets
+  - multiline_literal_brackets
+  - non_optional_string_data_conversion
+  - trailing_comma
+  - type_name

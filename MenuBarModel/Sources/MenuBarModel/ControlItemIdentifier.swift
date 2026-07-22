@@ -21,6 +21,12 @@ public enum ControlItemIdentifier: String, CaseIterable, Sendable {
     /// The identifier for the control item for the always-hidden section.
     case alwaysHidden = "Thaw.ControlItem.AlwaysHidden"
 
+    /// The shared prefix of every control-item autosave name. All three raw
+    /// values (and their `.Spacer.N` children) begin with it, so it identifies a
+    /// `status:<owner>::<autosave>` preference key as belonging to a Thaw control
+    /// item regardless of which owner identity registered it.
+    public static let autosavePrefix = "Thaw.ControlItem."
+
     /// A tag for the control item with this identifier.
     public var tag: MenuBarItemTag {
         switch self {

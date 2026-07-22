@@ -10,7 +10,7 @@ import Cocoa
 
 // MARK: - CGEventField Helpers
 
-extension CGEventField {
+nonisolated extension CGEventField {
     /// Key to access a field that contains the event's window identifier.
     static let windowID = CGEventField(rawValue: 0x33)! // swiftlint:disable:this force_unwrapping
 
@@ -25,7 +25,7 @@ extension CGEventField {
 
 // MARK: - MoveInputSuppression
 
-enum MoveInputSuppression {
+nonisolated enum MoveInputSuppression {
     private static let syntheticMoveUserData: Int64 = 0x5468_6177_4D6F_7665
 
     static let suppressedMouseEventTypes: [CGEventType] = [
@@ -69,7 +69,7 @@ enum MoveInputSuppression {
 
 // MARK: - CGEventFilterMask Helpers
 
-extension CGEventFilterMask {
+nonisolated extension CGEventFilterMask {
     /// Specifies that all events should be permitted during event suppression states.
     static let permitAllEvents: CGEventFilterMask = [
         .permitLocalMouseEvents, .permitLocalKeyboardEvents, .permitSystemDefinedEvents,
@@ -78,7 +78,7 @@ extension CGEventFilterMask {
 
 // MARK: - CGEventType Helpers
 
-private extension CGEventType {
+private nonisolated extension CGEventType {
     var logString: String {
         switch self {
         case .null: "null event"
@@ -107,7 +107,7 @@ private extension CGEventType {
 
 // MARK: - CGMouseButton Helpers
 
-extension CGMouseButton {
+nonisolated extension CGMouseButton {
     var logString: String {
         switch self {
         case .left: "left mouse button"
@@ -120,7 +120,7 @@ extension CGMouseButton {
 
 // MARK: - Duration Helpers
 
-extension Duration {
+nonisolated extension Duration {
     var milliseconds: Double {
         let (seconds, attoseconds) = components
         return Double(seconds) * 1000 + Double(attoseconds) / 1_000_000_000_000_000
@@ -129,7 +129,7 @@ extension Duration {
 
 // MARK: - CGEvent Helpers
 
-extension CGEvent {
+nonisolated extension CGEvent {
     static func menuBarItemEvent(
         item: MenuBarItem,
         source: CGEventSource,

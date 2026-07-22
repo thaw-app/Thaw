@@ -9,14 +9,17 @@
 import CoreGraphics
 import Foundation
 import MenuBarModel
+import Synchronization
 
 /// A namespace for mouse helper operations.
-enum MouseHelpers {
+nonisolated enum MouseHelpers {
     private static let diagLog = DiagLog(category: "MouseHelpers")
     private static let cursorLock = DispatchQueue(label: "MouseHelpers.cursorLock")
+    private static let cursorHideCountLock = Mutex<Int>(0)
     /// Protected by `cursorLock` — all accesses go through `cursorLock.sync`.
-    private static nonisolated(unsafe) var cursorHideCount = 0
-    /// Protected by `cursorLock` — all accesses go through `cursorLock.sync`.
+    /// Left as a GCD-guarded `DispatchWorkItem` (rather than converted here)
+    /// because it should be revisited alongside Plan 04's GCD removal, which
+    /// will convert this to a cancellable `Task`.
     private static nonisolated(unsafe) var autoShowWorkItem: DispatchWorkItem?
     private static let defaultWatchdogTimeout: DispatchTimeInterval = .seconds(1)
 
@@ -57,7 +60,7 @@ enum MouseHelpers {
     }
 
     private static func forceShowCursor(reason: String) {
-        cursorLock.sync { cursorHideCount = 0 }
+        cursorHideCountLock.withLock { $0 = 0 }
         let result = CGDisplayShowCursor(CGMainDisplayID())
         if result != .success {
             diagLog.error("Force show cursor failed (reason: \(reason), error: \(result.rawValue))")
@@ -82,10 +85,9 @@ enum MouseHelpers {
 
     /// Hides the mouse cursor and increments the hide cursor count.
     static func hideCursor(watchdogTimeout: DispatchTimeInterval? = nil) {
-        var shouldHide = false
-        cursorLock.sync {
-            cursorHideCount += 1
-            shouldHide = cursorHideCount == 1
+        let shouldHide = cursorHideCountLock.withLock { count -> Bool in
+            count += 1
+            return count == 1
         }
 
         guard shouldHide else { return }
@@ -93,7 +95,7 @@ enum MouseHelpers {
         let result = CGDisplayHideCursor(CGMainDisplayID())
         if result != .success {
             diagLog.error("CGDisplayHideCursor failed with error code \(result.rawValue)")
-            cursorLock.sync { cursorHideCount = 0 } // Reset on failure
+            cursorHideCountLock.withLock { $0 = 0 } // Reset on failure
         } else {
             scheduleAutoShow(after: watchdogTimeout ?? defaultWatchdogTimeout)
         }
@@ -104,10 +106,10 @@ enum MouseHelpers {
     static func showCursor() {
         var shouldShow = false
         var wasAlreadyZero = false
-        cursorLock.sync {
-            if cursorHideCount > 0 {
-                cursorHideCount -= 1
-                shouldShow = cursorHideCount == 0
+        cursorHideCountLock.withLock { count in
+            if count > 0 {
+                count -= 1
+                shouldShow = count == 0
             } else {
                 wasAlreadyZero = true
             }

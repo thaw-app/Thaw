@@ -240,6 +240,50 @@ final class MenuBarItemImageCacheFreshBoundsTests: XCTestCase {
     }
 
     @available(macOS 27, *)
+    func testCropOwnershipUsesActualClampedPixelRect() {
+        let imageBounds = CGRect(x: 0, y: 0, width: 200, height: 60)
+        let firstExpected = CGRect(x: -1, y: 0, width: 25, height: 44)
+        let secondExpected = CGRect(x: 0, y: 0, width: 24, height: 44)
+        let firstTag = MenuBarItemTag.appItem(bundleID: "com.test.first", title: "First")
+
+        let firstActual = MenuBarItemImageCache.captureCropRect(
+            expected: firstExpected,
+            imageBounds: imageBounds
+        )
+        let secondActual = MenuBarItemImageCache.captureCropRect(
+            expected: secondExpected,
+            imageBounds: imageBounds
+        )
+
+        XCTAssertEqual(firstActual, secondActual)
+        XCTAssertEqual(
+            MenuBarItemImageCache.cropRectOwner(
+                secondActual,
+                cropRectOwners: [firstActual: firstTag]
+            ),
+            firstTag
+        )
+    }
+
+    @available(macOS 27, *)
+    func testCaptureBoundsIntersectingNativeOverflowAreContaminated() {
+        let overflowBounds = [CGRect(x: 1180, y: 0, width: 24, height: 30)]
+
+        XCTAssertTrue(
+            MenuBarItemImageCache.isContaminatedByNativeOverflow(
+                CGRect(x: 1182, y: 3, width: 20, height: 24),
+                overflowBounds: overflowBounds
+            )
+        )
+        XCTAssertFalse(
+            MenuBarItemImageCache.isContaminatedByNativeOverflow(
+                CGRect(x: 1150, y: 3, width: 24, height: 24),
+                overflowBounds: overflowBounds
+            )
+        )
+    }
+
+    @available(macOS 27, *)
     func testPlausibleHostingCaptureAcceptsMatchingPixelSize() {
         XCTAssertTrue(
             MenuBarItemImageCache.isPlausibleHostingCapture(
@@ -342,6 +386,20 @@ final class MenuBarItemImageCacheFreshBoundsTests: XCTestCase {
                 after: CGRect(x: 100, y: 3, width: 48, height: 24)
             )
         )
+    }
+
+    @available(macOS 27, *)
+    func testPrefersDisplayStripCaptureForThirdPartyAndThaw() {
+        let thirdParty = MenuBarItemTag(namespace: .string("com.openai.chat"), title: "Item-0")
+        let menuBarAgent = MenuBarItemTag(namespace: .menuBarAgent, title: "Clock")
+        let thaw = MenuBarItemTag(namespace: .thaw, title: "Thaw.ControlItem.Visible")
+
+        // Only genuine Apple modules composite cleanly in the hosting window.
+        XCTAssertTrue(MenuBarItemImageCache.prefersDisplayStripCapture(for: thirdParty))
+        XCTAssertFalse(MenuBarItemImageCache.prefersDisplayStripCapture(for: menuBarAgent))
+        // Thaw's own control item is a third-party Liquid Glass item for capture
+        // purposes and shreds in the hosting window — read it from the strip.
+        XCTAssertTrue(MenuBarItemImageCache.prefersDisplayStripCapture(for: thaw))
     }
 
     private func makeItem(

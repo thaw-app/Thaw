@@ -6,7 +6,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-@preconcurrency import Sparkle
+import Sparkle
 import SwiftUI
 
 /// Sparkle appcast channels Thaw publishes to.
@@ -209,7 +209,7 @@ extension UpdatesManager: SPUUpdaterDelegate {
 
 // MARK: UpdatesManager: SPUStandardUserDriverDelegate
 
-extension UpdatesManager: @preconcurrency SPUStandardUserDriverDelegate {
+extension UpdatesManager: @MainActor SPUStandardUserDriverDelegate {
     var supportsGentleScheduledUpdateReminders: Bool {
         true
     }

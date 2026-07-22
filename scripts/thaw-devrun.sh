@@ -21,7 +21,7 @@
 #   ./scripts/thaw-devrun.sh --skip-packages
 #
 # The development workspace can override the public `prk-bin` dependency with a
-# sibling `../PlatformRuntimeKit` checkout via a symlink under
+# sibling `../PlatformRuntimeKit` checkout via a source mirror under
 # `.swiftpm-overrides/`. When that sibling is missing, this script builds with
 # `Thaw.xcodeproj` and the published packages as-is.
 #
@@ -62,15 +62,20 @@ done
 say() { printf '\033[1;36m==>\033[0m %s\n' "$*"; }
 
 prepare_local_package_override() {
-    # Symlink sibling PlatformRuntimeKit when present — no rsync copy. Workspace
-    # FileRefs stay under `.swiftpm-overrides/` so ThawDev.xcworkspace paths
-    # remain stable. Targets are relative to the symlink location (one level
-    # deeper than the Thaw root), so siblings need `../..`.
+    # Mirror sibling PlatformRuntimeKit into a directory literally named
+    # `prk-bin`. Xcode 27 resolves symlinks before computing package identity,
+    # so a `prk-bin -> PlatformRuntimeKit` symlink has identity
+    # `platformruntimekit` and fails to override the published `prk-bin`
+    # dependency. The gitignored source mirror preserves the required identity
+    # while still including uncommitted local kit work.
     if [[ -f "$PRK_SOURCE/Package.swift" ]]; then
         mkdir -p "$PRK_OVERRIDE_DIR"
-        # Remove a prior copy or symlink first; otherwise ln targets inside a dir.
         rm -rf "$PRK_OVERRIDE"
-        ln -sfn ../../PlatformRuntimeKit "$PRK_OVERRIDE"
+        mkdir -p "$PRK_OVERRIDE"
+        rsync -a --delete \
+            --exclude .build \
+            --exclude .git \
+            "$PRK_SOURCE/" "$PRK_OVERRIDE/"
         USE_LOCAL_PRK=1
         say "Using local PlatformRuntimeKit ($PRK_SOURCE)"
     else

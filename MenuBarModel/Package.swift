@@ -9,5 +9,9 @@ let package = Package(
     ],
     targets: [
         .target(name: "MenuBarModel"),
+        .testTarget(
+            name: "MenuBarModelTests",
+            dependencies: ["MenuBarModel"]
+        ),
     ]
 )

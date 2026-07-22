@@ -119,6 +119,11 @@ extension SectionedList {
 // MARK: - SectionedListItem
 
 /// An item in a sectioned list.
+///
+/// `@unchecked Sendable` is required because `Content` (an arbitrary SwiftUI
+/// `View`) is not itself `Sendable`. Instances are only ever created,
+/// mutated, and read on the main actor (they live in `@Published` arrays on
+/// `@MainActor` models such as `MenuBarSearchModel`), so this is safe.
 struct SectionedListItem<ID: Hashable, Content: View>: @unchecked Sendable {
     let content: Content
     let id: ID
@@ -168,24 +173,29 @@ private struct SectionedListItemView<ItemID: Hashable, ItemContent: View>: View 
     }
 
     var body: some View {
-        ZStack {
-            borderShape
-                .fill(Color.accentColor.opacity(borderOpacity))
-            item.content
-                .foregroundStyle(foregroundStyle)
+        Button {
+            selection = item.id
+        } label: {
+            ZStack {
+                borderShape
+                    .fill(Color.accentColor.opacity(borderOpacity))
+                item.content
+                    .foregroundStyle(foregroundStyle)
+            }
+            .frame(minWidth: 22, minHeight: 22)
+            .contentShape([.focusEffect, .interaction], borderShape)
         }
-        .frame(minWidth: 22, minHeight: 22)
-        .contentShape([.focusEffect, .interaction], borderShape)
+        .buttonStyle(.plain)
         .onHover { hovering in
             isHovering = hovering
-        }
-        .onTapGesture {
-            selection = item.id
         }
         .simultaneousGesture(
             TapGesture(count: 2).onEnded {
                 item.action?()
             }
         )
+        .accessibilityAction(named: Text("Open")) {
+            item.action?()
+        }
     }
 }

@@ -13,7 +13,7 @@ import SwiftUI
 /// Links a search entry to the `@Published` property it represents on a
 /// settings model, so the drift-guard test can assert every user-facing
 /// property has a matching entry.
-enum SettingsProperty: Hashable {
+nonisolated enum SettingsProperty: Hashable {
     case general(String)
     case advanced(String)
 }
@@ -36,7 +36,7 @@ enum SettingsProperty: Hashable {
 /// conformance is safe — matching the precedent set by `SectionedListItem`.
 /// `Identifiable.id` is `String`, which is `Hashable`, so `Identifiable` is
 /// satisfied without the whole struct being `Hashable`.
-struct SearchEntry: Identifiable, @unchecked Sendable {
+nonisolated struct SearchEntry: Identifiable, @unchecked Sendable {
     let id: String
     let titleKey: LocalizedStringKey
     let titleText: String
@@ -49,9 +49,9 @@ struct SearchEntry: Identifiable, @unchecked Sendable {
 
     var disclosure: AppNavigationState.SettingsDisclosure? {
         switch id {
-        case "advanced.enableMenuBarItemOverflow",
+        case "advanced.alwaysUseAppIconForMenuBarItems",
+             "advanced.enableMenuBarItemOverflow",
              "advanced.menuBarOrderFulfillmentTimeout",
-             "advanced.useContinuousMenuBarCapture",
              "advanced.useLCSSortingOnNotchedDisplays":
             .advancedLayoutControls
         default:
@@ -62,7 +62,7 @@ struct SearchEntry: Identifiable, @unchecked Sendable {
 
 // MARK: - SearchIndex
 
-enum SearchIndex {
+nonisolated enum SearchIndex {
     /// Entries indexed on every supported macOS release.
     private static let sharedEntries: [SearchEntry] = paneEntries + generalEntries + revealEntries + advancedEntries
         + displayEntries + hotkeyEntries + layoutEntries + appearanceEntries
@@ -81,6 +81,17 @@ enum SearchIndex {
             property: .advanced("enableExperimentalSystemItemHiding")
         ),
         SearchEntry(
+            id: "advanced.alwaysUseAppIconForMenuBarItems",
+            titleKey: "Use app icons instead of live previews",
+            titleText: "Use app icons instead of live previews",
+            descriptionText: "Show each item's app icon in the Thaw Bar and layout editor instead of a live screenshot.",
+            pane: .menuBarLayout,
+            sectionKey: "Advanced layout controls",
+            sectionText: "Advanced layout controls",
+            keywords: ["app icon", "live preview", "screenshot", "capture", "overflow", "notch"],
+            property: .advanced("alwaysUseAppIconForMenuBarItems")
+        ),
+        SearchEntry(
             id: "advanced.menuBarOrderFulfillmentTimeout",
             titleKey: "Reorder timeout",
             titleText: "Reorder timeout",
@@ -91,26 +102,19 @@ enum SearchIndex {
             keywords: ["reorder", "timeout", "wait", "layout", "seconds"],
             property: .advanced("menuBarOrderFulfillmentTimeout")
         ),
-        SearchEntry(
-            id: "advanced.useContinuousMenuBarCapture",
-            titleKey: "Use live icon capture",
-            titleText: "Use live icon capture",
-            descriptionText: "Keeps animated previews up to date, but may show the screen recording indicator and reflow the menu bar.",
-            pane: .menuBarLayout,
-            sectionKey: "Advanced layout controls",
-            sectionText: "Advanced layout controls",
-            keywords: ["capture", "live", "menu bar icons", "screen recording", "refresh", "stream"],
-            property: .advanced("useContinuousMenuBarCapture")
-        ),
     ]
 
     /// All searchable settings entries, in pane order.
-    static var entries: [SearchEntry] {
+    ///
+    /// The set is static for a given OS, so it is resolved once and cached
+    /// rather than re-concatenated on every access (the search path reads it
+    /// per keystroke).
+    static let entries: [SearchEntry] = {
         if #available(macOS 27, *) {
             return sharedEntries + macOS27Entries
         }
         return sharedEntries
-    }
+    }()
 
     /// `@Published` property names that are intentionally absent from the
     /// index because they are deprecated, internal, or currently commented out
@@ -120,13 +124,16 @@ enum SearchIndex {
         .general("useIceBar"),
         .general("useIceBarOnlyOnNotchedDisplay"),
         .general("iceBarLocation"),
+        // URI/Defaults-only experimental toggle with no Settings UI; excluded
+        // on every OS version rather than only on macOS <27.
+        .advanced("enableExperimentalOverflowPrevention"),
     ]
 
     /// Advanced settings that only participate in search on macOS 27.
     private static let macOS27AdvancedNonSearchableProperties: Set<SettingsProperty> = [
+        .advanced("alwaysUseAppIconForMenuBarItems"),
         .advanced("enableExperimentalWindowHiding"),
         .advanced("enableExperimentalSystemItemHiding"),
-        .advanced("useContinuousMenuBarCapture"),
         .advanced("menuBarOrderFulfillmentTimeout"),
     ]
 
@@ -590,7 +597,7 @@ enum SearchIndex {
             id: "advanced.iconRefreshInterval",
             titleKey: "Icon refresh rate",
             titleText: "Icon refresh rate",
-            descriptionText: "Controls how often menu bar icon previews refresh while a panel is open for both one-shot and live capture.",
+            descriptionText: "Controls how often menu bar icon previews refresh while a panel is open.",
             pane: .menuBarLayout,
             sectionKey: "Icon previews",
             sectionText: "Icon previews",

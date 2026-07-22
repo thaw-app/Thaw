@@ -9,7 +9,7 @@
 import Foundation
 import SwiftUI
 
-enum Defaults {
+nonisolated enum Defaults {
     /// Returns a dictionary containing the keys and values for
     /// the defaults meant to be seen by all applications.
     static var globalDomain: [String: Any] {
@@ -140,7 +140,7 @@ enum Defaults {
 }
 
 extension Defaults {
-    enum DefaultValue {
+    nonisolated enum DefaultValue {
         // MARK: General Settings
 
         static let showIceIcon = true
@@ -172,7 +172,7 @@ extension Defaults {
         static let tempShowInterval: TimeInterval = 15
         static let tooltipDelay: TimeInterval = 0.5
         static let showMenuBarTooltips = false
-        static let iconRefreshInterval: TimeInterval = 0.1
+        static let iconRefreshInterval: TimeInterval = 0.25
         #if DEBUG
             static let enableDiagnosticLogging = true
         #else
@@ -185,7 +185,7 @@ extension Defaults {
         static let enableExperimentalSystemItemHiding = false
         static let enableExperimentalWindowHiding = false
         static let enableExperimentalOverflowPrevention = false
-        static let useContinuousMenuBarCapture = false
+        static let alwaysUseAppIconForMenuBarItems = false
         static let menuBarOrderFulfillmentTimeout: TimeInterval = 3
 
         // MARK: Search
@@ -198,7 +198,7 @@ extension Defaults {
 
         // MARK: Hotkeys Settings
 
-        static nonisolated(unsafe) let hotkeys: [Any]? = nil
+        static let hotkeys: [String: Data]? = nil
 
         // MARK: Appearance Settings
 
@@ -266,7 +266,7 @@ extension Defaults {
         case enableExperimentalSystemItemHiding = "EnableExperimentalSystemItemHiding"
         case enableExperimentalWindowHiding = "EnableExperimentalWindowHiding"
         case enableExperimentalOverflowPrevention = "EnableExperimentalOverflowPrevention"
-        case useContinuousMenuBarCapture = "UseContinuousMenuBarCapture"
+        case alwaysUseAppIconForMenuBarItems = "AlwaysUseAppIconForMenuBarItems"
         case menuBarOrderFulfillmentTimeout = "MenuBarOrderFulfillmentTimeout"
         case diagnosticAssessmentModeSceneProbes = "Thaw.diagnosticAssessmentModeSceneProbes"
         case diagnosticAssessmentModeProbeHiddenTriggerPress = "Thaw.diagnosticAssessmentModeProbeHiddenTriggerPress"

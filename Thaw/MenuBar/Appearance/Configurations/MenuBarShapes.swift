@@ -9,7 +9,7 @@
 import SwiftUI
 
 /// An end cap in a menu bar shape.
-enum MenuBarEndCap: Int, CaseIterable, Codable, Hashable {
+nonisolated enum MenuBarEndCap: Int, CaseIterable, Codable, Hashable {
     /// An end cap with a square shape.
     case square = 0
     /// An end cap with a rounded shape.
@@ -17,7 +17,7 @@ enum MenuBarEndCap: Int, CaseIterable, Codable, Hashable {
 }
 
 /// A type that specifies a custom shape kind for the menu bar.
-enum MenuBarShapeKind: Int, CaseIterable, Identifiable {
+nonisolated enum MenuBarShapeKind: Int, CaseIterable, Identifiable {
     /// The menu bar does not use a custom shape.
     case noShape = 0
     /// A custom shape that takes up the full menu bar.
@@ -44,7 +44,7 @@ enum MenuBarShapeKind: Int, CaseIterable, Identifiable {
     }
 }
 
-extension MenuBarShapeKind: Codable {
+nonisolated extension MenuBarShapeKind: Codable {
     init(from decoder: any Decoder) throws {
         let container = try decoder.singleValueContainer()
         let rawValue = try container.decode(Int.self)
@@ -63,38 +63,38 @@ extension MenuBarShapeKind: Codable {
 }
 
 /// Information for the ``MenuBarShapeKind/full`` menu bar shape kind.
-struct MenuBarFullShapeInfo: Codable, Hashable {
+nonisolated struct MenuBarFullShapeInfo: Codable, Hashable {
     /// The leading end cap of the shape.
     var leadingEndCap: MenuBarEndCap
     /// The trailing end cap of the shape.
     var trailingEndCap: MenuBarEndCap
 }
 
-extension MenuBarFullShapeInfo {
+nonisolated extension MenuBarFullShapeInfo {
     var hasRoundedShape: Bool {
         leadingEndCap == .round || trailingEndCap == .round
     }
 }
 
-extension MenuBarFullShapeInfo {
+nonisolated extension MenuBarFullShapeInfo {
     static let defaultValue = MenuBarFullShapeInfo(leadingEndCap: .round, trailingEndCap: .round)
 }
 
 /// Information for the ``MenuBarShapeKind/split`` menu bar shape kind.
-struct MenuBarSplitShapeInfo: Codable, Hashable {
+nonisolated struct MenuBarSplitShapeInfo: Codable, Hashable {
     /// The leading information of the shape.
     var leading: MenuBarFullShapeInfo
     /// The trailing information of the shape.
     var trailing: MenuBarFullShapeInfo
 }
 
-extension MenuBarSplitShapeInfo {
+nonisolated extension MenuBarSplitShapeInfo {
     var hasRoundedShape: Bool {
         leading.hasRoundedShape || trailing.hasRoundedShape
     }
 }
 
-extension MenuBarSplitShapeInfo {
+nonisolated extension MenuBarSplitShapeInfo {
     static let defaultValue = MenuBarSplitShapeInfo(leading: .defaultValue, trailing: .defaultValue)
 }
 
@@ -104,25 +104,25 @@ extension MenuBarSplitShapeInfo {
 /// end-cap configuration. On non-notched displays the shape falls back
 /// to full-width, using the leading end-cap for the left corner and the
 /// trailing end-cap for the right corner.
-struct MenuBarNotchShapeInfo: Codable, Hashable {
+nonisolated struct MenuBarNotchShapeInfo: Codable, Hashable {
     /// The leading shape info.
     var leading: MenuBarFullShapeInfo
     /// The trailing shape info.
     var trailing: MenuBarFullShapeInfo
 }
 
-extension MenuBarNotchShapeInfo {
+nonisolated extension MenuBarNotchShapeInfo {
     var hasRoundedShape: Bool {
         leading.hasRoundedShape || trailing.hasRoundedShape
     }
 }
 
-extension MenuBarNotchShapeInfo {
+nonisolated extension MenuBarNotchShapeInfo {
     static let defaultValue = MenuBarNotchShapeInfo(leading: .defaultValue, trailing: .defaultValue)
 }
 
 /// A type that specifies how the background surrounding the shape is rendered.
-enum MenuBarBackgroundKind: Int, CaseIterable, Codable, Hashable {
+nonisolated enum MenuBarBackgroundKind: Int, CaseIterable, Codable, Hashable {
     /// No background.
     case none = 0
     /// A solid color background.
@@ -135,7 +135,7 @@ enum MenuBarBackgroundKind: Int, CaseIterable, Codable, Hashable {
     case adaptive = 4
 }
 
-extension MenuBarBackgroundKind {
+nonisolated extension MenuBarBackgroundKind {
     var localized: LocalizedStringKey {
         switch self {
         case .none: "None"
@@ -147,19 +147,20 @@ extension MenuBarBackgroundKind {
     }
 }
 
-extension MenuBarBackgroundKind {
+nonisolated extension MenuBarBackgroundKind {
     /// App-level default for background rendering in appearance configs.
     /// Named `default` for call-site readability (`.default`), escaped because `default` is a Swift keyword.
     static let `default` = MenuBarBackgroundKind.none
 }
 
 /// A type that specifies which glass style to use for glass backgrounds and tints.
-enum MenuBarGlassStyle: Int, CaseIterable, Codable, Hashable {
+nonisolated enum MenuBarGlassStyle: Int, CaseIterable, Codable, Hashable {
     /// Standard glass effect.
     case regular = 0
     /// Clear glass effect.
     case clear = 1
 
+    @MainActor
     var nsGlassStyle: NSGlassEffectView.Style {
         switch self {
         case .regular: .regular

@@ -207,7 +207,10 @@ final class ProfileManager: ObservableObject {
     // MARK: - Public API
 
     /// Captures the current app state and saves it as a named profile.
-    func saveProfile(name: String, from appState: AppState) throws {
+    ///
+    /// - Returns: The identifier of the newly created profile.
+    @discardableResult
+    func saveProfile(name: String, from appState: AppState) throws -> UUID {
         let profile = Profile(
             name: name,
             content: ProfileContent(
@@ -234,6 +237,8 @@ final class ProfileManager: ObservableObject {
         )
         profiles.append(metadata)
         saveManifest()
+
+        return profile.id
     }
 
     /// Loads a full profile from disk by its identifier.
@@ -451,11 +456,12 @@ final class ProfileManager: ObservableObject {
             }
         }
 
+        // Install the fallback template before per-display entries. Profiles
+        // created on another machine may not contain this display's UUID.
+        appState.settings.displaySettings.globalConfiguration = profile.globalDisplayConfiguration
+
         // Apply display configurations
         appState.settings.displaySettings.configurations = profile.displayConfigurations
-
-        // Apply global display configuration template
-        appState.settings.displaySettings.globalConfiguration = profile.globalDisplayConfiguration
 
         // Apply the spacing-relaunch confirmation preferences
         appState.settings.displaySettings.confirmSpacingRelaunch = profile.confirmSpacingRelaunch
@@ -806,7 +812,7 @@ final class ProfileManager: ObservableObject {
         pending.reserveCapacity(profiles.count)
         for meta in profiles {
             var profile = try loadProfile(id: meta.id)
-            let base = profile.displayConfigurations[displayUUID] ?? .defaultConfiguration
+            let base = profile.displayConfigurations[displayUUID] ?? profile.globalDisplayConfiguration
             profile.displayConfigurations[displayUUID] = base.withItemSpacingOffset(offset)
             profile.modifiedAt = now
             pending.append(profile)

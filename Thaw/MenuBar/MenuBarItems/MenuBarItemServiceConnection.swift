@@ -15,7 +15,7 @@ import XPC
 
 extension MenuBarItemService {
     /// A connection to the `MenuBarItemService` XPC service.
-    final class Connection: Sendable {
+    final nonisolated class Connection: Sendable {
         /// The shared connection.
         static let shared = Connection()
 
@@ -113,9 +113,16 @@ extension MenuBarItemService {
 
 extension MenuBarItemService {
     /// A wrapper around an XPC session.
-    private final class Session: Sendable {
+    private final nonisolated class Session: Sendable {
         /// A session's underlying storage.
-        private final class Storage: @unchecked Sendable {
+        ///
+        /// `Storage` is only ever constructed inside, and accessed through,
+        /// the `OSAllocatedUnfairLock<Storage>` below — no reference to it
+        /// escapes that lock, and none of its methods are called while the
+        /// lock isn't held. `@unchecked Sendable` is required only because
+        /// `session` (its one mutable stored property) is a `var`, which
+        /// disqualifies checked `Sendable` even though the lock makes it safe.
+        private final nonisolated class Storage: @unchecked Sendable {
             private let name = MenuBarItemService.name
             private var session: XPCSession?
             private let queue: DispatchQueue

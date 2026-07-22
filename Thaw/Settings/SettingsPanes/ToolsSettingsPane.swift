@@ -21,6 +21,13 @@ struct ToolsSettingsPane: View {
 
     var body: some View {
         IceForm {
+            SettingsWarningPill(
+                title: "Safe vs maintenance tools",
+                message: "Diagnostics and Onboarding are non-destructive. Reset and Troubleshooting can delete preferences, clear the cache, or quit apps.",
+                systemImage: "info.circle.fill",
+                tint: .blue
+            )
+
             IceSection("Diagnostics") {
                 diagnosticLogging
             }
@@ -87,7 +94,7 @@ struct ToolsSettingsPane: View {
             )?.lastPathComponent
         }
         .confirmationDialog(
-            confirmationTitle,
+            pendingAction?.confirmationTitle ?? "",
             isPresented: Binding(
                 get: { pendingAction != nil },
                 set: {
@@ -99,14 +106,14 @@ struct ToolsSettingsPane: View {
             titleVisibility: .visible,
             presenting: pendingAction
         ) { action in
-            Button(confirmationButtonTitle(for: action), role: .destructive) {
+            Button(action.confirmationButtonTitle, role: .destructive) {
                 Task { await perform(action) }
             }
             Button("Cancel", role: .cancel) {
                 pendingAction = nil
             }
         } message: { action in
-            Text(confirmationMessage(for: action))
+            Text(action.confirmationMessage)
         }
         .alert(
             "Couldn’t run tool",
@@ -180,38 +187,6 @@ struct ToolsSettingsPane: View {
         }
     }
 
-    private var confirmationTitle: String {
-        switch pendingAction {
-        case .resetSettings: String(localized: "Reset all settings?")
-        case .resetControlCenter: String(localized: "Reset Control Center preferences?")
-        case .quitAndClearCache: String(localized: "Quit and clear cache?")
-        case .resetPermissions: String(localized: "Reset permissions?")
-        case nil: ""
-        }
-    }
-
-    private func confirmationButtonTitle(for action: MaintenanceToolAction) -> LocalizedStringKey {
-        switch action {
-        case .resetSettings: "Reset"
-        case .resetControlCenter: "Reset Control Center"
-        case .quitAndClearCache: "Quit & Clear Cache"
-        case .resetPermissions: "Reset Permissions"
-        }
-    }
-
-    private func confirmationMessage(for action: MaintenanceToolAction) -> LocalizedStringKey {
-        switch action {
-        case .resetSettings:
-            "This will reset app preferences to their default values. Saved profiles, automation whitelists, and user data will not be deleted. This action cannot be undone."
-        case .resetControlCenter:
-            "Control Center will quit and its preference files will be deleted. macOS usually relaunches it automatically."
-        case .quitAndClearCache:
-            "\(Constants.displayName) will delete its cache folder and quit. Launch the app again afterward."
-        case .resetPermissions:
-            "Accessibility and Screen Recording permissions will be cleared for \(Constants.displayName). The app will quit so you can grant them again on next launch."
-        }
-    }
-
     @MainActor
     private func perform(_ action: MaintenanceToolAction) async {
         pendingAction = nil
@@ -261,5 +236,36 @@ private enum MaintenanceToolAction: Identifiable {
 
     var id: Self {
         self
+    }
+
+    var confirmationTitle: String {
+        switch self {
+        case .resetSettings: String(localized: "Reset all settings?")
+        case .resetControlCenter: String(localized: "Reset Control Center preferences?")
+        case .quitAndClearCache: String(localized: "Quit and clear cache?")
+        case .resetPermissions: String(localized: "Reset permissions?")
+        }
+    }
+
+    var confirmationButtonTitle: LocalizedStringKey {
+        switch self {
+        case .resetSettings: "Reset"
+        case .resetControlCenter: "Reset Control Center"
+        case .quitAndClearCache: "Quit & Clear Cache"
+        case .resetPermissions: "Reset Permissions"
+        }
+    }
+
+    var confirmationMessage: LocalizedStringKey {
+        switch self {
+        case .resetSettings:
+            "This will reset app preferences to their default values. Saved profiles, automation whitelists, and user data will not be deleted. This action cannot be undone."
+        case .resetControlCenter:
+            "Control Center will quit and its preference files will be deleted. macOS usually relaunches it automatically."
+        case .quitAndClearCache:
+            "\(Constants.displayName) will delete its cache folder and quit. Launch the app again afterward."
+        case .resetPermissions:
+            "Accessibility and Screen Recording permissions will be cleared for \(Constants.displayName). The app will quit so you can grant them again on next launch."
+        }
     }
 }

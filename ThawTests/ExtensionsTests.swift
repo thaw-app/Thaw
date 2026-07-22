@@ -13,6 +13,7 @@ import XCTest
 // MARK: - NSBezierPath.drawShadow Tests
 
 final class NSBezierPathDrawShadowTests: XCTestCase {
+    @MainActor
     func testDrawShadowNoOpsForEmptyPath() {
         NSBezierPath().drawShadow(color: .black, radius: 5)
     }
@@ -237,5 +238,76 @@ final class ColorAveragingOptionTests: XCTestCase {
     func testContainsIgnoreAlpha() {
         let option: CGImage.ColorAveragingOption = [.ignoreAlpha]
         XCTAssertTrue(option.contains(.ignoreAlpha))
+    }
+}
+
+// MARK: - CGImage Background Knockout Tests
+
+final class CGImageBackgroundKnockOutTests: XCTestCase {
+    func testKnockingOutNearUniformBackgroundClearsFillKeepsGlyph() throws {
+        let width = 32
+        let height = 24
+        let bytesPerRow = width * 4
+        var data = [UInt8](repeating: 0, count: bytesPerRow * height)
+        // Opaque dark fill.
+        for i in stride(from: 0, to: data.count, by: 4) {
+            data[i] = 40
+            data[i + 1] = 40
+            data[i + 2] = 40
+            data[i + 3] = 255
+        }
+        // Bright glyph block in the center.
+        for y in 8 ..< 16 {
+            for x in 12 ..< 20 {
+                let i = y * bytesPerRow + x * 4
+                data[i] = 240
+                data[i + 1] = 240
+                data[i + 2] = 240
+                data[i + 3] = 255
+            }
+        }
+
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let image = try XCTUnwrap(
+            CGContext(
+                data: &data,
+                width: width,
+                height: height,
+                bitsPerComponent: 8,
+                bytesPerRow: bytesPerRow,
+                space: colorSpace,
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            )?.makeImage()
+        )
+
+        let cleaned = try XCTUnwrap(image.knockingOutNearUniformBackground(maxColorDistance: 40))
+        XCTAssertFalse(cleaned.isTransparent(alphaThreshold: 0.05))
+
+        // Corner should be cleared; center glyph should remain.
+        let cornerAlpha = try XCTUnwrap(alpha(atX: 0, y: 0, in: cleaned))
+        let centerAlpha = try XCTUnwrap(alpha(atX: 16, y: 12, in: cleaned))
+        XCTAssertLessThan(cornerAlpha, 10)
+        XCTAssertGreaterThan(centerAlpha, 200)
+    }
+
+    private func alpha(atX x: Int, y: Int, in image: CGImage) -> UInt8? {
+        var pixel = [UInt8](repeating: 0, count: 4)
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        guard let context = CGContext(
+            data: &pixel,
+            width: 1,
+            height: 1,
+            bitsPerComponent: 8,
+            bytesPerRow: 4,
+            space: colorSpace,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else {
+            return nil
+        }
+        context.draw(
+            image,
+            in: CGRect(x: -x, y: -y, width: image.width, height: image.height)
+        )
+        return pixel[3]
     }
 }

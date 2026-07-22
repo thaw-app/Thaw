@@ -10,7 +10,7 @@ import Foundation
 import MenuBarModel
 
 extension MenuBarItemManager {
-    struct NewItemsPlacement: Codable, Equatable {
+    nonisolated struct NewItemsPlacement: Codable, Equatable {
         enum Relation: String, Codable {
             case leftOfAnchor
             case rightOfAnchor

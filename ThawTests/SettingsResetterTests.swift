@@ -25,7 +25,7 @@ struct SettingsResetterTests {
         advanced.enableExperimentalSystemItemHiding = !Defaults.DefaultValue.enableExperimentalSystemItemHiding
         advanced.enableExperimentalWindowHiding = !Defaults.DefaultValue.enableExperimentalWindowHiding
         advanced.enableExperimentalOverflowPrevention = !Defaults.DefaultValue.enableExperimentalOverflowPrevention
-        advanced.useContinuousMenuBarCapture = !Defaults.DefaultValue.useContinuousMenuBarCapture
+        advanced.alwaysUseAppIconForMenuBarItems = !Defaults.DefaultValue.alwaysUseAppIconForMenuBarItems
 
         settings.resetAdvanced()
 
@@ -37,6 +37,6 @@ struct SettingsResetterTests {
         #expect(advanced.enableExperimentalSystemItemHiding == Defaults.DefaultValue.enableExperimentalSystemItemHiding)
         #expect(advanced.enableExperimentalWindowHiding == Defaults.DefaultValue.enableExperimentalWindowHiding)
         #expect(advanced.enableExperimentalOverflowPrevention == Defaults.DefaultValue.enableExperimentalOverflowPrevention)
-        #expect(advanced.useContinuousMenuBarCapture == Defaults.DefaultValue.useContinuousMenuBarCapture)
+        #expect(advanced.alwaysUseAppIconForMenuBarItems == Defaults.DefaultValue.alwaysUseAppIconForMenuBarItems)
     }
 }
