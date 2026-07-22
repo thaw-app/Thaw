@@ -491,7 +491,11 @@ public extension MenuBarItemTag {
         {
             return 0
         }
-        if tag == .siri {
+        // Match both the legacy SystemUIServer Siri tag and MenuBarAgent titles.
+        if tag == .siri
+            || tag.title == "Siri"
+            || tag.title == "com.apple.menuextra.siri"
+        {
             return 1
         }
         if tag.title == clock.title

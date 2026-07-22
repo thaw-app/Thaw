@@ -128,7 +128,8 @@ jobs:
             -enableCodeCoverage YES \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO \
+            PRODUCT_BUNDLE_IDENTIFIER=com.stonerl.Thaw
 
       - name: Convert coverage to XML
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository

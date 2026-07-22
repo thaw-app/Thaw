@@ -1910,44 +1910,50 @@ final class MacOS27LayoutAnchorOrderingTests: XCTestCase {
         XCTAssertTrue(clock.isPhysicallyOrderable(experimentalSystemItemHiding: true))
         XCTAssertTrue(siri.isMovable(experimentalSystemItemHiding: true))
         XCTAssertFalse(siri.isPhysicallyOrderable(experimentalSystemItemHiding: true))
-        XCTAssertTrue(clock.canBeHidden(experimentalSystemItemHiding: true))
+        // MenuBarAgent children stay assignment-visible even under experimental
+        // system-item hiding; legacy SystemUIServer Siri remains assignment-hideable.
+        XCTAssertFalse(clock.canBeHidden(experimentalSystemItemHiding: true))
+        XCTAssertTrue(siri.canBeHidden(experimentalSystemItemHiding: true))
         XCTAssertFalse(MenuBarSectionController.canAssign(clock, to: .hidden, experimentalSystemItemHiding: false))
-        XCTAssertTrue(MenuBarSectionController.canAssign(clock, to: .hidden, experimentalSystemItemHiding: true))
+        XCTAssertFalse(MenuBarSectionController.canAssign(clock, to: .hidden, experimentalSystemItemHiding: true))
         XCTAssertFalse(MenuBarSectionController.canAssign(siri, to: .hidden, experimentalSystemItemHiding: false))
         XCTAssertTrue(MenuBarSectionController.canAssign(siri, to: .hidden, experimentalSystemItemHiding: true))
         XCTAssertTrue(MenuBarSectionController.isProtectedAssignmentItem(clock, experimentalSystemItemHiding: false))
+        // Layout anchors are unprotected for cleanup purposes when experimental
+        // hiding is on, but MenuBarAgent assignment policy still rejects them.
         XCTAssertFalse(MenuBarSectionController.isProtectedAssignmentItem(clock, experimentalSystemItemHiding: true))
 
-        // Reset-to-Hidden must be able to sweep all three layout anchors in one
-        // pass when experimental system-item hiding is on.
-        for item in [clock, siri] {
-            XCTAssertTrue(
-                MenuBarSectionController.canAssign(item, to: .hidden, experimentalSystemItemHiding: true),
-                item.logString
-            )
-            XCTAssertFalse(
-                MenuBarSectionController.isProtectedAssignmentItem(item, experimentalSystemItemHiding: true),
-                item.logString
-            )
-        }
+        XCTAssertTrue(
+            MenuBarSectionController.canAssign(siri, to: .hidden, experimentalSystemItemHiding: true),
+            siri.logString
+        )
+        XCTAssertFalse(
+            MenuBarSectionController.isProtectedAssignmentItem(siri, experimentalSystemItemHiding: true),
+            siri.logString
+        )
+        XCTAssertFalse(
+            MenuBarSectionController.canAssign(clock, to: .hidden, experimentalSystemItemHiding: true),
+            clock.logString
+        )
         let controlCenter = systemItem(title: "BentoBox-0", x: 72, windowID: 100)
-        XCTAssertTrue(MenuBarSectionController.canAssign(controlCenter, to: .hidden, experimentalSystemItemHiding: true))
+        XCTAssertFalse(MenuBarSectionController.canAssign(controlCenter, to: .hidden, experimentalSystemItemHiding: true))
         XCTAssertFalse(MenuBarSectionController.isProtectedAssignmentItem(controlCenter, experimentalSystemItemHiding: true))
 
-        // Assigned layout anchors must survive invalid-assignment cleanup when
-        // experimental system-item hiding is on — otherwise Reset-to-Hidden
-        // would strip Clock/CC/Siri on the first refresh and leave them visible.
+        // SystemUIServer Siri assignments survive invalid-assignment cleanup when
+        // experimental system-item hiding is on. MenuBarAgent Clock/CC do not —
+        // they remain forced-visible and are stripped from Hidden.
         let assignment = [
             clock.uniqueIdentifier: MenuBarSection.Name.hidden,
             siri.uniqueIdentifier: .hidden,
             controlCenter.uniqueIdentifier: .hidden,
         ]
-        XCTAssertTrue(
+        XCTAssertEqual(
             MenuBarSectionController.invalidAssignmentIdentifiers(
                 sectionAssignment: assignment,
                 liveItems: [clock, siri, controlCenter],
                 experimentalSystemItemHiding: true
-            ).isEmpty
+            ),
+            [clock.uniqueIdentifier, controlCenter.uniqueIdentifier]
         )
         XCTAssertEqual(
             MenuBarSectionController.invalidAssignmentIdentifiers(

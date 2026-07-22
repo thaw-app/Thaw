@@ -60,6 +60,7 @@ final class NativeOverflowStateReducerTests: XCTestCase {
     func testForgetClearsActiveStateAndDebounceCandidate() {
         var reducer = NativeOverflowStateReducer(presentThreshold: 2, absentThreshold: 2)
 
+        XCTAssertNil(reducer.consume(.present([]), on: 1))
         XCTAssertEqual(reducer.consume(.present([]), on: 1), true)
         XCTAssertTrue(reducer.isActive(on: 1))
         // Start (but don't finish) a debounce toward absent.
