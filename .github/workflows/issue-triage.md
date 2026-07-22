@@ -27,6 +27,10 @@ safe-outputs:
     allowed: [bug, docs, duplicate, enhancement, feature, invalid, needs-info, question, regression, upstream, wontfix, macos-14, macos-15, macos-26, macos-27, P0, P1, P2, P3, P4, P5, unsupported, menubar, icebar, layout, appearance, settings, onboarding, permissions, profiles, hotkeys, updates]
   update-issue:
     max: 1
+  # Successful "nothing to do" triage runs are normal (e.g. template already
+  # applied bug/feature). Do not open/update a [aw] No-Op Runs tracker issue.
+  noop:
+    report-as-issue: false
 ---
 
 # Issue Triage
