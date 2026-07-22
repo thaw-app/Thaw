@@ -2,6 +2,10 @@
 
 Check here before [filing a bug](https://github.com/stonerl/Thaw/issues/new/choose). Your problem may already be known with a workaround available.
 
+> [!IMPORTANT]
+> **macOS 27 (Golden Gate):** use the tracking issue **[#687](https://github.com/stonerl/Thaw/issues/687)** for general support, status, and preview builds. Do not open a new issue for that.
+
+- [macOS 27 (Golden Gate)](#macos-27-golden-gate)
 - [Items end up in the wrong section](#items-end-up-in-the-wrong-section)
 - [Thaw removed an item](#thaw-removed-an-item)
 - [Layout changes on its own](#layout-changes-on-its-own)
@@ -17,6 +21,12 @@ Check here before [filing a bug](https://github.com/stonerl/Thaw/issues/new/choo
 - [Live Activities and iPhone mirroring](#live-activities-and-iphone-mirroring)
 - [High CPU or memory usage](#high-cpu-or-memory-usage)
 - [Before you file a bug](#before-you-file-a-bug)
+
+## macOS 27 (Golden Gate)
+
+General macOS 27 support, incomplete behavior on Golden Gate, and preview builds are tracked in **[#687](https://github.com/stonerl/Thaw/issues/687)**. Comment there instead of opening a new issue.
+
+Only file a separate bug if you have a **narrow, specific, reproducible** problem that is clearly distinct from “Thaw isn’t fully supported on 27 yet.”
 
 ## Items end up in the wrong section
 

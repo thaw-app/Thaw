@@ -27,6 +27,9 @@ safe-outputs:
     allowed: [bug, docs, duplicate, enhancement, feature, invalid, needs-info, question, regression, upstream, wontfix, macos-14, macos-15, macos-26, macos-27, P0, P1, P2, P3, P4, P5, unsupported, menubar, icebar, layout, appearance, settings, onboarding, permissions, profiles, hotkeys, updates]
   update-issue:
     max: 1
+  close-issue:
+    max: 1
+    state-reason: duplicate
   # Successful "nothing to do" triage runs are normal (e.g. template already
   # applied bug/feature). Do not open/update a [aw] No-Op Runs tracker issue.
   noop:
@@ -68,7 +71,28 @@ If all required fields are present, you MUST NOT post a clarifying-questions com
 
 ## Your Triage Tasks
 
-### 0. Support Policy Check (comment + label if unsupported)
+### 0. macOS 27 / Golden Gate → tracking issue #687 (do this first)
+
+If the report is about **macOS 27** / **Golden Gate** (version field, title, or body) **and** it is any of:
+
+- general “Thaw doesn’t work / incomplete / broken on macOS 27”
+- asking for macOS 27 support or preview builds
+- restating problems already covered by the tracking discussion
+- a feature request that is effectively “add macOS 27 support”
+
+…then **stop other triage**. Do **not** ask clarifying questions. Do **not** assign priority. Do this only:
+
+1. Apply labels `duplicate` and `macos-27` using `add_labels`.
+2. Post **one** short comment with `add_comment` pointing to **#687**.
+3. Close the issue with `close_issue` (`state_reason: duplicate`, `duplicate_of: 687`).
+
+Example comment (keep it brief and firm):
+
+> This belongs in the macOS 27 tracking issue: **#687**. Please continue there (and read the pinned issue / README note before opening new reports). Closing as a duplicate.
+
+**Only keep the issue open** when it is a **narrow, specific, reproducible bug on macOS 27** that is clearly distinct from “27 support is incomplete” (unique steps, unique symptom). In that case apply `macos-27` and continue normal triage.
+
+### 1. Support Policy Check (comment + label if unsupported)
 
 If the reporter indicates **Thaw version < 1.2.0** **and** **macOS version < 15.7.7** (treat macOS 26.x and above as always supported — do not apply this check to macOS 26+ users), then:
 
@@ -81,7 +105,7 @@ Example comment:
 
 If the issue does **not** include both versions explicitly, do **not** assume — instead, request the missing version info under **“Ask Clarifying Questions”**.
 
-### 1. Identify the Issue Type
+### 2. Identify the Issue Type
 
 Based on the title and body, classify the issue and apply **exactly one** type label using `add_labels`:
 
@@ -97,7 +121,7 @@ Based on the title and body, classify the issue and apply **exactly one** type l
 
 **Important:** Always apply the appropriate type label (`bug`, `feature`, or `enhancement`) when it corresponds to the issue content. Remember: `bug` is for reports only, not for describing a fix.
 
-### 2. Assign a Priority Label
+### 3. Assign a Priority Label
 
 For **bug** and **regression** issues, assess severity and impact, then apply **exactly one** priority label using `add_labels`:
 
@@ -112,7 +136,7 @@ For **bug** and **regression** issues, assess severity and impact, then apply **
 
 Skip priority labelling for `feature`, `enhancement`, `docs`, `question`, and `invalid` issues.
 
-### 3. Apply Modifier Labels (if applicable)
+### 4. Apply Modifier Labels (if applicable)
 
 In addition to the type and priority labels, apply any of the following modifier labels that apply:
 
@@ -121,7 +145,7 @@ In addition to the type and priority labels, apply any of the following modifier
 
 Apply the macOS version label that matches the reporter’s stated macOS version (if provided).
 
-### 4. Apply Area Label (if clear)
+### 5. Apply Area Label (if clear)
 
 Apply **exactly one** area label when the report clearly maps to a product surface. Skip when ambiguous — do not guess.
 
@@ -138,7 +162,7 @@ Apply **exactly one** area label when the report clearly maps to a product surfa
 | `hotkeys` | Hotkey recording and bindings |
 | `updates` | Sparkle / release channels / appcast |
 
-### 5. Detect Duplicates
+### 6. Detect Duplicates
 
 Search for existing open **and** closed issues that are similar to this one. Use the GitHub search tools to look for:
 
@@ -149,10 +173,11 @@ If you find a duplicate:
 
 1. Apply the **`duplicate`** label using `add_labels`
 2. Post a comment with `add_comment` pointing to the original issue.
+3. Close the issue with `close_issue` (`state_reason: duplicate`, `duplicate_of: <canonical issue number>`) when it is clearly a duplicate (especially of #687 or another tracking/canonical issue).
 
-If you also need clarifying info, combine the duplicate notice and questions into a single comment.
+If you also need clarifying info, combine the duplicate notice and questions into a single comment — but prefer closing clear duplicates instead of leaving them open.
 
-### 6. Ask Clarifying Questions (if needed)
+### 7. Ask Clarifying Questions (if needed)
 
 If the issue description is unclear or missing important information, apply the **`needs-info`** label using `add_labels` and post a single friendly comment using `add_comment`.
 
@@ -178,15 +203,15 @@ If clarification is needed, post a comment like:
 
 If the issue is already clear and complete, **do not** post an unnecessary comment and **do not** apply `needs-info`.
 
-### 7. Assignment
+### 8. Assignment
 
 Do not assign issues automatically. Leave assignment decisions to maintainers.
 
 ## Important Guidelines
 
-- **Be concise and friendly** in all comments. Use a helpful, welcoming tone.
-- **Do not spam**. Only post a comment if you have something useful to say (clarifying questions or duplicate notice). Never post a generic "I've triaged your issue" comment.
+- **Be concise and firm** when redirecting ignored tracking issues (especially #687). Do not spend tokens on lengthy sympathy for reports that skipped the pinned issue / README.
+- **Do not spam**. Only post a comment if you have something useful to say (clarifying questions, duplicate/redirect, or unsupported). Never post a generic "I've triaged your issue" comment.
 - **Respect existing labels** already applied by issue templates — do not remove or duplicate them.
 - **Only use labels from the allowed list**: `bug`, `docs`, `duplicate`, `enhancement`, `feature`, `invalid`, `needs-info`, `question`, `regression`, `upstream`, `wontfix`, `unsupported`, `macos-14`, `macos-15`, `macos-26`, `macos-27`, `P0`, `P1`, `P2`, `P3`, `P4`, `P5`, `menubar`, `icebar`, `layout`, `appearance`, `settings`, `onboarding`, `permissions`, `profiles`, `hotkeys`, `updates`.
 - **One comment at a time** — combine any clarifying questions and duplicate notice into a single comment if both apply.
-- **Always complete with a safe-output call**: You must always call at least one safe-output tool (`add_labels`, `add_comment`, `update_issue`, `noop`, `missing_tool`, or `missing_data`) to indicate you finished.
+- **Always complete with a safe-output call**: You must always call at least one safe-output tool (`add_labels`, `add_comment`, `update_issue`, `close_issue`, `noop`, `missing_tool`, or `missing_data`) to indicate you finished.

@@ -8,12 +8,17 @@ body:
       value: |
         **Before submitting:** Search [open & closed suggestions](https://github.com/stonerl/Thaw/issues?q=is%3Aissue+-label%3Abug) for duplicates.
 
+        > [!IMPORTANT]
+        > macOS 27 / Golden Gate support and preview builds are tracked in **[#687](https://github.com/stonerl/Thaw/issues/687)**. Do not open a new feature request that is just “support macOS 27”.
+
   - type: checkboxes
     id: checks
     attributes:
       label: Pre-submission Checklist
       options:
         - label: I searched existing issues (open & closed) and found no duplicates
+          required: true
+        - label: If this is about macOS 27 / Golden Gate, I have read #687 (or this request is not about macOS 27)
           required: true
 
   - type: textarea

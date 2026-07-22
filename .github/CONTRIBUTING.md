@@ -68,7 +68,8 @@ This includes but is not limited to:
 - Xcode 26+
 - macOS 26+
 
-macOS 27 (Golden Gate) experimental work happens on `feat/macos-27-experimental` and is tracked in [issue #687](https://github.com/stonerl/Thaw/issues/687).
+> [!NOTE]
+> macOS 27 (Golden Gate) experimental work happens on `feat/macos-27-experimental` and is tracked in [issue #687](https://github.com/stonerl/Thaw/issues/687).
 
 ### Getting Started
 
