@@ -136,11 +136,6 @@ struct AboutSettingsPane: View {
                     Text("Based on Thaw \(Constants.versionString) (\(Constants.buildString))")
                         .font(.system(size: 13))
                         .foregroundStyle(.tertiary)
-                        .help(
-                            "macOS 27 support is functional with remaining limitations around Always Hidden and visual menu bar edge cases. Feature work is based on "
-                                + "\(Constants.versionString) (\(Constants.buildString)). "
-                                + "Preview builds ship on the Nightly (alpha) update channel."
-                        )
                 }
 
                 Text(Constants.copyrightString)
