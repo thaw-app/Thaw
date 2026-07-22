@@ -5,9 +5,21 @@
     <img src="Resources/headers/Header_Light.svg" width="400" alt="Thaw Header" />
   </picture>
 </p>
-Thaw is a powerful menu bar management tool for macOS. While its primary function is hiding and showing menu bar items, it aims to cover a wide variety of additional features to make it one of the most versatile menu bar tools available.
 
-<br>
+<p align="center">
+  Thaw is a powerful menu bar management tool for macOS. While its primary function is hiding and showing menu bar items, it aims to cover a wide variety of additional features to make it one of the most versatile menu bar tools available.
+</p>
+
+<p align="center">
+  <a href="https://github.com/stonerl/Thaw/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/stonerl/Thaw?style=flat-square&label=latest&color=555555" /></a>
+  <a href="https://github.com/stonerl/Thaw/releases"><img alt="Beta / pre-release" src="https://img.shields.io/github/v/release/stonerl/Thaw?include_prereleases&style=flat-square&label=beta&color=555555" /></a>
+  <a href="https://github.com/stonerl/Thaw/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/stonerl/Thaw/ci.yml?style=flat-square&label=CI" /></a>
+  <a href="https://www.bestpractices.dev/projects/13303"><img alt="OpenSSF Best Practices" src="https://www.bestpractices.dev/projects/13303/badge" /></a>
+  <img alt="Requirements" src="https://img.shields.io/badge/macOS-26%2B-555555?style=flat-square" />
+  <a href="https://github.com/sponsors/stonerl"><img alt="Sponsor" src="https://img.shields.io/badge/Sponsor-%E2%9D%A4-555555?style=flat-square" /></a>
+  <a href="https://discord.gg/5cnKkKbMFd"><img alt="Discord" src="https://img.shields.io/badge/Discord-7289DA?style=flat-square&logo=discord&logoColor=white" /></a>
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/stonerl/Thaw?style=flat-square&color=555555" /></a>
+</p>
 
 <p align="center">
   <strong>
@@ -17,8 +29,6 @@ Thaw is a powerful menu bar management tool for macOS. While its primary functio
   </strong>
 </p>
 
-
-
 <div align="center">
 <a href="https://trendshift.io/repositories/21173" target="_blank"><img src="https://trendshift.io/api/badge/repositories/21173" alt="stonerl%2FThaw | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 </div>
@@ -26,14 +36,6 @@ Thaw is a powerful menu bar management tool for macOS. While its primary functio
 <br>
 
 ![thaw-banner](https://github.com/user-attachments/assets/9584065d-f840-4545-9a42-cfc5534b5ac3)
-
-[![Download](https://img.shields.io/badge/download-latest-brightgreen?style=square)](https://github.com/stonerl/Thaw/releases/latest)
-[![CI](https://img.shields.io/github/actions/workflow/status/stonerl/Thaw/ci.yml?style=square)](https://github.com/stonerl/Thaw/actions/workflows/ci.yml)
-[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/13303/badge)](https://www.bestpractices.dev/projects/13303)
-![Requirements](https://img.shields.io/badge/requirements-macOS%2026%2B-fa4e49?style=square)
-[![Sponsor](https://img.shields.io/badge/Sponsor%20%E2%9D%A4%EF%B8%8F-8A2BE2?style=square)](https://github.com/sponsors/stonerl)
-[![Discord](https://img.shields.io/badge/Discord-7289DA?style=square&logo=discord&logoColor=white)](https://discord.gg/5cnKkKbMFd)
-[![License](https://img.shields.io/github/license/stonerl/Thaw?style=square)](LICENSE)
 
 > [!NOTE]
 > **Thaw** is a fork of [Ice](https://github.com/jordanbaird/Ice) by Jordan Baird.
@@ -47,13 +49,13 @@ Download the `Thaw_<version>.zip` file from the [latest release](https://github.
 
 ### Homebrew
 
-Install the latest stable release:
+Install the latest **stable** release:
 
 ```sh
 brew install thaw
 ```
 
-To get the latest beta (or stable, whichever is newer):
+Install the latest **beta** (or stable, whichever is newer):
 
 ```sh
 brew install thaw@beta
