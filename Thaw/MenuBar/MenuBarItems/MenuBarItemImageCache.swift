@@ -2819,8 +2819,19 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
                     sectionItems,
                     littleSnitchRunning: littleSnitchRunning
                 )
+                let displayID = appState.itemManager.itemCache.displayID
+                    ?? windowServer.activeMenuBarDisplayID()
+                    ?? CGMainDisplayID()
+                let isNativeOverflowActive = controller.isNativeOverflowActive(on: displayID)
                 let itemsToCapture = capturableSectionItems.filter { item in
-                    !onlyMissingImages || Self.prewarmNeedsCapture(
+                    // Native notch overflow remains in force when Thaw removes
+                    // an item from its own concealment assertion. A prewarm in
+                    // that state can only capture the system overflow chevron,
+                    // never the item's real glyph.
+                    guard !isNativeOverflowActive else {
+                        return false
+                    }
+                    return !onlyMissingImages || Self.prewarmNeedsCapture(
                         cachedImage: self.image(for: item.tag),
                         wouldAttemptCapture: self.wouldAttemptCapture(of: item)
                     )
@@ -2838,9 +2849,6 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
                 // time instead of the whole section, so a dynamic-title
                 // neighbor (e.g. iStat Menus) doesn't flicker or vanish
                 // while this item's real glyph is being captured.
-                let displayID = appState.itemManager.itemCache.displayID
-                    ?? windowServer.activeMenuBarDisplayID()
-                    ?? CGMainDisplayID()
                 let scale = NSScreen.screens.first { $0.displayID == displayID }?.backingScaleFactor
                     ?? NSScreen.main?.backingScaleFactor
                     ?? 2

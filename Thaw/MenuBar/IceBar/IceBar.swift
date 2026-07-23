@@ -529,12 +529,15 @@ private struct IceBarContentView: View {
     }
 
     private func image(for item: MenuBarItem) -> NSImage? {
-        OverflowFallbackIcon.resolvedImage(
+        let isNativeOverflowActive = appState.menuBarManager.sectionController?
+            .isNativeOverflowActive(on: screen.displayID) == true
+        return OverflowFallbackIcon.resolvedImage(
             for: item,
             section: section,
             appState: appState,
             cachedImage: imageCache.image(for: item.tag)?.nsImage,
-            visibleControlItemState: visibleControlItemState
+            visibleControlItemState: visibleControlItemState,
+            isNativeOverflowActive: isNativeOverflowActive
         )
     }
 

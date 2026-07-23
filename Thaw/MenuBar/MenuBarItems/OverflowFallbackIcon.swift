@@ -40,13 +40,22 @@ enum OverflowFallbackIcon {
         for item: MenuBarItem,
         in section: MenuBarSection.Name?,
         appState: AppState,
-        cachedImage: NSImage?
+        cachedImage: NSImage?,
+        isNativeOverflowActive: Bool = false
     ) -> Bool {
         guard supportsMissingCaptureFallback(for: section) else { return false }
         // These processes host multiple distinct Apple modules rather than one
         // app-owned status item. Keep their captures, including Siri, instead
         // of substituting the host process's application icon.
         guard !usesCapturedSystemPreview(item) else { return false }
+        // While native notch overflow is active, releasing Thaw's assertion
+        // does not guarantee that any hidden item becomes a normal first-row
+        // glyph. Capturing in that state can read the overflow chevron instead.
+        // Ignore even a populated cache entry because it may be that stale
+        // arrow crop from an earlier prewarm pass.
+        if isNativeOverflowActive {
+            return true
+        }
         // User escape hatch: always render the owning app's icon instead of the
         // live capture, regardless of whether a (possibly polluted) capture
         // exists. Lets users sidestep macOS 27 native-overflow capture bleed.
@@ -67,13 +76,15 @@ enum OverflowFallbackIcon {
         section: MenuBarSection.Name?,
         appState: AppState,
         cachedImage: NSImage?,
-        visibleControlItemState: ControlItem.HidingState? = nil
+        visibleControlItemState: ControlItem.HidingState? = nil,
+        isNativeOverflowActive: Bool = false
     ) -> NSImage? {
         if shouldPreferAppIcon(
             for: item,
             in: section,
             appState: appState,
-            cachedImage: cachedImage
+            cachedImage: cachedImage,
+            isNativeOverflowActive: isNativeOverflowActive
         ) {
             return preferredImage(
                 for: item,

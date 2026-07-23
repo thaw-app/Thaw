@@ -103,6 +103,36 @@ final class OverflowFallbackIconTests: XCTestCase {
         )
     }
 
+    func testNativeOverflowIgnoresCachedArrowCrop() throws {
+        guard #available(macOS 27, *) else {
+            throw XCTSkip("App-icon fallback is macOS 27-specific")
+        }
+
+        let appState = AppState()
+        appState.settings.advanced.alwaysUseAppIconForMenuBarItems = false
+        let item = runningAppItem()
+        let cachedArrowCrop = NSImage(size: NSSize(width: 24, height: 24))
+
+        XCTAssertTrue(
+            OverflowFallbackIcon.shouldPreferAppIcon(
+                for: item,
+                in: .hidden,
+                appState: appState,
+                cachedImage: cachedArrowCrop,
+                isNativeOverflowActive: true
+            )
+        )
+        XCTAssertFalse(
+            OverflowFallbackIcon.resolvedImage(
+                for: item,
+                section: .hidden,
+                appState: appState,
+                cachedImage: cachedArrowCrop,
+                isNativeOverflowActive: true
+            ) === cachedArrowCrop
+        )
+    }
+
     func testOverrideDoesNotShowFallbackForQuitApp() throws {
         guard #available(macOS 27, *) else {
             throw XCTSkip("App-icon fallback is macOS 27-specific")

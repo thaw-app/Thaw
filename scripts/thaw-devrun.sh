@@ -39,7 +39,7 @@ PRK_OVERRIDE_DIR=".swiftpm-overrides"
 PRK_OVERRIDE="$PRK_OVERRIDE_DIR/prk-bin"
 USE_LOCAL_PRK=0
 export MENU_BAR_MODEL_PATH="$PWD/MenuBarModel"
-PACKAGE_RESOLUTION_ARGS=(-onlyUsePackageVersionsFromResolvedFile)
+LOCKED_PACKAGE_ARGS=(-onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates)
 
 SKIP_PACKAGES=0
 while [[ $# -gt 0 ]]; do
@@ -88,11 +88,10 @@ prepare_local_package_override() {
 }
 
 resolve_swift_packages() {
-    say "Resolving Swift packages…"
+    say "Updating compatible Swift package releases…"
     xcodebuild -resolvePackageDependencies \
         "${XCODE_ROOT_ARGS[@]}" \
-        -scheme "$SCHEME" \
-        "${PACKAGE_RESOLUTION_ARGS[@]}"
+        -scheme "$SCHEME"
 }
 
 prepare_local_package_override
