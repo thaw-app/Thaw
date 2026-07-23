@@ -220,7 +220,65 @@ public extension ScreenCapture {
         )
     }
 
-    /// Captures the on-screen menu-bar band of a display (all windows composited).
+    /// Window-level threshold above which an on-screen window overlapping the
+    /// menu-bar strip is treated as a foreign overlay to exclude from the strip
+    /// capture.
+    ///
+    /// The system menu bar renders at `kCGMainMenuWindowLevel` and Thaw's own
+    /// menu-bar overlay sits at that same level; on macOS 27 third-party status
+    /// items are composited into MenuBarAgent's (off-screen) hosting surface, so
+    /// nothing we want to *read* from the strip lives strictly above the main
+    /// menu level on-screen. Everything that does — notch simulators, drop
+    /// shelves, dimming overlays, the Window Server recording indicator — is
+    /// painted *over* the bar and can only bleed foreign pixels into an item's
+    /// crop rect. Anchoring the cut just above the menu bar level keeps genuine
+    /// status glyphs while dropping the occluders.
+    @available(macOS 27, *)
+    static var menuBarStripOverlayLevelThreshold: Int {
+        Int(CGWindowLevelForKey(.mainMenuWindow))
+    }
+
+    /// Whether a window overlapping the menu-bar strip is a foreign overlay that
+    /// would pollute status-item crops and should be excluded from the strip
+    /// capture.
+    ///
+    /// Pure and primitive-typed so it can be unit-tested without a live
+    /// `SCWindow` set. See ``menuBarStripOverlayLevelThreshold`` for why the
+    /// level cut is the discriminator: an on-screen window drawn strictly above
+    /// the menu bar level that intersects the strip band is, by construction,
+    /// painted over the real bar rather than being part of it.
+    @available(macOS 27, *)
+    static func isMenuBarStripOverlay(
+        frame: CGRect,
+        windowLayer: Int,
+        isOnScreen: Bool,
+        stripFrame: CGRect
+    ) -> Bool {
+        guard isOnScreen else { return false }
+        guard windowLayer > menuBarStripOverlayLevelThreshold else { return false }
+        return frame.intersects(stripFrame)
+    }
+
+    /// The set of foreign overlay windows to exclude from a strip capture so the
+    /// composite reveals the real menu bar beneath notch simulators, drop
+    /// shelves, and other windows floating over the bar.
+    @available(macOS 27, *)
+    static func menuBarStripOverlayWindows(
+        in content: SCShareableContent,
+        stripFrame: CGRect
+    ) -> [SCWindow] {
+        content.windows.filter { window in
+            isMenuBarStripOverlay(
+                frame: window.frame,
+                windowLayer: window.windowLayer,
+                isOnScreen: window.isOnScreen,
+                stripFrame: stripFrame
+            )
+        }
+    }
+
+    /// Captures the on-screen menu-bar band of a display (menu-bar-level windows
+    /// composited, foreign overlays above the bar excluded).
     ///
     /// MenuBarAgent's private hosting window renders system modules cleanly, but
     /// third-party Liquid Glass slots in that same off-screen window often shred
@@ -250,7 +308,19 @@ public extension ScreenCapture {
 
         let displayFrame = display.frame
         let stripFrame = menuBarDisplayStripFrame(displayFrame: displayFrame)
-        let filter = SCContentFilter(display: display, excludingWindows: [])
+        // Exclude any window floating above the menu bar level that overlaps the
+        // strip band. Without this, notch simulators / drop shelves (Droppy,
+        // CodeIsland, …) and other menu-bar overlays composite into the strip
+        // and bleed their pixels into status-item crops — the "arrow / screen
+        // capture pollution" that hits the right-hand items sitting under such
+        // an overlay. Dropping them reveals the real bar beneath.
+        let overlayWindows = menuBarStripOverlayWindows(in: content, stripFrame: stripFrame)
+        if !overlayWindows.isEmpty {
+            diagLog.debug(
+                "captureMenuBarDisplayStripAsync: excluding \(overlayWindows.count) menu-bar overlay window(s)"
+            )
+        }
+        let filter = SCContentFilter(display: display, excludingWindows: overlayWindows)
         let reportedScale = CGFloat(filter.pointPixelScale)
         let scale = max(reportedScale, 0.5)
 

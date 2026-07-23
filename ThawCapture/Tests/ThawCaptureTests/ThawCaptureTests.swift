@@ -198,6 +198,78 @@ struct ThawCaptureTests {
         #expect(strip.height == 24)
     }
 
+    @Test
+    @available(macOS 27, *)
+    func stripOverlayExcludesWindowsAboveMenuBarLevel() {
+        let displayFrame = CGRect(x: 0, y: 0, width: 2048, height: 1152)
+        let stripFrame = ScreenCapture.menuBarDisplayStripFrame(displayFrame: displayFrame)
+
+        // Droppy-style drop shelf floating over the bar (level 100).
+        #expect(
+            ScreenCapture.isMenuBarStripOverlay(
+                frame: CGRect(x: 574, y: 0, width: 900, height: 294),
+                windowLayer: 100,
+                isOnScreen: true,
+                stripFrame: stripFrame
+            )
+        )
+        // CodeIsland-style notch simulator just above the status level (26).
+        #expect(
+            ScreenCapture.isMenuBarStripOverlay(
+                frame: CGRect(x: 714, y: 0, width: 620, height: 330),
+                windowLayer: 26,
+                isOnScreen: true,
+                stripFrame: stripFrame
+            )
+        )
+        // The Window Server recording indicator overlapping the right side.
+        #expect(
+            ScreenCapture.isMenuBarStripOverlay(
+                frame: CGRect(x: 2024, y: 1, width: 28, height: 28),
+                windowLayer: Int(Int32.max) - 17,
+                isOnScreen: true,
+                stripFrame: stripFrame
+            )
+        )
+    }
+
+    @Test
+    @available(macOS 27, *)
+    func stripOverlayKeepsBarAndOffscreenSurfaces() {
+        let displayFrame = CGRect(x: 0, y: 0, width: 2048, height: 1152)
+        let stripFrame = ScreenCapture.menuBarDisplayStripFrame(displayFrame: displayFrame)
+        let menuLevel = ScreenCapture.menuBarStripOverlayLevelThreshold
+
+        // The real system menu bar (level == main menu level) stays.
+        #expect(
+            !ScreenCapture.isMenuBarStripOverlay(
+                frame: CGRect(x: 0, y: 0, width: 2048, height: 30),
+                windowLayer: menuLevel,
+                isOnScreen: true,
+                stripFrame: stripFrame
+            )
+        )
+        // MenuBarAgent's hosting surface holding the composited glyphs is
+        // reported off-screen by SCK — never treat it as an overlay.
+        #expect(
+            !ScreenCapture.isMenuBarStripOverlay(
+                frame: CGRect(x: 0, y: 0, width: 2048, height: 37),
+                windowLayer: menuLevel + 50,
+                isOnScreen: false,
+                stripFrame: stripFrame
+            )
+        )
+        // A normal app window tucked below the bar does not intersect the strip.
+        #expect(
+            !ScreenCapture.isMenuBarStripOverlay(
+                frame: CGRect(x: 0, y: 60, width: 2048, height: 1000),
+                windowLayer: 0,
+                isOnScreen: true,
+                stripFrame: stripFrame
+            )
+        )
+    }
+
     private func makeTestImage(width: Int, height: Int) -> CGImage? {
         let bytesPerRow = width * 4
         var data = [UInt8](repeating: 0, count: bytesPerRow * height)

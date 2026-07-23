@@ -8,10 +8,24 @@
 
 import Cocoa
 import Combine
+import MenuBarModel
 import PlatformRuntimeKit
 
 /// A container for the items in the menu bar layout interface.
 final class LayoutBarContainer: NSView {
+    /// Visual styling for the background drawn behind a same-bundle cluster.
+    private enum GroupChrome {
+        static let cornerRadius: CGFloat = 7
+        static let horizontalPadding: CGFloat = 2
+        static let verticalPadding: CGFloat = 1
+        static let fillAlpha: CGFloat = 0.10
+        static let strokeAlpha: CGFloat = 0.22
+        /// Horizontal space reserved to the left of a cluster for its drag handle.
+        static let handleReservation: CGFloat = 15
+    }
+
+    /// The overlay grip views, one per detected cluster.
+    private var groupHandleViews = [LayoutBarGroupHandleView]()
     /// Phases for a dragging session.
     enum DraggingPhase {
         case entered, exited, updated, ended
@@ -226,9 +240,8 @@ final class LayoutBarContainer: NSView {
             view.hasContainer = false
         }
 
-        // retain the previous view on each iteration; use its frame
-        // to calculate the x coordinate of the next view's origin
-        var previous: NSView?
+        // track the running x coordinate for the next view's origin
+        var previousMaxX: CGFloat = 0
 
         // get the max height of all arranged views to calculate the
         // y coordinate of each view's origin
@@ -236,38 +249,190 @@ final class LayoutBarContainer: NSView {
             .map(\.bounds.height)
             .max() ?? 0
 
-        for var view in arrangedViews {
-            if subviews.contains(view) {
+        // Reserve a leading gap before the first member of each cluster so its
+        // drag handle has room to sit without overlapping any item.
+        let groups = groupedMemberIndices()
+        let groupStarts = Set(groups.compactMap(\.first))
+
+        for (index, entry) in arrangedViews.enumerated() {
+            var view: NSView = entry
+            if subviews.contains(entry) {
                 // view already exists inside the layout view, but may
                 // have moved from its previous location;
                 if shouldAnimateNextLayoutPass {
                     // replace the view with its animator proxy
-                    view = view.animator()
+                    view = entry.animator()
                 }
             } else {
                 // view does not already exist inside the layout view;
                 // add it as a subview
-                addSubview(view)
-                view.hasContainer = true
+                addSubview(entry)
+                entry.hasContainer = true
             }
+
+            let originX = previousMaxX + (groupStarts.contains(index) ? GroupChrome.handleReservation : 0)
 
             // set the view's origin; if the view is an animator proxy,
             // it will animate to the new position; otherwise, it must
             // be a newly added view
             view.setFrameOrigin(
                 CGPoint(
-                    x: previous.map(\.frame.maxX) ?? 0,
-                    y: (maxHeight / 2) - view.bounds.midY
+                    x: originX,
+                    y: (maxHeight / 2) - entry.bounds.midY
                 )
             )
 
-            previous = view // retain the view
+            previousMaxX = originX + entry.bounds.width
         }
 
         // update the width and height constraints using the information
         // collected while iterating
-        widthConstraint.constant = previous?.frame.maxX ?? 0
+        widthConstraint.constant = previousMaxX
         heightConstraint.constant = maxHeight
+
+        // Position the cluster drag handles in their reserved gaps, and refresh
+        // the cluster backgrounds (both are derived from the view frames just set).
+        updateGroupHandles(groups: groups)
+        needsDisplay = true
+    }
+
+    /// Rebuilds the cluster drag-handle overlays to match the current groups.
+    ///
+    /// Handles are cheap and stateless, so they are recreated each layout pass
+    /// rather than diffed; a handle drag freezes `canSetArrangedViews`, so this
+    /// never runs mid-drag to invalidate the active dragging source.
+    ///
+    /// `groups` are member-index lists (a bundle's members may not be adjacent).
+    /// One handle serves the whole bundle and carries every member's identifier,
+    /// so dragging it gathers all members — not just a contiguous subset.
+    private func updateGroupHandles(groups: [[Int]]) {
+        for handle in groupHandleViews {
+            handle.removeFromSuperview()
+        }
+        groupHandleViews.removeAll()
+
+        for memberIndices in groups {
+            let views = memberIndices.compactMap { arrangedViews.indices.contains($0) ? arrangedViews[$0] : nil }
+            guard let first = views.first else {
+                continue
+            }
+            let memberIdentifiers = views.compactMap { view -> String? in
+                if case let .item(item) = view.kind {
+                    return item.uniqueIdentifier
+                }
+                return nil
+            }
+            guard memberIdentifiers.count >= 2 else {
+                continue
+            }
+
+            let handle = LayoutBarGroupHandleView(
+                sourceContainer: self,
+                sourceSection: section,
+                memberIdentifiers: memberIdentifiers
+            )
+            let size = LayoutBarGroupHandleView.preferredSize(height: first.frame.height)
+            handle.setFrameSize(size)
+            handle.setFrameOrigin(
+                CGPoint(
+                    x: first.frame.minX - GroupChrome.handleReservation + ((GroupChrome.handleReservation - size.width) / 2),
+                    y: first.frame.midY - (size.height / 2)
+                )
+            )
+            addSubview(handle)
+            groupHandleViews.append(handle)
+        }
+    }
+
+    /// Snapshots the member views of a cluster into a single drag image.
+    ///
+    /// Returns the image plus the union rect (in this container's coordinates)
+    /// so the caller can align the drag image under the cursor.
+    func snapshotCluster(memberIdentifiers: [String]) -> (image: NSImage, rect: NSRect)? {
+        let views = arrangedViews.filter { view in
+            if case let .item(item) = view.kind {
+                return memberIdentifiers.contains(item.uniqueIdentifier)
+            }
+            return false
+        }
+        guard let first = views.first else {
+            return nil
+        }
+        let rect = views.dropFirst()
+            .reduce(first.frame) { $0.union($1.frame) }
+            .insetBy(dx: -GroupChrome.horizontalPadding, dy: -GroupChrome.verticalPadding)
+            .intersection(bounds)
+        guard !rect.isNull, !rect.isEmpty,
+              let rep = bitmapImageRepForCachingDisplay(in: rect)
+        else {
+            return nil
+        }
+        cacheDisplay(in: rect, to: rep)
+        let image = NSImage(size: rect.size)
+        image.addRepresentation(rep)
+        return (image, rect)
+    }
+
+    /// The member-index lists of the arranged views that form each same-bundle
+    /// cluster. A bundle's members may not be adjacent, so each entry is the full
+    /// set of that bundle's member indices, not a contiguous range.
+    ///
+    /// Only item views carry a bundle tag; the badge and opaque slots are mapped
+    /// to a non-groupable placeholder so they are never members.
+    private func groupedMemberIndices() -> [[Int]] {
+        let tags: [MenuBarItemTag] = arrangedViews.map { view in
+            if case let .item(item) = view.kind {
+                return item.tag
+            }
+            return .visibleControlItem
+        }
+        return MenuBarItemGrouping.groups(in: tags).map(\.memberIndices)
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        super.draw(dirtyRect)
+        for memberIndices in groupedMemberIndices() {
+            // A bundle's members may be scattered; draw one rounded background
+            // per contiguous sub-run so the chrome never encloses foreign items
+            // that happen to sit between members. One handle still moves them all.
+            for run in Self.contiguousRuns(of: memberIndices) {
+                let views = run.compactMap { arrangedViews.indices.contains($0) ? arrangedViews[$0] : nil }
+                guard let first = views.first else {
+                    continue
+                }
+                let union = views.dropFirst().reduce(first.frame) { $0.union($1.frame) }
+                let rect = union
+                    .insetBy(dx: -GroupChrome.horizontalPadding, dy: -GroupChrome.verticalPadding)
+                    .intersection(bounds)
+                guard !rect.isNull, !rect.isEmpty else {
+                    continue
+                }
+                let path = NSBezierPath(
+                    roundedRect: rect,
+                    xRadius: GroupChrome.cornerRadius,
+                    yRadius: GroupChrome.cornerRadius
+                )
+                NSColor.secondaryLabelColor.withAlphaComponent(GroupChrome.fillAlpha).setFill()
+                path.fill()
+                NSColor.separatorColor.withAlphaComponent(GroupChrome.strokeAlpha).setStroke()
+                path.lineWidth = 1
+                path.stroke()
+            }
+        }
+    }
+
+    /// Splits an ascending index list into its maximal contiguous runs.
+    private static func contiguousRuns(of indices: [Int]) -> [[Int]] {
+        var runs = [[Int]]()
+        for index in indices {
+            if var last = runs.last, let tail = last.last, index == tail + 1 {
+                last.append(index)
+                runs[runs.count - 1] = last
+            } else {
+                runs.append([index])
+            }
+        }
+        return runs
     }
 
     /// Sets the container's arranged views with the given items.

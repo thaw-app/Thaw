@@ -89,7 +89,7 @@ final class LayoutBarPaddingView: NSView {
             leadingInsetConstraint,
         ])
 
-        registerForDraggedTypes([.layoutBarItem])
+        registerForDraggedTypes([.layoutBarItem, .layoutBarGroupHandle])
 
         configureNotchObservers(appState: appState)
         updateNotchPresentation()
@@ -102,6 +102,11 @@ final class LayoutBarPaddingView: NSView {
 
     override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
         guard !isStabilizing else { return [] }
+        if sender.draggingSource is LayoutBarGroupHandleView {
+            // The whole-group drop mutates order/assignment on drop rather than
+            // reordering arranged views mid-drag, so just accept the move.
+            return .move
+        }
         // Freeze the destination's arrangedViews so that the cache refresh
         // triggered while the system move is in flight cannot overwrite the
         // mid-drag visual state. updateNewItemsPlacement at the end of move()
@@ -120,6 +125,9 @@ final class LayoutBarPaddingView: NSView {
 
     override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation {
         guard !isStabilizing else { return [] }
+        if sender.draggingSource is LayoutBarGroupHandleView {
+            return .move
+        }
         return container.updateArrangedViewsForDrag(with: sender, phase: .updated)
     }
 
@@ -165,6 +173,10 @@ final class LayoutBarPaddingView: NSView {
     }
 
     override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        if let handle = sender.draggingSource as? LayoutBarGroupHandleView {
+            return performGroupHandleDrop(handle, sender: sender)
+        }
+
         guard let draggingSource = sender.draggingSource as? LayoutBarArrangedView else {
             container.canSetArrangedViews = true
             return false
@@ -277,8 +289,22 @@ final class LayoutBarPaddingView: NSView {
                 // immediately from the new assignment, and physical order within a
                 // section is reconciled separately on reveal, so just commit the
                 // new section + order here.
-                controller?.setSection(container.section, item: item)
-                controller?.setSectionOrder(from: orderedItems, for: container.section)
+                //
+                // "One section per group": when the dragged item belongs to a
+                // multi-item bundle group in its source section, relocate the whole
+                // group so a bundle's items never split across sections. The batch
+                // `setSection` appends every member to the target section's order in
+                // group order, so the per-item order commit is skipped in that case.
+                if let groupMembers = crossSectionGroupMembers(
+                    for: item,
+                    sourceSection: sourceSection,
+                    controller: controller
+                ) {
+                    controller?.setSection(container.section, items: groupMembers)
+                } else {
+                    controller?.setSection(container.section, item: item)
+                    controller?.setSectionOrder(from: orderedItems, for: container.section)
+                }
                 if let appState = container.appState {
                     Task { await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true) }
                 }
@@ -630,6 +656,290 @@ final class LayoutBarPaddingView: NSView {
 
     private func orderedLayoutItems() -> [MenuBarItem] {
         Self.layoutItemsForPersistence(from: arrangedViews)
+    }
+
+    /// The members of the dragged item's bundle group in its source section, or
+    /// `nil` when the item is ungrouped (single-item bundle or not groupable).
+    ///
+    /// Grouping is by bundle, so the whole bundle travels together on a
+    /// cross-section drop — honoring "one section per group" — even if its items
+    /// are not currently adjacent in the source section.
+    private func crossSectionGroupMembers(
+        for item: MenuBarItem,
+        sourceSection: MenuBarSection.Name,
+        controller: MenuBarSectionController?
+    ) -> [MenuBarItem]? {
+        guard let appState = container.appState else {
+            return nil
+        }
+        let managed = appState.itemManager.itemCache.managedItems(for: sourceSection)
+        let sourceItems = controller?.ordered(managed, in: sourceSection) ?? managed
+        let tags = sourceItems.map(\.tag)
+        guard let index = sourceItems.firstIndex(where: { $0.tag == item.tag }),
+              let group = MenuBarItemGrouping.group(containing: index, in: tags),
+              group.count >= 2
+        else {
+            return nil
+        }
+        return group.memberIndices.compactMap { sourceItems.indices.contains($0) ? sourceItems[$0] : nil }
+    }
+
+    // MARK: Group handle drops
+
+    /// Commits a whole-group drag started from a cluster's drag handle.
+    ///
+    /// Within the same section it reorders the group as one contiguous block
+    /// (via persisted order + reconciliation, the same path a single reorder
+    /// uses). Across sections it relocates every member, honoring "one section
+    /// per group". Either way the group stays intact — individual items never
+    /// fall out of a handle drag.
+    private func performGroupHandleDrop(_ handle: LayoutBarGroupHandleView, sender: NSDraggingInfo) -> Bool {
+        if handle.sourceSection == container.section {
+            let dropX = container.convert(sender.draggingLocation, from: nil).x
+            // The reorder path restores view updates itself (immediately for a
+            // concealed section, or after its async move task for a live one).
+            return performGroupHandleReorder(handle, dropX: dropX)
+        }
+        defer { restoreAfterGroupDrop(handle) }
+        return performGroupHandleCrossSection(handle)
+    }
+
+    /// Re-enables view updates on both the drop and source containers after a
+    /// synchronous (no async move) group drop.
+    private func restoreAfterGroupDrop(_ handle: LayoutBarGroupHandleView) {
+        container.canSetArrangedViews = true
+        handle.sourceContainer?.canSetArrangedViews = true
+    }
+
+    /// Reorders a group as one contiguous block within its current section,
+    /// **gathering** its members even if they start scattered.
+    ///
+    /// In a concealed section the items are snapshots, so persisting the new
+    /// order is enough. In a physically-live section (Visible, or a revealed
+    /// hidden section) persistence alone does not move anything — the block is
+    /// realized with real AX moves, one member at a time, then the final order
+    /// is committed.
+    private func performGroupHandleReorder(_ handle: LayoutBarGroupHandleView, dropX: CGFloat) -> Bool {
+        guard let appState = container.appState else {
+            restoreAfterGroupDrop(handle)
+            return false
+        }
+        let controller = appState.menuBarManager.sectionController
+        let orderedItems = orderedLayoutItems()
+        let identifiers = orderedItems.map(\.uniqueIdentifier)
+
+        // Members in their current left-to-right order — the sequence the
+        // gathered block must end in. Membership is by identifier, so a bundle
+        // whose items are not adjacent still contributes every member.
+        let memberIDSet = Set(handle.memberIdentifiers)
+        let members = orderedItems.filter { memberIDSet.contains($0.uniqueIdentifier) }
+        guard members.count == handle.memberIdentifiers.count, members.count >= 2 else {
+            // Some members are no longer present in this section (e.g. one was
+            // pulled into another section); nothing to move as one block here.
+            restoreAfterGroupDrop(handle)
+            return false
+        }
+
+        // Drop cursor position in the *original* array's index space.
+        let destination = groupHandleDestinationIndex(in: identifiers, dropX: dropX)
+
+        // Gather: remove every member, then insert the block so it begins at the
+        // drop cursor. Members sitting before the cursor shift the insertion left.
+        var reordered = orderedItems.filter { !memberIDSet.contains($0.uniqueIdentifier) }
+        let membersBefore = orderedItems.prefix(min(destination, orderedItems.count))
+            .filter { memberIDSet.contains($0.uniqueIdentifier) }
+            .count
+        let insertionIndex = (destination - membersBefore).clamped(to: 0 ... reordered.count)
+        reordered.insert(contentsOf: members, at: insertionIndex)
+
+        // Dropped where the block already sits — nothing to do.
+        guard reordered.map(\.uniqueIdentifier) != identifiers else {
+            restoreAfterGroupDrop(handle)
+            return true
+        }
+
+        if macOS27SectionIsPhysicallyLive(container.section, controller: controller) {
+            let firstIndex = insertionIndex
+            let afterBlockIndex = firstIndex + members.count
+            moveGroupSequentially(
+                members: members,
+                rightAnchor: afterBlockIndex < reordered.count ? reordered[afterBlockIndex] : nil,
+                leftAnchor: firstIndex > 0 ? reordered[firstIndex - 1] : nil,
+                sectionOrderToCommit: reordered,
+                sourceContainer: handle.sourceContainer
+            )
+            // The async task calls `finishDrag`, which restores view updates.
+            return true
+        }
+
+        controller?.setSectionOrder(from: reordered, for: container.section)
+        Task { await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true) }
+        restoreAfterGroupDrop(handle)
+        return true
+    }
+
+    /// Realizes a block move in a physically-live section with sequential AX
+    /// moves.
+    ///
+    /// The members are anchored to a *fixed external neighbor* — the item that
+    /// borders the block's destination and is not itself a group member — never
+    /// to a just-moved member (whose cached AX element is momentarily stale, the
+    /// cause of members landing apart). Inserting each member adjacent to that
+    /// stable anchor in the right order keeps the block contiguous:
+    /// - against a right neighbor: insert members front-to-back, each to its
+    ///   left, so each new member pushes the previous ones further left;
+    /// - against a left neighbor (block goes to the end): insert back-to-front,
+    ///   each to its right.
+    private func moveGroupSequentially(
+        members: [MenuBarItem],
+        rightAnchor: MenuBarItem?,
+        leftAnchor: MenuBarItem?,
+        sectionOrderToCommit: [MenuBarItem],
+        sourceContainer: LayoutBarContainer?
+    ) {
+        guard let appState = container.appState, !members.isEmpty else {
+            finishDrag(nil, sourceContainer: sourceContainer)
+            return
+        }
+        let section = container.section
+        // `members` in left-to-right order — the sequence the block must end in.
+        let memberOrder = members.map(\.tag)
+
+        // Insert every member against a stable external anchor (never a
+        // just-moved member). Front-to-back to the anchor's left, or — when the
+        // block goes to the very end — back-to-front to a left anchor's right.
+        let anchorTag: MenuBarItemTag
+        let orderedMemberTags: [MenuBarItemTag]
+        let insertToLeftOfAnchor: Bool
+        if let rightAnchor {
+            anchorTag = rightAnchor.tag
+            orderedMemberTags = memberOrder
+            insertToLeftOfAnchor = true
+        } else if let leftAnchor {
+            anchorTag = leftAnchor.tag
+            orderedMemberTags = memberOrder.reversed()
+            insertToLeftOfAnchor = false
+        } else {
+            finishDrag(nil, sourceContainer: sourceContainer)
+            return
+        }
+
+        Task { @MainActor [weak self, weak appState] in
+            guard let self, let appState else { return }
+            guard !self.isStabilizing else {
+                self.finishDrag(nil, sourceContainer: sourceContainer)
+                return
+            }
+            self.isStabilizing = true
+            self.setDimmed(true)
+            try? await Task.sleep(for: .milliseconds(150))
+
+            let liveOrder: @MainActor () -> [MenuBarItem] = {
+                appState.itemManager.itemCache.managedItems(for: section)
+            }
+            let liveItem: @MainActor (MenuBarItemTag) -> MenuBarItem? = { tag in
+                liveOrder().first { $0.tag == tag }
+            }
+            // Whether the members already sit contiguously, in order, immediately
+            // beside the anchor — i.e., the block move is complete.
+            let isPlaced: @MainActor () -> Bool = {
+                let live = liveOrder()
+                guard let anchorIndex = live.firstIndex(where: { $0.tag == anchorTag }) else {
+                    return false
+                }
+                let start = insertToLeftOfAnchor ? anchorIndex - memberOrder.count : anchorIndex + 1
+                guard start >= 0, start + memberOrder.count <= live.count else {
+                    return false
+                }
+                return memberOrder.indices.allSatisfy { live[start + $0].tag == memberOrder[$0] }
+            }
+
+            // Repeat the placement pass until the whole block is contiguous; a
+            // single AX move can transiently fail or lag the cache, which would
+            // otherwise leave one member stranded outside the group.
+            let maxPasses = 4
+            var pass = 0
+            while pass < maxPasses, !isPlaced() {
+                pass += 1
+                for tag in orderedMemberTags {
+                    // Re-fetch both the member and the (stable) anchor so each
+                    // move targets a current AX element.
+                    guard let member = liveItem(tag), let anchor = liveItem(anchorTag) else {
+                        continue
+                    }
+                    let destination: MenuBarItemManager.MoveDestination =
+                        insertToLeftOfAnchor ? .leftOfItem(anchor) : .rightOfItem(anchor)
+                    do {
+                        _ = try await appState.itemManager.move(
+                            item: member,
+                            to: destination,
+                            skipInputPause: true,
+                            watchdogTimeout: MenuBarItemManager.layoutWatchdogTimeout
+                        )
+                    } catch {
+                        Self.diagLog.error("Group reorder move failed for \(member.logString): \(error)")
+                    }
+                    await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
+                    // Let the AX order settle before the next member reads it.
+                    try? await Task.sleep(for: .milliseconds(80))
+                }
+            }
+            if !isPlaced() {
+                Self.diagLog.warning("Group reorder did not fully converge after \(maxPasses) passes")
+            }
+
+            appState.menuBarManager.sectionController?.setSectionOrder(
+                from: sectionOrderToCommit,
+                for: section
+            )
+            await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
+            self.isStabilizing = false
+            self.setDimmed(false)
+            self.finishDrag(nil, sourceContainer: sourceContainer)
+        }
+    }
+
+    /// Relocates every member of a group into the drop section.
+    private func performGroupHandleCrossSection(_ handle: LayoutBarGroupHandleView) -> Bool {
+        guard let appState = container.appState else {
+            return false
+        }
+        let controller = appState.menuBarManager.sectionController
+        let sourceItems = appState.itemManager.itemCache.managedItems(for: handle.sourceSection)
+        let members = handle.memberIdentifiers.compactMap { identifier in
+            sourceItems.first { $0.uniqueIdentifier == identifier }
+        }
+        guard !members.isEmpty else {
+            return false
+        }
+
+        let experimentalSystemItemHiding = appState.settings.advanced.enableExperimentalSystemItemHiding
+        guard members.allSatisfy({
+            MenuBarSectionController.canAssign(
+                $0,
+                to: container.section,
+                experimentalSystemItemHiding: experimentalSystemItemHiding
+            )
+        }) else {
+            Self.diagLog.warning("Refusing group move to \(container.section.logString): a member is non-hideable")
+            return false
+        }
+
+        controller?.setSection(container.section, items: members)
+        Task { await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true) }
+        return true
+    }
+
+    /// The insertion index (in `identifiers` space) for a group dropped at
+    /// `dropX`, resolved from the nearest arranged item view.
+    private func groupHandleDestinationIndex(in identifiers: [String], dropX: CGFloat) -> Int {
+        guard let nearest = container.arrangedView(nearestTo: dropX, excludingBadge: true),
+              case let .item(item) = nearest.kind,
+              let index = identifiers.firstIndex(of: item.uniqueIdentifier)
+        else {
+            return identifiers.count
+        }
+        return dropX > nearest.frame.midX ? index + 1 : index
     }
 
     private func orderedLayoutItemsForSectionOrder() -> [MenuBarItem] {

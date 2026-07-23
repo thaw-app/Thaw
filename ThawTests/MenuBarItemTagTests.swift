@@ -453,6 +453,28 @@ final class MenuBarItemTagTests: XCTestCase {
         XCTAssertEqual(unknown.sectionManagementPolicy, .forcedVisible)
     }
 
+    @MainActor
+    func testMacOS27FocusAndNowPlayingCanBePositionManaged() throws {
+        guard #available(macOS 27, *) else {
+            throw XCTSkip("MenuBarAgent position management is macOS 27-specific")
+        }
+
+        for title in ["com.apple.menuextra.focusmode", "com.apple.menuextra.now-playing"] {
+            let tag = MenuBarItemTag(namespace: .menuBarAgent, title: title)
+            let item = MenuBarItem.fixture(tag: tag, windowID: 1)
+
+            XCTAssertTrue(tag.isPositionManageableMenuBarAgentItem, title)
+            XCTAssertTrue(MenuBarItemTag.isPositionManageableMenuBarAgentIdentifier(tag.description), title)
+            XCTAssertFalse(tag.isMenuBarAgentItemForcedVisible, title)
+            XCTAssertEqual(tag.sectionManagementPolicy, .hideable, title)
+            XCTAssertTrue(MenuBarSectionController.canAssign(
+                item,
+                to: .hidden,
+                experimentalSystemItemHiding: false
+            ), title)
+        }
+    }
+
     func testUnknownMenuBarAgentItemIsNotAnchored() throws {
         guard #available(macOS 27, *) else {
             throw XCTSkip("MenuBarAgent anchoring is macOS 27-specific")

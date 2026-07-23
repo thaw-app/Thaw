@@ -727,6 +727,18 @@ final class MenuBarSectionControllerTests: XCTestCase {
         XCTAssertEqual(controller.revealedSection, .hidden)
     }
 
+    func testRevealingFocusDoesNotChangeItsPersistedHiddenAssignment() {
+        let controller = makeController()
+        let focusIdentifier = "com.apple.MenuBarAgent:com.apple.menuextra.focusmode"
+
+        controller.setSection(.hidden, identifier: focusIdentifier)
+        controller.show(.hidden)
+
+        XCTAssertEqual(controller.section(for: focusIdentifier), .hidden)
+        XCTAssertEqual(controller.authoredSection(for: focusIdentifier), .hidden)
+        XCTAssertEqual(controller.revealedSection, .hidden)
+    }
+
     func testHideRevealedSections_ClearsReveal() {
         let controller = makeController()
         controller.show(.hidden)

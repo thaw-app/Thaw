@@ -1932,8 +1932,15 @@ final class MenuBarSectionController: ObservableObject {
     func refresh(forceRestrictionPulse: Bool = false) {
         guard let appState else { return }
         let experimentalSystemItemHiding = appState.settings.advanced.enableExperimentalSystemItemHiding
-        let experimentalWindowHiding = appState.settings.advanced.enablePositionHiding
         let allItems = appState.itemManager.itemCache.managedItems
+        // The assessment assertion collateral-hides Focus and Now Playing while
+        // it conceals any third-party app. Route third-party hiding through
+        // preferred positions whenever either module is live, even when the
+        // optional position backend setting is off.
+        let preservesPositionManagedSystemModules = allItems.contains {
+            $0.tag.isPositionManageableMenuBarAgentItem
+        } || sectionAssignment.keys.contains(where: MenuBarItemTag.isPositionManageableMenuBarAgentIdentifier)
+        let experimentalWindowHiding = appState.settings.advanced.enablePositionHiding || preservesPositionManagedSystemModules
         let invalidAssignmentIDs = Self.invalidAssignmentIdentifiers(
             sectionAssignment: sectionAssignment,
             liveItems: allItems,
@@ -1999,6 +2006,12 @@ final class MenuBarSectionController: ObservableObject {
         // they show/hide only on a real assignment change (drag to/from Hidden).
         var ccHiddenTitles = Set<String>()
         for (identifier, section) in assignmentIncludingOverflow where section != .visible {
+            // Focus and Now Playing use preferred positions, not the Control
+            // Center preference: restarting the host to apply that preference
+            // cannot overcome assessment-mode collateral hiding.
+            guard !MenuBarItemTag.isPositionManageableMenuBarAgentIdentifier(identifier) else {
+                continue
+            }
             if let title = RuntimeModuleController.governableMenuExtraTitle(forItemIdentifier: identifier) {
                 ccHiddenTitles.insert(title)
             }
