@@ -6,10 +6,11 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-@preconcurrency import CompactSlider
+import CompactSlider
 import SwiftUI
 
 struct IceSlider<Value: BinaryFloatingPoint, ValueLabel: View>: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Binding private var value: Value
 
     private let bounds: ClosedRange<Value>
@@ -69,7 +70,11 @@ struct IceSlider<Value: BinaryFloatingPoint, ValueLabel: View>: View {
         CompactSlider(value: $value, in: bounds, step: step ?? 0)
             .frame(height: height)
             .onContinuousHover { phase in
-                if case .active = phase { isLabelActive = true } else { isLabelActive = false }
+                if case .active = phase {
+                    isLabelActive = true
+                } else {
+                    isLabelActive = false
+                }
             }
             .overlay {
                 HStack(spacing: 4) {
@@ -97,7 +102,7 @@ struct IceSlider<Value: BinaryFloatingPoint, ValueLabel: View>: View {
                 .padding(.horizontal, 8)
                 .frame(height: height)
                 .opacity(isLabelActive ? 0.65 : 0.45)
-                .animation(.easeInOut(duration: 0.15), value: isLabelActive)
+                .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: isLabelActive)
                 .allowsHitTesting(false)
             }
             .glassEffect(.regular, in: borderShape)

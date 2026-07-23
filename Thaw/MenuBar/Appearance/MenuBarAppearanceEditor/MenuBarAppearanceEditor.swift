@@ -67,8 +67,8 @@ struct MenuBarAppearanceEditor: View {
                 case .settings = location,
                 appState.settings.advanced.enableSecondaryContextMenu
             {
-                CalloutBox(
-                    "Tip: You can also edit these settings by right-clicking in an empty area of the menu bar.",
+                SettingsWarningPill(
+                    message: "Tip: You can also edit these settings by right-clicking in an empty area of the menu bar.",
                     systemImage: "lightbulb"
                 )
             }
@@ -102,8 +102,8 @@ struct MenuBarAppearanceEditor: View {
                 || appearanceManager.configuration.shapeKind != .noShape
                 || appearanceManager.configuration.current.backgroundKind != .none
             {
-                CalloutBox(
-                    "If effects are not visible, disable \"Show menu bar background\" in System Settings \(Constants.menuArrow) Menu Bar",
+                SettingsWarningPill(
+                    message: "If effects are not visible, disable \"Show menu bar background\" in System Settings \(Constants.menuArrow) Menu Bar",
                     systemImage: "info.circle"
                 )
             }
@@ -199,7 +199,7 @@ private struct UnlabeledBackgroundEditor: View {
     }
 
     var body: some View {
-        VStack(spacing: .iceFormDefaultSpacing) {
+        VStack(spacing: 24) {
             if showTitle {
                 IceSection("Background") {
                     styleSection
@@ -311,7 +311,7 @@ private struct LabeledBackgroundEditor: View {
     let appearance: SystemAppearance
 
     var body: some View {
-        IceSection(options: .plain) {
+        IceSection(isBordered: false) {
             labelStack
         } content: {
             UnlabeledBackgroundEditor(configuration: binding, showTitle: false)
@@ -348,7 +348,7 @@ private struct UnlabeledShapeEditor: View {
     @Binding var configuration: MenuBarAppearancePartialConfiguration
 
     var body: some View {
-        VStack(spacing: .iceFormDefaultSpacing) {
+        VStack(spacing: 24) {
             IceSection {
                 tintPicker
                 tintOpacity
@@ -466,7 +466,7 @@ private struct LabeledShapeEditor: View {
     let appearance: SystemAppearance
 
     var body: some View {
-        IceSection(options: .plain) {
+        IceSection(isBordered: false) {
             labelStack
         } content: {
             partialEditor

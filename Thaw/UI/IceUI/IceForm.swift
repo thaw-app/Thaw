@@ -9,94 +9,70 @@
 import SwiftUI
 
 struct IceForm<Content: View>: View {
-    @State private var contentFrame = CGRect.zero
+    @Environment(\.settingsPaneTitle) private var settingsPaneTitle
+    @State private var formWidth: CGFloat = 0
 
-    private let alignment: HorizontalAlignment
-    private let padding: EdgeInsets
-    private let spacing: CGFloat
     private let content: Content
 
-    init(
-        alignment: HorizontalAlignment = .center,
-        padding: EdgeInsets = .iceFormDefaultPadding,
-        spacing: CGFloat = .iceFormDefaultSpacing,
-        @ViewBuilder content: () -> Content
-    ) {
-        self.alignment = alignment
-        self.padding = padding
-        self.spacing = spacing
+    init(@ViewBuilder content: () -> Content) {
         self.content = content()
     }
 
-    init(
-        alignment: HorizontalAlignment = .center,
-        padding: CGFloat,
-        spacing: CGFloat = .iceFormDefaultSpacing,
-        @ViewBuilder content: () -> Content
-    ) {
-        self.init(
-            alignment: alignment,
-            padding: EdgeInsets(all: padding),
-            spacing: spacing
-        ) {
-            content()
-        }
-    }
-
     var body: some View {
-        GeometryReader { geometry in
-            ScrollView {
-                contentLayout.frame(
-                    minWidth: geometry.size.width,
-                    minHeight: geometry.size.height,
-                    alignment: .top
-                )
+        // Page title sits above the Form (not in a grouped row/card). Form
+        // scrolls full-width so the scrollbar tracks the detail pane / window
+        // edge; reading width is enforced with symmetric gutters instead of
+        // shrinking the scroll view itself.
+        VStack(alignment: .leading, spacing: 0) {
+            if let settingsPaneTitle {
+                Text(settingsPaneTitle)
+                    .font(.title2.weight(.bold))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, SettingsDetailLayout.titleTopInset)
+                    .padding(.horizontal, SettingsDetailLayout.titleHorizontalInset)
+                    .padding(.bottom, 8)
+                    .accessibilityAddTraits(.isHeader)
             }
-            .background(Color.clear)
+
+            Form {
+                content
+            }
+            .formStyle(.grouped)
             .scrollContentBackground(.hidden)
+            .scrollEdgeEffectStyle(.soft, for: .top)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background {
+                GeometryReader { proxy in
+                    Color.clear.preference(
+                        key: IceFormWidthKey.self,
+                        value: proxy.size.width
+                    )
+                }
+            }
+            .onPreferenceChange(IceFormWidthKey.self) { width in
+                formWidth = width
+            }
+            .contentMargins(.horizontal, readingGutter, for: .scrollContent)
         }
         .focusSection()
         .accessibilityElement(children: .contain)
     }
 
-    private var contentLayout: some View {
-        VStack(alignment: alignment, spacing: spacing) {
-            content
+    /// Extra inset so grouped cards stay near ``SettingsDetailLayout/columnMaxWidth``
+    /// on wide windows without pinning the scrollbar to that column.
+    private var readingGutter: CGFloat {
+        let available = formWidth - (SettingsDetailLayout.titleHorizontalInset * 2)
+        let overflow = available - SettingsDetailLayout.columnMaxWidth
+        guard overflow > 0 else {
+            return 0
         }
-        .labeledContentStyle(IceFormLabeledContentStyle())
-        .toggleStyle(IceFormToggleStyle())
-        .padding(padding)
-        .onFrameChange(update: $contentFrame)
+        return overflow / 2
     }
 }
 
-private struct IceFormLabeledContentStyle: LabeledContentStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        LabeledContent {
-            configuration.content
-                .layoutPriority(1)
-        } label: {
-            configuration.label
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .layoutPriority(0)
-        }
+private struct IceFormWidthKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
     }
-}
-
-private struct IceFormToggleStyle: ToggleStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        Toggle(configuration)
-            .toggleStyle(.switch)
-            .controlSize(.mini)
-    }
-}
-
-extension EdgeInsets {
-    /// The default padding for an ``IceForm``.
-    static let iceFormDefaultPadding: EdgeInsets = .init(top: 0, leading: 20, bottom: 20, trailing: 20)
-}
-
-extension CGFloat {
-    /// The default spacing for an ``IceForm``.
-    static let iceFormDefaultSpacing: CGFloat = 24
 }

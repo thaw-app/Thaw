@@ -7,6 +7,7 @@
 //  Licensed under the GNU GPLv3
 
 import AppKit
+import MenuBarModel
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -18,7 +19,6 @@ struct ProfileSettingsPane: View {
     @State private var isApplying = false
     @State private var editingProfileID: UUID?
     @State private var editingName = ""
-    @State private var isConfirmingDelete = false
     @State private var profileToDelete: UUID?
     @State private var errorMessage: String?
     @State private var showingError = false
@@ -32,7 +32,7 @@ struct ProfileSettingsPane: View {
 
             if !profileManager.profiles.isEmpty {
                 IceSection {
-                    Text("Auto-Switch").font(.headline)
+                    Text("Auto-Switch")
                 } content: {
                     autoSwitchInfo
                     autoSwitchControls
@@ -44,7 +44,28 @@ struct ProfileSettingsPane: View {
         .alert("Error", isPresented: $showingError) {
             Button("OK") { errorMessage = nil }
         } message: {
-            if let errorMessage { Text(errorMessage) }
+            if let errorMessage {
+                Text(errorMessage)
+            }
+        }
+        .alert(
+            "Delete Profile?",
+            isPresented: Binding(
+                get: { profileToDelete != nil },
+                set: {
+                    if !$0 {
+                        profileToDelete = nil
+                    }
+                }
+            ),
+            presenting: profileToDelete
+        ) { id in
+            Button("Delete", role: .destructive) { deleteProfile(id: id) }
+            Button("Cancel", role: .cancel) {}
+        } message: { id in
+            if let profile = profileManager.profiles.first(where: { $0.id == id }) {
+                Text("Are you sure you want to delete the profile \"\(profile.name)\"? This cannot be undone.")
+            }
         }
     }
 
@@ -75,7 +96,7 @@ struct ProfileSettingsPane: View {
                 Button("Done") {
                     commitRename(id: profile.id)
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.settingsGlass)
             } else {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(.green)
@@ -84,7 +105,7 @@ struct ProfileSettingsPane: View {
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(profile.name)
-                        .font(.headline)
+                        .font(.body.weight(.semibold))
                     VStack(alignment: .leading, spacing: 1) {
                         Text("Created: \(profile.createdAt.formatted(date: .abbreviated, time: .shortened))")
                         Text("Modified: \(profile.modifiedAt.formatted(date: .abbreviated, time: .shortened))")
@@ -98,32 +119,35 @@ struct ProfileSettingsPane: View {
                 Button("Apply") {
                     applyProfile(id: profile.id)
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.settingsGlass)
                 .disabled(isApplying || profile.id == profileManager.activeProfileID)
 
-                Menu {
-                    Button("Update All") {
+                IceMenu(
+                    primaryAction: {
                         updateProfile(id: profile.id, scope: .all)
+                    },
+                    content: {
+                        Button("Update All") {
+                            updateProfile(id: profile.id, scope: .all)
+                        }
+                        Button("Update Layout Only") {
+                            updateProfile(id: profile.id, scope: .layoutOnly)
+                        }
+                        Button("Update Configuration Only") {
+                            updateProfile(id: profile.id, scope: .configurationOnly)
+                        }
+                        Divider()
+                        Button("Update Configuration on All Profiles") {
+                            updateConfigurationOnAllProfiles()
+                        }
+                    },
+                    title: {
+                        Text("Update")
                     }
-                    Button("Update Layout Only") {
-                        updateProfile(id: profile.id, scope: .layoutOnly)
-                    }
-                    Button("Update Configuration Only") {
-                        updateProfile(id: profile.id, scope: .configurationOnly)
-                    }
-                    Divider()
-                    Button("Update Configuration on All Profiles") {
-                        updateConfigurationOnAllProfiles()
-                    }
-                } label: {
-                    Text("Update")
-                } primaryAction: {
-                    updateProfile(id: profile.id, scope: .all)
-                }
-                .menuStyle(.borderlessButton)
+                )
                 .help("Update this profile with the current state")
 
-                Menu {
+                IceMenu {
                     Button("Rename") {
                         editingProfileID = profile.id
                         editingName = profile.name
@@ -141,30 +165,11 @@ struct ProfileSettingsPane: View {
 
                     Button("Delete", role: .destructive) {
                         profileToDelete = profile.id
-                        isConfirmingDelete = true
                     }
-                } label: {
+                } title: {
                     Image(systemName: "ellipsis.circle")
                 }
-                .menuStyle(.borderlessButton)
-                .fixedSize()
-            }
-        }
-        .alert("Delete Profile?", isPresented: $isConfirmingDelete) {
-            Button("Delete", role: .destructive) {
-                if let id = profileToDelete {
-                    deleteProfile(id: id)
-                }
-                profileToDelete = nil
-            }
-            Button("Cancel", role: .cancel) {
-                profileToDelete = nil
-            }
-        } message: {
-            if let id = profileToDelete,
-               let profile = profileManager.profiles.first(where: { $0.id == id })
-            {
-                Text("Are you sure you want to delete the profile \"\(profile.name)\"? This cannot be undone.")
+                .help("More profile actions")
             }
         }
     }
@@ -184,7 +189,7 @@ struct ProfileSettingsPane: View {
             Button("Save Current") {
                 createProfile()
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(.settingsGlass)
             .disabled(newProfileName.trimmingCharacters(in: .whitespaces).isEmpty)
         }
 
@@ -199,7 +204,7 @@ struct ProfileSettingsPane: View {
                     Text("Import Profile(s)")
                 }
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(.settingsGlass)
 
             if !profileManager.profiles.isEmpty {
                 Button {
@@ -211,7 +216,7 @@ struct ProfileSettingsPane: View {
                         Text("Export Profile(s)")
                     }
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.settingsGlass)
             }
         }
     }
@@ -225,28 +230,22 @@ struct ProfileSettingsPane: View {
     }
 
     private var focusFilterFooter: some View {
-        VStack(spacing: 8) {
-            CalloutBox(systemImage: "info.circle", font: .callout) {
-                Text("To switch profiles with Focus modes, add \(Constants.displayName) as a Focus Filter in System Settings \(Constants.menuArrow) Focus \(Constants.menuArrow) [Mode] \(Constants.menuArrow) Focus Filters. When a Focus mode deactivates, the display profile is automatically restored.")
-            }
-            .padding(.top, 22)
-            .padding(.leading, -8)
-
-            HStack {
-                Spacer()
-                Button("Open Focus Settings") {
-                    if let url = URL(string: "x-apple.systempreferences:com.apple.Focus") {
-                        NSWorkspace.shared.open(url)
-                    }
-                }
-                .buttonStyle(.bordered)
+        SettingsWarningPill(
+            title: "Focus Filters",
+            message: "To switch profiles with Focus modes, add \(Constants.displayName) as a Focus Filter in System Settings \(Constants.menuArrow) Focus \(Constants.menuArrow) [Mode] \(Constants.menuArrow) Focus Filters. When a Focus mode deactivates, the display profile is automatically restored.",
+            systemImage: "info.circle.fill",
+            actionTitle: "Open Focus Settings"
+        ) {
+            if let url = URL(string: "x-apple.systempreferences:com.apple.Focus") {
+                NSWorkspace.shared.open(url)
             }
         }
+        .padding(.top, 8)
     }
 
     @ViewBuilder
     private var autoSwitchControls: some View {
-        let displays = allDisplays()
+        let displays = allKnownDisplays
         let profileOptions = profileManager.profiles
 
         ForEach(displays) { display in
@@ -329,7 +328,7 @@ struct ProfileSettingsPane: View {
             }
         }
         if failed > 0 {
-            errorMessage = String(localized: "Failed to update configuration on \(failed) profile(s).")
+            errorMessage = String(localized: "Failed to update configuration on \(failed) profiles.")
             showingError = true
         }
     }
@@ -456,9 +455,9 @@ struct ProfileSettingsPane: View {
         }
     }
 
-    /// Returns all displays relevant to auto-switch: connected displays plus
-    /// any disconnected displays that still have a profile association.
-    private func allDisplays() -> [DisplayInfo] {
+    /// All displays relevant to auto-switch: connected displays plus any
+    /// disconnected displays that still have a profile association.
+    private var allKnownDisplays: [DisplayInfo] {
         let knownDisplays = appState.settings.displaySettings.knownDisplays
         var displays = NSScreen.managedScreens.compactMap { screen -> DisplayInfo? in
             guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else {

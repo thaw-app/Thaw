@@ -11,11 +11,14 @@ import SwiftUI
 struct MenuBarLayoutSettingsPane: View {
     @EnvironmentObject var appState: AppState
     @ObservedObject var itemManager: MenuBarItemManager
+    @ObservedObject var advancedSettings: AdvancedSettings
 
     @State private var loadDeadlineReached = false
     @State private var isResettingLayout = false
     @State private var resetStatus: ResetStatus?
     @State private var isConfirmingReset = false
+    @State private var maxSliderLabelWidth: CGFloat = 0
+    @State private var isAdvancedExpanded = false
 
     private let diagLog = DiagLog(category: "MenuBarLayoutPane")
 
@@ -33,9 +36,11 @@ struct MenuBarLayoutSettingsPane: View {
         } else if appState.menuBarManager.isMenuBarHiddenBySystemUserDefaults {
             cannotArrange
         } else {
-            IceForm(spacing: 20) {
-                header
-                layoutBars
+            IceForm {
+                layoutBarsSection
+                layoutSectionsCard
+                iconPreviewsCard
+                advancedLayoutControlsCard
                 resetControls
             }
             .onAppear {
@@ -46,17 +51,122 @@ struct MenuBarLayoutSettingsPane: View {
         }
     }
 
-    private var header: some View {
+    private var layoutSectionsCard: some View {
+        IceSection("Sections") {
+            Toggle(
+                "Enable the always-hidden section",
+                isOn: $advancedSettings.enableAlwaysHiddenSection
+            )
+            sectionDividerStyle
+        }
+    }
+
+    private var iconPreviewsCard: some View {
+        IceSection("Icon previews") {
+            iconRefreshInterval
+        }
+    }
+
+    private var advancedLayoutControlsCard: some View {
         IceSection {
-            VStack(spacing: 3) {
+            DisclosureGroup("Advanced layout controls", isExpanded: $isAdvancedExpanded) {
+                enableMenuBarItemOverflow
+                useLCSSortingOnNotchedDisplays
+            }
+        }
+        .onChange(of: appState.navigationState.requestedSettingsDisclosure, initial: true) { _, _ in
+            if SettingsSearchNavigation.consumeDisclosure(
+                .advancedLayoutControls,
+                navigationState: appState.navigationState
+            ) {
+                isAdvancedExpanded = true
+            }
+        }
+    }
+
+    private var enableMenuBarItemOverflow: some View {
+        Toggle(
+            "Enable menu bar item overflow",
+            isOn: $advancedSettings.enableMenuBarItemOverflow
+        )
+        .annotation {
+            Text(
+                """
+                Move menu bar items from the visible section into the hidden \
+                section when they don't fit beside the notch on a notched \
+                display. Disable to keep the saved profile layout exactly as \
+                authored even when items would otherwise be pushed under the \
+                notch.
+                """
+            )
+            .padding(.trailing, 75)
+        }
+    }
+
+    private var useLCSSortingOnNotchedDisplays: some View {
+        Toggle(
+            "Use LCS sorting on notched displays",
+            isOn: $advancedSettings.useLCSSortingOnNotchedDisplays
+        )
+        .annotation {
+            Text(
+                """
+                Use the faster LCS (Longest Common Subsequence) algorithm for \
+                profile sorting on notched displays instead of the full sort. \
+                LCS minimises the number of moves but may be less reliable on \
+                notched displays with smaller resolutions.
+                """
+            )
+            .padding(.trailing, 75)
+        }
+    }
+
+    private var sectionDividerStyle: some View {
+        IcePicker("Section divider style", selection: $advancedSettings.sectionDividerStyle) {
+            ForEach(SectionDividerStyle.allCases) { style in
+                Text(style.localized).tag(style)
+            }
+        }
+    }
+
+    private var iconRefreshInterval: some View {
+        let fpsBinding = Binding<Double>(
+            get: {
+                let interval = advancedSettings.iconRefreshInterval
+                return interval > 0 ? (1.0 / interval).rounded() : 0
+            },
+            set: { advancedSettings.iconRefreshInterval = $0 > 0 ? 1.0 / $0 : 0 }
+        )
+        return LabeledContent {
+            IceSlider(
+                value: fpsBinding,
+                in: 0 ... 30,
+                step: 1
+            ) {
+                Text(fpsBinding.wrappedValue > 0
+                    ? "\(Int(fpsBinding.wrappedValue)) fps"
+                    : "Off")
+            }
+        } label: {
+            Text("Icon refresh rate")
+                .frame(minWidth: maxSliderLabelWidth, alignment: .leading)
+                .onFrameChange { frame in
+                    maxSliderLabelWidth = max(maxSliderLabelWidth, frame.width)
+                }
+        }
+        .annotation("How often animated menu bar icons are refreshed in panels. Higher values are smoother but use more CPU.")
+    }
+
+    private var layoutBarsSection: some View {
+        IceSection {
+            layoutBars
+        } footer: {
+            // Explanatory text sits underneath the bars as a native grouped
+            // Section footer (secondary/caption styling applied by the OS).
+            VStack(alignment: .leading, spacing: 4) {
                 Text("Drag to arrange your menu bar items into different sections.")
-                    .font(.title3.bold())
                 Text("Move the New Items badge to choose where newly detected items will appear.")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(.secondary)
                 Text("Items can also be arranged by ⌘ Command + dragging them in the menu bar.")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(.secondary)
             }
         }
     }
@@ -78,7 +188,7 @@ struct MenuBarLayoutSettingsPane: View {
                             if areControlItemsDisabledBySystem {
                                 Text("One or more section dividers are hidden by macOS")
                                 Text("Check System Settings > Menu Bar and enable \(Constants.displayName)")
-                                    .font(.calloutBox)
+                                    .font(.callout.bold())
                                     .foregroundStyle(.secondary)
                             } else {
                                 Text("Unable to load menu bar items")
