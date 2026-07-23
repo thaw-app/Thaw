@@ -97,6 +97,23 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable {
         SystemMenuBarModuleCatalog.controlCenterKeysByMenuExtraTitle[title] != nil
     }
 
+    /// Whether this tag is one of the two MenuBarAgent-hosted Apple modules —
+    /// Focus and Now Playing — whose position ``PositionHideBackend`` can park
+    /// and restore through their stable `status:` / `module:` keys. The
+    /// assessment assertion collateral-hides them whenever it conceals a
+    /// third-party app, but unlike every other Apple-owned module MenuBarAgent
+    /// exposes an addressable key for them, so they are the sole system
+    /// exceptions the position backend manages directly.
+    public var isPositionManageableMenuBarAgentItem: Bool {
+        guard namespace == .menuBarAgent else { return false }
+        switch SystemMenuBarModuleCatalog.moduleName(matching: title) {
+        case "NowPlaying", "FocusModes":
+            return true
+        default:
+            return false
+        }
+    }
+
     /// A MenuBarAgent-hosted item that must remain in Visible. macOS 27 owns
     /// these children as one system-hosted family; assignment hiding is not a
     /// reliable per-child operation. Movable children still participate in
