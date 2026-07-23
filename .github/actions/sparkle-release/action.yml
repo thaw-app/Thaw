@@ -1,0 +1,252 @@
+name: Sparkle Release
+description: Package a notarized app ZIP, sign Sparkle updates, and refresh appcast.xml on gh-pages
+
+inputs:
+  tag:
+    description: Release tag / marketing version (for example, 2.0.0-rc.1)
+    required: true
+  channel:
+    description: Sparkle channel (stable, beta, or alpha). Stable omits sparkle:channel.
+    required: true
+  app-name:
+    description: Name of the .app bundle
+    required: false
+    default: Thaw.app
+  sparkle-version:
+    description: Sparkle tools version (must match Package.resolved)
+    required: false
+    default: "2.9.3"
+  sparkle-private-key:
+    description: EdDSA private key contents matching SUPublicEDKey
+    required: true
+  previous-release-count:
+    description: How many prior GitHub release ZIPs to fetch for delta generation
+    required: false
+    default: "3"
+  publish-appcast:
+    description: Push updated appcast.xml to the gh-pages branch
+    required: false
+    default: "true"
+
+outputs:
+  zip-path:
+    description: Path to the Sparkle ZIP asset
+    value: ${{ steps.package.outputs.zip-path }}
+  zip-name:
+    description: File name of the Sparkle ZIP asset
+    value: ${{ steps.package.outputs.zip-name }}
+  appcast-path:
+    description: Path to the generated appcast.xml
+    value: ${{ steps.appcast.outputs.appcast-path }}
+  delta-glob:
+    description: Glob for newly generated delta assets
+    value: ${{ steps.appcast.outputs.delta-glob }}
+
+runs:
+  using: composite
+  steps:
+    - name: Package notarized ZIP
+      id: package
+      shell: bash
+      env:
+        APP_NAME: ${{ inputs.app-name }}
+        TAG: ${{ inputs.tag }}
+      run: |
+        set -euo pipefail
+
+        app_path="build/Export/$APP_NAME"
+        if [[ ! -d "$app_path" ]]; then
+          echo "Missing exported app at $app_path"
+          exit 1
+        fi
+
+        # Ticket from DMG notarization applies to the same CDHash.
+        xcrun stapler staple "$app_path"
+        xcrun stapler validate "$app_path"
+
+        zip_name="Thaw_${TAG}.zip"
+        zip_path="build/$zip_name"
+        rm -f "$zip_path"
+        ditto -c -k --sequesterRsrc --keepParent "$app_path" "$zip_path"
+
+        echo "zip-name=$zip_name" >> "$GITHUB_OUTPUT"
+        echo "zip-path=$zip_path" >> "$GITHUB_OUTPUT"
+        ls -lh "$zip_path"
+
+    - name: Install Sparkle tools
+      shell: bash
+      env:
+        SPARKLE_VERSION: ${{ inputs.sparkle-version }}
+      run: |
+        set -euo pipefail
+
+        tools_dir="$RUNNER_TEMP/sparkle-tools"
+        rm -rf "$tools_dir"
+        mkdir -p "$tools_dir"
+
+        archive="$RUNNER_TEMP/Sparkle-${SPARKLE_VERSION}.tar.xz"
+        curl -fsSL -o "$archive" \
+          "https://github.com/sparkle-project/Sparkle/releases/download/${SPARKLE_VERSION}/Sparkle-${SPARKLE_VERSION}.tar.xz"
+        tar -xJf "$archive" -C "$tools_dir"
+
+        if [[ -x "$tools_dir/bin/generate_appcast" ]]; then
+          sparkle_bin="$tools_dir/bin"
+        elif [[ -x "$tools_dir/generate_appcast" ]]; then
+          sparkle_bin="$tools_dir"
+        else
+          echo "generate_appcast not found in Sparkle archive"
+          find "$tools_dir" -maxdepth 3 \( -type f -name 'generate_appcast' -o -name 'sign_update' \) | head
+          exit 1
+        fi
+
+        echo "SPARKLE_BIN=$sparkle_bin" >> "$GITHUB_ENV"
+        "$sparkle_bin/generate_appcast" --help | head -n 20 || true
+
+    - name: Prepare archives and existing appcast
+      shell: bash
+      env:
+        TAG: ${{ inputs.tag }}
+        ZIP_PATH: ${{ steps.package.outputs.zip-path }}
+        PREVIOUS_COUNT: ${{ inputs.previous-release-count }}
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        set -euo pipefail
+
+        archives="$RUNNER_TEMP/sparkle-archives"
+        pages="$RUNNER_TEMP/gh-pages"
+        rm -rf "$archives" "$pages"
+        mkdir -p "$archives" "$pages"
+
+        cp "$ZIP_PATH" "$archives/"
+
+        # Best-effort: fetch recent ZIPs so generate_appcast can emit deltas.
+        if command -v gh >/dev/null 2>&1; then
+          fetched=0
+          while IFS= read -r release_tag; do
+            [[ -z "$release_tag" || "$release_tag" == "$TAG" ]] && continue
+            asset="Thaw_${release_tag}.zip"
+            if gh release download "$release_tag" --pattern "$asset" --dir "$archives" 2>/dev/null; then
+              fetched=$((fetched + 1))
+            fi
+            [[ "$fetched" -ge "$PREVIOUS_COUNT" ]] && break
+          done < <(
+            gh release list --limit 20 --json tagName,isDraft \
+              --jq '.[] | select(.isDraft == false) | .tagName' || true
+          )
+          echo "Fetched $fetched prior ZIP(s) for deltas"
+        fi
+
+        git fetch origin gh-pages:gh-pages 2>/dev/null || true
+        if git show origin/gh-pages:appcast.xml > "$pages/appcast.xml" 2>/dev/null \
+          || git show gh-pages:appcast.xml > "$pages/appcast.xml" 2>/dev/null; then
+          echo "Loaded existing appcast from gh-pages"
+        else
+          printf '%s\n' \
+            '<?xml version="1.0" standalone="yes"?>' \
+            '<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">' \
+            '  <channel>' \
+            '    <title>Thaw</title>' \
+            '    <language>en</language>' \
+            '  </channel>' \
+            '</rss>' > "$pages/appcast.xml"
+          echo "Created empty appcast stub"
+        fi
+
+        echo "SPARKLE_ARCHIVES=$archives" >> "$GITHUB_ENV"
+        echo "SPARKLE_PAGES=$pages" >> "$GITHUB_ENV"
+        ls -lh "$archives"
+
+    - name: Generate and sign appcast
+      id: appcast
+      shell: bash
+      env:
+        TAG: ${{ inputs.tag }}
+        CHANNEL: ${{ inputs.channel }}
+        SPARKLE_PRIVATE_KEY: ${{ inputs.sparkle-private-key }}
+        REPOSITORY: ${{ github.repository }}
+      run: |
+        set -euo pipefail
+
+        key_file="$RUNNER_TEMP/sparkle_eddsa_private.key"
+        printf '%s\n' "$SPARKLE_PRIVATE_KEY" > "$key_file"
+        chmod 600 "$key_file"
+
+        download_prefix="https://github.com/${REPOSITORY}/releases/download/${TAG}/"
+        args=(
+          --ed-key-file "$key_file"
+          --download-url-prefix "$download_prefix"
+          --link "https://github.com/${REPOSITORY}/releases/tag/${TAG}"
+          -o "$SPARKLE_PAGES/appcast.xml"
+        )
+
+        case "$CHANNEL" in
+          stable|"")
+            ;;
+          beta|alpha)
+            args+=(--channel "$CHANNEL")
+            ;;
+          *)
+            echo "Unsupported Sparkle channel: $CHANNEL"
+            exit 1
+            ;;
+        esac
+
+        "$SPARKLE_BIN/generate_appcast" "${args[@]}" "$SPARKLE_ARCHIVES"
+
+        # generate_appcast applies one --download-url-prefix to every archive.
+        # Rewrite enclosure URLs so each Thaw_<tag>.zip resolves under that tag.
+        perl -i -pe \
+          's#(url="https://github.com/\Q'"$REPOSITORY"'\E/releases/download/)[^/]+/(Thaw_([^"]+)\.zip")#$1$3/$2#g' \
+          "$SPARKLE_PAGES/appcast.xml"
+
+        rm -f "$key_file"
+
+        # Expose deltas that belong to this tag for release upload.
+        delta_glob="$SPARKLE_ARCHIVES/*.delta"
+        echo "appcast-path=$SPARKLE_PAGES/appcast.xml" >> "$GITHUB_OUTPUT"
+        echo "delta-glob=$delta_glob" >> "$GITHUB_OUTPUT"
+        echo "SPARKLE_DELTA_DIR=$SPARKLE_ARCHIVES" >> "$GITHUB_ENV"
+
+        echo "Appcast head:"
+        head -n 60 "$SPARKLE_PAGES/appcast.xml"
+
+    - name: Publish appcast to gh-pages
+      if: inputs.publish-appcast == 'true'
+      shell: bash
+      env:
+        TAG: ${{ inputs.tag }}
+        CHANNEL: ${{ inputs.channel }}
+        GITHUB_TOKEN: ${{ github.token }}
+      run: |
+        set -euo pipefail
+
+        work="$RUNNER_TEMP/gh-pages-work"
+        rm -rf "$work"
+        mkdir -p "$work"
+
+        git clone --depth 1 --branch gh-pages \
+          "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+          "$work" 2>/dev/null \
+        || {
+          git clone --depth 1 \
+            "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+            "$work"
+          git -C "$work" checkout --orphan gh-pages
+          git -C "$work" rm -rf . >/dev/null 2>&1 || true
+        }
+
+        cp "$SPARKLE_PAGES/appcast.xml" "$work/appcast.xml"
+        if [[ ! -f "$work/.gitignore" ]]; then
+          printf '*\n!appcast.xml\n!.gitignore\n' > "$work/.gitignore"
+        fi
+
+        git -C "$work" config user.name "github-actions[bot]"
+        git -C "$work" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git -C "$work" add appcast.xml .gitignore
+        if git -C "$work" diff --staged --quiet; then
+          echo "appcast.xml unchanged"
+          exit 0
+        fi
+
+        git -C "$work" commit -m "chore(sparkle): publish appcast for ${TAG} (${CHANNEL})"
+        git -C "$work" push origin HEAD:gh-pages
