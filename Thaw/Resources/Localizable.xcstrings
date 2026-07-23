@@ -19903,6 +19903,9 @@
         }
       }
     },
+    "Help translate %@" : {
+      "comment" : "A button that opens the project's Crowdin page where users can help translate the app. The placeholder is the app's display name."
+    },
     "Hide Always-Hidden Section" : {
       "comment" : "Title for a menu bar item that hides an always-hidden section.",
       "localizations" : {

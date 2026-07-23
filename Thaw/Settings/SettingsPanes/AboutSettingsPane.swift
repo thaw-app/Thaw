@@ -149,6 +149,10 @@ struct AboutSettingsPane: View {
                     .buttonStyle(.plain)
 
                     Menu {
+                        Button("Help translate \(Constants.displayName)") {
+                            openURL(Constants.translateURL)
+                        }
+                        Divider()
                         Button("Acknowledgements", action: openAcknowledgements)
                         Divider()
                         Button("Contribute") {

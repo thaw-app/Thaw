@@ -101,6 +101,38 @@ struct SettingsView: View {
         // stays a solid Music-like fill.
         window.isOpaque = false
         window.backgroundColor = .clear
+        if #unavailable(macOS 27) {
+            // On macOS 26, NavigationSplitView inserts its own opaque `.sidebar`
+            // NSVisualEffectView in front of our behind-window `sharedSidebarSurface`,
+            // so the pane surface never spills across the sidebar — it reads as a
+            // flat, disconnected slab. Retune that system layer to the same
+            // behind-window material so the background is continuous. (Liquid Glass
+            // on macOS 27 keeps that layer translucent, so it isn't needed there.)
+            retuneLegacySidebarMaterial(in: window.contentView)
+            // The split view may insert its sidebar layer after this first pass,
+            // so retune again once the hierarchy has settled.
+            DispatchQueue.main.async { [weak window] in
+                retuneLegacySidebarMaterial(in: window?.contentView)
+            }
+        }
+    }
+
+    /// Rewrites the `NavigationSplitView`-inserted `.sidebar` effect view to sample
+    /// the desktop like `sharedSidebarSurface`, so the pane background spills across
+    /// the sidebar on macOS 26. No-op when the system layer is absent.
+    private func retuneLegacySidebarMaterial(in view: NSView?) {
+        guard let view else {
+            return
+        }
+        if let effectView = view as? NSVisualEffectView, effectView.material == .sidebar {
+            effectView.material = sidebarMaterial
+            effectView.blendingMode = .behindWindow
+            effectView.state = .active
+            effectView.isEmphasized = false
+        }
+        for subview in view.subviews {
+            retuneLegacySidebarMaterial(in: subview)
+        }
     }
 
     @ViewBuilder
