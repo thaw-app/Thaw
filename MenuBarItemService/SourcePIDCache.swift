@@ -152,6 +152,13 @@ actor SourcePIDCache {
         var apps = [CachedApplication]()
         var pids = [CGWindowID: pid_t]()
 
+        /// Window IDs a full scan failed to resolve, mapped to the deadline
+        /// after which they may initiate a new scan. A negative entry gates
+        /// scan initiation only: a scan started for another window still
+        /// retries every unresolved window, so late-arriving markers are
+        /// discovered immediately.
+        var negativeUntil = [CGWindowID: ContinuousClock.Instant]()
+
         /// Reorders the cached apps so that those that are confirmed
         /// to have an extras menu bar are first in the array.
         mutating func partitionApps() {
@@ -172,6 +179,17 @@ actor SourcePIDCache {
 
     /// The shared cache.
     static let shared = SourcePIDCache()
+
+    /// How long an unresolved window is barred from initiating a new scan.
+    private static let negativeCacheTTL: Duration = .seconds(60)
+
+    /// Minimum interval between unresolved-diagnostic dumps for an unchanged
+    /// unresolved set. The dump re-walks every app's AX tree, so repeating it
+    /// can add seconds of IPC without yielding new information.
+    private static let unresolvedDiagDumpInterval: Duration = .seconds(300)
+
+    /// Only accessed while `scanLock` is held, where diagnostics are emitted.
+    private var lastUnresolvedDiagDump: (windowIDs: Set<CGWindowID>, at: ContinuousClock.Instant)?
 
     /// The cache's protected state.
     ///
@@ -247,6 +265,12 @@ actor SourcePIDCache {
             // releasing the lock.
             var reused = [CachedApplication]()
 
+            // Preserve unexpired negative entries across cleanup. Dropping
+            // them would let a known-unresolvable window start a full scan
+            // immediately after every application-list update.
+            let now = ContinuousClock.now
+            let carriedNegativeUntil = state.negativeUntil.filter { $0.value > now }
+
             // Create a new state that matches the current running apps.
             state = runningApps.reduce(into: State()) { result, app in
                 let pid = app.processIdentifier
@@ -267,6 +291,7 @@ actor SourcePIDCache {
                     }
                 }
             }
+            state.negativeUntil = carriedNegativeUntil
 
             // Log cleanup activity
             if !terminatedPids.isEmpty {
@@ -322,8 +347,12 @@ actor SourcePIDCache {
         // never getting a scan: the first window in their batch was always
         // an already-cached resolved one, and the scan only ever ran at
         // session start.
+        let now = ContinuousClock.now
         if let unresolved = windows.first(where: { window in
-            state.withLock { $0.pids[window.windowID] == nil }
+            state.withLock { state in
+                state.pids[window.windowID] == nil
+                    && (state.negativeUntil[window.windowID].map { $0 <= now } ?? true)
+            }
         }) {
             _ = pidBody(for: unresolved)
         }
@@ -338,6 +367,13 @@ actor SourcePIDCache {
             return pid
         }
 
+        if let deadline = state.withLock({ $0.negativeUntil[window.windowID] }),
+           deadline > ContinuousClock.now
+        {
+            SourcePIDCache.diagLog.debug("SourcePIDCache.pid: negative cache hit for windowID \(window.windowID), skipping scan")
+            return nil
+        }
+
         SourcePIDCache.diagLog.debug("SourcePIDCache.pid: cache miss for windowID \(window.windowID) title=\(window.title ?? "nil"), acquiring scan lock")
 
         // Use a lock to ensure that only one thread performs the full AX traversal.
@@ -346,10 +382,16 @@ actor SourcePIDCache {
         defer { scanLock.unlock() }
 
         // Re-check cache after acquiring the scan lock, as it may have been populated
-        // by another thread that just finished a full scan.
+        // or negative-cached by another thread that just finished a full scan.
         if let pid = state.withLock({ $0.pids[window.windowID] }) {
             SourcePIDCache.diagLog.debug("SourcePIDCache.pid: cache hit after scan lock for windowID \(window.windowID) -> PID \(pid)")
             return pid
+        }
+        if let deadline = state.withLock({ $0.negativeUntil[window.windowID] }),
+           deadline > ContinuousClock.now
+        {
+            SourcePIDCache.diagLog.debug("SourcePIDCache.pid: negative cache hit after scan lock for windowID \(window.windowID), skipping scan")
+            return nil
         }
 
         let isTrusted = AXHelpers.isProcessTrusted()
@@ -597,6 +639,20 @@ actor SourcePIDCache {
         let finalPID = state.withLock { $0.pids[window.windowID] }
         SourcePIDCache.diagLog.debug("SourcePIDCache.pid: batch resolution finished. Found \(totalMatchesFound) matches. Requested windowID \(window.windowID) -> PID \(finalPID.map { "\($0)" } ?? "nil") (checked \(appsChecked) apps, \(appsWithBar) with extras bar, \(totalChildrenChecked) children)")
 
+        // Negative-cache every window that survived the full scan unresolved.
+        // Expired entries are pruned on the same write to bound the dictionary.
+        if !unresolvedWindows.isEmpty {
+            let now = ContinuousClock.now
+            let deadline = now + Self.negativeCacheTTL
+            let unresolvedSnapshot = unresolvedWindows
+            state.withLock { state in
+                state.negativeUntil = state.negativeUntil.filter { $0.value > now }
+                for windowID in unresolvedSnapshot {
+                    state.negativeUntil[windowID] = deadline
+                }
+            }
+        }
+
         // Diagnostic dump for unresolved windows.
         //
         // When at least one window remains unresolved after the batch
@@ -611,8 +667,19 @@ actor SourcePIDCache {
         //
         // Quiet path on normal cycles where every window resolves.
         // The diagnostic re-walks AX children, which can be expensive,
-        // so it only fires when there is actual unresolved state.
+        // so it only fires when there is actual unresolved state—and no more
+        // than once per interval for the same unresolved set.
+        var shouldDumpUnresolvedDiagnostics = false
         if !unresolvedWindows.isEmpty {
+            if let last = lastUnresolvedDiagDump {
+                shouldDumpUnresolvedDiagnostics = last.windowIDs != unresolvedWindows
+                    || ContinuousClock.now >= last.at + Self.unresolvedDiagDumpInterval
+            } else {
+                shouldDumpUnresolvedDiagnostics = true
+            }
+        }
+        if shouldDumpUnresolvedDiagnostics {
+            lastUnresolvedDiagDump = (unresolvedWindows, ContinuousClock.now)
             SourcePIDCache.diagLog.debug(
                 "SourcePIDCache diag: \(unresolvedWindows.count) window(s) unresolved after batch, dumping details"
             )
