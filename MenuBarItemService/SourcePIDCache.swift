@@ -535,6 +535,36 @@ final class SourcePIDCache {
             }
         }
 
+        // Title-identity fallback for parked (off-screen) items.
+        //
+        // The spatial passes need an AX child near the CG window and the
+        // marker-pair pass only considers on-screen icons, so a widget whose
+        // window title is its own bundle identifier (Little Snitch's agent)
+        // becomes unresolvable the moment it is parked at off-screen
+        // coordinates — and an unresolvable hidden item can never be matched
+        // back to its saved section. An exact title == bundle-identifier
+        // match against a running application is direct ownership evidence
+        // that needs no geometry; the reverse-DNS shape requirement keeps
+        // generic slot titles (Item-0) away from the lookup.
+        if !unresolvedWindows.isEmpty {
+            let unresolvedInfos = allWindows.filter { unresolvedWindows.contains($0.windowID) }
+            for window in unresolvedInfos {
+                guard let title = window.title,
+                      title.split(separator: ".").count >= 3,
+                      let pid = NSRunningApplication
+                          .runningApplications(withBundleIdentifier: title)
+                          .first?
+                          .processIdentifier
+                else { continue }
+                SourcePIDCache.diagLog.info(
+                    "SourcePIDCache title-identity resolution: windowID=\(window.windowID) → PID \(pid) (title=\(title))"
+                )
+                state.withLock { $0.pids[window.windowID] = pid }
+                unresolvedWindows.remove(window.windowID)
+                totalMatchesFound += 1
+            }
+        }
+
         let finalPID = state.withLock { $0.pids[window.windowID] }
         SourcePIDCache.diagLog.debug("SourcePIDCache.pid: batch resolution finished. Found \(totalMatchesFound) matches. Requested windowID \(window.windowID) -> PID \(finalPID.map { "\($0)" } ?? "nil") (checked \(appsChecked) apps, \(appsWithBar) with extras bar, \(totalChildrenChecked) children)")
 

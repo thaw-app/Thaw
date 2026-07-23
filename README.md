@@ -1,9 +1,39 @@
-<div align="center">
-    <img src="Resources/Icon.svg" width=200 height=200>
-    <h1>Thaw</h1>
-</div>
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" width="400" srcset="Resources/headers/Header_Dark.svg">
+    <source media="(prefers-color-scheme: light)" width="400" srcset="Resources/headers/Header_Light.svg">
+    <img src="Resources/headers/Header_Light.svg" width="400" alt="Thaw Header" />
+  </picture>
+</p>
 
-Thaw is a powerful menu bar management tool for macOS 26. While its primary function is hiding and showing menu bar items, it aims to cover a wide variety of additional features to make it one of the most versatile menu bar tools available.
+<p align="center">
+  Thaw is a powerful menu bar management tool for macOS. While its primary function is hiding and showing menu bar items, it aims to cover a wide variety of additional features to make it one of the most versatile menu bar tools available.
+</p>
+
+<p align="center">
+  <a href="https://github.com/stonerl/Thaw/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/stonerl/Thaw?style=flat-square&label=latest&color=555555" /></a>
+  <a href="https://github.com/stonerl/Thaw/releases"><img alt="Beta / pre-release" src="https://img.shields.io/github/v/release/stonerl/Thaw?include_prereleases&style=flat-square&label=beta&color=555555" /></a>
+  <img alt="Requirements" src="https://img.shields.io/badge/macOS-26%2B-555555?style=flat-square" />
+  <a href="https://github.com/stonerl/Thaw/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/stonerl/Thaw/ci.yml?style=flat-square&label=CI" /></a>
+  <a href="https://www.bestpractices.dev/projects/13303"><img alt="OpenSSF Best Practices" src="https://img.shields.io/cii/summary/13303?style=flat-square&label=OpenSSF" /></a>
+  <a href="https://github.com/sponsors/stonerl"><img alt="Sponsor" src="https://img.shields.io/badge/Sponsor-%E2%9D%A4-555555?style=flat-square" /></a>
+  <a href="https://discord.gg/5cnKkKbMFd"><img alt="Discord" src="https://img.shields.io/badge/Discord-7289DA?style=flat-square&logo=discord&logoColor=white" /></a>
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/stonerl/Thaw?style=flat-square&color=555555" /></a>
+</p>
+
+<p align="center">
+  <a href="https://www.raycast.com/diazdesandi/thaw"><img alt="Works with Raycast" src="Resources/badges/works-with-raycast.svg" height="42" /></a>
+  &nbsp;&nbsp;
+  <a href="https://getdroppy.app/"><img alt="Works with Droppy" src="Resources/badges/works-with-droppy.svg" height="42" /></a>
+</p>
+
+<p align="center">
+  <strong>
+    <a href="https://github.com/stonerl/Thaw/issues/687">
+      macOS 27 (Golden Gate) status and preview builds
+    </a>
+  </strong>
+</p>
 
 <div align="center">
 <a href="https://trendshift.io/repositories/21173" target="_blank"><img src="https://trendshift.io/api/badge/repositories/21173" alt="stonerl%2FThaw | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
@@ -13,14 +43,6 @@ Thaw is a powerful menu bar management tool for macOS 26. While its primary func
 
 ![thaw-banner](https://github.com/user-attachments/assets/9584065d-f840-4545-9a42-cfc5534b5ac3)
 
-[![Download](https://img.shields.io/badge/download-latest-brightgreen?style=flat-square)](https://github.com/stonerl/Thaw/releases/latest)
-[![CI](https://img.shields.io/github/actions/workflow/status/stonerl/Thaw/ci.yml?style=flat-square)](https://github.com/stonerl/Thaw/actions/workflows/ci.yml)
-![Platform](https://img.shields.io/badge/platform-macOS-blue?style=flat-square)
-![Requirements](https://img.shields.io/badge/requirements-macOS%2026%2B-fa4e49?style=flat-square)
-[![Sponsor](https://img.shields.io/badge/Sponsor%20%E2%9D%A4%EF%B8%8F-8A2BE2?style=flat-square)](https://github.com/sponsors/stonerl)
-[![Discord](https://img.shields.io/badge/Discord-7289DA?style=flat-square&logo=discord&logoColor=white)](https://discord.gg/5cnKkKbMFd)
-[![License](https://img.shields.io/github/license/stonerl/Thaw?style=flat-square)](LICENSE)
-
 > [!NOTE]
 > **Thaw** is a fork of [Ice](https://github.com/jordanbaird/Ice) by Jordan Baird.
 > As the original project appears to be inactive, Thaw aims to keep the project alive fixing bugs, ensuring compatibility with the latest macOS releases, and eventually implementing the remaining roadmap features.
@@ -29,21 +51,36 @@ Thaw is a powerful menu bar management tool for macOS 26. While its primary func
 
 ### Manual Installation
 
-Download the `Thaw_1.x.x.zip` file from the [latest release](https://github.com/stonerl/Thaw/releases/latest) and move the unzipped app into your `Applications` folder.
+Download the `Thaw_<version>.zip` file from the [latest release](https://github.com/stonerl/Thaw/releases/latest) and move the unzipped app into your `Applications` folder.
 
 ### Homebrew
 
-Install the latest stable release:
+Install the latest **stable** release:
 
 ```sh
 brew install thaw
 ```
 
-To get the latest beta (or stable, whichever is newer):
+Install the latest **beta** (or stable, whichever is newer):
 
 ```sh
 brew install thaw@beta
 ```
+
+### Integrations
+
+- **[Raycast](https://www.raycast.com/diazdesandi/thaw)** — toggle hidden sections and search the menu bar from the keyboard
+- **[Droppy](https://github.com/iordv/Droppy)** — install Thaw as a Droplet and keep it updated automatically
+
+For `thaw://` actions and settings automation, see [URI schemes](docs/URI_SCHEMES.md).
+
+Having trouble after installing? Check [Frequent Issues](FREQUENT_ISSUES.md) before opening a new report.
+
+## Contributing
+
+Pull requests are welcome. Please open them against the **`development`** branch, follow the PR template, and read [Contributing](.github/CONTRIBUTING.md).
+
+**Translations** are managed on [Crowdin](https://crowdin.com/project/thaw) — translation PRs are not accepted in this repo.
 
 ## Translations
 
@@ -51,188 +88,133 @@ Thaw is currently available in the following languages:
 
 <table frame="void" rules="none">
     <tr>
-        <th align="left">Language</th>
-        <th align="center">Flag</th>
-        <th align="left">Translation</th>
-        <th width="30"></th>
-        <th align="left">Language</th>
-        <th align="center">Flag</th>
-        <th align="left">Translation</th>
+        <td>🇮🇩 <b>Bahasa Indonesia</b><br /><img alt="id translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=id&style=square&logo=crowdin&query=%24.progress.5.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
+        <td>🇨🇿 <b>Čeština</b><br /><img alt="cs translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=cs&style=square&logo=crowdin&query=%24.progress.0.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
+        <td>🇩🇪 🇦🇹 <b>Deutsch</b><br /><img alt="de translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=de&style=square&logo=crowdin&query=%24.progress.1.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
+        <td>🇬🇧 🇺🇸 <b>English</b><br /><img alt="en translation" src="https://img.shields.io/badge/en-100%25-blue?style=square&logo=crowdin" /></td>
+        <td>🇪🇸 🇲🇽 <b>Español</b><br /><img alt="es-ES translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=es-ES&style=square&logo=crowdin&query=%24.progress.2.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
     </tr>
     <tr>
-        <td><b>Bahasa Indonesia</b></td>
-        <td align="center">🇮🇩</td>
-        <td><img alt="id translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=id&style=flat-square&logo=crowdin&query=%24.progress.5.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
-        <td></td>
-        <td><b>Čeština</b></td>
-        <td align="center">🇨🇿</td>
-        <td><img alt="cs translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=cs&style=flat-square&logo=crowdin&query=%24.progress.0.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
+        <td>🇫🇷 <b>Français</b><br /><img alt="fr translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=fr&style=square&logo=crowdin&query=%24.progress.3.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
+        <td>🇮🇹 <b>Italiano</b><br /><img alt="it translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=it&style=square&logo=crowdin&query=%24.progress.6.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
+        <td>🇯🇵 <b>日本語</b><br /><img alt="ja translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=ja&style=square&logo=crowdin&query=%24.progress.7.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
+        <td>🇰🇷 <b>한국어</b><br /><img alt="ko translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=ko&style=square&logo=crowdin&query=%24.progress.8.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
+        <td>🇭🇺 <b>Magyar</b><br /><img alt="hu translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=hu&style=square&logo=crowdin&query=%24.progress.4.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
     </tr>
     <tr>
-        <td><b>Deutsch</b></td>
-        <td align="center">🇩🇪/🇦🇹</td>
-        <td><img alt="de translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=de&style=flat-square&logo=crowdin&query=%24.progress.1.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
-        <td></td>
-        <td><b>English</b></td>
-        <td align="center">🇬🇧/🇺🇸</td>
-        <td><img src="https://img.shields.io/badge/100%25-blue?style=flat-square" /></td>
+        <td>🇳🇱 🇧🇪 <b>Nederlands</b><br /><img alt="nl translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=nl&style=square&logo=crowdin&query=%24.progress.9.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
+        <td>🇧🇷 <b>Português (Brasil)</b><br /><img alt="pt-BR translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=pt-BR&style=square&logo=crowdin&query=%24.progress.11.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
+        <td>🇷🇺 <b>Русский</b><br /><img alt="ru translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=ru&style=square&logo=crowdin&query=%24.progress.12.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
+        <td>🇨🇳 <b>简体中文</b><br /><img alt="zh-CN translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=zh-CN&style=square&logo=crowdin&query=%24.progress.17.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
+        <td>🇹🇼 <b>正體中文</b><br /><img alt="zh-TW translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=zh-TW&style=square&logo=crowdin&query=%24.progress.18.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
     </tr>
     <tr>
-        <td><b>Español</b></td>
-        <td align="center">🇪🇸/🇲🇽</td>
-        <td><img alt="es-ES translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=es-ES&style=flat-square&logo=crowdin&query=%24.progress.2.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
-        <td></td>
-        <td><b>Français</b></td>
-        <td align="center">🇫🇷</td>
-        <td><img alt="fr translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=fr&style=flat-square&logo=crowdin&query=%24.progress.3.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
-    </tr>
-    <tr>
-        <td><b>Italiano</b></td>
-        <td align="center">🇮🇹</td>
-        <td><img alt="it translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=it&style=flat-square&logo=crowdin&query=%24.progress.6.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
-        <td></td>
-        <td><b>日本語</b></td>
-        <td align="center">🇯🇵</td>
-        <td><img alt="ja translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=ja&style=flat-square&logo=crowdin&query=%24.progress.7.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
-    </tr>
-    <tr>
-        <td><b>한국어</b></td>
-        <td align="center">🇰🇷</td>
-        <td><img alt="ko translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=ko&style=flat-square&logo=crowdin&query=%24.progress.8.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
-        <td></td>
-        <td><b>Magyar</b></td>
-        <td align="center">🇭🇺</td>
-        <td><img alt="hu translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=hu&style=flat-square&logo=crowdin&query=%24.progress.4.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
-    </tr>
-    <tr>
-        <td><b>Nederlands</b></td>
-        <td align="center">🇳🇱/🇧🇪</td>
-        <td><img alt="nl translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=nl&style=flat-square&logo=crowdin&query=%24.progress.9.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
-        <td></td>
-        <td><b>Português (Brasil)</b></td>
-        <td align="center">🇧🇷</td>
-        <td><img alt="pt-BR translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=pt-BR&style=flat-square&logo=crowdin&query=%24.progress.11.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
-    </tr>
-    <tr>
-        <td><b>Русский</b></td>
-        <td align="center">🇷🇺</td>
-        <td><img alt="ru translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=ru&style=flat-square&logo=crowdin&query=%24.progress.12.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
-        <td></td>
-        <td><b>简体中文</b></td>
-        <td align="center">🇨🇳</td>
-        <td><img alt="zh-CN translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=zh-CN&style=flat-square&logo=crowdin&query=%24.progress.17.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
-    </tr>
-    <tr>
-        <td><b>正體中文</b></td>
-        <td align="center">🇹🇼</td>
-        <td><img alt="zh-TW translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=zh-TW&style=flat-square&logo=crowdin&query=%24.progress.18.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
-        <td></td>
-        <td><b>ภาษาไทย</b></td>
-        <td align="center">🇹🇭</td>
-        <td><img alt="th translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=th&style=flat-square&logo=crowdin&query=%24.progress.13.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
-    </tr>
-    <tr>
-        <td><b>Polski</b></td>
-        <td align="center">🇵🇱</td>
-        <td><img alt="pl translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=pl&style=flat-square&logo=crowdin&query=%24.progress.10.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
-        <td></td>
-        <td><b>Türkçe</b></td>
-        <td align="center">🇹🇷</td>
-        <td><img alt="tr translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=tr&style=flat-square&logo=crowdin&query=%24.progress.14.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
-    </tr>
-    <tr>
-        <td><b>Українська(*)</b></td>
-        <td align="center">🇺🇦</td>
-        <td><img alt="uk translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=uk&style=flat-square&logo=crowdin&query=%24.progress.15.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
-        <td></td>
-        <td><b>Tiếng Việt(*)</b></td>
-        <td align="center">🇻🇳</td>
-        <td><img alt="vi translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=vi&style=flat-square&logo=crowdin&query=%24.progress.16.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
+        <td>🇹🇭 <b>ภาษาไทย</b><br /><img alt="th translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=th&style=square&logo=crowdin&query=%24.progress.13.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
+        <td>🇵🇱 <b>Polski</b><br /><img alt="pl translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=pl&style=square&logo=crowdin&query=%24.progress.10.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
+        <td>🇹🇷 <b>Türkçe</b><br /><img alt="tr translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=tr&style=square&logo=crowdin&query=%24.progress.14.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
+        <td>🇺🇦 <b>Українська(*)</b><br /><img alt="uk translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=uk&style=square&logo=crowdin&query=%24.progress.15.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
+        <td>🇻🇳 <b>Tiếng Việt(*)</b><br /><img alt="vi translation" src="https://img.shields.io/badge/dynamic/json?color=blue&label=vi&style=square&logo=crowdin&query=%24.progress.16.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-12858911-889934.json" /></td>
     </tr>
 </table>
 
 _Note: languages marked with (\*) are currently only available in the development branch._
 
-Help translate Thaw via [Crowdin](https://crowdin.com/project/thaw)
+Help translate Thaw via [Crowdin](https://crowdin.com/project/thaw).
 
-If a language you'd like to help to translate is not listed here, let us know and we will add it on Crowdin. 
+If a language you'd like to help translate is not listed here, let us know and we will add it on Crowdin.
 
-## Features/Roadmap
+## Features
 
 <details>
-<summary>Click to view the full Features & Roadmap list</summary>
+<summary>Click to view the full features list</summary>
 
 ### Menu bar item management
 
-- [x] Hide menu bar items
-- [x] "Always-hidden" menu bar section
-- [x] Show hidden menu bar items when hovering over the menu bar
-- [x] Show hidden menu bar items when an empty area in the menu bar is clicked
-- [x] Show hidden menu bar items by scrolling or swiping in the menu bar
-- [x] Automatically rehide menu bar items
-- [x] Hide application menus when they overlap with shown menu bar items
-- [x] Drag and drop interface to arrange individual menu bar items
-- [x] Display hidden menu bar items in a separate bar (e.g. for MacBooks with the notch)
-- [x] Search menu bar items
-- [x] Menu bar item spacing (BETA)
-- [x] Profiles for menu bar layout
-- [ ] Individual spacer items
-- [ ] Menu bar item groups
-- [ ] Show menu bar items when trigger conditions are met
+- Hide menu bar items
+- "Always-hidden" menu bar section
+- Show hidden menu bar items when hovering over the menu bar
+- Show hidden menu bar items when an empty area in the menu bar is clicked
+- Show hidden menu bar items by scrolling or swiping in the menu bar
+- Automatically rehide menu bar items
+- Hide application menus when they overlap with shown menu bar items
+- Drag and drop interface to arrange individual menu bar items
+- Display hidden menu bar items in a separate bar (e.g. for MacBooks with the notch)
+- Search menu bar items
+- Menu bar item spacing
+- Profiles for menu bar layout
 
 ### Menu bar appearance
 
-- [x] Menu bar tint (solid and gradient)
-- [x] Menu bar shadow
-- [x] Menu bar border
-- [x] Custom menu bar shapes (rounded and/or split)
-- [x] Remove background behind menu bar (macOS setting)
-- [ ] Rounded screen corners
-- [x] Different settings for light/dark mode
+- Menu bar tint (solid and gradient)
+- Menu bar shadow
+- Menu bar border
+- Custom menu bar shapes (rounded and/or split)
+- Remove background behind menu bar (macOS setting)
+- Different settings for light/dark mode
 
 ### Hotkeys
 
-- [x] Toggle individual menu bar sections
-- [x] Show the search panel
-- [x] Enable/disable the Thaw Bar
-- [x] Show/hide section divider icons
-- [x] Toggle application menus
-- [ ] Enable/disable auto rehide
-- [ ] Temporarily show individual menu bar items
+- Toggle individual menu bar sections
+- Show the search panel
+- Enable/disable the Thaw Bar
+- Show/hide section divider icons
+- Toggle application menus
 
-### Other
+</details>
 
-- [x] Launch at login
-- [x] Automatic updates
-- [ ] Menu bar widgets
+## Roadmap
+
+<details>
+<summary>Click to view the roadmap</summary>
+
+<br>
+
+- **Menu bar item management** — individual spacer items; menu bar item groups; show menu bar items when trigger conditions are met
+- **Menu bar appearance** — rounded screen corners
+- **Hotkeys** — enable/disable auto rehide; temporarily show individual menu bar items
+- **Other** — menu bar widgets
 
 </details>
 
 ## Gallery
 
-### Item layout
+> Click any screenshot to view it full size.
 
-<img width="1760" height="956" alt="thaw-items-fs8" src="https://github.com/user-attachments/assets/f2f6b9a6-55c5-40b3-910f-b27b114577dd" />
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <a href="https://github.com/user-attachments/assets/f2f6b9a6-55c5-40b3-910f-b27b114577dd"><img alt="Item layout" src="https://github.com/user-attachments/assets/f2f6b9a6-55c5-40b3-910f-b27b114577dd" width="400" /></a><br />
+      <sub><b>Item layout</b></sub>
+    </td>
+    <td align="center" width="50%">
+      <a href="https://github.com/user-attachments/assets/c6ac6364-30f8-4c92-8f6f-9efe15f99573"><img alt="Show hidden menu bar items below the menu bar" src="https://github.com/user-attachments/assets/c6ac6364-30f8-4c92-8f6f-9efe15f99573" width="400" /></a><br />
+      <sub><b>Show hidden items below the menu bar</b></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <a href="https://github.com/user-attachments/assets/54273d41-fcf3-4c9a-834b-e62a162a6b0c"><img alt="Drag-and-drop interface to arrange menu bar items" src="https://github.com/user-attachments/assets/54273d41-fcf3-4c9a-834b-e62a162a6b0c" width="400" /></a><br />
+      <sub><b>Drag-and-drop arrangement</b></sub>
+    </td>
+    <td align="center" width="50%">
+      <a href="https://github.com/user-attachments/assets/d95302df-26b0-4608-896e-4966c822fb5e"><img alt="Customize the menu bar's appearance" src="https://github.com/user-attachments/assets/d95302df-26b0-4608-896e-4966c822fb5e" width="400" /></a><br />
+      <sub><b>Customize the appearance</b></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <a href="https://github.com/user-attachments/assets/ebafc745-7220-46c9-9297-f7a00ef6c15d"><img alt="Menu bar item search" src="https://github.com/user-attachments/assets/ebafc745-7220-46c9-9297-f7a00ef6c15d" width="400" /></a><br />
+      <sub><b>Menu bar item search</b></sub>
+    </td>
+    <td width="50%"></td>
+  </tr>
+</table>
 
-### Show hidden menu bar items below the menu bar
+## Contributors
 
-<img width="1760" height="400" alt="thaw-hidden-fs8" src="https://github.com/user-attachments/assets/c6ac6364-30f8-4c92-8f6f-9efe15f99573" />
+This project exists thanks to the awesome people who contribute code and documentation:
 
-### Drag-and-drop interface to arrange menu bar items
-
-<img width="1760" height="800" alt="thaw-layout-fs8" src="https://github.com/user-attachments/assets/54273d41-fcf3-4c9a-834b-e62a162a6b0c" />
-
-### Customize the menu bar's appearance
-
-<img width="1760" height="956" alt="thaw-appearance-fs8" src="https://github.com/user-attachments/assets/d95302df-26b0-4608-896e-4966c822fb5e" />
-
-### Menu bar item search
-
-<img width="1760" height="956" alt="thaw-search-fs8" src="https://github.com/user-attachments/assets/ebafc745-7220-46c9-9297-f7a00ef6c15d" />
-
-## License
-
-Thaw is available under the [GPL-3.0 license](LICENSE).
+<a href="https://github.com/stonerl/Thaw/graphs/contributors"><img alt="Gallery of all contributors' profile photos" src="https://contrib.rocks/image?repo=stonerl/Thaw&columns=16" width="100%" /></a>
 
 ## Project Stats
 
@@ -243,3 +225,7 @@ Thaw is available under the [GPL-3.0 license](LICENSE).
     <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=stonerl/Thaw&type=Date" width="100%" />
   </picture>
 </a>
+
+## License
+
+Thaw is available under the [GPL-3.0 license](LICENSE).

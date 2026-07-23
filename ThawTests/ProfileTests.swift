@@ -163,6 +163,30 @@ final class MenuBarLayoutSnapshotTests: XCTestCase {
         XCTAssertNil(decoded.itemHotkeys)
     }
 
+    func testLegacyLayoutUsesSavedOrderForItemOrderAndSections() throws {
+        let json = """
+        {
+            "savedSectionOrder": {
+                "visible": ["com.example.visible:Status"],
+                "hidden": ["com.example.hidden:Status"],
+                "alwaysHidden": ["com.example.alwaysHidden:Status"]
+            },
+            "pinnedHiddenBundleIDs": [],
+            "pinnedAlwaysHiddenBundleIDs": [],
+            "customNames": {}
+        }
+        """.data(using: .utf8)!
+
+        let decoded = try JSONDecoder().decode(MenuBarLayoutSnapshot.self, from: json)
+
+        XCTAssertEqual(decoded.resolvedItemOrder, decoded.savedSectionOrder)
+        XCTAssertEqual(decoded.resolvedItemSectionMap, [
+            "com.example.visible:Status": "visible",
+            "com.example.hidden:Status": "hidden",
+            "com.example.alwaysHidden:Status": "alwaysHidden",
+        ])
+    }
+
     func testEncodeDecodeItemHotkeys() throws {
         let original = MenuBarLayoutSnapshot(
             savedSectionOrder: [:],
@@ -421,7 +445,7 @@ final class ProfileFullTests: XCTestCase {
         let decoded = try decoder.decode(Profile.self, from: json)
 
         // Should use defaults
-        XCTAssertEqual(decoded.name, "Untitled")
+        XCTAssertEqual(decoded.name, String(localized: "Untitled"))
         XCTAssertNotNil(decoded.id)
     }
 

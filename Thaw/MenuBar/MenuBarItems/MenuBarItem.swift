@@ -34,7 +34,11 @@ struct MenuBarItem: CustomStringConvertible {
 
     /// A Boolean value that indicates whether this item can be moved.
     var isMovable: Bool {
-        tag.isMovable
+        // Generic Control Center slots (``Item-N``) without a resolved
+        // source process are system-owned placeholders. Posting drag events
+        // to Control Center for them always times out, so presenting them as
+        // movable in the layout editor leads to a misleading generic error.
+        tag.isMovable && !(tag.isControlCenterGenericItem && sourcePID == nil)
     }
 
     /// A Boolean value that indicates whether this item can be hidden.

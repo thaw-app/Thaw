@@ -15,7 +15,7 @@ Thaw registers the `thaw://` URL scheme in `Info.plist` via `CFBundleURLTypes`. 
 | `thaw://toggle-hidden`            | Toggle Hidden Section | Shows/hides the hidden menu bar section  |
 | `thaw://toggle-always-hidden`     | Toggle Always-Hidden  | Shows/hides the always-hidden section    |
 | `thaw://search`                   | Open Search Panel     | Displays the menu bar item search panel  |
-| `thaw://toggle-thawbar`           | Toggle Thaw Bar       | Toggles the IceBar on the active display |
+| `thaw://toggle-thawbar`           | Toggle Thaw Bar       | Toggles the Thaw Bar on the active display |
 | `thaw://toggle-application-menus` | Toggle App Menus      | Shows/hides application menus            |
 | `thaw://open-settings`            | Open Settings         | Opens the Thaw settings window           |
 | `thaw://authorize`                | Authorize App         | Triggers auth dialog to grant an app whitelist access to settings |
@@ -108,6 +108,7 @@ Thaw uses the following system URLs to open macOS Settings:
 
 | URL                                                                             | Opens                     |
 | ------------------------------------------------------------------------------- | ------------------------- |
+| `x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility` | Accessibility settings    |
 | `x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture` | Screen Recording settings |
 
 ## Settings URI (Automation)
@@ -143,7 +144,7 @@ Thaw supports programmatic settings manipulation via the `thaw://` URL scheme wi
 | `enableDiagnosticLogging`                 | Bool | Enable debug logging                         |
 | `customIceIconIsTemplate`                 | Bool | Custom icon renders as template              |
 | `showIceIcon`                             | Bool | Show the Thaw icon in menu bar               |
-| `iceBarLocationOnHotkey`                  | Bool | IceBar appears at mouse location on hotkey     |
+| `iceBarLocationOnHotkey`                  | Bool | Thaw Bar appears at mouse location on hotkey     |
 | `useLCSSortingOnNotchedDisplays`          | Bool | Use LCS sorting on notched displays          |
 
 #### Double/Time Interval Settings

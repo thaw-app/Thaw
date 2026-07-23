@@ -32,7 +32,7 @@ Regardless of the type of contribution, you'll need a GitHub account and a fork 
    git checkout -b your-branch-name
    ```
 
-5. When ready, open a pull request against `stonerl/Thaw:main`
+5. When ready, open a pull request against `stonerl/Thaw:development`
 
 ## Non-technical contributions
 
@@ -68,6 +68,9 @@ This includes but is not limited to:
 - Xcode 26+
 - macOS 26+
 
+> [!NOTE]
+> macOS 27 (Golden Gate) experimental work happens on `feat/macos-27-experimental` and is tracked in [issue #687](https://github.com/stonerl/Thaw/issues/687).
+
 ### Getting Started
 
 1. Open `Thaw.xcodeproj` in Xcode 26 or later
@@ -86,10 +89,19 @@ Before submitting a request, run:
 
 ```bash
 swiftformat .
-swiftlint lint
+swiftlint lint --strict
 ```
 
 Pull requests are automatically reviewed by SonarCloud for code quality and CodeRabbit for AI-assisted review. You may receive automated comments from these tools, so please address any findings before requesting a human review.
+
+### Project conventions
+
+- **Branch & base:** All external PRs must target `development` (not `main`), unless a maintainer asks otherwise.
+- **PR size:** Aim for ≤500 lines / ≤20 files per PR. If you expect to exceed this, say why in the Summary and link the design/issue.
+- **Templates & issues:** Bugfix and feature PRs should always reference a GitHub issue (`Closes: #123`, or `Closes: N/A` when agreed).
+- **Commit / PR titles:** Prefer conventional commits, e.g. `fix(menubar): …`, `feat(settings): …`.
+- **Code review bots:** CodeRabbit and SonarCloud comments are treated as *required* unless a maintainer marks them won’t-fix. If you’re unsure, wait for a maintainer reply before large refactors spurred by bots alone.
+- **Sensitive areas:** Expect deeper review and stronger tests when touching menu bar hiding/layout, IceBar / Thaw Bar, triggers/automation, logging, or permissions.
 
 ### Pull Requests
 
@@ -105,4 +117,4 @@ Open a pull request via the [Thaw pull requests page][pr] and select the [approp
 [fq]: ../FREQUENT_ISSUES.md
 [it]: https://github.com/stonerl/Thaw/issues
 [pr]: https://github.com/stonerl/Thaw/pulls
-[prt]: https://github.com/stonerl/Thaw/blob/main/.github/pull_request_template.md
+[prt]: https://github.com/stonerl/Thaw/blob/development/.github/pull_request_template.md

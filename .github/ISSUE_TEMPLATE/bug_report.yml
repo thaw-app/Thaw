@@ -1,12 +1,20 @@
 name: Bug Report
 description: File a bug report
 title: "[Bug] "
-labels: ["bug"] 
+labels: ["bug"]
 body:
   - type: markdown
     attributes:
       value: |
-        **Before submitting:** Search [open & closed issues](https://github.com/stonerl/Thaw/issues?q=is%3Aissue) for duplicates.
+        **Before submitting:**
+        - Check [Frequent Issues](https://github.com/stonerl/Thaw/blob/development/FREQUENT_ISSUES.md)
+        - Search [open & closed issues](https://github.com/stonerl/Thaw/issues?q=is%3Aissue) for duplicates
+
+        > [!IMPORTANT]
+        > **macOS 27 (Golden Gate):** general support, “doesn’t work on 27”, and preview-build discussion belong **only** in the tracking issue:
+        > **[#687 — macOS 27 support & preview builds](https://github.com/stonerl/Thaw/issues/687)**
+        >
+        > Do **not** open a new issue for that. New issues that ignore #687 will be closed as duplicates.
 
   - type: checkboxes
     id: checks
@@ -14,6 +22,8 @@ body:
       label: Pre-submission Checklist
       options:
         - label: I searched existing issues (open & closed) and found no duplicates
+          required: true
+        - label: If this is about macOS 27 / Golden Gate, I have read #687 and this report is a specific new bug not already covered there (or this is not about macOS 27)
           required: true
         - label: I'm using the latest app version
           required: true
@@ -58,7 +68,8 @@ body:
     id: macos_version
     attributes:
       label: macOS Version
-      placeholder: e.g. 26.0 (Tahoe)
+      description: Use 26.x for Tahoe. For 27 / Golden Gate, confirm you read #687 first.
+      placeholder: e.g. 26.0 (Tahoe) or 27.0 (Golden Gate)
     validations:
       required: true
 

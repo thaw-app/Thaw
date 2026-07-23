@@ -7,13 +7,33 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Release tag to publish (for example, 1.2.3)
+        description: Release tag to publish (for example, 1.2.3 or 2.0.0-rc.1)
         required: true
         type: string
+      channel:
+        description: Sparkle channel (auto infers from tag suffix)
+        required: true
+        type: choice
+        default: auto
+        options:
+          - auto
+          - stable
+          - beta
+          - alpha
+      publish_release:
+        description: Publish the GitHub Release (uncheck to leave as draft)
+        required: false
+        type: boolean
+        default: false
+      publish_appcast:
+        description: Push signed appcast.xml to gh-pages
+        required: false
+        type: boolean
+        default: true
 
 jobs:
   release:
-    runs-on: macos-26
+    runs-on: xcode-27
     permissions:
       contents: write
     env:
@@ -21,21 +41,60 @@ jobs:
       DMG_NAME: "Thaw.dmg"
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/tags/{0}', inputs.tag) || github.ref }}
 
-      - name: Validate tag name format
-        id: validate
+      - name: Resolve tag and channel
+        id: meta
         env:
           TAG_NAME: ${{ inputs.tag || github.ref_name }}
+          CHANNEL_INPUT: ${{ inputs.channel || 'auto' }}
         run: |
+          set -euo pipefail
+
           if [[ ! "$TAG_NAME" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9._]+)?$ ]]; then
-            echo "Invalid tag name format. Must be in the form 1.2.3"
+            echo "Invalid tag name format. Must be in the form 1.2.3 or 1.2.3-rc.1"
             exit 1
           fi
-      - run: sudo xcode-select -s /Applications/Xcode_26.5.app/Contents/Developer
+
+          channel="$CHANNEL_INPUT"
+          if [[ "$channel" == "auto" ]]; then
+            shopt -s nocasematch
+            if [[ "$TAG_NAME" =~ -(alpha|nightly)(\.|$) ]]; then
+              channel="alpha"
+            elif [[ "$TAG_NAME" =~ -(beta|rc)(\.|$) ]]; then
+              channel="beta"
+            else
+              channel="stable"
+            fi
+            shopt -u nocasematch
+          fi
+
+          case "$channel" in
+            stable|beta|alpha) ;;
+            *)
+              echo "Unsupported channel: $channel"
+              exit 1
+              ;;
+          esac
+
+          prerelease=false
+          if [[ "$channel" != "stable" ]]; then
+            prerelease=true
+          fi
+
+          {
+            echo "tag=$TAG_NAME"
+            echo "channel=$channel"
+            echo "prerelease=$prerelease"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "tag=$TAG_NAME channel=$channel prerelease=$prerelease"
+
+      - run: sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
+
       - name: Configure signing
         uses: ./.github/actions/configure-signing
         with:
@@ -63,15 +122,91 @@ jobs:
           dmg-name: ${{ env.DMG_NAME }}
           app-name: ${{ env.APP_NAME }}
 
+      - name: Sparkle ZIP and appcast
+        id: sparkle
+        uses: ./.github/actions/sparkle-release
+        with:
+          tag: ${{ steps.meta.outputs.tag }}
+          channel: ${{ steps.meta.outputs.channel }}
+          app-name: ${{ env.APP_NAME }}
+          sparkle-private-key: ${{ secrets.SPARKLE_ED25519_PRIVATE_KEY }}
+          publish-appcast: "false"
+
+      - name: Collect release assets
+        id: assets
+        run: |
+          set -euo pipefail
+
+          list="$RUNNER_TEMP/release-assets.txt"
+          : > "$list"
+          printf '%s\n' "build/${DMG_NAME}" >> "$list"
+          printf '%s\n' "${{ steps.sparkle.outputs.zip-path }}" >> "$list"
+
+          shopt -s nullglob
+          for delta in "$RUNNER_TEMP"/sparkle-archives/*.delta; do
+            printf '%s\n' "$delta" >> "$list"
+          done
+
+          echo "files<<EOF" >> "$GITHUB_OUTPUT"
+          cat "$list" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+          echo "Release assets:"
+          cat "$list"
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: ${{ inputs.tag || github.ref_name }}
-          files: build/${{ env.DMG_NAME }}
+          tag_name: ${{ steps.meta.outputs.tag }}
+          files: ${{ steps.assets.outputs.files }}
           generate_release_notes: false
-          draft: true
+          # Tag pushes publish immediately so Sparkle download URLs work.
+          # workflow_dispatch stays draft unless publish_release is checked.
+          draft: ${{ github.event_name == 'workflow_dispatch' && !inputs.publish_release }}
+          prerelease: ${{ steps.meta.outputs.prerelease == 'true' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish appcast to gh-pages
+        if: >-
+          (github.event_name != 'workflow_dispatch' || inputs.publish_appcast)
+          && (github.event_name != 'workflow_dispatch' || inputs.publish_release)
+        env:
+          TAG: ${{ steps.meta.outputs.tag }}
+          CHANNEL: ${{ steps.meta.outputs.channel }}
+          APPCAST_PATH: ${{ steps.sparkle.outputs.appcast-path }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          work="$RUNNER_TEMP/gh-pages-work"
+          rm -rf "$work"
+
+          git clone --depth 1 --branch gh-pages \
+            "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+            "$work" 2>/dev/null \
+          || {
+            git clone --depth 1 \
+              "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+              "$work"
+            git -C "$work" checkout --orphan gh-pages
+            git -C "$work" rm -rf . >/dev/null 2>&1 || true
+          }
+
+          cp "$APPCAST_PATH" "$work/appcast.xml"
+          if [[ ! -f "$work/.gitignore" ]]; then
+            printf '*\n!appcast.xml\n!.gitignore\n' > "$work/.gitignore"
+          fi
+
+          git -C "$work" config user.name "github-actions[bot]"
+          git -C "$work" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C "$work" add appcast.xml .gitignore
+          if git -C "$work" diff --staged --quiet; then
+            echo "appcast.xml unchanged"
+            exit 0
+          fi
+
+          git -C "$work" commit -m "chore(sparkle): publish appcast for ${TAG} (${CHANNEL})"
+          git -C "$work" push origin HEAD:gh-pages
 
       - name: Cleanup keychain
         if: always()

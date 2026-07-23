@@ -303,7 +303,7 @@ final class MenuBarItemManager: ObservableObject {
     /// True while `applyProfileLayout` is executing. Suppresses the
     /// late-arrival detection in `cacheItemsRegardless` to prevent
     /// false re-sort triggers during an in-flight sort.
-    private var isApplyingProfileLayout = false
+    private(set) var isApplyingProfileLayout = false
 
     /// Persisted mapping of item tag identifiers to their original section name for
     /// temporarily shown items whose apps quit before they could be rehidden. When
@@ -1825,12 +1825,30 @@ extension MenuBarItemManager {
                     return bounds.origin.x == -1
                 }
             }
-            if !hasBlockedItems {
-                saveSectionOrder(from: context.cache)
-            } else {
+            // Don't persist while the items straddle two displays. A cross-display
+            // cache is a menu bar relocation caught mid-flight, not a settled
+            // layout: macOS un-hides items as it moves them to the new screen, so
+            // capturing the section order now would bake those un-hidden items
+            // into the saved layout as if the user wanted them visible. Wait for
+            // the items to collapse back onto a single display.
+            let screenFrames = NSScreen.screens.map { CGDisplayBounds($0.displayID) }
+            let itemCenters = MenuBarSection.Name.allCases.flatMap { section in
+                context.cache[section].map { CGPoint(x: $0.bounds.midX, y: $0.bounds.midY) }
+            }
+            let spansDisplays = LayoutSolver.itemsSpanMultipleDisplays(
+                itemCenters: itemCenters,
+                screenFrames: screenFrames
+            )
+            if hasBlockedItems {
                 MenuBarItemManager.diagLog.debug(
                     "Skipping saveSectionOrder; blocked items detected (x=-1), will retry on next cache tick"
                 )
+            } else if spansDisplays {
+                MenuBarItemManager.diagLog.debug(
+                    "Skipping saveSectionOrder; menu bar items span multiple displays (relocation in progress)"
+                )
+            } else {
+                saveSectionOrder(from: context.cache)
             }
         }
         MenuBarItemManager.diagLog.debug("Updated menu bar item cache: visible=\(context.cache[.visible].count), hidden=\(context.cache[.hidden].count), alwaysHidden=\(context.cache[.alwaysHidden].count)")
@@ -2400,7 +2418,7 @@ extension MenuBarItemManager {
     /// paused input for at least the given duration.
     ///
     /// - Parameter duration: The duration that certain types of input
-    ///   events must not have occured within in order to return `true`.
+    ///   events must not have occurred within in order to return `true`.
     private nonisolated func hasUserPausedInput(for duration: Duration) -> Bool {
         NSEvent.modifierFlags.isEmpty &&
             !MouseHelpers.lastMovementOccurred(within: duration) &&
@@ -2410,10 +2428,17 @@ extension MenuBarItemManager {
 
     /// Waits asynchronously for the user to pause input.
     private nonisolated func waitForUserToPauseInput() async throws {
+        // The pre-move input-pause window is configurable so users hit by repeated cursor
+        // "kidnapping" during menu-bar reordering can widen it. Reordering warps the real cursor,
+        // and a very short window lets warps slip through the micro-gaps between a user's own mouse
+        // moves when a churny app keeps changing its menu-bar items (see #750, #723, #736). The
+        // default preserves the previous 50 ms behaviour; override with:
+        //   defaults write com.stonerl.Thaw inputPauseThresholdMs -int <milliseconds>
+        let pauseMs = max(0, (UserDefaults.standard.object(forKey: "inputPauseThresholdMs") as? Int) ?? 50)
         let waitTask = Task {
             while true {
                 try Task.checkCancellation()
-                if hasUserPausedInput(for: .milliseconds(50)) {
+                if hasUserPausedInput(for: .milliseconds(pauseMs)) {
                     break
                 }
                 try await Task.sleep(for: .milliseconds(50))
@@ -2933,6 +2958,23 @@ extension MenuBarItemManager {
             }
         }
 
+        /// Returns the drag point for placing an item relative to the target bounds.
+        ///
+        /// Targets parked beyond the display's left edge use their vertical
+        /// midpoint so a synthetic event clamped to the edge cannot land on a
+        /// top Hot Corner. On-screen targets retain the existing top-edge
+        /// coordinate to avoid changing normal cursor-warp behavior.
+        func targetPoint(in targetBounds: CGRect, on displayBounds: CGRect) -> CGPoint {
+            let targetIsParkedOffscreen = targetBounds.maxX <= displayBounds.minX
+            let targetY = targetIsParkedOffscreen ? targetBounds.midY : targetBounds.minY
+            return switch self {
+            case .leftOfItem:
+                CGPoint(x: targetBounds.minX, y: targetY)
+            case .rightOfItem:
+                CGPoint(x: targetBounds.maxX, y: targetY)
+            }
+        }
+
         /// A string to use for logging purposes.
         var logString: String {
             switch self {
@@ -2940,6 +2982,18 @@ extension MenuBarItemManager {
             case let .rightOfItem(item): "right of \(item.logString)"
             }
         }
+    }
+
+    /// Returns a safe location for an off-screen move's initial mouse-down.
+    ///
+    /// `NSScreen` frames use AppKit coordinates, while `CGEvent` locations use
+    /// Core Graphics coordinates. Their horizontal axes align, so the notch
+    /// supplies only the x-coordinate; the target supplies the event's y-coordinate.
+    static nonisolated func notchMouseDownPoint(
+        notchFrameAppKit: CGRect,
+        targetPointCoreGraphics: CGPoint
+    ) -> CGPoint {
+        CGPoint(x: notchFrameAppKit.midX, y: targetPointCoreGraphics.y)
     }
 
     /// Returns the default timeout for move operations associated
@@ -3032,17 +3086,11 @@ extension MenuBarItemManager {
         let itemBounds = try await getCurrentBounds(for: item)
         let targetBounds = try await getCurrentBounds(for: destination.targetItem)
 
-        let start: CGPoint
-        let end: CGPoint
-
-        switch destination {
-        case .leftOfItem:
-            start = CGPoint(x: targetBounds.minX, y: targetBounds.minY)
-        case .rightOfItem:
-            start = CGPoint(x: targetBounds.maxX, y: targetBounds.minY)
-        }
-
-        end = start
+        let start = destination.targetPoint(
+            in: targetBounds,
+            on: CGDisplayBounds(displayID)
+        )
+        let end = start
 
         MenuBarItemManager.diagLog.debug(
             "Move points: startX=\(start.x) endX=\(end.x) startY=\(start.y) targetMinX=\(targetBounds.minX) itemMinX=\(itemBounds.minX) targetTag=\(destination.targetItem.tag) itemTag=\(item.tag) display=\(displayID)"
@@ -3196,7 +3244,9 @@ extension MenuBarItemManager {
         // when slow apps have to register the tracking events before the
         // mouseDown; irrelevant offscreen.
         let warpPoint = targetPoints.start
-        let warpIsOnScreen = NSScreen.screens.contains { $0.frame.contains(warpPoint) }
+        let warpIsOnScreen = NSScreen.screens.contains {
+            CGDisplayBounds($0.displayID).contains(warpPoint)
+        }
         if warpIsOnScreen {
             MouseHelpers.warpCursor(to: warpPoint)
         }
@@ -3205,13 +3255,15 @@ extension MenuBarItemManager {
             await eventSleep(for: .milliseconds(20))
         }
         // For notched displays, when the target is offscreen, redirect
-        // mouseDown's hit-test location into the notch itself. The
-        // notch is hardware with no clickable UI, so the OS hit-test
-        // there has nothing to dismiss, no menu to open, and no app
-        // window to surface a click against. mouseUp keeps its
-        // original location (the drop position the receiving app
-        // uses to place the item). For non-notched displays the
-        // original behaviour is preserved (no override).
+        // mouseDown's horizontal hit-test location into the notch itself. The
+        // notch is hardware with no clickable UI, so the OS hit-test there has
+        // nothing to dismiss, no menu to open, and no app window to surface a
+        // click against. Keep the Core Graphics y-coordinate inside the menu
+        // bar; frameOfNotch is in AppKit coordinates and its y-coordinate would
+        // instead point near the bottom of the display. mouseUp keeps its
+        // original location (the drop position the receiving app uses to place
+        // the item). For non-notched displays the original behaviour is
+        // preserved (no override).
         if !warpIsOnScreen {
             let activeScreen = NSScreen.screens.first(where: { $0.displayID == displayID })
                 ?? NSScreen.main
@@ -3219,9 +3271,9 @@ extension MenuBarItemManager {
                activeScreen.hasNotch,
                let notch = activeScreen.frameOfNotch
             {
-                mouseDown.location = CGPoint(
-                    x: notch.midX,
-                    y: notch.midY
+                mouseDown.location = Self.notchMouseDownPoint(
+                    notchFrameAppKit: notch,
+                    targetPointCoreGraphics: targetPoints.start
                 )
             }
         }
@@ -5584,7 +5636,7 @@ extension MenuBarItemManager {
     /// Phase 7 with Task.isCancelled false). If a crash, SIGKILL, or
     /// mid-apply cancellation aborts before that point, disk reflects
     /// the previous profile rather than an unexecuted intent.
-    private func armProfileState(
+    func armProfileState(
         source: ApplySource,
         pinnedHidden: Set<String>,
         pinnedAlwaysHidden: Set<String>,
@@ -5673,6 +5725,19 @@ extension MenuBarItemManager {
         updateProfileSortedSnapshot(source: source, items: items)
         guard case .profile = source else { return }
         isApplyingProfileLayout = false
+    }
+
+    /// Cleanup for a profile apply that needed no item moves: the bar was
+    /// already in the target arrangement, so the move loop is skipped and the
+    /// normal Phase 7 exit (which clears the in-flight flag) is never reached.
+    /// This early exit must run the same profile-only teardown as Phase 7,
+    /// otherwise a no-moves apply (common on a display reconnect, where the
+    /// active-display profile is re-applied onto an already-correct bar) leaks
+    /// isApplyingProfileLayout = true and permanently blocks applySavedLayout
+    /// for the rest of the session.
+    func concludeProfileApplyWithoutMoves(source: ApplySource, items: [MenuBarItem]) {
+        persistProfileStateOnSuccess(source: source)
+        clearProfileState(source: source, items: items)
     }
 
     /// Schedules the post-apply refresh sequence on a detached Task:
@@ -5765,12 +5830,14 @@ extension MenuBarItemManager {
             isRestoringItemOrderTimestamp = nil
         }
 
-        guard let appState else {
-            MenuBarItemManager.diagLog.error("applyProfileLayout: missing appState")
-            return
-        }
         guard !itemOrder.isEmpty else {
             MenuBarItemManager.diagLog.debug("applyProfileLayout: no item order, skipping")
+            concludeProfileApplyWithoutMoves(source: source, items: [])
+            return
+        }
+        guard let appState else {
+            MenuBarItemManager.diagLog.error("applyProfileLayout: missing appState")
+            clearProfileState(source: source, items: [])
             return
         }
 
@@ -5810,6 +5877,7 @@ extension MenuBarItemManager {
               )
         else {
             MenuBarItemManager.diagLog.error("applyProfileLayout: missing control items")
+            clearProfileState(source: source, items: items)
             return
         }
 
@@ -5998,10 +6066,40 @@ extension MenuBarItemManager {
         // Gated by the user-facing "Enable menu bar item overflow" toggle in
         // Advanced Settings; when off, the saved profile layout is honoured
         // verbatim and items the notch would otherwise eject stay in visible.
-        let activeScreen = NSScreen.screenWithActiveMenuBar ?? NSScreen.main
-        if appState.settings.advanced.enableMenuBarItemOverflow,
-           let screen = activeScreen,
-           screen.hasNotch,
+        // The overflow gate reads the *actual* active menu bar screen — no
+        // `NSScreen.main` fallback. Guessing a screen while the active one is
+        // unknown risks budgeting against the wrong display, which is the
+        // exact failure this gate prevents, so the gate fails closed instead.
+        // `activeScreen` keeps the fallback solely for the Phase-5 execution
+        // strategy choice below, where a guess only picks a sort strategy.
+        let activeMenuBarScreen = NSScreen.screenWithActiveMenuBar
+        let activeScreen = activeMenuBarScreen ?? NSScreen.main
+        let activeIsMainDisplay = activeMenuBarScreen?.displayID == CGMainDisplayID()
+        // A notched display that isn't the main menu bar display only hosts the
+        // status items transiently (while it holds focus); ejecting there
+        // strands profile items in hidden once focus returns to the main
+        // screen. Log the skips so the field logs make the reason explicit.
+        if appState.settings.advanced.enableMenuBarItemOverflow {
+            if let screen = activeMenuBarScreen, screen.hasNotch, !activeIsMainDisplay {
+                MenuBarItemManager.diagLog.debug(
+                    "Notch overflow: skipping — active notched display \(screen.displayID) is a secondary "
+                        + "(main display is \(CGMainDisplayID())); overflow only manages the main menu bar, "
+                        + "so the saved layout is honoured verbatim"
+                )
+            } else if activeMenuBarScreen == nil {
+                MenuBarItemManager.diagLog.debug(
+                    "Notch overflow: skipping — active menu bar display is unknown; "
+                        + "overflow does not guess a screen, so the saved layout is honoured verbatim"
+                )
+            }
+        }
+        if LayoutSolver.shouldManageNotchOverflow(
+            overflowEnabled: appState.settings.advanced.enableMenuBarItemOverflow,
+            activeScreenKnown: activeMenuBarScreen != nil,
+            activeHasNotch: activeMenuBarScreen?.hasNotch ?? false,
+            activeIsMainDisplay: activeIsMainDisplay
+        ),
+           let screen = activeMenuBarScreen,
            let notch = screen.frameOfNotch
         {
             let notchGap = MenuBarSection.notchGap
@@ -6142,8 +6240,7 @@ extension MenuBarItemManager {
             )
             if fullSequence.isEmpty {
                 MenuBarItemManager.diagLog.info("Profile layout (full sort): current order matches desired, skipping")
-                updateProfileSortedSnapshot(source: source, items: items)
-                persistProfileStateOnSuccess(source: source)
+                concludeProfileApplyWithoutMoves(source: source, items: items)
                 scheduleDeferredCacheRefresh()
                 return
             }
@@ -6464,6 +6561,7 @@ extension MenuBarItemManager {
                     alwaysHiddenControlItemWindowID: alwaysHiddenWID
                 ) else {
                     MenuBarItemManager.diagLog.error("applyProfileLayout: lost control items after phase 1")
+                    clearProfileState(source: source, items: items)
                     scheduleDeferredCacheRefresh()
                     return
                 }
@@ -6508,8 +6606,7 @@ extension MenuBarItemManager {
                 } else {
                     MenuBarItemManager.diagLog.info("Profile layout: all items already in correct positions")
                 }
-                updateProfileSortedSnapshot(source: source, items: items)
-                persistProfileStateOnSuccess(source: source)
+                concludeProfileApplyWithoutMoves(source: source, items: items)
                 scheduleDeferredCacheRefresh()
                 return
             }
@@ -6732,6 +6829,22 @@ extension MenuBarItemManager {
             return false
         }
         return !previous.isSubset(of: current)
+    }
+
+
+    /// Whether enough menu bar items are missing a resolved source PID that
+    /// bulk-applying the saved layout would act on unmatchable identities.
+    ///
+    /// When the MenuBarItemService XPC connection fails (service cold start,
+    /// connection interruption), most third-party items resolve to a nil
+    /// sourcePID and collapse to ambiguous Control-Center-owned identifiers.
+    /// A bulk apply dispatched in that state rearranges items it cannot match
+    /// to the saved layout. A few system items (WiFi, Clock, BentoBox) and
+    /// notch-hidden stragglers legitimately resolve to nil, so a minority
+    /// share is normal; only a majority signals a resolution failure. The
+    /// item-count floor keeps degenerate tiny sets from tripping the gate.
+    nonisolated static func majorityOfSourcePIDsUnresolved(unresolvedCount: Int, itemCount: Int) -> Bool {
+        itemCount >= 4 && unresolvedCount * 2 > itemCount
     }
 
     func applySavedLayout(

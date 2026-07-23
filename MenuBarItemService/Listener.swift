@@ -7,6 +7,7 @@
 //  Licensed under the GNU GPLv3
 
 import Foundation
+import Security
 import XPC
 
 /// A wrapper around an XPC listener object.
@@ -70,6 +71,35 @@ final class Listener: @unchecked Sendable {
         }
     }
 
+    /// Activates the listener without a peer requirement. Used for builds
+    /// signed without a team identifier (ad-hoc/personal builds), where
+    /// `.isFromSameTeam()` can never be satisfied and every session is
+    /// cancelled before the first message.
+    private func uncheckedActivateWithoutPeerRequirement() throws {
+        xpcListener = try XPCListener(service: name) { request in
+            request.accept { [self] message in
+                self.handleMessage(message)
+            }
+        }
+    }
+
+    /// The team identifier of the current process, or `nil` when signed
+    /// without one (ad-hoc).
+    private static let processTeamIdentifier: String? = {
+        var code: SecCode?
+        guard SecCodeCopySelf([], &code) == errSecSuccess, let code else { return nil }
+        var staticCode: SecStaticCode?
+        guard SecCodeCopyStaticCode(code, [], &staticCode) == errSecSuccess, let staticCode else { return nil }
+        var info: CFDictionary?
+        let flags = SecCSFlags(rawValue: kSecCSSigningInformation)
+        guard SecCodeCopySigningInformation(staticCode, flags, &info) == errSecSuccess,
+              let dict = info as? [String: Any]
+        else {
+            return nil
+        }
+        return dict[kSecCodeInfoTeamIdentifier as String] as? String
+    }()
+
     /// Activates the listener.
     func activate() {
         guard xpcListener == nil else {
@@ -80,7 +110,12 @@ final class Listener: @unchecked Sendable {
         diagLog.debug("Activating listener")
 
         do {
-            try uncheckedActivateWithSameTeamRequirement()
+            if Self.processTeamIdentifier == nil {
+                diagLog.notice("Listener: no team identifier (ad-hoc build), activating without peer requirement")
+                try uncheckedActivateWithoutPeerRequirement()
+            } else {
+                try uncheckedActivateWithSameTeamRequirement()
+            }
         } catch {
             diagLog.error("Failed to activate listener with error \(error)")
         }
