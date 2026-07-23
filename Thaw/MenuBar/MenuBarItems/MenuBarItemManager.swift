@@ -2801,11 +2801,16 @@ extension MenuBarItemManager {
         event: CGEvent,
         item: MenuBarItem,
         timeout: Duration,
-        repeating count: Int
+        repeating count: Int,
+        manageCursorVisibility: Bool = true
     ) async throws {
-        MouseHelpers.hideCursor()
+        if manageCursorVisibility {
+            MouseHelpers.hideCursor()
+        }
         defer {
-            MouseHelpers.showCursor()
+            if manageCursorVisibility {
+                MouseHelpers.showCursor()
+            }
         }
 
         guard
@@ -2890,14 +2895,16 @@ extension MenuBarItemManager {
         _ event: CGEvent,
         to item: MenuBarItem,
         timeout: Duration,
-        repeating count: Int = 1
+        repeating count: Int = 1,
+        manageCursorVisibility: Bool = true
     ) async throws {
         try await performEventContinuationOperation(
             EventContinuationKind.postEventBarrier,
             event: event,
             item: item,
             timeout: timeout,
-            repeating: count
+            repeating: count,
+            manageCursorVisibility: manageCursorVisibility
         )
     }
 
@@ -2917,14 +2924,16 @@ extension MenuBarItemManager {
         _ event: CGEvent,
         item: MenuBarItem,
         timeout: Duration,
-        repeating count: Int = 1
+        repeating count: Int = 1,
+        manageCursorVisibility: Bool = true
     ) async throws {
         try await performEventContinuationOperation(
             EventContinuationKind.scromble,
             event: event,
             item: item,
             timeout: timeout,
-            repeating: count
+            repeating: count,
+            manageCursorVisibility: manageCursorVisibility
         )
     }
 }
@@ -3088,11 +3097,16 @@ extension MenuBarItemManager {
     private nonisolated func waitForMoveEventResponse(
         from item: MenuBarItem,
         initialOrigin: CGPoint,
-        timeout: Duration
+        timeout: Duration,
+        manageCursorVisibility: Bool = true
     ) async throws -> CGPoint {
-        MouseHelpers.hideCursor()
+        if manageCursorVisibility {
+            MouseHelpers.hideCursor()
+        }
         defer {
-            MouseHelpers.showCursor()
+            if manageCursorVisibility {
+                MouseHelpers.showCursor()
+            }
         }
         let responseTask = Task.detached {
             while true {
@@ -3213,7 +3227,9 @@ extension MenuBarItemManager {
         if warpIsOnScreen {
             MouseHelpers.warpCursor(to: warpPoint)
         }
-        MouseHelpers.hideCursor()
+        if warpCursorAfter {
+            MouseHelpers.hideCursor()
+        }
         if warpIsOnScreen {
             await eventSleep(for: .milliseconds(20))
         }
@@ -3242,7 +3258,9 @@ extension MenuBarItemManager {
             if let mouseLocation {
                 MouseHelpers.warpCursor(to: mouseLocation)
             }
-            MouseHelpers.showCursor()
+            if warpCursorAfter {
+                MouseHelpers.showCursor()
+            }
             lastMoveOperationTimestamp = .now
             updateMoveOperationTimeout(timeout, for: item)
         }
@@ -3251,23 +3269,27 @@ extension MenuBarItemManager {
             try await scrombleEvent(
                 mouseDown,
                 item: item,
-                timeout: timeout
+                timeout: timeout,
+                manageCursorVisibility: warpCursorAfter
             )
             itemOrigin = try await waitForMoveEventResponse(
                 from: item,
                 initialOrigin: itemOrigin,
-                timeout: timeout
+                timeout: timeout,
+                manageCursorVisibility: warpCursorAfter
             )
             try await scrombleEvent(
                 mouseUp,
                 item: item,
                 timeout: timeout,
-                repeating: 2 // Double mouse up prevents invalid item state.
+                repeating: 2, // Double mouse up prevents invalid item state.
+                manageCursorVisibility: warpCursorAfter
             )
             itemOrigin = try await waitForMoveEventResponse(
                 from: item,
                 initialOrigin: itemOrigin,
-                timeout: timeout
+                timeout: timeout,
+                manageCursorVisibility: warpCursorAfter
             )
             timeout -= timeout / 4
         } catch {
@@ -3277,7 +3299,8 @@ extension MenuBarItemManager {
                     mouseUp,
                     item: item,
                     timeout: .milliseconds(100), // Fixed timeout for fallback.
-                    repeating: 2 // Double mouse up prevents invalid item state.
+                    repeating: 2, // Double mouse up prevents invalid item state.
+                    manageCursorVisibility: warpCursorAfter
                 )
             } catch {
                 // Catch this for logging purposes only. We want to propagate
@@ -3430,15 +3453,11 @@ extension MenuBarItemManager {
         // during a layout reset when items required multiple attempts).
         let mouseLocation = try getMouseLocation()
         // The default 1 s cursor-hide watchdog is too short for menu
-        // bar item moves: each item can take up to ~4 s across retries
-        // (8 attempts × ~500 ms timeout), and during a full layout pass
-        // many items move sequentially. When the watchdog fires partway
-        // through, the cursor is force-shown at the synthetic event's
-        // last cursorPosition (mid-display, per the offscreen-target
-        // override below in postMoveEvents) and the user sees a brief
-        // cursor flash. 10 s is long enough to cover any single move
-        // without giving up the safety net for genuinely stuck states.
-        MouseHelpers.hideCursor(watchdogTimeout: watchdogTimeout ?? .seconds(10))
+        // bar item moves. A slow Control Center item can consume the full
+        // retry envelope; if the watchdog fires mid-drag, the cursor becomes
+        // visible at a synthetic event position. Keep one watchdog around the
+        // entire retry sequence rather than resetting it in each inner event.
+        MouseHelpers.hideCursor(watchdogTimeout: watchdogTimeout ?? .seconds(30))
         defer {
             MouseHelpers.warpCursor(to: mouseLocation)
             MouseHelpers.showCursor()
