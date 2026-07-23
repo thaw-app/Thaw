@@ -231,7 +231,6 @@ struct PermissionsView<Manager: PermissionsManaging>: View {
 struct PermissionCard: View {
     @EnvironmentObject var appState: AppState
     @ObservedObject var permission: Permission
-    @State var isRequestingPermission = false
 
     /// Whether granting the permission should bring the permissions window
     /// back to the front. Disabled when hosted in a context — like the
@@ -265,19 +264,11 @@ struct PermissionCard: View {
                 Spacer(minLength: 0)
 
                 Button {
-                    guard !isRequestingPermission else {
-                        return
-                    }
-                    isRequestingPermission = true
+                    // The request is intentionally fire-and-forget. The
+                    // permission object keeps polling until the user grants
+                    // access, so closing System Settings leaves this button
+                    // available for another attempt.
                     permission.performRequest()
-                    Task {
-                        defer { isRequestingPermission = false }
-                        await permission.waitForPermission()
-                        appState.activate(withPolicy: .regular)
-                        if refocusesWindowAfterGrant {
-                            appState.openWindow(.permissions)
-                        }
-                    }
                 } label: {
                     if permission.hasPermission {
                         Label("Permission Granted", systemImage: "checkmark")
@@ -290,10 +281,18 @@ struct PermissionCard: View {
                 .buttonStyle(.borderedProminent)
                 .tint(permission.hasPermission ? .green : .accentColor)
                 .allowsHitTesting(!permission.hasPermission)
-                .disabled(isRequestingPermission)
             }
             .padding(12)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        }
+        .onChange(of: permission.hasPermission) { _, hasPermission in
+            guard hasPermission else {
+                return
+            }
+            appState.activate(withPolicy: .regular)
+            if refocusesWindowAfterGrant {
+                appState.openWindow(.permissions)
+            }
         }
     }
 }

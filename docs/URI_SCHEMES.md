@@ -108,6 +108,7 @@ Thaw uses the following system URLs to open macOS Settings:
 
 | URL                                                                             | Opens                     |
 | ------------------------------------------------------------------------------- | ------------------------- |
+| `x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility` | Accessibility settings    |
 | `x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture` | Screen Recording settings |
 
 ## Settings URI (Automation)

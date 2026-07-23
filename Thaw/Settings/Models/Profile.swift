@@ -342,6 +342,30 @@ struct MenuBarLayoutSnapshot: Codable {
     /// the menuBarItemHotkeys default. Absent in profiles saved before this
     /// field was introduced.
     var itemHotkeys: [String: Data]?
+
+    /// Resolves the ordering representation used by the layout apply path.
+    /// Profiles written before `itemOrder` was added contain the equivalent
+    /// `savedSectionOrder` representation, so preserve their layout intent.
+    var resolvedItemOrder: [String: [String]] {
+        itemOrder ?? savedSectionOrder
+    }
+
+    /// Resolves per-item section assignments for both current and legacy
+    /// profile formats. When the explicit map is absent, each identifier's
+    /// section is encoded by the compatible ordered representation.
+    var resolvedItemSectionMap: [String: String] {
+        if let itemSectionMap {
+            return itemSectionMap
+        }
+
+        var result = [String: String]()
+        for (sectionKey, identifiers) in resolvedItemOrder {
+            for identifier in identifiers {
+                result[identifier] = sectionKey
+            }
+        }
+        return result
+    }
 }
 
 // MARK: - ProfileContent

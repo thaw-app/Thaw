@@ -1,0 +1,38 @@
+name: Assign agentic workflow issues
+
+# gh-aw opens failure / incomplete / noop tracker issues with the
+# `agentic-workflows` label but does not assign a maintainer. Assign them to
+# the Thaw maintainer so they surface in "Assigned to me".
+
+on:
+  issues:
+    types: [opened, labeled, reopened]
+
+jobs:
+  assign:
+    if: contains(github.event.issue.labels.*.name, 'agentic-workflows')
+    runs-on: ubuntu-slim
+    permissions:
+      issues: write
+    steps:
+      - name: Assign maintainer
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const maintainer = 'diazdesandi';
+            const issue = context.payload.issue;
+            const alreadyAssigned = (issue.assignees || []).some(
+              (a) => a.login.toLowerCase() === maintainer.toLowerCase(),
+            );
+            if (alreadyAssigned) {
+              core.info(`#${issue.number} already assigned to ${maintainer}`);
+              return;
+            }
+
+            await github.rest.issues.addAssignees({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              assignees: [maintainer],
+            });
+            core.info(`Assigned #${issue.number} to ${maintainer}`);

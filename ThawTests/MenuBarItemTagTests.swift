@@ -296,6 +296,26 @@ final class MenuBarItemTagTests: XCTestCase {
         XCTAssertTrue(tag.isMovable)
     }
 
+    func testUnresolvedGenericControlCenterItemIsNotMovable() {
+        let item = MenuBarItem.fixture(
+            tag: MenuBarItemTag(namespace: .controlCenter, title: "Item-13"),
+            windowID: 13,
+            sourcePID: nil
+        )
+
+        XCTAssertFalse(item.isMovable)
+    }
+
+    func testResolvedGenericControlCenterItemKeepsItsTagMovability() {
+        let item = MenuBarItem.fixture(
+            tag: MenuBarItemTag(namespace: .controlCenter, title: "Item-13"),
+            windowID: 13,
+            sourcePID: 1234
+        )
+
+        XCTAssertTrue(item.isMovable)
+    }
+
     // MARK: - Can Be Hidden Tests
 
     func testVisibleControlItemCannotBeHidden() {

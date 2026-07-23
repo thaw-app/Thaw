@@ -43,11 +43,11 @@ class Permission: ObservableObject, Identifiable {
     /// The function that requests permissions.
     private let request: () -> Void
 
+    /// The function that opens a System Settings URL.
+    private let openSettings: (URL) -> Bool
+
     /// Observer that runs on a timer to check permissions.
     private var timerCancellable: AnyCancellable?
-
-    /// Observer that observes the ``hasPermission`` property.
-    private var hasPermissionCancellable: AnyCancellable?
 
     /// Creates a permission.
     ///
@@ -58,6 +58,7 @@ class Permission: ObservableObject, Identifiable {
     ///   - settingsURL: The URL of the settings pane to open.
     ///   - check: A function that checks permissions.
     ///   - request: A function that requests permissions.
+    ///   - openSettings: A function that opens the settings URL.
     init(
         title: String,
         iconName: String,
@@ -66,7 +67,8 @@ class Permission: ObservableObject, Identifiable {
         isRequired: Bool,
         settingsURL: URL?,
         check: @escaping () -> Bool,
-        request: @escaping () -> Void
+        request: @escaping () -> Void,
+        openSettings: @escaping (URL) -> Bool = { NSWorkspace.shared.open($0) }
     ) {
         self.title = title
         self.iconName = iconName
@@ -76,6 +78,7 @@ class Permission: ObservableObject, Identifiable {
         self.settingsURL = settingsURL
         self.check = check
         self.request = request
+        self.openSettings = openSettings
         self.hasPermission = check()
         configureCancellables()
     }
@@ -104,40 +107,19 @@ class Permission: ObservableObject, Identifiable {
 
     /// Performs the request and opens the System Settings app to the appropriate pane.
     func performRequest() {
+        // Setup stops background permission polling once the app is running.
+        // Restart it for every explicit request so later grants are observed.
+        configureCancellables()
         request()
         if let settingsURL {
-            NSWorkspace.shared.open(settingsURL)
+            _ = openSettings(settingsURL)
         }
-    }
-
-    /// Asynchronously waits for the app to be granted this permission.
-    func waitForPermission() async {
-        hasPermissionCancellable?.cancel()
-        configureCancellables()
-        guard !hasPermission else {
-            return
-        }
-        await withCheckedContinuation { continuation in
-            hasPermissionCancellable = $hasPermission.sink { [weak self] hasPermission in
-                guard self != nil else {
-                    continuation.resume()
-                    return
-                }
-                if hasPermission {
-                    continuation.resume()
-                }
-            }
-        }
-        hasPermissionCancellable?.cancel()
-        hasPermissionCancellable = nil
     }
 
     /// Stops running the permission check.
     func stopCheck() {
         timerCancellable?.cancel()
         timerCancellable = nil
-        hasPermissionCancellable?.cancel()
-        hasPermissionCancellable = nil
     }
 }
 
@@ -157,7 +139,9 @@ final class AccessibilityPermission: Permission {
                 String(localized: "Click menu bar items on your behalf, such as when using the search bar."),
             ],
             isRequired: true,
-            settingsURL: nil,
+            // Keep an explicit settings URL so every click can recover the
+            // flow if the user closes System Settings before granting access.
+            settingsURL: URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"),
             check: {
                 AXHelpers.isProcessTrusted()
             },

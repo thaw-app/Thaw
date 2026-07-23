@@ -1,0 +1,315 @@
+name: "PR Metadata"
+
+# Labels (type/area) + shape checks (base/title/Closes; size warn-only).
+# Uses pull_request_target so fork PRs can still receive labels.
+# Crowdin sync PRs are skipped — they are translation-only and often huge.
+
+on:
+  pull_request_target:
+    types: [opened, edited, synchronize, reopened]
+
+jobs:
+  metadata:
+    runs-on: ubuntu-slim
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Apply labels from PR template and changed paths
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            if (!pr) return;
+
+            // Crowdin sync PRs are trusted translation dumps; skip labeling/shape checks.
+            if ((pr.title || '').toLowerCase().includes('crowdin')) {
+              core.info('Skipping PR metadata for Crowdin sync PR.');
+              return;
+            }
+
+            const body = pr.body || '';
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            // PR change kinds — never map Bug fix to `bug` (that label is issue-only).
+            const typeLabels = {
+              'Bug fix': ['fix'],
+              'CI/CD': ['ci', 'cd'],
+              'Documentation': ['docs'],
+              'Feature': ['feature'],
+              'Enhancement': ['enhancement'],
+              'Refactor': ['refactor'],
+              'Performance improvement': ['performance'],
+              'Test addition or update': ['test'],
+              'Other (please describe)': ['chore'],
+            };
+
+            const areaLabels = [
+              'menubar',
+              'icebar',
+              'layout',
+              'appearance',
+              'settings',
+              'onboarding',
+              'permissions',
+              'profiles',
+              'hotkeys',
+              'updates',
+              'ops',
+            ];
+
+            // First matching rule wins per path; settings/ops are fallbacks when nothing else matched.
+            const pathAreaRules = [
+              { label: 'icebar', test: (p) => p.startsWith('Thaw/MenuBar/IceBar/') },
+              { label: 'layout', test: (p) =>
+                p.startsWith('Thaw/MenuBar/LayoutBar/') ||
+                /MenuBarLayout/i.test(p) ||
+                /SavedLayout/i.test(p)
+              },
+              { label: 'appearance', test: (p) =>
+                p.startsWith('Thaw/MenuBar/Appearance/') ||
+                /MenuBarAppearance/i.test(p)
+              },
+              { label: 'menubar', test: (p) => p.startsWith('Thaw/MenuBar/') },
+              { label: 'onboarding', test: (p) => p.startsWith('Thaw/Onboarding/') },
+              { label: 'permissions', test: (p) => p.startsWith('Thaw/Permissions/') },
+              { label: 'profiles', test: (p) => /Profile/i.test(p) },
+              { label: 'hotkeys', test: (p) => /Hotkey/i.test(p) },
+              { label: 'updates', test: (p) =>
+                /Sparkle/i.test(p) ||
+                /\/Update/i.test(p) ||
+                /appcast/i.test(p)
+              },
+              { label: 'settings', test: (p) => p.startsWith('Thaw/Settings/') },
+              { label: 'ops', test: (p) =>
+                p.startsWith('.github/') ||
+                p.startsWith('scripts/') ||
+                p === 'AGENTS.md' ||
+                p === 'FREQUENT_ISSUES.md' ||
+                p === 'README.md' ||
+                p === '.swiftformat' ||
+                p === '.swiftlint.yml' ||
+                p === 'sonar-project.properties'
+              },
+            ];
+
+            const getSection = (heading) => {
+              const re = new RegExp(`##\\s*${heading}\\s*\\n([\\s\\S]*?)(?=\\n##\\s|$)`, 'i');
+              const match = body.match(re);
+              return match ? match[1] : '';
+            };
+
+            const isChecked = (section, text) => {
+              const escaped = text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+              const re = new RegExp(`-\\s*\\[[xX]\\]\\s*${escaped}`);
+              return re.test(section);
+            };
+
+            const prTypeSection = getSection('PR Type');
+            const areaSection = getSection('Area');
+            const breakingSection = getSection('Does this PR introduce a breaking change\\?');
+
+            const toAdd = new Set();
+            const toRemove = new Set();
+
+            for (const [text, labels] of Object.entries(typeLabels)) {
+              if (isChecked(prTypeSection, text)) {
+                for (const label of labels) toAdd.add(label);
+              } else {
+                for (const label of labels) toRemove.add(label);
+              }
+            }
+
+            if (isChecked(breakingSection, 'Yes')) {
+              toAdd.add('breaking-change');
+            } else {
+              toRemove.add('breaking-change');
+            }
+
+            // Issue-only: never leave `bug` on a PR.
+            toRemove.add('bug');
+
+            // Path-based areas.
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner,
+              repo,
+              pull_number: pr.number,
+              per_page: 100,
+            });
+
+            const pathAreas = new Set();
+            for (const file of files) {
+              const path = file.filename;
+              for (const rule of pathAreaRules) {
+                if (rule.test(path)) {
+                  pathAreas.add(rule.label);
+                  break;
+                }
+              }
+            }
+
+            // Prefer specific product areas over the settings fallback when both matched.
+            // Keep `ops` alongside `settings` when those are the only matched areas.
+            const productAreasExcludingSettings = [
+              'menubar',
+              'icebar',
+              'layout',
+              'appearance',
+              'onboarding',
+              'permissions',
+              'profiles',
+              'hotkeys',
+              'updates',
+            ];
+            if (
+              pathAreas.has('settings') &&
+              productAreasExcludingSettings.some((label) => pathAreas.has(label))
+            ) {
+              pathAreas.delete('settings');
+            }
+
+            for (const label of pathAreas) toAdd.add(label);
+
+            // Manual Area checkboxes only add (do not remove path-applied areas).
+            for (const label of areaLabels) {
+              if (isChecked(areaSection, label)) {
+                toAdd.add(label);
+              }
+            }
+
+            // Do not remove a change-kind label we are also adding.
+            for (const label of toAdd) toRemove.delete(label);
+
+            const existing = (await github.paginate(github.rest.issues.listLabelsOnIssue, {
+              owner,
+              repo,
+              issue_number: pr.number,
+            })).map(l => l.name);
+
+            const addList = [...toAdd].filter(l => !existing.includes(l));
+            if (addList.length > 0) {
+              await github.rest.issues.addLabels({
+                owner,
+                repo,
+                issue_number: pr.number,
+                labels: addList,
+              });
+            }
+
+            for (const label of toRemove) {
+              if (existing.includes(label)) {
+                await github.rest.issues.removeLabel({
+                  owner,
+                  repo,
+                  issue_number: pr.number,
+                  name: label,
+                });
+              }
+            }
+
+      - name: Check PR conventions
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            if (!pr) return;
+
+            // Crowdin sync PRs are trusted translation dumps; skip title/size/Closes checks.
+            if ((pr.title || '').toLowerCase().includes('crowdin')) {
+              core.info('Skipping PR conventions for Crowdin sync PR.');
+              return;
+            }
+
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const title = pr.title || '';
+            const body = pr.body || '';
+            const base = pr.base?.ref || '';
+            const association = pr.author_association || '';
+            const maintainerAssociations = new Set(['OWNER', 'MEMBER', 'COLLABORATOR']);
+
+            const failures = [];
+            const warnings = [];
+
+            // External contributors must not target main.
+            if (base === 'main' && !maintainerAssociations.has(association)) {
+              failures.push(
+                `Base branch is \`main\`. External PRs must target \`development\` (see CONTRIBUTING).`,
+              );
+            }
+
+            // Conventional commit title (type optional scope).
+            const titleRe = /^(feat|fix|chore|docs|ci|test|refactor|perf|build|style|revert)(\(.+\))?!?: .+/;
+            if (!titleRe.test(title)) {
+              failures.push(
+                `Title must match conventional commits, e.g. \`fix(menubar): …\` or \`feat(settings): …\`. Got: \`${title}\`.`,
+              );
+            }
+
+            // Template requires a Closes: line (issue number or N/A).
+            if (!/\bCloses:\s*(?:#\d+|N\/A)\b/i.test(body)) {
+              failures.push(
+                `PR body must include a \`Closes:\` line (e.g. \`Closes: #123\` or \`Closes: N/A\`).`,
+              );
+            }
+
+            const changedFiles = pr.changed_files || 0;
+            const churn = (pr.additions || 0) + (pr.deletions || 0);
+            if (changedFiles > 30 || churn > 1000) {
+              warnings.push(
+                `This PR looks large (${changedFiles} files, ${churn} lines changed). Consider splitting if possible (see CONTRIBUTING: aim ≤20 files / ≤500 LOC).`,
+              );
+            }
+
+            const marker = '<!-- thaw-pr-conventions -->';
+            const existing = await github.paginate(github.rest.issues.listComments, {
+              owner,
+              repo,
+              issue_number: pr.number,
+              per_page: 100,
+            });
+            const prior = existing.find(
+              (c) => c.user?.type === 'Bot' && (c.body || '').includes(marker),
+            );
+
+            if (warnings.length > 0) {
+              const warnBody = [
+                marker,
+                '### PR size heads-up',
+                '',
+                ...warnings.map((w) => `- ${w}`),
+                '',
+                '_This check is informational and does not block merge._',
+              ].join('\n');
+
+              if (prior) {
+                await github.rest.issues.updateComment({
+                  owner,
+                  repo,
+                  comment_id: prior.id,
+                  body: warnBody,
+                });
+              } else {
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: pr.number,
+                  body: warnBody,
+                });
+              }
+            } else if (prior) {
+              // Clear stale size warning when the PR shrinks.
+              await github.rest.issues.deleteComment({
+                owner,
+                repo,
+                comment_id: prior.id,
+              });
+            }
+
+            if (failures.length > 0) {
+              core.setFailed(failures.join('\n'));
+            } else {
+              core.info('PR conventions checks passed.');
+            }

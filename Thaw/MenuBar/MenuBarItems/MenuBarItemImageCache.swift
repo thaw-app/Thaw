@@ -13,6 +13,67 @@ import os.lock
 /// Cache for menu bar item images.
 final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
     private static nonisolated let diagLog = DiagLog(category: "MenuBarItemImageCache")
+
+    struct DisplayResolution: Equatable {
+        let displayID: CGDirectDisplayID
+        let usedFallback: Bool
+    }
+
+    static func resolveDisplayID(
+        preferredDisplayID: CGDirectDisplayID?,
+        availableDisplayIDs: [CGDirectDisplayID],
+        activeMenuBarDisplayID: CGDirectDisplayID?,
+        mainDisplayID: CGDirectDisplayID
+    ) -> DisplayResolution? {
+        guard !availableDisplayIDs.isEmpty else {
+            return nil
+        }
+
+        if let preferredDisplayID, availableDisplayIDs.contains(preferredDisplayID) {
+            return DisplayResolution(displayID: preferredDisplayID, usedFallback: false)
+        }
+
+        if let activeMenuBarDisplayID, availableDisplayIDs.contains(activeMenuBarDisplayID) {
+            return DisplayResolution(
+                displayID: activeMenuBarDisplayID,
+                usedFallback: preferredDisplayID != nil
+            )
+        }
+
+        if availableDisplayIDs.contains(mainDisplayID) {
+            return DisplayResolution(
+                displayID: mainDisplayID,
+                usedFallback: preferredDisplayID != nil
+            )
+        }
+
+        return DisplayResolution(
+            displayID: availableDisplayIDs[0],
+            usedFallback: preferredDisplayID != nil
+        )
+    }
+
+    @MainActor
+    private static func resolveScreen(
+        preferredDisplayID: CGDirectDisplayID?,
+        screens: [NSScreen] = NSScreen.screens
+    ) -> (screen: NSScreen, usedFallback: Bool)? {
+        guard let resolution = resolveDisplayID(
+            preferredDisplayID: preferredDisplayID,
+            availableDisplayIDs: screens.map(\.displayID),
+            activeMenuBarDisplayID: Bridging.getActiveMenuBarDisplayID(),
+            mainDisplayID: CGMainDisplayID()
+        ) else {
+            return nil
+        }
+
+        guard let screen = screens.first(where: { $0.displayID == resolution.displayID }) else {
+            return nil
+        }
+
+        return (screen, resolution.usedFallback)
+    }
+
     /// A representation of a captured menu bar item image.
     struct CapturedImage: Hashable {
         /// The base image.
@@ -564,12 +625,16 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
 
             let nav = appState.navigationState
 
-            // Determine display
-            let displayID = appState.itemManager.itemCache.displayID
-                ?? Bridging.getActiveMenuBarDisplayID()
-                ?? CGMainDisplayID()
-            guard let screen = NSScreen.screens.first(where: { $0.displayID == displayID }) else {
+            let preferredDisplayID = appState.itemManager.itemCache.displayID
+            guard let resolvedScreen = Self.resolveScreen(preferredDisplayID: preferredDisplayID) else {
+                MenuBarItemImageCache.diagLog.warning("liveRefresh: no connected screens available, skipping")
                 continue
+            }
+            let screen = resolvedScreen.screen
+            if resolvedScreen.usedFallback, let preferredDisplayID {
+                MenuBarItemImageCache.diagLog.warning(
+                    "liveRefresh: cached displayID \(preferredDisplayID) is not connected; using displayID \(screen.displayID)"
+                )
             }
 
             // Determine which sections to refresh based on what's visible
@@ -1281,16 +1346,16 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
             return
         }
 
-        guard let displayID = appState.itemManager.itemCache.displayID else {
-            MenuBarItemImageCache.diagLog.warning("updateCacheWithoutChecks: itemCache.displayID is nil, aborting")
+        let preferredDisplayID = appState.itemManager.itemCache.displayID
+        guard let resolvedScreen = Self.resolveScreen(preferredDisplayID: preferredDisplayID) else {
+            MenuBarItemImageCache.diagLog.warning("updateCacheWithoutChecks: no connected screens available, aborting")
             return
         }
-
-        guard let screen = NSScreen.screens.first(where: {
-            $0.displayID == displayID
-        }) else {
-            MenuBarItemImageCache.diagLog.warning("updateCacheWithoutChecks: no screen found for displayID \(displayID)")
-            return
+        let screen = resolvedScreen.screen
+        if resolvedScreen.usedFallback, let preferredDisplayID {
+            MenuBarItemImageCache.diagLog.warning(
+                "updateCacheWithoutChecks: cached displayID \(preferredDisplayID) is not connected; using displayID \(screen.displayID)"
+            )
         }
 
         let scale = screen.backingScaleFactor

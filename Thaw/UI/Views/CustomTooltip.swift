@@ -50,7 +50,9 @@ final class CustomTooltipPanel: NSPanel {
         isOpaque = false
         backgroundColor = .clear
         hasShadow = true
-        level = .floating
+        // The Thaw Bar sits at `.mainMenu + 1`. Keep tooltips one level
+        // above it so grid items cannot obscure their labels.
+        level = .mainMenu + 2
         ignoresMouseEvents = true
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
         animationBehavior = .none
