@@ -463,6 +463,7 @@ final class PlanNotchOverflowTests: XCTestCase {
     func testOverflowRunsOnNotchedMainDisplay() {
         XCTAssertTrue(LayoutSolver.shouldManageNotchOverflow(
             overflowEnabled: true,
+            activeScreenKnown: true,
             activeHasNotch: true,
             activeIsMainDisplay: true
         ))
@@ -477,6 +478,7 @@ final class PlanNotchOverflowTests: XCTestCase {
     func testOverflowSkippedOnNotchedSecondaryDisplay() {
         XCTAssertFalse(LayoutSolver.shouldManageNotchOverflow(
             overflowEnabled: true,
+            activeScreenKnown: true,
             activeHasNotch: true,
             activeIsMainDisplay: false
         ))
@@ -487,7 +489,20 @@ final class PlanNotchOverflowTests: XCTestCase {
     func testOverflowSkippedOnNonNotchedMainDisplay() {
         XCTAssertFalse(LayoutSolver.shouldManageNotchOverflow(
             overflowEnabled: true,
+            activeScreenKnown: true,
             activeHasNotch: false,
+            activeIsMainDisplay: true
+        ))
+    }
+
+    /// While the active menu bar display is unknown (e.g. mid
+    /// display-reconfiguration), overflow must not run against a guessed
+    /// screen — even one that would qualify (notched + main).
+    func testOverflowSkippedWhileActiveDisplayUnknown() {
+        XCTAssertFalse(LayoutSolver.shouldManageNotchOverflow(
+            overflowEnabled: true,
+            activeScreenKnown: false,
+            activeHasNotch: true,
             activeIsMainDisplay: true
         ))
     }
@@ -496,6 +511,7 @@ final class PlanNotchOverflowTests: XCTestCase {
     func testOverflowSkippedWhenDisabled() {
         XCTAssertFalse(LayoutSolver.shouldManageNotchOverflow(
             overflowEnabled: false,
+            activeScreenKnown: true,
             activeHasNotch: true,
             activeIsMainDisplay: true
         ))

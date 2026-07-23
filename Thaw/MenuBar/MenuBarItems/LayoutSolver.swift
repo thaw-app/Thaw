@@ -360,12 +360,20 @@ enum LayoutSolver {
     /// in hidden once focus returns to the main screen. So overflow runs only
     /// when the active notched display is also the main display; on a notched
     /// secondary the saved layout is honoured verbatim.
+    ///
+    /// `activeScreenKnown` is whether `NSScreen.screenWithActiveMenuBar`
+    /// actually resolved a screen. When it is `false` (e.g. mid
+    /// display-reconfiguration) the gate fails closed: guessing a screen —
+    /// such as falling back to `NSScreen.main` — risks computing the budget
+    /// against a display the layout is not anchored to, which is the same
+    /// mis-budget failure this gate exists to prevent.
     static nonisolated func shouldManageNotchOverflow(
         overflowEnabled: Bool,
+        activeScreenKnown: Bool,
         activeHasNotch: Bool,
         activeIsMainDisplay: Bool
     ) -> Bool {
-        overflowEnabled && activeHasNotch && activeIsMainDisplay
+        overflowEnabled && activeScreenKnown && activeHasNotch && activeIsMainDisplay
     }
 
     /// Whether the given menu bar items currently occupy more than one display.
