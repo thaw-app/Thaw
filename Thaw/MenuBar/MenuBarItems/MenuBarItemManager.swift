@@ -318,6 +318,15 @@ final class MenuBarItemManager: ObservableObject {
     /// Persisted per-section item order. Maps section key to an ordered list of
     /// `uniqueIdentifier` strings (right-to-left, matching cache array order).
     private var savedSectionOrder = [String: [String]]()
+
+    /// Identifiers most recently moved from visible to hidden by the
+    /// notch-overflow rebalance (Phase 4 of the layout apply). The ejection
+    /// is a transient, per-display accommodation — these items must not be
+    /// persisted as hidden (the user never moved them), and their divergence
+    /// from the saved layout is intentional while the notched display is
+    /// active. Cleared when overflow no longer applies, when a non-notched
+    /// apply restores them, or when the user moves them to another section.
+    private var notchOverflowEjectedUIDs = Set<String>()
     /// Placement preference for newly detected menu bar items.
     @Published private(set) var newItemsPlacement = NewItemsPlacement.defaultValue
 
@@ -504,11 +513,23 @@ final class MenuBarItemManager: ObservableObject {
             return !item.isControlItem && item.sourcePID != nil
         }
 
+        // Items the notch-overflow rebalance ejected that are still sitting
+        // in hidden are treated as absent from the current layout: they then
+        // ride planSectionOrder's closed-app position-preserving merge and
+        // keep their saved visible positions instead of being persisted as
+        // hidden. An ejected item found in any OTHER section was moved by
+        // the user — drop it from the tracked set and persist it normally.
+        let ejectedStillInHidden = notchOverflowEjectedUIDs.intersection(
+            Set(cache[.hidden].map(\.uniqueIdentifier))
+        )
+        notchOverflowEjectedUIDs = ejectedStillInHidden
+
         var allCurrentIdentifiers = Set<String>()
         var allCurrentBaseIdentifiers = Set<String>()
         for section in MenuBarSection.Name.allCases {
             for item in cache[section] where isPersistable(item) {
                 guard !pendingRehideTagIDs.contains(item.tag.tagIdentifier) else { continue }
+                guard !ejectedStillInHidden.contains(item.uniqueIdentifier) else { continue }
                 // Always track base identifier so stale saved entries for
                 // transient items (Live Activities) get pruned by the
                 // isStaleInstanceIndex guard below and not re-injected.
@@ -529,7 +550,8 @@ final class MenuBarItemManager: ObservableObject {
                 .filter {
                     isPersistable($0) &&
                         !$0.isTransientControlCenterItem &&
-                        !pendingRehideTagIDs.contains($0.tag.tagIdentifier)
+                        !pendingRehideTagIDs.contains($0.tag.tagIdentifier) &&
+                        !ejectedStillInHidden.contains($0.uniqueIdentifier)
                 }
                 .map(\.uniqueIdentifier)
 
@@ -6203,6 +6225,10 @@ extension MenuBarItemManager {
                 availableWidth: availableWidth
             )
 
+            // Replace (not union) so items freed by a previous overflow drop
+            // out of the tracked set once they no longer overflow.
+            notchOverflowEjectedUIDs = Set(overflowResult.overflowUIDs)
+
             if !overflowResult.overflowUIDs.isEmpty {
                 MenuBarItemManager.diagLog.info(
                     "Profile layout: notch overflow; \(overflowResult.overflowUIDs.count) item(s) moved from visible to hidden"
@@ -6210,6 +6236,11 @@ extension MenuBarItemManager {
                 desiredFiltered = overflowResult.updatedDesiredFiltered
                 sectionMap = overflowResult.updatedSectionMap
             }
+        } else if !notchOverflowEjectedUIDs.isEmpty {
+            // Overflow doesn't apply here (no notch, or the feature is off):
+            // this apply restores the saved layout verbatim, so the ejection
+            // bookkeeping is obsolete.
+            notchOverflowEjectedUIDs.removeAll()
         }
 
         // MARK: Phase 5: choose execution strategy (full-sort vs LCS)
@@ -6770,6 +6801,18 @@ extension MenuBarItemManager {
         let hiddenMaxX = controlItems.hidden.bounds.maxX
         let ahBounds = controlItems.alwaysHidden?.bounds
 
+        // While the overflow feature is enabled and the active menu bar is
+        // on a notched display, items the overflow rebalance ejected into
+        // hidden diverge from the saved layout by design — reporting them
+        // as divergent would re-dispatch a bulk apply every cache cycle.
+        // The skip requires all three of: the feature still enabled (a
+        // toggle-off must restore items promptly), a notched active display
+        // (elsewhere the divergence is what triggers the restoring apply),
+        // and the item actually sitting in hidden (an ejected item that
+        // drifted to another section is genuine drift).
+        let overflowSkipActive = (appState?.settings.advanced.enableMenuBarItemOverflow ?? false)
+            && ((NSScreen.screenWithActiveMenuBar ?? NSScreen.main)?.hasNotch ?? false)
+
         for item in items where !item.isControlItem && item.canBeHidden && item.isMovable {
             let identifier = item.uniqueIdentifier
             let baseID = Self.baseIdentifier(forSavedIdentifier: identifier)
@@ -6792,6 +6835,12 @@ extension MenuBarItemManager {
             }
 
             guard let currentSection else { continue }
+            if overflowSkipActive,
+               currentSection == .hidden,
+               notchOverflowEjectedUIDs.contains(item.uniqueIdentifier)
+            {
+                continue
+            }
             if currentSection != expectedSection {
                 return true
             }
