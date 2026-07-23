@@ -180,11 +180,8 @@ struct AboutSettingsPane: View {
     private var updatesSection: some View {
         VStack(spacing: 12) {
             automaticallyCheckForUpdates
-            Divider()
             automaticallyDownloadUpdates
-            Divider()
             updateChannel
-            Divider()
             checkForUpdates
         }
         .frame(maxWidth: 600)
@@ -208,30 +205,43 @@ struct AboutSettingsPane: View {
         HStack {
             Text("Update channel")
             Spacer()
-            Picker(
-                "Update channel",
-                selection: Binding(
-                    get: { updatesManager.updateChannel },
-                    set: { updatesManager.updateChannel = $0 }
-                )
-            ) {
-                Text("Stable").tag(UpdateChannel.stable)
-                Text("Development").tag(UpdateChannel.beta)
-                Text("Nightly").tag(UpdateChannel.alpha)
+            if #available(macOS 27, *) {
+                // macOS 27 ships exclusively through Nightly; the channel is
+                // locked so users can't switch to a build without 27 support.
+                Text("Nightly")
+                    .foregroundStyle(.secondary)
+            } else {
+                Picker(
+                    "Update channel",
+                    selection: Binding(
+                        get: { updatesManager.updateChannel },
+                        set: { updatesManager.updateChannel = $0 }
+                    )
+                ) {
+                    Text("Stable").tag(UpdateChannel.stable)
+                    Text("Development").tag(UpdateChannel.beta)
+                    Text("Nightly").tag(UpdateChannel.alpha)
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
             }
-            .pickerStyle(.segmented)
-            .labelsHidden()
+            updateButton
         }
+    }
+
+    private var updateButton: some View {
+        Button {
+            updatesManager.checkForUpdates()
+        } label: {
+            Label("Update", systemImage: "arrow.clockwise")
+        }
+        .buttonStyle(.settingsGlass)
+        .disabled(!updatesManager.canCheckForUpdates)
+        .accessibilityLabel("Check for Updates")
     }
 
     private var checkForUpdates: some View {
         HStack {
-            Button("Check for Updates") {
-                updatesManager.checkForUpdates()
-            }
-            .buttonStyle(.settingsGlass)
-            .disabled(!updatesManager.canCheckForUpdates)
-
             Spacer()
 
             Text("Last checked: \(updatesManager.lastUpdateCheckDate?.formatted(date: .abbreviated, time: .standard) ?? String(localized: "Never"))")

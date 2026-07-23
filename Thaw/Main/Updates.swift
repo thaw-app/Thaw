@@ -73,6 +73,11 @@ final class UpdatesManager: NSObject, ObservableObject {
     /// The selected Sparkle update channel.
     var updateChannel: UpdateChannel {
         get {
+            // macOS 27 ships exclusively through Nightly and cannot switch off
+            // it; the stored preference is ignored there.
+            if #available(macOS 27, *) {
+                return .alpha
+            }
             if let raw = UserDefaults.standard.string(forKey: Self.updateChannelDefaultsKey),
                let channel = UpdateChannel(rawValue: raw)
             {
@@ -81,12 +86,13 @@ final class UpdatesManager: NSObject, ObservableObject {
             if UserDefaults.standard.bool(forKey: Self.legacyAllowsBetaUpdatesKey) {
                 return .beta
             }
-            if #available(macOS 27, *) {
-                return .alpha
-            }
             return .stable
         }
         set {
+            // Channel is locked to Nightly on macOS 27; ignore change attempts.
+            if #available(macOS 27, *) {
+                return
+            }
             objectWillChange.send()
             UserDefaults.standard.set(newValue.rawValue, forKey: Self.updateChannelDefaultsKey)
             // Keep the legacy boolean roughly in sync for older installs / tooling.
