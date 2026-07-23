@@ -24,17 +24,21 @@ struct AboutSettingsPane: View {
     @State private var copyFeedbackTask: Task<Void, Never>?
 
     var body: some View {
-        // The About page isn't a settings form: it centers the app identity in
-        // the page. The detail host uses the same extreme behind-window
-        // vibrancy as the sidebar.
-        VStack(spacing: 24) {
-            Spacer(minLength: 0)
-            appIconAndCopyrightContent
-            updatesSection
-            Spacer(minLength: 0)
+        // Structured grouped form (macOS-26 organization, 27 design): the app
+        // identity sits in an unbordered header, followed by an Updates card.
+        IceForm {
+            IceSection(isBordered: false) {
+                appIconAndCopyrightContent
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 8)
+            }
+            IceSection("Updates") {
+                automaticallyCheckForUpdates
+                automaticallyDownloadUpdates
+                updateChannel
+                checkForUpdates
+            }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(24)
         .onChange(of: colorScheme, initial: true) {
             applicationIcon = Self.currentApplicationIcon()
         }
@@ -171,16 +175,6 @@ struct AboutSettingsPane: View {
     private func openAcknowledgements() {
         guard let url = Bundle.main.url(forResource: "Acknowledgements", withExtension: "pdf") else { return }
         NSWorkspace.shared.open(url)
-    }
-
-    private var updatesSection: some View {
-        VStack(spacing: 12) {
-            automaticallyCheckForUpdates
-            automaticallyDownloadUpdates
-            updateChannel
-            checkForUpdates
-        }
-        .frame(maxWidth: 600)
     }
 
     private var automaticallyCheckForUpdates: some View {

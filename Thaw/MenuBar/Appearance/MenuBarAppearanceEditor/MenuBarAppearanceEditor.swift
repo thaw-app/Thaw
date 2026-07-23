@@ -67,10 +67,10 @@ struct MenuBarAppearanceEditor: View {
                 case .settings = location,
                 appState.settings.advanced.enableSecondaryContextMenu
             {
-                SettingsWarningPill(
-                    message: "Tip: You can also edit these settings by right-clicking in an empty area of the menu bar.",
-                    systemImage: "lightbulb"
-                )
+                Text("Tip: You can also edit these settings by right-clicking in an empty area of the menu bar.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
 
             IceSection {
@@ -102,10 +102,10 @@ struct MenuBarAppearanceEditor: View {
                 || appearanceManager.configuration.shapeKind != .noShape
                 || appearanceManager.configuration.current.backgroundKind != .none
             {
-                SettingsWarningPill(
-                    message: "If effects are not visible, disable \"Show menu bar background\" in System Settings \(Constants.menuArrow) Menu Bar",
-                    systemImage: "info.circle"
-                )
+                Text("If effects are not visible, disable \"Show menu bar background\" in System Settings \(Constants.menuArrow) Menu Bar")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }

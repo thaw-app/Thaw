@@ -161,13 +161,17 @@ struct MenuBarLayoutSettingsPane: View {
         IceSection {
             layoutBars
         } footer: {
-            // Explanatory text sits underneath the bars as a native grouped
-            // Section footer (secondary/caption styling applied by the OS).
-            VStack(alignment: .leading, spacing: 4) {
+            // Native grouped Section footer beneath the bars. Concatenated so
+            // the three translated strings flow as one wrapping paragraph
+            // instead of three fixed lines.
+            (
                 Text("Drag to arrange your menu bar items into different sections.")
-                Text("Move the New Items badge to choose where newly detected items will appear.")
-                Text("Items can also be arranged by ⌘ Command + dragging them in the menu bar.")
-            }
+                    + Text(verbatim: " ")
+                    + Text("Move the New Items badge to choose where newly detected items will appear.")
+                    + Text(verbatim: " ")
+                    + Text("Items can also be arranged by ⌘ Command + dragging them in the menu bar.")
+            )
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 

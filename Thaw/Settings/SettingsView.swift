@@ -27,24 +27,20 @@ struct SettingsView: View {
                 .id(navigationState.settingsNavigationIdentifier)
                 .transition(paneTransition)
                 .buttonStyle(.settingsGlass)
+                // In-pane header at the top of the detail pane (right of the
+                // sidebar). With a standard titlebar it sits just below the
+                // toolbar band, clear of the sidebar-toggle button.
                 .environment(\.settingsPaneTitle, paneTitle)
                 // Fill the detail column so the Form's scrollbar sits on the
                 // window/detail trailing edge — not on a 680pt content column.
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                // Draw under the transparent toolbar so the page title isn't pushed
-                // down by the ~60pt title-bar safe area.
-                .ignoresSafeArea(.container, edges: .top)
-                // Dark panes use a solid Music-like surface. Light bumps vibrancy
-                // with under-window materials instead of the denser `.sidebar` fill.
                 .background {
                     detailSurface
                         .ignoresSafeArea(.container, edges: .top)
                 }
         }
-        // Keep the window titled for Mission Control; omit the toolbar label so
-        // it does not fight the in-pane header while scrolling.
+        // Window title bar stays empty; the visible header is the in-pane one.
         .navigationTitle("")
-        .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
         .onWindowChange { window in
             settingsWindow = window
             configureSettingsWindowChrome(window)
@@ -61,9 +57,8 @@ struct SettingsView: View {
     }
 
     private var paneTitle: LocalizedStringKey? {
-        // About is a centered identity layout; a page title would be redundant.
-        // Title sits above IceForm (outside grouped cards) and stays put while
-        // the form scrolls in the remaining space.
+        // About carries its own large app-identity header, so it needs no
+        // page title; every other pane shows its name at the top of the pane.
         navigationState.settingsNavigationIdentifier == .about
             ? nil
             : navigationState.settingsNavigationIdentifier.localized
@@ -77,13 +72,11 @@ struct SettingsView: View {
         guard let window else {
             return
         }
-        // Draw content under the title bar (so the in-pane title sits in a
-        // clean unified band) and suppress the system separator over the
-        // detail pane. The window stays opaque with a standard background —
-        // no desktop bleed-through behind the sidebar or detail pane.
-        window.styleMask.insert(.fullSizeContentView)
-        window.titlebarAppearsTransparent = true
-        window.titlebarSeparatorStyle = .none
+        // Standard opaque title bar showing the pane name. Explicitly clear the
+        // earlier full-size-content / transparent-titlebar treatment so the
+        // header sits in the title bar and never overlaps the sidebar toggle.
+        window.styleMask.remove(.fullSizeContentView)
+        window.titlebarAppearsTransparent = false
     }
 
     private var detailSurface: some View {
