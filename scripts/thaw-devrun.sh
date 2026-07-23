@@ -136,11 +136,11 @@ say "Building ${CONFIG} (bundle id ${DEBUG_BUNDLE_ID})…"
 # THAW_BUNDLE_ID_SUFFIX is only honored by the Thaw Debug target; MenuBarItemService
 # and ThawTests keep their normal identifiers.
 xcodebuild "${XCODE_ROOT_ARGS[@]}" -scheme "$SCHEME" -configuration "$CONFIG" \
-    -destination 'platform=macOS' "${PACKAGE_RESOLUTION_ARGS[@]}" \
+    -destination 'platform=macOS' "${LOCKED_PACKAGE_ARGS[@]}" \
     THAW_BUNDLE_ID_SUFFIX=.debug build
 
 PRODUCTS_DIR=$(xcodebuild "${XCODE_ROOT_ARGS[@]}" -scheme "$SCHEME" -configuration "$CONFIG" \
-    "${PACKAGE_RESOLUTION_ARGS[@]}" THAW_BUNDLE_ID_SUFFIX=.debug \
+    "${LOCKED_PACKAGE_ARGS[@]}" THAW_BUNDLE_ID_SUFFIX=.debug \
     -showBuildSettings 2>/dev/null | awk -F' = ' '/ BUILT_PRODUCTS_DIR /{print $2; exit}')
 APP="${PRODUCTS_DIR}/Thaw.app"
 [ -d "$APP" ] || { echo "Build product not found: $APP"; exit 1; }
