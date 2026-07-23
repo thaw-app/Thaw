@@ -354,6 +354,35 @@ enum LayoutSolver {
         rightBoundary.isFinite && rightBoundary > notchMaxX
     }
 
+    /// Whether the notch-overflow rebalance should run for the current active
+    /// menu bar display.
+    ///
+    /// Overflow ejection is only meaningful on the display the user's persistent
+    /// layout is anchored to — the *main* menu bar display. When a notched
+    /// display is merely a secondary (e.g. a MacBook whose built-in screen sits
+    /// next to a non-notched external that is the main display), macOS relocates
+    /// the status items onto the built-in's menu bar only while it transiently
+    /// holds focus. Computing the narrow beside-notch budget there ejects
+    /// profile items that fit fine on the main display, and they stay stranded
+    /// in hidden once focus returns to the main screen. So overflow runs only
+    /// when the active notched display is also the main display; on a notched
+    /// secondary the saved layout is honoured verbatim.
+    ///
+    /// `activeScreenKnown` is whether `NSScreen.screenWithActiveMenuBar`
+    /// actually resolved a screen. When it is `false` (e.g. mid
+    /// display-reconfiguration) the gate fails closed: guessing a screen —
+    /// such as falling back to `NSScreen.main` — risks computing the budget
+    /// against a display the layout is not anchored to, which is the same
+    /// mis-budget failure this gate exists to prevent.
+    static nonisolated func shouldManageNotchOverflow(
+        overflowEnabled: Bool,
+        activeScreenKnown: Bool,
+        activeHasNotch: Bool,
+        activeIsMainDisplay: Bool
+    ) -> Bool {
+        overflowEnabled && activeScreenKnown && activeHasNotch && activeIsMainDisplay
+    }
+
     /// Whether the given menu bar items currently occupy more than one display.
     ///
     /// Each center is matched to the screen frame that contains it. Frames and
