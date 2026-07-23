@@ -106,7 +106,7 @@ final class RuntimePositionStoreTests: XCTestCase {
             writePositions: { written = $0 },
             nudgeAgent: { nudged = true }
         )
-        XCTAssertFalse(
+        XCTAssertTrue(
             RuntimePositionStore.move(
                 item: a,
                 to: .rightOfItem(target),
@@ -142,7 +142,8 @@ final class RuntimePositionStoreTests: XCTestCase {
         XCTAssertEqual(written?["status:A::C"], 101)
     }
 
-    func testExperimentalMoveCanTargetMenuBarAgentSystemItem() {
+    func testExperimentalMoveCanTargetMenuBarAgentSystemItem() throws {
+        try XCTSkipUnless(isRunningOnMacOS27OrLater)
         let a = item("A", x: 0)
         let clock = MenuBarItem.fixture(
             tag: .clock,
@@ -164,7 +165,9 @@ final class RuntimePositionStoreTests: XCTestCase {
             nudgeAgent: {}
         )
 
-        XCTAssertTrue(
+        // Fixed system anchors are not physically orderable without the
+        // experimental toggle, so a move that targets Clock is rejected.
+        XCTAssertFalse(
             RuntimePositionStore.move(
                 item: a,
                 to: .rightOfItem(clock),

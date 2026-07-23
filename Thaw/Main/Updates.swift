@@ -9,6 +9,30 @@
 import Sparkle
 import SwiftUI
 
+/// Sparkle appcast channels Thaw publishes to.
+enum UpdateChannel: String, CaseIterable, Identifiable {
+    /// Default channel (no `sparkle:channel` in the appcast).
+    case stable
+    /// Development / RC builds (`sparkle:channel` = `beta`).
+    case beta
+    /// Nightly / macOS 27 preview builds (`sparkle:channel` = `alpha`).
+    case alpha
+
+    var id: String { rawValue }
+
+    /// Sparkle channel names to allow in addition to the default channel.
+    var allowedSparkleChannels: Set<String> {
+        switch self {
+        case .stable:
+            []
+        case .beta:
+            ["beta"]
+        case .alpha:
+            ["alpha"]
+        }
+    }
+}
+
 /// Manager for app updates.
 @MainActor
 final class UpdatesManager: NSObject, ObservableObject {
@@ -27,6 +51,9 @@ final class UpdatesManager: NSObject, ObservableObject {
     /// Tracks whether the updater has been started.
     private var hasStartedUpdater = false
 
+    private static let updateChannelDefaultsKey = "UpdateChannel"
+    private static let legacyAllowsBetaUpdatesKey = "AllowsBetaUpdates"
+
     private var debugUpdateMessage: String {
         String(localized: "Checking for updates is not supported in debug mode.")
     }
@@ -43,13 +70,33 @@ final class UpdatesManager: NSObject, ObservableObject {
         updaterController.updater
     }
 
-    /// A Boolean value that indicates whether the user wants to receive beta updates.
-    var allowsBetaUpdates: Bool {
+    /// The selected Sparkle update channel.
+    var updateChannel: UpdateChannel {
         get {
-            UserDefaults.standard.bool(forKey: "AllowsBetaUpdates")
+            // macOS 27 ships exclusively through Nightly and cannot switch off
+            // it; the stored preference is ignored there.
+            if #available(macOS 27, *) {
+                return .alpha
+            }
+            if let raw = UserDefaults.standard.string(forKey: Self.updateChannelDefaultsKey),
+               let channel = UpdateChannel(rawValue: raw)
+            {
+                return channel
+            }
+            if UserDefaults.standard.bool(forKey: Self.legacyAllowsBetaUpdatesKey) {
+                return .beta
+            }
+            return .stable
         }
         set {
-            UserDefaults.standard.set(newValue, forKey: "AllowsBetaUpdates")
+            // Channel is locked to Nightly on macOS 27; ignore change attempts.
+            if #available(macOS 27, *) {
+                return
+            }
+            objectWillChange.send()
+            UserDefaults.standard.set(newValue.rawValue, forKey: Self.updateChannelDefaultsKey)
+            // Keep the legacy boolean roughly in sync for older installs / tooling.
+            UserDefaults.standard.set(newValue != .stable, forKey: Self.legacyAllowsBetaUpdatesKey)
             Task {
                 guard hasStartedUpdater else { return }
                 updater.checkForUpdatesInBackground()
@@ -155,10 +202,7 @@ extension UpdatesManager: SPUUpdaterDelegate {
 
     /// Determines which update channels are allowed.
     func allowedChannels(for _: SPUUpdater) -> Set<String> {
-        if UserDefaults.standard.bool(forKey: "AllowsBetaUpdates") {
-            return ["beta"]
-        }
-        return []
+        updateChannel.allowedSparkleChannels
     }
 
     func updater(_: SPUUpdater, willScheduleUpdateCheckAfterDelay _: TimeInterval) {

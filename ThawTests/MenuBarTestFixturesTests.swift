@@ -393,7 +393,9 @@ final class MenuBarItemCaptureSectionTests: XCTestCase {
                 revealedSection: .hidden
             )
         )
-        XCTAssertTrue(
+        // Visible items stay on-screen during Always Hidden reveal; fresh
+        // bounds are only required for sections that were just un-concealed.
+        XCTAssertFalse(
             MenuBarItemImageCache.shouldUseFreshBounds(
                 for: .visible,
                 revealedSection: .alwaysHidden

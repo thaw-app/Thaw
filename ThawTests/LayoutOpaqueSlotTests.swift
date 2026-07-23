@@ -20,6 +20,7 @@ final class LayoutOpaqueSlotTests: XCTestCase {
     }
 
     func testDescriptorReplacesResolvedAndUnresolvedTilesWithOneSlot() throws {
+        try XCTSkipUnless(isRunningOnMacOS27OrLater)
         let descriptor = try XCTUnwrap(makeDescriptor())
         let resolved = makeItem(tag: .appItem(bundleID: descriptor.bundleIdentifier, title: "Item-0"))
         let unresolved = makeItem(tag: MenuBarItemTag(namespace: .menuBarAgent, title: "Item-0"))
@@ -30,7 +31,8 @@ final class LayoutOpaqueSlotTests: XCTestCase {
         XCTAssertEqual(displayed.map(\.tag), [neighbor.tag])
     }
 
-    func testRuntimeKeyRemovalRemovesOpaqueAndStaleStandardTiles() {
+    func testRuntimeKeyRemovalRemovesOpaqueAndStaleStandardTiles() throws {
+        try XCTSkipUnless(isRunningOnMacOS27OrLater)
         let resolved = makeItem(
             tag: .appItem(bundleID: LayoutOpaqueSlotDescriptor.littleSnitchBundleIdentifier, title: "Item-0")
         )
@@ -50,7 +52,8 @@ final class LayoutOpaqueSlotTests: XCTestCase {
         XCTAssertEqual(displayed.map(\.tag), [neighbor.tag])
     }
 
-    func testStoppedAgentKeepsStaleUnresolvedTileSuppressedAcrossRebuilds() {
+    func testStoppedAgentKeepsStaleUnresolvedTileSuppressedAcrossRebuilds() throws {
+        try XCTSkipUnless(isRunningOnMacOS27OrLater)
         let unresolved = makeItem(tag: MenuBarItemTag(namespace: .menuBarAgent, title: "Item-0"))
         let neighbor = makeItem(tag: .appItem(bundleID: "com.example.neighbor", title: "Neighbor"))
         let items = [unresolved, neighbor]

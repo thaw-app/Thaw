@@ -27586,6 +27586,9 @@
         }
       }
     },
+    "Nightly" : {
+      "comment" : "A label for the \"Nightly\" segment in the update channel picker."
+    },
     "No analytics usage tracking" : {
 
     },

@@ -12,11 +12,11 @@ import Testing
 
 @Suite("Maintenance cache paths")
 struct MaintenanceToolsCacheTests {
-    @Test("Debug builds clear their own and the legacy cache directories")
-    func debugCacheDirectoryNames() {
+    @Test("Production builds clear their own and the legacy cache directories")
+    func productionCacheDirectoryNames() {
         #expect(
-            MaintenanceTools.appCacheDirectoryNames(bundleIdentifier: "com.stonerl.Thaw.debug") == [
-                "com.stonerl.Thaw.debug",
+            MaintenanceTools.appCacheDirectoryNames(bundleIdentifier: "com.stonerl.Thaw") == [
+                "com.stonerl.Thaw",
                 "com.stonerl.thaw",
             ]
         )
@@ -37,10 +37,10 @@ struct MaintenanceToolsCacheTests {
 
         let url = MenuBarItemImageCache.cacheFileURL(
             cachesDirectory: cachesDirectory,
-            bundleIdentifier: "com.stonerl.Thaw.debug"
+            bundleIdentifier: "com.stonerl.Thaw"
         )
 
-        #expect(url.path == "/tmp/cache-root/com.stonerl.Thaw.debug/imageCache.json")
+        #expect(url.path == "/tmp/cache-root/com.stonerl.Thaw/imageCache.json")
     }
 
     @Test("Cache reset suspends future disk persistence")
@@ -73,7 +73,7 @@ struct MaintenanceToolsCacheTests {
             .appending(path: "ThawMaintenanceToolsTests-\(UUID().uuidString)", directoryHint: .isDirectory)
         defer { try? fileManager.removeItem(at: root) }
 
-        let current = root.appending(path: "com.stonerl.Thaw.debug", directoryHint: .isDirectory)
+        let current = root.appending(path: "com.stonerl.Thaw", directoryHint: .isDirectory)
         let legacy = root.appending(path: "com.stonerl.thaw", directoryHint: .isDirectory)
         let unrelated = root.appending(path: "com.example.Unrelated", directoryHint: .isDirectory)
         for directory in [current, legacy, unrelated] {
@@ -83,7 +83,7 @@ struct MaintenanceToolsCacheTests {
 
         try MaintenanceTools.clearAppCache(
             cachesDirectory: root,
-            bundleIdentifier: "com.stonerl.Thaw.debug",
+            bundleIdentifier: "com.stonerl.Thaw",
             fileManager: fileManager
         )
 
@@ -102,12 +102,12 @@ struct MaintenanceToolsCacheTests {
 
         try MaintenanceTools.clearAppCache(
             cachesDirectory: root,
-            bundleIdentifier: "com.stonerl.Thaw.debug",
+            bundleIdentifier: "com.stonerl.Thaw",
             fileManager: fileManager
         )
         try MaintenanceTools.clearAppCache(
             cachesDirectory: root,
-            bundleIdentifier: "com.stonerl.Thaw.debug",
+            bundleIdentifier: "com.stonerl.Thaw",
             fileManager: fileManager
         )
 

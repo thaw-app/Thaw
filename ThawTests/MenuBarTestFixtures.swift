@@ -9,6 +9,21 @@
 import CoreGraphics
 @testable import Thaw
 
+// MARK: - Runtime OS gating
+
+/// Whether the current process is actually running on macOS 27 or later.
+///
+/// `MenuBarItemTag.Namespace.isMenuBarHostingNamespace` branches on
+/// `#available(macOS 27, *)` to pick MenuBarAgent vs. Control Center hosting.
+/// CI's `xcode-27` runner image ships Xcode 27 on a macOS 26 host, so that
+/// check is always false there even though the SDK is 27. Tests that assert
+/// macOS-27-only hosting behavior must skip themselves on such hosts rather
+/// than fail — use `try XCTSkipUnless(isRunningOnMacOS27OrLater)`.
+var isRunningOnMacOS27OrLater: Bool {
+    if #available(macOS 27, *) { return true }
+    return false
+}
+
 // MARK: - MenuBarItemTag fixtures
 
 extension MenuBarItemTag {

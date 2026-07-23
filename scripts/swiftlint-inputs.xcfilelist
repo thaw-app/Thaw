@@ -17,6 +17,7 @@ $(SRCROOT)/MenuBarModel/Sources/MenuBarModel/MenuBarItem+Ordering.swift
 $(SRCROOT)/MenuBarModel/Sources/MenuBarModel/MenuBarItem.swift
 $(SRCROOT)/MenuBarModel/Sources/MenuBarModel/MenuBarItemCache.swift
 $(SRCROOT)/MenuBarModel/Sources/MenuBarModel/MenuBarItemCollectionExtensions.swift
+$(SRCROOT)/MenuBarModel/Sources/MenuBarModel/MenuBarItemGrouping.swift
 $(SRCROOT)/MenuBarModel/Sources/MenuBarModel/MenuBarItemTag.swift
 $(SRCROOT)/MenuBarModel/Sources/MenuBarModel/MenuBarSectionName.swift
 $(SRCROOT)/MenuBarModel/Sources/MenuBarModel/MoveDestination.swift
@@ -28,6 +29,8 @@ $(SRCROOT)/MenuBarModel/Sources/MenuBarModel/ThawMenuBarIdentity.swift
 $(SRCROOT)/MenuBarModel/Sources/MenuBarModel/WindowInfo.swift
 $(SRCROOT)/MenuBarModel/Tests/MenuBarModelTests/DiagnosticLoggerTests.swift
 $(SRCROOT)/MenuBarModel/Tests/MenuBarModelTests/LegacyConstantsCompatibilityTests.swift
+$(SRCROOT)/MenuBarModel/Tests/MenuBarModelTests/MenuBarItemAutoDetectedNameTests.swift
+$(SRCROOT)/MenuBarModel/Tests/MenuBarModelTests/MenuBarItemGroupingTests.swift
 $(SRCROOT)/MenuBarModel/Tests/MenuBarModelTests/MenuBarSectionNameTests.swift
 $(SRCROOT)/MenuBarModel/Tests/MenuBarModelTests/WindowInfoTests.swift
 $(SRCROOT)/Shared/Services/MenuBarItemService.swift
@@ -76,6 +79,7 @@ $(SRCROOT)/Thaw/MenuBar/IceBar/IceBarLocation.swift
 $(SRCROOT)/Thaw/MenuBar/LayoutBar/LayoutBar.swift
 $(SRCROOT)/Thaw/MenuBar/LayoutBar/LayoutBarArrangedView.swift
 $(SRCROOT)/Thaw/MenuBar/LayoutBar/LayoutBarContainer.swift
+$(SRCROOT)/Thaw/MenuBar/LayoutBar/LayoutBarGroupHandleView.swift
 $(SRCROOT)/Thaw/MenuBar/LayoutBar/LayoutBarItemView.swift
 $(SRCROOT)/Thaw/MenuBar/LayoutBar/LayoutBarNewItemsBadgeView.swift
 $(SRCROOT)/Thaw/MenuBar/LayoutBar/LayoutBarPaddingView.swift
@@ -102,6 +106,7 @@ $(SRCROOT)/Thaw/MenuBar/MenuBarItems/SyntheticMoveEngine.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/WindowServerReading.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarManager.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarSection.swift
+$(SRCROOT)/Thaw/MenuBar/Search/KeyCapView.swift
 $(SRCROOT)/Thaw/MenuBar/Search/MenuBarSearchModel.swift
 $(SRCROOT)/Thaw/MenuBar/Search/MenuBarSearchPanel.swift
 $(SRCROOT)/Thaw/MenuBar/Spacing/MenuBarItemSpacingError.swift
@@ -170,6 +175,7 @@ $(SRCROOT)/Thaw/UI/Views/BetaBadge.swift
 $(SRCROOT)/Thaw/UI/Views/CustomTooltip.swift
 $(SRCROOT)/Thaw/UI/Views/HotkeyRecorder.swift
 $(SRCROOT)/Thaw/UI/Views/MenuBarItemContainer.swift
+$(SRCROOT)/Thaw/UI/Views/SecondsLabel.swift
 $(SRCROOT)/Thaw/UI/Views/SectionedList.swift
 $(SRCROOT)/Thaw/UI/Views/SettingsWarningPill.swift
 $(SRCROOT)/Thaw/UserNotifications/UserNotificationIdentifier.swift
