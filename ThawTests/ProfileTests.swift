@@ -421,7 +421,7 @@ final class ProfileFullTests: XCTestCase {
         let decoded = try decoder.decode(Profile.self, from: json)
 
         // Should use defaults
-        XCTAssertEqual(decoded.name, "Untitled")
+        XCTAssertEqual(decoded.name, String(localized: "Untitled"))
         XCTAssertNotNil(decoded.id)
     }
 
