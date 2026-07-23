@@ -6025,9 +6025,28 @@ extension MenuBarItemManager {
         // Advanced Settings; when off, the saved profile layout is honoured
         // verbatim and items the notch would otherwise eject stay in visible.
         let activeScreen = NSScreen.screenWithActiveMenuBar ?? NSScreen.main
+        let activeIsMainDisplay = activeScreen?.displayID == CGMainDisplayID()
+        // A notched display that isn't the main menu bar display only hosts the
+        // status items transiently (while it holds focus); ejecting there
+        // strands profile items in hidden once focus returns to the main
+        // screen. Log the skip so the field logs make the reason explicit.
         if appState.settings.advanced.enableMenuBarItemOverflow,
            let screen = activeScreen,
            screen.hasNotch,
+           !activeIsMainDisplay
+        {
+            MenuBarItemManager.diagLog.debug(
+                "Notch overflow: skipping — active notched display \(screen.displayID) is a secondary "
+                    + "(main display is \(CGMainDisplayID())); overflow only manages the main menu bar, "
+                    + "so the saved layout is honoured verbatim"
+            )
+        }
+        if LayoutSolver.shouldManageNotchOverflow(
+            overflowEnabled: appState.settings.advanced.enableMenuBarItemOverflow,
+            activeHasNotch: activeScreen?.hasNotch ?? false,
+            activeIsMainDisplay: activeIsMainDisplay
+        ),
+           let screen = activeScreen,
            let notch = screen.frameOfNotch
         {
             let notchGap = MenuBarSection.notchGap

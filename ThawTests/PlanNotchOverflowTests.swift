@@ -455,4 +455,49 @@ final class PlanNotchOverflowTests: XCTestCase {
         )
         XCTAssertEqual(result.updatedSectionMap["a"], "hidden")
     }
+
+    // MARK: - Display gate (shouldManageNotchOverflow)
+
+    /// A notched display that is the main menu bar display runs overflow —
+    /// e.g. a MacBook used on its own, or with the built-in set as main.
+    func testOverflowRunsOnNotchedMainDisplay() {
+        XCTAssertTrue(LayoutSolver.shouldManageNotchOverflow(
+            overflowEnabled: true,
+            activeHasNotch: true,
+            activeIsMainDisplay: true
+        ))
+    }
+
+    /// A notched *secondary* display must NOT run overflow. This is the field
+    /// bug: a MacBook built-in next to a non-notched external main display.
+    /// The active menu bar transiently flips to the built-in, the 447pt
+    /// beside-notch budget ejects two profile items, and they stay stranded in
+    /// hidden once focus returns to the external. Gating on the main display
+    /// keeps the saved layout intact.
+    func testOverflowSkippedOnNotchedSecondaryDisplay() {
+        XCTAssertFalse(LayoutSolver.shouldManageNotchOverflow(
+            overflowEnabled: true,
+            activeHasNotch: true,
+            activeIsMainDisplay: false
+        ))
+    }
+
+    /// A non-notched main display (e.g. an external as the only/primary screen)
+    /// has no notch to overflow around.
+    func testOverflowSkippedOnNonNotchedMainDisplay() {
+        XCTAssertFalse(LayoutSolver.shouldManageNotchOverflow(
+            overflowEnabled: true,
+            activeHasNotch: false,
+            activeIsMainDisplay: true
+        ))
+    }
+
+    /// The user toggle wins regardless of geometry.
+    func testOverflowSkippedWhenDisabled() {
+        XCTAssertFalse(LayoutSolver.shouldManageNotchOverflow(
+            overflowEnabled: false,
+            activeHasNotch: true,
+            activeIsMainDisplay: true
+        ))
+    }
 }
