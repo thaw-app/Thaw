@@ -6255,7 +6255,14 @@ extension MenuBarItemManager {
         let isNotchedDisplay = activeScreen?.hasNotch == true && !useLCSOnNotched
 
         // Hide cursor for the entire profile apply to avoid visual jitter.
-        let savedCursorPosition = NSEvent.mouseLocation
+        // Capture in CoreGraphics space (top-left origin) so the Phase 7
+        // restore can warp back directly — CGWarpMouseCursorPosition takes
+        // CoreGraphics coordinates, matching what each inner move() already
+        // uses. The previous AppKit capture flipped against the cursor's
+        // *containing* screen instead of the primary, so on vertically
+        // stacked or mixed-height multi-monitor setups the restore warped
+        // the cursor onto the wrong display.
+        let savedCursorPosition = MouseHelpers.locationCoreGraphics
         MouseHelpers.hideCursor(watchdogTimeout: .seconds(30))
         defer { MouseHelpers.showCursor() }
 
@@ -6694,12 +6701,11 @@ extension MenuBarItemManager {
 
         // MARK: Phase 7: finalize (cursor, snapshot, cache, UI refresh)
 
-        // Restore cursor to its original position.
-        let screen = NSScreen.screens.first(where: { $0.frame.contains(savedCursorPosition) })
-            ?? NSScreen.main
-        if let screen {
-            let cgY = screen.frame.origin.y + screen.frame.height - savedCursorPosition.y
-            MouseHelpers.warpCursor(to: CGPoint(x: savedCursorPosition.x, y: cgY))
+        // Restore cursor to its original position. savedCursorPosition is
+        // already in CoreGraphics coordinates, so warp back directly with no
+        // AppKit→CG flip (and no dependence on which screen contains it).
+        if let savedCursorPosition {
+            MouseHelpers.warpCursor(to: savedCursorPosition)
         }
 
         // Re-fetch items after moves and update the snapshot so the
