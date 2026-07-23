@@ -17,6 +17,7 @@ $(SRCROOT)/MenuBarModel/Sources/MenuBarModel/MenuBarItem+Ordering.swift
 $(SRCROOT)/MenuBarModel/Sources/MenuBarModel/MenuBarItem.swift
 $(SRCROOT)/MenuBarModel/Sources/MenuBarModel/MenuBarItemCache.swift
 $(SRCROOT)/MenuBarModel/Sources/MenuBarModel/MenuBarItemCollectionExtensions.swift
+$(SRCROOT)/MenuBarModel/Sources/MenuBarModel/MenuBarItemGrouping.swift
 $(SRCROOT)/MenuBarModel/Sources/MenuBarModel/MenuBarItemTag.swift
 $(SRCROOT)/MenuBarModel/Sources/MenuBarModel/MenuBarSectionName.swift
 $(SRCROOT)/MenuBarModel/Sources/MenuBarModel/MoveDestination.swift
@@ -29,6 +30,7 @@ $(SRCROOT)/MenuBarModel/Sources/MenuBarModel/WindowInfo.swift
 $(SRCROOT)/MenuBarModel/Tests/MenuBarModelTests/DiagnosticLoggerTests.swift
 $(SRCROOT)/MenuBarModel/Tests/MenuBarModelTests/LegacyConstantsCompatibilityTests.swift
 $(SRCROOT)/MenuBarModel/Tests/MenuBarModelTests/MenuBarItemAutoDetectedNameTests.swift
+$(SRCROOT)/MenuBarModel/Tests/MenuBarModelTests/MenuBarItemGroupingTests.swift
 $(SRCROOT)/MenuBarModel/Tests/MenuBarModelTests/MenuBarSectionNameTests.swift
 $(SRCROOT)/MenuBarModel/Tests/MenuBarModelTests/WindowInfoTests.swift
 $(SRCROOT)/Shared/Services/MenuBarItemService.swift
@@ -77,6 +79,7 @@ $(SRCROOT)/Thaw/MenuBar/IceBar/IceBarLocation.swift
 $(SRCROOT)/Thaw/MenuBar/LayoutBar/LayoutBar.swift
 $(SRCROOT)/Thaw/MenuBar/LayoutBar/LayoutBarArrangedView.swift
 $(SRCROOT)/Thaw/MenuBar/LayoutBar/LayoutBarContainer.swift
+$(SRCROOT)/Thaw/MenuBar/LayoutBar/LayoutBarGroupHandleView.swift
 $(SRCROOT)/Thaw/MenuBar/LayoutBar/LayoutBarItemView.swift
 $(SRCROOT)/Thaw/MenuBar/LayoutBar/LayoutBarNewItemsBadgeView.swift
 $(SRCROOT)/Thaw/MenuBar/LayoutBar/LayoutBarPaddingView.swift
