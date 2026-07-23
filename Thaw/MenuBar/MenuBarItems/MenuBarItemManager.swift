@@ -1763,9 +1763,9 @@ extension MenuBarItemManager {
 
         /// Creates a control item pair from a list of menu bar items.
         ///
-        /// The initializer first attempts a tag-based lookup (namespace + title).
-        /// If that fails it falls back to matching by the current process PID and
-        /// known control-item titles, and finally to matching by known window IDs.
+        /// Window IDs from this process's `NSStatusItem` windows are the
+        /// authoritative lookup when available. Tag and title lookup remain
+        /// fallbacks for startup, when those window IDs may not exist yet.
         ///
         /// On macOS 26 (Tahoe), all menu bar item windows are owned by Control
         /// Center and the item title reported by `kCGWindowName` may differ from
@@ -1776,14 +1776,35 @@ extension MenuBarItemManager {
             hiddenControlItemWindowID: CGWindowID? = nil,
             alwaysHiddenControlItemWindowID: CGWindowID? = nil
         ) {
-            // Primary lookup: match by tag (namespace + title).
+            // Primary lookup: match the windows this process created. Duplicate
+            // Thaw instances can produce identical titles; tag assignment then
+            // favors the lowest window ID, which may belong to another process.
+            if let hiddenWID = hiddenControlItemWindowID,
+               let hiddenIndex = items.firstIndex(where: { $0.windowID == hiddenWID })
+            {
+                self.hidden = items.remove(at: hiddenIndex)
+                if let alwaysHiddenWID = alwaysHiddenControlItemWindowID {
+                    // Do not adopt a duplicate control window when the
+                    // authoritative always-hidden ID is known but absent.
+                    if let alwaysHiddenIndex = items.firstIndex(where: { $0.windowID == alwaysHiddenWID }) {
+                        self.alwaysHidden = items.remove(at: alwaysHiddenIndex)
+                    } else {
+                        self.alwaysHidden = nil
+                    }
+                } else {
+                    self.alwaysHidden = items.removeFirst(matching: .alwaysHiddenControlItem)
+                }
+                return
+            }
+
+            // Fallback 1: match by tag (namespace + title).
             if let hidden = items.removeFirst(matching: .hiddenControlItem) {
                 self.hidden = hidden
                 self.alwaysHidden = items.removeFirst(matching: .alwaysHiddenControlItem)
                 return
             }
 
-            // Fallback 1: match by sourcePID (our own process) + known title.
+            // Fallback 2: match by sourcePID (our own process) + known title.
             let ourPID = ProcessInfo.processInfo.processIdentifier
             let hiddenTitle = ControlItem.Identifier.hidden.rawValue
             let alwaysHiddenTitle = ControlItem.Identifier.alwaysHidden.rawValue
@@ -1946,6 +1967,50 @@ extension MenuBarItemManager {
             }
             return matchedIndices.isEmpty ? nil : matchedIndices
         }
+    }
+
+    /// Returns duplicate windows that claim this instance's control-item
+    /// title while its authoritative window is present in the same list.
+    /// Requiring the authoritative window makes the filter self-validating:
+    /// if a window number is stale or absent, nothing is discarded.
+    static nonisolated func ghostControlItemWindowIDs(
+        in items: [MenuBarItem],
+        ownWindowIDsByTitle: [String: CGWindowID]
+    ) -> Set<CGWindowID> {
+        var ghostIDs = Set<CGWindowID>()
+        for (title, ownWindowID) in ownWindowIDsByTitle {
+            guard items.contains(where: { $0.windowID == ownWindowID }) else { continue }
+            for item in items where item.title == title && item.windowID != ownWindowID {
+                ghostIDs.insert(item.windowID)
+            }
+        }
+        return ghostIDs
+    }
+
+    private func ownControlItemWindowIDsByTitle() -> [String: CGWindowID] {
+        guard let menuBarManager = appState?.menuBarManager else { return [:] }
+        return MenuBarSection.Name.allCases.reduce(into: [:]) { result, name in
+            guard let controlItem = menuBarManager.controlItem(withName: name),
+                  let window = controlItem.window,
+                  window.windowNumber > 0,
+                  let windowID = CGWindowID(exactly: window.windowNumber)
+            else { return }
+            result[controlItem.identifier.rawValue] = windowID
+        }
+    }
+
+    @discardableResult
+    private func dropGhostControlItemWindows(from items: inout [MenuBarItem]) -> Set<CGWindowID> {
+        let ghostIDs = Self.ghostControlItemWindowIDs(
+            in: items,
+            ownWindowIDsByTitle: ownControlItemWindowIDsByTitle()
+        )
+        guard !ghostIDs.isEmpty else { return [] }
+        MenuBarItemManager.diagLog.warning(
+            "cacheItemsRegardless: dropping \(ghostIDs.count) duplicate control item window(s)"
+        )
+        items.removeAll { ghostIDs.contains($0.windowID) }
+        return ghostIDs
     }
 
     /// Context maintained during a menu bar item cache operation.
@@ -2334,6 +2399,12 @@ extension MenuBarItemManager {
             items.removeAll(where: \.isSystemClone)
         }
 
+        // A duplicate Thaw process (or windows left by one that crashed) can
+        // expose control-item titles under foreign window IDs. Exclude those
+        // windows from every cache decision so they cannot be treated as new
+        // unmanaged items or make the normal window-ID comparison churn.
+        let ghostControlWindowIDs = dropGhostControlItemWindows(from: &items)
+
         // Reconcile resolved sourcePIDs against previously known values to
         // prevent transient resolution errors (e.g. stale AX data after item
         // moves) from corrupting item identities. SourcePIDCache does spatial
@@ -2405,13 +2476,12 @@ extension MenuBarItemManager {
             MenuBarItemManager.diagLog.error("cacheItemsRegardless: getMenuBarItems returned ZERO items even after retry; this is the root cause of 'Loading menu bar items' being stuck")
         }
 
-        // currentItemWindowIDs comes straight from the bridging window
-        // list and may still contain clone IDs; items has already been
-        // filtered, so strip any clone IDs to keep the stored set in sync
-        // with the managed item set. The fallback branch is clone-free
-        // because items is filtered.
+        // currentItemWindowIDs comes straight from the bridging window list
+        // and may still contain clone or ghost IDs. Keep the stored set in
+        // sync with the managed item set and ignore those transient IDs in
+        // the next raw-list comparison.
         let itemWindowIDs = (currentItemWindowIDs ?? items.reversed().map(\.windowID))
-            .filter { !cloneWindowIDs.contains($0) }
+            .filter { !cloneWindowIDs.contains($0) && !ghostControlWindowIDs.contains($0) }
         // NOTE: cacheActor.updateCachedItemWindowIDs/updateCachedCloneWindowIDs
         // are deliberately NOT called here. Committing them this early, before
         // the ControlItemPair guard below is known to succeed, would make
@@ -2485,7 +2555,7 @@ extension MenuBarItemManager {
 
         controlItemLookupFailureStreak = 0
         cacheActor.updateCachedItemWindowIDs(itemWindowIDs)
-        cacheActor.updateCachedCloneWindowIDs(cloneWindowIDs)
+        cacheActor.updateCachedCloneWindowIDs(cloneWindowIDs.union(ghostControlWindowIDs))
         cacheActor.updateCachedControlCenterGenericWindowIDs(
             Set(items.filter { $0.tag.isControlCenterGenericItem }.map(\.windowID))
         )
