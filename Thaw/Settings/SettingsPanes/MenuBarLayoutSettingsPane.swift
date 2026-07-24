@@ -44,9 +44,16 @@ struct MenuBarLayoutSettingsPane: View {
                 resetControls
             }
             .onAppear {
-                // Enable background cache prewarming now that the user has opened
-                // the layout settings pane at least once.
+                // Enable background cache prewarming while the layout settings
+                // pane is open.
                 appState.imageCache.markSettingsPaneOpened()
+            }
+            .onDisappear {
+                // Disable background cache prewarming once the layout settings
+                // pane is no longer visible, bounding how long perpetual
+                // background captures (including the leaking SkyLight offscreen
+                // path) can run (#759).
+                appState.imageCache.markSettingsPaneClosed()
             }
         }
     }

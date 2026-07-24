@@ -177,10 +177,19 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
     /// The currently running live-refresh task, if any.
     private var liveRefreshTask: Task<Void, Never>?
 
-    /// Tracks whether the MenuBarLayoutSettingsPane has been opened at least once.
-    /// Used to gate background cache prewarming so captures only occur after the user
-    /// has accessed the layout settings.
-    @Published private(set) var settingsPaneHasBeenOpened = false
+    /// Timestamp of the last offscreen SkyLight batch capture, used to
+    /// rate-limit how often the leaking `SLSWindowListCreateImageFromArrayProxying`
+    /// path is invoked (defense in depth for #759).
+    private var lastSkyLightBatchAt: ContinuousClock.Instant?
+
+    /// Minimum spacing enforced between offscreen SkyLight batch captures.
+    private static let minSkyLightBatchInterval: Duration = .seconds(1)
+
+    /// Tracks whether the MenuBarLayoutSettingsPane is currently open.
+    /// Used to gate background cache prewarming so captures only occur while the
+    /// user has the layout settings open, rather than staying stuck on for the
+    /// remaining lifetime of the process after the first open (#759).
+    @Published private(set) var isSettingsPaneOpen = false
 
     /// Whether the per-item hotkey list in the Hotkeys settings pane is expanded.
     /// While collapsed, the pane has no visible item-icon consumer, so the live
@@ -214,7 +223,7 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
         loadFromDisk()
 
         // Only prewarm if a visible consumer exists at setup time.
-        // Background prewarming is gated by settingsPaneHasBeenOpened.
+        // Background prewarming is gated by isSettingsPaneOpen.
         let hasVisible = hasVisibleCaptureConsumer()
         guard hasVisible else {
             return
@@ -232,7 +241,16 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
     /// Call this from the pane's onAppear or task modifier to enable background cache prewarming.
     @MainActor
     func markSettingsPaneOpened() {
-        settingsPaneHasBeenOpened = true
+        isSettingsPaneOpen = true
+    }
+
+    /// Marks that the MenuBarLayoutSettingsPane has been closed.
+    /// Call this from the pane's onDisappear to stop background cache prewarming
+    /// once the pane is no longer visible, bounding how long perpetual background
+    /// captures (including the leaking SkyLight offscreen path) can run (#759).
+    @MainActor
+    func markSettingsPaneClosed() {
+        isSettingsPaneOpen = false
     }
 
     // MARK: Disk Persistence
@@ -397,18 +415,18 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
                     return
                 }
                 // Only trigger capture if a visible consumer exists or the settings pane
-                // has been opened at least once (itemCacheChangePublisher may indicate
+                // is currently open (itemCacheChangePublisher may indicate
                 // new items that the layout pane will need).
                 let nav = self.makeNavigationStateSnapshot()
                 let hasVisible = self.hasVisibleCaptureConsumer(nav: nav)
-                let settingsOpened = self.settingsPaneHasBeenOpened
-                guard hasVisible || settingsOpened else {
+                let settingsOpen = self.isSettingsPaneOpen
+                guard hasVisible || settingsOpen else {
                     return
                 }
                 self.currentUpdateTask?.cancel()
-                self.currentUpdateTask = Task { [weak self, settingsOpened] in
+                self.currentUpdateTask = Task { [weak self, settingsOpen] in
                     await self?.refreshVisibleConsumersOrPrewarmLayoutCache(
-                        allowBackgroundCapture: settingsOpened
+                        allowBackgroundCapture: settingsOpen
                     )
                 }
             }
@@ -490,6 +508,18 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
         )
     }
 
+    /// Pure gating decision for whether a background (offscreen-inclusive) capture
+    /// cycle should proceed: either a visible consumer needs it, or the caller
+    /// explicitly requested a background capture while the layout settings pane
+    /// is currently open. Extracted for unit testing (#759).
+    nonisolated static func shouldAllowBackgroundCapture(
+        hasVisibleConsumer: Bool,
+        allowBackgroundCapture: Bool,
+        isSettingsPaneOpen: Bool
+    ) -> Bool {
+        hasVisibleConsumer || (allowBackgroundCapture && isSettingsPaneOpen)
+    }
+
     /// Refreshes the cache for currently visible consumers, or keeps a warm
     /// background snapshot ready for the layout settings pane when no consumer
     /// is visible.
@@ -506,9 +536,13 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
         let hasVisibleConsumer = hasVisibleCaptureConsumer(nav: nav)
 
         // Early-return unless a visible consumer exists or background capture is explicitly allowed.
-        // Background capture is gated by settingsPaneHasBeenOpened to avoid unnecessary full-screen
-        // captures when the user has never opened the layout settings pane.
-        guard hasVisibleConsumer || (allowBackgroundCapture && settingsPaneHasBeenOpened) else {
+        // Background capture is gated by isSettingsPaneOpen to avoid unnecessary full-screen
+        // captures once the user has closed the layout settings pane (#759).
+        guard Self.shouldAllowBackgroundCapture(
+            hasVisibleConsumer: hasVisibleConsumer,
+            allowBackgroundCapture: allowBackgroundCapture,
+            isSettingsPaneOpen: isSettingsPaneOpen
+        ) else {
             return
         }
 
@@ -691,8 +725,20 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
             }
 
             if !offscreenBatch.isEmpty {
-                MenuBarItemImageCache.diagLog.debug("liveRefresh (SkyLight): batched \(offscreenBatch.count) offscreen items [\(offscreenSectionLabels.joined(separator: ", "))]")
-                await refreshImages(of: offscreenBatch, scale: scale)
+                // Rate-limit the leaking SkyLight offscreen path: skip this
+                // tick's batch if the last one ran too recently (defense in
+                // depth for #759). Visible-section SCK captures above are
+                // unaffected and keep their normal cadence.
+                let now = ContinuousClock.now
+                if let lastSkyLightBatchAt,
+                   now - lastSkyLightBatchAt < Self.minSkyLightBatchInterval
+                {
+                    MenuBarItemImageCache.diagLog.debug("liveRefresh (SkyLight): skipping batch of \(offscreenBatch.count) offscreen items, rate-limited")
+                } else {
+                    lastSkyLightBatchAt = now
+                    MenuBarItemImageCache.diagLog.debug("liveRefresh (SkyLight): batched \(offscreenBatch.count) offscreen items [\(offscreenSectionLabels.joined(separator: ", "))]")
+                    await refreshImages(of: offscreenBatch, scale: scale)
+                }
             }
         }
 
