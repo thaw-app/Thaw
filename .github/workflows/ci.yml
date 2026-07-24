@@ -25,10 +25,16 @@ on:
 jobs:
   static_analysis:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          # Same-repo PRs: check out the head branch so regenerations can be pushed back.
+          # Fork PRs / pushes: default ref (merge commit or push SHA).
+          ref: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.head_ref || github.ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Validate XCStrings
         if: github.event_name == 'pull_request'
         shell: bash
@@ -44,12 +50,49 @@ jobs:
             python3 -m json.tool "$file" > /dev/null
           done
 
-      - name: Verify SwiftLint input file list
+      - name: Regenerate SwiftLint input file list
+        id: swiftlint_inputs
         run: |
           set -euo pipefail
           chmod +x scripts/generate-swiftlint-inputs.sh
-          scripts/generate-swiftlint-inputs.sh /tmp/swiftlint-inputs.xcfilelist
-          diff -u scripts/swiftlint-inputs.xcfilelist /tmp/swiftlint-inputs.xcfilelist
+          scripts/generate-swiftlint-inputs.sh
+          if git diff --quiet -- scripts/swiftlint-inputs.xcfilelist; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "swiftlint-inputs.xcfilelist is up to date"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "swiftlint-inputs.xcfilelist was regenerated"
+            git diff --stat -- scripts/swiftlint-inputs.xcfilelist
+          fi
+
+      - name: Commit SwiftLint input file list
+        if: >-
+          steps.swiftlint_inputs.outputs.changed == 'true' &&
+          (
+            github.event_name == 'push' ||
+            (
+              github.event_name == 'pull_request' &&
+              github.event.pull_request.head.repo.full_name == github.repository
+            )
+          )
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/swiftlint-inputs.xcfilelist
+          git commit -m "chore: regenerate swiftlint-inputs.xcfilelist"
+          git push
+
+      - name: Require SwiftLint input file list on fork PRs
+        if: >-
+          steps.swiftlint_inputs.outputs.changed == 'true' &&
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name != github.repository
+        run: |
+          set -euo pipefail
+          echo "::error::scripts/swiftlint-inputs.xcfilelist is out of date. Run scripts/generate-swiftlint-inputs.sh and commit the result."
+          git --no-pager diff -- scripts/swiftlint-inputs.xcfilelist
+          exit 1
 
       - name: Run SwiftLint
         run: |
