@@ -2443,6 +2443,9 @@ extension MenuBarItemManager {
         case itemResponseTimeout(MenuBarItem)
         /// A menu bar item's bounds cannot be found.
         case missingItemBounds(MenuBarItem)
+        /// A menu bar item's menu is tracking (e.g. the Wi-Fi picker or an
+        /// input method panel is open) and the move was deferred.
+        case menuTrackingActive(MenuBarItem)
 
         var description: String {
             switch self {
@@ -2462,6 +2465,8 @@ extension MenuBarItemManager {
                 "\(Self.self).itemResponseTimeout(item: \(item.tag))"
             case let .missingItemBounds(item):
                 "\(Self.self).missingItemBounds(item: \(item.tag))"
+            case let .menuTrackingActive(item):
+                "\(Self.self).menuTrackingActive(item: \(item.tag))"
             }
         }
 
@@ -2483,6 +2488,8 @@ extension MenuBarItemManager {
                 "\"\(item.displayName)\" took too long to respond"
             case let .missingItemBounds(item):
                 "Missing bounds rectangle for \"\(item.displayName)\""
+            case let .menuTrackingActive(item):
+                "A menu bar item's menu was open while moving \"\(item.displayName)\""
             }
         }
 
@@ -3496,6 +3503,19 @@ extension MenuBarItemManager {
         }
         guard let appState else {
             throw EventError.cannotComplete
+        }
+
+        // Never drag an item while a menu bar item menu is tracking — a synthetic
+        // Cmd-drag tears down the user's interaction (Wi-Fi picker, input methods).
+        // Wait briefly for the menu to close; if it stays open, give up this attempt.
+        var menuWaitAttempts = 0
+        while await isAnyMenuBarItemMenuOpen() {
+            menuWaitAttempts += 1
+            if menuWaitAttempts > 20 { // ~5s at 250ms steps
+                MenuBarItemManager.diagLog.warning("move: menu still open after wait; deferring move of \(item.logString)")
+                throw EventError.menuTrackingActive(item)
+            }
+            try await Task.sleep(for: .milliseconds(250))
         }
 
         // Allow right-of-item moves to proceed even when the item is at x=-1.
@@ -5962,6 +5982,15 @@ extension MenuBarItemManager {
             return
         }
 
+        // Never drag items while a menu bar item menu is tracking — a synthetic
+        // Cmd-drag would tear down the user's interaction (Wi-Fi picker, input
+        // methods). State is unwound so a subsequent apply can retry cleanly.
+        if await isAnyMenuBarItemMenuOpen() {
+            MenuBarItemManager.diagLog.info("applyProfileLayout: skipping, a menu bar item menu is open")
+            clearProfileState(source: source, items: items)
+            return
+        }
+
         guard var itemsCopy = Optional(items),
               let controlItems = ControlItemPair(
                   items: &itemsCopy,
@@ -7070,6 +7099,14 @@ extension MenuBarItemManager {
             MenuBarItemManager.diagLog.info(
                 "applySavedLayout: skipping, \(unresolvedSourcePIDCount)/\(items.count) items have unresolved sourcePIDs (XPC resolution likely failed)"
             )
+            return false
+        }
+
+        // Never drag items while a menu bar item menu is tracking — a synthetic
+        // Cmd-drag would tear down the user's interaction (Wi-Fi picker, input
+        // methods). The change gate stays armed, so the next cache cycle retries.
+        if await isAnyMenuBarItemMenuOpen() {
+            MenuBarItemManager.diagLog.info("applySavedLayout: skipping, a menu bar item menu is open")
             return false
         }
 

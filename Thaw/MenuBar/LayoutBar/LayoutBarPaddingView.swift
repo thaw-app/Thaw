@@ -233,6 +233,12 @@ final class LayoutBarPaddingView: NSView {
                 )
                 appState.itemManager.removeTemporarilyShownItemFromCache(with: item.tag)
                 await stabilizePlacement(of: item, to: destination, expectedSection: container.section, appState: appState)
+            } catch MenuBarItemManager.EventError.menuTrackingActive {
+                // A menu bar item's menu (Wi-Fi picker, input method panel,
+                // etc.) was open and the move was deferred to avoid tearing
+                // down the user's interaction. This isn't a failure worth
+                // alerting on — log only.
+                Self.diagLog.info("Move deferred, a menu bar item menu was open")
             } catch {
                 Self.diagLog.error("Error moving menu bar item: \(error)")
                 // The system event-driven move sometimes throws cannotComplete
