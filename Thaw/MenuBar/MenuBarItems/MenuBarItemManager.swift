@@ -181,6 +181,16 @@ final class MenuBarItemManager: ObservableObject {
     /// before the control items' status items are rebuilt.
     nonisolated static let controlItemRebuildThreshold = 3
 
+    /// Supplementary AX-derived identity for items whose CG-side identity is
+    /// degraded (a Control-Center generic `Item-N` placeholder title, or a
+    /// bundle-id-shaped title — see `86f2514e`). Populated at most once per
+    /// `cacheItemsRegardless` pass, only when at least one degraded item is
+    /// present in that pass. Additive and display-only: this map is never
+    /// consulted for matching, section assignment, or persisted layout keys
+    /// — see plan 014. No display consumer exists on this branch, so this
+    /// is groundwork for a future tooltip/display-name path.
+    private(set) var degradedItemAXIdentities = [CGWindowID: AXIdentityCatalog.AXItemIdentity]()
+
     /// Diagnostic logger for the menu bar item manager.
     fileprivate static nonisolated let diagLog = DiagLog(category: "MenuBarItemManager")
 
@@ -1707,7 +1717,134 @@ extension MenuBarItemManager {
                 return
             }
 
+            // Fallback 3 (strategy 4, #754): AX-frame correlation against
+            // Thaw's own AX elements. Thaw's control items are its own
+            // NSStatusItems, so their AX elements (reached via Thaw's own
+            // process, not any third party) carry frames that can be
+            // correlated against the candidate items' CG window bounds even
+            // when tag, title, and window ID all fail to match — this is
+            // the only strategy that lets Thaw identify its OWN control
+            // items when every CG-side identity channel has degraded.
+            if let pair = Self.matchViaAXFrame(items: &items) {
+                self.hidden = pair.hidden
+                self.alwaysHidden = pair.alwaysHidden
+                return
+            }
+
             return nil
+        }
+
+        /// Strategy 4: correlates Thaw's own AX element frames (from its own
+        /// `extrasMenuBar`, via `NSRunningApplication.current`) against the
+        /// candidate items' CG window bounds, using
+        /// `AXIdentityCatalog.identity(for:in:)`'s pure correlation. Confident
+        /// matches (>50% overlap of the smaller rect's area, no ties) select
+        /// the hidden and always-hidden control items exactly as strategies
+        /// 1–3 would.
+        private static func matchViaAXFrame(
+            items: inout [MenuBarItem]
+        ) -> (hidden: MenuBarItem, alwaysHidden: MenuBarItem?)? {
+            guard
+                let app = AXHelpers.application(for: .current),
+                let extrasMenuBar = AXHelpers.extrasMenuBar(for: app)
+            else {
+                MenuBarItemManager.diagLog.debug(
+                    "ControlItemPair: strategy 4 (AX frame) unavailable — could not resolve Thaw's own extrasMenuBar"
+                )
+                return nil
+            }
+            try? app.setMessagingTimeout(0.25)
+            try? extrasMenuBar.setMessagingTimeout(0.25)
+
+            let children = AXHelpers.children(for: extrasMenuBar)
+            let snapshot: [AXIdentityCatalog.AXItemIdentity] = children.compactMap { child in
+                try? child.setMessagingTimeout(0.25)
+                guard let frame = AXHelpers.frame(for: child) else { return nil }
+                return AXIdentityCatalog.AXItemIdentity(
+                    identifier: AXHelpers.identifier(for: child),
+                    title: AXHelpers.title(for: child),
+                    help: AXHelpers.help(for: child),
+                    frame: frame
+                )
+            }
+
+            guard !snapshot.isEmpty else {
+                MenuBarItemManager.diagLog.debug(
+                    "ControlItemPair: strategy 4 (AX frame) unavailable — Thaw's extrasMenuBar has no children with frames"
+                )
+                return nil
+            }
+
+            let ourPID = ProcessInfo.processInfo.processIdentifier
+            let candidates = items.enumerated().map { index, item in
+                CandidateFrame(index: index, bounds: item.bounds, isOwnProcess: item.sourcePID == ourPID)
+            }
+            let axFrames = snapshot.map(\.frame)
+
+            guard let matchedIndices = Self.selectViaAXFrame(candidates: candidates, axFrames: axFrames),
+                  let hiddenIdx = matchedIndices.first
+            else {
+                MenuBarItemManager.diagLog.debug(
+                    "ControlItemPair: strategy 4 (AX frame) found no confident correlation among \(items.count) candidate item(s)"
+                )
+                return nil
+            }
+
+            // Remove higher index first so the lower index stays valid.
+            let sortedIndices = matchedIndices.sorted(by: >)
+            var removed = [Int: MenuBarItem]()
+            for idx in sortedIndices {
+                removed[idx] = items.remove(at: idx)
+            }
+            let hidden = removed[hiddenIdx]!
+            let alwaysHidden = matchedIndices.count > 1 ? removed[matchedIndices[1]] : nil
+
+            MenuBarItemManager.diagLog.info(
+                "ControlItemPair: strategy 4 (AX frame) matched hidden control item via AX-frame correlation (windowID=\(hidden.windowID))\(alwaysHidden.map { ", alwaysHidden windowID=\($0.windowID)" } ?? "")"
+            )
+
+            return (hidden, alwaysHidden)
+        }
+
+        /// A candidate item's bounds and own-process ownership, stripped
+        /// down to what ``selectViaAXFrame(candidates:axFrames:)`` needs so
+        /// it can be exercised with synthetic fixtures.
+        struct CandidateFrame {
+            let index: Int
+            let bounds: CGRect
+            let isOwnProcess: Bool
+        }
+
+        /// Pure selection helper: correlates each of our own control items
+        /// (`candidates` where `isOwnProcess` is true) against `axFrames` in
+        /// AX order (left-to-right in the extras menu bar, matching the
+        /// order Thaw's own status items are enumerated in), so the first
+        /// confidently-correlated own-item becomes the hidden control item
+        /// and the second becomes the always-hidden one — the same relative
+        /// ordering the tag/title strategies assume, but derived from AX
+        /// position instead of a title that may no longer be trustworthy.
+        ///
+        /// Returns the matched candidate indices (1 or 2 of them, in
+        /// hidden/always-hidden order), or `nil` when no own-process
+        /// candidate correlates confidently with any AX frame.
+        nonisolated static func selectViaAXFrame(
+            candidates: [CandidateFrame],
+            axFrames: [CGRect]
+        ) -> [Int]? {
+            var matchedIndices = [Int]()
+            for frame in axFrames {
+                let identity = [AXIdentityCatalog.AXItemIdentity(identifier: nil, title: nil, help: nil, frame: frame)]
+                guard
+                    let candidate = candidates.first(where: { candidate in
+                        !matchedIndices.contains(candidate.index)
+                            && candidate.isOwnProcess
+                            && AXIdentityCatalog.identity(for: candidate.bounds, in: identity) != nil
+                    })
+                else { continue }
+                matchedIndices.append(candidate.index)
+                if matchedIndices.count == 2 { break }
+            }
+            return matchedIndices.isEmpty ? nil : matchedIndices
         }
     }
 
@@ -1986,6 +2123,58 @@ extension MenuBarItemManager {
         identifiers.contains { $0.hasPrefix(bundleID + ":") }
     }
 
+    /// A Boolean value indicating whether `item`'s CG-side identity is
+    /// degraded: either a Control-Center generic `Item-N` placeholder title,
+    /// or a bundle-id-shaped title (reverse-DNS, three-plus dot-separated
+    /// components — the same shape `86f2514e`'s title-identity fallback
+    /// matches on the service side).
+    private static func isDegradedIdentity(_ item: MenuBarItem) -> Bool {
+        if item.tag.isControlCenterGenericItem {
+            return true
+        }
+        guard let title = item.title else { return false }
+        return title.split(separator: ".").count >= 3
+    }
+
+    /// Populates `degradedItemAXIdentities` for `items` whose CG-side
+    /// identity is degraded, at most once per `cacheItemsRegardless` pass
+    /// and only when at least one degraded item is present. Takes an
+    /// on-demand AX snapshot of Control Center and SystemUIServer (the hosts
+    /// responsible for the degraded cases this targets) and records the
+    /// confident correlation for each degraded item's window bounds.
+    ///
+    /// This map is additive and display-only — see its declaration.
+    private func enrichDegradedItemIdentities(in items: [MenuBarItem]) {
+        let degradedItems = items.filter(Self.isDegradedIdentity)
+        guard !degradedItems.isEmpty else {
+            degradedItemAXIdentities = [:]
+            return
+        }
+
+        let hostBundleIDs = ["com.apple.controlcenter", "com.apple.systemuiserver"]
+        let hosts = hostBundleIDs.flatMap { NSRunningApplication.runningApplications(withBundleIdentifier: $0) }
+        guard !hosts.isEmpty else {
+            MenuBarItemManager.diagLog.debug(
+                "enrichDegradedItemIdentities: \(degradedItems.count) degraded item(s) present but no Control Center/SystemUIServer host is running"
+            )
+            degradedItemAXIdentities = [:]
+            return
+        }
+
+        let snapshot = AXIdentityCatalog.snapshot(hosts: hosts)
+        var enrichment = [CGWindowID: AXIdentityCatalog.AXItemIdentity]()
+        for item in degradedItems {
+            let bounds = Bridging.getWindowBounds(for: item.windowID) ?? item.bounds
+            guard let identity = AXIdentityCatalog.identity(for: bounds, in: snapshot) else { continue }
+            enrichment[item.windowID] = identity
+        }
+
+        MenuBarItemManager.diagLog.debug(
+            "enrichDegradedItemIdentities: \(degradedItems.count) degraded item(s), \(enrichment.count) resolved via AX-frame correlation"
+        )
+        degradedItemAXIdentities = enrichment
+    }
+
     /// Caches the current menu bar items, regardless of whether the
     /// items have changed since the previous cache.
     ///
@@ -2221,6 +2410,8 @@ extension MenuBarItemManager {
         }
 
         MenuBarItemManager.diagLog.debug("cacheItemsRegardless: found control items, hidden windowID=\(controlItems.hidden.windowID), alwaysHidden=\(controlItems.alwaysHidden.map { "\($0.windowID)" } ?? "nil")")
+
+        enrichDegradedItemIdentities(in: items)
 
         guard !Task.isCancelled else {
             MenuBarItemManager.diagLog.debug("cacheItemsRegardless: cancelled after control item discovery")
