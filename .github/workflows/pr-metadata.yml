@@ -3,10 +3,17 @@ name: "PR Metadata"
 # Labels (type/area) + shape checks (base/title/Closes; size warn-only).
 # Uses pull_request_target so fork PRs can still receive labels.
 # Crowdin sync PRs are skipped — they are translation-only and often huge.
+#
+# Spam guard: do not run on `edited` (title/body tweaks). Size heads-ups go to
+# the job summary only — never PR comments — so pushes don't bump the timeline.
 
 on:
   pull_request_target:
-    types: [opened, edited, synchronize, reopened]
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: pr-metadata-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   metadata:
@@ -263,6 +270,19 @@ jobs:
               );
             }
 
+            // Size heads-up: Actions job summary only (no PR comments / timeline spam).
+            if (warnings.length > 0) {
+              core.summary
+                .addHeading('PR size heads-up')
+                .addList(warnings)
+                .addRaw('_Informational only — does not block merge._')
+                .write();
+              for (const warning of warnings) {
+                core.warning(warning);
+              }
+            }
+
+            // Best-effort cleanup of legacy size-warning comments from older workflow runs.
             const marker = '<!-- thaw-pr-conventions -->';
             const existing = await github.paginate(github.rest.issues.listComments, {
               owner,
@@ -270,42 +290,14 @@ jobs:
               issue_number: pr.number,
               per_page: 100,
             });
-            const prior = existing.find(
-              (c) => c.user?.type === 'Bot' && (c.body || '').includes(marker),
-            );
-
-            if (warnings.length > 0) {
-              const warnBody = [
-                marker,
-                '### PR size heads-up',
-                '',
-                ...warnings.map((w) => `- ${w}`),
-                '',
-                '_This check is informational and does not block merge._',
-              ].join('\n');
-
-              if (prior) {
-                await github.rest.issues.updateComment({
+            for (const comment of existing) {
+              if (comment.user?.type === 'Bot' && (comment.body || '').includes(marker)) {
+                await github.rest.issues.deleteComment({
                   owner,
                   repo,
-                  comment_id: prior.id,
-                  body: warnBody,
-                });
-              } else {
-                await github.rest.issues.createComment({
-                  owner,
-                  repo,
-                  issue_number: pr.number,
-                  body: warnBody,
+                  comment_id: comment.id,
                 });
               }
-            } else if (prior) {
-              // Clear stale size warning when the PR shrinks.
-              await github.rest.issues.deleteComment({
-                owner,
-                repo,
-                comment_id: prior.id,
-              });
             }
 
             if (failures.length > 0) {
