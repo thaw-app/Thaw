@@ -158,7 +158,7 @@ actor SimpleSemaphore {
 /// Manager for menu bar items.
 @MainActor
 final class MenuBarItemManager: ObservableObject {
-    static let layoutWatchdogTimeout: DispatchTimeInterval = .seconds(6)
+    static let layoutWatchdogTimeout: Duration = .seconds(6)
 
     /// Delay between relocation/restore moves and the subsequent recache,
     /// giving macOS time to settle menu bar item positions.
@@ -3995,7 +3995,7 @@ extension MenuBarItemManager {
         to destination: MoveDestination,
         on displayID: CGDirectDisplayID? = nil,
         skipInputPause: Bool = false,
-        watchdogTimeout: DispatchTimeInterval? = nil,
+        watchdogTimeout: Duration? = nil,
         maxMoveAttempts: Int = 8
     ) async throws {
         // System clone windows are transient WindowServer duplicates that

@@ -75,7 +75,7 @@ struct MenuBarShapePicker: View {
             MenuBarFullShapePicker(
                 info: Binding(
                     get: { configuration.fullShapeInfo },
-                    set: { newValue in DispatchQueue.main.async { configuration.fullShapeInfo = newValue } }
+                    set: { newValue in Task { @MainActor in configuration.fullShapeInfo = newValue } }
                 ),
                 leftMargin: $configuration.leftMargin,
                 rightMargin: $configuration.rightMargin,
@@ -85,7 +85,7 @@ struct MenuBarShapePicker: View {
             MenuBarSplitShapePicker(
                 info: Binding(
                     get: { configuration.splitShapeInfo },
-                    set: { newValue in DispatchQueue.main.async { configuration.splitShapeInfo = newValue } }
+                    set: { newValue in Task { @MainActor in configuration.splitShapeInfo = newValue } }
                 ),
                 leftMargin: $configuration.leftMargin,
                 rightMargin: $configuration.rightMargin,
@@ -101,7 +101,7 @@ struct MenuBarShapePicker: View {
                         )
                     },
                     set: { newValue in
-                        DispatchQueue.main.async {
+                        Task { @MainActor in
                             configuration.notchShapeInfo.leading = newValue.leading
                             configuration.notchShapeInfo.trailing = newValue.trailing
                         }

@@ -24,17 +24,6 @@ final class LayoutBarPaddingView: NSView {
     private var containerLeadingInsetConstraint: NSLayoutConstraint?
     private var notchObservers = Set<AnyCancellable>()
 
-    private func layoutWatchdogDuration() -> Duration? {
-        switch MenuBarItemManager.layoutWatchdogTimeout {
-        case let .seconds(s):
-            return .seconds(s)
-        case let .milliseconds(ms):
-            return .milliseconds(ms)
-        default:
-            return nil
-        }
-    }
-
     /// The layout view's arranged views.
     var arrangedViews: [LayoutBarArrangedView] {
         get { container.arrangedViews }
@@ -224,8 +213,7 @@ final class LayoutBarPaddingView: NSView {
             }
 
             let watchdogTask = Task { [weak self, weak appState] in
-                guard let duration = self?.layoutWatchdogDuration() else { return }
-                try? await Task.sleep(for: duration + .seconds(1))
+                try? await Task.sleep(for: MenuBarItemManager.layoutWatchdogTimeout + .seconds(1))
                 guard let self, !Task.isCancelled else { return }
                 await self.resetStabilizingStateIfNeeded()
                 guard let appState else { return }

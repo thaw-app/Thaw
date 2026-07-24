@@ -28,7 +28,8 @@ struct VisualEffectBackground: NSViewRepresentable {
     }
 
     private func makeWindowTransparent(_ view: NSView) {
-        DispatchQueue.main.async {
+        // Deferred one turn: view.window is nil until the view is attached.
+        Task { @MainActor in
             guard let window = view.window else { return }
             window.isOpaque = false
             window.backgroundColor = .clear

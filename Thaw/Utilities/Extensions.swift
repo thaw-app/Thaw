@@ -726,7 +726,10 @@ extension NSScreen {
     private static func scheduleMenuBarHeightRetry(for displayID: CGDirectDisplayID) {
         let shouldSchedule = pendingRetryDisplays.withLock { $0.insert(displayID).inserted }
         guard shouldSchedule else { return }
-        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + .milliseconds(500)) {
+        // Detached: this must run off the caller's actor (the CG window
+        // query is not main-actor work) after a fixed delay.
+        Task.detached(priority: .utility) {
+            try? await Task.sleep(for: .milliseconds(500))
             if let menuBarWindow = WindowInfo.menuBarWindow(for: displayID) {
                 let height = menuBarWindow.bounds.height
                 if height > 0 {
