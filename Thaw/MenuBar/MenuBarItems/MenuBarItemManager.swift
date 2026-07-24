@@ -5891,6 +5891,21 @@ extension MenuBarItemManager {
         // and reshuffling the bar. This fetch is independent of the cache
         // path, so it needs its own filter.
         items.removeAll(where: \.isSystemClone)
+
+        // Skip the bulk apply while the majority of items have no resolved
+        // sourcePID — uniqueIdentifier (used to match items against
+        // itemOrder/itemSectionMap) is derived from sourcePID via
+        // MenuBarItemTag's namespace, so an unresolved-PID majority means
+        // the identifiers used for matching are unreliable.
+        let unresolvedSourcePIDCount = items.filter { $0.sourcePID == nil }.count
+        if Self.majorityOfSourcePIDsUnresolved(unresolvedCount: unresolvedSourcePIDCount, itemCount: items.count) {
+            MenuBarItemManager.diagLog.info(
+                "applyProfileLayout: skipping, \(unresolvedSourcePIDCount)/\(items.count) items have unresolved sourcePIDs (XPC resolution likely failed)"
+            )
+            clearProfileState(source: source, items: items)
+            return
+        }
+
         guard var itemsCopy = Optional(items),
               let controlItems = ControlItemPair(
                   items: &itemsCopy,
@@ -6974,6 +6989,17 @@ extension MenuBarItemManager {
             : currentLayoutDivergesFromSaved(items: items, controlItems: controlItems)
         guard windowIDsChanged || layoutDiverged else {
             MenuBarItemManager.diagLog.debug("applySavedLayout: skipping, no windowID change and saved layout matches current")
+            return false
+        }
+
+        // Skip the bulk apply while the majority of items have no resolved
+        // sourcePID — mirrors relocateNewLeftmostItems's unresolved-sourcePID
+        // noop.
+        let unresolvedSourcePIDCount = items.filter { $0.sourcePID == nil }.count
+        if Self.majorityOfSourcePIDsUnresolved(unresolvedCount: unresolvedSourcePIDCount, itemCount: items.count) {
+            MenuBarItemManager.diagLog.info(
+                "applySavedLayout: skipping, \(unresolvedSourcePIDCount)/\(items.count) items have unresolved sourcePIDs (XPC resolution likely failed)"
+            )
             return false
         }
 

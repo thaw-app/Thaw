@@ -18,6 +18,16 @@ import XCTest
 /// majority-unresolved signature while tolerating the small number of system
 /// items (WiFi, Clock, BentoBox) that legitimately resolve to nil.
 final class SourcePIDResolutionGateTests: XCTestCase {
+    // NOTE: `applySavedLayout` and `applyProfileLayout` (the call sites that
+    // consult this gate) are instance methods on `MenuBarItemManager` that
+    // require a live `appState`, real `ControlItemPair`s, and Window Server
+    // items to run — they cannot be exercised with plain fixture values the
+    // way `savedLayoutSectionLookup` can (see SavedLayoutSectionLookupTests).
+    // This suite is limited to characterizing the pure predicate; the
+    // call-site wiring is verified structurally (grep for the call site
+    // inside applySavedLayout/applyProfileLayout) rather than by unit test.
+
+
     func testHealthyBarWithSystemItemNilsDoesNotTrip() {
         // 27 items, 3 system items unresolved — the everyday shape.
         XCTAssertFalse(
