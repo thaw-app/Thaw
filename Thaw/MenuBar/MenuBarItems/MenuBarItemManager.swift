@@ -323,6 +323,12 @@ final class MenuBarItemManager: ObservableObject {
     /// false re-sort triggers during an in-flight sort.
     private(set) var isApplyingProfileLayout = false
 
+    /// Timestamp of the first observation of a diverged layout that has
+    /// not yet been confirmed by a second consecutive observation. `nil`
+    /// when no divergence is currently pending confirmation. See
+    /// `confirmedDivergence(divergedNow:pendingSince:now:staleness:)`.
+    private var pendingDivergenceObservedAt: ContinuousClock.Instant?
+
     /// Persisted mapping of item tag identifiers to their original section name for
     /// temporarily shown items whose apps quit before they could be rehidden. When
     /// the app relaunches, this allows us to move the item back to its original section.
@@ -7020,6 +7026,52 @@ extension MenuBarItemManager {
         itemCount >= 4 && unresolvedCount * 2 > itemCount
     }
 
+    /// Decides whether a divergence observation should trigger the apply.
+    ///
+    /// A single divergent reading of `currentLayoutDivergesFromSaved` can be
+    /// transient: an app activating with a wide application menu compresses
+    /// or covers status items, shifting their bounds for the duration the
+    /// menu is up. Reading that shift as "items in the wrong section" and
+    /// immediately dispatching a bulk apply replays the whole layout and
+    /// yanks the cursor around (#723) for geometry that resolves itself once
+    /// the menu closes. Requiring the same divergence to be observed on two
+    /// consecutive cache cycles filters out that transient case while still
+    /// reacting promptly to genuine, persistent drift.
+    ///
+    /// - Parameters:
+    ///   - divergedNow: The result of the current cycle's divergence check.
+    ///   - pendingSince: The timestamp of a prior unconfirmed observation, if
+    ///     one is armed.
+    ///   - now: The current time.
+    ///   - staleness: How long an armed observation remains eligible for
+    ///     confirmation. A stale arm is discarded and treated as a fresh
+    ///     first observation rather than confirmed, so an old, likely
+    ///     unrelated observation can't confirm a much later one.
+    /// - Returns: Whether this observation confirms the divergence (i.e.
+    ///   should trigger the apply), and the pending-observation state to
+    ///   carry forward to the next cycle.
+    nonisolated static func confirmedDivergence(
+        divergedNow: Bool,
+        pendingSince: ContinuousClock.Instant?,
+        now: ContinuousClock.Instant,
+        staleness: Duration = .seconds(30)
+    ) -> (confirmed: Bool, newPendingSince: ContinuousClock.Instant?) {
+        guard divergedNow else {
+            return (false, nil)
+        }
+        guard let pendingSince else {
+            // First observation: arm and defer this pass.
+            return (false, now)
+        }
+        guard now - pendingSince <= staleness else {
+            // The prior arm is too old to confirm against; discard it and
+            // re-arm on this observation instead.
+            return (false, now)
+        }
+        // Second consecutive observation within the staleness window: confirmed.
+        return (true, nil)
+    }
+
     func applySavedLayout(
         items: [MenuBarItem],
         previousWindowIDs: [CGWindowID],
@@ -7079,6 +7131,16 @@ extension MenuBarItemManager {
         // Divergence is computed lazily: only consulted when
         // windowIDsChanged didn't already advance the gate, so the
         // happy path on app quit/relaunch pays nothing.
+        //
+        // A single divergent reading is required to be *stable* across two
+        // consecutive cache cycles before it advances the gate (#723): an
+        // app activating with a wide application menu can transiently
+        // compress or cover status items, which currentLayoutDivergesFromSaved
+        // reads as items in the wrong section even though the geometry
+        // reverts once the menu closes. windowIDsChanged is a direct,
+        // trustworthy signal (an item genuinely disappeared) and is not
+        // subject to this confirmation — it stays immediate and never
+        // arms/consumes the pending-divergence state below.
         let currentWindowIDSet = Set(items.map(\.windowID))
         let previousWindowIDSet = Set(previousWindowIDs)
         let windowIDsChanged = Self.windowIDsChanged(
@@ -7087,13 +7149,33 @@ extension MenuBarItemManager {
             previousDisplayID: previousDisplayID,
             currentDisplayID: currentDisplayID
         )
-        let layoutDiverged = windowIDsChanged
-            ? false
-            : currentLayoutDivergesFromSaved(items: items, controlItems: controlItems)
+        let layoutDiverged: Bool
+        if windowIDsChanged {
+            layoutDiverged = false
+        } else {
+            let divergedNow = currentLayoutDivergesFromSaved(items: items, controlItems: controlItems)
+            let now = ContinuousClock.now
+            let decision = Self.confirmedDivergence(
+                divergedNow: divergedNow,
+                pendingSince: pendingDivergenceObservedAt,
+                now: now
+            )
+            pendingDivergenceObservedAt = decision.newPendingSince
+            if divergedNow, !decision.confirmed {
+                MenuBarItemManager.diagLog.debug("applySavedLayout: divergence observed, awaiting confirmation on next cycle")
+            } else if decision.confirmed {
+                MenuBarItemManager.diagLog.debug("applySavedLayout: divergence confirmed on second consecutive cycle")
+            }
+            layoutDiverged = decision.confirmed
+        }
         guard windowIDsChanged || layoutDiverged else {
             MenuBarItemManager.diagLog.debug("applySavedLayout: skipping, no windowID change and saved layout matches current")
             return false
         }
+        // A windowID-change apply proceeds regardless of any pending
+        // divergence arm; discard the stale arm so it can't spuriously
+        // confirm on a later, unrelated cycle once the bar has settled.
+        pendingDivergenceObservedAt = nil
 
         // Skip the bulk apply while the majority of items have no resolved
         // sourcePID — mirrors relocateNewLeftmostItems's unresolved-sourcePID
