@@ -183,6 +183,7 @@ extension Defaults {
         static let enableMenuBarItemOverflow = true
         static let useAXClickDelivery = false
         static let useSyntheticCursorMoves = false
+        static let stampWindowIDOnLegacyMoves = true
 
         // MARK: Search
 
@@ -260,6 +261,7 @@ extension Defaults {
         case enableMenuBarItemOverflow = "EnableMenuBarItemOverflow"
         case useAXClickDelivery = "UseAXClickDelivery"
         case useSyntheticCursorMoves = "UseSyntheticCursorMoves"
+        case stampWindowIDOnLegacyMoves = "StampWindowIDOnLegacyMoves"
 
         // MARK: Search
 

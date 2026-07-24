@@ -3534,6 +3534,14 @@ extension MenuBarItemManager {
             throw EventError.cannotComplete
         }
 
+        // Experimental A/B toggle: whether the legacy move path stamps the
+        // raw 0x33 windowID field (see setWindowID). Default true preserves
+        // shipped behavior; settings unavailable also falls back to true.
+        let stampRawWindowID = appState?.settings.advanced.stampWindowIDOnLegacyMoves ?? true
+        if !stampRawWindowID {
+            MenuBarItemManager.diagLog.debug("postMoveEvents: raw windowID (0x33) stamping disabled by experimental toggle")
+        }
+
         var itemOrigin = try await getCurrentBounds(for: item).origin
         let targetPoints = try await getTargetPoints(forMoving: item, to: destination, on: displayID)
 
@@ -3584,13 +3592,15 @@ extension MenuBarItemManager {
                 item: item,
                 source: source,
                 type: .move(.mouseDown),
-                location: targetPoints.start
+                location: targetPoints.start,
+                stampRawWindowID: stampRawWindowID
             ),
             let mouseUp = CGEvent.menuBarItemEvent(
                 item: destination.targetItem,
                 source: source,
                 type: .move(.mouseUp),
-                location: targetPoints.end
+                location: targetPoints.end,
+                stampRawWindowID: stampRawWindowID
             )
         else {
             throw EventError.eventCreationFailure(item)
@@ -7842,11 +7852,16 @@ private extension CGEvent {
     ///   - type: The event's specialized type.
     ///   - location: The event's location. Does not need to be
     ///     within the bounds of the item.
+    ///   - stampRawWindowID: Whether to additionally stamp the legacy raw
+    ///     0x33 windowID field for `.move` events. Ignored for all other
+    ///     event types. Defaults to `true` so non-move call sites (e.g.
+    ///     clicks) are unaffected.
     static func menuBarItemEvent(
         item: MenuBarItem,
         source: CGEventSource,
         type: MenuBarItemEventType,
-        location: CGPoint
+        location: CGPoint,
+        stampRawWindowID: Bool = true
     ) -> CGEvent? {
         guard let event = CGEvent(
             mouseEventSource: source,
@@ -7858,7 +7873,7 @@ private extension CGEvent {
         }
         event.setFlags(for: type)
         event.setUserData(ObjectIdentifier(event))
-        event.setWindowID(item.windowID, for: type)
+        event.setWindowID(item.windowID, for: type, stampRawWindowID: stampRawWindowID)
         event.setClickState(for: type)
         return event
     }
@@ -7918,13 +7933,13 @@ private extension CGEvent {
         setIntegerValueField(.eventSourceUserData, value: userData)
     }
 
-    private func setWindowID(_ windowID: CGWindowID, for type: MenuBarItemEventType) {
+    private func setWindowID(_ windowID: CGWindowID, for type: MenuBarItemEventType, stampRawWindowID: Bool = true) {
         let windowID = Int64(windowID)
 
         setIntegerValueField(.mouseEventWindowUnderMousePointer, value: windowID)
         setIntegerValueField(.mouseEventWindowUnderMousePointerThatCanHandleThisEvent, value: windowID)
 
-        if case .move = type {
+        if case .move = type, stampRawWindowID {
             setIntegerValueField(.windowID, value: windowID)
         }
     }

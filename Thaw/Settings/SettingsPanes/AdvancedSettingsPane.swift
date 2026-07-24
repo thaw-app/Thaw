@@ -40,6 +40,7 @@ struct AdvancedSettingsPane: View {
                 }
                 useAXClickDelivery
                 useSyntheticCursorMoves
+                stampWindowIDOnLegacyMoves
             }
             IceSection("Permissions") {
                 allPermissions
@@ -277,6 +278,25 @@ struct AdvancedSettingsPane: View {
                 Move menu bar items using a posted synthetic Command-drag event sequence \
                 instead of warping the real cursor. Real mouse input is briefly suppressed \
                 while an item is being moved.
+                """
+            )
+            .padding(.trailing, 75)
+        }
+    }
+
+    private var stampWindowIDOnLegacyMoves: some View {
+        Toggle(
+            "Stamp window ID on legacy move events",
+            isOn: $settings.stampWindowIDOnLegacyMoves
+        )
+        .annotation {
+            Text(
+                """
+                When moving menu bar items with the legacy cursor-warp path, additionally \
+                stamp the raw window ID CGEvent field. Disabling this isolates the field \
+                for testing; it may help on some systems where WindowServer discards the \
+                event's location for pid-routed events. Has no effect when synthetic \
+                cursor moves are enabled.
                 """
             )
             .padding(.trailing, 75)
