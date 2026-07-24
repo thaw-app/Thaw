@@ -182,6 +182,7 @@ extension Defaults {
         static let useDoubleClickToShowAlwaysHiddenSection = false
         static let enableMenuBarItemOverflow = true
         static let useAXClickDelivery = false
+        static let useSyntheticCursorMoves = false
 
         // MARK: Search
 
@@ -258,6 +259,7 @@ extension Defaults {
         case useDoubleClickToShowAlwaysHiddenSection = "UseDoubleClickToShowAlwaysHiddenSection"
         case enableMenuBarItemOverflow = "EnableMenuBarItemOverflow"
         case useAXClickDelivery = "UseAXClickDelivery"
+        case useSyntheticCursorMoves = "UseSyntheticCursorMoves"
 
         // MARK: Search
 

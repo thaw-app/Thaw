@@ -3536,6 +3536,41 @@ extension MenuBarItemManager {
 
         var itemOrigin = try await getCurrentBounds(for: item).origin
         let targetPoints = try await getTargetPoints(forMoving: item, to: destination, on: displayID)
+
+        // Flagged synthetic-cursor move delivery, ported from
+        // `feat/macos-27-experimental`'s `SyntheticMoveEngine`. Unlike the
+        // legacy path below, this never warps the real cursor and never
+        // stamps the raw 0x33 windowID field: the drag is a pure posted
+        // event sequence whose positions ride inside the events, with real
+        // user mouse input suppressed for the gesture's duration. Default
+        // off; the legacy path below is unchanged and remains the fallback.
+        if appState?.settings.advanced.useSyntheticCursorMoves == true {
+            let itemBounds = try await getCurrentBounds(for: item)
+            let start = CGPoint(x: itemBounds.midX, y: itemBounds.midY)
+            let end = targetPoints.end
+            // A dedicated source (not the shared, cached getEventSource())
+            // so its userData can be set to the synthetic-move sentinel
+            // before any event is created from it — see
+            // MoveInputSuppression's type-level note.
+            let source = try MoveInputSuppression.makeSyntheticMoveEventSource()
+
+            // Mirrors the legacy path's per-item hide/show, gated the same
+            // way on `isBulkApplyInProgress` (see plan-006 cursor semantics).
+            if !isBulkApplyInProgress {
+                MouseHelpers.hideCursor()
+            }
+            defer {
+                if !isBulkApplyInProgress {
+                    MouseHelpers.showCursor()
+                }
+            }
+
+            try await MoveInputSuppression.withUserMouseInputSuppressed {
+                await performSyntheticCursorDrag(start: start, end: end, source: source)
+            }
+            return
+        }
+
         // Capture mouse location only when this call owns the cursor warp.
         // When called from move(), the outer move() handles the single warp
         // at the end of all attempts so the cursor doesn't oscillate per attempt.
@@ -3672,6 +3707,59 @@ extension MenuBarItemManager {
             timeout += timeout / 2
             throw error
         }
+    }
+
+    /// Posts the synthetic Command-drag gesture used by the flagged
+    /// synthetic-cursor move path in `postMoveEvents`. Ported verbatim
+    /// (timing and step count) from `feat/macos-27-experimental`'s
+    /// `SyntheticMoveEngine.performCommandDrag(from:to:source:)`: a
+    /// `.mouseMoved` prelude at `start`, a Cmd-flagged `leftMouseDown`, an
+    /// interpolated `leftMouseDragged` sequence from `start` to `end`, and a
+    /// final `leftMouseUp`. No cursor warp, no windowID (0x33) stamping, and
+    /// no pid routing — every event is created from `source`, which the
+    /// caller obtains via `MoveInputSuppression.makeSyntheticMoveEventSource()`
+    /// so it inherits the synthetic-move sentinel `userData` at creation
+    /// time (see that type's note on why source-level marking, not
+    /// per-event field writes, is used). `markSyntheticMoveEvent` is also
+    /// called on each event as a belt-and-suspenders shim. Events are
+    /// posted to the HID event tap, each carrying its own position.
+    private nonisolated func performSyntheticCursorDrag(
+        start: CGPoint,
+        end: CGPoint,
+        source: CGEventSource
+    ) async {
+        func post(_ type: CGEventType, _ location: CGPoint) {
+            guard let event = CGEvent(
+                mouseEventSource: source,
+                mouseType: type,
+                mouseCursorPosition: location,
+                mouseButton: .left
+            ) else { return }
+            event.flags = .maskCommand
+            MoveInputSuppression.markSyntheticMoveEvent(event)
+            event.post(tap: .cghidEventTap)
+        }
+
+        post(.mouseMoved, start)
+        await eventSleep(for: .milliseconds(30))
+        post(.leftMouseDown, start)
+        await eventSleep(for: .milliseconds(60))
+
+        let steps = 24
+        for index in 1 ... steps {
+            let progress = CGFloat(index) / CGFloat(steps)
+            post(
+                .leftMouseDragged,
+                CGPoint(
+                    x: start.x + (end.x - start.x) * progress,
+                    y: start.y + (end.y - start.y) * progress
+                )
+            )
+            await eventSleep(for: .milliseconds(16))
+        }
+
+        post(.leftMouseUp, end)
+        await eventSleep(for: .milliseconds(40))
     }
 
     /// Checks if a menu bar item is in a "blocked" state (positioned at x=-1 off-screen).

@@ -71,6 +71,13 @@ final class AdvancedSettings: ObservableObject {
     /// failure. Moves and right-clicks are unaffected.
     @Published var useAXClickDelivery = Defaults.DefaultValue.useAXClickDelivery
 
+    /// A Boolean value that controls whether menu bar item moves are
+    /// delivered via a synthetic Command-drag posted event sequence instead
+    /// of warping the real cursor and stamping the raw windowID (0x33)
+    /// event field. Experimental; default off. When enabled, real user
+    /// mouse input is suppressed for the duration of each move gesture.
+    @Published var useSyntheticCursorMoves = Defaults.DefaultValue.useSyntheticCursorMoves
+
     /// The order in which menu bar sections appear in the search panel.
     @Published var searchSectionOrder: [MenuBarSection.Name] = Defaults.DefaultValue.searchSectionOrder
         .compactMap(MenuBarSection.Name.init(rawValue:))
@@ -117,6 +124,7 @@ final class AdvancedSettings: ObservableObject {
         Defaults.ifPresent(key: .useLCSSortingOnNotchedDisplays, assign: &useLCSSortingOnNotchedDisplays)
         Defaults.ifPresent(key: .enableMenuBarItemOverflow, assign: &enableMenuBarItemOverflow)
         Defaults.ifPresent(key: .useAXClickDelivery, assign: &useAXClickDelivery)
+        Defaults.ifPresent(key: .useSyntheticCursorMoves, assign: &useSyntheticCursorMoves)
         Defaults.ifPresent(key: .searchIncludeVisible, assign: &searchIncludeVisible)
         Defaults.ifPresent(key: .searchIncludeHidden, assign: &searchIncludeHidden)
         Defaults.ifPresent(key: .searchIncludeAlwaysHidden, assign: &searchIncludeAlwaysHidden)
@@ -184,6 +192,7 @@ final class AdvancedSettings: ObservableObject {
         $useLCSSortingOnNotchedDisplays.persistToDefaults(key: .useLCSSortingOnNotchedDisplays, in: &c)
         $enableMenuBarItemOverflow.persistToDefaults(key: .enableMenuBarItemOverflow, in: &c)
         $useAXClickDelivery.persistToDefaults(key: .useAXClickDelivery, in: &c)
+        $useSyntheticCursorMoves.persistToDefaults(key: .useSyntheticCursorMoves, in: &c)
         $searchSectionOrder.persistToDefaults(
             key: .searchSectionOrder,
             transform: { $0.map(\.rawValue) },
@@ -238,6 +247,8 @@ final class AdvancedSettings: ObservableObject {
                 enableMenuBarItemOverflow = boolValue
             case "useAXClickDelivery":
                 useAXClickDelivery = boolValue
+            case "useSyntheticCursorMoves":
+                useSyntheticCursorMoves = boolValue
             case "searchIncludeVisible":
                 searchIncludeVisible = boolValue
             case "searchIncludeHidden":
