@@ -9,20 +9,22 @@
 import AppKit
 import Combine
 import Foundation
+import Observation
 import SwiftUI
 
 /// Settings model for managing Settings URI automation and whitelist.
 @MainActor
-final class AutomationSettings: ObservableObject {
-    // MARK: - Published Properties
+@Observable
+final class AutomationSettings {
+    // MARK: - Observable Properties
 
-    @Published var isSettingsURIEnabled: Bool {
+    var isSettingsURIEnabled: Bool {
         didSet {
             Defaults.set(isSettingsURIEnabled, forKey: .settingsURIEnabled)
         }
     }
 
-    @Published var whitelistedApps: [WhitelistedApp] = []
+    var whitelistedApps: [WhitelistedApp] = []
 
     // MARK: - Types
 
@@ -47,6 +49,7 @@ final class AutomationSettings: ObservableObject {
 
     // MARK: - Private Properties
 
+    @ObservationIgnored
     private var cancellables = Set<AnyCancellable>()
 
     // MARK: - Initialization

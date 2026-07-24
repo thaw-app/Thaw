@@ -354,7 +354,7 @@ private final class IceBarHostingView: NSHostingView<IceBarContentView> {
 
 private struct IceBarContentView: View {
     @ObservedObject var appState: AppState
-    @ObservedObject var colorManager: IceBarColorManager
+    let colorManager: IceBarColorManager
     @ObservedObject var itemManager: MenuBarItemManager
     @ObservedObject var imageCache: MenuBarItemImageCache
     @ObservedObject var menuBarManager: MenuBarManager

@@ -6,8 +6,8 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import Combine
 import Ifrit
+import Observation
 import SwiftUI
 
 // MARK: - SearchGroup
@@ -57,24 +57,20 @@ private struct SearchItem: Searchable {
 /// the ranked results by pane into ``SearchGroup``s for
 /// ``SearchResultsList``.
 @MainActor
-final class SearchModel: ObservableObject {
-    @Published var searchText = ""
-    @Published var displayedGroups = [SearchGroup]()
+@Observable
+final class SearchModel {
+    var searchText = "" {
+        didSet {
+            updateDisplayedItems()
+        }
+    }
+
+    var displayedGroups = [SearchGroup]()
 
     let fuse = Fuse(threshold: 0.5)
 
     /// The static search corpus, tokenized once and reused across queries.
     private let searchItems = SearchIndex.entries.map(SearchItem.init)
-
-    private var cancellables = Set<AnyCancellable>()
-
-    init() {
-        $searchText
-            .sink { [weak self] _ in
-                self?.updateDisplayedItems()
-            }
-            .store(in: &cancellables)
-    }
 
     /// Rebuilds `displayedGroups` from the current `searchText`.
     func updateDisplayedItems() {

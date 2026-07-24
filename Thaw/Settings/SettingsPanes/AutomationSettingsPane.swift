@@ -12,8 +12,8 @@ import UniformTypeIdentifiers
 
 struct AutomationSettingsPane: View {
     @EnvironmentObject var appState: AppState
-    @StateObject private var settings = AutomationSettings()
-    @StateObject private var hookSettings = AutomationHookSettings()
+    @State private var settings = AutomationSettings()
+    @State private var hookSettings = AutomationHookSettings()
     @State private var newBundleId: String = ""
     @State private var isShowingAddError = false
     @State private var addErrorMessage = ""

@@ -8,6 +8,7 @@
 
 import Combine
 import Foundation
+import Observation
 
 /// Manages the two global profile hooks shown in AutomationSettingsPane.
 ///
@@ -15,15 +16,16 @@ import Foundation
 /// writes them directly through ProfileManager and does not need to be
 /// mirrored here.
 @MainActor
-final class AutomationHookSettings: ObservableObject {
-    @Published var globalPreHook: HookScript? {
+@Observable
+final class AutomationHookSettings {
+    var globalPreHook: HookScript? {
         didSet {
             guard !suppressPersist else { return }
             HookScript.saveGlobal(globalPreHook, phase: .pre)
         }
     }
 
-    @Published var globalPostHook: HookScript? {
+    var globalPostHook: HookScript? {
         didSet {
             guard !suppressPersist else { return }
             HookScript.saveGlobal(globalPostHook, phase: .post)
@@ -31,7 +33,8 @@ final class AutomationHookSettings: ObservableObject {
     }
 
     /// True while loading from defaults; suppresses writeback in the
-    /// @Published didSet so we do not echo the initial load back to disk.
+    /// didSet so we do not echo the initial load back to disk.
+    @ObservationIgnored
     private var suppressPersist = false
 
     init() {
