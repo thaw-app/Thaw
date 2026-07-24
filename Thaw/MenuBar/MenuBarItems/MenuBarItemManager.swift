@@ -66,21 +66,59 @@ actor SimpleSemaphore {
     /// An error that indicates the semaphore wait timed out.
     struct TimeoutError: Error {}
 
+    private enum WaitOutcome {
+        case acquired
+        case timedOut
+    }
+
     /// Waits for, or decrements, the semaphore with a timeout.
     /// Throws ``CancellationError`` on cancellation or
     /// ``TimeoutError`` on timeout.
+    ///
+    /// Invariant 1: on `TimeoutError`, the semaphore's state is exactly as
+    /// if this call never happened (no permit held, no waiter left behind).
+    /// Invariant 2: on normal return, exactly one permit is held.
     func wait(timeout: Duration) async throws {
-        try await withThrowingTaskGroup(of: Void.self) { group in
+        let outcome: WaitOutcome = try await withThrowingTaskGroup(of: WaitOutcome.self) { group in
             group.addTask {
                 try await self.wait()
+                return .acquired
             }
             group.addTask {
                 try await Task.sleep(for: timeout)
-                throw TimeoutError()
+                return .timedOut
             }
-            // The first task to finish (or throw) wins.
-            _ = try await group.next()
+            // The first child to finish wins. next()! is safe: the group
+            // always has exactly two children at this point.
+            let first = try await group.next()!
             group.cancelAll()
+            if first == .timedOut {
+                // The acquire child may STILL have won the race against
+                // cancellation (it may have decremented `value` before
+                // cancelAll() landed). Drain it: an .acquired result means
+                // we hold a permit nobody will use, so give it back to
+                // preserve invariant 1. A CancellationError from the drain
+                // is the normal case (the acquire child was cancelled
+                // cleanly before winning) and is swallowed.
+                do {
+                    while let drained = try await group.next() {
+                        if drained == .acquired {
+                            self.signal()
+                        }
+                    }
+                } catch is CancellationError {
+                    // Acquire child cancelled cleanly — nothing held.
+                }
+            } else {
+                // Acquired. Drain the cancelled timeout-sleep child and
+                // ignore its error (CancellationError); this preserves
+                // invariant 2.
+                while (try? await group.next()) != nil {}
+            }
+            return first
+        }
+        if outcome == .timedOut {
+            throw TimeoutError()
         }
     }
 
@@ -3282,8 +3320,7 @@ extension MenuBarItemManager {
             try await eventSemaphore.wait(timeout: .milliseconds(3500))
             acquiredSemaphore = true
         } catch is SimpleSemaphore.TimeoutError {
-            MenuBarItemManager.diagLog.error("eventSemaphore timed out (3.5s) in postMoveEvents")
-            await eventSemaphore.reset(to: 1)
+            MenuBarItemManager.diagLog.error("eventSemaphore timed out (3.5s) in postMoveEvents, retrying once")
             do {
                 try await eventSemaphore.wait(timeout: .milliseconds(3500))
                 acquiredSemaphore = true
@@ -3787,8 +3824,7 @@ extension MenuBarItemManager {
             try await eventSemaphore.wait(timeout: .milliseconds(3500))
             acquiredSemaphore = true
         } catch is SimpleSemaphore.TimeoutError {
-            MenuBarItemManager.diagLog.error("eventSemaphore timed out (3.5s) in postClickEvents for \(item.logString)")
-            await eventSemaphore.reset(to: 1)
+            MenuBarItemManager.diagLog.error("eventSemaphore timed out (3.5s) in postClickEvents for \(item.logString), retrying once")
             do {
                 try await eventSemaphore.wait(timeout: .milliseconds(3500))
                 acquiredSemaphore = true
