@@ -9,30 +9,28 @@
 @testable import Thaw
 import XCTest
 
-// MARK: - OnboardingSlide Tests
+// MARK: - ThawTourSlide Tests
 
-final class OnboardingSlideTests: XCTestCase {
+final class ThawTourSlideTests: XCTestCase {
     // MARK: - Ordering invariant
 
-    // The onboarding flow relies on a fixed slide order: `welcome` must be
-    // first, and `permissions` must be last. The "Skip" button jumps to
-    // `slides.count - 1`, `OnboardingSheet/isLast` gates the first-launch
-    // permissions handoff, and the zoom reset keys off the welcome slide.
-    // Reordering the enum would silently break those flows, so lock the
-    // endpoints here.
+    // The tour relies on a fixed slide order: `welcome` must be first, and
+    // the remaining slides loop back to `menuBarManagement` once the last
+    // one finishes. Reordering the enum would silently break that loop, so
+    // lock the endpoints here.
 
     func testWelcomeIsFirst() {
-        XCTAssertEqual(OnboardingSlide.allCases.first, .welcome)
+        XCTAssertEqual(ThawTourSlide.allCases.first, .welcome)
     }
 
-    func testPermissionsIsLast() {
-        XCTAssertEqual(OnboardingSlide.allCases.last, .permissions)
+    func testProfilesIsLast() {
+        XCTAssertEqual(ThawTourSlide.allCases.last, .profiles)
     }
 
     // MARK: - id
 
     func testIdMatchesRawValue() {
-        for slide in OnboardingSlide.allCases {
+        for slide in ThawTourSlide.allCases {
             XCTAssertEqual(slide.id, slide.rawValue)
         }
     }
@@ -40,9 +38,21 @@ final class OnboardingSlideTests: XCTestCase {
     // MARK: - Content
 
     func testEveryCaseHasNonEmptyTitleAndDescription() {
-        for slide in OnboardingSlide.allCases {
-            XCTAssertFalse(String(localized: slide.title).isEmpty, "title for \(slide) should not be empty")
-            XCTAssertFalse(String(localized: slide.description).isEmpty, "description for \(slide) should not be empty")
+        for slide in ThawTourSlide.allCases {
+            XCTAssertFalse(slide.title.isEmpty, "title for \(slide) should not be empty")
+            XCTAssertFalse(slide.description.isEmpty, "description for \(slide) should not be empty")
+        }
+    }
+
+    // MARK: - autoAdvanceDelay
+
+    func testWelcomeHasNoAutoAdvanceDelay() {
+        XCTAssertEqual(ThawTourSlide.welcome.autoAdvanceDelay, 0)
+    }
+
+    func testLoopingSlidesHavePositiveAutoAdvanceDelay() {
+        for slide in ThawTourSlide.allCases where slide != .welcome {
+            XCTAssertGreaterThan(slide.autoAdvanceDelay, 0, "\(slide) should auto-advance")
         }
     }
 }
