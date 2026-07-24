@@ -1,5 +1,5 @@
 {
-  "originHash" : "81c7d3ca8ed1d78f1668c42192530f02f316a4e1ec0dbc1ca59b56d35d7da8b0",
+  "originHash" : "4308d859e825a88711a907ede419bb01e73337ac325e7bf72e86a5dde88ccc86",
   "pins" : [
     {
       "identity" : "axswift6",
@@ -44,6 +44,42 @@
       "state" : {
         "revision" : "d46d456107feacc80711b21847b82b07bd9fb46e",
         "version" : "2.9.3"
+      }
+    },
+    {
+      "identity" : "swift-async-algorithms",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-async-algorithms",
+      "state" : {
+        "revision" : "3da39bbc4e687d4192af7c9cf4eab805745a0b9c",
+        "version" : "1.1.5"
+      }
+    },
+    {
+      "identity" : "swift-collections",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-collections",
+      "state" : {
+        "revision" : "a0cb0954ecb21e4e31b0070e6ed5674e8556685a",
+        "version" : "1.6.0"
+      }
+    },
+    {
+      "identity" : "swift-subprocess",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/swiftlang/swift-subprocess",
+      "state" : {
+        "revision" : "13d087685b95d64d6aac9b94500d347bbe84c39b",
+        "version" : "0.4.0"
+      }
+    },
+    {
+      "identity" : "swift-system",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-system",
+      "state" : {
+        "revision" : "50688cacbd41d547e9eb9f7a213542340b7c442b",
+        "version" : "1.7.5"
       }
     }
   ],

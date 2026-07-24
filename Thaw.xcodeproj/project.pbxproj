@@ -13,6 +13,9 @@
 		17F71BB52B880B4500905CBA /* CompactSlider in Frameworks */ = {isa = PBXBuildFile; productRef = 17F71BB42B880B4500905CBA /* CompactSlider */; };
 		7127A9FF2C4886D100D99DEF /* IfritStatic in Frameworks */ = {isa = PBXBuildFile; productRef = 7127A9FE2C4886D100D99DEF /* IfritStatic */; };
 		7168EE532E281CBC00FF9830 /* AXSwift6 in Frameworks */ = {isa = PBXBuildFile; productRef = 7168EE522E281CBC00FF9830 /* AXSwift6 */; };
+		9570E4A96CDEC0BEBAA5573F /* AsyncAlgorithms in Frameworks */ = {isa = PBXBuildFile; productRef = 43C5F05D006747974015EBD9 /* AsyncAlgorithms */; };
+		765B9E4A97DD40A18EE1F15D /* Collections in Frameworks */ = {isa = PBXBuildFile; productRef = 6937234B615A4E0BA19DFCF5 /* Collections */; };
+		C9858DF951474BBA89EEC700 /* Subprocess in Frameworks */ = {isa = PBXBuildFile; productRef = F723B15E4E92458CA2A3A2D5 /* Subprocess */; };
 		7188A68C2E27F9ED008F131D /* MenuBarItemService.xpc in Embed XPC Services */ = {isa = PBXBuildFile; fileRef = 7188A6832E27F9ED008F131D /* MenuBarItemService.xpc */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
@@ -103,6 +106,9 @@
 			files = (
 				170423D92B56DE78004A2549 /* Sparkle in Frameworks */,
 				7127A9FF2C4886D100D99DEF /* IfritStatic in Frameworks */,
+				9570E4A96CDEC0BEBAA5573F /* AsyncAlgorithms in Frameworks */,
+				765B9E4A97DD40A18EE1F15D /* Collections in Frameworks */,
+				C9858DF951474BBA89EEC700 /* Subprocess in Frameworks */,
 				175061912B1543DD003144CD /* LaunchAtLogin in Frameworks */,
 				1787C4272B16890B002F50DF /* AXSwift6 in Frameworks */,
 				17F71BB52B880B4500905CBA /* CompactSlider in Frameworks */,
@@ -173,6 +179,8 @@
 				170423D82B56DE78004A2549 /* Sparkle */,
 				17F71BB42B880B4500905CBA /* CompactSlider */,
 				7127A9FE2C4886D100D99DEF /* IfritStatic */,
+				43C5F05D006747974015EBD9 /* AsyncAlgorithms */,
+				F723B15E4E92458CA2A3A2D5 /* Subprocess */,
 			);
 			productName = Ice;
 			productReference = 7166832A2A767E6A006ABF84 /* Thaw.app */;
@@ -277,6 +285,9 @@
 				170423D72B56DE78004A2549 /* XCRemoteSwiftPackageReference "Sparkle" */,
 				17F71BB32B880B4500905CBA /* XCRemoteSwiftPackageReference "CompactSlider" */,
 				7127A9FB2C4881BC00D99DEF /* XCRemoteSwiftPackageReference "Ifrit" */,
+				1ADDA61D49BE1BA7CA5EA059 /* XCRemoteSwiftPackageReference "swift-async-algorithms" */,
+				9DDA1A418DCA43C89DE5A80F /* XCRemoteSwiftPackageReference "swift-collections" */,
+				7A0DF10D46BE41C9B7301DBB /* XCRemoteSwiftPackageReference "swift-subprocess" */,
 			);
 			preferredProjectObjectVersion = 100;
 			productRefGroup = 7166832B2A767E6A006ABF84 /* Products */;
@@ -817,6 +828,30 @@
 				minimumVersion = 4.0.0;
 			};
 		};
+		1ADDA61D49BE1BA7CA5EA059 /* XCRemoteSwiftPackageReference "swift-async-algorithms" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-async-algorithms";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
+			};
+		};
+		9DDA1A418DCA43C89DE5A80F /* XCRemoteSwiftPackageReference "swift-collections" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-collections";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
+			};
+		};
+		7A0DF10D46BE41C9B7301DBB /* XCRemoteSwiftPackageReference "swift-subprocess" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/swiftlang/swift-subprocess";
+			requirement = {
+				kind = upToNextMinorVersion;
+				minimumVersion = 0.4.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -849,6 +884,21 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 1787C4252B16890B002F50DF /* XCRemoteSwiftPackageReference "AXSwift6" */;
 			productName = AXSwift6;
+		};
+		43C5F05D006747974015EBD9 /* AsyncAlgorithms */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1ADDA61D49BE1BA7CA5EA059 /* XCRemoteSwiftPackageReference "swift-async-algorithms" */;
+			productName = AsyncAlgorithms;
+		};
+		6937234B615A4E0BA19DFCF5 /* Collections */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9DDA1A418DCA43C89DE5A80F /* XCRemoteSwiftPackageReference "swift-collections" */;
+			productName = Collections;
+		};
+		F723B15E4E92458CA2A3A2D5 /* Subprocess */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7A0DF10D46BE41C9B7301DBB /* XCRemoteSwiftPackageReference "swift-subprocess" */;
+			productName = Subprocess;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
