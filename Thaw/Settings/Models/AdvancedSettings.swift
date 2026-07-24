@@ -64,6 +64,13 @@ final class AdvancedSettings: ObservableObject {
     /// Only affects notched displays; non-notched displays never use this path.
     @Published var enableMenuBarItemOverflow = Defaults.DefaultValue.enableMenuBarItemOverflow
 
+    /// A Boolean value that controls whether left-clicks on menu bar items
+    /// from the IceBar are delivered via an accessibility action (AXShowMenu,
+    /// falling back to AXPress) instead of a synthetic mouse click.
+    /// Experimental; automatically falls back to the synthetic click on any
+    /// failure. Moves and right-clicks are unaffected.
+    @Published var useAXClickDelivery = Defaults.DefaultValue.useAXClickDelivery
+
     /// The order in which menu bar sections appear in the search panel.
     @Published var searchSectionOrder: [MenuBarSection.Name] = Defaults.DefaultValue.searchSectionOrder
         .compactMap(MenuBarSection.Name.init(rawValue:))
@@ -109,6 +116,7 @@ final class AdvancedSettings: ObservableObject {
         Defaults.ifPresent(key: .enableDiagnosticLogging, assign: &enableDiagnosticLogging)
         Defaults.ifPresent(key: .useLCSSortingOnNotchedDisplays, assign: &useLCSSortingOnNotchedDisplays)
         Defaults.ifPresent(key: .enableMenuBarItemOverflow, assign: &enableMenuBarItemOverflow)
+        Defaults.ifPresent(key: .useAXClickDelivery, assign: &useAXClickDelivery)
         Defaults.ifPresent(key: .searchIncludeVisible, assign: &searchIncludeVisible)
         Defaults.ifPresent(key: .searchIncludeHidden, assign: &searchIncludeHidden)
         Defaults.ifPresent(key: .searchIncludeAlwaysHidden, assign: &searchIncludeAlwaysHidden)
@@ -175,6 +183,7 @@ final class AdvancedSettings: ObservableObject {
         )
         $useLCSSortingOnNotchedDisplays.persistToDefaults(key: .useLCSSortingOnNotchedDisplays, in: &c)
         $enableMenuBarItemOverflow.persistToDefaults(key: .enableMenuBarItemOverflow, in: &c)
+        $useAXClickDelivery.persistToDefaults(key: .useAXClickDelivery, in: &c)
         $searchSectionOrder.persistToDefaults(
             key: .searchSectionOrder,
             transform: { $0.map(\.rawValue) },
@@ -227,6 +236,8 @@ final class AdvancedSettings: ObservableObject {
                 useLCSSortingOnNotchedDisplays = boolValue
             case "enableMenuBarItemOverflow":
                 enableMenuBarItemOverflow = boolValue
+            case "useAXClickDelivery":
+                useAXClickDelivery = boolValue
             case "searchIncludeVisible":
                 searchIncludeVisible = boolValue
             case "searchIncludeHidden":

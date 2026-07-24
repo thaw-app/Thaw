@@ -4030,6 +4030,16 @@ extension MenuBarItemManager {
             throw EventError.cannotComplete
         }
 
+        if mouseButton == .left, appState.settings.advanced.useAXClickDelivery == true {
+            do {
+                try await AXItemActivator.activate(item: item)
+                MenuBarItemManager.diagLog.debug("Activated \(item.logString) via AX click delivery")
+                return
+            } catch {
+                MenuBarItemManager.diagLog.debug("AX activation failed (\(error)), falling back to synthetic click")
+            }
+        }
+
         if !skipInputPause {
             try await waitForUserToPauseInput()
         }
