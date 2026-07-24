@@ -7,37 +7,36 @@
 //  Licensed under the GNU GPLv3
 
 import Cocoa
+import os.lock
+import Synchronization
 
 /// An object that receives events from a defined point in
 /// the event stream.
-final class EventTap: @unchecked Sendable {
+///
+/// Invariant: `callback`, `runLoop`, and the `creation*` parameters are `let`s
+/// set once at init and never mutated. The only mutable state (`machPort`,
+/// `source`, `isInvalidated`) lives in `state`, an `OSAllocatedUnfairLock`, and
+/// is only ever read or written under that lock — including from the
+/// `sharedCallback` C callback (which runs on `runLoop`, always the main run
+/// loop) and from `enable()`/`disable()` calls made off the main actor.
+final nonisolated class EventTap: @unchecked Sendable {
     /// Pool to limit concurrent EventTaps and prevent Mach port leaks
-    private static nonisolated(unsafe) var activeTaps: Set<ObjectIdentifier> = []
+    private static let activeTaps = Mutex<Set<ObjectIdentifier>>([])
     private static let maxConcurrentTaps = 10
-    private static let tapQueue = DispatchQueue(label: "EventTap.pool", attributes: .concurrent)
 
     /// Request access to create a new tap
     private static func requestTapCreation() -> Bool {
-        return tapQueue.sync(flags: .barrier) {
-            if activeTaps.count < maxConcurrentTaps {
-                return true
-            }
-            return false
-        }
+        activeTaps.withLock { $0.count < maxConcurrentTaps }
     }
 
     /// Register a new tap
     private static func registerTap(_ tap: EventTap) {
-        _ = tapQueue.sync(flags: .barrier) {
-            activeTaps.insert(ObjectIdentifier(tap))
-        }
+        activeTaps.withLock { _ = $0.insert(ObjectIdentifier(tap)) }
     }
 
     /// Unregister a tap
     private static func unregisterTap(_ tap: EventTap) {
-        _ = tapQueue.sync(flags: .barrier) {
-            activeTaps.remove(ObjectIdentifier(tap))
-        }
+        activeTaps.withLock { _ = $0.remove(ObjectIdentifier(tap)) }
     }
 
     /// Constants that specify the possible insertion points
@@ -96,8 +95,13 @@ final class EventTap: @unchecked Sendable {
         }
     }
 
-    private var machPort: CFMachPort?
-    private var source: CFRunLoopSource?
+    private struct TapState {
+        var machPort: CFMachPort?
+        var source: CFRunLoopSource?
+        var isInvalidated = false
+    }
+
+    private let state = OSAllocatedUnfairLock(uncheckedState: TapState())
     private let runLoop: CFRunLoop
     private let callback: (EventTap, CGEvent) -> CGEvent?
 
@@ -113,15 +117,19 @@ final class EventTap: @unchecked Sendable {
     /// A Boolean value that indicates whether the tap is actively
     /// listening for events.
     var isEnabled: Bool {
-        guard let machPort else { return false }
-        return CGEvent.tapIsEnabled(tap: machPort)
+        state.withLock { state in
+            guard let machPort = state.machPort else { return false }
+            return CGEvent.tapIsEnabled(tap: machPort)
+        }
     }
 
     /// A Boolean value that indicates whether the tap is valid and
     /// able to receive events.
     var isValid: Bool {
-        guard let machPort else { return false }
-        return CFMachPortIsValid(machPort)
+        state.withLock { state in
+            guard let machPort = state.machPort else { return false }
+            return CFMachPortIsValid(machPort)
+        }
     }
 
     /// Creates a new event tap for the specified event types.
@@ -189,11 +197,16 @@ final class EventTap: @unchecked Sendable {
         // Register this tap
         Self.registerTap(self)
 
-        self.machPort = machPort
-        self.source = source
+        // `withLockUnchecked` (not `withLock`) because `machPort`/`source`
+        // are `CFMachPort`/`CFRunLoopSource`, non-`Sendable` types that
+        // `withLock`'s `@Sendable` closure can't capture. Safe here: this is
+        // the only reference to these locals, handed off to `state` under
+        // the lock and never touched outside it again.
+        state.withLockUnchecked { state in
+            state.machPort = machPort
+            state.source = source
+        }
     }
-
-    private var isInvalidated = false
 
     /// Creates a new event tap for the specified event type.
     ///
@@ -251,12 +264,15 @@ final class EventTap: @unchecked Sendable {
             return true
         }
         let tapLabel = self.label
-        if machPort == nil, !isInvalidated {
+        let (hasMachPort, invalidated) = state.withLock { state in
+            (state.machPort != nil, state.isInvalidated)
+        }
+        if !hasMachPort, !invalidated {
             // Tap was never successfully created.
             Self.diagLog.warning("Event tap \"\(tapLabel)\" has no Mach port, attempting creation")
             return recreate()
         }
-        if isInvalidated {
+        if invalidated {
             Self.diagLog.warning("Event tap \"\(tapLabel)\" was invalidated, cannot recreate")
             return false
         }
@@ -270,15 +286,17 @@ final class EventTap: @unchecked Sendable {
         let tapLabel = self.label
         // Clean up the old tap without setting isInvalidated (we want to reuse this instance).
         Self.unregisterTap(self)
-        if let source {
-            CFRunLoopRemoveSource(runLoop, source, .commonModes)
-            self.source = nil
-        }
-        if let machPort {
-            CGEvent.tapEnable(tap: machPort, enable: false)
-            CFMachPortInvalidate(machPort)
-            self.machPort = nil
-            Unmanaged.passUnretained(self).release()
+        state.withLock { state in
+            if let source = state.source {
+                CFRunLoopRemoveSource(runLoop, source, .commonModes)
+                state.source = nil
+            }
+            if let machPort = state.machPort {
+                CGEvent.tapEnable(tap: machPort, enable: false)
+                CFMachPortInvalidate(machPort)
+                state.machPort = nil
+                Unmanaged.passUnretained(self).release()
+            }
         }
 
         guard Self.requestTapCreation() else {
@@ -303,28 +321,40 @@ final class EventTap: @unchecked Sendable {
         }
 
         Self.registerTap(self)
-        self.machPort = newMachPort
-        self.source = newSource
+        // `withLockUnchecked`: see the comment at the other `machPort`/
+        // `source` assignment above — same non-`Sendable` capture issue.
+        state.withLockUnchecked { state in
+            state.machPort = newMachPort
+            state.source = newSource
+        }
         Self.diagLog.info("Successfully recreated event tap \"\(tapLabel)\"")
         return true
     }
 
     /// Invalidates the event tap and releases its resources.
     func invalidate() {
-        guard !isInvalidated else {
+        let alreadyInvalidated = state.withLock { state -> Bool in
+            if state.isInvalidated {
+                return true
+            }
+            state.isInvalidated = true
+            return false
+        }
+        guard !alreadyInvalidated else {
             return
         }
-        isInvalidated = true
         Self.unregisterTap(self)
-        if let source {
-            CFRunLoopRemoveSource(runLoop, source, .commonModes)
-            self.source = nil
-        }
-        if let machPort {
-            CGEvent.tapEnable(tap: machPort, enable: false)
-            CFMachPortInvalidate(machPort)
-            self.machPort = nil
-            Unmanaged.passUnretained(self).release()
+        state.withLock { state in
+            if let source = state.source {
+                CFRunLoopRemoveSource(runLoop, source, .commonModes)
+                state.source = nil
+            }
+            if let machPort = state.machPort {
+                CGEvent.tapEnable(tap: machPort, enable: false)
+                CFMachPortInvalidate(machPort)
+                state.machPort = nil
+                Unmanaged.passUnretained(self).release()
+            }
         }
     }
 
@@ -372,15 +402,19 @@ final class EventTap: @unchecked Sendable {
 
     /// Enables the tap.
     func enable() {
-        guard let source, let machPort else { return }
-        CGEvent.tapEnable(tap: machPort, enable: true)
-        CFRunLoopAddSource(runLoop, source, .commonModes)
+        state.withLock { state in
+            guard let source = state.source, let machPort = state.machPort else { return }
+            CGEvent.tapEnable(tap: machPort, enable: true)
+            CFRunLoopAddSource(runLoop, source, .commonModes)
+        }
     }
 
     /// Disables the tap.
     func disable() {
-        guard let source, let machPort else { return }
-        CFRunLoopRemoveSource(runLoop, source, .commonModes)
-        CGEvent.tapEnable(tap: machPort, enable: false)
+        state.withLock { state in
+            guard let source = state.source, let machPort = state.machPort else { return }
+            CFRunLoopRemoveSource(runLoop, source, .commonModes)
+            CGEvent.tapEnable(tap: machPort, enable: false)
+        }
     }
 }
