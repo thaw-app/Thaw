@@ -49,9 +49,11 @@ struct PermissionsWindow: Scene {
         if Defaults.bool(forKey: .hasCompletedFirstLaunch) {
             PermissionsView<AppPermissions>()
         } else {
-            OnboardingSheet {
+            ThawOnboardingView {
                 Defaults.set(true, forKey: .hasSeenOnboarding)
+                appState.completeFirstLaunchSetup()
             }
+            .frame(width: ThawOnboardingWindowMetrics.width, height: ThawOnboardingWindowMetrics.height)
         }
     }
 }
