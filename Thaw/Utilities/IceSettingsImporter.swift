@@ -188,13 +188,4 @@ struct IceSettingsImporter {
 
         return imported
     }
-
-    /// Imports control item positions and visibility flags from Ice.
-    ///
-    /// NOTE: We no longer migrate control item autosave data to avoid
-    /// collapsing sections when macOS repositions status items. Users
-    /// will need to re-place section dividers manually after import.
-    private func importControlItemSettings(from _: UserDefaults) -> Int {
-        return 0
-    }
 }

@@ -21,9 +21,6 @@ final class UpdatesManager: NSObject, ObservableObject {
     /// The shared app state.
     private(set) weak var appState: AppState?
 
-    /// Whether the user has already handled the permission prompt.
-    private var hasHandledPermission = Defaults.bool(forKey: .hasSeenUpdateConsent)
-
     /// Tracks whether the updater has been started.
     private var hasStartedUpdater = false
 

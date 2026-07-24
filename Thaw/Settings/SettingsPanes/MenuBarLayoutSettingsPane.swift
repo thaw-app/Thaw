@@ -301,14 +301,6 @@ struct MenuBarLayoutSettingsPane: View {
         }
     }
 
-    private var loadingMenuBarItems: some View {
-        VStack {
-            Text("Loading menu bar items…")
-            ProgressView()
-        }
-        .font(.title)
-    }
-
     @ViewBuilder
     private func layoutBar(for name: MenuBarSection.Name) -> some View {
         if

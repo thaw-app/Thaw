@@ -415,19 +415,6 @@ private struct IceBarContentView: View {
         return menuBarHeight > 0 ? menuBarHeight : nil
     }
 
-    /// The maximum rendered width of any item in the current section.
-    private var maxItemWidth: CGFloat {
-        guard let maxHeight = itemMaxHeight, maxHeight > 0 else { return 0 }
-        let widths = items.compactMap { item -> CGFloat? in
-            guard let cachedImage = imageCache.images[item.tag] else { return nil }
-            let image = cachedImage.nsImage
-            guard image.size.height > 0 else { return image.size.width }
-            let scale = maxHeight / image.size.height
-            return image.size.width * scale
-        }
-        return widths.max() ?? maxHeight
-    }
-
     /// Per-column maximum widths for the grid layout.
     private var columnWidths: [CGFloat] {
         guard let maxHeight = itemMaxHeight, maxHeight > 0 else { return [] }
