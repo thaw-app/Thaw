@@ -445,6 +445,32 @@ extension CGImage {
         }
         return context.isTransparent()
     }
+
+    // MARK: Detaching
+
+    /// Returns a copy that owns its own pixel buffer.
+    ///
+    /// `cropping(to:)` returns an image sharing the parent's data provider, so a
+    /// small cached crop pins the entire multi-MB composite it was cut from.
+    /// Redrawing into a fresh bitmap context detaches it.
+    func detachedCopy() -> CGImage {
+        guard width > 0, height > 0 else { return self }
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let bitmapInfo = CGImageAlphaInfo.premultipliedLast.rawValue
+        guard let context = CGContext(
+            data: nil,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: colorSpace,
+            bitmapInfo: bitmapInfo
+        ) else {
+            return self
+        }
+        context.draw(self, in: CGRect(x: 0, y: 0, width: width, height: height))
+        return context.makeImage() ?? self
+    }
 }
 
 // MARK: - Collection where Element == MenuBarItem

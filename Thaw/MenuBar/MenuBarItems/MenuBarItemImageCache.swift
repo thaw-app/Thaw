@@ -785,7 +785,7 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
                 height: bounds.height * scale
             )
 
-            let croppedImage = compositeImage.cropping(to: cropRect)
+            let croppedImage = compositeImage.cropping(to: cropRect)?.detachedCopy()
             guard let croppedImage else {
                 cropNilCount += 1
                 recordCaptureFailure(for: item)
@@ -1047,7 +1047,7 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
             // above already rejects fully-transparent captures. Individual
             // transparent crops are intentional spacers. Failure tracking
             // lives in compositeCapture/individualCapture only.
-            guard let image = compositeImage.cropping(to: cropRect) else {
+            guard let image = compositeImage.cropping(to: cropRect)?.detachedCopy() else {
                 continue
             }
             newImages[item.tag] = CapturedImage(cgImage: image, scale: scale)
