@@ -49,6 +49,22 @@ enum AXHelpers {
         try? element.attribute(.frame)
     }
 
+    /// The element's `AXIdentifier` attribute (e.g. `com.apple.menuextra.wifi`
+    /// for a Control Center-hosted module), when the element publishes one.
+    static func identifier(for element: UIElement) -> String? {
+        try? element.attribute(.identifier)
+    }
+
+    /// The element's `AXHelp` attribute (tooltip/description string).
+    static func help(for element: UIElement) -> String? {
+        try? element.attribute(.help)
+    }
+
+    /// The element's `AXTitle` attribute.
+    static func title(for element: UIElement) -> String? {
+        try? element.attribute(.title)
+    }
+
     static func role(for element: UIElement) -> Role? {
         try? element.role()
     }
