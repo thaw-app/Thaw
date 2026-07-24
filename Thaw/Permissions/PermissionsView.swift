@@ -11,6 +11,12 @@ import SwiftUI
 /// The standalone permissions screen: shows a card per required permission,
 /// an optional Ice settings import prompt, and Quit/Continue actions that
 /// gate first-launch setup.
+///
+/// Known warning: the compiler notes Manager's ObservableObject conformance
+/// "may be isolated" (IsolatedConformances). Both conformers (AppPermissions
+/// and the preview mock) are @MainActor with nonisolated ObservableObject
+/// conformances, and the view is only used on the main actor; there is no
+/// suppression syntax for this in the current compiler.
 struct PermissionsView<Manager: PermissionsManaging>: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var manager: Manager
@@ -299,6 +305,7 @@ struct PermissionCard: View {
 
 /// A lightweight stand-in for ``AppPermissions`` used by the preview, so it
 /// doesn't need to spin up the real manager and its app machinery.
+@MainActor
 private final class MockPermissionsManager: PermissionsManaging {
     @Published var permissionsState: AppPermissions.PermissionsState = .missing
 

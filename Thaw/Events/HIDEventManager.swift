@@ -985,8 +985,9 @@ extension HIDEventManager {
         let initialSpaceID = Bridging.getActiveSpaceID()
 
         Task {
-            // Give the window under the mouse a chance to focus.
-            try await Task.sleep(for: .milliseconds(250))
+            // Give the window under the mouse a chance to focus. A cancelled
+            // sleep aborts the check instead of running it early.
+            guard (try? await Task.sleep(for: .milliseconds(250))) != nil else { return }
 
             // Don't bother checking the window if the click caused
             // a space change.

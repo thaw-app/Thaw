@@ -176,9 +176,10 @@ final class MenuBarManager: ObservableObject {
                     switch appState.settings.general.rehideStrategy {
                     case .focusedApp, .smart:
                         Task {
-                            // Add delay for smart strategy to allow app focus to settle
+                            // Add delay for smart strategy to allow app focus to settle.
+                            // A cancelled sleep aborts the rehide instead of firing early.
                             let delay: TimeInterval = appState.settings.general.rehideStrategy == .smart ? 0.25 : 0.1
-                            try await Task.sleep(for: .seconds(delay))
+                            guard (try? await Task.sleep(for: .seconds(delay))) != nil else { return }
 
                             // Ignore rehide requests for a short grace period after showing.
                             if let lastShow = self.lastShowTimestamp,

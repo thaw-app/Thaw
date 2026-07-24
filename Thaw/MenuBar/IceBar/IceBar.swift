@@ -752,9 +752,15 @@ private struct IceBarItemView: View {
                 // as the panel hides rather than busy-polling.
                 await panel.waitUntilClosed(timeout: .milliseconds(200))
                 if let liveItem = await liveOnScreenItem(matching: item, on: displayID) {
-                    try await itemManager.click(item: liveItem, with: .left)
-                    let duration = Date.now.timeIntervalSince(clickStartTime)
-                    IceBarItemView.diagLog.debug("leftClick: ✓ completed in \(Int(duration * 1000))ms (on-screen path)")
+                    do {
+                        try await itemManager.click(item: liveItem, with: .left)
+                        let duration = Date.now.timeIntervalSince(clickStartTime)
+                        IceBarItemView.diagLog.debug("leftClick: ✓ completed in \(Int(duration * 1000))ms (on-screen path)")
+                    } catch {
+                        // Surfacing this matters: a swallowed error here is a
+                        // user click that silently does nothing.
+                        IceBarItemView.diagLog.error("leftClick: failed for \(item.logString): \(error)")
+                    }
                 } else {
                     // temporarilyShow handles move, click, and fallback click
                     // internally so that shownInterfaceWindow is always captured
@@ -777,7 +783,13 @@ private struct IceBarItemView: View {
             Task {
                 await panel.waitUntilClosed(timeout: .milliseconds(200))
                 if let liveItem = await liveOnScreenItem(matching: item, on: displayID) {
-                    try await itemManager.click(item: liveItem, with: .right)
+                    do {
+                        try await itemManager.click(item: liveItem, with: .right)
+                    } catch {
+                        // Surfacing this matters: a swallowed error here is a
+                        // user click that silently does nothing.
+                        IceBarItemView.diagLog.error("rightClick: failed for \(item.logString): \(error)")
+                    }
                 } else {
                     let result = await itemManager.temporarilyShow(item: item, clickingWith: .right, on: displayID, fastPath: true)
                     IceBarItemView.diagLog.debug("rightClick: temp-show result=\(result)")

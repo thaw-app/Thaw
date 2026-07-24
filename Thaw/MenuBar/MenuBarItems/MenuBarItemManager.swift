@@ -1428,10 +1428,11 @@ final class MenuBarItemManager: ObservableObject {
                 // new window IDs and relocateNewLeftmostItems no-ops. Re-check
                 // at +2.5s and +5s to catch late arrivals; cacheItemsIfNeeded
                 // bails when window IDs are unchanged, so this is cheap when
-                // the item already showed up on the first pass.
-                try await Task.sleep(for: .seconds(2.5))
+                // the item already showed up on the first pass. A cancelled
+                // sleep skips the remaining re-checks.
+                guard (try? await Task.sleep(for: .seconds(2.5))) != nil else { return }
                 await self?.cacheItemsIfNeeded()
-                try await Task.sleep(for: .seconds(2.5))
+                guard (try? await Task.sleep(for: .seconds(2.5))) != nil else { return }
                 await self?.cacheItemsIfNeeded()
             }
         }

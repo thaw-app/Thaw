@@ -168,17 +168,12 @@ struct MenuBarLayoutSettingsPane: View {
         IceSection {
             layoutBars
         } footer: {
-            // Native grouped Section footer beneath the bars. Concatenated so
+            // Native grouped Section footer beneath the bars. Interpolated so
             // the three translated strings flow as one wrapping paragraph
-            // instead of three fixed lines.
-            (
-                Text("Drag to arrange your menu bar items into different sections.")
-                    + Text(verbatim: " ")
-                    + Text("Move the New Items badge to choose where newly detected items will appear.")
-                    + Text(verbatim: " ")
-                    + Text("Items can also be arranged by ⌘ Command + dragging them in the menu bar.")
-            )
-            .frame(maxWidth: .infinity, alignment: .leading)
+            // instead of three fixed lines (Text + is deprecated on macOS 26;
+            // each inner Text keeps its own localization key).
+            Text("\(Text("Drag to arrange your menu bar items into different sections.")) \(Text("Move the New Items badge to choose where newly detected items will appear.")) \(Text("Items can also be arranged by ⌘ Command + dragging them in the menu bar."))")
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 

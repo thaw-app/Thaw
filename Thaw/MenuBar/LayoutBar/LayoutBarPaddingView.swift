@@ -207,13 +207,21 @@ final class LayoutBarPaddingView: NSView {
         guard let appState = container.appState else {
             return
         }
-        Task {
+        // Explicit strong captures: the move must complete even if the view
+        // is torn down mid-drag; only the longer-lived watchdog below holds
+        // weak references.
+        Task { [self, appState] in
             guard !isStabilizing else { return }
             isStabilizing = true
             await MainActor.run { self.showOverlay(true) }
             // Increased delay to allow macOS to settle after operations like Reset Layout.
             // Prevents transient errors when dragging items immediately after reset.
-            try await Task.sleep(for: .milliseconds(150))
+            // A cancelled sleep must not leave the overlay up and isStabilizing
+            // stuck true (the watchdog that would reset them hasn't started yet).
+            guard (try? await Task.sleep(for: .milliseconds(150))) != nil else {
+                await resetStabilizingStateIfNeeded()
+                return
+            }
 
             let watchdogTask = Task { [weak self, weak appState] in
                 guard let duration = self?.layoutWatchdogDuration() else { return }
