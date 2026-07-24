@@ -7,7 +7,7 @@
 //  Licensed under the GNU GPLv3
 
 import Cocoa
-@preconcurrency import Combine
+import Combine
 
 final class RunLoopLocalEventMonitor {
     private let runLoop = CFRunLoopGetCurrent()

@@ -9,7 +9,7 @@
 import CoreGraphics
 import Foundation
 import os.lock
-@preconcurrency import ScreenCaptureKit
+import ScreenCaptureKit
 
 /// A namespace for screen capture operations.
 enum ScreenCapture {
@@ -225,44 +225,36 @@ enum ScreenCapture {
         return image
     }
 
-    /// Helper to get shareable content using async wrapper
+    /// Helper to get shareable content using ScreenCaptureKit's async API.
+    ///
+    /// `SCShareableContent.current` is the async form of
+    /// `getShareableContentWithCompletionHandler:`. It has no built-in
+    /// cancellation, so it runs inside a child task that races a
+    /// `withTaskCancellationHandler` resume: a cancelled caller aborts promptly
+    /// instead of proceeding to a wasted capture, while a late framework result
+    /// is discarded because the continuation has already been taken.
     private static func getShareableContent() async throws -> SCShareableContent {
         let box = ContinuationBox<SCShareableContent, any Error>()
         return try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
                 box.setContinuation(continuation)
-                SCShareableContent.getWithCompletionHandler(makeShareableContentCompletion(box: box))
+                Task {
+                    do {
+                        let content = try await SCShareableContent.current
+                        box.takeContinuation()?.resume(returning: content)
+                    } catch {
+                        box.takeContinuation()?.resume(throwing: error)
+                    }
+                }
             }
         } onCancel: {
-            // Resume with cancellation error if still pending
-            if let continuation = box.takeContinuation() {
-                continuation.resume(throwing: CancellationError())
-            }
-        }
-    }
-
-    /// Creates a completion handler for SCShareableContent request
-    private static func makeShareableContentCompletion(
-        box: ContinuationBox<SCShareableContent, any Error>
-    ) -> @Sendable (SCShareableContent?, Error?) -> Void {
-        { content, error in
-            guard let continuation = box.takeContinuation() else { return }
-            if let error {
-                continuation.resume(throwing: error)
-            } else if let content {
-                continuation.resume(returning: content)
-            } else {
-                continuation.resume(throwing: ScreenCaptureError.noContent)
-            }
+            // Resume with cancellation error if still pending.
+            box.takeContinuation()?.resume(throwing: CancellationError())
         }
     }
 }
 
 // MARK: - Helper Types
-
-private enum ScreenCaptureError: Error {
-    case noContent
-}
 
 private final class ContinuationBox<T, E: Error>: Sendable {
     private let lock = OSAllocatedUnfairLock<CheckedContinuation<T, E>?>(initialState: nil)

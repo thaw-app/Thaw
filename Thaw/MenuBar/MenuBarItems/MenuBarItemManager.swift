@@ -8,7 +8,11 @@
 
 import AXSwift6
 import Cocoa
-@preconcurrency import Combine
+import Combine
+// @preconcurrency retained: CoreGraphics event types (CGEventSource/CGEvent) are
+// still not Sendable-annotated in the macOS 26/27 SDK, yet are used off the main
+// actor under OSAllocatedUnfairLock for menu-bar event posting. Removing the shim
+// would force @unchecked Sendable wrappers. Drop this once Apple annotates them.
 @preconcurrency import CoreGraphics
 import os.lock
 

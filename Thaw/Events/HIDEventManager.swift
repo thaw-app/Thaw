@@ -8,7 +8,7 @@
 
 import AXSwift6
 import Cocoa
-@preconcurrency import Combine
+import Combine
 import os
 
 /// Manager that monitors input events and implements the features
