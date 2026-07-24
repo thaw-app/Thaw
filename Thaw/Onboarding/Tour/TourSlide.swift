@@ -9,7 +9,7 @@
 import Foundation
 
 /// A single page of the onboarding tour, in the order it's presented.
-enum ThawTourSlide: Int, CaseIterable, Identifiable {
+nonisolated enum ThawTourSlide: Int, CaseIterable, Identifiable {
     case welcome
     case menuBarManagement
     case menuBarAppearance

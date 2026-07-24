@@ -505,7 +505,7 @@ final class MenuBarItemManager: ObservableObject {
         }
     }
 
-    struct NewItemsPlacement: Codable, Equatable {
+    nonisolated struct NewItemsPlacement: Codable, Equatable {
         enum Relation: String, Codable {
             case leftOfAnchor
             case rightOfAnchor
@@ -1720,15 +1720,21 @@ extension MenuBarItemManager {
     /// A pair of control items, taken from a list of menu bar items
     /// during a menu bar item cache operation.
     struct ControlItemPair {
-        let hidden: MenuBarItem
-        let alwaysHidden: MenuBarItem?
+        nonisolated let hidden: MenuBarItem
+        nonisolated let alwaysHidden: MenuBarItem?
 
         /// Creates a control item pair from already-known control items.
         ///
         /// Used by test fixtures and by callers that have already resolved the
         /// hidden and always-hidden items themselves. Production discovery from
         /// a live menu bar uses the failable initializer below.
-        init(hidden: MenuBarItem, alwaysHidden: MenuBarItem?) {
+        ///
+        /// Marked `nonisolated` so test fixtures (compiled without the app
+        /// target's MainActor default) and other non-MainActor callers can
+        /// construct a pair from already-resolved items without a hop; the
+        /// failable `init?` below stays implicitly `@MainActor` since it
+        /// performs AX-frame correlation.
+        nonisolated init(hidden: MenuBarItem, alwaysHidden: MenuBarItem?) {
             self.hidden = hidden
             self.alwaysHidden = alwaysHidden
         }
@@ -2972,7 +2978,7 @@ extension MenuBarItemManager {
         holder.withLock { $0 }
     }
 
-    private struct EventContinuationContext {
+    private nonisolated struct EventContinuationContext {
         let event: CGEvent
         let pid: pid_t
         let entryEvent: CGEvent
@@ -2981,14 +2987,14 @@ extension MenuBarItemManager {
         let secondLocation: EventTap.Location
     }
 
-    private struct EventContinuationState {
+    private nonisolated struct EventContinuationState {
         let countHolder: OSAllocatedUnfairLock<Int>
         let didResume: OSAllocatedUnfairLock<Bool>
         let continuationHolder: OSAllocatedUnfairLock<CheckedContinuation<Void, any Error>?>
         let innerTaskHolder: OSAllocatedUnfairLock<Task<Void, Never>?>
     }
 
-    private enum EventContinuationKind {
+    private nonisolated enum EventContinuationKind {
         case postEventBarrier
         case scromble
     }
@@ -3352,7 +3358,7 @@ extension MenuBarItemManager {
 
 extension MenuBarItemManager {
     /// Destinations for menu bar item move operations.
-    enum MoveDestination: Equatable {
+    nonisolated enum MoveDestination: Equatable {
         /// The destination to the left of the given target item.
         case leftOfItem(MenuBarItem)
         /// The destination to the right of the given target item.
@@ -3949,7 +3955,7 @@ extension MenuBarItemManager {
 
     /// The outcome to take when a hidden-section drag's move throws after
     /// the drag handler's resample-and-verify pass.
-    enum HiddenDragFailureAction: Equatable {
+    nonisolated enum HiddenDragFailureAction: Equatable {
         /// The item actually reached its intended position; the throw was a
         /// false alarm from verification racing macOS's own settle. No
         /// alert needed.
@@ -5789,7 +5795,7 @@ extension MenuBarItemManager {
 // MARK: - MenuBarItemEventType
 
 /// Event types for menu bar item events.
-private enum MenuBarItemEventType {
+private nonisolated enum MenuBarItemEventType {
     /// The event type for moving a menu bar item.
     case move(MoveSubtype)
     /// The event type for clicking a menu bar item.
@@ -7881,7 +7887,7 @@ extension MenuBarItemManager {
 
 // MARK: - CGEventField Helpers
 
-private extension CGEventField {
+private nonisolated extension CGEventField {
     /// Key to access a field that contains the event's window identifier.
     static let windowID = CGEventField(rawValue: 0x33)! // swiftlint:disable:this force_unwrapping
 
@@ -7896,7 +7902,7 @@ private extension CGEventField {
 
 // MARK: - CGEventFilterMask Helpers
 
-private extension CGEventFilterMask {
+private nonisolated extension CGEventFilterMask {
     /// Specifies that all events should be permitted during event suppression states.
     static let permitAllEvents: CGEventFilterMask = [
         .permitLocalMouseEvents,
@@ -7907,7 +7913,7 @@ private extension CGEventFilterMask {
 
 // MARK: - CGEventType Helpers
 
-private extension CGEventType {
+private nonisolated extension CGEventType {
     /// A string to use for logging purposes.
     var logString: String {
         switch self {
@@ -7937,7 +7943,7 @@ private extension CGEventType {
 
 // MARK: - CGMouseButton Helpers
 
-private extension CGMouseButton {
+private nonisolated extension CGMouseButton {
     /// A string to use for logging purposes.
     var logString: String {
         switch self {
@@ -7951,7 +7957,7 @@ private extension CGMouseButton {
 
 // MARK: - Duration Helpers
 
-private extension Duration {
+private nonisolated extension Duration {
     /// Returns the duration in milliseconds as a Double.
     var milliseconds: Double {
         let (seconds, attoseconds) = components
@@ -7961,7 +7967,7 @@ private extension Duration {
 
 // MARK: - CGEvent Helpers
 
-private extension CGEvent {
+private nonisolated extension CGEvent {
     /// Returns an event that can be sent to a menu bar item.
     ///
     /// - Parameters:

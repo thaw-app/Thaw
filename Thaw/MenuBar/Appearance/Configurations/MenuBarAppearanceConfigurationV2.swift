@@ -8,7 +8,7 @@
 
 import SwiftUI
 
-struct MenuBarAppearanceConfigurationV2: Hashable {
+nonisolated struct MenuBarAppearanceConfigurationV2: Hashable {
     var lightModeConfiguration: MenuBarAppearancePartialConfiguration
     var darkModeConfiguration: MenuBarAppearancePartialConfiguration
     var staticConfiguration: MenuBarAppearancePartialConfiguration
@@ -46,7 +46,7 @@ struct MenuBarAppearanceConfigurationV2: Hashable {
 
 // MARK: Default Configuration
 
-extension MenuBarAppearanceConfigurationV2 {
+nonisolated extension MenuBarAppearanceConfigurationV2 {
     static let defaultConfiguration = MenuBarAppearanceConfigurationV2(
         lightModeConfiguration: .defaultConfiguration,
         darkModeConfiguration: .defaultConfiguration,
@@ -63,7 +63,7 @@ extension MenuBarAppearanceConfigurationV2 {
     )
 }
 
-extension MenuBarAppearanceConfigurationV2: Codable {
+nonisolated extension MenuBarAppearanceConfigurationV2: Codable {
     private enum CodingKeys: CodingKey {
         case lightModeConfiguration
         case darkModeConfiguration
@@ -116,7 +116,7 @@ extension MenuBarAppearanceConfigurationV2: Codable {
 
 // MARK: - MenuBarAppearancePartialConfiguration
 
-struct MenuBarAppearancePartialConfiguration: Hashable {
+nonisolated struct MenuBarAppearancePartialConfiguration: Hashable {
     var hasShadow: Bool
     var hasBorder: Bool
     var borderColor: CGColor
@@ -139,7 +139,7 @@ struct MenuBarAppearancePartialConfiguration: Hashable {
 
 // MARK: Default Partial Configuration
 
-extension MenuBarAppearancePartialConfiguration {
+nonisolated extension MenuBarAppearancePartialConfiguration {
     static let defaultConfiguration = MenuBarAppearancePartialConfiguration(
         hasShadow: false,
         hasBorder: false,
@@ -164,7 +164,7 @@ extension MenuBarAppearancePartialConfiguration {
 
 // MARK: MenuBarAppearancePartialConfiguration: Codable
 
-extension MenuBarAppearancePartialConfiguration: Codable {
+nonisolated extension MenuBarAppearancePartialConfiguration: Codable {
     private enum CodingKeys: CodingKey {
         case hasShadow
         case hasBorder

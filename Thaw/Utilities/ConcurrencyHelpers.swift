@@ -19,7 +19,7 @@ struct TaskTimeoutError: CustomStringConvertible, LocalizedError {
     }
 }
 
-extension Task {
+nonisolated extension Task {
     static func withTimeout<C: Clock>(
         _ timeout: C.Instant.Duration,
         tolerance: C.Instant.Duration? = nil,
@@ -41,7 +41,7 @@ extension Task {
     }
 }
 
-extension Task where Failure == any Error {
+nonisolated extension Task where Failure == any Error {
     /// Runs the given throwing operation asynchronously as part of a
     /// new _unstructured_ top-level task.
     ///

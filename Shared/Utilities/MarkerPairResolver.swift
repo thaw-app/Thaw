@@ -30,7 +30,7 @@ import Foundation
 /// resolver pairs icons with markers by width and synthesizes the
 /// sourcePID via injected lookups so the algorithm stays pure and
 /// testable.
-enum MarkerPairResolver {
+nonisolated enum MarkerPairResolver {
     /// A marker window candidate distilled from the items-only list.
     /// Markers carry bundle-ID-shaped titles (titles containing a ".")
     /// and serve as the recovery handle for paired on-screen icons.
@@ -206,7 +206,7 @@ enum MarkerPairResolver {
 /// candidate app's bundle identifier corroborates a loose spatial match,
 /// so a nearby unrelated neighbor can never be mis-attributed the way a
 /// bare distance threshold would allow.
-enum HostedItemOwnership {
+nonisolated enum HostedItemOwnership {
     /// Returns true when title and bundleID, treated as reverse-DNS
     /// strings, are in an owner relationship: they agree on at least two
     /// leading components, and either one is a full component-prefix of

@@ -112,9 +112,9 @@ extension MenuBarItemService {
 
 extension MenuBarItemService {
     /// A wrapper around an XPC session.
-    private final class Session: Sendable {
+    private nonisolated final class Session: Sendable {
         /// A session's underlying storage.
-        private final class Storage: @unchecked Sendable {
+        private nonisolated final class Storage: @unchecked Sendable {
             private let name = MenuBarItemService.name
             private var session: XPCSession?
             private let queue: DispatchQueue

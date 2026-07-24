@@ -11,7 +11,7 @@ import Cocoa
 import Combine
 
 /// An object that manages the registration, storage, and unregistration of hotkeys.
-final class HotkeyRegistry {
+nonisolated final class HotkeyRegistry {
     private let diagLog = DiagLog(category: "HotkeyRegistry")
     /// The event kinds that a hotkey can be registered for.
     enum EventKind {

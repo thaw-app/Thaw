@@ -13,7 +13,7 @@ import SwiftUI
 @MainActor
 final class MenuBarSection {
     /// The name of a menu bar section.
-    enum Name: String, CaseIterable, Codable {
+    nonisolated enum Name: String, CaseIterable, Codable {
         case visible
         case hidden
         case alwaysHidden
@@ -78,7 +78,7 @@ final class MenuBarSection {
     static nonisolated let notchGap: CGFloat = 24
 
     /// The preferred way to present the section on the menu bar.
-    enum PresentationMode: Equatable {
+    nonisolated enum PresentationMode: Equatable {
         /// Show the items inline without modifying the application menus.
         case inline
         /// Show the items inline, but only after hiding the application menus.

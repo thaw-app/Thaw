@@ -25,7 +25,7 @@ import Cocoa
 @MainActor
 enum AXIdentityCatalog {
     /// AX-derived identity for a single menu-bar-hosted element.
-    struct AXItemIdentity {
+    nonisolated struct AXItemIdentity {
         let identifier: String?
         let title: String?
         let help: String?

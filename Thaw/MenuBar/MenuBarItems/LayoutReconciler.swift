@@ -22,7 +22,7 @@ import CoreGraphics
 ///
 /// Pinned bundle IDs are only consumed by the profile-apply path; the
 /// restore path leaves them empty.
-struct DesiredLayout: Equatable {
+nonisolated struct DesiredLayout: Equatable {
     /// For each section, an ordered list of uniqueIdentifiers. Index 0
     /// is the leftmost-after-chevron position within the section.
     var sectionOrder: [MenuBarSection.Name: [String]]
@@ -92,7 +92,7 @@ struct DesiredLayout: Equatable {
 /// computes (sometimes from Bridging / CacheContext, sometimes from
 /// instance state) into a single typed value, so the reconciler entry
 /// points have a clean signature.
-struct ObservedLayout {
+nonisolated struct ObservedLayout {
     let items: [MenuBarItem]
     let controlItems: MenuBarItemManager.ControlItemPair
     let sectionByWindowID: [CGWindowID: MenuBarSection.Name]
@@ -110,7 +110,7 @@ struct ObservedLayout {
 /// alwaysHidden is absent when the user has disabled the always-hidden
 /// section. hidden is required because a working layout always has the
 /// hidden divider.
-struct ControlUIDs: Equatable {
+nonisolated struct ControlUIDs: Equatable {
     let visible: String?
     let hidden: String
     let alwaysHidden: String?
@@ -131,7 +131,7 @@ struct ControlUIDs: Equatable {
 /// PendingLedger remains separate because pending-relocation decisions
 /// are not driven by DesiredLayout but by per-entry retry state. The
 /// temporality split from the previous refactor still holds.
-enum LayoutReconciler {
+nonisolated enum LayoutReconciler {
     /// Resolves an abstract LCSPlannedDestination against live items
     /// to produce a concrete MoveDestination.
     ///

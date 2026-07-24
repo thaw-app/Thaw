@@ -10,7 +10,7 @@ import Cocoa
 import os.lock
 
 /// A structural representation of a menu bar item.
-struct MenuBarItem: CustomStringConvertible {
+nonisolated struct MenuBarItem: CustomStringConvertible {
     /// The tag associated with this item.
     let tag: MenuBarItemTag
 
@@ -236,7 +236,7 @@ struct MenuBarItem: CustomStringConvertible {
 
 // MARK: - MenuBarItem List
 
-extension MenuBarItem {
+nonisolated extension MenuBarItem {
     /// Options that specify the menu bar items in a list.
     struct ListOption: OptionSet {
         let rawValue: Int
@@ -498,7 +498,7 @@ extension MenuBarItem {
 
 // MARK: - MenuBarItem Init
 
-extension MenuBarItem {
+nonisolated extension MenuBarItem {
     init(tag: MenuBarItemTag, windowID: CGWindowID, ownerPID: pid_t, sourcePID: pid_t?, bounds: CGRect, title: String?, isOnScreen: Bool) {
         self.tag = tag
         self.windowID = windowID
@@ -512,7 +512,7 @@ extension MenuBarItem {
 
 // MARK: MenuBarItem: Equatable
 
-extension MenuBarItem: Equatable {
+nonisolated extension MenuBarItem: Equatable {
     static func == (lhs: MenuBarItem, rhs: MenuBarItem) -> Bool {
         lhs.tag == rhs.tag &&
             lhs.windowID == rhs.windowID &&
@@ -526,7 +526,7 @@ extension MenuBarItem: Equatable {
 
 // MARK: MenuBarItem: Hashable
 
-extension MenuBarItem: Hashable {
+nonisolated extension MenuBarItem: Hashable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(tag)
         hasher.combine(windowID)
@@ -543,7 +543,7 @@ extension MenuBarItem: Hashable {
 
 // MARK: - MenuBarItemTag Helper
 
-private extension MenuBarItemTag {
+private nonisolated extension MenuBarItemTag {
     /// Creates a tag without checks.
     ///
     /// This initializer does not perform validity checks on its parameters.
@@ -572,7 +572,7 @@ private extension MenuBarItemTag {
 
 // MARK: - MenuBarItemTag.Namespace Helper
 
-extension MenuBarItemTag.Namespace {
+nonisolated extension MenuBarItemTag.Namespace {
     private static let uuidCache = OSAllocatedUnfairLock<[CGWindowID: UUID]>(initialState: [:])
 
     @MainActor

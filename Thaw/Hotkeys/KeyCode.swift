@@ -9,7 +9,7 @@
 import Carbon.HIToolbox
 
 /// Representation of a physical key on a keyboard.
-struct KeyCode: Codable, Hashable, RawRepresentable {
+nonisolated struct KeyCode: Codable, Hashable, RawRepresentable {
     let rawValue: Int
 
     // MARK: Letters
@@ -155,7 +155,7 @@ struct KeyCode: Codable, Hashable, RawRepresentable {
 
 // MARK: Key Equivalent
 
-extension KeyCode {
+nonisolated extension KeyCode {
     /// System representation.
     var keyEquivalent: String {
         guard
@@ -197,7 +197,7 @@ extension KeyCode {
 
 // MARK: Custom String Mappings
 
-private let customStringMappings = [
+private nonisolated let customStringMappings = [
     // standard keys
     KeyCode.space: "Space",
     KeyCode.tab: "⇥",
@@ -272,7 +272,7 @@ private let customStringMappings = [
 
 // MARK: String Value
 
-extension KeyCode {
+nonisolated extension KeyCode {
     /// A custom string representation for the key.
     var stringValue: String {
         customStringMappings[self, default: keyEquivalent]

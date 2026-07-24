@@ -13,13 +13,13 @@ import ScreenCaptureKit
 // MARK: - Bridging
 
 /// A namespace for bridged or wrapped APIs.
-enum Bridging {
+nonisolated enum Bridging {
     private static let diagLog = DiagLog(category: "Bridging")
 }
 
 // MARK: - CGSConnection
 
-extension Bridging {
+nonisolated extension Bridging {
     // MARK: Private Connection Helpers
 
     /// The identifier for the `null` window server connection.
@@ -77,7 +77,7 @@ extension Bridging {
 
 // MARK: - CGDisplay / CGSDisplay
 
-extension Bridging {
+nonisolated extension Bridging {
     // MARK: Private Display Helpers
 
     /// A display to exclude from Thaw's display enumeration while it exists.
@@ -191,7 +191,7 @@ extension Bridging {
 
 // MARK: - CGSEvent
 
-extension Bridging {
+nonisolated extension Bridging {
     /// Returns a Boolean value indicating whether the given process
     /// is unresponsive.
     ///
@@ -219,7 +219,7 @@ extension Bridging {
 
 // MARK: - CGSSpace
 
-extension Bridging {
+nonisolated extension Bridging {
     /// Returns the identifier for the active space.
     static func getActiveSpaceID() -> CGSSpaceID {
         cgsGetActiveSpace(getMainConnection())
@@ -272,7 +272,7 @@ extension Bridging {
 
 // MARK: - CGSWindow
 
-extension Bridging {
+nonisolated extension Bridging {
     /// Returns the bounds for the given window.
     ///
     /// - Parameter windowID: An identifier for a window.
@@ -544,7 +544,7 @@ extension Bridging {
 
 // MARK: - SkyLight Window Capture
 
-extension Bridging {
+nonisolated extension Bridging {
     /// Captures a composite image of an array of windows using SkyLight's private API.
     ///
     /// This is the replacement for the deprecated `CGWindowListCreateImageFromArray` API,
@@ -589,7 +589,7 @@ extension Bridging {
 
 // MARK: - ScreenCaptureKit Window Capture
 
-extension Bridging {
+nonisolated extension Bridging {
     /// Captures a composite image of an array of windows using ScreenCaptureKit.
     ///
     /// Async, leak-free replacement for captureWindowsImage. Use this for any
@@ -809,6 +809,6 @@ actor ShareableContentCache<Content: Sendable> {
 /// annotation. It is returned as a completed framework snapshot and this
 /// wrapper never mutates or exposes any mutable state, so sharing that
 /// reference among the capture readers is safe.
-struct ShareableContentSnapshot: @unchecked Sendable {
+nonisolated struct ShareableContentSnapshot: @unchecked Sendable {
     let content: SCShareableContent
 }

@@ -12,7 +12,7 @@ import Foundation
 // MARK: - MenuBarItemTag
 
 /// An identifier for a menu bar item.
-struct MenuBarItemTag: Hashable, CustomStringConvertible {
+nonisolated struct MenuBarItemTag: Hashable, CustomStringConvertible {
     /// The namespace of the item identified by this tag.
     let namespace: Namespace
 
@@ -152,7 +152,7 @@ struct MenuBarItemTag: Hashable, CustomStringConvertible {
 
 // MARK: MenuBarItemTag Constants
 
-extension MenuBarItemTag {
+nonisolated extension MenuBarItemTag {
     // MARK: Special Item Lists
 
     /// An array of tags for items whose movement is prevented by macOS.
@@ -221,7 +221,7 @@ extension MenuBarItemTag {
 
 // MARK: - MenuBarItemTag.Namespace
 
-extension MenuBarItemTag {
+nonisolated extension MenuBarItemTag {
     /// A type that represents a menu bar item namespace.
     enum Namespace: Hashable, CustomStringConvertible {
         /// The `null` namespace.
@@ -281,7 +281,7 @@ extension MenuBarItemTag {
 
 // MARK: MenuBarItemTag.Namespace Constants
 
-extension MenuBarItemTag.Namespace {
+nonisolated extension MenuBarItemTag.Namespace {
     /// The namespace for the "Thaw" process.
     static let thaw = string(Constants.bundleIdentifier)
 

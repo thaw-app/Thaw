@@ -9,7 +9,7 @@
 import Cocoa
 
 /// A Codable image for a control item.
-enum ControlItemImage: Codable, Hashable {
+nonisolated enum ControlItemImage: Codable, Hashable {
     /// An image created from drawing code built into the app.
     case builtin(_ name: ImageBuiltinName)
     /// A system symbol image.
@@ -49,7 +49,7 @@ enum ControlItemImage: Codable, Hashable {
     }
 }
 
-extension ControlItemImage {
+nonisolated extension ControlItemImage {
     /// A name for an image that is created from drawing code in the app.
     enum ImageBuiltinName: Codable, Hashable {
         /// A large chevron.

@@ -8,11 +8,11 @@
 
 import Foundation
 
-enum MenuBarItemService {
+nonisolated enum MenuBarItemService {
     static let name = "com.stonerl.Thaw.MenuBarItemService"
 }
 
-extension MenuBarItemService {
+nonisolated extension MenuBarItemService {
     enum Request: Codable {
         case start
         case configureLogging(filePath: String)

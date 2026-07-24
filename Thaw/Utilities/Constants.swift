@@ -10,7 +10,7 @@ import Foundation
 
 /// App-specific constants for the main Thaw target.
 /// System-framework paths shared with XPC targets live in `SharedConstants`.
-enum Constants {
+nonisolated enum Constants {
     // swiftlint:disable force_unwrapping
 
     /// The version string in the app's bundle.

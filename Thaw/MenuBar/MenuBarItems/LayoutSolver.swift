@@ -24,7 +24,7 @@ import CoreGraphics
 /// anchors stored across cycles). The boundary follows the council's
 /// temporality split: LayoutSolver decides over the current snapshot,
 /// PendingLedger decides over per-entry retry state.
-enum LayoutSolver {
+nonisolated enum LayoutSolver {
     // MARK: - Result types
 
     /// A decision emitted by the leftmost-item relocation planner.

@@ -11,7 +11,7 @@ import Foundation
 import Synchronization
 
 /// A namespace for mouse helper operations.
-enum MouseHelpers {
+nonisolated enum MouseHelpers {
     private static let diagLog = DiagLog(category: "MouseHelpers")
 
     /// Cursor hide/show bookkeeping. The `CGDisplayHideCursor` /

@@ -9,7 +9,7 @@
 import Cocoa
 import Combine
 
-final class RunLoopLocalEventMonitor {
+nonisolated final class RunLoopLocalEventMonitor {
     private let runLoop = CFRunLoopGetCurrent()
     private let mask: NSEvent.EventTypeMask
     private let mode: RunLoop.Mode
@@ -101,7 +101,7 @@ final class RunLoopLocalEventMonitor {
     }
 }
 
-extension RunLoopLocalEventMonitor {
+nonisolated extension RunLoopLocalEventMonitor {
     struct RunLoopLocalEventPublisher: Publisher {
         typealias Output = NSEvent
         typealias Failure = Never
@@ -120,7 +120,7 @@ extension RunLoopLocalEventMonitor {
     }
 }
 
-extension RunLoopLocalEventMonitor.RunLoopLocalEventPublisher {
+nonisolated extension RunLoopLocalEventMonitor.RunLoopLocalEventPublisher {
     private final class RunLoopLocalEventSubscription<S: Subscriber<Output, Failure> & Sendable>: Subscription, @unchecked Sendable {
         let mask: NSEvent.EventTypeMask
         let mode: RunLoop.Mode

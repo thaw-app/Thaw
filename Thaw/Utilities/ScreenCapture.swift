@@ -13,7 +13,7 @@ import os.lock
 import ScreenCaptureKit
 
 /// A namespace for screen capture operations.
-enum ScreenCapture {
+nonisolated enum ScreenCapture {
     private static let diagLog = DiagLog(category: "ScreenCapture")
 
     // MARK: Permissions
@@ -287,7 +287,7 @@ enum ScreenCapture {
 
 // MARK: - Helper Types
 
-private final class ContinuationBox<T, E: Error>: Sendable {
+private nonisolated final class ContinuationBox<T, E: Error>: Sendable {
     private let lock = OSAllocatedUnfairLock<CheckedContinuation<T, E>?>(initialState: nil)
 
     func setContinuation(_ cont: CheckedContinuation<T, E>) {
@@ -299,7 +299,7 @@ private final class ContinuationBox<T, E: Error>: Sendable {
     }
 }
 
-private final class FrameCaptor: NSObject, SCStreamOutput, SCStreamDelegate, @unchecked Sendable {
+private nonisolated final class FrameCaptor: NSObject, SCStreamOutput, SCStreamDelegate, @unchecked Sendable {
     /// Shared serial queue for all SCStream sample buffer handlers.
     static let sampleHandlerQueue = DispatchQueue(label: "com.stonerl.Thaw.screencapture")
 

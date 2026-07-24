@@ -11,7 +11,7 @@ import Foundation
 /// Constants shared across all targets (main app and XPC services).
 /// Only values that are needed in every target belong here; app-only
 /// constants live in `Constants` (Thaw target).
-enum SharedConstants {
+nonisolated enum SharedConstants {
     // MARK: - System Framework Paths
 
     /// Info.plist key used to configure the SkyLight private framework path.

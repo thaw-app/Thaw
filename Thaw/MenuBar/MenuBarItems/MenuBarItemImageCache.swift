@@ -14,12 +14,12 @@ import os.lock
 final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
     private static nonisolated let diagLog = DiagLog(category: "MenuBarItemImageCache")
 
-    struct DisplayResolution: Equatable {
+    nonisolated struct DisplayResolution: Equatable {
         let displayID: CGDirectDisplayID
         let usedFallback: Bool
     }
 
-    static func resolveDisplayID(
+    static nonisolated func resolveDisplayID(
         preferredDisplayID: CGDirectDisplayID?,
         availableDisplayIDs: [CGDirectDisplayID],
         activeMenuBarDisplayID: CGDirectDisplayID?,
@@ -75,7 +75,7 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
     }
 
     /// A representation of a captured menu bar item image.
-    struct CapturedImage: Hashable {
+    nonisolated struct CapturedImage: Hashable {
         /// The base image.
         let cgImage: CGImage
 
@@ -149,8 +149,8 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
     private let failedCapturesLock = OSAllocatedUnfairLock<[MenuBarItemTag: FailedCapture]>(initialState: [:])
 
     /// Configuration for failed capture handling
-    private static let maxFailuresBeforeBlacklist = 3
-    private static let blacklistCooldownSeconds: TimeInterval = 30 // 30 seconds
+    private nonisolated static let maxFailuresBeforeBlacklist = 3
+    private nonisolated static let blacklistCooldownSeconds: TimeInterval = 30 // 30 seconds
 
     /// Queue to run cache operations.
     private let queue = DispatchQueue(
@@ -262,7 +262,7 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
     }
 
     /// Maximum age of disk cache before it's considered stale (30 seconds).
-    private static let maxCacheAgeSeconds: TimeInterval = 30
+    private nonisolated static let maxCacheAgeSeconds: TimeInterval = 30
 
     /// Saves the image cache to disk for faster restart.
     func saveToDisk() {
@@ -1122,7 +1122,7 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
         scale: CGFloat,
         appState: AppState
     ) async -> [MenuBarItemTag: CapturedImage] {
-        let items = await appState.itemManager.itemCache.managedItems(
+        let items = appState.itemManager.itemCache.managedItems(
             for: section
         )
         let captureResult = await captureImages(
@@ -1141,7 +1141,7 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
     // MARK: Failed Capture Management
 
     /// Checks if an item should be skipped due to repeated capture failures.
-    private func shouldSkipCapture(for item: MenuBarItem) -> Bool {
+    private nonisolated func shouldSkipCapture(for item: MenuBarItem) -> Bool {
         failedCapturesLock.withLock { dict in
             guard let failed = dict[item.tag] else {
                 return false
@@ -1164,7 +1164,7 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
     }
 
     /// Records a capture failure for an item.
-    private func recordCaptureFailure(for item: MenuBarItem) {
+    private nonisolated func recordCaptureFailure(for item: MenuBarItem) {
         let now = Date()
         failedCapturesLock.withLock { dict in
             let existing = dict[item.tag]
@@ -1198,7 +1198,7 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
     }
 
     /// Records a successful capture for an item (resets failure count).
-    private func recordCaptureSuccess(for item: MenuBarItem) {
+    private nonisolated func recordCaptureSuccess(for item: MenuBarItem) {
         let recovered = failedCapturesLock.withLock { dict in
             dict.removeValue(forKey: item.tag)
         }
@@ -1588,7 +1588,7 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
 
         if !skipRecentMoveCheck {
             guard
-                await !appState.itemManager.lastMoveOperationOccurred(
+                !appState.itemManager.lastMoveOperationOccurred(
                     within: .seconds(1)
                 )
             else {
@@ -1599,7 +1599,7 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
             }
 
             // Skip updates during layout reset to prevent stale cache between passes
-            if await appState.itemManager.isResettingLayout {
+            if appState.itemManager.isResettingLayout {
                 MenuBarItemImageCache.diagLog.debug(
                     "Skipping item image cache because layout reset is in progress"
                 )

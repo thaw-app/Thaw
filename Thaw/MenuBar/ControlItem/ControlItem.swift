@@ -15,7 +15,7 @@ import Combine
 @MainActor
 final class ControlItem {
     /// An identifier for a control item.
-    enum Identifier: String, CaseIterable {
+    nonisolated enum Identifier: String, CaseIterable {
         /// The identifier for the control item for the visible section.
         case visible = "Thaw.ControlItem.Visible"
         /// The identifier for the control item for the hidden section.
@@ -54,7 +54,7 @@ final class ControlItem {
     }
 
     /// A namespace for control item lengths.
-    private enum Lengths {
+    private nonisolated enum Lengths {
         static let standard: CGFloat = NSStatusItem.variableLength
         static let expanded: CGFloat = 10000
     }
@@ -101,6 +101,7 @@ final class ControlItem {
             }
         }
 
+        @MainActor
         deinit {
             guard !isDisposed else {
                 return
@@ -919,7 +920,7 @@ final class ControlItem {
 
 /// Proxy getters and setters for a control item's stored
 /// UserDefaults values.
-enum ControlItemDefaults {
+nonisolated enum ControlItemDefaults {
     /// Accesses the value associated with the specified key
     /// and autosave name.
     static subscript<Value>(key: Key<Value>, autosaveName: String) -> Value? {
@@ -1005,7 +1006,7 @@ enum ControlItemDefaults {
 
 // MARK: - ControlItemDefaults.Key
 
-extension ControlItemDefaults {
+nonisolated extension ControlItemDefaults {
     /// Keys used to look up UserDefaults values for control items.
     struct Key<Value> {
         /// The raw value of the key.
@@ -1025,14 +1026,14 @@ extension ControlItemDefaults {
 
 // MARK: ControlItemDefaults.Key<CGFloat>
 
-extension ControlItemDefaults.Key<CGFloat> {
+nonisolated extension ControlItemDefaults.Key<CGFloat> {
     /// String key: "NSStatusItem Preferred Position autosaveName"
     static let preferredPosition = Self(rawValue: "Preferred Position")
 }
 
 // MARK: ControlItemDefaults.Key<Bool>
 
-extension ControlItemDefaults.Key<Bool> {
+nonisolated extension ControlItemDefaults.Key<Bool> {
     /// String key: "NSStatusItem Visible autosaveName"
     static let visible = Self(rawValue: "Visible")
 

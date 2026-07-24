@@ -56,7 +56,7 @@ extension MenuBarItem {
 
 // MARK: - ControlItemPair fixtures
 
-extension MenuBarItemManager.ControlItemPair {
+nonisolated extension MenuBarItemManager.ControlItemPair {
     /// Builds a synthetic control item pair from explicit rectangles. The
     /// hidden divider is required; the always-hidden divider is optional to
     /// model both layouts (with and without the always-hidden section).

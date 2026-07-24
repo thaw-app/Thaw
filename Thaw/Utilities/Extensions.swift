@@ -12,7 +12,7 @@ import SwiftUI
 
 // MARK: - Bundle
 
-extension Bundle {
+nonisolated extension Bundle {
     /// The bundle's copyright string.
     ///
     /// This accessor checks the bundle's `Info.plist` for a string value associated
@@ -71,7 +71,7 @@ extension CGColor {
 
 // MARK: - CGImage
 
-extension CGImage {
+nonisolated extension CGImage {
     // MARK: Color Averaging
 
     /// Options that effect how colors are processed when computing
@@ -485,7 +485,7 @@ extension Collection<MenuBarItem> {
 
 // MARK: - Comparable
 
-extension Comparable {
+nonisolated extension Comparable {
     /// Returns a copy of this value, clamped to the given minimum
     /// and maximum limiting values.
     ///
@@ -526,7 +526,7 @@ extension DistributedNotificationCenter {
 
 // MARK: - EdgeInsets
 
-extension EdgeInsets {
+nonisolated extension EdgeInsets {
     /// A copy of this instance with only the leading and trailing
     /// edges set.
     var horizontal: EdgeInsets {
@@ -623,7 +623,7 @@ extension NSImage {
 // MARK: - NSScreen
 
 extension NSScreen {
-    private static let diagLog = DiagLog(category: "NSScreen")
+    private nonisolated static let diagLog = DiagLog(category: "NSScreen")
 
     /// The screen containing the mouse pointer.
     static var screenWithMouse: NSScreen? {
@@ -687,7 +687,7 @@ extension NSScreen {
         var menuBarHeights = [CGDirectDisplayID: CGFloat]()
     }
 
-    private static let displayCache = OSAllocatedUnfairLock(initialState: DisplayCache())
+    private nonisolated static let displayCache = OSAllocatedUnfairLock(initialState: DisplayCache())
 
     /// Invalidates the cached application menu frame when the frontmost app changes.
     private static func invalidateApplicationMenuFrameCacheIfNeeded() {
@@ -717,7 +717,7 @@ extension NSScreen {
     }
 
     /// Tracks displays with a pending menu bar height retry.
-    private static let pendingRetryDisplays = OSAllocatedUnfairLock(initialState: Set<CGDirectDisplayID>())
+    private nonisolated static let pendingRetryDisplays = OSAllocatedUnfairLock(initialState: Set<CGDirectDisplayID>())
 
     /// Schedules a one-shot deferred retry to populate the menu bar height
     /// cache for a display after a transient unavailability (e.g. during
@@ -900,7 +900,7 @@ extension NSStatusItem {
 
 // MARK: - OSAllocatedUnfairLock
 
-extension OSAllocatedUnfairLock where State == Bool {
+nonisolated extension OSAllocatedUnfairLock where State == Bool {
     /// Atomically sets the value to `true` and returns whether this call
     /// was the first to do so. Useful for ensuring a continuation or
     /// callback is invoked exactly once across competing code paths.
@@ -1031,7 +1031,7 @@ extension Publisher where Output: Equatable, Failure == Never {
 
 // MARK: - RangeReplaceableCollection where Element: Hashable
 
-extension RangeReplaceableCollection where Element: Hashable {
+nonisolated extension RangeReplaceableCollection where Element: Hashable {
     /// Returns a copy of the collection with duplicate values removed.
     func removingDuplicates() -> Self {
         var seen = Set<Element>()

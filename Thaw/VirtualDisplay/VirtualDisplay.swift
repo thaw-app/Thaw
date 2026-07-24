@@ -19,7 +19,7 @@ import Foundation
 /// those markers so the existing marker-pair pass can resolve the orphans; the
 /// resolved windowID -> PID mappings persist in the cache after the display is
 /// removed, so it only needs to be present long enough to resolve once.
-final class VirtualDisplay {
+nonisolated final class VirtualDisplay {
     private let handle: UnsafeMutableRawPointer
     private var isValid = true
 

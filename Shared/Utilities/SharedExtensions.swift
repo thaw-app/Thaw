@@ -11,7 +11,7 @@ import Dispatch
 
 // MARK: - CGError
 
-extension CGError {
+nonisolated extension CGError {
     /// A string to use for logging purposes.
     var logString: String {
         switch self {
@@ -33,7 +33,7 @@ extension CGError {
 
 // MARK: - CGPoint
 
-extension CGPoint {
+nonisolated extension CGPoint {
     /// Returns the distance between this point and another point.
     func distance(to other: CGPoint) -> CGFloat {
         hypot(x - other.x, y - other.y)
@@ -42,7 +42,7 @@ extension CGPoint {
 
 // MARK: - CGRect
 
-extension CGRect {
+nonisolated extension CGRect {
     /// The center point of the rectangle.
     var center: CGPoint {
         CGPoint(x: midX, y: midY)
@@ -51,7 +51,7 @@ extension CGRect {
 
 // MARK: - DispatchQueue
 
-extension DispatchQueue {
+nonisolated extension DispatchQueue {
     /// Creates and returns a new dispatch queue that targets the global
     /// system queue with the specified quality-of-service class.
     static func targetingGlobal(

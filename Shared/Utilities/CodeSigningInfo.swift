@@ -8,7 +8,7 @@
 
 import Security
 
-enum CodeSigningInfo {
+nonisolated enum CodeSigningInfo {
     /// The team identifier of the current process, or `nil` when signed
     /// without one (ad-hoc). Used by both the XPC service's `Listener` and
     /// the main app's `MenuBarItemServiceConnection` to decide whether a

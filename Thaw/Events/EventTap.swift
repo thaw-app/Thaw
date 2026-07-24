@@ -70,10 +70,10 @@ final nonisolated class EventTap: @unchecked Sendable {
     }
 
     /// Shared logger for event taps.
-    private static let diagLog = DiagLog(category: "EventTap")
+    private nonisolated static let diagLog = DiagLog(category: "EventTap")
 
     /// Shared callback for all event taps.
-    private static let sharedCallback: CGEventTapCallBack = { _, type, event, refcon in
+    private nonisolated static let sharedCallback: CGEventTapCallBack = { _, type, event, refcon in
         guard let refcon else {
             return Unmanaged.passUnretained(event)
         }
