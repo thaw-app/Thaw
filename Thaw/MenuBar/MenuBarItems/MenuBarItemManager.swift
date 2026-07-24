@@ -88,9 +88,11 @@ actor SimpleSemaphore {
                 try await Task.sleep(for: timeout)
                 return .timedOut
             }
-            // The first child to finish wins. next()! is safe: the group
-            // always has exactly two children at this point.
-            let first = try await group.next()!
+            // The first child to finish wins. The group always has exactly
+            // two children at this point, so next() must return a value.
+            guard let first = try await group.next() else {
+                preconditionFailure("SimpleSemaphore.wait: task group unexpectedly empty")
+            }
             group.cancelAll()
             if first == .timedOut {
                 // The acquire child may STILL have won the race against
@@ -1796,7 +1798,9 @@ extension MenuBarItemManager {
             for idx in sortedIndices {
                 removed[idx] = items.remove(at: idx)
             }
-            let hidden = removed[hiddenIdx]!
+            guard let hidden = removed[hiddenIdx] else {
+                return nil
+            }
             let alwaysHidden = matchedIndices.count > 1 ? removed[matchedIndices[1]] : nil
 
             MenuBarItemManager.diagLog.info(
@@ -7447,7 +7451,6 @@ extension MenuBarItemManager {
         }
         return !previous.isSubset(of: current)
     }
-
 
     /// Whether enough menu bar items are missing a resolved source PID that
     /// bulk-applying the saved layout would act on unmatchable identities.
