@@ -64,6 +64,10 @@ final class ControlItem {
         let statusItem: NSStatusItem
         let constraint: NSLayoutConstraint?
 
+        /// Set once `dispose()` has run, so `deinit` doesn't remove the
+        /// status item a second time.
+        private var isDisposed = false
+
         /// Creates a new storage instance.
         @MainActor
         init(controlItem: ControlItem) {
@@ -98,6 +102,28 @@ final class ControlItem {
         }
 
         deinit {
+            guard !isDisposed else {
+                return
+            }
+            removeStatusItem()
+        }
+
+        /// Explicitly tears down the status item, ahead of (and instead of)
+        /// relying on `deinit`. Used by `ControlItem.recreateStatusItem()`
+        /// so the old status item is fully removed — and its position
+        /// cached to the shared `autosaveName` slot — before a new
+        /// `StatusItemStorage` is constructed at that same autosave name.
+        /// Without this, the new `NSStatusItem` would briefly exist
+        /// alongside the old one under the same autosaveName, and the old
+        /// one's later, deinit-driven removal would overwrite the autosave
+        /// slot with its own (possibly stale/garbage, in the #754 failure
+        /// state) position, clobbering what the new item just restored.
+        @MainActor
+        func dispose() {
+            guard !isDisposed else {
+                return
+            }
+            isDisposed = true
             removeStatusItem()
         }
 
@@ -145,6 +171,15 @@ final class ControlItem {
 
     /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
+
+    /// Storage for observers whose subscriptions are bound to the specific
+    /// `NSStatusItem` instance backing `storage`. Combine's KVO publishers
+    /// latch onto object identity at subscription time, so these must be
+    /// re-created (via `configureStatusItemCancellables()`) whenever
+    /// `storage` — and therefore `statusItem` — is replaced by
+    /// `recreateStatusItem()`. Kept separate from `cancellables` so a
+    /// rebuild only tears down and re-subscribes this subset.
+    private var statusItemCancellables = Set<AnyCancellable>()
 
     /// The control item's underlying status item.
     private var statusItem: NSStatusItem {
@@ -196,33 +231,6 @@ final class ControlItem {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 self?.updateStatusItem()
-            }
-            .store(in: &c)
-
-        statusItem.publisher(for: \.isVisible)
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] isVisible in
-                guard
-                    let self,
-                    let menuBarManager = appState?.menuBarManager,
-                    let section = menuBarManager.section(withName: sectionName),
-                    let hotkey = section.hotkey
-                else {
-                    return
-                }
-                if isVisible {
-                    hotkey.enable()
-                } else {
-                    hotkey.disable()
-                }
-            }
-            .store(in: &c)
-
-        statusItem.publisher(for: \.button).removeNil()
-            .flatMap { $0.publisher(for: \.window) }
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] window in
-                self?.window = window
             }
             .store(in: &c)
 
@@ -299,24 +307,6 @@ final class ControlItem {
                     .store(in: &c)
             }
 
-            if identifier == .alwaysHidden {
-                appState.settings.advanced.$enableAlwaysHiddenSection
-                    .combineLatest(statusItem.publisher(for: \.isVisible))
-                    .removeDuplicates()
-                    .receive(on: DispatchQueue.main)
-                    .sink { [weak self] shouldEnable, _ in
-                        guard let self else {
-                            return
-                        }
-                        if shouldEnable {
-                            addToMenuBar()
-                        } else {
-                            removeFromMenuBar()
-                        }
-                    }
-                    .store(in: &c)
-            }
-
             if isSectionDivider {
                 appState.settings.advanced.$sectionDividerStyle
                     .removeDuplicates()
@@ -329,6 +319,94 @@ final class ControlItem {
         }
 
         cancellables = c
+
+        configureStatusItemCancellables()
+    }
+
+    /// Configures the observers whose subscriptions are bound to the
+    /// specific `NSStatusItem` instance currently backing `storage`. Called
+    /// once from `configureCancellables()` at setup, and again from
+    /// `recreateStatusItem()` after the underlying status item is rebuilt,
+    /// since Combine's KVO publishers latch onto the object identity of the
+    /// status item they were created from and would otherwise keep
+    /// observing the now-detached old one.
+    private func configureStatusItemCancellables() {
+        var c = Set<AnyCancellable>()
+
+        statusItem.publisher(for: \.isVisible)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] isVisible in
+                guard
+                    let self,
+                    let menuBarManager = appState?.menuBarManager,
+                    let section = menuBarManager.section(withName: sectionName),
+                    let hotkey = section.hotkey
+                else {
+                    return
+                }
+                if isVisible {
+                    hotkey.enable()
+                } else {
+                    hotkey.disable()
+                }
+            }
+            .store(in: &c)
+
+        statusItem.publisher(for: \.button).removeNil()
+            .flatMap { $0.publisher(for: \.window) }
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] window in
+                self?.window = window
+            }
+            .store(in: &c)
+
+        if identifier == .alwaysHidden, let appState {
+            appState.settings.advanced.$enableAlwaysHiddenSection
+                .combineLatest(statusItem.publisher(for: \.isVisible))
+                .removeDuplicates()
+                .receive(on: DispatchQueue.main)
+                .sink { [weak self] shouldEnable, _ in
+                    guard let self else {
+                        return
+                    }
+                    if shouldEnable {
+                        addToMenuBar()
+                    } else {
+                        removeFromMenuBar()
+                    }
+                }
+                .store(in: &c)
+        }
+
+        statusItemCancellables = c
+    }
+
+    /// Rebuilds the control item's underlying `NSStatusItem` from scratch.
+    ///
+    /// Used as a bounded recovery step (#754) when `ControlItemPair` lookup
+    /// keeps failing across multiple independently triggered cache cycles —
+    /// a state that means the existing status item's `windowNumber` no
+    /// longer matches any enumerated CG window ID, which is otherwise
+    /// terminal since `storage` is normally created once and never
+    /// recreated.
+    ///
+    /// `storage.dispose()` removes the old status item — and caches its
+    /// `autosaveName` position — *before* a fresh `StatusItemStorage` is
+    /// constructed at that same `autosaveName`, so AppKit restores the
+    /// position the old item cached. This ordering matters: if the new
+    /// storage were created first, the two `NSStatusItem`s would briefly
+    /// share one autosaveName, and the old item's removal (deferred to its
+    /// `deinit`) would run after the new item already restored its
+    /// position, overwriting the autosave slot with the old item's own
+    /// possibly-stale position and clobbering what the new item just set.
+    /// The `window`-chain and other status-item-bound observers are
+    /// re-subscribed against the new instance since Combine's KVO
+    /// publishers don't follow object identity changes on their own.
+    @MainActor
+    func recreateStatusItem() {
+        storage.dispose()
+        storage = StatusItemStorage(controlItem: self)
+        configureStatusItemCancellables()
     }
 
     /// Updates the appearance of the status item using the current hiding state.
