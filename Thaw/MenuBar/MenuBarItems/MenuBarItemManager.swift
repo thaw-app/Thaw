@@ -115,7 +115,9 @@ actor SimpleSemaphore {
                 // Acquired. Drain the cancelled timeout-sleep child and
                 // ignore its error (CancellationError); this preserves
                 // invariant 2.
-                while (try? await group.next()) != nil {}
+                while (try? await group.next()) != nil {
+                    // Intentionally empty: draining the cancelled child, result discarded.
+                }
             }
             return first
         }
@@ -3580,6 +3582,7 @@ extension MenuBarItemManager {
             try await MoveInputSuppression.withUserMouseInputSuppressed {
                 await performSyntheticCursorDrag(start: start, end: end, source: source)
             }
+            lastMoveOperationTimestamp = .now
             return
         }
 

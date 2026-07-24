@@ -183,7 +183,9 @@ final class ThawManagementMockupModel {
 
 struct ManagementSlideMockup: View {
     let model: ThawManagementMockupModel
-    var onInteraction: () -> Void = {}
+    var onInteraction: () -> Void = {
+        // Intentionally empty: default no-op for previews/callers that don't need it.
+    }
 
     var body: some View {
         VStack(spacing: 18) {
@@ -245,7 +247,9 @@ final class ThawAppearanceMockupModel {
 
 struct AppearanceSlideMockup: View {
     let model: ThawAppearanceMockupModel
-    var onInteraction: () -> Void = {}
+    var onInteraction: () -> Void = {
+        // Intentionally empty: default no-op for previews/callers that don't need it.
+    }
 
     private var style: DemoBarStyle {
         switch model.styleIndex {
@@ -309,7 +313,9 @@ final class ThawHotkeysMockupModel {
 
 struct HotkeysSlideMockup: View {
     let model: ThawHotkeysMockupModel
-    var onInteraction: () -> Void = {}
+    var onInteraction: () -> Void = {
+        // Intentionally empty: default no-op for previews/callers that don't need it.
+    }
 
     private func triggerFromUser() {
         onInteraction()
@@ -326,7 +332,7 @@ struct HotkeysSlideMockup: View {
             )
             SlideHUD {
                 Button(action: triggerFromUser) {
-                    Label(String("Press ⌃ Space"), systemImage: "keyboard")
+                    Label(String(localized: "Press ⌃ Space"), systemImage: "keyboard")
                         .font(.system(size: 12))
                         .foregroundStyle(.secondary)
                 }
@@ -382,7 +388,9 @@ final class ThawProfilesMockupModel {
 
 struct ProfilesSlideMockup: View {
     let model: ThawProfilesMockupModel
-    var onInteraction: () -> Void = {}
+    var onInteraction: () -> Void = {
+        // Intentionally empty: default no-op for previews/callers that don't need it.
+    }
 
     var body: some View {
         VStack(spacing: 18) {

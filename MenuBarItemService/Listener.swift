@@ -7,7 +7,6 @@
 //  Licensed under the GNU GPLv3
 
 import Foundation
-import Security
 import XPC
 
 /// A wrapper around an XPC listener object.
@@ -83,23 +82,6 @@ final class Listener: @unchecked Sendable {
         }
     }
 
-    /// The team identifier of the current process, or `nil` when signed
-    /// without one (ad-hoc).
-    private static let processTeamIdentifier: String? = {
-        var code: SecCode?
-        guard SecCodeCopySelf([], &code) == errSecSuccess, let code else { return nil }
-        var staticCode: SecStaticCode?
-        guard SecCodeCopyStaticCode(code, [], &staticCode) == errSecSuccess, let staticCode else { return nil }
-        var info: CFDictionary?
-        let flags = SecCSFlags(rawValue: kSecCSSigningInformation)
-        guard SecCodeCopySigningInformation(staticCode, flags, &info) == errSecSuccess,
-              let dict = info as? [String: Any]
-        else {
-            return nil
-        }
-        return dict[kSecCodeInfoTeamIdentifier as String] as? String
-    }()
-
     /// Activates the listener.
     func activate() {
         guard xpcListener == nil else {
@@ -110,7 +92,7 @@ final class Listener: @unchecked Sendable {
         diagLog.debug("Activating listener")
 
         do {
-            if Self.processTeamIdentifier == nil {
+            if CodeSigningInfo.processTeamIdentifier == nil {
                 diagLog.notice("Listener: no team identifier (ad-hoc build), activating without peer requirement")
                 try uncheckedActivateWithoutPeerRequirement()
             } else {

@@ -489,6 +489,7 @@ final class SourcePIDCache {
         // to prevent misattribution. Thaw's own control items and
         // self-registration windows are excluded so Thaw's PID can
         // never be attributed to a third-party widget.
+        var markerWindowIDs = Set<CGWindowID>()
         if !unresolvedWindows.isEmpty {
             let thawBundleID = "com.stonerl.Thaw"
             let markers = MarkerPairResolver.extractMarkers(
@@ -503,6 +504,7 @@ final class SourcePIDCache {
                 thawControlItemPrefix: "Thaw.ControlItem.",
                 thawBundleID: thawBundleID
             )
+            markerWindowIDs = Set(markers.map(\.windowID))
             let unresolvedInfos = allWindows.filter { unresolvedWindows.contains($0.windowID) }
             let icons = unresolvedInfos.map { win in
                 MarkerPairResolver.UnresolvedIcon(
@@ -546,23 +548,23 @@ final class SourcePIDCache {
         // match against a running application is direct ownership evidence
         // that needs no geometry; the reverse-DNS shape requirement keeps
         // generic slot titles (Item-0) away from the lookup.
-        if !unresolvedWindows.isEmpty {
-            let unresolvedInfos = allWindows.filter { unresolvedWindows.contains($0.windowID) }
-            for window in unresolvedInfos {
-                guard let title = window.title,
-                      title.split(separator: ".").count >= 3,
-                      let pid = NSRunningApplication
-                          .runningApplications(withBundleIdentifier: title)
-                          .first?
-                          .processIdentifier
-                else { continue }
-                SourcePIDCache.diagLog.info(
-                    "SourcePIDCache title-identity resolution: windowID=\(window.windowID) → PID \(pid) (title=\(title))"
-                )
-                state.withLock { $0.pids[window.windowID] = pid }
-                unresolvedWindows.remove(window.windowID)
-                totalMatchesFound += 1
-            }
+        let unresolvedInfos = allWindows.filter {
+            unresolvedWindows.contains($0.windowID) && !markerWindowIDs.contains($0.windowID)
+        }
+        for window in unresolvedInfos {
+            guard let title = window.title,
+                  title.split(separator: ".").count >= 3,
+                  let pid = NSRunningApplication
+                      .runningApplications(withBundleIdentifier: title)
+                      .first?
+                      .processIdentifier
+            else { continue }
+            SourcePIDCache.diagLog.info(
+                "SourcePIDCache title-identity resolution: windowID=\(window.windowID) → PID \(pid) (title=\(title))"
+            )
+            state.withLock { $0.pids[window.windowID] = pid }
+            unresolvedWindows.remove(window.windowID)
+            totalMatchesFound += 1
         }
 
         let finalPID = state.withLock { $0.pids[window.windowID] }

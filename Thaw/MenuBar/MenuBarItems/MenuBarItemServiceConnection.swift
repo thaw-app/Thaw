@@ -8,7 +8,6 @@
 
 import Foundation
 import os.lock
-import Security
 import XPC
 
 // MARK: - MenuBarItemService.Connection
@@ -142,7 +141,7 @@ extension MenuBarItemService {
                 // without a team identifier (ad-hoc/personal builds) — every
                 // send would fail with "Peer forbidden (code signing)".
                 // Mirrors the teamless fallback in the service's Listener.
-                if Self.processTeamIdentifier != nil {
+                if CodeSigningInfo.processTeamIdentifier != nil {
                     session.setPeerRequirement(.isFromSameTeam())
                 } else {
                     diagLog.notice("getOrCreateSession: no team identifier (ad-hoc build), skipping peer requirement")
@@ -160,24 +159,6 @@ extension MenuBarItemService {
                 }
                 session.cancel(reason: reason)
             }
-
-            /// The team identifier of the current process, or `nil` when
-            /// signed without one (ad-hoc). Duplicated from the service's
-            /// Listener to avoid cross-target file membership changes.
-            private static let processTeamIdentifier: String? = {
-                var code: SecCode?
-                guard SecCodeCopySelf([], &code) == errSecSuccess, let code else { return nil }
-                var staticCode: SecStaticCode?
-                guard SecCodeCopyStaticCode(code, [], &staticCode) == errSecSuccess, let staticCode else { return nil }
-                var info: CFDictionary?
-                let flags = SecCSFlags(rawValue: kSecCSSigningInformation)
-                guard SecCodeCopySigningInformation(staticCode, flags, &info) == errSecSuccess,
-                      let dict = info as? [String: Any]
-                else {
-                    return nil
-                }
-                return dict[kSecCodeInfoTeamIdentifier as String] as? String
-            }()
         }
 
         /// Protected storage for the underlying XPC session.

@@ -84,6 +84,7 @@ enum AXItemActivator {
     private static func resolveElement(for item: MenuBarItem) -> UIElement? {
         let center = item.bounds.center
 
+        try? systemWideElement.setMessagingTimeout(messagingTimeout)
         if let hit = AXHelpers.element(at: center) {
             try? hit.setMessagingTimeout(messagingTimeout)
             return hit

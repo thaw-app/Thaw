@@ -60,7 +60,9 @@ struct ProfileSettingsPane: View {
             presenting: profileToDelete
         ) { id in
             Button("Delete", role: .destructive) { deleteProfile(id: id) }
-            Button("Cancel", role: .cancel) {}
+            Button("Cancel", role: .cancel) {
+                // Intentionally empty: dismisses the alert, no other action needed.
+            }
         } message: { id in
             if let profile = profileManager.profiles.first(where: { $0.id == id }) {
                 Text("Are you sure you want to delete the profile \"\(profile.name)\"? This cannot be undone.")

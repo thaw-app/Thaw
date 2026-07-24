@@ -12,7 +12,6 @@ struct SecondsLabel: View {
     let value: Double
 
     var body: Text {
-        let number = value.formatted(.number.precision(.fractionLength(0 ... 1)))
-        return Text("\(number) seconds")
+        Text("\(value, format: .number.precision(.fractionLength(0 ... 1))) seconds")
     }
 }

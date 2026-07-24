@@ -13,6 +13,7 @@ import SwiftUI
 struct SettingsView: View {
     let appState: AppState
     @ObservedObject var navigationState: AppNavigationState
+    @StateObject private var searchModel = SearchModel()
 
     private var allSections: [SettingsNavigationIdentifier] {
         SettingsNavigationIdentifier.allCases
@@ -74,25 +75,44 @@ struct SettingsView: View {
             set: { newValue in
                 if navigationState.settingsNavigationIdentifier != newValue {
                     Task { @MainActor in
-                        navigationState.settingsNavigationIdentifier = newValue
+                        SettingsSearchNavigation.selectSidebarPane(
+                            newValue,
+                            navigationState: navigationState
+                        )
                     }
                 }
             }
         )
 
-        return List(selection: selection) {
-            Section {
-                ForEach(SettingsNavigationIdentifier.allCases) { identifier in
-                    Label {
-                        Text(identifier.localized)
-                    } icon: {
-                        identifier.iconResource.view
+        return VStack(spacing: 0) {
+            SearchField(text: $searchModel.searchText)
+
+            if searchModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                List(selection: selection) {
+                    Section {
+                        ForEach(SettingsNavigationIdentifier.allCases) { identifier in
+                            Label {
+                                Text(identifier.localized)
+                            } icon: {
+                                identifier.iconResource.view
+                            }
+                            .tag(identifier)
+                        }
                     }
-                    .tag(identifier)
+                }
+                .listStyle(.sidebar)
+            } else if searchModel.displayedGroups.isEmpty {
+                SearchEmptyView()
+            } else {
+                SearchResultsList(groups: searchModel.displayedGroups) { entry in
+                    SettingsSearchNavigation.selectSearchResult(
+                        entry,
+                        navigationState: navigationState,
+                        query: &searchModel.searchText
+                    )
                 }
             }
         }
-        .listStyle(.sidebar)
         .navigationSplitViewColumnWidth(ideal: 180, max: 220)
     }
 

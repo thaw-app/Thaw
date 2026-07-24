@@ -797,7 +797,9 @@ actor ShareableContentCache<Content: Sendable> {
     private func awaitWithoutCancelling(_ task: Task<Content, any Error>) async throws -> Content {
         try await withTaskCancellationHandler {
             try await task.value
-        } onCancel: {}
+        } onCancel: {
+            // Intentionally empty: the shared task keeps running for other callers.
+        }
     }
 }
 

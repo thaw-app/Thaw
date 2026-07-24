@@ -263,12 +263,7 @@ enum ScreenCapture {
             try await withCheckedThrowingContinuation { continuation in
                 box.setContinuation(continuation)
                 Task {
-                    do {
-                        let content = try await SCShareableContent.current
-                        box.takeContinuation()?.resume(returning: content)
-                    } catch {
-                        box.takeContinuation()?.resume(throwing: error)
-                    }
+                    await settleFromCurrentContent(into: box)
                 }
             }
         } onCancel: {
@@ -276,6 +271,17 @@ enum ScreenCapture {
             box.takeContinuation()?.resume(throwing: CancellationError())
         }
         return ShareableContentSnapshot(content: content)
+    }
+
+    private static func settleFromCurrentContent(
+        into box: ContinuationBox<SCShareableContent, any Error>
+    ) async {
+        do {
+            let content = try await SCShareableContent.current
+            box.takeContinuation()?.resume(returning: content)
+        } catch {
+            box.takeContinuation()?.resume(throwing: error)
+        }
     }
 }
 

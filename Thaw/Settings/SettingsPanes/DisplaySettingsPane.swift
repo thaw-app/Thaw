@@ -599,23 +599,48 @@ struct DisplaySettingsPane: View {
     /// unconfirmedSpacingProfileScope. Used when confirmations are disabled;
     /// mirrors the globalConfirmationButtons actions including rollback.
     private func commitGlobalApplyWithoutConfirmation(activeProfileID: UUID?) {
+        guard let id = activeProfileID else {
+            commitGlobalApply()
+            return
+        }
+        switch displaySettings.unconfirmedSpacingProfileScope {
+        case .activeProfile:
+            updateActiveProfile(id: id)
+        case .allProfiles:
+            updateAllProfiles()
+        }
+    }
+
+    /// Broadcasts the global template, then persists it to `id`'s profile.
+    /// Snapshots the previous configurations first so a save failure can
+    /// roll the live state back rather than leaving the broadcast applied
+    /// without a matching profile entry, which the next reapply would revert.
+    private func updateActiveProfile(id: UUID) {
         let previousConfigurations = displaySettings.configurations
         commitGlobalApply()
-        guard let id = activeProfileID else { return }
         do {
-            switch displaySettings.unconfirmedSpacingProfileScope {
-            case .activeProfile:
-                try appState.profileManager.updateProfile(
-                    id: id,
-                    scope: .configurationOnly,
-                    appState: appState
-                )
-            case .allProfiles:
-                try appState.profileManager.updateAllProfilesGlobalConfiguration(
-                    displaySettings.globalConfiguration,
-                    propagateToDisplays: true
-                )
-            }
+            try appState.profileManager.updateProfile(
+                id: id,
+                scope: .configurationOnly,
+                appState: appState
+            )
+        } catch {
+            displaySettings.configurations = previousConfigurations
+            errorMessage = error.localizedDescription
+            showingError = true
+        }
+    }
+
+    /// Broadcasts the global template, then persists it to every profile.
+    /// Mirrors ``updateActiveProfile(id:)``'s rollback-on-failure behavior.
+    private func updateAllProfiles() {
+        let previousConfigurations = displaySettings.configurations
+        commitGlobalApply()
+        do {
+            try appState.profileManager.updateAllProfilesGlobalConfiguration(
+                displaySettings.globalConfiguration,
+                propagateToDisplays: true
+            )
         } catch {
             displaySettings.configurations = previousConfigurations
             errorMessage = error.localizedDescription
@@ -625,50 +650,23 @@ struct DisplaySettingsPane: View {
 
     @ViewBuilder
     private func globalConfirmationButtons(for pending: PendingGlobalApply) -> some View {
-        if pending.activeProfileID != nil {
+        if let activeProfileID = pending.activeProfileID {
             Button(String(localized: "Update Active Profile"), role: .destructive) {
-                if let id = pending.activeProfileID {
-                    // Snapshot the previous configurations so a save failure
-                    // can roll the live state back rather than leaving the
-                    // broadcast applied without a matching profile entry,
-                    // which the next reapply would revert.
-                    let previousConfigurations = displaySettings.configurations
-                    commitGlobalApply()
-                    do {
-                        try appState.profileManager.updateProfile(
-                            id: id,
-                            scope: .configurationOnly,
-                            appState: appState
-                        )
-                    } catch {
-                        displaySettings.configurations = previousConfigurations
-                        errorMessage = error.localizedDescription
-                        showingError = true
-                    }
-                } else {
-                    commitGlobalApply()
-                }
+                updateActiveProfile(id: activeProfileID)
             }
             Button(String(localized: "Update All Profiles"), role: .destructive) {
-                let previousConfigurations = displaySettings.configurations
-                commitGlobalApply()
-                do {
-                    try appState.profileManager.updateAllProfilesGlobalConfiguration(
-                        displaySettings.globalConfiguration,
-                        propagateToDisplays: true
-                    )
-                } catch {
-                    displaySettings.configurations = previousConfigurations
-                    errorMessage = error.localizedDescription
-                    showingError = true
-                }
+                updateAllProfiles()
             }
-            Button(String(localized: "Cancel"), role: .cancel) {}
+            Button(String(localized: "Cancel"), role: .cancel) {
+                // Intentionally empty: dismisses the alert, no other action needed.
+            }
         } else {
             Button(String(localized: "Apply"), role: .destructive) {
                 commitGlobalApply()
             }
-            Button(String(localized: "Cancel"), role: .cancel) {}
+            Button(String(localized: "Cancel"), role: .cancel) {
+                // Intentionally empty: dismisses the alert, no other action needed.
+            }
         }
     }
 

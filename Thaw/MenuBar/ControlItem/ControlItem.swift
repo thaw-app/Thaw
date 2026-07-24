@@ -407,6 +407,7 @@ final class ControlItem {
         storage.dispose()
         storage = StatusItemStorage(controlItem: self)
         configureStatusItemCancellables()
+        updateStatusItem()
     }
 
     /// Updates the appearance of the status item using the current hiding state.
