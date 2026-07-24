@@ -11,18 +11,10 @@ import SwiftUI
 // MARK: - SettingsDetailLayout
 
 enum SettingsDetailLayout {
-    /// Comfortable reading width for settings groups. Title and form share this
-    /// column so they stay aligned when the window grows.
+    /// Comfortable reading width for settings groups.
     static let columnMaxWidth: CGFloat = 680
-    /// Offset from the window top under the transparent unified toolbar.
-    /// Intentionally well below the ~60pt safe-area push.
-    static let titleTopInset: CGFloat = 28
     /// Leading inset aligned with grouped form section cards / headers.
     static let titleHorizontalInset: CGFloat = 28
-}
-
-extension EnvironmentValues {
-    @Entry var settingsPaneTitle: LocalizedStringKey?
 }
 
 // MARK: - SettingsGlassButtonStyle
