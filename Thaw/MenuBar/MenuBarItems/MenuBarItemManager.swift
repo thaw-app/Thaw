@@ -125,6 +125,20 @@ final class MenuBarItemManager: ObservableObject {
     /// hidden sections are missing from the menu bar.
     @Published private(set) var areControlItemsMissing = false
 
+    /// Number of consecutive `ControlItemPair` lookup failures seen by
+    /// `cacheItemsRegardless`. Reset to zero on the first successful lookup.
+    /// Once this reaches `controlItemRebuildThreshold`, the hidden and
+    /// always-hidden control items' underlying status items are rebuilt from
+    /// scratch (see `recreateStatusItem()`), since a lookup that keeps
+    /// failing across multiple independently-triggered cache cycles means
+    /// the backing `NSStatusItem`s themselves are gone, not that this one
+    /// cycle raced a transient WindowServer update.
+    private var controlItemLookupFailureStreak = 0
+
+    /// Number of consecutive `ControlItemPair` lookup failures required
+    /// before the control items' status items are rebuilt.
+    nonisolated static let controlItemRebuildThreshold = 3
+
     /// Diagnostic logger for the menu bar item manager.
     fileprivate static nonisolated let diagLog = DiagLog(category: "MenuBarItemManager")
 
@@ -2073,8 +2087,15 @@ extension MenuBarItemManager {
         // because items is filtered.
         let itemWindowIDs = (currentItemWindowIDs ?? items.reversed().map(\.windowID))
             .filter { !cloneWindowIDs.contains($0) }
-        cacheActor.updateCachedItemWindowIDs(itemWindowIDs)
-        cacheActor.updateCachedCloneWindowIDs(cloneWindowIDs)
+        // NOTE: cacheActor.updateCachedItemWindowIDs/updateCachedCloneWindowIDs
+        // are deliberately NOT called here. Committing them this early, before
+        // the ControlItemPair guard below is known to succeed, would make
+        // cacheItemsIfNeeded's change detector see cachedIDs == itemWindowIDs
+        // on the very next poll even though this cycle failed to find the
+        // control items. That desensitizes the detector right when recovery
+        // depends on it, since a failed cacheItemsRegardless call otherwise
+        // looks identical to a successful one from the detector's point of
+        // view. The commit happens only after the guard succeeds, below.
 
         await MainActor.run {
             MenuBarItemTag.Namespace.pruneUUIDCache(keeping: Set(itemWindowIDs))
@@ -2097,14 +2118,49 @@ extension MenuBarItemManager {
             hiddenControlItemWindowID: hiddenControlItemWID,
             alwaysHiddenControlItemWindowID: alwaysHiddenControlItemWID
         ) else {
-            // ???: Is clearing the cache the best thing to do here?
-            MenuBarItemManager.diagLog.warning("cacheItemsRegardless: Missing control item for hidden section (expected tag: \(MenuBarItemTag.hiddenControlItem)), clearing cache. Items remaining: \(items.count), windowIDs: \(itemWindowIDs.count). hiddenControlItemWID=\(hiddenControlItemWID.map { "\($0)" } ?? "nil"), alwaysHiddenControlItemWID=\(alwaysHiddenControlItemWID.map { "\($0)" } ?? "nil")")
+            // Recovery path (#754): a failed lookup here used to wipe
+            // itemCache and commit the just-fetched window-ID snapshot to
+            // the change detector, which together made the failure
+            // permanent — the cache stayed empty, and cacheItemsIfNeeded
+            // saw no further change to re-drive a recache. Instead: keep
+            // the last-known-good itemCache (consumers key visible UI off
+            // areControlItemsMissing, not off an empty cache; see
+            // MenuBarLayoutSettingsPane), leave the window-ID snapshot
+            // uncommitted so the detector re-fires on the next poll, and
+            // count consecutive failures. After controlItemRebuildThreshold
+            // in a row, the backing NSStatusItems are rebuilt outright,
+            // since a lookup that keeps failing across independently
+            // triggered cache cycles means the status items themselves are
+            // gone (e.g. their windowNumber no longer matches any
+            // enumerated CG window ID), not that this one cycle raced a
+            // transient WindowServer update.
+            controlItemLookupFailureStreak += 1
+            let failureStreak = controlItemLookupFailureStreak
+            MenuBarItemManager.diagLog.warning("cacheItemsRegardless: Missing control item for hidden section (expected tag: \(MenuBarItemTag.hiddenControlItem)), keeping last-known-good cache. Items remaining: \(items.count), windowIDs: \(itemWindowIDs.count). hiddenControlItemWID=\(hiddenControlItemWID.map { "\($0)" } ?? "nil"), alwaysHiddenControlItemWID=\(alwaysHiddenControlItemWID.map { "\($0)" } ?? "nil"). consecutiveFailures=\(failureStreak)")
             await MainActor.run {
                 self.areControlItemsMissing = true
             }
-            itemCache = ItemCache(displayID: nil)
+
+            if MenuBarItemManager.shouldRebuildControlItems(consecutiveFailures: failureStreak) {
+                MenuBarItemManager.diagLog.warning("cacheItemsRegardless: \(failureStreak) consecutive control item lookup failures, rebuilding hidden/always-hidden status items")
+                await MainActor.run {
+                    appState?.menuBarManager.controlItem(withName: .hidden)?.recreateStatusItem()
+                    appState?.menuBarManager.controlItem(withName: .alwaysHidden)?.recreateStatusItem()
+                }
+                controlItemLookupFailureStreak = 0
+                // Schedule one immediate recache so the freshly rebuilt
+                // status items are picked up right away rather than waiting
+                // for the next externally triggered cache cycle.
+                Task { [weak self] in
+                    await self?.cacheItemsRegardless()
+                }
+            }
             return
         }
+
+        controlItemLookupFailureStreak = 0
+        cacheActor.updateCachedItemWindowIDs(itemWindowIDs)
+        cacheActor.updateCachedCloneWindowIDs(cloneWindowIDs)
 
         await MainActor.run {
             self.areControlItemsMissing = false
@@ -6778,6 +6834,20 @@ extension MenuBarItemManager {
     /// directly; base-identifier fallback is allowed only when all saved
     /// instances for that base belong to one section, avoiding false positives
     /// from multi-instance items split across sections.
+    /// Pure decision helper (#754) for whether a rebuild of the control
+    /// items' underlying status items should be triggered, given the
+    /// number of consecutive `ControlItemPair` lookup failures seen so far.
+    /// Extracted so the escalation threshold can be unit-tested without a
+    /// live `NSStatusItem`. The counter resets to zero both on the first
+    /// successful lookup and immediately after a rebuild is triggered, so
+    /// this fires at most once per failure streak.
+    nonisolated static func shouldRebuildControlItems(
+        consecutiveFailures: Int,
+        threshold: Int = MenuBarItemManager.controlItemRebuildThreshold
+    ) -> Bool {
+        consecutiveFailures >= threshold
+    }
+
     nonisolated static func baseIdentifier(forSavedIdentifier identifier: String) -> String {
         let parts = identifier.split(separator: ":", maxSplits: 2, omittingEmptySubsequences: false)
         guard parts.count >= 2 else { return identifier }
