@@ -7,6 +7,12 @@
 //  Licensed under the GNU GPLv3
 
 import Cocoa
+import Subprocess
+#if canImport(System)
+    import System
+#else
+    import SystemPackage
+#endif
 
 /// Manager for menu bar item spacing.
 @MainActor
@@ -86,30 +92,32 @@ final class MenuBarItemSpacingManager {
 
     /// Runs a command with the given arguments.
     private func runCommand(_ command: String, with arguments: [String]) async throws {
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            let process = Process()
-            process.executableURL = Constants.menuBarItemSpacingExecutableURL
-            process.arguments = CollectionOfOne(command) + arguments
-            process.terminationHandler = { process in
-                if process.terminationStatus == 0 {
-                    continuation.resume()
-                } else {
-                    continuation.resume(throwing: MenuBarItemSpacingError(
-                        kind: .nonZeroExitStatus(process.terminationStatus),
-                        command: command,
-                        arguments: arguments
-                    ))
-                }
+        let result: ExecutionRecord<DiscardedOutput, DiscardedOutput>
+        do {
+            result = try await Subprocess.run(
+                .path(FilePath(Constants.menuBarItemSpacingExecutableURL.path)),
+                arguments: Arguments([command] + arguments),
+                output: .discarded,
+                error: .discarded
+            )
+        } catch {
+            throw MenuBarItemSpacingError(
+                kind: .processRun(error),
+                command: command,
+                arguments: arguments
+            )
+        }
+
+        guard result.terminationStatus.isSuccess else {
+            let exitStatus: Int32 = switch result.terminationStatus {
+            case let .exited(code): code
+            case let .signaled(code): code
             }
-            do {
-                try process.run()
-            } catch {
-                continuation.resume(throwing: MenuBarItemSpacingError(
-                    kind: .processRun(error),
-                    command: command,
-                    arguments: arguments
-                ))
-            }
+            throw MenuBarItemSpacingError(
+                kind: .nonZeroExitStatus(exitStatus),
+                command: command,
+                arguments: arguments
+            )
         }
     }
 
