@@ -251,14 +251,60 @@ final class LayoutBarPaddingView: NSView {
                 // showing it for a move that visibly worked is a false alarm.
                 try? await Task.sleep(for: .milliseconds(250))
                 await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
-                if didItemReachIntendedPosition(
+                let reachedPosition = didItemReachIntendedPosition(
                     item: item,
                     destination: destination,
                     expectedSection: container.section,
                     cache: appState.itemManager.itemCache
-                ) {
-                    Self.diagLog.info("Move verification failed but \(item.logString) reached intended position in \(container.section.logString); suppressing alert")
+                )
+                let isBlocked = if reachedPosition {
+                    false
                 } else {
+                    await appState.itemManager.isItemCurrentlyBlocked(item)
+                }
+                let action = MenuBarItemManager.classifyHiddenDragFailure(
+                    reachedPosition: reachedPosition,
+                    isBlocked: isBlocked,
+                    controlItemsMissing: appState.itemManager.areControlItemsMissing
+                )
+                switch action {
+                case .suppress:
+                    Self.diagLog.info("Move verification failed but \(item.logString) reached intended position in \(container.section.logString); suppressing alert")
+                case .rescueAndRetry:
+                    // The item is stuck at the x=-1 sentinel. Rescue it to
+                    // the visible section, let macOS settle, then retry the
+                    // original move exactly once (no loop). Only if that
+                    // retry also fails do we alert, and with a calm message
+                    // rather than the raw error, matching the safe-harbor
+                    // behavior of restoreBlockedItemsToVisible.
+                    Self.diagLog.warning("\(item.logString) is blocked (x=-1); attempting one rescue-and-retry before alerting")
+                    _ = await appState.itemManager.rescueBlockedItemToVisible(item)
+                    try? await Task.sleep(for: .milliseconds(250))
+                    await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
+                    do {
+                        try await appState.itemManager.move(
+                            item: item,
+                            to: destination,
+                            skipInputPause: true,
+                            watchdogTimeout: MenuBarItemManager.layoutWatchdogTimeout
+                        )
+                        appState.itemManager.removeTemporarilyShownItemFromCache(with: item.tag)
+                        await stabilizePlacement(of: item, to: destination, expectedSection: container.section, appState: appState)
+                    } catch {
+                        Self.diagLog.error("Rescue-and-retry failed for \(item.logString): \(error)")
+                        let alert = NSAlert()
+                        alert.alertStyle = .warning
+                        alert.messageText = String(localized: "Couldn't move \(item.logString) to the hidden section.")
+                        alert.informativeText = String(localized: "The item was left in the visible section so it isn't stuck offscreen. Try dragging it again in a moment.")
+                        alert.runModal()
+                    }
+                case .alertControlItemsMissing:
+                    let alert = NSAlert()
+                    alert.alertStyle = .warning
+                    alert.messageText = String(localized: "Couldn't move the item right now.")
+                    alert.informativeText = String(localized: "\(Constants.displayName) can't locate its hidden-section divider right now. It is attempting recovery in the background — try again in a few seconds.")
+                    alert.runModal()
+                case .alertGeneric:
                     let alert = NSAlert(error: error)
                     alert.runModal()
                 }

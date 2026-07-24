@@ -3508,6 +3508,79 @@ extension MenuBarItemManager {
         }
     }
 
+    /// Returns whether the given item is currently in the "blocked" state
+    /// (positioned at x=-1). Exposed so drag-failure callers can classify a
+    /// failed move without duplicating the sentinel check performed by
+    /// `isItemBlocked`.
+    func isItemCurrentlyBlocked(_ item: MenuBarItem) async -> Bool {
+        await isItemBlocked(item)
+    }
+
+    /// Attempts to move a blocked (x=-1) item back to the visible section,
+    /// immediately right of the hidden control item — the same safe-harbor
+    /// anchor used by `restoreBlockedItemsToVisible` and
+    /// `validateItemPositionAfterMove`. This does not retry the original
+    /// move; callers are responsible for retrying afterward if desired.
+    ///
+    /// - Returns: `true` if the rescue move completed without throwing.
+    func rescueBlockedItemToVisible(_ item: MenuBarItem) async -> Bool {
+        let items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+        guard let hiddenMenuBarItem = items.first(matching: .hiddenControlItem) else {
+            MenuBarItemManager.diagLog.error("Cannot rescue blocked item \(item.logString): hidden control item not found")
+            return false
+        }
+        do {
+            try await move(
+                item: item,
+                to: .rightOfItem(hiddenMenuBarItem),
+                skipInputPause: true,
+                watchdogTimeout: Self.layoutWatchdogTimeout
+            )
+            return true
+        } catch {
+            MenuBarItemManager.diagLog.error("Failed to rescue blocked item \(item.logString): \(error)")
+            return false
+        }
+    }
+
+    /// The outcome to take when a hidden-section drag's move throws after
+    /// the drag handler's resample-and-verify pass.
+    enum HiddenDragFailureAction: Equatable {
+        /// The item actually reached its intended position; the throw was a
+        /// false alarm from verification racing macOS's own settle. No
+        /// alert needed.
+        case suppress
+        /// The item is stuck at the x=-1 sentinel. It can be rescued to the
+        /// visible section and the original move retried once.
+        case rescueAndRetry
+        /// The hidden-section control item couldn't be resolved; recovery
+        /// is already running in the background (see plan 004). Show a
+        /// calm, specific message instead of the raw error.
+        case alertControlItemsMissing
+        /// None of the above; show the raw error as before.
+        case alertGeneric
+    }
+
+    /// Pure classification of a failed hidden-section drag, used to decide
+    /// whether to suppress, rescue-and-retry, or alert (and with which
+    /// message). Precedence: reaching the position beats being blocked;
+    /// being blocked beats missing control items.
+    nonisolated static func classifyHiddenDragFailure(
+        reachedPosition: Bool,
+        isBlocked: Bool,
+        controlItemsMissing: Bool
+    ) -> HiddenDragFailureAction {
+        if reachedPosition {
+            .suppress
+        } else if isBlocked {
+            .rescueAndRetry
+        } else if controlItemsMissing {
+            .alertControlItemsMissing
+        } else {
+            .alertGeneric
+        }
+    }
+
     /// Moves a menu bar item to the given destination.
     ///
     /// - Parameters:
