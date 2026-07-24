@@ -15,7 +15,12 @@ import Foundation
 // logged before the configureLogging request arrives still reaches
 // OSLog; only the on-disk diagnostic file is gated.
 
-SourcePIDCache.shared.start()
+// SourcePIDCache is an actor; `start()` only wires up the Combine
+// observer pipeline used for periodic cache cleanup, so it does not
+// need to complete before the listener activates.
+Task {
+    await SourcePIDCache.shared.start()
+}
 Listener.shared.activate()
 
 // Run the RunLoop in a loop that drains an autoreleasepool every

@@ -24,7 +24,22 @@ import os
 /// Accessibility are thread blocking, we do most of the heavy lifting
 /// in a dedicated XPC service, which we then call asynchronously from
 /// the main app.
-final class SourcePIDCache {
+///
+/// This type is an `actor`. Only the Combine observer wiring in
+/// `start()` (and its backing `cancellable` lazy var) is actually
+/// actor-isolated — that state had no synchronization of its own
+/// before this conversion. Everything else (`state`, `scanLock`, and
+/// the `CachedApplication` cache entries) was already protected by its
+/// own `OSAllocatedUnfairLock`, so those members and the methods that
+/// only touch them are marked `nonisolated`. This preserves the exact
+/// pre-actor concurrency semantics: cache-hit reads in `pidBody` can
+/// still proceed without waiting on an in-flight full AX scan, and
+/// `scanLock` (not actor isolation) is still what serializes full
+/// scans across concurrent callers. Making these methods actor-isolated
+/// instead would have serialized *all* calls — including fast
+/// cache-hit checks — behind any long-running blocking AX scan, which
+/// would have been a behavior change, not just a safety upgrade.
+actor SourcePIDCache {
     private static let diagLog = DiagLog(category: "SourcePIDCache")
     /// An object that contains a running application and provides an
     /// interface to access relevant information, such as its process
@@ -156,13 +171,22 @@ final class SourcePIDCache {
     }
 
     /// The shared cache.
-    static nonisolated(unsafe) let shared = SourcePIDCache()
+    static let shared = SourcePIDCache()
 
     /// The cache's protected state.
-    private let state = OSAllocatedUnfairLock(initialState: State())
+    ///
+    /// `nonisolated`: this is already synchronized by its own
+    /// `OSAllocatedUnfairLock` and does not need actor isolation on
+    /// top of that. Keeping it `nonisolated` lets fast cache-hit reads
+    /// run without waiting for the actor even while `start()`/cleanup
+    /// (which remain actor-isolated) are in flight.
+    private nonisolated let state = OSAllocatedUnfairLock(initialState: State())
 
     /// Lock to prevent multiple concurrent full scans of all applications.
-    private let scanLock = OSAllocatedUnfairLock(initialState: ())
+    ///
+    /// `nonisolated` for the same reason as `state` above — it is the
+    /// mechanism (not actor isolation) that serializes full AX scans.
+    private nonisolated let scanLock = OSAllocatedUnfairLock(initialState: ())
 
     /// Observer for running applications.
     private lazy var cancellable: AnyCancellable = {
@@ -185,13 +209,13 @@ final class SourcePIDCache {
     }
 
     /// Performs cleanup of the cache state.
-    private func performCleanup() {
+    private nonisolated func performCleanup() {
         autoreleasepool {
             performCleanupBody()
         }
     }
 
-    private func performCleanupBody() {
+    private nonisolated func performCleanupBody() {
         let runningApps = NSWorkspace.shared.runningApplications
         SourcePIDCache.diagLog.debug("Performing PID cache cleanup")
 
@@ -267,7 +291,7 @@ final class SourcePIDCache {
 
     /// Returns the cached process identifier for the given window,
     /// updating the cache if needed.
-    func pid(for window: WindowInfo) -> pid_t? {
+    nonisolated func pid(for window: WindowInfo) -> pid_t? {
         // Wrap the entire request in an autoreleasepool. This XPC service
         // has no NSApplication, so autoreleased ObjC/CF objects from
         // WindowInfo creation, AX API calls, and CGS bridging would
@@ -282,13 +306,13 @@ final class SourcePIDCache {
     ///
     /// `pidBody` already caches **all** matched windows during its full
     /// AX scan, so after one call all resolvable PIDs are available.
-    func pids(for windows: [WindowInfo]) -> [pid_t?] {
+    nonisolated func pids(for windows: [WindowInfo]) -> [pid_t?] {
         autoreleasepool {
             pidsBody(for: windows)
         }
     }
 
-    private func pidsBody(for windows: [WindowInfo]) -> [pid_t?] {
+    private nonisolated func pidsBody(for windows: [WindowInfo]) -> [pid_t?] {
         // Drive the scan via an unresolved window in the batch, not via
         // `windows.first`. pidBody returns early on a cache hit (line 292),
         // so passing a cached window skips the AX traversal entirely.
@@ -308,7 +332,7 @@ final class SourcePIDCache {
         }
     }
 
-    private func pidBody(for window: WindowInfo) -> pid_t? {
+    private nonisolated func pidBody(for window: WindowInfo) -> pid_t? {
         if let pid = state.withLock({ $0.pids[window.windowID] }) {
             SourcePIDCache.diagLog.debug("SourcePIDCache.pid: cache hit for windowID \(window.windowID) -> PID \(pid)")
             return pid
