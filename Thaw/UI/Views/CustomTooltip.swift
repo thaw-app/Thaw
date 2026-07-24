@@ -19,6 +19,15 @@ final class CustomTooltipPanel: NSPanel {
     /// Only the owner that showed the tooltip can dismiss it.
     private(set) var currentOwner: AnyHashable?
 
+    /// Safety-net timer that force-dismisses the tooltip if no owner ever
+    /// calls `dismiss(owner:)`.
+    ///
+    /// A missed hover-exit (a stalled event tap, a deallocated owner, …)
+    /// must never leave this singleton on screen forever (#734). The
+    /// timer is refreshed on every `show(...)`, so a genuine long hover
+    /// keeps the tooltip alive; it only fires after 10s of silence.
+    private var hideWatchdog: Timer?
+
     private let label: NSTextField = {
         let field = NSTextField(labelWithString: "")
         field.font = .toolTipsFont(ofSize: NSFont.smallSystemFontSize)
@@ -87,7 +96,6 @@ final class CustomTooltipPanel: NSPanel {
     /// The `owner` token is used to prevent other callers from dismissing
     /// a tooltip they didn't show.
     func show(text: String, near point: CGPoint, in screen: NSScreen?, owner: AnyHashable? = nil) {
-        currentOwner = owner
         label.stringValue = text
         label.sizeToFit()
 
@@ -98,8 +106,62 @@ final class CustomTooltipPanel: NSPanel {
             height: labelSize.height + padding.height
         )
 
-        let screen = screen ?? NSScreen.main ?? NSScreen.screens.first
-        let screenFrame = screen?.visibleFrame ?? .zero
+        let screens = NSScreen.screens.map { (frame: $0.frame, visibleFrame: $0.visibleFrame) }
+        guard let origin = Self.placementOrigin(
+            for: panelSize,
+            near: point,
+            screens: screens,
+            preferred: screen?.frame
+        ) else {
+            // The point doesn't fall inside any known screen, which is the
+            // source of the #734 "random position" reports (stale/parked
+            // bounds). Don't show a tooltip we can't place sanely.
+            return
+        }
+
+        currentOwner = owner
+        setContentSize(panelSize)
+        setFrameOrigin(origin)
+        orderFrontRegardless()
+
+        // (Re)arm the watchdog on every show, so a stuck owner can never
+        // pin the tooltip on screen indefinitely (#734).
+        hideWatchdog?.invalidate()
+        hideWatchdog = Timer.scheduledTimer(withTimeInterval: 10, repeats: false) { [weak self] _ in
+            Task { @MainActor in
+                self?.forceDismiss()
+            }
+        }
+    }
+
+    /// Computes the origin at which a panel of `panelSize` should be placed
+    /// near `point`, clamped to whichever screen's `frame` contains `point`.
+    ///
+    /// Returns `nil` if `point` falls outside every screen's `frame` — that
+    /// indicates stale or parked coordinates that shouldn't be trusted to
+    /// place a visible panel (#734).
+    ///
+    /// `preferred` is used only to break ties between overlapping screen
+    /// frames that both contain `point`; it has no effect otherwise.
+    nonisolated static func placementOrigin(
+        for panelSize: NSSize,
+        near point: NSPoint,
+        screens: [(frame: NSRect, visibleFrame: NSRect)],
+        preferred: NSRect?
+    ) -> NSPoint? {
+        let candidates = screens.filter { $0.frame.contains(point) }
+        guard !candidates.isEmpty else {
+            return nil
+        }
+
+        let match: (frame: NSRect, visibleFrame: NSRect)
+        if let preferred, let preferredMatch = candidates.first(where: { $0.frame == preferred }) {
+            match = preferredMatch
+        } else {
+            match = candidates[0]
+        }
+
+        let screenFrame = match.visibleFrame
 
         // Position: centered horizontally below the cursor, offset down by 18pt.
         var origin = NSPoint(
@@ -111,9 +173,7 @@ final class CustomTooltipPanel: NSPanel {
         origin.x = max(screenFrame.minX + 2, min(origin.x, screenFrame.maxX - panelSize.width - 2))
         origin.y = max(screenFrame.minY + 2, min(origin.y, screenFrame.maxY - panelSize.height - 2))
 
-        setContentSize(panelSize)
-        setFrameOrigin(origin)
-        orderFrontRegardless()
+        return origin
     }
 
     /// Hides the tooltip immediately.
@@ -126,6 +186,17 @@ final class CustomTooltipPanel: NSPanel {
         }
         currentOwner = nil
         orderOut(nil)
+        hideWatchdog?.invalidate()
+        hideWatchdog = nil
+    }
+
+    /// Force-dismisses the tooltip regardless of owner, invoked by the
+    /// watchdog timer when no owner has dismissed it in time (#734).
+    private func forceDismiss() {
+        currentOwner = nil
+        orderOut(nil)
+        hideWatchdog?.invalidate()
+        hideWatchdog = nil
     }
 }
 
