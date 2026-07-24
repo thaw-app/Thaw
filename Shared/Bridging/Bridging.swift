@@ -619,10 +619,7 @@ extension Bridging {
 
         let content: SCShareableContent
         do {
-            content = try await SCShareableContent.excludingDesktopWindows(
-                false,
-                onScreenWindowsOnly: false
-            )
+            content = try await shareableContentIncludingOffscreen()
         } catch {
             diagLog.error("captureWindowsImageSCK: SCShareableContent failed: \(error)")
             return nil
@@ -710,4 +707,106 @@ extension Bridging {
             return nil
         }
     }
+
+    /// Cached equivalent of `SCShareableContent.excludingDesktopWindows(false,
+    /// onScreenWindowsOnly: false)`.
+    ///
+    /// `captureWindowsImageSCK` is a hot path — the 4 fps live-refresh loop
+    /// and every other `captureWindowsAsync` call site fetch shareable
+    /// content on each tick, each a full window/display enumeration.
+    /// `ShareableContentCache` coalesces calls within `maxAge` of each other
+    /// into a single underlying fetch.
+    ///
+    /// This is a *different* content shape than
+    /// `ScreenCapture.getShareableContent()`, which wraps
+    /// `SCShareableContent.getWithCompletionHandler`'s default (equivalent to
+    /// `.current`, i.e. `excludingDesktopWindows: true, onScreenWindowsOnly:
+    /// true`): this one explicitly asks for desktop windows and offscreen
+    /// windows too, because captureWindowsImageSCK needs to be able to
+    /// resolve menu-bar item windows that ScreenCaptureKit still enumerates
+    /// while offscreen even though its capture path later rejects them.
+    /// Since the two callers request genuinely different content, they are
+    /// cached under separate `ShareableContentCache` instances (keys) rather
+    /// than being coalesced into one fetch. `ShareableContentCache` lives
+    /// here (rather than alongside `ScreenCapture.getShareableContent()`)
+    /// because this file is shared between the Thaw and MenuBarItemService
+    /// targets, and only the shared file's symbols are visible to both.
+    private static func shareableContentIncludingOffscreen(maxAge: Duration = .milliseconds(150)) async throws -> SCShareableContent {
+        let snapshot = try await shareableContentIncludingOffscreenCache.content(
+            maxAge: maxAge,
+            fetch: fetchShareableContentIncludingOffscreenUncached
+        )
+        return snapshot.content
+    }
+
+    private static let shareableContentIncludingOffscreenCache = ShareableContentCache<ShareableContentSnapshot>()
+
+    private static func fetchShareableContentIncludingOffscreenUncached() async throws -> ShareableContentSnapshot {
+        let content = try await SCShareableContent.excludingDesktopWindows(
+            false,
+            onScreenWindowsOnly: false
+        )
+        return ShareableContentSnapshot(content: content)
+    }
+}
+
+/// Coalesces concurrent/rapid shareable-content fetches into one underlying
+/// fetch.
+///
+/// Holds the most recent result plus an in-flight fetch task. Callers that
+/// arrive while a fetch is already running await the same task rather than
+/// starting a second enumeration; only the caller that started the task
+/// records the result and clears `inFlightTask`, so joiners never race each
+/// other over the cache bookkeeping.
+///
+/// Generic over the cached payload so tests can exercise the coalescing
+/// logic with a lightweight fake instead of a real `SCShareableContent`.
+actor ShareableContentCache<Content: Sendable> {
+    private var cached: (content: Content, timestamp: ContinuousClock.Instant)?
+    private var inFlightTask: Task<Content, any Error>?
+
+    func content(
+        maxAge: Duration,
+        fetch: @Sendable @escaping () async throws -> Content
+    ) async throws -> Content {
+        if let cached, ContinuousClock.now - cached.timestamp < maxAge {
+            return cached.content
+        }
+
+        if let inFlightTask {
+            return try await awaitWithoutCancelling(inFlightTask)
+        }
+
+        let task = Task<Content, any Error> {
+            try await fetch()
+        }
+        inFlightTask = task
+        do {
+            let content = try await awaitWithoutCancelling(task)
+            cached = (content, .now)
+            inFlightTask = nil
+            return content
+        } catch {
+            inFlightTask = nil
+            throw error
+        }
+    }
+
+    /// A caller cancelling must not cancel the shared task — other callers
+    /// may still be awaiting its result.
+    private func awaitWithoutCancelling(_ task: Task<Content, any Error>) async throws -> Content {
+        try await withTaskCancellationHandler {
+            try await task.value
+        } onCancel: {}
+    }
+}
+
+/// An immutable ScreenCaptureKit snapshot passed across the cache actor.
+///
+/// `SCShareableContent` is an Objective-C reference type without a Sendable
+/// annotation. It is returned as a completed framework snapshot and this
+/// wrapper never mutates or exposes any mutable state, so sharing that
+/// reference among the capture readers is safe.
+struct ShareableContentSnapshot: @unchecked Sendable {
+    let content: SCShareableContent
 }
