@@ -6,6 +6,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import AsyncAlgorithms
 import Cocoa
 import Combine
 
@@ -47,6 +48,12 @@ final class DisplaySettingsManager: ObservableObject {
 
     /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
+
+    /// Task backing the swift-async-algorithms screen-parameters debounce (see
+    /// ``configureCancellables()``). Held so it is cancelled in `deinit`,
+    /// matching the lifetime of the Combine cancellables above; its notification
+    /// observer is owned inside the task and removed when it ends.
+    private var screenParametersTask: Task<Void, Never>?
 
     /// JSON encoder for persistence.
     private let encoder = JSONEncoder()
@@ -244,6 +251,13 @@ final class DisplaySettingsManager: ObservableObject {
         }
     }
 
+    deinit {
+        // Combine cancellables tear down automatically; the async-algorithms
+        // screen-parameters task is manually owned, so cancel it here. Ending
+        // the task runs its defer, which removes the notification observer.
+        screenParametersTask?.cancel()
+    }
+
     // MARK: - Persistence
 
     /// Configures Combine sinks to persist configurations on change.
@@ -304,11 +318,26 @@ final class DisplaySettingsManager: ObservableObject {
         // common case but does not cover oscillating values during the
         // flap window). One second coalesces a single docking event into
         // one apply.
-        NotificationCenter.default
-            .publisher(for: NSApplication.didChangeScreenParametersNotification)
-            .debounce(for: .seconds(1), scheduler: DispatchQueue.main)
-            .sink { [weak self] _ in
-                guard let self else { return }
+        //
+        // First swift-async-algorithms adoption site: a NotificationCenter
+        // observer feeds an AsyncStream that `.debounce(for:)` coalesces,
+        // replacing Combine's `.debounce(for:scheduler:)`. Behaviour is
+        // identical — the two per-event skips are `continue` (skip this
+        // notification), not loop exit.
+        let (screenParameterEvents, screenParameterContinuation) = AsyncStream<Void>.makeStream()
+        screenParametersTask = Task { @MainActor [weak self] in
+            // The observer is owned by this task: added when it starts and
+            // removed when it ends (cancellation ends the for-await loop, which
+            // runs the defer). This keeps the non-Sendable observer token off
+            // the class so the nonisolated deinit only needs to cancel the task.
+            let observer = NotificationCenter.default.addObserver(
+                forName: NSApplication.didChangeScreenParametersNotification,
+                object: nil,
+                queue: .main
+            ) { _ in screenParameterContinuation.yield(()) }
+            defer { NotificationCenter.default.removeObserver(observer) }
+            for await _ in screenParameterEvents.debounce(for: .seconds(1)) {
+                guard let self else { break }
                 // Ignore the self-inflicted parameter change from the virtual
                 // display the provoker briefly creates and tears down. Reacting
                 // to it (a no-op spacing preflight) cancels the in-flight item
@@ -317,7 +346,7 @@ final class DisplaySettingsManager: ObservableObject {
                 // display, so there is nothing here to apply.
                 if let until = VirtualDisplayProvoker.displayReactionsSuppressedUntil, Date() < until {
                     diagLog.info("Screen parameters changed during virtual-display provoke; ignoring self-inflicted event")
-                    return
+                    continue
                 }
                 diagLog.info("Screen parameters changed — \(NSScreen.managedScreens.count) screen(s) connected")
                 captureCurrentlyConnectedDisplays()
@@ -327,11 +356,11 @@ final class DisplaySettingsManager: ObservableObject {
                     lastAppliedActiveDisplayUUID: lastAppliedActiveDisplayUUID
                 ) {
                     diagLog.info("Active menu bar display unchanged (\(currentUUID ?? "nil")); skipping spacing apply")
-                    return
+                    continue
                 }
                 applyActiveDisplaySpacing(reason: "screenParametersChanged")
             }
-            .store(in: &c)
+        }
 
         // Whenever per-display configurations change (user edit, profile
         // load), re-derive what the active display's spacing should be and
