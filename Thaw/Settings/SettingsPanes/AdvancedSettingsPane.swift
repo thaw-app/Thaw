@@ -6,9 +6,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import MenuBarModel
 import SwiftUI
-import ThawCapture
 
 struct AdvancedSettingsPane: View {
     @EnvironmentObject var appState: AppState

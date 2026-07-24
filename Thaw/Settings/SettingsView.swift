@@ -30,12 +30,22 @@ struct SettingsView: View {
         currentSectionIndex == allSections.count - 1
     }
 
+    private var paneTitle: LocalizedStringKey? {
+        // About is a centered identity layout; a page title would be redundant.
+        // Title sits above IceForm (outside grouped cards) and stays put while
+        // the form scrolls in the remaining space.
+        navigationState.settingsNavigationIdentifier == .about
+            ? nil
+            : navigationState.settingsNavigationIdentifier.localized
+    }
+
     var body: some View {
         NavigationSplitView {
             sidebar
         } detail: {
             settingsPane
                 .id(navigationState.settingsNavigationIdentifier)
+                .environment(\.settingsPaneTitle, paneTitle)
         }
         .navigationTitle(navigationState.settingsNavigationIdentifier.localized)
         .toolbar {
