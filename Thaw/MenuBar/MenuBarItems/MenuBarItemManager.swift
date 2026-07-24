@@ -387,6 +387,36 @@ final class MenuBarItemManager: ObservableObject {
     /// `confirmedDivergence(divergedNow:pendingSince:now:staleness:)`.
     private var pendingDivergenceObservedAt: ContinuousClock.Instant?
 
+    /// Per-item move-failure history for the bulk-apply loops, keyed by
+    /// `uniqueIdentifier`. A failed move records an entry; a successful
+    /// move clears it. Items under backoff are skipped by the next apply
+    /// so one persistently unmovable item (a vanished transient Control
+    /// Center window, an item whose app hangs) can't re-trigger a full
+    /// cursor-hijacking apply loop every cache cycle (#736).
+    private var moveFailureHistory = [String: (count: Int, lastFailure: ContinuousClock.Instant)]()
+
+    /// How long a failed item stays excluded from bulk-apply moves.
+    /// Grows linearly with consecutive failures, capped at 5 minutes.
+    nonisolated static func moveFailureBackoffInterval(failureCount: Int) -> Duration {
+        .seconds(min(30 * max(failureCount, 1), 300))
+    }
+
+    /// Whether the bulk-apply loops should skip moving the given item
+    /// because it failed recently and is still inside its backoff window.
+    private func isUnderMoveFailureBackoff(_ uid: String, now: ContinuousClock.Instant = .now) -> Bool {
+        guard let entry = moveFailureHistory[uid] else { return false }
+        return now - entry.lastFailure < Self.moveFailureBackoffInterval(failureCount: entry.count)
+    }
+
+    private func recordMoveFailure(_ uid: String, now: ContinuousClock.Instant = .now) {
+        let count = (moveFailureHistory[uid]?.count ?? 0) + 1
+        moveFailureHistory[uid] = (count: count, lastFailure: now)
+    }
+
+    private func recordMoveSuccess(_ uid: String) {
+        moveFailureHistory.removeValue(forKey: uid)
+    }
+
     /// Persisted mapping of item tag identifiers to their original section name for
     /// temporarily shown items whose apps quit before they could be rehidden. When
     /// the app relaunches, this allows us to move the item back to its original section.
@@ -620,7 +650,15 @@ final class MenuBarItemManager: ObservableObject {
                 // Exclude transient Control Center items (Live Activities,
                 // iPhone Mirroring icons) from the identifier set so their
                 // ephemeral UIDs are never written to savedSectionOrder.
-                guard !item.isTransientControlCenterItem else { continue }
+                // isTransientControlCenterItem requires a resolved sourcePID,
+                // so also exclude CC-generic (`Item-N`) items whose sourcePID
+                // is nil: those are either the same transient windows caught
+                // before resolution, or third-party items degraded to
+                // ambiguous CC identifiers by an XPC resolution failure
+                // (#784) — neither is a stable identity worth persisting.
+                guard !item.isTransientControlCenterItem,
+                      !(item.tag.isControlCenterGenericItem && item.sourcePID == nil)
+                else { continue }
                 allCurrentIdentifiers.insert(item.uniqueIdentifier)
             }
         }
@@ -632,6 +670,7 @@ final class MenuBarItemManager: ObservableObject {
                 .filter {
                     isPersistable($0) &&
                         !$0.isTransientControlCenterItem &&
+                        !($0.tag.isControlCenterGenericItem && $0.sourcePID == nil) &&
                         !pendingRehideTagIDs.contains($0.tag.tagIdentifier) &&
                         !ejectedStillInHidden.contains($0.uniqueIdentifier)
                 }
@@ -665,6 +704,18 @@ final class MenuBarItemManager: ObservableObject {
     /// look like?" question has a single answer used by both periodic
     /// save and profile capture.
     private func saveSectionOrder(from cache: ItemCache) {
+        // Never persist an order computed from a degraded snapshot: when
+        // XPC sourcePID resolution fails, third-party items collapse into
+        // ambiguous Control-Center identifiers, and writing that snapshot
+        // would poison the saved layout every apply matches against (#784).
+        let managedItems = cache.managedItems
+        let unresolvedCount = managedItems.filter { $0.sourcePID == nil }.count
+        if Self.majorityOfSourcePIDsUnresolved(unresolvedCount: unresolvedCount, itemCount: managedItems.count) {
+            MenuBarItemManager.diagLog.info(
+                "saveSectionOrder: skipping, \(unresolvedCount)/\(managedItems.count) items have unresolved sourcePIDs"
+            )
+            return
+        }
         let newOrder = computeSectionOrder(from: cache)
         guard newOrder != savedSectionOrder else { return }
         savedSectionOrder = newOrder
@@ -1527,6 +1578,14 @@ extension MenuBarItemManager {
         /// doesn't read as a layout change and trigger a recache.
         private(set) var cachedCloneWindowIDs = Set<CGWindowID>()
 
+        /// Window identifiers of Control-Center-generic (`Item-N`) items seen
+        /// in the most recent cache cycle. These windows churn — Live
+        /// Activities and other transient Control Center widgets appear,
+        /// vanish, and get new windowIDs while the visible item count stays
+        /// stable — so applySavedLayout's windowID-change gate ignores their
+        /// disappearance instead of dispatching a full bulk apply (#736).
+        private(set) var cachedControlCenterGenericWindowIDs = Set<CGWindowID>()
+
         /// Runs the given async closure as a task and waits for it to
         /// complete before returning.
         ///
@@ -1549,6 +1608,11 @@ extension MenuBarItemManager {
             cachedCloneWindowIDs = ids
         }
 
+        /// Updates the set of cached Control-Center-generic window identifiers.
+        func updateCachedControlCenterGenericWindowIDs(_ ids: Set<CGWindowID>) {
+            cachedControlCenterGenericWindowIDs = ids
+        }
+
         /// Updates the mapping from window identifiers to source process identifiers.
         func updateCachedItemPIDs(_ pids: [CGWindowID: pid_t]) {
             cachedItemPIDs = pids
@@ -1563,6 +1627,7 @@ extension MenuBarItemManager {
             // a recycled windowID out of its comparison before the recache
             // that follows this reset repopulates the set.
             cachedCloneWindowIDs.removeAll()
+            cachedControlCenterGenericWindowIDs.removeAll()
         }
     }
 
@@ -2221,6 +2286,7 @@ extension MenuBarItemManager {
         defer { Task { await cacheGate.end() } }
 
         let previousWindowIDs = cacheActor.cachedItemWindowIDs
+        let previousCCGenericWindowIDs = cacheActor.cachedControlCenterGenericWindowIDs
         let displayID = Bridging.getActiveMenuBarDisplayID()
         MenuBarItemManager.diagLog.debug("cacheItemsRegardless: displayID=\(displayID.map { "\($0)" } ?? "nil"), previousWindowIDs count=\(previousWindowIDs.count)")
 
@@ -2410,6 +2476,9 @@ extension MenuBarItemManager {
         controlItemLookupFailureStreak = 0
         cacheActor.updateCachedItemWindowIDs(itemWindowIDs)
         cacheActor.updateCachedCloneWindowIDs(cloneWindowIDs)
+        cacheActor.updateCachedControlCenterGenericWindowIDs(
+            Set(items.filter { $0.tag.isControlCenterGenericItem }.map(\.windowID))
+        )
 
         await MainActor.run {
             self.areControlItemsMissing = false
@@ -2596,7 +2665,8 @@ extension MenuBarItemManager {
                 previousWindowIDs: previousWindowIDs,
                 controlItems: controlItems,
                 previousDisplayID: itemCache.displayID,
-                currentDisplayID: displayID
+                currentDisplayID: displayID,
+                previousCCGenericWindowIDs: previousCCGenericWindowIDs
             )
             if didApplySavedLayout {
                 backgroundCacheContinuation?.resume()
@@ -4070,6 +4140,18 @@ extension MenuBarItemManager {
                     continue
                 }
             } catch {
+                // missingItemBounds is definitive: getCurrentBounds already
+                // refreshed the on-screen items and re-matched by tag before
+                // throwing, so the item's window is genuinely gone (transient
+                // Control Center item vanished, owning app quit). Retrying
+                // just warps the hidden cursor into the menu bar once per
+                // remaining attempt for an item that cannot be moved (#736).
+                if case EventError.missingItemBounds = error {
+                    MenuBarItemManager.diagLog.warning(
+                        "Attempt \(n): \(item.logString) no longer reports bounds, aborting move"
+                    )
+                    throw error
+                }
                 MenuBarItemManager.diagLog.debug("Attempt \(n) failed: \(error)")
                 if n < maxAttempts {
                     try await waitForMoveOperationBuffer()
@@ -6875,14 +6957,26 @@ extension MenuBarItemManager {
                     break
                 }
 
+                // Control items are the section anchors of the full sort —
+                // skipping one would misplace everything after it, so they
+                // are exempt from failure backoff.
+                if !isControlUID, isUnderMoveFailureBackoff(uid) {
+                    MenuBarItemManager.diagLog.warning(
+                        "Profile layout (full sort): \(uid) under move-failure backoff, skipping"
+                    )
+                    continue
+                }
+
                 let dest: MoveDestination = .leftOfItem(cc)
                 MenuBarItemManager.diagLog.debug("Profile layout (full sort): \(uid) → .leftOfItem(CC)")
 
                 do {
                     try await move(item: item, to: dest, skipInputPause: true)
                     movedCount += 1
+                    recordMoveSuccess(uid)
                     try? await Task.sleep(for: .milliseconds(200))
                 } catch {
+                    recordMoveFailure(uid)
                     MenuBarItemManager.diagLog.error("Profile layout (full sort): failed \(uid): \(error)")
                 }
             }
@@ -7211,6 +7305,13 @@ extension MenuBarItemManager {
             for planned in plannedMoves {
                 guard !Task.isCancelled else { break }
 
+                if isUnderMoveFailureBackoff(planned.uid) {
+                    MenuBarItemManager.diagLog.warning(
+                        "Profile layout: \(planned.uid) under move-failure backoff, skipping"
+                    )
+                    continue
+                }
+
                 let allFreshItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
                 var freshItemsCopy = allFreshItems
                 guard let freshControl = ControlItemPair(
@@ -7243,8 +7344,10 @@ extension MenuBarItemManager {
                 do {
                     try await move(item: item, to: dest, skipInputPause: true)
                     movedCount += 1
+                    recordMoveSuccess(planned.uid)
                     try? await Task.sleep(for: .milliseconds(200))
                 } catch {
+                    recordMoveFailure(planned.uid)
                     MenuBarItemManager.diagLog.error(
                         "Profile layout: failed to move \(planned.uid): \(error)"
                     )
@@ -7521,7 +7624,8 @@ extension MenuBarItemManager {
         previousWindowIDs: [CGWindowID],
         controlItems: ControlItemPair,
         previousDisplayID: CGDirectDisplayID? = nil,
-        currentDisplayID: CGDirectDisplayID? = nil
+        currentDisplayID: CGDirectDisplayID? = nil,
+        previousCCGenericWindowIDs: Set<CGWindowID> = []
     ) async -> Bool {
         // Each guard logs a distinct reason so a "Thaw stopped
         // restoring my layout" bug report can be diagnosed from the
@@ -7587,8 +7691,15 @@ extension MenuBarItemManager {
         // arms/consumes the pending-divergence state below.
         let currentWindowIDSet = Set(items.map(\.windowID))
         let previousWindowIDSet = Set(previousWindowIDs)
+        // Control-Center-generic (`Item-N`) windows churn windowIDs while
+        // the visible item count stays stable (Live Activities, transient
+        // CC widgets). Their disappearance is not an app quit/relaunch and
+        // must not dispatch a bulk apply, or every churn cycle replays the
+        // whole layout and hijacks the cursor (#736). Their identities are
+        // never part of a saved layout (saveSectionOrder excludes them), so
+        // ignoring them here can't miss a restorable change.
         let windowIDsChanged = Self.windowIDsChanged(
-            previous: previousWindowIDSet,
+            previous: previousWindowIDSet.subtracting(previousCCGenericWindowIDs),
             current: currentWindowIDSet,
             previousDisplayID: previousDisplayID,
             currentDisplayID: currentDisplayID

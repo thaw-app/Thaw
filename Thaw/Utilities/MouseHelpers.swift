@@ -14,9 +14,24 @@ enum MouseHelpers {
     private static let diagLog = DiagLog(category: "MouseHelpers")
     private static let cursorLock = DispatchQueue(label: "MouseHelpers.cursorLock")
     /// Protected by `cursorLock` — all accesses go through `cursorLock.sync`.
+    /// The `CGDisplayHideCursor`/`CGDisplayShowCursor` calls that this count
+    /// mirrors are made *inside* the same critical section, so the count and
+    /// the window server's hide state can never diverge through interleaving
+    /// (a hide landing between another thread's decrement and its show call
+    /// used to strand the cursor hidden until the watchdog fired).
     private static nonisolated(unsafe) var cursorHideCount = 0
     /// Protected by `cursorLock` — all accesses go through `cursorLock.sync`.
     private static nonisolated(unsafe) var autoShowWorkItem: DispatchWorkItem?
+    /// Protected by `cursorLock`. Deadline of the currently scheduled
+    /// watchdog, used to extend — never shorten — coverage when nested
+    /// holders request a longer timeout than the first hide armed.
+    private static nonisolated(unsafe) var autoShowDeadline: DispatchTime = .distantFuture
+    /// Protected by `cursorLock`. Bumped whenever the watchdog is armed or
+    /// cancelled. A fired work item that lost the race with its own
+    /// cancellation (already executing, blocked on the lock) compares its
+    /// captured generation and becomes a no-op instead of force-showing a
+    /// cursor a newer holder legitimately hid.
+    private static nonisolated(unsafe) var watchdogGeneration = 0
     private static let defaultWatchdogTimeout: DispatchTimeInterval = .seconds(1)
 
     private static func formattedTimeout(_ interval: DispatchTimeInterval) -> String {
@@ -36,30 +51,64 @@ enum MouseHelpers {
         }
     }
 
-    private static func scheduleAutoShow(after timeout: DispatchTimeInterval = defaultWatchdogTimeout) {
+    /// Arms the watchdog, or extends it when the requested timeout reaches
+    /// past the currently scheduled deadline. Never shortens an armed
+    /// watchdog: a nested short-timeout hide must not cut the safety window
+    /// out from under an outer long-running holder (and vice versa, a
+    /// nested long-timeout hide extends the 1s default a shorter first
+    /// holder armed, so the watchdog can't force-show mid-operation).
+    ///
+    /// Must be called while holding `cursorLock`. Returns whether a new
+    /// watchdog was scheduled so the caller can log outside the lock.
+    private static func scheduleAutoShowLocked(after timeout: DispatchTimeInterval) -> Bool {
+        let deadline = DispatchTime.now() + timeout
+        if autoShowWorkItem != nil, autoShowDeadline >= deadline {
+            return false
+        }
+        autoShowWorkItem?.cancel()
+        watchdogGeneration += 1
+        let generation = watchdogGeneration
         let workItem = DispatchWorkItem {
-            forceShowCursor(reason: "watchdog timeout")
+            forceShowCursor(reason: "watchdog timeout", generation: generation)
         }
-        cursorLock.sync {
-            autoShowWorkItem?.cancel()
-            autoShowWorkItem = workItem
-        }
-        diagLog.debug("Cursor watchdog scheduled for \(formattedTimeout(timeout))")
-        DispatchQueue.main.asyncAfter(deadline: .now() + timeout, execute: workItem)
+        autoShowWorkItem = workItem
+        autoShowDeadline = deadline
+        DispatchQueue.main.asyncAfter(deadline: deadline, execute: workItem)
+        return true
     }
 
-    private static func cancelAutoShow() {
+    /// Must be called while holding `cursorLock`.
+    private static func cancelAutoShowLocked() {
+        autoShowWorkItem?.cancel()
+        autoShowWorkItem = nil
+        watchdogGeneration += 1
+    }
+
+    private static func forceShowCursor(reason: String, generation: Int) {
+        var result = CGError.success
+        var rearmed = false
+        var isStale = false
         cursorLock.sync {
-            autoShowWorkItem?.cancel()
+            guard generation == watchdogGeneration else {
+                // This item was superseded or cancelled after it had already
+                // started executing; the current cursor state belongs to a
+                // newer holder.
+                isStale = true
+                return
+            }
+            cursorHideCount = 0
             autoShowWorkItem = nil
+            result = CGDisplayShowCursor(CGMainDisplayID())
+            if result != .success {
+                // The safety net is the only recovery path once the count is
+                // zero; keep it alive so a transiently failing show retries.
+                rearmed = scheduleAutoShowLocked(after: defaultWatchdogTimeout)
+            }
         }
-    }
-
-    private static func forceShowCursor(reason: String) {
-        cursorLock.sync { cursorHideCount = 0 }
-        let result = CGDisplayShowCursor(CGMainDisplayID())
-        if result != .success {
-            diagLog.error("Force show cursor failed (reason: \(reason), error: \(result.rawValue))")
+        if isStale {
+            diagLog.debug("Stale cursor watchdog fired (reason: \(reason)), ignoring")
+        } else if result != .success {
+            diagLog.error("Force show cursor failed (reason: \(reason), error: \(result.rawValue), rearmed: \(rearmed))")
         } else {
             diagLog.info("Cursor force-shown (reason: \(reason))")
         }
@@ -81,50 +130,60 @@ enum MouseHelpers {
 
     /// Hides the mouse cursor and increments the hide cursor count.
     static func hideCursor(watchdogTimeout: DispatchTimeInterval? = nil) {
-        var shouldHide = false
+        let timeout = watchdogTimeout ?? defaultWatchdogTimeout
+        var hideFailure: CGError?
+        var scheduledWatchdog = false
         cursorLock.sync {
             cursorHideCount += 1
-            shouldHide = cursorHideCount == 1
+            if cursorHideCount == 1 {
+                let result = CGDisplayHideCursor(CGMainDisplayID())
+                guard result == .success else {
+                    // Undo only this call's increment; a blanket reset to 0
+                    // would wipe increments a concurrent holder still owns.
+                    cursorHideCount -= 1
+                    hideFailure = result
+                    return
+                }
+            }
+            scheduledWatchdog = scheduleAutoShowLocked(after: timeout)
         }
-
-        guard shouldHide else { return }
-
-        let result = CGDisplayHideCursor(CGMainDisplayID())
-        if result != .success {
-            diagLog.error("CGDisplayHideCursor failed with error code \(result.rawValue)")
-            cursorLock.sync { cursorHideCount = 0 } // Reset on failure
-        } else {
-            scheduleAutoShow(after: watchdogTimeout ?? defaultWatchdogTimeout)
+        if let hideFailure {
+            diagLog.error("CGDisplayHideCursor failed with error code \(hideFailure.rawValue)")
+        }
+        if scheduledWatchdog {
+            diagLog.debug("Cursor watchdog scheduled for \(formattedTimeout(timeout))")
         }
     }
 
     /// Decrements the hide cursor count and shows the mouse cursor
     /// if the count is `0`.
     static func showCursor() {
-        var shouldShow = false
         var wasAlreadyZero = false
+        var showFailure: CGError?
         cursorLock.sync {
-            if cursorHideCount > 0 {
-                cursorHideCount -= 1
-                shouldShow = cursorHideCount == 0
-            } else {
+            guard cursorHideCount > 0 else {
                 wasAlreadyZero = true
+                return
+            }
+            cursorHideCount -= 1
+            guard cursorHideCount == 0 else { return }
+
+            let result = CGDisplayShowCursor(CGMainDisplayID())
+            if result == .success {
+                cancelAutoShowLocked()
+            } else {
+                showFailure = result
+                // The count is already zero, so no later showCursor call
+                // will retry — keep the watchdog armed as the recovery path
+                // instead of leaving the cursor stranded hidden.
+                _ = scheduleAutoShowLocked(after: defaultWatchdogTimeout)
             }
         }
 
         if wasAlreadyZero {
             diagLog.debug("showCursor called with count already zero")
-            return
-        }
-
-        guard shouldShow else { return }
-
-        cancelAutoShow()
-
-        let result = CGDisplayShowCursor(CGMainDisplayID())
-        if result != .success {
-            diagLog.error("CGDisplayShowCursor failed with error code \(result.rawValue)")
-            // Don't reset count on failure to prevent imbalance
+        } else if let showFailure {
+            diagLog.error("CGDisplayShowCursor failed with error code \(showFailure.rawValue), watchdog kept armed")
         }
     }
 
