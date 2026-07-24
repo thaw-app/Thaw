@@ -1,13 +1,13 @@
 {
-  "originHash" : "7fcd5a61e81c66f8a0dbb9e99dba2fb00fa3b8a737fdf1503d3b580118ff3e1e",
+  "originHash" : "81c7d3ca8ed1d78f1668c42192530f02f316a4e1ec0dbc1ca59b56d35d7da8b0",
   "pins" : [
     {
-      "identity" : "axswift",
+      "identity" : "axswift6",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/stonerl/AXSwift",
+      "location" : "https://github.com/thaw-app/AXSwift6",
       "state" : {
-        "revision" : "467ccb39efa69b6d9e49c9f3dc4482da65194781",
-        "version" : "0.3.2"
+        "revision" : "7c3c6115a4aa61231a97dadd847e7d0d849ea8b3",
+        "version" : "0.4.1"
       }
     },
     {
