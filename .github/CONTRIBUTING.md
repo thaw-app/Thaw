@@ -14,6 +14,8 @@ Please read and follow our [Code of Conduct][coc].
 - Code
 - Translations
 
+Looking for a concrete task? See the living list in **[Ways to contribute (#316)](https://github.com/stonerl/Thaw/issues/316)** (docs/screenshots, triage, small cleanups, and more).
+
 ## Before You Start
 
 Regardless of the type of contribution, you'll need a GitHub account and a fork of the repository:

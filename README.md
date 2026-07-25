@@ -80,6 +80,8 @@ Having trouble after installing? Check [Frequent Issues](FREQUENT_ISSUES.md) bef
 
 Pull requests are welcome. Please open them against the **`development`** branch, follow the PR template, and read [Contributing](.github/CONTRIBUTING.md).
 
+Looking for something to do? See [Ways to contribute](https://github.com/stonerl/Thaw/issues/316).
+
 **Translations** are managed on [Crowdin](https://crowdin.com/project/thaw) — translation PRs are not accepted in this repo.
 
 ## Translations
