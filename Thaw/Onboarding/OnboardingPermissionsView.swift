@@ -79,7 +79,7 @@ struct ThawPermissionsView: View {
 }
 
 private struct OnboardingPermissionCard: View {
-    @ObservedObject var permission: Permission
+    let permission: Permission
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {

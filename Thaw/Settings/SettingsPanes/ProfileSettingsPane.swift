@@ -12,7 +12,7 @@ import UniformTypeIdentifiers
 
 struct ProfileSettingsPane: View {
     @EnvironmentObject var appState: AppState
-    @ObservedObject var profileManager: ProfileManager
+    let profileManager: ProfileManager
 
     @State private var newProfileName = ""
     @State private var isApplying = false

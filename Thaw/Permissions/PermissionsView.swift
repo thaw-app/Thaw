@@ -236,7 +236,7 @@ struct PermissionsView<Manager: PermissionsManaging>: View {
 /// button to request it (or a confirmation once it's been granted).
 struct PermissionCard: View {
     @EnvironmentObject var appState: AppState
-    @ObservedObject var permission: Permission
+    let permission: Permission
 
     /// Whether granting the permission should bring the permissions window
     /// back to the front. Disabled when hosted in a context — like the

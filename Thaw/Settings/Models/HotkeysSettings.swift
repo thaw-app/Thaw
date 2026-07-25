@@ -6,7 +6,6 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import Combine
 import Foundation
 
 /// Model for the app's Hotkeys settings.
@@ -27,9 +26,6 @@ final class HotkeysSettings: ObservableObject {
     /// Decoder for properties.
     private let decoder = JSONDecoder()
 
-    /// Storage for internal observers.
-    private var cancellables = Set<AnyCancellable>()
-
     /// The shared app state.
     private(set) weak var appState: AppState?
 
@@ -40,7 +36,7 @@ final class HotkeysSettings: ObservableObject {
             hotkey.performSetup(with: appState)
         }
         loadInitialState()
-        configureCancellables()
+        configureObservers()
     }
 
     /// Loads the model's initial state.
@@ -66,27 +62,26 @@ final class HotkeysSettings: ObservableObject {
     }
 
     /// Configures the internal observers for the model.
-    private func configureCancellables() {
-        var c = Set<AnyCancellable>()
-
+    ///
+    /// Each hotkey's callback is assigned after ``loadInitialState()`` has
+    /// already set its initial key combination, so — like the previous
+    /// `dropFirst()` Combine pipeline — the initial value is never persisted
+    /// redundantly, only subsequent changes.
+    private func configureObservers() {
         for hotkey in hotkeys {
-            hotkey.$keyCombination
-                .encode(encoder: encoder)
-                .receive(on: DispatchQueue.main)
-                .sink { [weak self] completion in
-                    if case let .failure(error) = completion {
-                        self?.diagLog.error("Error encoding hotkey: \(error)")
-                    }
-                } receiveValue: { data in
+            hotkey.keyCombinationDidChange = { [weak self, weak hotkey] in
+                guard let self, let hotkey else { return }
+                do {
+                    let data = try encoder.encode(hotkey.keyCombination)
                     withMutableCopy(of: Defaults.dictionary(forKey: .hotkeys) ?? [:]) { dictionary in
                         dictionary[hotkey.action.rawValue] = data
                         Defaults.set(dictionary, forKey: .hotkeys)
                     }
+                } catch {
+                    self.diagLog.error("Error encoding hotkey: \(error)")
                 }
-                .store(in: &c)
+            }
         }
-
-        cancellables = c
     }
 
     /// Returns the hotkey with the given action.

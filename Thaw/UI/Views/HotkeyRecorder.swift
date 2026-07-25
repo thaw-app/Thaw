@@ -6,7 +6,6 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import Combine
 import SwiftUI
 
 // MARK: - HotkeyRecorder
@@ -134,23 +133,8 @@ private final class HotkeyRecorderModel: ObservableObject {
         return nil
     }
 
-    private var cancellables = Set<AnyCancellable>()
-
     init(hotkey: Hotkey) {
         self.hotkey = hotkey
-        configureCancellables()
-    }
-
-    private func configureCancellables() {
-        var c = Set<AnyCancellable>()
-
-        hotkey.objectWillChange
-            .sink { [weak self] in
-                self?.objectWillChange.send()
-            }
-            .store(in: &c)
-
-        cancellables = c
     }
 
     func startRecording() {

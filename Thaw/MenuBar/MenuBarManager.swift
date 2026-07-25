@@ -54,10 +54,6 @@ final class MenuBarManager: ObservableObject {
     /// Read by Hotkey.Listener when an openMenuBarItem hotkey fires.
     var hotkeyItemMap: [ObjectIdentifier: String] = [:]
 
-    /// Per-item hotkey persistence observers, keyed by item identifier so a
-    /// single binding can be torn down without disturbing the others.
-    private var itemHotkeyCancellables = [String: AnyCancellable]()
-
     /// Cancellable for the periodic average-color refresh, active only while settings is visible.
     private var averageColorRefreshCancellable: AnyCancellable?
 
@@ -903,7 +899,6 @@ final class MenuBarManager: ObservableObject {
         for (identifier, hotkey) in itemHotkeys where !wantedIdentifiers.contains(identifier) {
             hotkey.disable()
             hotkeyItemMap[ObjectIdentifier(hotkey)] = nil
-            itemHotkeyCancellables[identifier] = nil
             newHotkeys[identifier] = nil
         }
 
@@ -928,20 +923,20 @@ final class MenuBarManager: ObservableObject {
             hotkeyItemMap[ObjectIdentifier(hotkey)] = identifier
 
             // Observe future changes from HotkeyRecorder and persist them.
-            itemHotkeyCancellables[identifier] = hotkey.$keyCombination
-                .dropFirst() // Skip the initial value we just set.
-                .receive(on: DispatchQueue.main)
-                .sink { [weak self, weak hotkey] newCombo in
-                    guard let self, let hotkey else { return }
-                    var dict = Defaults.dictionary(forKey: .menuBarItemHotkeys) as? [String: Data] ?? [:]
-                    if let combo = newCombo, let data = try? enc.encode(combo) {
-                        dict[identifier] = data
-                    } else {
-                        dict.removeValue(forKey: identifier)
-                    }
-                    Defaults.set(dict, forKey: .menuBarItemHotkeys)
-                    self.hotkeyItemMap[ObjectIdentifier(hotkey)] = newCombo != nil ? identifier : nil
+            // Assigned after the initial keyCombination is set above, so —
+            // like the previous dropFirst() Combine pipeline — the initial
+            // value is never redundantly persisted.
+            hotkey.keyCombinationDidChange = { [weak self, weak hotkey] in
+                guard let self, let hotkey else { return }
+                var dict = Defaults.dictionary(forKey: .menuBarItemHotkeys) as? [String: Data] ?? [:]
+                if let combo = hotkey.keyCombination, let data = try? enc.encode(combo) {
+                    dict[identifier] = data
+                } else {
+                    dict.removeValue(forKey: identifier)
                 }
+                Defaults.set(dict, forKey: .menuBarItemHotkeys)
+                self.hotkeyItemMap[ObjectIdentifier(hotkey)] = hotkey.keyCombination != nil ? identifier : nil
+            }
 
             newHotkeys[identifier] = hotkey
         }

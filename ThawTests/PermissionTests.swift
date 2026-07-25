@@ -6,7 +6,6 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import Combine
 import SwiftUI
 @testable import Thaw
 import XCTest
@@ -44,15 +43,16 @@ final class PermissionTests: XCTestCase {
         isGranted = true
 
         let granted = expectation(description: "Permission grant is observed after polling restarts")
-        let cancellable = permission.$hasPermission
-            .filter(\.self)
-            .sink { _ in granted.fulfill() }
+        permission.onChange = {
+            if permission.hasPermission {
+                granted.fulfill()
+            }
+        }
 
         wait(for: [granted], timeout: 5)
 
         XCTAssertEqual(requestCount, 2)
         XCTAssertEqual(openedSettingsURLs, [settingsURL, settingsURL])
         XCTAssertTrue(permission.hasPermission)
-        withExtendedLifetime(cancellable) {}
     }
 }

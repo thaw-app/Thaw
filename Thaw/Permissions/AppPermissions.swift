@@ -6,7 +6,6 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import Combine
 import Foundation
 
 /// An abstraction over ``AppPermissions`` that lets views depend on just the
@@ -55,9 +54,6 @@ final class AppPermissions: ObservableObject, PermissionsManaging {
     /// The state of the app's granted permissions.
     @Published private(set) var permissionsState: PermissionsState = .missing
 
-    /// Storage for internal observers.
-    private var cancellable: AnyCancellable?
-
     /// The permissions required for full app functionality.
     var allPermissions: [Permission] {
         [accessibility, screenRecording]
@@ -71,11 +67,11 @@ final class AppPermissions: ObservableObject, PermissionsManaging {
     /// Creates a new permissions manager.
     init() {
         self.updatePermissionsState()
-        self.cancellable = Publishers.MergeMany(allPermissions.map(\.$hasPermission))
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
+        for permission in allPermissions {
+            permission.onChange = { [weak self] in
                 self?.updatePermissionsState()
             }
+        }
     }
 
     /// Updates the current permissions state.
