@@ -25,10 +25,12 @@ import Foundation
 /// the verdict, so the second encounter costs one bounded attempt instead
 /// of three.
 ///
-/// The record is a hint, never a veto: a marked item is still attempted
-/// once, and a single success clears it. That way an owner that starts
-/// answering again — a relaunch, an update, a permission finally granted —
-/// recovers on its own without the user having to know this list exists.
+/// The record is a hint, never a veto: a marked item is still attempted,
+/// and a single success clears it. That way an owner that starts answering
+/// again — a relaunch, an update, a permission finally granted — recovers
+/// on its own without the user having to know this list exists.
+///
+/// Marking takes two failures, not one. See ``provisionalFailures``.
 @MainActor
 final class UnresponsiveItemStore {
     /// How long a record survives without being renewed.
@@ -43,6 +45,19 @@ final class UnresponsiveItemStore {
 
     /// The last time each key was seen failing, keyed by ``persistenceKey(for:)``.
     private var lastFailureDates: [String: Date]
+
+    /// Keys that have failed once in this session but are not marked yet.
+    ///
+    /// A single failure is not evidence. Event operations can time out for
+    /// reasons that have nothing to do with the owner — contention on the
+    /// event semaphore is the obvious one — and a mark earned that way would
+    /// stand for two weeks on an app that was never at fault. Requiring a
+    /// second failure costs the pathological case nothing, since an owner
+    /// that never answers reaches two within the same session.
+    ///
+    /// Deliberately not persisted: a lone failure per session is not the
+    /// behaviour this store exists to remember.
+    private var provisionalFailures = Set<String>()
 
     init() {
         let stored = Defaults.dictionary(forKey: .unresponsiveMenuBarItems) as? [String: Double] ?? [:]
@@ -85,22 +100,35 @@ final class UnresponsiveItemStore {
         return true
     }
 
-    /// Records that the item's owner failed to answer, renewing its lifetime.
+    /// Records that the item's owner failed to answer.
+    ///
+    /// The first failure in a session is held provisionally; the second
+    /// marks the item and renews its lifetime.
     func recordFailure(for tag: MenuBarItemTag) {
         guard let key = Self.persistenceKey(for: tag) else {
             return
         }
-        let wasKnown = lastFailureDates[key] != nil
+        let wasMarked = lastFailureDates[key] != nil
+        guard wasMarked || !provisionalFailures.insert(key).inserted else {
+            Self.diagLog.debug("\(key) failed once; waiting for a second failure before marking it")
+            return
+        }
         lastFailureDates[key] = .now
         persist()
-        if !wasKnown {
+        if !wasMarked {
             Self.diagLog.info("Marked \(key) as unresponsive to synthetic events")
         }
     }
 
     /// Clears any record for the item, because its owner just answered.
     func recordSuccess(for tag: MenuBarItemTag) {
-        guard let key = Self.persistenceKey(for: tag), lastFailureDates.removeValue(forKey: key) != nil else {
+        guard let key = Self.persistenceKey(for: tag) else {
+            return
+        }
+        // A success is evidence against a provisional failure too, otherwise
+        // two unrelated blips a week apart would eventually mark a healthy app.
+        provisionalFailures.remove(key)
+        guard lastFailureDates.removeValue(forKey: key) != nil else {
             return
         }
         persist()
@@ -109,6 +137,7 @@ final class UnresponsiveItemStore {
 
     /// Forgets every record.
     func removeAll() {
+        provisionalFailures.removeAll()
         guard !lastFailureDates.isEmpty else {
             return
         }

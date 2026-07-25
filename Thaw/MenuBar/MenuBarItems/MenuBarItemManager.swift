@@ -4246,16 +4246,7 @@ extension MenuBarItemManager {
         // target externally; ordinary items skip this gate.
         var anyMoveEventsSucceeded = false
 
-        // Same bound as click(): an owner with a standing record of ignoring
-        // synthetic events gets one attempt. The loop already aborts early
-        // once postMoveEvents detects a hung owner, but that detection only
-        // catches owners that are visibly stalled — this also covers the ones
-        // that merely never acknowledge, which otherwise burn every attempt.
-        let maxAttempts: Int = if unresponsiveItems.isUnresponsive(item.tag) {
-            1
-        } else {
-            max(1, maxMoveAttempts)
-        }
+        let maxAttempts = max(1, maxMoveAttempts)
         for n in 1 ... maxAttempts {
             guard !Task.isCancelled else {
                 throw EventError.cannotComplete
@@ -4319,6 +4310,23 @@ extension MenuBarItemManager {
                 if case EventError.ownerUnresponsive = error {
                     MenuBarItemManager.diagLog.warning(
                         "Attempt \(n): \(item.logString) owner is unresponsive, aborting move"
+                    )
+                    unresponsiveItems.recordFailure(for: item.tag)
+                    throw error
+                }
+                // An owner with a standing record of ignoring synthetic events
+                // gets no further attempts once it fails this way again. This
+                // is deliberately narrower than capping maxAttempts up front:
+                // the loop also retries when the owner *did* respond but the
+                // item did not land, which is a different failure and still
+                // deserves its full budget. Capping up front would strip those
+                // retries too, and since the move would then fail, the item
+                // could never earn the success that clears its record.
+                if let error = error as? EventError,
+                   error.indicatesUnresponsiveOwner,
+                   unresponsiveItems.isUnresponsive(item.tag) {
+                    MenuBarItemManager.diagLog.warning(
+                        "Attempt \(n): \(item.logString) failed the way it always does, aborting move"
                     )
                     unresponsiveItems.recordFailure(for: item.tag)
                     throw error

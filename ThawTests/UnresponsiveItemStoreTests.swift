@@ -44,9 +44,41 @@ final class UnresponsiveItemStoreTests: XCTestCase {
         XCTAssertFalse(store.isUnresponsive(tag("at.obdev.littlesnitch", "Item-0")))
     }
 
-    func testRecordedFailureSurvivesANewStore() {
+    func testASingleFailureDoesNotMarkAnItem() {
         let item = tag("at.obdev.littlesnitch", "Item-0")
-        UnresponsiveItemStore().recordFailure(for: item)
+        let store = UnresponsiveItemStore()
+        store.recordFailure(for: item)
+
+        XCTAssertFalse(store.isUnresponsive(item))
+        XCTAssertNil(Defaults.object(forKey: .unresponsiveMenuBarItems))
+    }
+
+    func testASecondFailureMarksTheItem() {
+        let item = tag("at.obdev.littlesnitch", "Item-0")
+        let store = UnresponsiveItemStore()
+        store.recordFailure(for: item)
+        store.recordFailure(for: item)
+
+        XCTAssertTrue(store.isUnresponsive(item))
+    }
+
+    func testASuccessResetsTheProvisionalFailure() {
+        // Two failures separated by a success are two unrelated blips, not
+        // an owner that never answers.
+        let item = tag("at.obdev.littlesnitch", "Item-0")
+        let store = UnresponsiveItemStore()
+        store.recordFailure(for: item)
+        store.recordSuccess(for: item)
+        store.recordFailure(for: item)
+
+        XCTAssertFalse(store.isUnresponsive(item))
+    }
+
+    func testMarkSurvivesANewStore() {
+        let item = tag("at.obdev.littlesnitch", "Item-0")
+        let first = UnresponsiveItemStore()
+        first.recordFailure(for: item)
+        first.recordFailure(for: item)
 
         // A second instance reads only what was persisted, which is what a
         // relaunch does.
@@ -57,6 +89,7 @@ final class UnresponsiveItemStoreTests: XCTestCase {
         let item = tag("at.obdev.littlesnitch", "Item-0")
         let store = UnresponsiveItemStore()
         store.recordFailure(for: item)
+        store.recordFailure(for: item)
         store.recordSuccess(for: item)
 
         XCTAssertFalse(store.isUnresponsive(item))
@@ -65,6 +98,7 @@ final class UnresponsiveItemStoreTests: XCTestCase {
 
     func testRecordsAreScopedToTheExactItem() {
         let store = UnresponsiveItemStore()
+        store.recordFailure(for: tag("at.obdev.littlesnitch", "Item-0"))
         store.recordFailure(for: tag("at.obdev.littlesnitch", "Item-0"))
 
         XCTAssertFalse(store.isUnresponsive(tag("at.obdev.littlesnitch", "Item-1")))
@@ -77,6 +111,7 @@ final class UnresponsiveItemStoreTests: XCTestCase {
         let ephemeral = MenuBarItemTag(namespace: .uuid(UUID()), title: "Item-0")
         let store = UnresponsiveItemStore()
         store.recordFailure(for: ephemeral)
+        store.recordFailure(for: ephemeral)
 
         XCTAssertFalse(store.isUnresponsive(ephemeral))
         XCTAssertNil(Defaults.object(forKey: .unresponsiveMenuBarItems))
@@ -85,6 +120,7 @@ final class UnresponsiveItemStoreTests: XCTestCase {
     func testRemoveAllForgetsEverything() {
         let item = tag("at.obdev.littlesnitch", "Item-0")
         let store = UnresponsiveItemStore()
+        store.recordFailure(for: item)
         store.recordFailure(for: item)
         store.removeAll()
 
