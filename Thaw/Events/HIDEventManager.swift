@@ -27,8 +27,30 @@ final class HIDEventManager {
     /// The shared app state.
     private weak var appState: AppState?
 
-    /// Thread-safe counter for mouse-moved event throttling.
-    private nonisolated let mouseMovedThrottleCounter = OSAllocatedUnfairLock(initialState: 0)
+    /// Minimum interval between processed mouse-moved events (~30 fps).
+    ///
+    /// Time-based, not count-based: a count divisor scales its effective
+    /// work rate with the input device's polling rate, so a 1000 Hz mouse
+    /// would do 8x the work of a 125 Hz mouse for identical physical
+    /// motion. A wall-clock gate keeps the cost independent of the device.
+    nonisolated static let mouseMovedThrottleInterval: TimeInterval = 1.0 / 30.0
+
+    /// Timestamp of the last processed mouse-moved event, used to rate
+    /// limit the mouse-moved tap on wall-clock time.
+    private nonisolated let lastMouseMovedProcessTime = OSAllocatedUnfairLock(initialState: TimeInterval(0))
+
+    /// Cursor location at the last processed mouse-moved event.
+    ///
+    /// Compared against the current location as a cheap gate: a sub-point
+    /// move cannot change which screen the cursor is on or which display
+    /// owns the active menu bar, so the screen queries below would return
+    /// the same answers. Only updated when a mouse-moved event actually
+    /// proceeds past this gate, not on every observed event — comparing
+    /// against the last *observed* location instead would let a slow drift
+    /// of less than a point per tick accumulate past the threshold without
+    /// ever being caught, since the reference point would keep creeping
+    /// along with it.
+    private nonisolated let lastMouseMovedLocation = OSAllocatedUnfairLock(initialState: CGPoint.zero)
 
     /// Timestamp of the last forwarded app menu click, used to debounce
     /// duplicate events from a single physical interaction.
@@ -276,18 +298,29 @@ final class HIDEventManager {
             return event
         }
 
-        // Throttling: Only process every 5th event to reduce CPU usage.
-        let shouldProcess = mouseMovedThrottleCounter.withLock { count -> Bool in
-            count += 1
-            if count >= 5 {
-                count = 0
-                return true
-            }
-            return false
-        }
-        guard shouldProcess else {
+        // Throttling: rate limit on wall-clock time so cost stays bounded
+        // regardless of the input device's polling rate.
+        let now = CACurrentMediaTime()
+        guard Self.shouldProcessMouseMoved(now: now, lastProcessTime: lastMouseMovedProcessTime) else {
             return event
         }
+
+        // Cheap gate: skip the screen queries below when the cursor hasn't
+        // moved meaningfully since the last processed event. A sub-point
+        // move cannot put the cursor on a different screen or change which
+        // display owns the active menu bar, so those queries would return
+        // the same answers. Compared against the last *processed* location
+        // (only updated when we proceed past this gate) rather than the
+        // last *observed* one, so a slow drift of under a point per tick
+        // still accumulates past the threshold instead of never triggering.
+        let currentLocation = NSEvent.mouseLocation
+        let lastLocation = lastMouseMovedLocation.withLock { $0 }
+        let dx = currentLocation.x - lastLocation.x
+        let dy = currentLocation.y - lastLocation.y
+        guard (dx * dx) + (dy * dy) >= Self.mouseMovedLocationEpsilonSquared else {
+            return event
+        }
+        lastMouseMovedLocation.withLock { $0 = currentLocation }
 
         if let appState {
             guard let screen = NSScreen.screenWithMouse ?? NSScreen.main else {
@@ -311,6 +344,35 @@ final class HIDEventManager {
             handleMenuBarTooltip(appState: appState, screen: screen)
         }
         return event
+    }
+
+    /// The minimum squared distance (in points) the cursor must move
+    /// between processed mouse-moved events before the screen queries in
+    /// `mouseMovedTap` run again. Squared so the hot-path comparison can
+    /// avoid a square root.
+    private static let mouseMovedLocationEpsilonSquared: CGFloat = 1.0 * 1.0
+
+    /// Determines whether a mouse-moved event observed at `now` should be
+    /// processed, given the timestamp of the last processed event, and
+    /// atomically records `now` as the new last-processed time when it
+    /// does.
+    ///
+    /// The read-and-set happens under a single lock acquisition so two
+    /// concurrent callers can't both observe an elapsed interval and both
+    /// pass the gate. Extracted as a pure function of `now` (rather than
+    /// reading `CACurrentMediaTime()` internally) so it's directly testable
+    /// without a real event tap.
+    nonisolated static func shouldProcessMouseMoved(
+        now: TimeInterval,
+        lastProcessTime: OSAllocatedUnfairLock<TimeInterval>
+    ) -> Bool {
+        lastProcessTime.withLock { last in
+            guard now - last >= mouseMovedThrottleInterval else {
+                return false
+            }
+            last = now
+            return true
+        }
     }
 
     /// Monitor for scroll wheel events.
