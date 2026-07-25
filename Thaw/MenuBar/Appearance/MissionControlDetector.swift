@@ -31,9 +31,26 @@ import Observation
 @MainActor
 @Observable
 final class MissionControlDetector {
-    /// The polling interval, in seconds. Matches the fixed rate of the
-    /// per-panel timer this detector replaces.
-    static let pollInterval: TimeInterval = 0.1
+    /// The polling interval used while nothing suggests Mission Control
+    /// might be starting or ending. Slow, because most of the time nothing
+    /// is happening and this detector should cost as little as possible.
+    static let idleInterval: TimeInterval = 1.0
+
+    /// The polling interval used while `isActive` is `true`, or for
+    /// `activeSignalWindow` seconds after a step-up signal. Matches the
+    /// fixed rate of the per-panel timer this detector replaces, which
+    /// comfortably tracked Mission Control's enter/exit animation without
+    /// visible lag.
+    static let activeInterval: TimeInterval = 0.1
+
+    /// How long after a step-up signal the probe keeps running at
+    /// `activeInterval` before it's allowed to fall back to `idleInterval`.
+    /// Entering Mission Control without a step-up signal firing first would
+    /// otherwise be noticed up to `idleInterval` seconds late, which would
+    /// show as a visible overlay artifact — this window covers the gap
+    /// between the signal firing and Mission Control actually finishing its
+    /// enter/exit animation.
+    static let activeSignalWindow: TimeInterval = 2.0
 
     /// A Boolean value that indicates whether Mission Control or App
     /// Exposé is currently believed to be active.
@@ -50,11 +67,19 @@ final class MissionControlDetector {
     /// The time when the probe window first became displaced.
     private var missionControlDisplacedSince: Date?
 
+    /// The time of the most recent step-up signal — a notification that
+    /// Mission Control might be about to start or end. Drives the adaptive
+    /// poll rate; see `nextInterval(isActive:lastStepUpSignal:now:)`.
+    private var lastStepUpSignal: Date?
+
     /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
 
+    /// The currently scheduled poll task.
+    private var pollTask: Task<Void, Never>?
+
     /// A Boolean value that indicates whether the detector is currently
-    /// running (has an active probe window and poll timer).
+    /// running (has an active probe window and poll loop).
     var isRunning: Bool {
         probeWindow != nil
     }
@@ -75,15 +100,19 @@ final class MissionControlDetector {
         window.orderFrontRegardless()
 
         configureCancellables()
+        schedulePoll()
     }
 
     /// Stops the detector and releases the probe window.
     func stop() {
+        pollTask?.cancel()
+        pollTask = nil
         cancellables.removeAll()
         probeWindow?.close()
         probeWindow = nil
         probeAtRestOrigin = nil
         missionControlDisplacedSince = nil
+        lastStepUpSignal = nil
         if isActive {
             isActive = false
         }
@@ -92,11 +121,12 @@ final class MissionControlDetector {
     private func configureCancellables() {
         var c = Set<AnyCancellable>()
 
-        // Poll the mission control probe window to detect if it has moved/scaled.
-        Timer.publish(every: Self.pollInterval, on: .main, in: .common)
-            .autoconnect()
+        // Step-up signal: a space change often brackets Mission Control
+        // entry/exit, so treat it as a reason to poll fast for a bit.
+        NSWorkspace.shared.notificationCenter
+            .publisher(for: NSWorkspace.activeSpaceDidChangeNotification)
             .sink { [weak self] _ in
-                self?.tick()
+                self?.lastStepUpSignal = Date()
             }
             .store(in: &c)
 
@@ -105,16 +135,56 @@ final class MissionControlDetector {
         // The old baseline no longer reflects the probe window's correct
         // resting position; a stale baseline can wedge the probe into a
         // false-positive "Mission Control active" state that never clears.
+        // Also treat it as a step-up signal, since a display change is a
+        // reasonable moment to want a quick, accurate re-read.
         NotificationCenter.default
             .publisher(for: NSApplication.didChangeScreenParametersNotification)
             .sink { [weak self] _ in
                 guard let self else { return }
                 probeAtRestOrigin = nil
                 missionControlDisplacedSince = nil
+                lastStepUpSignal = Date()
             }
             .store(in: &c)
 
         cancellables = c
+    }
+
+    /// Runs the poll loop, re-scheduling itself with an interval chosen by
+    /// `nextInterval(isActive:lastStepUpSignal:now:)` after every tick.
+    private func schedulePoll() {
+        pollTask?.cancel()
+        pollTask = Task { [weak self] in
+            while !Task.isCancelled {
+                guard let self else { return }
+                self.tick()
+                let interval = Self.nextInterval(
+                    isActive: self.isActive,
+                    lastStepUpSignal: self.lastStepUpSignal,
+                    now: Date()
+                )
+                try? await Task.sleep(for: .seconds(interval))
+            }
+        }
+    }
+
+    /// Chooses the next polling interval given the current state.
+    ///
+    /// Pulled out as a pure function (no access to instance state) so the
+    /// rate-selection logic can be unit-tested without a live probe window
+    /// or task.
+    static func nextInterval(
+        isActive: Bool,
+        lastStepUpSignal: Date?,
+        now: Date
+    ) -> TimeInterval {
+        if isActive {
+            return activeInterval
+        }
+        if let lastStepUpSignal, now.timeIntervalSince(lastStepUpSignal) < activeSignalWindow {
+            return activeInterval
+        }
+        return idleInterval
     }
 
     /// Polls the probe window's actual on-screen bounds and updates
