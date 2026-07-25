@@ -217,35 +217,60 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
             .sink { [weak self] _ in
                 guard let self else { return }
                 let windowID = CGWindowID(self.missionControlProbeWindow.windowNumber)
-                if let actualBounds = Bridging.getWindowBounds(for: windowID) {
-                    let actualOrigin = actualBounds.origin
-
-                    // Capture the "at-rest" origin when we're reasonably sure we're not in Mission Control
-                    if self.probeAtRestOrigin == nil {
-                        self.probeAtRestOrigin = actualOrigin
-                        return
-                    }
-
-                    guard let atRest = self.probeAtRestOrigin else { return }
-
-                    let isActive = abs(actualOrigin.x - atRest.x) > 1.0 &&
-                        abs(actualOrigin.y - atRest.y) > 1.0
-
-                    let now = Date()
-
-                    if isActive {
-                        if let displacedSince = self.missionControlDisplacedSince {
-                            if now.timeIntervalSince(displacedSince) > 0.1 {
-                                self.isMissionControlActive = true
-                            }
-                        } else {
-                            self.missionControlDisplacedSince = now
-                        }
-                    } else {
-                        self.missionControlDisplacedSince = nil
+                guard let actualBounds = Bridging.getWindowBounds(for: windowID) else {
+                    // No bounds: we can't observe displacement this tick, so
+                    // don't keep asserting Mission Control is active — that
+                    // would suppress the overlay indefinitely if the query
+                    // never succeeds again.
+                    self.missionControlDisplacedSince = nil
+                    if self.isMissionControlActive {
                         self.isMissionControlActive = false
                     }
+                    return
                 }
+                let actualOrigin = actualBounds.origin
+
+                // Capture the "at-rest" origin when we're reasonably sure we're not in Mission Control
+                if self.probeAtRestOrigin == nil {
+                    self.probeAtRestOrigin = actualOrigin
+                    return
+                }
+
+                guard let atRest = self.probeAtRestOrigin else { return }
+
+                let isActive = abs(actualOrigin.x - atRest.x) > 1.0 &&
+                    abs(actualOrigin.y - atRest.y) > 1.0
+
+                let now = Date()
+
+                if isActive {
+                    if let displacedSince = self.missionControlDisplacedSince {
+                        if now.timeIntervalSince(displacedSince) > 0.1 {
+                            self.isMissionControlActive = true
+                        }
+                    } else {
+                        self.missionControlDisplacedSince = now
+                    }
+                } else {
+                    self.missionControlDisplacedSince = nil
+                    self.isMissionControlActive = false
+                }
+            }
+            .store(in: &c)
+
+        // Re-latch the probe's at-rest baseline after a display
+        // configuration change (resolution, menu bar height, arrangement).
+        // The old baseline no longer reflects the probe window's correct
+        // resting position; a stale baseline can wedge the probe into a
+        // false-positive "Mission Control active" state that never clears
+        // (the displacement check above never sees the origin return to
+        // the old, now-incorrect, at-rest position).
+        NotificationCenter.default
+            .publisher(for: NSApplication.didChangeScreenParametersNotification)
+            .sink { [weak self] _ in
+                guard let self else { return }
+                self.probeAtRestOrigin = nil
+                self.missionControlDisplacedSince = nil
             }
             .store(in: &c)
 
