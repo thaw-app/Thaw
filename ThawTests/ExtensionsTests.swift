@@ -159,60 +159,6 @@ final class EdgeInsetsExtensionTests: XCTestCase {
     }
 }
 
-// MARK: - RangeReplaceableCollection.removingDuplicates Tests
-
-final class RemovingDuplicatesTests: XCTestCase {
-    func testRemovingDuplicatesFromArrayWithDuplicates() {
-        let array = [1, 2, 2, 3, 3, 3, 4]
-        let result = array.removingDuplicates()
-
-        XCTAssertEqual(result, [1, 2, 3, 4])
-    }
-
-    func testRemovingDuplicatesFromArrayWithoutDuplicates() {
-        let array = [1, 2, 3, 4, 5]
-        let result = array.removingDuplicates()
-
-        XCTAssertEqual(result, [1, 2, 3, 4, 5])
-    }
-
-    func testRemovingDuplicatesFromEmptyArray() {
-        let array: [Int] = []
-        let result = array.removingDuplicates()
-
-        XCTAssertEqual(result, [])
-    }
-
-    func testRemovingDuplicatesPreservesOrder() {
-        let array = [3, 1, 2, 1, 3, 2]
-        let result = array.removingDuplicates()
-
-        // First occurrence of each element preserved
-        XCTAssertEqual(result, [3, 1, 2])
-    }
-
-    func testRemovingDuplicatesWithStrings() {
-        let array = ["a", "b", "a", "c", "b"]
-        let result = array.removingDuplicates()
-
-        XCTAssertEqual(result, ["a", "b", "c"])
-    }
-
-    func testRemovingDuplicatesAllSame() {
-        let array = [5, 5, 5, 5, 5]
-        let result = array.removingDuplicates()
-
-        XCTAssertEqual(result, [5])
-    }
-
-    func testRemovingDuplicatesSingleElement() {
-        let array = [42]
-        let result = array.removingDuplicates()
-
-        XCTAssertEqual(result, [42])
-    }
-}
-
 // MARK: - CGImage.ColorAveragingOption Tests
 
 final class ColorAveragingOptionTests: XCTestCase {

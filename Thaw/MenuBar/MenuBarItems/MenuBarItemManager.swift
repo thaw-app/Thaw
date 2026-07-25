@@ -6,6 +6,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Algorithms
 import AXSwift6
 import Cocoa
 import Combine
@@ -5783,7 +5784,7 @@ extension MenuBarItemManager {
 
     private static nonisolated func resolveAllSourcePIDs(for windows: [WindowInfo]) async -> Set<pid_t> {
         let pids = await MenuBarItemService.Connection.shared.sourcePIDs(for: windows)
-        return Set(pids.compactMap(\.self))
+        return Set(pids.compacted())
     }
 }
 

@@ -6,6 +6,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Algorithms
 import Combine
 import SwiftUI
 
@@ -419,9 +420,7 @@ private struct IceBarContentView: View {
     private var columnWidths: [CGFloat] {
         guard let maxHeight = itemMaxHeight, maxHeight > 0 else { return [] }
         let allItems = items
-        let rows = stride(from: 0, to: allItems.count, by: gridColumns).map { start in
-            Array(allItems[start ..< Swift.min(start + gridColumns, allItems.count)])
-        }
+        let rows = allItems.chunks(ofCount: gridColumns).map(Array.init)
         return (0 ..< gridColumns).map { col in
             rows.compactMap { row in
                 guard col < row.count else { return nil }
@@ -666,9 +665,7 @@ private struct IceBarContentView: View {
             case .grid:
                 ScrollView(.vertical) {
                     VStack(spacing: 0) {
-                        let rows = stride(from: 0, to: items.count, by: gridColumns).map { start in
-                            Array(items[start ..< Swift.min(start + gridColumns, items.count)])
-                        }
+                        let rows = items.chunks(ofCount: gridColumns).map(Array.init)
                         ForEach(Array(rows.enumerated()), id: \.offset) { rowIndex, rowItems in
                             HStack(spacing: itemSpacing) {
                                 ForEach(Array(rowItems.enumerated()), id: \.element.windowID) { colIndex, item in

@@ -6,6 +6,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Algorithms
 import Cocoa
 import Combine
 import Observation
@@ -325,7 +326,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
 
                 let tagString = "\(tag.namespace):\(tag.title)"
                 return (tagString, pngData)
-            }.compactMap(\.self)
+            }.compacted()
 
             guard cacheData.count == snapshot.count else { return }
 

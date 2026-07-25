@@ -6,6 +6,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Algorithms
 import Foundation
 import XPC
 
@@ -50,7 +51,7 @@ final class Listener: @unchecked Sendable {
             case let .sourcePIDs(windows):
                 diagLog.debug("Listener: sourcePIDs batch request for \(windows.count) windows")
                 let pids = SourcePIDCache.shared.pids(for: windows)
-                diagLog.debug("Listener: sourcePIDs batch response (\(pids.compactMap(\.self).count) resolved)")
+                diagLog.debug("Listener: sourcePIDs batch response (\(pids.compacted().count) resolved)")
                 return .sourcePIDs(pids)
             }
         } catch {

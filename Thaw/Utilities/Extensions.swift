@@ -973,16 +973,6 @@ extension Publisher {
     }
 }
 
-// MARK: - RangeReplaceableCollection where Element: Hashable
-
-nonisolated extension RangeReplaceableCollection where Element: Hashable {
-    /// Returns a copy of the collection with duplicate values removed.
-    func removingDuplicates() -> Self {
-        var seen = Set<Element>()
-        return filter { seen.insert($0).inserted }
-    }
-}
-
 // MARK: - RangeReplaceableCollection where Element == MenuBarItem
 
 extension RangeReplaceableCollection where Element == MenuBarItem {
