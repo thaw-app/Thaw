@@ -191,6 +191,17 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     /// `configureCancellables()`.
     private let colorChangeSubject = PassthroughSubject<Void, Never>()
 
+    /// Task observing `itemManager.itemCache` (wave 4), which is
+    /// `@Observable` rather than a Combine `ObservableObject`. Bridges into
+    /// `itemCacheChangeSubject` so it can still participate in the
+    /// `Publishers.MergeMany` below.
+    private var itemCacheObservationTask: Task<Void, Never>?
+
+    /// Bridges `itemCacheObservationTask`'s Observation-based updates into
+    /// the Combine `Publishers.MergeMany` pipeline in
+    /// `configureCancellables()`.
+    private let itemCacheChangeSubject = PassthroughSubject<Void, Never>()
+
     private var memoryPressureSource: DispatchSourceMemoryPressure?
 
     /// The currently running cache update task, if any.
@@ -240,6 +251,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
         iconRefreshIntervalObservationTask?.cancel()
         navigationStateObservationTask?.cancel()
         averageColorInfoObservationTask?.cancel()
+        itemCacheObservationTask?.cancel()
     }
 
     // MARK: Setup
@@ -443,10 +455,24 @@ final class MenuBarItemImageCache: @unchecked Sendable {
                 }
             }
 
-            let itemCacheChangePublisher: AnyPublisher<Void, Never> = appState.itemManager.$itemCache
-                .removeDuplicates()
-                .map { _ in () }
+            // `itemManager` is now `@Observable` (wave 4), so it no longer
+            // has a `$itemCache` publisher. `itemCacheChangeSubject` is fed
+            // by `itemCacheObservationTask` (started below) and bridges
+            // those updates back into this Combine merge.
+            let itemCacheChangePublisher: AnyPublisher<Void, Never> = itemCacheChangeSubject
                 .eraseToAnyPublisher()
+
+            itemCacheObservationTask?.cancel()
+            itemCacheObservationTask = Task { [weak self, weak appState] in
+                var previous: MenuBarItemManager.ItemCache?
+                let changes = Observations { appState?.itemManager.itemCache }
+                for await cache in changes {
+                    guard let self else { return }
+                    guard cache != previous else { continue }
+                    previous = cache
+                    self.itemCacheChangeSubject.send(())
+                }
+            }
 
             Publishers.MergeMany([
                 spaceChangePublisher,

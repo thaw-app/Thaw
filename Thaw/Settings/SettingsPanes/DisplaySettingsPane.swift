@@ -14,7 +14,7 @@ struct DisplaySettingsPane: View {
     /// per-display draftSpacing dictionary without colliding.
     private static let globalDraftKey = "__global__"
 
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState: AppState
     @Bindable var displaySettings: DisplaySettingsManager
 
     /// Per-display draft of the spacing slider, keyed by display UUID.

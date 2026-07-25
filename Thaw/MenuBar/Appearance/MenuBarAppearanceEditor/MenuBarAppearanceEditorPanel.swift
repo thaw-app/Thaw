@@ -226,7 +226,7 @@ private final class MenuBarAppearanceEditorHostingController: NSHostingControlle
 // MARK: - MenuBarAppearanceEditorContentView
 
 private struct MenuBarAppearanceEditorContentView: View {
-    @ObservedObject var appState: AppState
+    let appState: AppState
     let onDone: (() -> Void)?
 
     var body: some View {
@@ -235,6 +235,6 @@ private struct MenuBarAppearanceEditorContentView: View {
             location: .panel,
             onDone: onDone
         )
-        .environmentObject(appState)
+        .environment(appState)
     }
 }

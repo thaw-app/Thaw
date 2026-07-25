@@ -11,7 +11,7 @@ import SwiftUI
 // MARK: - SettingsWindow
 
 struct SettingsWindow: Scene {
-    @ObservedObject var appState: AppState
+    @Bindable var appState: AppState
 
     var body: some Scene {
         IceWindow(id: .settings) {
@@ -45,6 +45,6 @@ struct SettingsWindow: Scene {
         .defaultSize(width: 950, height: 650)
         .windowStyle(.titleBar)
         .windowToolbarStyle(.unified)
-        .environmentObject(appState)
+        .environment(appState)
     }
 }

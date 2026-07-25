@@ -19,7 +19,7 @@ struct MenuBarItemContainer<Content: View>: View {
         case manual(MenuBarAverageColorInfo?)
     }
 
-    @ObservedObject private var appState: AppState
+    private var appState: AppState
     private var appearanceManager: MenuBarAppearanceManager
     private var menuBarManager: MenuBarManager
 

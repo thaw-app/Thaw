@@ -11,16 +11,17 @@ import SwiftUI
 // MARK: - HotkeyRecorder
 
 struct HotkeyRecorder<Label: View>: View {
-    @StateObject private var model: HotkeyRecorderModel
+    @State private var model: HotkeyRecorderModel
 
     private let label: Label
 
     init(hotkey: Hotkey, @ViewBuilder label: () -> Label) {
-        self._model = StateObject(wrappedValue: HotkeyRecorderModel(hotkey: hotkey))
+        self._model = State(wrappedValue: HotkeyRecorderModel(hotkey: hotkey))
         self.label = label()
     }
 
     var body: some View {
+        @Bindable var model = model
         LabeledContent {
             segmentStack
         } label: {
@@ -118,13 +119,17 @@ struct HotkeyRecorder<Label: View>: View {
 // MARK: - HotkeyRecorderModel
 
 @MainActor
-private final class HotkeyRecorderModel: ObservableObject {
-    @Published private(set) var isRecording = false
+@Observable
+private final class HotkeyRecorderModel {
+    private(set) var isRecording = false
 
-    @Published var isPresentingSystemReservedError = false
+    var isPresentingSystemReservedError = false
 
     let hotkey: Hotkey
 
+    /// `@ObservationIgnored`: the Observation macro cannot generate its
+    /// tracked-access init accessor for a `lazy` property.
+    @ObservationIgnored
     private lazy var monitor = EventMonitor.local(for: .keyDown) { [weak self] event in
         guard let self else {
             return event

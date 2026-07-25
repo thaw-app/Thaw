@@ -6,24 +6,27 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import AsyncAlgorithms
 import Combine
 import CoreGraphics
+import Observation
 import SwiftUI
 
 /// The model for app-wide state.
 @MainActor
-final class AppState: ObservableObject {
+@Observable
+final class AppState {
     /// Information for the active space.
-    @Published private(set) var activeSpace = SpaceInfo.activeSpace()
+    private(set) var activeSpace = SpaceInfo.activeSpace()
 
     /// A Boolean value that indicates whether the user is dragging a menu bar item.
-    @Published private(set) var isDraggingMenuBarItem = false
+    private(set) var isDraggingMenuBarItem = false
 
     /// Tracks presentation of the update consent sheet.
-    @Published var isUpdateConsentPresented = false
+    var isUpdateConsentPresented = false
 
     /// Tracks presentation of the onboarding sheet.
-    @Published var isOnboardingPresented = false
+    var isOnboardingPresented = false
 
     /// Model for the app's settings.
     let settings = AppSettings()
@@ -58,6 +61,13 @@ final class AppState: ObservableObject {
     /// Briefly adds a virtual display on single-display machines so the window
     /// server publishes the marker windows needed to resolve unidentified menu
     /// bar items, then tears it down.
+    ///
+    /// `@ObservationIgnored`: the Observation macro cannot generate its
+    /// tracked-access init accessor for a `lazy` property (it closes over
+    /// `self` in a context the macro can't express), so this is exempted
+    /// from observation tracking. No view reads this property directly in
+    /// its body, so the exemption has no UI-observability effect.
+    @ObservationIgnored
     private(set) lazy var virtualDisplayProvoker = VirtualDisplayProvoker(appState: self)
 
     /// Manager for app updates.
@@ -78,6 +88,14 @@ final class AppState: ObservableObject {
     /// the old `$isDraggingMenuBarItem.removeDuplicates().sink` subscription.
     private var hidEventManagerObservationTask: Task<Void, Never>?
 
+    /// Observes `itemManager.itemCache` (wave 4), which is `@Observable`
+    /// rather than a Combine `ObservableObject`, replacing the old
+    /// `$itemCache.debounce(for: .seconds(0.5), scheduler:
+    /// DispatchQueue.main).sink` subscription that let the virtual display
+    /// provoker decide whether to briefly add a virtual display after each
+    /// cache cycle settles.
+    private var itemCacheProvokerObservationTask: Task<Void, Never>?
+
     /// Track open windows to prevent duplicates
     private var openWindows = Set<IceWindowIdentifier>()
 
@@ -90,6 +108,10 @@ final class AppState: ObservableObject {
     /// Diagnostic logger for the app state.
     let diagLog = DiagLog(category: "AppState")
 
+    /// `@ObservationIgnored`: the Observation macro cannot generate its
+    /// tracked-access init accessor for a `lazy` property. Not read by any
+    /// view body, so the exemption has no UI-observability effect.
+    @ObservationIgnored
     private lazy var setupTask = Task { @MainActor in
         #if DEBUG
             // Debug builds always have diagnostic logging on so logs are
@@ -311,36 +333,30 @@ final class AppState: ObservableObject {
             }
         }
 
-        // `menuBarManager` is now @Observable (wave 3), so it no longer has
-        // an `objectWillChange` publisher to forward here. See the
-        // `settings` note below for why views reading `menuBarManager.*`
-        // properties directly still update correctly without this forwarding.
-        // `permissions` (AppPermissions) is now @Observable (wave 3), so it
-        // no longer has an `objectWillChange` publisher to forward here. See
-        // the `settings` note below for why views reading `permissions.*`
-        // properties directly still update correctly without this forwarding.
-        // `settings` (AppSettings) is now @Observable (wave 2), so it no
-        // longer has an `objectWillChange` publisher to forward here. Views
-        // reading `appState.settings.*` properties directly in their body
-        // (or via `.onChange(of:)`, whose value comparison still needs a
-        // body re-render to be scheduled) rely on SwiftUI's Observation
-        // access tracking picking up those reads directly, which it does
-        // even though AppState itself is not @Observable — see the wave 2
-        // migration report for the verification of this across call sites.
-        // `updatesManager` (UpdatesManager) is now @Observable (wave 3), so
-        // it no longer has an `objectWillChange` publisher to forward here.
-        // Views reading `appState.updatesManager.*` directly in their body
-        // rely on SwiftUI's Observation access tracking, same as `settings`
-        // above (see wave 2 migration report).
+        // `menuBarManager`, `permissions`, `settings`, and `updatesManager`
+        // are all `@Observable` (waves 2–3), and `AppState` itself is now
+        // `@Observable` too (wave 4): the old `objectWillChange` forwarding
+        // lattice that used to re-publish each child's changes through
+        // `AppState`'s own `objectWillChange` is gone entirely. Views
+        // reading `appState.settings.*`, `appState.menuBarManager.*`, etc.
+        // directly in their body rely on SwiftUI's Observation access
+        // tracking, which composes transparently across nested `@Observable`
+        // object graphs without any manual forwarding.
 
         // After each cache cycle settles, let the provoker decide whether to
-        // briefly add a virtual display to resolve any single-display orphans.
-        itemManager.$itemCache
-            .debounce(for: .seconds(0.5), scheduler: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.virtualDisplayProvoker.considerProvoking()
+        // briefly add a virtual display to resolve any single-display
+        // orphans. `itemManager` is now `@Observable` (wave 4), so it no
+        // longer has an `$itemCache` publisher; `Observations { }` is an
+        // `AsyncSequence`, so the debounce is reproduced with
+        // AsyncAlgorithms' `.debounce(for:)`.
+        let itemManagerForProvoker = itemManager
+        itemCacheProvokerObservationTask = Task { [weak self] in
+            let changes = Observations { itemManagerForProvoker.itemCache }
+            for await _ in changes.debounce(for: .seconds(0.5)) {
+                guard let self else { return }
+                self.virtualDisplayProvoker.considerProvoking()
             }
-            .store(in: &c)
+        }
 
         NotificationCenter.default.publisher(for: NSApplication.didChangeScreenParametersNotification)
             .debounce(for: .seconds(0.5), scheduler: DispatchQueue.main)

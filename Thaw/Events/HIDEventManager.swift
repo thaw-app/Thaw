@@ -44,6 +44,11 @@ final class HIDEventManager {
     /// can no longer feed the `Publishers.CombineLatest3` this used to be.
     private var hoverSettingsObservationTask: Task<Void, Never>?
 
+    /// Task observing `itemManager.itemCache` (wave 4), which is
+    /// `@Observable` rather than a Combine `ObservableObject`, replacing the
+    /// old `$itemCache.removeDuplicates().receive(on:).sink` pipeline.
+    private var itemCacheWindowBoundsObservationTask: Task<Void, Never>?
+
     /// Timer that periodically checks whether the event tap is still
     /// valid and attempts to recreate it if the Mach port was invalidated.
     private nonisolated(unsafe) var healthCheckTimer: Timer?
@@ -554,13 +559,19 @@ final class HIDEventManager {
 
             // Rebuild the window bounds lookup whenever the item cache changes.
             // This replaces per-event Window Server IPC calls with an in-memory lookup.
-            appState.itemManager.$itemCache
-                .removeDuplicates()
-                .receive(on: DispatchQueue.main)
-                .sink { [weak self] cache in
-                    self?.rebuildWindowBoundsLookup(from: cache)
+            // `itemManager` is now `@Observable` (wave 4), so it no longer has
+            // an `$itemCache` publisher.
+            let itemManagerForWindowBounds = appState.itemManager
+            itemCacheWindowBoundsObservationTask = Task { [weak self] in
+                var previous: MenuBarItemManager.ItemCache?
+                let changes = Observations { itemManagerForWindowBounds.itemCache }
+                for await cache in changes {
+                    guard let self else { return }
+                    guard cache != previous else { continue }
+                    previous = cache
+                    self.rebuildWindowBoundsLookup(from: cache)
                 }
-                .store(in: &c)
+            }
 
             // When any section's control item state changes, the menu bar layout shifts.
             // Merge all sections into a single publisher so only one cache refresh fires
@@ -694,6 +705,7 @@ final class HIDEventManager {
     deinit {
         healthCheckTimer?.invalidate()
         hoverSettingsObservationTask?.cancel()
+        itemCacheWindowBoundsObservationTask?.cancel()
     }
 }
 

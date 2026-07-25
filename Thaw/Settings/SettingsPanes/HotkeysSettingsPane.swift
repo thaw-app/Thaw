@@ -9,7 +9,7 @@
 import SwiftUI
 
 struct HotkeysSettingsPane: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState: AppState
     let settings: HotkeysSettings
 
     var body: some View {
@@ -93,7 +93,7 @@ struct HotkeysSettingsPane: View {
 /// running are still listed, marked unavailable, so the binding can be cleared.
 private struct MenuBarItemHotkeyList: View {
     let menuBarManager: MenuBarManager
-    @ObservedObject var itemManager: MenuBarItemManager
+    let itemManager: MenuBarItemManager
     let imageCache: MenuBarItemImageCache
 
     @State private var isExpanded = false

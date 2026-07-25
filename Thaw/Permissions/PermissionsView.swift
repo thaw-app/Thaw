@@ -19,7 +19,7 @@ import SwiftUI
 /// of `manager`'s properties normally regardless of how the reference itself
 /// arrived at the view.
 struct PermissionsView<Manager: PermissionsManaging>: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState: AppState
     let manager: Manager
 
     @State private var hasIceSettings = false
@@ -236,7 +236,7 @@ struct PermissionsView<Manager: PermissionsManaging>: View {
 /// A card describing a single permission — its icon, title, details, and a
 /// button to request it (or a confirmation once it's been granted).
 struct PermissionCard: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState: AppState
     let permission: Permission
 
     /// Whether granting the permission should bring the permissions window
@@ -319,5 +319,5 @@ private final class MockPermissionsManager: PermissionsManaging {
 
 #Preview {
     PermissionsView(manager: MockPermissionsManager())
-        .environmentObject(AppState())
+        .environment(AppState())
 }

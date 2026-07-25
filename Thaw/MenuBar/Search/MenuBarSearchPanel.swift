@@ -421,8 +421,8 @@ private final class MenuBarSearchHostingView: NSHostingView<AnyView> {
                 MenuBarSearchContentView(model: model, displayID: displayID, panel: panel) { [weak panel] in
                     panel?.close()
                 }
-                .environmentObject(appState)
-                .environmentObject(appState.itemManager)
+                .environment(appState)
+                .environment(appState.itemManager)
                 .environment(appState.imageCache)
             )
         )
@@ -442,8 +442,8 @@ private final class MenuBarSearchHostingView: NSHostingView<AnyView> {
 private struct MenuBarSearchContentView: View {
     private typealias ListItem = SectionedListItem<MenuBarSearchModel.ItemID>
 
-    @EnvironmentObject var appState: AppState
-    @EnvironmentObject var itemManager: MenuBarItemManager
+    @Environment(AppState.self) var appState: AppState
+    @Environment(MenuBarItemManager.self) var itemManager: MenuBarItemManager
     @Environment(MenuBarItemImageCache.self) var imageCache: MenuBarItemImageCache
     // `MenuBarSearchModel` is @Observable (wave 3). `$model.property`
     // bindings are needed in several of this view's computed properties
@@ -892,7 +892,7 @@ private let controlCenterIcon: NSImage? = {
 
 private struct MenuBarSearchItemView: View {
     @Environment(\.menuBarSearchPanel) var panel
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState: AppState
     @Environment(MenuBarItemImageCache.self) var imageCache: MenuBarItemImageCache
     @Bindable var model: MenuBarSearchModel
 

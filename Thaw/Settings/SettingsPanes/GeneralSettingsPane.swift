@@ -10,7 +10,7 @@ import LaunchAtLogin
 import SwiftUI
 
 struct GeneralSettingsPane: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState: AppState
     @Bindable var settings: GeneralSettings
     @Bindable var advancedSettings: AdvancedSettings
     @State private var isImportingCustomIceIcon = false

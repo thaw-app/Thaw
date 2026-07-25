@@ -9,8 +9,8 @@
 import SwiftUI
 
 struct MenuBarLayoutSettingsPane: View {
-    @EnvironmentObject var appState: AppState
-    @ObservedObject var itemManager: MenuBarItemManager
+    @Environment(AppState.self) var appState: AppState
+    let itemManager: MenuBarItemManager
     @Bindable var advancedSettings: AdvancedSettings
 
     @State private var loadDeadlineReached = false

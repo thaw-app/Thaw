@@ -6,6 +6,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import AsyncAlgorithms
 import Combine
 import Observation
 import SwiftUI
@@ -69,12 +70,21 @@ final class MenuBarManager {
     /// ... }.removeDuplicates().sink` pipeline.
     private var appearanceConfigurationObservationTask: Task<Void, Never>?
 
+    /// Task observing `itemManager.itemCache` (wave 4), which is
+    /// `@Observable` rather than a Combine `ObservableObject`, replacing the
+    /// old `$itemCache.debounce(for: .seconds(0.5), scheduler:
+    /// DispatchQueue.main).sink` pipeline. `Observations { }` is an
+    /// `AsyncSequence`, so the debounce is reproduced with AsyncAlgorithms'
+    /// `.debounce(for:)` instead.
+    private var itemCacheHotkeyObservationTask: Task<Void, Never>?
+
     @MainActor
     deinit {
         displayConfigurationsObservationTask?.cancel()
         settingsWindowObservationTask?.cancel()
         settingsWindowVisibilityCancellable?.cancel()
         appearanceConfigurationObservationTask?.cancel()
+        itemCacheHotkeyObservationTask?.cancel()
     }
 
     /// Per-item hotkeys, keyed by MenuBarItem.uniqueIdentifier. Each opens the
@@ -258,12 +268,14 @@ final class MenuBarManager {
             // so newly-arrived items become assignable. Debounced because the
             // item cache ticks frequently and rebuilding on every tick would
             // churn hotkey registrations.
-            appState.itemManager.$itemCache
-                .debounce(for: .seconds(0.5), scheduler: DispatchQueue.main)
-                .sink { [weak self] _ in
-                    self?.rebuildItemHotkeys()
+            let itemManager = appState.itemManager
+            itemCacheHotkeyObservationTask = Task { [weak self] in
+                let changes = Observations { itemManager.itemCache }
+                for await _ in changes.debounce(for: .seconds(0.5)) {
+                    guard let self else { return }
+                    rebuildItemHotkeys()
                 }
-                .store(in: &c)
+            }
         }
 
         settingsWindowObservationTask = Task { [weak self] in

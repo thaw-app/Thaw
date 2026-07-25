@@ -11,7 +11,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct AutomationSettingsPane: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState: AppState
     @State private var settings = AutomationSettings()
     @State private var hookSettings = AutomationHookSettings()
     @State private var newBundleId: String = ""

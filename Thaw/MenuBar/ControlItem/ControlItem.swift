@@ -184,11 +184,17 @@ final class ControlItem {
     private var sectionDividerStyleObservationTask: Task<Void, Never>?
     private var alwaysHiddenSectionObservationTask: Task<Void, Never>?
 
+    /// Task observing `appState.isDraggingMenuBarItem` (wave 4), which is
+    /// `@Observable` rather than a Combine `ObservableObject`, replacing the
+    /// old `$isDraggingMenuBarItem.removeDuplicates().sink`.
+    private var isDraggingMenuBarItemObservationTask: Task<Void, Never>?
+
     deinit {
         showIceIconObservationTask?.cancel()
         iceIconObservationTask?.cancel()
         sectionDividerStyleObservationTask?.cancel()
         alwaysHiddenSectionObservationTask?.cancel()
+        isDraggingMenuBarItemObservationTask?.cancel()
     }
 
     /// Storage for observers whose subscriptions are bound to the specific
@@ -291,18 +297,21 @@ final class ControlItem {
             .store(in: &c)
 
         if let appState {
-            appState.$isDraggingMenuBarItem
-                .removeDuplicates()
-                .receive(on: DispatchQueue.main)
-                .sink { [weak self] isDragging in
-                    guard let self else {
-                        return
-                    }
+            // `appState` is now `@Observable` (wave 4), so it no longer has
+            // an `$isDraggingMenuBarItem` publisher.
+            isDraggingMenuBarItemObservationTask?.cancel()
+            isDraggingMenuBarItemObservationTask = Task { [weak self, weak appState] in
+                var previous: Bool?
+                let changes = Observations { appState?.isDraggingMenuBarItem }
+                for await isDragging in changes {
+                    guard let self else { return }
+                    guard let isDragging, isDragging != previous else { continue }
+                    previous = isDragging
                     if isDragging {
                         updateStatusItem()
                     }
                 }
-                .store(in: &c)
+            }
 
             if identifier == .visible {
                 let generalSettings = appState.settings.general

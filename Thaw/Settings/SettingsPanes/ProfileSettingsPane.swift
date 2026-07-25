@@ -11,7 +11,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct ProfileSettingsPane: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState: AppState
     let profileManager: ProfileManager
 
     @State private var newProfileName = ""

@@ -598,10 +598,16 @@ private final class MenuBarOverlayPanelContentView: NSView {
     /// replacing the old `$previewConfiguration` sink.
     private var previewConfigurationObservationTask: Task<Void, Never>?
 
+    /// Task observing `appState.isDraggingMenuBarItem` (wave 4), which is
+    /// `@Observable` rather than a Combine `ObservableObject`, replacing the
+    /// old `$isDraggingMenuBarItem.removeDuplicates().sink`.
+    private var isDraggingMenuBarItemObservationTask: Task<Void, Never>?
+
     deinit {
         averageColorsObservationTask?.cancel()
         appearanceConfigurationObservationTask?.cancel()
         previewConfigurationObservationTask?.cancel()
+        isDraggingMenuBarItemObservationTask?.cancel()
     }
 
     private lazy var tintGlassView: NSGlassEffectView = {
@@ -723,16 +729,23 @@ private final class MenuBarOverlayPanelContentView: NSView {
                 }
 
                 // Fade out whenever a menu bar item is being dragged.
-                appState.$isDraggingMenuBarItem
-                    .removeDuplicates()
-                    .sink { [weak self] isDragging in
+                // `appState` is now `@Observable` (wave 4), so it no longer
+                // has an `$isDraggingMenuBarItem` publisher.
+                isDraggingMenuBarItemObservationTask?.cancel()
+                isDraggingMenuBarItemObservationTask = Task { [weak self, weak appState] in
+                    var previous: Bool?
+                    let changes = Observations { appState?.isDraggingMenuBarItem }
+                    for await isDragging in changes {
+                        guard let self else { return }
+                        guard let isDragging, isDragging != previous else { continue }
+                        previous = isDragging
                         if isDragging {
-                            self?.animator().alphaValue = 0
+                            self.animator().alphaValue = 0
                         } else {
-                            self?.animator().alphaValue = 1
+                            self.animator().alphaValue = 1
                         }
                     }
-                    .store(in: &c)
+                }
 
                 for section in appState.menuBarManager.sections {
                     // Redraw whenever the window frame of a control item changes.

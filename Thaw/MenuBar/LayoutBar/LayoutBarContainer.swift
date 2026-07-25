@@ -84,9 +84,16 @@ final class LayoutBarContainer: NSView {
     /// the old `$averageColorInfo` sink.
     private var averageColorInfoObservationTask: Task<Void, Never>?
 
+    /// Task observing `itemManager.itemCache` and `itemManager.newItemsPlacement`
+    /// (wave 4), which are `@Observable` rather than Combine `@Published`
+    /// properties, so they can no longer take part in `Publishers.CombineLatest`.
+    /// Replaces the old `CombineLatest($itemCache, $newItemsPlacement).sink`.
+    private var itemCacheObservationTask: Task<Void, Never>?
+
     deinit {
         enableAlwaysHiddenSectionObservationTask?.cancel()
         averageColorInfoObservationTask?.cancel()
+        itemCacheObservationTask?.cancel()
     }
 
     /// Creates a container view with the given app state, section, and spacing.
@@ -115,23 +122,23 @@ final class LayoutBarContainer: NSView {
         var c = Set<AnyCancellable>()
 
         if let appState {
-            Publishers.CombineLatest(
-                appState.itemManager.$itemCache,
-                appState.itemManager.$newItemsPlacement
-            )
-            .sink { [weak self] cache, _ in
-                guard let self else {
-                    return
+            let itemManager = appState.itemManager
+            itemCacheObservationTask = Task { [weak self] in
+                let changes = Observations {
+                    (itemManager.itemCache, itemManager.newItemsPlacement)
                 }
-                setArrangedViews(items: cache.managedItems(for: section))
+                for await (cache, _) in changes {
+                    guard let self else {
+                        return
+                    }
+                    setArrangedViews(items: cache.managedItems(for: section))
+                }
             }
-            .store(in: &c)
 
             // `AdvancedSettings.enableAlwaysHiddenSection` is `@Observable`
             // rather than a Combine `ObservableObject`, so it can no longer
             // take part in the `CombineLatest` above — observed separately,
             // re-running the same re-arrangement using the current item cache.
-            let itemManager = appState.itemManager
             let advancedSettings = appState.settings.advanced
             enableAlwaysHiddenSectionObservationTask = Task { [weak self] in
                 let changes = Observations { advancedSettings.enableAlwaysHiddenSection }

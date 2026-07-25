@@ -9,7 +9,7 @@
 import SwiftUI
 
 struct AdvancedSettingsPane: View {
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState: AppState
     @Bindable var settings: AdvancedSettings
     @State private var maxSliderLabelWidth: CGFloat = 0
     @State private var currentLogFileName: String?

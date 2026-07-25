@@ -14,7 +14,7 @@ struct MenuBarAppearanceEditor: View {
         case panel
     }
 
-    @EnvironmentObject var appState: AppState
+    @Environment(AppState.self) var appState: AppState
     @Bindable var appearanceManager: MenuBarAppearanceManager
     @Environment(\.dismissWindow) private var dismissWindow
     @State private var isResetPromptPresented = false
@@ -511,7 +511,7 @@ private struct StaticShapeEditor: View {
 // MARK: - Preview Button
 
 private struct PreviewButton: View {
-    @EnvironmentObject private var appState: AppState
+    @Environment(AppState.self) private var appState: AppState
     @State private var isPressed = false
 
     let appearance: SystemAppearance
