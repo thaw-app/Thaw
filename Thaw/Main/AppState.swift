@@ -96,6 +96,13 @@ final class AppState {
     /// cache cycle settles.
     private var itemCacheProvokerObservationTask: Task<Void, Never>?
 
+    /// Observes `NSApplication.didChangeScreenParametersNotification` via
+    /// `NotificationCenter.notifications(named:)`, replacing a
+    /// `NotificationCenter.publisher(for:).debounce(for:scheduler:).sink`
+    /// Combine chain with an async sequence debounced through
+    /// swift-async-algorithms' `.debounce(for:)`.
+    private var screenParametersObservationTask: Task<Void, Never>?
+
     /// Track open windows to prevent duplicates
     private var openWindows = Set<IceWindowIdentifier>()
 
@@ -358,52 +365,62 @@ final class AppState {
             }
         }
 
-        NotificationCenter.default.publisher(for: NSApplication.didChangeScreenParametersNotification)
-            .debounce(for: .seconds(0.5), scheduler: DispatchQueue.main)
-            .map { _ in NSScreen.managedScreens.count }
-            .sink { [weak self] count in
+        // Mirrors DisplaySettingsManager.configureObservers' screenParametersTask
+        // (and itemCacheProvokerObservationTask above): a plain
+        // NotificationCenter.publisher().debounce(scheduler:) chain here would
+        // be the only remaining Combine cancellable doing what an async
+        // sequence already does better elsewhere in the codebase, so it's
+        // reproduced with an AsyncStream fed by a NotificationCenter observer,
+        // coalesced with swift-async-algorithms' `.debounce(for:)`, instead of
+        // a Combine hop to DispatchQueue.main. Notification isn't Sendable, so
+        // the stream carries Void and the count is re-read from NSScreen
+        // (MainActor-isolated, like the rest of this task's body) per event.
+        let (screenParameterEvents, screenParameterContinuation) = AsyncStream<Void>.makeStream()
+        screenParametersObservationTask = Task { @MainActor [weak self] in
+            let observer = NotificationCenter.default.addObserver(
+                forName: NSApplication.didChangeScreenParametersNotification,
+                object: nil,
+                queue: .main
+            ) { _ in screenParameterContinuation.yield(()) }
+            defer { NotificationCenter.default.removeObserver(observer) }
+            for await _ in screenParameterEvents.debounce(for: .seconds(0.5)) {
                 guard let self else { return }
+                let count = NSScreen.managedScreens.count
                 defer { self.lastKnownScreenCount = count }
                 if count < self.lastKnownScreenCount {
                     self.diagLog.info("Display disconnected: refresh item cache + cleanup image cache")
-                    Task { @MainActor [weak self] in
-                        guard let self else { return }
-                        // A display change relocates items to the remaining
-                        // display and leaves the menu bar geometry (Control
-                        // Center position, item bounds) unsettled for a short
-                        // window. Open a settling period so saved-layout restores
-                        // defer until the bar restabilizes and then run once on
-                        // settled geometry. Without this, a restore could fire
-                        // against transient off-screen geometry: Control Center's
-                        // stale left edge produces a negative notch-overflow
-                        // budget that collapses the hidden section into visible
-                        // and is then persisted into the saved order.
-                        self.itemManager.startSettlingPeriod(reason: "displayDisconnect")
-                        // Force item cache rebuild so displayID reflects current
-                        // display geometry (items moved to remaining display).
-                        await self.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
-                        // Force image cache: remove entries for items no longer
-                        // present, trigger re-capture for current display.
-                        self.imageCache.performCacheCleanup()
-                        await self.imageCache.updateCacheWithoutChecks(sections: MenuBarSection.Name.allCases)
-                        self.diagLog.info("Cache refresh complete after display disconnect")
-                    }
+                    // A display change relocates items to the remaining
+                    // display and leaves the menu bar geometry (Control
+                    // Center position, item bounds) unsettled for a short
+                    // window. Open a settling period so saved-layout restores
+                    // defer until the bar restabilizes and then run once on
+                    // settled geometry. Without this, a restore could fire
+                    // against transient off-screen geometry: Control Center's
+                    // stale left edge produces a negative notch-overflow
+                    // budget that collapses the hidden section into visible
+                    // and is then persisted into the saved order.
+                    self.itemManager.startSettlingPeriod(reason: "displayDisconnect")
+                    // Force item cache rebuild so displayID reflects current
+                    // display geometry (items moved to remaining display).
+                    await self.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
+                    // Force image cache: remove entries for items no longer
+                    // present, trigger re-capture for current display.
+                    self.imageCache.performCacheCleanup()
+                    await self.imageCache.updateCacheWithoutChecks(sections: MenuBarSection.Name.allCases)
+                    self.diagLog.info("Cache refresh complete after display disconnect")
                 } else if count > self.lastKnownScreenCount {
                     self.diagLog.info("Display connected: refresh item cache")
-                    Task { @MainActor [weak self] in
-                        guard let self else { return }
-                        // Defer the saved-layout restore until the menu bar
-                        // geometry settles after the new display attaches; see
-                        // the disconnect branch above for the rationale.
-                        self.itemManager.startSettlingPeriod(reason: "displayConnect")
-                        // Items keep their windowIDs when moving to new display.
-                        // Item cache rebuild picks up new items on the added display.
-                        await self.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
-                        self.diagLog.info("Item cache refreshed after display connect")
-                    }
+                    // Defer the saved-layout restore until the menu bar
+                    // geometry settles after the new display attaches; see
+                    // the disconnect branch above for the rationale.
+                    self.itemManager.startSettlingPeriod(reason: "displayConnect")
+                    // Items keep their windowIDs when moving to new display.
+                    // Item cache rebuild picks up new items on the added display.
+                    await self.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
+                    self.diagLog.info("Item cache refreshed after display connect")
                 }
             }
-            .store(in: &c)
+        }
 
         cancellables = c
     }

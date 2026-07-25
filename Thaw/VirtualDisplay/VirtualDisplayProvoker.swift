@@ -7,6 +7,7 @@
 //  Licensed under the GNU GPLv3
 
 import AppKit
+import AsyncAlgorithms
 import Foundation
 
 /// Briefly creates a virtual display when, on a single physical display, menu
@@ -77,8 +78,7 @@ final class VirtualDisplayProvoker {
     /// display has an unresolved orphan, so a short interval is inexpensive.
     private func startPeriodicEvaluation() {
         Task { [weak self] in
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(2))
+            for await _ in AsyncTimerSequence(interval: .seconds(2), clock: .continuous) {
                 guard let self else {
                     return
                 }

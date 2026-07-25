@@ -9,6 +9,7 @@
 import Algorithms
 import AXSwift6
 import Cocoa
+import Collections
 import Combine
 // @preconcurrency retained: CoreGraphics event types (CGEventSource/CGEvent) are
 // still not Sendable-annotated in the macOS 26/27 SDK, yet are used off the main
@@ -26,7 +27,7 @@ actor SimpleSemaphore {
     }
 
     private var value: Int
-    private var waiters: [Waiter] = [] // FIFO
+    private var waiters: Deque<Waiter> = [] // FIFO; O(1) popFirst instead of Array's O(n) removeFirst
 
     init(value: Int) {
         precondition(value >= 0, "SimpleSemaphore requires a non-negative value")
@@ -140,8 +141,7 @@ actor SimpleSemaphore {
     /// prior holders had released.
     func signal() {
         value += 1
-        if value <= 0, let waiter = waiters.first {
-            waiters.removeFirst()
+        if value <= 0, let waiter = waiters.popFirst() {
             waiter.continuation.resume(returning: ())
         }
     }
