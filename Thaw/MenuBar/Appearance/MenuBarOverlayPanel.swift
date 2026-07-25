@@ -81,7 +81,16 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
     @Published var needsShow = false
 
     /// A Boolean value that indicates whether Mission Control or App Expose is active.
-    @Published private var isMissionControlActive = false
+    @Published private var isMissionControlActive = false {
+        didSet {
+            updateAlphaForMenuBarVisibility()
+        }
+    }
+
+    /// The last-observed value of `menuBarManager.isMenuBarHiddenBySystem`
+    /// (wave 3: `menuBarManager` is now `@Observable`, so this is tracked via
+    /// `menuBarManagerObservationTask` rather than a `CombineLatest` operand).
+    private var cachedIsMenuBarHiddenBySystem = false
 
     /// Flags representing the components of the panel currently in need of an update.
     @Published private(set) var updateFlags = Set<UpdateFlag>()
@@ -91,6 +100,14 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
 
     /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
+
+    /// Task observing `menuBarManager.isMenuBarHiddenBySystem` (wave 3),
+    /// replacing the `CombineLatest` operand of the same name.
+    private var menuBarManagerObservationTask: Task<Void, Never>?
+
+    /// Task observing `appearanceManager.configuration` (wave 3), replacing
+    /// the old `$configuration.sink { updateWindowLevel() }` subscription.
+    private var appearanceConfigurationObservationTask: Task<Void, Never>?
 
     /// The context that manages panel update tasks.
     private let updateTaskContext = UpdateTaskContext()
@@ -170,6 +187,15 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
         configureCancellables()
 
         missionControlProbeWindow.orderFrontRegardless()
+    }
+
+    /// Updates `alphaValue` based on the combination of
+    /// `cachedIsMenuBarHiddenBySystem` and `isMissionControlActive` — the two
+    /// operands of the old `CombineLatest(menuBarManager.$isMenuBarHiddenBySystem,
+    /// $isMissionControlActive)` pipeline (wave 3).
+    private func updateAlphaForMenuBarVisibility() {
+        let isHidden = cachedIsMenuBarHiddenBySystem || isMissionControlActive
+        alphaValue = isHidden ? 0 : 1
     }
 
     private func configureCancellables() {
@@ -357,21 +383,30 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
             .store(in: &c)
 
         if let appState {
-            Publishers.CombineLatest(
-                appState.menuBarManager.$isMenuBarHiddenBySystem,
-                $isMissionControlActive
-            )
-            .sink { [weak self] isMenuBarHidden, isMissionControlActive in
-                let isHidden = isMenuBarHidden || isMissionControlActive
-                self?.alphaValue = isHidden ? 0 : 1
-            }
-            .store(in: &c)
-
-            appState.appearanceManager.$configuration
-                .sink { [weak self] _ in
-                    self?.updateWindowLevel()
+            // `menuBarManager` is now `@Observable` (wave 3), so it no longer
+            // has an `$isMenuBarHiddenBySystem` publisher to feed a
+            // `CombineLatest`. `isMissionControlActive`'s side of the old
+            // pairing is now handled by its own `didSet` calling
+            // `updateAlphaForMenuBarVisibility()`, which combines it with
+            // `cachedIsMenuBarHiddenBySystem`, kept in sync below.
+            menuBarManagerObservationTask = Task { [weak self, weak appState] in
+                let changes = Observations { appState?.menuBarManager.isMenuBarHiddenBySystem ?? false }
+                for await isHidden in changes {
+                    guard let self else { return }
+                    self.cachedIsMenuBarHiddenBySystem = isHidden
+                    self.updateAlphaForMenuBarVisibility()
                 }
-                .store(in: &c)
+            }
+
+            // `appearanceManager` is now `@Observable` (wave 3), so it no
+            // longer has a `$configuration` publisher.
+            appearanceConfigurationObservationTask = Task { [weak self, weak appState] in
+                let changes = Observations { appState?.appearanceManager.configuration }
+                for await _ in changes {
+                    guard let self else { return }
+                    self.updateWindowLevel()
+                }
+            }
         }
 
         cancellables = c
@@ -503,6 +538,10 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
         showRetryTask = nil
         // Cancel all pending update tasks to prevent memory leaks
         updateTaskContext.cancelAllTasks()
+        menuBarManagerObservationTask?.cancel()
+        menuBarManagerObservationTask = nil
+        appearanceConfigurationObservationTask?.cancel()
+        appearanceConfigurationObservationTask = nil
         // Clear publishers to release references
         cancellables.removeAll()
         // Clear captured wallpaper image and other state
@@ -546,6 +585,24 @@ private final class MenuBarOverlayPanelContentView: NSView {
     @Published private var averageColorInfo: MenuBarAverageColorInfo?
 
     private var cancellables = Set<AnyCancellable>()
+
+    /// Task observing `menuBarManager.averageColors` (wave 3), replacing the
+    /// old `$averageColors` sink.
+    private var averageColorsObservationTask: Task<Void, Never>?
+
+    /// Task observing `appearanceManager.configuration` (wave 3), replacing
+    /// the old `$configuration` sink and `objectWillChange` debounce sink.
+    private var appearanceConfigurationObservationTask: Task<Void, Never>?
+
+    /// Task observing `appearanceManager.previewConfiguration` (wave 3),
+    /// replacing the old `$previewConfiguration` sink.
+    private var previewConfigurationObservationTask: Task<Void, Never>?
+
+    deinit {
+        averageColorsObservationTask?.cancel()
+        appearanceConfigurationObservationTask?.cancel()
+        previewConfigurationObservationTask?.cancel()
+    }
 
     private lazy var tintGlassView: NSGlassEffectView = {
         let view = NSGlassEffectView()
@@ -621,30 +678,49 @@ private final class MenuBarOverlayPanelContentView: NSView {
 
         if let overlayPanel {
             if let appState = overlayPanel.appState {
-                appState.appearanceManager.$configuration
-                    .sink { [weak self] config in
-                        self?.fullConfiguration = config
-                    }
-                    .store(in: &c)
-
-                appState.appearanceManager.objectWillChange
-                    .debounce(for: .seconds(0), scheduler: DispatchQueue.main)
-                    .sink { [weak self] _ in
+                // `appearanceManager` is now `@Observable` (wave 3), so it no
+                // longer has `$configuration` / `objectWillChange` publishers.
+                // A single Observation task now covers both the direct
+                // `configuration` updates the old `$configuration` sink
+                // handled and the "something changed" signal the old
+                // `objectWillChange` debounce sink existed to catch — under
+                // Observation, every mutation of `configuration` is already
+                // visible through this one sequence.
+                appearanceConfigurationObservationTask?.cancel()
+                appearanceConfigurationObservationTask = Task { [weak self, weak appState] in
+                    let changes = Observations { appState?.appearanceManager.configuration }
+                    for await config in changes {
                         guard let self else { return }
-                        fullConfiguration = appState.appearanceManager.configuration
+                        guard let config else { continue }
+                        self.fullConfiguration = config
                     }
-                    .store(in: &c)
+                }
 
-                appState.appearanceManager.$previewConfiguration
-                    .removeDuplicates()
-                    .assign(to: &$previewConfiguration)
+                // `appearanceManager` is now `@Observable` (wave 3), so it no
+                // longer has an `$previewConfiguration` publisher.
+                previewConfigurationObservationTask?.cancel()
+                previewConfigurationObservationTask = Task { [weak self, weak appState] in
+                    var previous: MenuBarAppearancePartialConfiguration?
+                    let changes = Observations { appState?.appearanceManager.previewConfiguration }
+                    for await preview in changes {
+                        guard let self else { return }
+                        guard preview != previous else { continue }
+                        previous = preview
+                        self.previewConfiguration = preview
+                    }
+                }
 
-                appState.menuBarManager.$averageColors
-                    .sink { [weak self] colors in
-                        guard let self, let displayID = self.overlayPanel?.owningScreen.displayID else { return }
+                // `menuBarManager` is now `@Observable` (wave 3), so it no
+                // longer has an `$averageColors` publisher.
+                averageColorsObservationTask?.cancel()
+                averageColorsObservationTask = Task { [weak self, weak appState] in
+                    let changes = Observations { appState?.menuBarManager.averageColors ?? [:] }
+                    for await colors in changes {
+                        guard let self else { return }
+                        guard let displayID = self.overlayPanel?.owningScreen.displayID else { continue }
                         self.averageColorInfo = colors[displayID]
                     }
-                    .store(in: &c)
+                }
 
                 // Fade out whenever a menu bar item is being dragged.
                 appState.$isDraggingMenuBarItem

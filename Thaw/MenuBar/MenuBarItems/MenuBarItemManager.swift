@@ -225,6 +225,9 @@ final class MenuBarItemManager: ObservableObject {
     /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
 
+    /// Observes `appState.navigationState`'s @Observable properties (wave 3).
+    private var navigationStateObservationTask: Task<Void, Never>?
+
     /// The currently running "is any menu open" probe, reused so concurrent
     /// smart-rehide callers do not all trigger their own full menu-bar scan.
     private var menuOpenCheckTask: Task<Bool, Never>?
@@ -1466,35 +1469,24 @@ final class MenuBarItemManager: ObservableObject {
         }
         .store(in: &c)
 
-        appState.navigationState.$settingsNavigationIdentifier
-            .sink { [weak self] identifier in
-                guard let self, identifier == .menuBarLayout else {
-                    return
-                }
-                Task {
-                    await self.appState?.imageCache.updateCache(sections: MenuBarSection.Name.allCases)
-                }
+        // `navigationState` (AppNavigationState) is @Observable (wave 3), so
+        // its old `$settingsNavigationIdentifier`/`$isSettingsPresented`
+        // Combine projections are gone. Both old subscribers wanted the same
+        // outcome (refresh the image cache once Menu Bar Layout becomes the
+        // presented settings pane), just triggered from two different edges
+        // (identifier changing while already presented, vs. presented
+        // becoming true while identifier is already .menuBarLayout), so they
+        // are combined into a single Observations-Task tracking both.
+        navigationStateObservationTask = Task { [weak self] in
+            guard let self, let appState = self.appState else { return }
+            let changes = Observations { [navigationState = appState.navigationState] in
+                (navigationState.settingsNavigationIdentifier, navigationState.isSettingsPresented)
             }
-            .store(in: &c)
-
-        // When Settings reopens with Menu Bar Layout already selected,
-        // settingsNavigationIdentifier does not change, so the subscriber
-        // above does not fire. Observe isSettingsPresented to catch this case.
-        appState.navigationState.$isSettingsPresented
-            .removeDuplicates()
-            .sink { [weak self] isPresented in
-                guard
-                    let self,
-                    isPresented,
-                    appState.navigationState.settingsNavigationIdentifier == .menuBarLayout
-                else {
-                    return
-                }
-                Task {
-                    await self.appState?.imageCache.updateCache(sections: MenuBarSection.Name.allCases)
-                }
+            for await (identifier, isPresented) in changes {
+                guard isPresented, identifier == .menuBarLayout else { continue }
+                await self.appState?.imageCache.updateCache(sections: MenuBarSection.Name.allCases)
             }
-            .store(in: &c)
+        }
 
         // Rescan on menu bar window-list changes. cacheItemsIfNeeded compares
         // the current items-only window IDs against the cached set and recaches

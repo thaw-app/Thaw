@@ -15,7 +15,7 @@ struct MenuBarAppearanceEditor: View {
     }
 
     @EnvironmentObject var appState: AppState
-    @ObservedObject var appearanceManager: MenuBarAppearanceManager
+    @Bindable var appearanceManager: MenuBarAppearanceManager
     @Environment(\.dismissWindow) private var dismissWindow
     @State private var isResetPromptPresented = false
 

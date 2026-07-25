@@ -80,8 +80,13 @@ final class LayoutBarContainer: NSView {
     /// longer take part in the `Publishers.CombineLatest3` below.
     private var enableAlwaysHiddenSectionObservationTask: Task<Void, Never>?
 
+    /// Task observing `menuBarManager.averageColorInfo` (wave 3), replacing
+    /// the old `$averageColorInfo` sink.
+    private var averageColorInfoObservationTask: Task<Void, Never>?
+
     deinit {
         enableAlwaysHiddenSectionObservationTask?.cancel()
+        averageColorInfoObservationTask?.cancel()
     }
 
     /// Creates a container view with the given app state, section, and spacing.
@@ -136,19 +141,22 @@ final class LayoutBarContainer: NSView {
                 }
             }
 
-            // Observe average color changes to update badge appearance
-            appState.menuBarManager.$averageColorInfo
-                .removeDuplicates()
-                .sink { [weak self] colorInfo in
-                    guard let self else {
-                        return
-                    }
+            // Observe average color changes to update badge appearance.
+            // `menuBarManager` is now `@Observable` (wave 3), so it no
+            // longer has an `$averageColorInfo` publisher.
+            averageColorInfoObservationTask = Task { [weak self, weak appState] in
+                var previous: MenuBarAverageColorInfo?
+                let changes = Observations { appState?.menuBarManager.averageColorInfo }
+                for await colorInfo in changes {
+                    guard let self else { return }
+                    guard colorInfo != previous else { continue }
+                    previous = colorInfo
                     // Update the color info on the badge view
-                    if let badgeView = arrangedViews.first(where: { $0.isNewItemsBadge }) {
+                    if let badgeView = self.arrangedViews.first(where: { $0.isNewItemsBadge }) {
                         badgeView.averageColorInfo = colorInfo
                     }
                 }
-                .store(in: &c)
+            }
 
             // Observe screen parameter changes (moving between displays) to update badge
             NotificationCenter.default

@@ -12,7 +12,9 @@ import Observation
 import os.lock
 
 /// Cache for menu bar item images.
-final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
+@MainActor
+@Observable
+final class MenuBarItemImageCache: @unchecked Sendable {
     private static nonisolated let diagLog = DiagLog(category: "MenuBarItemImageCache")
 
     nonisolated struct DisplayResolution: Equatable {
@@ -128,7 +130,7 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
     }
 
     /// The cached item images, keyed by their corresponding tags.
-    @Published private(set) var images = [MenuBarItemTag: CapturedImage]()
+    private(set) var images = [MenuBarItemTag: CapturedImage]()
 
     /// Maximum number of images to cache to prevent memory growth
     private static let maxCacheSize = 200
@@ -174,6 +176,21 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
     /// `@Observable` rather than a Combine `ObservableObject`.
     private var iconRefreshIntervalObservationTask: Task<Void, Never>?
 
+    /// Task observing `AppNavigationState`'s properties (wave 3), which is
+    /// `@Observable` rather than a Combine `ObservableObject`.
+    private var navigationStateObservationTask: Task<Void, Never>?
+
+    /// Task observing `menuBarManager.averageColorInfo` (wave 3), which is
+    /// `@Observable` rather than a Combine `ObservableObject`. Bridges into
+    /// `colorChangeSubject` so it can still participate in the
+    /// `Publishers.MergeMany` below.
+    private var averageColorInfoObservationTask: Task<Void, Never>?
+
+    /// Bridges `averageColorInfoObservationTask`'s Observation-based updates
+    /// into the Combine `Publishers.MergeMany` pipeline in
+    /// `configureCancellables()`.
+    private let colorChangeSubject = PassthroughSubject<Void, Never>()
+
     private var memoryPressureSource: DispatchSourceMemoryPressure?
 
     /// The currently running cache update task, if any.
@@ -194,13 +211,18 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
     /// Used to gate background cache prewarming so captures only occur while the
     /// user has the layout settings open, rather than staying stuck on for the
     /// remaining lifetime of the process after the first open (#759).
-    @Published private(set) var isSettingsPaneOpen = false
+    private(set) var isSettingsPaneOpen = false
 
     /// Whether the per-item hotkey list in the Hotkeys settings pane is expanded.
     /// While collapsed, the pane has no visible item-icon consumer, so the live
     /// capture loop stays off rather than paying the off-screen SkyLight capture
     /// cost for items the user cannot see.
-    @Published private(set) var isItemHotkeyListExpanded = false
+    private(set) var isItemHotkeyListExpanded = false {
+        didSet {
+            guard oldValue != isItemHotkeyListExpanded else { return }
+            startLiveRefreshIfNeeded()
+        }
+    }
 
     /// Updates isItemHotkeyListExpanded from the Hotkeys settings UI.
     func setItemHotkeyListExpanded(_ expanded: Bool) {
@@ -210,11 +232,14 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
         isItemHotkeyListExpanded = expanded
     }
 
+    @MainActor
     deinit {
         memoryPressureSource?.cancel()
         currentUpdateTask?.cancel()
         liveRefreshTask?.cancel()
         iconRefreshIntervalObservationTask?.cancel()
+        navigationStateObservationTask?.cancel()
+        averageColorInfoObservationTask?.cancel()
     }
 
     // MARK: Setup
@@ -399,10 +424,24 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
             .map { _ in () }
             .eraseToAnyPublisher()
 
-            let colorChangePublisher: AnyPublisher<Void, Never> = appState.menuBarManager.$averageColorInfo
-                .removeDuplicates()
-                .map { _ in () }
+            // `menuBarManager` is now `@Observable` (wave 3), so it no longer
+            // has an `$averageColorInfo` publisher. `colorChangeSubject` is
+            // fed by `averageColorInfoObservationTask` (started below) and
+            // bridges those updates back into this Combine merge.
+            let colorChangePublisher: AnyPublisher<Void, Never> = colorChangeSubject
                 .eraseToAnyPublisher()
+
+            averageColorInfoObservationTask?.cancel()
+            averageColorInfoObservationTask = Task { [weak self, weak appState] in
+                var previous: MenuBarAverageColorInfo?
+                let changes = Observations { appState?.menuBarManager.averageColorInfo }
+                for await info in changes {
+                    guard let self else { return }
+                    guard info != previous else { continue }
+                    previous = info
+                    self.colorChangeSubject.send(())
+                }
+            }
 
             let itemCacheChangePublisher: AnyPublisher<Void, Never> = appState.itemManager.$itemCache
                 .removeDuplicates()
@@ -438,29 +477,35 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
             }
             .store(in: &c)
 
-            // Observe navigation state changes to start/stop live refresh
-            Publishers.CombineLatest4(
-                appState.navigationState.$isIceBarPresented,
-                appState.navigationState.$isSearchPresented,
-                appState.navigationState.$isSettingsPresented,
-                appState.navigationState.$settingsNavigationIdentifier
-            )
-            .combineLatest(appState.navigationState.$isAppFrontmost)
-            .debounce(for: .milliseconds(50), scheduler: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.startLiveRefreshIfNeeded()
+            // Observe navigation state changes to start/stop live refresh.
+            // `AppNavigationState` is `@Observable` (wave 3) rather than a
+            // Combine `ObservableObject`, so this is observed via the
+            // `Observations` async sequence instead of its old
+            // `$isIceBarPresented`/etc. projections. The original pipeline
+            // debounced 50ms; since `startLiveRefreshIfNeeded()` is itself
+            // idempotent (guards internally against redundant starts), the
+            // debounce is dropped in favor of firing directly on each change.
+            navigationStateObservationTask = Task { @MainActor [weak self, navigationState = appState.navigationState] in
+                let changes = Observations {
+                    (
+                        navigationState.isIceBarPresented,
+                        navigationState.isSearchPresented,
+                        navigationState.isSettingsPresented,
+                        navigationState.settingsNavigationIdentifier,
+                        navigationState.isAppFrontmost
+                    )
+                }
+                for await _ in changes {
+                    guard let self else { return }
+                    self.startLiveRefreshIfNeeded()
+                }
             }
-            .store(in: &c)
 
             // Start/stop the live refresh when the Hotkeys pane's per-item list
             // is expanded or collapsed, since that gates its capture consumer.
-            $isItemHotkeyListExpanded
-                .removeDuplicates()
-                .receive(on: DispatchQueue.main)
-                .sink { [weak self] _ in
-                    self?.startLiveRefreshIfNeeded()
-                }
-                .store(in: &c)
+            // Replaced by `isItemHotkeyListExpanded`'s `didSet` above now
+            // that this class is @Observable (no more `$isItemHotkeyListExpanded`
+            // Combine projection to subscribe to).
 
             // Restart the live refresh loop when the icon refresh interval
             // changes. `AdvancedSettings` is `@Observable` rather than a

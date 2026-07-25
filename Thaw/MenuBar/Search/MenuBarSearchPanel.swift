@@ -125,7 +125,20 @@ final class MenuBarSearchPanel: NSPanel {
             names[uniqueIdentifier] = newName
         }
         Defaults.set(names, forKey: .menuBarItemCustomNames)
-        model.objectWillChange.send()
+        // The rendered row (`MenuBarSearchItemView`) reads its display name
+        // from `Defaults`/`item.customName` directly rather than from a
+        // tracked `model` property, so writing to `Defaults` above doesn't
+        // register as an Observation mutation. The old code forced a
+        // refresh with `model.objectWillChange.send()`; @Observable has no
+        // such escape hatch. `MenuBarSearchContentView.updateDisplayedItems()`
+        // (the function that actually rebuilds the row list) isn't reachable
+        // from here across the panel/view boundary, so instead we
+        // reassign `displayedItems` to itself: @Observable's generated
+        // setter unconditionally calls `withMutation(keyPath:)` (no
+        // implicit equality check), so this is a genuine, Observation-
+        // visible mutation of the exact property the row list renders from,
+        // forcing SwiftUI to re-evaluate each row (and pick up the new name).
+        model.displayedItems = model.displayedItems
     }
 
     /// The default screen to show the panel on.
@@ -405,13 +418,12 @@ private final class MenuBarSearchHostingView: NSHostingView<AnyView> {
     ) {
         super.init(
             rootView: AnyView(
-                MenuBarSearchContentView(displayID: displayID, panel: panel) { [weak panel] in
+                MenuBarSearchContentView(model: model, displayID: displayID, panel: panel) { [weak panel] in
                     panel?.close()
                 }
                 .environmentObject(appState)
                 .environmentObject(appState.itemManager)
-                .environmentObject(appState.imageCache)
-                .environmentObject(model)
+                .environment(appState.imageCache)
             )
         )
     }
@@ -432,8 +444,14 @@ private struct MenuBarSearchContentView: View {
 
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var itemManager: MenuBarItemManager
-    @EnvironmentObject var imageCache: MenuBarItemImageCache
-    @EnvironmentObject var model: MenuBarSearchModel
+    @Environment(MenuBarItemImageCache.self) var imageCache: MenuBarItemImageCache
+    // `MenuBarSearchModel` is @Observable (wave 3). `$model.property`
+    // bindings are needed in several of this view's computed properties
+    // (searchField, mainContent), not just `body`, so a local `@Bindable`
+    // re-declaration inside `body` alone wouldn't reach them. Passed in
+    // explicitly and held as `@Bindable` here instead of via `@Environment`,
+    // which keeps bindings available anywhere in the type.
+    @Bindable var model: MenuBarSearchModel
     @FocusState private var searchFieldIsFocused: Bool
     @AppStorage(Defaults.Key.rememberSearchQuery.rawValue) private var rememberSearchQuery = Defaults.DefaultValue.rememberSearchQuery
 
@@ -687,7 +705,7 @@ private struct MenuBarSearchContentView: View {
                     let listItem = ListItem.item(id: .item(item.tag, windowID: item.windowID)) {
                         performAction(for: item)
                     } content: {
-                        MenuBarSearchItemView(item: item)
+                        MenuBarSearchItemView(model: model, item: item)
                     }
                     items.append(SearchItem(listItem: listItem, title: item.displayName))
                 }
@@ -875,8 +893,8 @@ private let controlCenterIcon: NSImage? = {
 private struct MenuBarSearchItemView: View {
     @Environment(\.menuBarSearchPanel) var panel
     @EnvironmentObject var appState: AppState
-    @EnvironmentObject var imageCache: MenuBarItemImageCache
-    @EnvironmentObject var model: MenuBarSearchModel
+    @Environment(MenuBarItemImageCache.self) var imageCache: MenuBarItemImageCache
+    @Bindable var model: MenuBarSearchModel
 
     let item: MenuBarItem
     @FocusState private var isEditing: Bool

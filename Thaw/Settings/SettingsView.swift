@@ -12,7 +12,7 @@ import SwiftUI
 
 struct SettingsView: View {
     let appState: AppState
-    @ObservedObject var navigationState: AppNavigationState
+    let navigationState: AppNavigationState
     @State private var searchModel = SearchModel()
 
     private var allSections: [SettingsNavigationIdentifier] {

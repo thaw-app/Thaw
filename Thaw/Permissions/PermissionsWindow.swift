@@ -37,7 +37,6 @@ struct PermissionsWindow: Scene {
         .windowResizability(.contentSize)
         .windowStyle(.hiddenTitleBar)
         .environmentObject(appState)
-        .environmentObject(appState.permissions)
     }
 
     /// During first launch, permissions are requested as the final step of
@@ -47,13 +46,14 @@ struct PermissionsWindow: Scene {
     @ViewBuilder
     private var permissionsContent: some View {
         if Defaults.bool(forKey: .hasCompletedFirstLaunch) {
-            PermissionsView<AppPermissions>()
+            PermissionsView(manager: appState.permissions)
         } else {
             ThawOnboardingView {
                 Defaults.set(true, forKey: .hasSeenOnboarding)
                 appState.completeFirstLaunchSetup()
             }
             .frame(width: ThawOnboardingWindowMetrics.width, height: ThawOnboardingWindowMetrics.height)
+            .environment(appState.permissions)
         }
     }
 }

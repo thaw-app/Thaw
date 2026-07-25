@@ -10,7 +10,7 @@ import SwiftUI
 
 /// The permissions step shown at the end of the glass onboarding tour.
 struct ThawPermissionsView: View {
-    @EnvironmentObject private var permissions: AppPermissions
+    @Environment(AppPermissions.self) private var permissions
 
     var onContinue: () -> Void
 

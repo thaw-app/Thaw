@@ -12,52 +12,75 @@ import SwiftUI
 
 /// Manager for the state of the menu bar.
 @MainActor
-final class MenuBarManager: ObservableObject {
+@Observable
+final class MenuBarManager {
     /// Information for the menu bar's average color on the active screen.
-    @Published private(set) var averageColorInfo: MenuBarAverageColorInfo?
+    private(set) var averageColorInfo: MenuBarAverageColorInfo?
 
     /// Per-screen average colors for multi-monitor adaptive backgrounds.
-    @Published private(set) var averageColors: [CGDirectDisplayID: MenuBarAverageColorInfo] = [:]
+    private(set) var averageColors: [CGDirectDisplayID: MenuBarAverageColorInfo] = [:]
 
     /// A Boolean value that indicates whether the menu bar is either always hidden
     /// by the system, or automatically hidden and shown by the system based on the
     /// location of the mouse.
-    @Published private(set) var isMenuBarHiddenBySystem = false
+    private(set) var isMenuBarHiddenBySystem = false
 
     /// A Boolean value that indicates whether the menu bar is hidden by the system
     /// according to a value stored in UserDefaults.
-    @Published private(set) var isMenuBarHiddenBySystemUserDefaults = false
+    private(set) var isMenuBarHiddenBySystemUserDefaults = false
 
     /// A Boolean value that indicates whether the "ShowOnHover" feature is allowed.
-    @Published var showOnHoverAllowed = true
+    var showOnHoverAllowed = true
 
     /// Timestamp of the last time a section was shown.
     private(set) var lastShowTimestamp: ContinuousClock.Instant?
 
     /// Reference to the settings window.
-    @Published private var settingsWindow: NSWindow?
+    private var settingsWindow: NSWindow?
 
     /// Diagnostic logger for the menu bar manager.
+    @ObservationIgnored
     private let diagLog = DiagLog(category: "MenuBarManager")
 
     /// The shared app state.
+    @ObservationIgnored
     private weak var appState: AppState?
 
     /// Storage for internal observers.
+    @ObservationIgnored
     private var cancellables = Set<AnyCancellable>()
 
     /// Task observing `DisplaySettingsManager.configurations`, which is
     /// `@Observable` rather than a Combine `ObservableObject`.
     private var displayConfigurationsObservationTask: Task<Void, Never>?
 
+    /// Task observing `settingsWindow`'s `isVisible` KVO stream (wave 3),
+    /// replacing the old `$settingsWindow.removeNil().map { $0.publisher(for:
+    /// \.isVisible) }.switchToLatest()` pipeline. `settingsWindow` is now a
+    /// plain `@Observable` property rather than a Combine `@Published` one,
+    /// so it no longer has a `$settingsWindow` publisher; the inner KVO
+    /// publisher on the resolved `NSWindow` is unrelated to Observation and
+    /// stays Combine, manually re-subscribed on each new non-nil window
+    /// value (mirroring `switchToLatest`'s behavior).
+    private var settingsWindowObservationTask: Task<Void, Never>?
+
+    /// Task observing `appearanceManager.configuration` for adaptive-color
+    /// refresh start/stop (wave 3), replacing the old `$configuration.map {
+    /// ... }.removeDuplicates().sink` pipeline.
+    private var appearanceConfigurationObservationTask: Task<Void, Never>?
+
+    @MainActor
     deinit {
         displayConfigurationsObservationTask?.cancel()
+        settingsWindowObservationTask?.cancel()
+        settingsWindowVisibilityCancellable?.cancel()
+        appearanceConfigurationObservationTask?.cancel()
     }
 
     /// Per-item hotkeys, keyed by MenuBarItem.uniqueIdentifier. Each opens the
     /// item's menu when its key combination fires. Mirrors the per-profile
     /// hotkeys on ProfileManager.
-    @Published private(set) var itemHotkeys: [String: Hotkey] = [:]
+    private(set) var itemHotkeys: [String: Hotkey] = [:]
 
     /// Reverse map from a hotkey instance to the item identifier it opens.
     /// Read by Hotkey.Listener when an openMenuBarItem hotkey fires.
@@ -65,6 +88,11 @@ final class MenuBarManager: ObservableObject {
 
     /// Cancellable for the periodic average-color refresh, active only while settings is visible.
     private var averageColorRefreshCancellable: AnyCancellable?
+
+    /// Cancellable for `settingsWindow`'s `isVisible` KVO stream, resubscribed
+    /// on each new non-nil `settingsWindow` value by `settingsWindowObservationTask`.
+    @ObservationIgnored
+    private var settingsWindowVisibilityCancellable: AnyCancellable?
 
     /// Cancellable for the periodic average-color refresh when adaptive background is active.
     private var adaptiveColorRefreshCancellable: AnyCancellable?
@@ -238,29 +266,32 @@ final class MenuBarManager: ObservableObject {
                 .store(in: &c)
         }
 
-        $settingsWindow
-            .removeNil()
-            .map { $0.publisher(for: \.isVisible) }
-            .switchToLatest()
-            .removeDuplicates()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] isVisible in
+        settingsWindowObservationTask = Task { [weak self] in
+            let changes = Observations { self?.settingsWindow }
+            for await window in changes {
                 guard let self else { return }
-                if isVisible {
-                    updateAverageColorInfo()
-                    // Start a visibility-gated 60s refresh to catch wallpaper changes
-                    // (macOS no longer posts a wallpaper change notification).
-                    averageColorRefreshCancellable = Timer.publish(every: 60, tolerance: 10, on: .main, in: .default)
-                        .autoconnect()
-                        .sink { [weak self] _ in
-                            self?.updateAverageColorInfo()
+                guard let window else { continue }
+                settingsWindowVisibilityCancellable = window.publisher(for: \.isVisible)
+                    .removeDuplicates()
+                    .receive(on: DispatchQueue.main)
+                    .sink { [weak self] isVisible in
+                        guard let self else { return }
+                        if isVisible {
+                            updateAverageColorInfo()
+                            // Start a visibility-gated 60s refresh to catch wallpaper changes
+                            // (macOS no longer posts a wallpaper change notification).
+                            averageColorRefreshCancellable = Timer.publish(every: 60, tolerance: 10, on: .main, in: .default)
+                                .autoconnect()
+                                .sink { [weak self] _ in
+                                    self?.updateAverageColorInfo()
+                                }
+                        } else {
+                            averageColorRefreshCancellable?.cancel()
+                            averageColorRefreshCancellable = nil
                         }
-                } else {
-                    averageColorRefreshCancellable?.cancel()
-                    averageColorRefreshCancellable = nil
-                }
+                    }
             }
-            .store(in: &c)
+        }
 
         // Refresh average color when space or screen changes while settings or adaptive is active.
         Publishers.Merge(
@@ -375,14 +406,17 @@ final class MenuBarManager: ObservableObject {
 
         // Start/stop adaptive color refresh when background or tint uses adaptive mode.
         if let appState {
-            appState.appearanceManager.$configuration
-                .map { config in
-                    let current = config.current
-                    return current.backgroundKind == .adaptive || current.tintKind == .adaptive
-                }
-                .removeDuplicates()
-                .sink { [weak self] isAdaptive in
+            appearanceConfigurationObservationTask?.cancel()
+            appearanceConfigurationObservationTask = Task { [weak self, weak appState] in
+                var previousIsAdaptive: Bool?
+                let changes = Observations { appState?.appearanceManager.configuration }
+                for await config in changes {
                     guard let self else { return }
+                    guard let config else { continue }
+                    let current = config.current
+                    let isAdaptive = current.backgroundKind == .adaptive || current.tintKind == .adaptive
+                    guard isAdaptive != previousIsAdaptive else { continue }
+                    previousIsAdaptive = isAdaptive
                     if isAdaptive {
                         captureAdaptiveColorWithRetry()
                         adaptiveColorRefreshCancellable = Timer.publish(every: 30, tolerance: 5, on: .main, in: .default)
@@ -395,7 +429,7 @@ final class MenuBarManager: ObservableObject {
                         adaptiveColorRefreshCancellable = nil
                     }
                 }
-                .store(in: &c)
+            }
         }
 
         // Hide application menus when a section is shown (if applicable).

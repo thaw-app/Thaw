@@ -16,12 +16,13 @@ import os
 /// that are triggered by them, such as showing hidden items on
 /// click/hover/scroll.
 @MainActor
-final class HIDEventManager: ObservableObject {
+@Observable
+final class HIDEventManager {
     private static nonisolated let diagLog = DiagLog(category: "HIDEventManager")
 
     /// A Boolean value that indicates whether the user is dragging
     /// a menu bar item.
-    @Published private(set) var isDraggingMenuBarItem = false
+    private(set) var isDraggingMenuBarItem = false
 
     /// The shared app state.
     private weak var appState: AppState?
@@ -34,6 +35,7 @@ final class HIDEventManager: ObservableObject {
     private var lastAppMenuClickTime: CFAbsoluteTime = 0
 
     /// Storage for internal observers.
+    @ObservationIgnored
     private var cancellables = Set<AnyCancellable>()
 
     /// Task observing `GeneralSettings.showOnHover`, `AdvancedSettings.
@@ -169,6 +171,7 @@ final class HIDEventManager: ObservableObject {
     // MARK: Monitors
 
     /// Monitor for mouse down events.
+    @ObservationIgnored
     private(set) lazy var mouseDownMonitor = EventMonitor.universal(
         for: [.leftMouseDown, .rightMouseDown]
     ) { [weak self] event in
@@ -230,6 +233,7 @@ final class HIDEventManager: ObservableObject {
     }
 
     /// Monitor for mouse up events.
+    @ObservationIgnored
     private(set) lazy var mouseUpMonitor = EventMonitor.universal(
         for: .leftMouseUp
     ) { [weak self] event in
@@ -241,6 +245,7 @@ final class HIDEventManager: ObservableObject {
     }
 
     /// Monitor for mouse dragged events.
+    @ObservationIgnored
     private(set) lazy var mouseDraggedMonitor = EventMonitor.universal(
         for: .leftMouseDragged
     ) { [weak self] event in
@@ -255,6 +260,7 @@ final class HIDEventManager: ObservableObject {
     }
 
     /// Tap for mouse moved events.
+    @ObservationIgnored
     private(set) lazy var mouseMovedTap = EventTap(
         type: .mouseMoved,
         location: .hidEventTap,
@@ -303,6 +309,7 @@ final class HIDEventManager: ObservableObject {
     }
 
     /// Monitor for scroll wheel events.
+    @ObservationIgnored
     private(set) lazy var scrollWheelMonitor = EventMonitor.universal(
         for: .scrollWheel
     ) { [weak self] event in
@@ -315,6 +322,7 @@ final class HIDEventManager: ObservableObject {
     /// Active tap that temporarily swallows clicks in the protected region
     /// after a first show-on-click reveal, so a double-click can still be
     /// recognized even though hidden items have appeared under the cursor.
+    @ObservationIgnored
     private(set) lazy var showOnClickGuardTap = EventTap(
         label: "showOnClickGuardTap",
         types: [.leftMouseDown, .leftMouseUp],
@@ -375,6 +383,7 @@ final class HIDEventManager: ObservableObject {
     // MARK: All Monitors
 
     /// All monitors maintained by the manager.
+    @ObservationIgnored
     private lazy var allMonitors: [any EventMonitorProtocol] = [
         mouseDownMonitor,
         mouseUpMonitor,
@@ -681,6 +690,7 @@ final class HIDEventManager: ObservableObject {
         dismissMenuBarTooltip()
     }
 
+    @MainActor
     deinit {
         healthCheckTimer?.invalidate()
         hoverSettingsObservationTask?.cancel()

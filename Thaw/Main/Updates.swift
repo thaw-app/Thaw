@@ -6,17 +6,20 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Combine
+import Observation
 import Sparkle
 import SwiftUI
 
 /// Manager for app updates.
 @MainActor
-final class UpdatesManager: NSObject, ObservableObject {
+@Observable
+final class UpdatesManager: NSObject {
     /// A Boolean value that indicates whether the user can check for updates.
-    @Published var canCheckForUpdates = false
+    var canCheckForUpdates = false
 
     /// The date of the last update check.
-    @Published var lastUpdateCheckDate: Date?
+    var lastUpdateCheckDate: Date?
 
     /// The shared app state.
     private(set) weak var appState: AppState?
@@ -24,11 +27,16 @@ final class UpdatesManager: NSObject, ObservableObject {
     /// Tracks whether the updater has been started.
     private var hasStartedUpdater = false
 
+    /// Storage for internal observers.
+    @ObservationIgnored
+    private var cancellables = Set<AnyCancellable>()
+
     private var debugUpdateMessage: String {
         String(localized: "Checking for updates is not supported in debug mode.")
     }
 
     /// The underlying updater controller.
+    @ObservationIgnored
     private(set) lazy var updaterController = SPUStandardUpdaterController(
         startingUpdater: false,
         updaterDelegate: self,
@@ -54,16 +62,25 @@ final class UpdatesManager: NSObject, ObservableObject {
         }
     }
 
+    // `automaticallyChecksForUpdates`/`automaticallyDownloadsUpdates` are
+    // computed properties backed by Sparkle's `updater`, not by a stored
+    // property the @Observable macro can track automatically. The old
+    // Combine `objectWillChange.send()` poke is replaced with the macro-
+    // synthesized `access(keyPath:)`/`withMutation(keyPath:)` calls, which
+    // register/notify Observation access for a specific property exactly
+    // like a stored property would.
     /// A Boolean value that indicates whether to automatically check for updates.
     var automaticallyChecksForUpdates: Bool {
         get {
-            updater.automaticallyChecksForUpdates
+            access(keyPath: \.automaticallyChecksForUpdates)
+            return updater.automaticallyChecksForUpdates
         }
         set {
-            objectWillChange.send()
-            updater.automaticallyChecksForUpdates = newValue
-            if newValue {
-                Defaults.set(true, forKey: .hasSeenUpdateConsent)
+            withMutation(keyPath: \.automaticallyChecksForUpdates) {
+                updater.automaticallyChecksForUpdates = newValue
+                if newValue {
+                    Defaults.set(true, forKey: .hasSeenUpdateConsent)
+                }
             }
         }
     }
@@ -71,13 +88,15 @@ final class UpdatesManager: NSObject, ObservableObject {
     /// A Boolean value that indicates whether to automatically download updates.
     var automaticallyDownloadsUpdates: Bool {
         get {
-            updater.automaticallyDownloadsUpdates
+            access(keyPath: \.automaticallyDownloadsUpdates)
+            return updater.automaticallyDownloadsUpdates
         }
         set {
-            objectWillChange.send()
-            updater.automaticallyDownloadsUpdates = newValue
-            if newValue {
-                Defaults.set(true, forKey: .hasSeenUpdateConsent)
+            withMutation(keyPath: \.automaticallyDownloadsUpdates) {
+                updater.automaticallyDownloadsUpdates = newValue
+                if newValue {
+                    Defaults.set(true, forKey: .hasSeenUpdateConsent)
+                }
             }
         }
     }
@@ -100,10 +119,22 @@ final class UpdatesManager: NSObject, ObservableObject {
 
     /// Configures the internal observers for the manager.
     private func configureCancellables() {
+        var c = Set<AnyCancellable>()
+        // `assign(to: &$property)` relied on the Combine `@Published`
+        // projection, which no longer exists now that this class is
+        // @Observable. Replaced with an explicit `.sink` that writes the
+        // plain property (weak self, since KVO publishers can outlive us).
         updater.publisher(for: \.canCheckForUpdates)
-            .assign(to: &$canCheckForUpdates)
+            .sink { [weak self] value in
+                self?.canCheckForUpdates = value
+            }
+            .store(in: &c)
         updater.publisher(for: \.lastUpdateCheckDate)
-            .assign(to: &$lastUpdateCheckDate)
+            .sink { [weak self] value in
+                self?.lastUpdateCheckDate = value
+            }
+            .store(in: &c)
+        cancellables = c
     }
 
     /// Checks for app updates.

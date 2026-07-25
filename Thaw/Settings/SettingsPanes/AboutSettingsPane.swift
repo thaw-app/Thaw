@@ -9,7 +9,7 @@
 import SwiftUI
 
 struct AboutSettingsPane: View {
-    @ObservedObject var updatesManager: UpdatesManager
+    @Bindable var updatesManager: UpdatesManager
     @Environment(\.openURL) private var openURL
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorScheme) private var colorScheme

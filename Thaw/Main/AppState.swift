@@ -69,6 +69,15 @@ final class AppState: ObservableObject {
     /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
 
+    /// Observes `navigationState`'s @Observable properties (wave 3), replacing
+    /// the old `Publishers.CombineLatest($isAppFrontmost, $isSettingsPresented)`
+    /// subscription.
+    private var navigationStateObservationTask: Task<Void, Never>?
+
+    /// Observes `hidEventManager.isDraggingMenuBarItem` (wave 3), replacing
+    /// the old `$isDraggingMenuBarItem.removeDuplicates().sink` subscription.
+    private var hidEventManagerObservationTask: Task<Void, Never>?
+
     /// Track open windows to prevent duplicates
     private var openWindows = Set<IceWindowIdentifier>()
 
@@ -260,25 +269,32 @@ final class AppState: ObservableObject {
             }
             .store(in: &c)
 
-        hidEventManager.$isDraggingMenuBarItem
-            .removeDuplicates()
-            .sink { [weak self] isDragging in
-                self?.isDraggingMenuBarItem = isDragging
+        hidEventManagerObservationTask = Task { [weak self, weak hidEventManager] in
+            let changes = Observations { hidEventManager?.isDraggingMenuBarItem ?? false }
+            for await isDragging in changes {
+                guard let self else { return }
+                guard self.isDraggingMenuBarItem != isDragging else { continue }
+                self.isDraggingMenuBarItem = isDragging
             }
-            .store(in: &c)
+        }
 
-        Publishers.CombineLatest(
-            navigationState.$isAppFrontmost,
-            navigationState.$isSettingsPresented
-        )
-        .map { $0 && $1 }
-        .throttle(for: 0.1, scheduler: DispatchQueue.main, latest: true)
-        .merge(with: Just(true).delay(for: 1, scheduler: DispatchQueue.main))
-        .sink { [weak self] shouldUpdate in
-            guard let self, shouldUpdate else {
-                return
+        // `navigationState` (AppNavigationState) is now @Observable (wave 3),
+        // so its old `$isAppFrontmost`/`$isSettingsPresented` Combine
+        // projections are gone. Replaced with the wave-2 Observations-Task
+        // pattern. The original pipeline also merged in a one-time `true`
+        // fired after a 1s delay to force an initial update once at launch;
+        // reproduced below as a separate detached delay. The 0.1s throttle
+        // is dropped: isAppFrontmost/isSettingsPresented only flip on user
+        // navigation (not high-frequency), so per-change firing is
+        // equivalent in practice and avoids reimplementing throttle(latest:)
+        // by hand.
+        navigationStateObservationTask = Task { [weak self] in
+            guard let self else { return }
+            let changes = Observations { [navigationState] in
+                (navigationState.isAppFrontmost, navigationState.isSettingsPresented)
             }
-            Task {
+            for await (isAppFrontmost, isSettingsPresented) in changes {
+                guard isAppFrontmost && isSettingsPresented else { continue }
                 await self.imageCache.updateCacheWithoutChecks(sections: MenuBarSection.Name.allCases)
                 // Log cache status periodically (only if cache is getting full)
                 if self.imageCache.cacheSize > 15 {
@@ -286,18 +302,23 @@ final class AppState: ObservableObject {
                 }
             }
         }
-        .store(in: &c)
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(1))
+            guard let self else { return }
+            await self.imageCache.updateCacheWithoutChecks(sections: MenuBarSection.Name.allCases)
+            if self.imageCache.cacheSize > 15 {
+                self.imageCache.logCacheStatus("Periodic update")
+            }
+        }
 
-        menuBarManager.objectWillChange
-            .sink { [weak self] in
-                self?.objectWillChange.send()
-            }
-            .store(in: &c)
-        permissions.objectWillChange
-            .sink { [weak self] in
-                self?.objectWillChange.send()
-            }
-            .store(in: &c)
+        // `menuBarManager` is now @Observable (wave 3), so it no longer has
+        // an `objectWillChange` publisher to forward here. See the
+        // `settings` note below for why views reading `menuBarManager.*`
+        // properties directly still update correctly without this forwarding.
+        // `permissions` (AppPermissions) is now @Observable (wave 3), so it
+        // no longer has an `objectWillChange` publisher to forward here. See
+        // the `settings` note below for why views reading `permissions.*`
+        // properties directly still update correctly without this forwarding.
         // `settings` (AppSettings) is now @Observable (wave 2), so it no
         // longer has an `objectWillChange` publisher to forward here. Views
         // reading `appState.settings.*` properties directly in their body
@@ -306,11 +327,11 @@ final class AppState: ObservableObject {
         // access tracking picking up those reads directly, which it does
         // even though AppState itself is not @Observable — see the wave 2
         // migration report for the verification of this across call sites.
-        updatesManager.objectWillChange
-            .sink { [weak self] in
-                self?.objectWillChange.send()
-            }
-            .store(in: &c)
+        // `updatesManager` (UpdatesManager) is now @Observable (wave 3), so
+        // it no longer has an `objectWillChange` publisher to forward here.
+        // Views reading `appState.updatesManager.*` directly in their body
+        // rely on SwiftUI's Observation access tracking, same as `settings`
+        // above (see wave 2 migration report).
 
         // After each cache cycle settles, let the provoker decide whether to
         // briefly add a virtual display to resolve any single-display orphans.

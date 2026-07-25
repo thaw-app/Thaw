@@ -8,6 +8,7 @@
 
 import Cocoa
 import Combine
+import Observation
 
 /// A Cocoa view that manages the menu bar layout interface.
 final class LayoutBarPaddingView: NSView {
@@ -23,6 +24,14 @@ final class LayoutBarPaddingView: NSView {
     private var containerLeadingAfterNotchConstraint: NSLayoutConstraint?
     private var containerLeadingInsetConstraint: NSLayoutConstraint?
     private var notchObservers = Set<AnyCancellable>()
+
+    /// Task observing `menuBarManager.averageColorInfo` (wave 3), replacing
+    /// the old `$averageColorInfo` sink.
+    private var averageColorInfoObservationTask: Task<Void, Never>?
+
+    deinit {
+        averageColorInfoObservationTask?.cancel()
+    }
 
     /// The layout view's arranged views.
     var arrangedViews: [LayoutBarArrangedView] {
@@ -490,13 +499,18 @@ final class LayoutBarPaddingView: NSView {
             }
             .store(in: &notchObservers)
 
-        appState.menuBarManager.$averageColorInfo
-            .removeDuplicates()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] colorInfo in
-                self?.notchView?.averageColorInfo = colorInfo
+        // `menuBarManager` is now `@Observable` (wave 3), so it no longer has
+        // an `$averageColorInfo` publisher.
+        averageColorInfoObservationTask = Task { [weak self, weak appState] in
+            var previous: MenuBarAverageColorInfo?
+            let changes = Observations { appState?.menuBarManager.averageColorInfo }
+            for await colorInfo in changes {
+                guard let self else { return }
+                guard colorInfo != previous else { continue }
+                previous = colorInfo
+                self.notchView?.averageColorInfo = colorInfo
             }
-            .store(in: &notchObservers)
+        }
     }
 
     private func updateNotchPresentation() {

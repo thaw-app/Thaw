@@ -7,6 +7,7 @@
 //  Licensed under the GNU GPLv3
 
 import Combine
+import Observation
 import SwiftUI
 
 /// A popover that contains a portable version of the menu bar
@@ -24,11 +25,20 @@ final class MenuBarAppearanceEditorPanel: NSObject, NSPopoverDelegate {
     /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
 
+    /// Observes `appearanceManager.configuration` to keep the popover's
+    /// content size in sync, replacing the old `$configuration.sink`.
+    private var appearanceConfigurationObservationTask: Task<Void, Never>?
+
     /// The underlying popover.
     private var popover: NSPopover?
 
     /// An invisible window used to anchor the popover to the top of the screen.
     private var anchorWindow: NSWindow?
+
+    @MainActor
+    deinit {
+        appearanceConfigurationObservationTask?.cancel()
+    }
 
     /// Sets up the popover.
     func performSetup(with appState: AppState) {
@@ -84,13 +94,16 @@ final class MenuBarAppearanceEditorPanel: NSObject, NSPopoverDelegate {
             }
             .store(in: &c)
 
-        appState.appearanceManager.$configuration
-            .sink { [weak self] _ in
-                self?.updateContentSize()
-            }
-            .store(in: &c)
-
         cancellables = c
+
+        appearanceConfigurationObservationTask?.cancel()
+        appearanceConfigurationObservationTask = Task { [weak self, weak appState] in
+            let changes = Observations { appState?.appearanceManager.configuration }
+            for await _ in changes {
+                guard let self else { return }
+                self.updateContentSize()
+            }
+        }
     }
 
     private func makePopover(appState: AppState, onDone: (() -> Void)?) -> NSPopover {
@@ -156,23 +169,32 @@ private final class MenuBarAppearanceEditorHostingController: NSHostingControlle
     private weak var appState: AppState?
     private var cancellables = Set<AnyCancellable>()
 
+    /// Observes `appearanceManager.configuration` to keep the preferred
+    /// content size in sync, replacing the old `$configuration.sink`.
+    private var appearanceConfigurationObservationTask: Task<Void, Never>?
+
     init(appState: AppState, onDone: (() -> Void)?) {
         self.appState = appState
         super.init(rootView: MenuBarAppearanceEditorContentView(appState: appState, onDone: onDone))
         updatePreferredContentSize()
 
-        appState.appearanceManager.$configuration
-            .sink { [weak self] _ in
-                Task { @MainActor [weak self] in
-                    self?.updatePreferredContentSize()
-                }
+        appearanceConfigurationObservationTask = Task { [weak self, weak appState] in
+            let changes = Observations { appState?.appearanceManager.configuration }
+            for await _ in changes {
+                guard let self else { return }
+                self.updatePreferredContentSize()
             }
-            .store(in: &cancellables)
+        }
     }
 
     @available(*, unavailable)
     required init?(coder _: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    @MainActor
+    deinit {
+        appearanceConfigurationObservationTask?.cancel()
     }
 
     func updatePreferredContentSize() {

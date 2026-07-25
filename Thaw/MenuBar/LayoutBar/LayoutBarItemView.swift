@@ -29,6 +29,19 @@ final class LayoutBarItemView: LayoutBarArrangedView {
 
     private var cancellables = Set<AnyCancellable>()
 
+    /// Observes `appState.imageCache.images` (wave 3: `MenuBarItemImageCache`
+    /// is @Observable rather than a Combine `ObservableObject`, so its old
+    /// `$images` projection is gone). This is an AppKit view (not a SwiftUI
+    /// body), so the Observations-async-sequence pattern is used instead of
+    /// `withObservationTracking`'s recursive-registration form, matching
+    /// this class's existing Combine-`sink`-based subscription style.
+    private var imageObservationTask: Task<Void, Never>?
+
+    @MainActor
+    deinit {
+        imageObservationTask?.cancel()
+    }
+
     /// The item that the view represents.
     let item: MenuBarItem
 
@@ -109,24 +122,20 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     }
 
     private func configureCancellables() {
-        var c = Set<AnyCancellable>()
+        let c = Set<AnyCancellable>()
 
         if let appState {
             let tag = item.tag
-            let imageForTag = appState.imageCache.$images
-                .map { [weak appState] _ -> MenuBarItemImageCache.CapturedImage? in
-                    appState?.imageCache.image(for: tag)
-                }
-
-            imageForTag
-                .removeDuplicates(by: MenuBarItemImageCache.CapturedImage.isVisuallyEqual)
-                .sink { [weak self] image in
-                    guard let self else {
-                        return
-                    }
+            imageObservationTask = Task { @MainActor [weak self, weak appState] in
+                var previous: MenuBarItemImageCache.CapturedImage?
+                let changes = Observations { appState?.imageCache.images[tag] ?? nil }
+                for await image in changes {
+                    guard let self else { return }
+                    guard !MenuBarItemImageCache.CapturedImage.isVisuallyEqual(previous, image) else { continue }
+                    previous = image
                     self.cachedImage = image
                 }
-                .store(in: &c)
+            }
         }
 
         cancellables = c

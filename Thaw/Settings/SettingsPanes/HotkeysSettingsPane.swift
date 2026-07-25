@@ -92,9 +92,9 @@ struct HotkeysSettingsPane: View {
 /// hotkey fires. Items with a saved binding whose owning app is not currently
 /// running are still listed, marked unavailable, so the binding can be cleared.
 private struct MenuBarItemHotkeyList: View {
-    @ObservedObject var menuBarManager: MenuBarManager
+    let menuBarManager: MenuBarManager
     @ObservedObject var itemManager: MenuBarItemManager
-    @ObservedObject var imageCache: MenuBarItemImageCache
+    let imageCache: MenuBarItemImageCache
 
     @State private var isExpanded = false
     @State private var rows: [Row] = []

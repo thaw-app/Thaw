@@ -356,8 +356,8 @@ private struct IceBarContentView: View {
     @ObservedObject var appState: AppState
     let colorManager: IceBarColorManager
     @ObservedObject var itemManager: MenuBarItemManager
-    @ObservedObject var imageCache: MenuBarItemImageCache
-    @ObservedObject var menuBarManager: MenuBarManager
+    let imageCache: MenuBarItemImageCache
+    let menuBarManager: MenuBarManager
     @State private var frame = CGRect.zero
     @State private var scrollIndicatorsFlashTrigger = 0
     @State private var cacheGracePeriodActive = true
@@ -718,9 +718,9 @@ private struct IceBarContentView: View {
 private struct IceBarItemView: View {
     private static let diagLog = DiagLog(category: "IceBar.ItemView")
 
-    @ObservedObject var imageCache: MenuBarItemImageCache
+    let imageCache: MenuBarItemImageCache
     @ObservedObject var itemManager: MenuBarItemManager
-    @ObservedObject var menuBarManager: MenuBarManager
+    let menuBarManager: MenuBarManager
 
     @State private var isHovered = false
 

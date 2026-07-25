@@ -12,14 +12,15 @@ import SwiftUI
 /// an optional Ice settings import prompt, and Quit/Continue actions that
 /// gate first-launch setup.
 ///
-/// Known warning: the compiler notes Manager's ObservableObject conformance
-/// "may be isolated" (IsolatedConformances). Both conformers (AppPermissions
-/// and the preview mock) are @MainActor with nonisolated ObservableObject
-/// conformances, and the view is only used on the main actor; there is no
-/// suppression syntax for this in the current compiler.
+/// `manager` is a plain stored property rather than an `@Environment`-sourced
+/// one: `PermissionsManaging` is generic over `Manager`, and `@Environment`
+/// injection needs a concrete type at both the injection and read site,
+/// which a generic parameter doesn't provide. Observation still tracks reads
+/// of `manager`'s properties normally regardless of how the reference itself
+/// arrived at the view.
 struct PermissionsView<Manager: PermissionsManaging>: View {
     @EnvironmentObject var appState: AppState
-    @EnvironmentObject var manager: Manager
+    let manager: Manager
 
     @State private var hasIceSettings = false
     @State private var showImportIceSettings = false
@@ -306,8 +307,9 @@ struct PermissionCard: View {
 /// A lightweight stand-in for ``AppPermissions`` used by the preview, so it
 /// doesn't need to spin up the real manager and its app machinery.
 @MainActor
+@Observable
 private final class MockPermissionsManager: PermissionsManaging {
-    @Published var permissionsState: AppPermissions.PermissionsState = .missing
+    var permissionsState: AppPermissions.PermissionsState = .missing
 
     let allPermissions: [Permission] = [
         AccessibilityPermission(),
@@ -316,7 +318,6 @@ private final class MockPermissionsManager: PermissionsManaging {
 }
 
 #Preview {
-    PermissionsView<MockPermissionsManager>()
+    PermissionsView(manager: MockPermissionsManager())
         .environmentObject(AppState())
-        .environmentObject(MockPermissionsManager())
 }
