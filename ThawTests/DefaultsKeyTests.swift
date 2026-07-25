@@ -23,11 +23,13 @@ final class DefaultsKeyTests: XCTestCase {
         XCTAssertEqual(Defaults.Key.inputPauseThresholdMs.rawValue, "inputPauseThresholdMs")
         XCTAssertEqual(Defaults.Key.discardStrayMoveEvents.rawValue, "discardStrayMoveEvents")
         XCTAssertEqual(Defaults.Key.failFastOnEventWindowMismatch.rawValue, "failFastOnEventWindowMismatch")
+        XCTAssertEqual(Defaults.Key.axMessagingTimeout.rawValue, "axMessagingTimeout")
     }
 
     func testHiddenFlagDefaultValuesAreUnchanged() {
         XCTAssertEqual(Defaults.DefaultValue.inputPauseThresholdMs, 50)
         XCTAssertEqual(Defaults.DefaultValue.discardStrayMoveEvents, true)
         XCTAssertEqual(Defaults.DefaultValue.failFastOnEventWindowMismatch, false)
+        XCTAssertEqual(Defaults.DefaultValue.axMessagingTimeout, 1.0)
     }
 }

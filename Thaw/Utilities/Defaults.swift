@@ -212,6 +212,7 @@ nonisolated extension Defaults {
         static let inputPauseThresholdMs = 50
         static let discardStrayMoveEvents = true
         static let failFastOnEventWindowMismatch = false
+        static let axMessagingTimeout = 1.0
     }
 }
 
@@ -283,6 +284,13 @@ nonisolated extension Defaults {
         // MARK: Menu Bar Item Custom Names
 
         case menuBarItemCustomNames = "MenuBarItemCustomNames"
+
+        // MARK: Internal (Event Delivery)
+
+        /// Items whose owners have recently failed to answer synthetic
+        /// events, keyed by namespace and title. Managed by
+        /// ``UnresponsiveItemStore``; not exposed in Settings.
+        case unresponsiveMenuBarItems = "UnresponsiveMenuBarItems"
 
         // MARK: Appearance Settings
 
@@ -364,5 +372,13 @@ nonisolated extension Defaults {
         ///
         /// Hidden diagnostic flag; not exposed in Settings. Default: false.
         case failFastOnEventWindowMismatch = "failFastOnEventWindowMismatch"
+
+        /// Seconds an accessibility message may block before it fails.
+        ///
+        /// Applied to every element AXSwift6 creates. `0` restores the
+        /// system default of six seconds.
+        ///
+        /// Hidden diagnostic flag; not exposed in Settings. Default: 1.0.
+        case axMessagingTimeout = "axMessagingTimeout"
     }
 }

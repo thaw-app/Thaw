@@ -204,6 +204,9 @@ final class MenuBarItemManager {
     /// Semaphore to prevent overlapping event operations.
     private let eventSemaphore = SimpleSemaphore(value: 1)
 
+    /// Items whose owners have been seen ignoring synthetic events.
+    let unresponsiveItems = UnresponsiveItemStore()
+
     /// Actor for managing menu bar item cache operations.
     private let cacheActor = CacheActor()
 
@@ -2892,6 +2895,23 @@ extension MenuBarItemManager {
             if case .itemNotMovable = self { return nil }
             return "Please try again. If the error persists, please file a bug report."
         }
+
+        /// Whether this failure means the item's owner never acknowledged
+        /// the events we posted.
+        ///
+        /// Only failures that are specifically about the owner staying
+        /// silent count. `cannotComplete` is deliberately excluded: it is
+        /// the catch-all, and attributing it to the owner would mark items
+        /// over failures that had nothing to do with them.
+        var indicatesUnresponsiveOwner: Bool {
+            switch self {
+            case .ownerUnresponsive, .eventOperationTimeout, .itemResponseTimeout:
+                true
+            case .cannotComplete, .invalidEventSource, .missingMouseLocation, .eventCreationFailure,
+                 .itemNotMovable, .missingItemBounds, .menuTrackingActive, .eventWindowMismatch:
+                false
+            }
+        }
     }
 
     /// Returns a Boolean value that indicates whether the user has
@@ -4226,7 +4246,16 @@ extension MenuBarItemManager {
         // target externally; ordinary items skip this gate.
         var anyMoveEventsSucceeded = false
 
-        let maxAttempts = max(1, maxMoveAttempts)
+        // Same bound as click(): an owner with a standing record of ignoring
+        // synthetic events gets one attempt. The loop already aborts early
+        // once postMoveEvents detects a hung owner, but that detection only
+        // catches owners that are visibly stalled — this also covers the ones
+        // that merely never acknowledge, which otherwise burn every attempt.
+        let maxAttempts: Int = if unresponsiveItems.isUnresponsive(item.tag) {
+            1
+        } else {
+            max(1, maxMoveAttempts)
+        }
         for n in 1 ... maxAttempts {
             guard !Task.isCancelled else {
                 throw EventError.cannotComplete
@@ -4259,6 +4288,7 @@ extension MenuBarItemManager {
                 // Verify the item actually reached the correct position.
                 if try await itemHasCorrectPosition(item: item, for: destination, on: resolvedDisplayID) {
                     MenuBarItemManager.diagLog.debug("Attempt \(n) succeeded and verified, finished with move")
+                    unresponsiveItems.recordSuccess(for: item.tag)
                     // Validate that item didn't get stuck when moving to hidden section
                     await validateItemPositionAfterMove(item: item, destination: destination, on: resolvedDisplayID)
                     return
@@ -4290,6 +4320,7 @@ extension MenuBarItemManager {
                     MenuBarItemManager.diagLog.warning(
                         "Attempt \(n): \(item.logString) owner is unresponsive, aborting move"
                     )
+                    unresponsiveItems.recordFailure(for: item.tag)
                     throw error
                 }
                 MenuBarItemManager.diagLog.debug("Attempt \(n) failed: \(error)")
@@ -4297,7 +4328,10 @@ extension MenuBarItemManager {
                     try await waitForMoveOperationBuffer()
                     continue
                 }
-                if error is EventError {
+                if let error = error as? EventError {
+                    if error.indicatesUnresponsiveOwner {
+                        unresponsiveItems.recordFailure(for: item.tag)
+                    }
                     throw error
                 }
                 throw EventError.cannotComplete
@@ -4574,7 +4608,15 @@ extension MenuBarItemManager {
             appState.hidEventManager.startAll()
         }
 
-        let maxAttempts = max(1, maxAttempts)
+        // An owner already known to ignore synthetic events gets one attempt
+        // instead of three. Retrying it only repeats the cursor warp that the
+        // user sees as the item jittering, and the extra attempts have never
+        // been what makes such an owner answer.
+        let maxAttempts: Int = if unresponsiveItems.isUnresponsive(item.tag) {
+            1
+        } else {
+            max(1, maxAttempts)
+        }
         let attemptStartTime = Date.now
         for n in 1 ... maxAttempts {
             guard !Task.isCancelled else {
@@ -4585,6 +4627,7 @@ extension MenuBarItemManager {
                 try await postClickEvents(item: item, mouseButton: mouseButton)
                 let clickDuration = Date.now.timeIntervalSince(clickStartTime)
                 MenuBarItemManager.diagLog.debug("Attempt \(n) succeeded in \(Int(clickDuration * 1000))ms, finished with click")
+                unresponsiveItems.recordSuccess(for: item.tag)
                 return
             } catch {
                 let attemptDuration = Date.now.timeIntervalSince(attemptStartTime)
@@ -4593,7 +4636,10 @@ extension MenuBarItemManager {
                     await eventSleep()
                     continue
                 }
-                if error is EventError {
+                if let error = error as? EventError {
+                    if error.indicatesUnresponsiveOwner {
+                        unresponsiveItems.recordFailure(for: item.tag)
+                    }
                     throw error
                 }
                 throw EventError.cannotComplete
