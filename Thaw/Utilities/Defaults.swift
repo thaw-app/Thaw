@@ -206,6 +206,12 @@ nonisolated extension Defaults {
         static let globalDisplayConfiguration: DisplayIceBarConfiguration = .defaultConfiguration
         static let confirmSpacingRelaunch = true
         static let unconfirmedSpacingProfileScope: SpacingProfileSaveScope = .activeProfile
+
+        // MARK: Hidden Diagnostic Flags
+
+        static let inputPauseThresholdMs = 50
+        static let discardStrayMoveEvents = true
+        static let failFastOnEventWindowMismatch = false
     }
 }
 
@@ -337,5 +343,26 @@ nonisolated extension Defaults {
         // MARK: Deprecated (Other)
 
         case sections = "Sections"
+
+        // MARK: Hidden Diagnostic Flags
+
+        /// Milliseconds of input inactivity required before a menu-bar item
+        /// reorder move proceeds.
+        ///
+        /// Hidden diagnostic flag; not exposed in Settings. Default: 50.
+        case inputPauseThresholdMs = "inputPauseThresholdMs"
+
+        /// Whether stray echoes of synthetic move events are discarded
+        /// before they can be delivered against the wrong window.
+        ///
+        /// Hidden diagnostic flag; not exposed in Settings. Default: true.
+        case discardStrayMoveEvents = "discardStrayMoveEvents"
+
+        /// Whether a synthetic event that comes back addressed to a
+        /// different window than it was posted with fails its operation
+        /// immediately rather than running to timeout.
+        ///
+        /// Hidden diagnostic flag; not exposed in Settings. Default: false.
+        case failFastOnEventWindowMismatch = "failFastOnEventWindowMismatch"
     }
 }

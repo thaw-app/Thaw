@@ -2914,7 +2914,10 @@ extension MenuBarItemManager {
         // moves when a churny app keeps changing its menu-bar items (see #750, #723, #736). The
         // default preserves the previous 50 ms behaviour; override with:
         //   defaults write com.stonerl.Thaw inputPauseThresholdMs -int <milliseconds>
-        let pauseMs = max(0, (UserDefaults.standard.object(forKey: "inputPauseThresholdMs") as? Int) ?? 50)
+        let pauseMs = max(
+            0,
+            (Defaults.object(forKey: .inputPauseThresholdMs) as? Int) ?? Defaults.DefaultValue.inputPauseThresholdMs
+        )
         let waitTask = Task {
             while true {
                 try Task.checkCancellation()
@@ -3141,7 +3144,7 @@ extension MenuBarItemManager {
     /// switch, should it ever misfire:
     ///   defaults write com.stonerl.Thaw discardStrayMoveEvents -bool NO
     private nonisolated var discardsStrayMoveEvents: Bool {
-        UserDefaults.standard.object(forKey: "discardStrayMoveEvents") as? Bool ?? true
+        (Defaults.object(forKey: .discardStrayMoveEvents) as? Bool) ?? Defaults.DefaultValue.discardStrayMoveEvents
     }
 
     /// Whether a synthetic event that comes back addressed to a different
@@ -3157,7 +3160,7 @@ extension MenuBarItemManager {
     /// the opt-in. Enable with:
     ///   defaults write com.stonerl.Thaw failFastOnEventWindowMismatch -bool YES
     private nonisolated var failsFastOnEventWindowMismatch: Bool {
-        UserDefaults.standard.bool(forKey: "failFastOnEventWindowMismatch")
+        Defaults.bool(forKey: .failFastOnEventWindowMismatch)
     }
 
     private nonisolated func makeContinuationTask(
