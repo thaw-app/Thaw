@@ -210,8 +210,8 @@ final class MenuBarItemManager {
     private var temporarilyShownItemContexts = [TemporarilyShownItemContext]()
 
     /// A timer for rehiding temporarily shown menu bar items.
-    private nonisolated(unsafe) var rehideTimer: Timer?
-    private nonisolated(unsafe) var rehideCancellable: AnyCancellable?
+    private var rehideTimer: Timer?
+    private var rehideCancellable: AnyCancellable?
 
     /// Timestamp of the most recent menu bar item move operation.
     private var lastMoveOperationTimestamp: ContinuousClock.Instant?
@@ -239,7 +239,7 @@ final class MenuBarItemManager {
     private var menuOpenCheckCachedAt: ContinuousClock.Instant?
 
     /// Timer for lightweight periodic cache checks.
-    private nonisolated(unsafe) var cacheTickCancellable: AnyCancellable?
+    private var cacheTickCancellable: AnyCancellable?
 
     /// Persisted identifiers of menu bar items we've already seen.
     private var knownItemIdentifiers = Set<String>()
