@@ -4575,16 +4575,26 @@ extension MenuBarItemManager {
     ///   - maxAttempts: Maximum number of click attempts (default 3).
     ///     Pass `1` from `temporarilyShow` so a single failure returns
     ///     immediately and the caller's fallback path fires promptly.
-    func click(item: MenuBarItem, with mouseButton: CGMouseButton, skipInputPause: Bool = false, maxAttempts: Int = 3) async throws {
+    /// - Returns: What the owner was observed to do in response. Callers
+    ///   that need the window the click opened can read it from here
+    ///   instead of scanning for it themselves.
+    @discardableResult
+    func click(
+        item: MenuBarItem,
+        with mouseButton: CGMouseButton,
+        skipInputPause: Bool = false,
+        maxAttempts: Int = 3
+    ) async throws -> ClickReactionVerifier.Reaction {
         guard let appState else {
             throw EventError.cannotComplete
         }
 
         if mouseButton == .left, appState.settings.advanced.useAXClickDelivery == true {
+            let snapshot = ClickReactionVerifier.snapshot(for: item)
             do {
                 try await AXItemActivator.activate(item: item)
                 MenuBarItemManager.diagLog.debug("Activated \(item.logString) via AX click delivery")
-                return
+                return await ClickReactionVerifier.verify(against: snapshot)
             } catch {
                 MenuBarItemManager.diagLog.debug("AX activation failed (\(error)), falling back to synthetic click")
             }
@@ -4622,11 +4632,26 @@ extension MenuBarItemManager {
             }
             do {
                 let clickStartTime = Date.now
+                let snapshot = ClickReactionVerifier.snapshot(for: item)
                 try await postClickEvents(item: item, mouseButton: mouseButton)
                 let clickDuration = Date.now.timeIntervalSince(clickStartTime)
                 MenuBarItemManager.diagLog.debug("Attempt \(n) succeeded in \(Int(clickDuration * 1000))ms, finished with click")
-                failureLedger.recordSuccess(for: item)
-                return
+
+                // The events landed. Whether the owner did anything with
+                // them is a separate question, and only a yes is allowed
+                // to clear a standing unresponsive mark: an owner that
+                // drops synthetic events acknowledges them exactly like
+                // one that acts on them, so crediting the post itself
+                // would forgive the very behaviour the mark records.
+                let reaction = await ClickReactionVerifier.verify(against: snapshot)
+                if reaction.didReact {
+                    failureLedger.recordSuccess(for: item)
+                } else {
+                    MenuBarItemManager.diagLog.debug(
+                        "\(item.logString) acknowledged the click but was not seen reacting to it"
+                    )
+                }
+                return reaction
             } catch {
                 let attemptDuration = Date.now.timeIntervalSince(attemptStartTime)
                 MenuBarItemManager.diagLog.debug("Attempt \(n) failed after \(Int(attemptDuration * 1000))ms: \(error)")
@@ -4643,6 +4668,10 @@ extension MenuBarItemManager {
                 throw EventError.cannotComplete
             }
         }
+
+        // Unreachable: the loop runs at least once and every path through
+        // it either returns or throws.
+        throw EventError.cannotComplete
     }
 }
 
@@ -5165,6 +5194,10 @@ extension MenuBarItemManager {
         // menu via an Accessibility press once revealed, mirroring the on-screen
         // path. Other apps (and right-clicks) use the synthetic click below. The
         // popup window capture that follows is unaffected by which path opened it.
+        // The window the click opened, when the click path we took already
+        // watched for it. Saves repeating the scan below.
+        var observedInterfaceWindowID: CGWindowID?
+
         if mouseButton == .left, isElectronItem(clickItem), pressItemViaAccessibility(clickItem) {
             MenuBarItemManager.diagLog.info("Activated \(clickItem.logString) via AX press")
         } else {
@@ -5172,7 +5205,8 @@ extension MenuBarItemManager {
                 // Single attempt: the item is already at a known-good position with
                 // fresh bounds. If it fails, fall through to the fallback path below
                 // rather than spending 3× the semaphore timeout here.
-                try await click(item: clickItem, with: mouseButton, skipInputPause: true, maxAttempts: 1)
+                let reaction = try await click(item: clickItem, with: mouseButton, skipInputPause: true, maxAttempts: 1)
+                observedInterfaceWindowID = reaction.openedWindowID
             } catch {
                 MenuBarItemManager.diagLog.error("Error clicking item (first attempt): \(error); attempting fallback click")
 
@@ -5191,7 +5225,8 @@ extension MenuBarItemManager {
                 // the fallback succeeds, keeping isShowingInterface accurate for
                 // the rehide logic.
                 do {
-                    try await click(item: fallbackItem, with: mouseButton, skipInputPause: true)
+                    let reaction = try await click(item: fallbackItem, with: mouseButton, skipInputPause: true)
+                    observedInterfaceWindowID = reaction.openedWindowID
                 } catch {
                     MenuBarItemManager.diagLog.error("Fallback click also failed for \(item.logString): \(error)")
                     // Icon is visible but both click attempts failed.
@@ -5201,11 +5236,18 @@ extension MenuBarItemManager {
         }
 
         // Capture the popup window opened by whichever click path succeeded.
-        await eventSleep(for: .milliseconds(100))
-        let windowsAfterClick = WindowInfo.createWindows(option: .onScreen)
+        // The synthetic-click paths already waited for it and told us which
+        // one it was; only the AX press path, which posts nothing and so has
+        // nothing to verify, still has to look for itself.
+        if let observedInterfaceWindowID {
+            context.shownInterfaceWindow = WindowInfo(windowID: observedInterfaceWindowID)
+        } else {
+            await eventSleep(for: .milliseconds(100))
+            let windowsAfterClick = WindowInfo.createWindows(option: .onScreen)
 
-        context.shownInterfaceWindow = windowsAfterClick.first { window in
-            window.ownerPID == clickPID && !idsBeforeClick.contains(window.windowID)
+            context.shownInterfaceWindow = windowsAfterClick.first { window in
+                window.ownerPID == clickPID && !idsBeforeClick.contains(window.windowID)
+            }
         }
 
         return .movedAndClicked
