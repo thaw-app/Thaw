@@ -2770,6 +2770,14 @@ extension MenuBarItemManager {
         /// A menu bar item's menu is tracking (e.g. the Wi-Fi picker or an
         /// input method panel is open) and the move was deferred.
         case menuTrackingActive(MenuBarItem)
+        /// A menu bar item's owning process is alive but not pumping its
+        /// event loop, so it cannot acknowledge synthetic move events.
+        case ownerUnresponsive(MenuBarItem)
+        /// A synthetic event came back through the session tap carrying a
+        /// different window than the one it was addressed to, meaning the
+        /// window server re-resolved it against whatever sits under the
+        /// clamped cursor position.
+        case eventWindowMismatch(MenuBarItem)
 
         var description: String {
             switch self {
@@ -2791,6 +2799,10 @@ extension MenuBarItemManager {
                 "\(Self.self).missingItemBounds(item: \(item.tag))"
             case let .menuTrackingActive(item):
                 "\(Self.self).menuTrackingActive(item: \(item.tag))"
+            case let .ownerUnresponsive(item):
+                "\(Self.self).ownerUnresponsive(item: \(item.tag))"
+            case let .eventWindowMismatch(item):
+                "\(Self.self).eventWindowMismatch(item: \(item.tag))"
             }
         }
 
@@ -2814,6 +2826,10 @@ extension MenuBarItemManager {
                 "Missing bounds rectangle for \"\(item.displayName)\""
             case let .menuTrackingActive(item):
                 "A menu bar item's menu was open while moving \"\(item.displayName)\""
+            case let .ownerUnresponsive(item):
+                "\"\(item.displayName)\" is not responding and cannot be moved"
+            case let .eventWindowMismatch(item):
+                "A move event for \"\(item.displayName)\" was delivered to the wrong window"
             }
         }
 
@@ -2976,6 +2992,7 @@ extension MenuBarItemManager {
 
     private nonisolated struct EventContinuationContext {
         let event: CGEvent
+        let item: MenuBarItem
         let pid: pid_t
         let entryEvent: CGEvent
         let exitEvent: CGEvent
@@ -3025,6 +3042,69 @@ extension MenuBarItemManager {
         }
     }
 
+    /// Resumes the stored continuation by throwing `error`, if no other
+    /// path has resumed it yet. Used to fail an in-flight event operation
+    /// early instead of waiting out its timeout.
+    private nonisolated func resumeFailureIfNeeded(
+        state: EventContinuationState,
+        error: any Error
+    ) {
+        let continuation = currentContinuation(from: state.continuationHolder)
+        if let continuation, state.didResume.tryClaimOnce() {
+            continuation.resume(throwing: error)
+        }
+    }
+
+    /// Returns whether `rEvent` is a stray echo of this operation's own
+    /// event: it carries the same `eventSourceUserData` — unique per posted
+    /// event, so a positive identification — but its window fields no longer
+    /// match the ones it was posted with.
+    ///
+    /// The window server re-resolves
+    /// `mouseEventWindowUnderMousePointer*` against whatever actually sits
+    /// under the cursor. For an item parked off the left edge, the posted
+    /// coordinates get clamped to the display's leftmost edge — under the
+    /// Apple menu — and the event comes back bound to that window instead.
+    /// Left in the stream it is delivered there, which is what surfaces as a
+    /// stray click at the top-left of the screen.
+    private nonisolated func isStrayEcho(
+        of rEvent: CGEvent,
+        context: EventContinuationContext
+    ) -> Bool {
+        guard rEvent.matches(context.event, byIntegerFields: [.eventSourceUserData]) else {
+            return false
+        }
+        return !rEvent.matches(context.event, byIntegerFields: CGEventField.menuBarItemEventFields)
+    }
+
+    /// Whether stray echoes of our own move events are dropped from the
+    /// session stream before they can be delivered against the wrong window.
+    ///
+    /// On by default; this only ever discards events that are already
+    /// misdirected — an echo whose window fields still match is passed
+    /// through untouched, so the scromble handshake is unaffected. Kill
+    /// switch, should it ever misfire:
+    ///   defaults write com.stonerl.Thaw discardStrayMoveEvents -bool NO
+    private nonisolated var discardsStrayMoveEvents: Bool {
+        UserDefaults.standard.object(forKey: "discardStrayMoveEvents") as? Bool ?? true
+    }
+
+    /// Whether a synthetic event that comes back addressed to a different
+    /// window than it was posted with should fail its operation immediately
+    /// rather than let it run to timeout.
+    ///
+    /// The mismatch is always logged; only the early failure is gated. The
+    /// window server re-resolves the `mouseEventWindowUnderMousePointer*`
+    /// fields against whatever actually sits under the cursor, so a mismatch
+    /// is the signature of a move whose coordinates were clamped — the
+    /// top-left/Apple-menu case for items parked off the left edge. Whether
+    /// that is *always* unrecoverable is unverified on real hardware, hence
+    /// the opt-in. Enable with:
+    ///   defaults write com.stonerl.Thaw failFastOnEventWindowMismatch -bool YES
+    private nonisolated var failsFastOnEventWindowMismatch: Bool {
+        UserDefaults.standard.bool(forKey: "failFastOnEventWindowMismatch")
+    }
+
     private nonisolated func makeContinuationTask(
         eventTaps: [EventTap],
         state _: EventContinuationState,
@@ -3063,6 +3143,7 @@ extension MenuBarItemManager {
         location: EventTap.Location,
         placement: CGEventTapPlacement,
         context: EventContinuationContext,
+        onMismatch: ((CGEvent) -> Void)? = nil,
         onMatch: @escaping (EventTap) -> Void
     ) -> EventTap {
         makeEventTap(
@@ -3073,6 +3154,15 @@ extension MenuBarItemManager {
             option: .listenOnly
         ) { tap, rEvent in
             guard rEvent.matches(context.event, byIntegerFields: CGEventField.menuBarItemEventFields) else {
+                // `eventSourceUserData` is unique per posted event (see
+                // `setUserData`), so matching on it alone positively
+                // identifies this operation's own event. Getting here with
+                // that field equal means the event came back with the window
+                // fields rewritten — it was delivered against a different
+                // window than the one it addressed.
+                if rEvent.matches(context.event, byIntegerFields: [.eventSourceUserData]) {
+                    onMismatch?(rEvent)
+                }
                 return rEvent
             }
             onMatch(tap)
@@ -3121,23 +3211,41 @@ extension MenuBarItemManager {
             label: "EventTap 2",
             location: context.secondLocation,
             placement: .tailAppendEventTap,
-            context: context
-        ) { tap in
-            switch kind {
-            case .postEventBarrier:
-                if self.currentCount(from: state.countHolder) <= 0 {
-                    tap.disable()
-                    context.exitEvent.post(to: context.firstLocation)
-                } else {
-                    context.entryEvent.post(to: context.firstLocation)
+            context: context,
+            onMismatch: { [weak self] rEvent in
+                guard let self else { return }
+                let expected = context.event.getIntegerValueField(.mouseEventWindowUnderMousePointer)
+                let got = rEvent.getIntegerValueField(.mouseEventWindowUnderMousePointer)
+                MenuBarItemManager.diagLog.warning(
+                    """
+                    Event for \(context.item.logString) came back on the wrong window \
+                    (got \(got), expected \(expected)) at \(String(describing: rEvent.location))
+                    """
+                )
+                if failsFastOnEventWindowMismatch {
+                    resumeFailureIfNeeded(
+                        state: state,
+                        error: EventError.eventWindowMismatch(context.item)
+                    )
                 }
-            case .scromble:
-                if self.currentCount(from: state.countHolder) <= 0 {
-                    tap.disable()
+            },
+            onMatch: { tap in
+                switch kind {
+                case .postEventBarrier:
+                    if self.currentCount(from: state.countHolder) <= 0 {
+                        tap.disable()
+                        context.exitEvent.post(to: context.firstLocation)
+                    } else {
+                        context.entryEvent.post(to: context.firstLocation)
+                    }
+                case .scromble:
+                    if self.currentCount(from: state.countHolder) <= 0 {
+                        tap.disable()
+                    }
+                    context.event.post(to: context.firstLocation)
                 }
-                context.event.post(to: context.firstLocation)
             }
-        }
+        )
     }
 
     private nonisolated func makeFirstLocationRelayEventTap(
@@ -3159,24 +3267,61 @@ extension MenuBarItemManager {
         }
     }
 
+    /// Creates a tap that removes stray echoes of this operation's own event
+    /// from the session stream, so they cannot be delivered against the
+    /// window the window server re-bound them to.
+    ///
+    /// Head-inserted and non-listen-only, so it runs before the tail-appended
+    /// handshake taps and can actually drop the event. This is safe with
+    /// respect to that handshake: those taps only act on echoes whose window
+    /// fields still match, and such echoes are passed through here untouched.
+    private nonisolated func makeStrayEventDiscardTap(
+        context: EventContinuationContext
+    ) -> EventTap {
+        makeEventTap(
+            label: "Stray move event discard",
+            type: context.event.type,
+            location: context.secondLocation,
+            placement: .headInsertEventTap,
+            option: .defaultTap
+        ) { _, rEvent in
+            guard self.isStrayEcho(of: rEvent, context: context) else {
+                return rEvent
+            }
+            MenuBarItemManager.diagLog.debug(
+                """
+                Discarding stray echo of \(context.item.logString) move event \
+                at \(String(describing: rEvent.location))
+                """
+            )
+            return nil
+        }
+    }
+
     private nonisolated func makeContinuationEventTaps(
         kind: EventContinuationKind,
         context: EventContinuationContext,
         state: EventContinuationState,
         continuation: CheckedContinuation<Void, any Error>
     ) -> [EventTap] {
-        var eventTaps = [
-            makeEntryEventTap(
-                context: context,
-                state: state,
-                continuation: continuation
-            ),
-            makeSecondLocationEventTap(
-                kind: kind,
-                context: context,
-                state: state
-            ),
-        ]
+        var eventTaps = [EventTap]()
+        if discardsStrayMoveEvents {
+            eventTaps.append(makeStrayEventDiscardTap(context: context))
+        }
+        eventTaps.append(
+            contentsOf: [
+                makeEntryEventTap(
+                    context: context,
+                    state: state,
+                    continuation: continuation
+                ),
+                makeSecondLocationEventTap(
+                    kind: kind,
+                    context: context,
+                    state: state
+                ),
+            ]
+        )
         if kind == EventContinuationKind.scromble {
             eventTaps.append(
                 makeFirstLocationRelayEventTap(
@@ -3249,6 +3394,7 @@ extension MenuBarItemManager {
         let innerTaskHolder = OSAllocatedUnfairLock<Task<Void, Never>?>(initialState: nil)
         let continuationContext = EventContinuationContext(
             event: event,
+            item: item,
             pid: pid,
             entryEvent: entryEvent,
             exitEvent: exitEvent,
@@ -3290,6 +3436,11 @@ extension MenuBarItemManager {
             try await timeoutTask.value
         } catch is TaskTimeoutError {
             throw EventError.eventOperationTimeout(item)
+        } catch let error as EventError {
+            // Preserve failures raised from inside the continuation (e.g. a
+            // window mismatch) so callers can tell them apart from a generic
+            // failure and skip pointless retries.
+            throw error
         } catch {
             throw EventError.cannotComplete
         }
@@ -3613,6 +3764,21 @@ extension MenuBarItemManager {
             throw EventError.cannotComplete
         }
 
+        // A process that is alive but not pumping its event loop never
+        // acknowledges the synthetic move, so every scrombleEvent below runs
+        // to its timeout and burns the full 3.5 s semaphore budget — with the
+        // semaphore held, that stalls every *other* item's move behind it.
+        // Little Snitch is the recurring case (it ships with GUI Scripting
+        // disabled), but this catches any hung owner. Bail out immediately
+        // instead; the caller's retry/backoff path picks the item up again
+        // once its owner starts responding.
+        if Bridging.isProcessUnresponsive(eventPID) {
+            MenuBarItemManager.diagLog.warning(
+                "postMoveEvents: target PID \(eventPID) for \(item.logString) is unresponsive; skipping move"
+            )
+            throw EventError.ownerUnresponsive(item)
+        }
+
         // Experimental A/B toggle: whether the legacy move path stamps the
         // raw 0x33 windowID field (see setWindowID). Default true preserves
         // shipped behavior; settings unavailable also falls back to true.
@@ -3621,7 +3787,8 @@ extension MenuBarItemManager {
             MenuBarItemManager.diagLog.debug("postMoveEvents: raw windowID (0x33) stamping disabled by experimental toggle")
         }
 
-        var itemOrigin = try await getCurrentBounds(for: item).origin
+        let itemBounds = try await getCurrentBounds(for: item)
+        var itemOrigin = itemBounds.origin
         let targetPoints = try await getTargetPoints(forMoving: item, to: destination, on: displayID)
 
         // Flagged synthetic-cursor move delivery, ported from
@@ -3632,31 +3799,53 @@ extension MenuBarItemManager {
         // user mouse input suppressed for the gesture's duration. Default
         // off; the legacy path below is unchanged and remains the fallback.
         if appState?.settings.advanced.useSyntheticCursorMoves == true {
-            let itemBounds = try await getCurrentBounds(for: item)
             let start = CGPoint(x: itemBounds.midX, y: itemBounds.midY)
             let end = targetPoints.end
-            // A dedicated source (not the shared, cached getEventSource())
-            // so its userData can be set to the synthetic-move sentinel
-            // before any event is created from it — see
-            // MoveInputSuppression's type-level note.
-            let source = try MoveInputSuppression.makeSyntheticMoveEventSource()
 
-            // Mirrors the legacy path's per-item hide/show, gated the same
-            // way on `isBulkApplyInProgress` (see plan-006 cursor semantics).
-            if !isBulkApplyInProgress {
-                MouseHelpers.hideCursor()
-            }
-            defer {
+            // A drag whose interpolated path enters the notch dead zone is
+            // posted cleanly and then discarded by the window server: every
+            // step lands, the item never moves. (Measured independently by
+            // SaneBar, which reports a deterministic zero position delta for
+            // exactly this case.) The legacy path never crosses the gap — it
+            // teleports with two events and a stamped windowID — so fall
+            // through to it rather than performing a drag that cannot work.
+            if Self.syntheticDragPathCrossesNotch(start: start, end: end, on: displayID) {
+                MenuBarItemManager.diagLog.notice(
+                    """
+                    Synthetic cursor move for \(item.logString) would cross the notch; \
+                    using the legacy move path instead
+                    """
+                )
+            } else {
+                // A dedicated source (not the shared, cached getEventSource())
+                // so its userData can be set to the synthetic-move sentinel
+                // before any event is created from it — see
+                // MoveInputSuppression's type-level note.
+                let source = try MoveInputSuppression.makeSyntheticMoveEventSource()
+
+                // Mirrors the legacy path's per-item hide/show, gated the same
+                // way on `isBulkApplyInProgress` (see plan-006 cursor semantics).
                 if !isBulkApplyInProgress {
-                    MouseHelpers.showCursor()
+                    MouseHelpers.hideCursor()
                 }
-            }
+                defer {
+                    if !isBulkApplyInProgress {
+                        MouseHelpers.showCursor()
+                    }
+                }
 
-            try await MoveInputSuppression.withUserMouseInputSuppressed {
-                await performSyntheticCursorDrag(start: start, end: end, source: source)
+                try await MoveInputSuppression.withUserMouseInputSuppressed {
+                    await performSyntheticCursorDrag(
+                        start: start,
+                        end: end,
+                        source: source,
+                        downWindowID: item.windowID,
+                        upWindowID: destination.targetItem.windowID
+                    )
+                }
+                lastMoveOperationTimestamp = .now
+                return
             }
-            lastMoveOperationTimestamp = .now
-            return
         }
 
         // Capture mouse location only when this call owns the cursor warp.
@@ -3813,12 +4002,30 @@ extension MenuBarItemManager {
     /// per-event field writes, is used). `markSyntheticMoveEvent` is also
     /// called on each event as a belt-and-suspenders shim. Events are
     /// posted to the HID event tap, each carrying its own position.
+    ///
+    /// Every event additionally carries the window it addresses in
+    /// `mouseEventWindowUnderMousePointer` and
+    /// `...ThatCanHandleThisEvent`, matching what the legacy path stamps via
+    /// `CGEvent.menuBarItemEvent(item:source:type:location:)`. Without them
+    /// the window server resolves the target from the real cursor — which
+    /// this path deliberately never moves — so the gesture lands on whatever
+    /// happens to sit under the pointer and the item never moves. Only the
+    /// raw 0x33 field stays unstamped; isolating it is the point of the flag.
+    ///
+    /// - Parameters:
+    ///   - downWindowID: The window addressed by the `mouseDown` and the
+    ///     interpolated drag steps, i.e. the item being moved.
+    ///   - upWindowID: The window addressed by the `mouseUp`, i.e. the
+    ///     destination's target item. Mirrors the legacy path, which builds
+    ///     its `mouseUp` from `destination.targetItem`.
     private nonisolated func performSyntheticCursorDrag(
         start: CGPoint,
         end: CGPoint,
-        source: CGEventSource
+        source: CGEventSource,
+        downWindowID: CGWindowID,
+        upWindowID: CGWindowID
     ) async {
-        func post(_ type: CGEventType, _ location: CGPoint) {
+        func post(_ type: CGEventType, _ location: CGPoint, _ windowID: CGWindowID) {
             guard let event = CGEvent(
                 mouseEventSource: source,
                 mouseType: type,
@@ -3827,12 +4034,20 @@ extension MenuBarItemManager {
             ) else { return }
             event.flags = .maskCommand
             MoveInputSuppression.markSyntheticMoveEvent(event)
+            event.setIntegerValueField(
+                .mouseEventWindowUnderMousePointer,
+                value: Int64(windowID)
+            )
+            event.setIntegerValueField(
+                .mouseEventWindowUnderMousePointerThatCanHandleThisEvent,
+                value: Int64(windowID)
+            )
             event.post(tap: .cghidEventTap)
         }
 
-        post(.mouseMoved, start)
+        post(.mouseMoved, start, downWindowID)
         await eventSleep(for: .milliseconds(30))
-        post(.leftMouseDown, start)
+        post(.leftMouseDown, start, downWindowID)
         await eventSleep(for: .milliseconds(60))
 
         let steps = 24
@@ -3843,13 +4058,40 @@ extension MenuBarItemManager {
                 CGPoint(
                     x: start.x + (end.x - start.x) * progress,
                     y: start.y + (end.y - start.y) * progress
-                )
+                ),
+                downWindowID
             )
             await eventSleep(for: .milliseconds(16))
         }
 
-        post(.leftMouseUp, end)
+        post(.leftMouseUp, end, upWindowID)
         await eventSleep(for: .milliseconds(40))
+        // Mirrors the legacy path's `repeating: 2` mouseUp, which exists
+        // because a single mouseUp can leave the item in an invalid dragging
+        // state. This path has no handshake to detect that, so the second
+        // release is unconditional.
+        post(.leftMouseUp, end, upWindowID)
+        await eventSleep(for: .milliseconds(40))
+    }
+
+    /// Returns whether the straight path from `start` to `end` enters the
+    /// horizontal span of the notch on `displayID`.
+    ///
+    /// Only the x-span is tested: both points sit inside the menu bar by
+    /// construction, so a path whose x-range overlaps the notch necessarily
+    /// passes through the dead zone. `frameOfNotch` is in AppKit
+    /// coordinates, but x is identical in both coordinate systems — only y
+    /// is flipped — so no conversion is needed.
+    private static func syntheticDragPathCrossesNotch(
+        start: CGPoint,
+        end: CGPoint,
+        on displayID: CGDirectDisplayID
+    ) -> Bool {
+        let screen = NSScreen.screens.first { $0.displayID == displayID } ?? NSScreen.main
+        guard let screen, screen.hasNotch, let notch = screen.frameOfNotch else {
+            return false
+        }
+        return min(start.x, end.x) <= notch.maxX && max(start.x, end.x) >= notch.minX
     }
 
     /// Checks if a menu bar item is in a "blocked" state (positioned at x=-1 off-screen).
@@ -4152,6 +4394,17 @@ extension MenuBarItemManager {
                 if case EventError.missingItemBounds = error {
                     MenuBarItemManager.diagLog.warning(
                         "Attempt \(n): \(item.logString) no longer reports bounds, aborting move"
+                    )
+                    throw error
+                }
+                // Also definitive for the duration of this call: a hung owner
+                // will not start pumping its event loop within the few hundred
+                // milliseconds between attempts, so the remaining attempts
+                // would only re-pay the semaphore wait. Callers retry the item
+                // on a later cache tick, by which point it may have recovered.
+                if case EventError.ownerUnresponsive = error {
+                    MenuBarItemManager.diagLog.warning(
+                        "Attempt \(n): \(item.logString) owner is unresponsive, aborting move"
                     )
                     throw error
                 }
