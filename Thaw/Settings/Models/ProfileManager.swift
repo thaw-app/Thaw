@@ -15,13 +15,13 @@ import Foundation
 final class ProfileManager {
     /// The manager's list of profile metadata.
     ///
-    /// `didSet` does not fire for assignments made from within this class's
-    /// own `init` (matching the previous `$profiles.dropFirst()` Combine
-    /// subscription, which skipped the value delivered at subscribe time).
-    /// It does fire for every later assignment, including ones made before
-    /// ``performSetup(with:)`` is called; ``rebuildProfileHotkeys()`` no-ops
-    /// via its `appState` guard in that case, same as before when no
-    /// subscription existed yet.
+    /// `didSet` does not fire for assignments made directly in this class's
+    /// `init` body, but it DOES fire for assignments made inside methods
+    /// called from `init` — including ``loadManifest()``'s assignment during
+    /// construction. That init-time ``rebuildProfileHotkeys()`` call no-ops
+    /// via its `appState` guard (appState isn't wired until
+    /// ``performSetup(with:)``), which is what preserves the previous
+    /// `$profiles.dropFirst()` Combine behavior in practice.
     private(set) var profiles: [ProfileMetadata] = [] {
         didSet {
             rebuildProfileHotkeys()

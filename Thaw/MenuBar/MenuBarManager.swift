@@ -53,7 +53,7 @@ final class MenuBarManager {
 
     /// Task observing `DisplaySettingsManager.configurations`, which is
     /// `@Observable` rather than a Combine `ObservableObject`.
-    private var displayConfigurationsObservationTask: Task<Void, Never>?
+    @ObservationIgnored private var displayConfigurationsObservationTask: Task<Void, Never>?
 
     /// Task observing `settingsWindow`'s `isVisible` KVO stream (wave 3),
     /// replacing the old `$settingsWindow.removeNil().map { $0.publisher(for:
@@ -63,12 +63,12 @@ final class MenuBarManager {
     /// publisher on the resolved `NSWindow` is unrelated to Observation and
     /// stays Combine, manually re-subscribed on each new non-nil window
     /// value (mirroring `switchToLatest`'s behavior).
-    private var settingsWindowObservationTask: Task<Void, Never>?
+    @ObservationIgnored private var settingsWindowObservationTask: Task<Void, Never>?
 
     /// Task observing `appearanceManager.configuration` for adaptive-color
     /// refresh start/stop (wave 3), replacing the old `$configuration.map {
     /// ... }.removeDuplicates().sink` pipeline.
-    private var appearanceConfigurationObservationTask: Task<Void, Never>?
+    @ObservationIgnored private var appearanceConfigurationObservationTask: Task<Void, Never>?
 
     /// Task observing `itemManager.itemCache` (wave 4), which is
     /// `@Observable` rather than a Combine `ObservableObject`, replacing the
@@ -76,7 +76,7 @@ final class MenuBarManager {
     /// DispatchQueue.main).sink` pipeline. `Observations { }` is an
     /// `AsyncSequence`, so the debounce is reproduced with AsyncAlgorithms'
     /// `.debounce(for:)` instead.
-    private var itemCacheHotkeyObservationTask: Task<Void, Never>?
+    @ObservationIgnored private var itemCacheHotkeyObservationTask: Task<Void, Never>?
 
     @MainActor
     deinit {
@@ -97,7 +97,7 @@ final class MenuBarManager {
     var hotkeyItemMap: [ObjectIdentifier: String] = [:]
 
     /// Cancellable for the periodic average-color refresh, active only while settings is visible.
-    private var averageColorRefreshCancellable: AnyCancellable?
+    @ObservationIgnored private var averageColorRefreshCancellable: AnyCancellable?
 
     /// Cancellable for `settingsWindow`'s `isVisible` KVO stream, resubscribed
     /// on each new non-nil `settingsWindow` value by `settingsWindowObservationTask`.
@@ -256,6 +256,7 @@ final class MenuBarManager {
 
         if let appState {
             let displaySettings = appState.settings.displaySettings
+            displayConfigurationsObservationTask?.cancel()
             displayConfigurationsObservationTask = Task { [weak self] in
                 let changes = Observations { displaySettings.configurations }
                 for await _ in changes {
@@ -269,6 +270,7 @@ final class MenuBarManager {
             // item cache ticks frequently and rebuilding on every tick would
             // churn hotkey registrations.
             let itemManager = appState.itemManager
+            itemCacheHotkeyObservationTask?.cancel()
             itemCacheHotkeyObservationTask = Task { [weak self] in
                 let changes = Observations { itemManager.itemCache }
                 for await _ in changes.debounce(for: .seconds(0.5)) {
@@ -278,6 +280,7 @@ final class MenuBarManager {
             }
         }
 
+        settingsWindowObservationTask?.cancel()
         settingsWindowObservationTask = Task { [weak self] in
             let changes = Observations { self?.settingsWindow }
             for await window in changes {

@@ -299,7 +299,9 @@ final class LayoutBarPaddingView: NSView {
                         Self.diagLog.error("Rescue-and-retry failed for \(item.logString): \(error)")
                         let alert = NSAlert()
                         alert.alertStyle = .warning
-                        alert.messageText = String(localized: "Couldn't move \(item.logString) to the hidden section.")
+                        alert.messageText = container.section == .alwaysHidden
+                            ? String(localized: "Couldn't move \(item.displayName) to the always-hidden section.")
+                            : String(localized: "Couldn't move \(item.displayName) to the hidden section.")
                         alert.informativeText = String(localized: "The item was left in the visible section so it isn't stuck offscreen. Try dragging it again in a moment.")
                         alert.runModal()
                     }

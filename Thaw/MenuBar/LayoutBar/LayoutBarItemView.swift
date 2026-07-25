@@ -7,7 +7,6 @@
 //  Licensed under the GNU GPLv3
 
 import Cocoa
-import Combine
 
 // MARK: - LayoutBarItemView
 
@@ -26,8 +25,6 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     }
 
     private weak var appState: AppState?
-
-    private var cancellables = Set<AnyCancellable>()
 
     /// Observes `appState.imageCache.images` (wave 3: `MenuBarItemImageCache`
     /// is @Observable rather than a Combine `ObservableObject`, so its old
@@ -80,7 +77,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
 
         isEnabled = item.isMovable
 
-        configureCancellables()
+        configureObservation()
     }
 
     @available(*, unavailable)
@@ -121,9 +118,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         tooltipController.cancel()
     }
 
-    private func configureCancellables() {
-        let c = Set<AnyCancellable>()
-
+    private func configureObservation() {
         if let appState {
             let tag = item.tag
             imageObservationTask = Task { @MainActor [weak self, weak appState] in
@@ -137,8 +132,6 @@ final class LayoutBarItemView: LayoutBarArrangedView {
                 }
             }
         }
-
-        cancellables = c
     }
 
     /// Provides an alert to display when the item view is disabled.

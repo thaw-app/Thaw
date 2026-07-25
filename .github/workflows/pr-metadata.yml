@@ -272,7 +272,7 @@ jobs:
 
             // Size heads-up: Actions job summary only (no PR comments / timeline spam).
             if (warnings.length > 0) {
-              core.summary
+              await core.summary
                 .addHeading('PR size heads-up')
                 .addList(warnings)
                 .addRaw('_Informational only — does not block merge._')
@@ -292,11 +292,17 @@ jobs:
             });
             for (const comment of existing) {
               if (comment.user?.type === 'Bot' && (comment.body || '').includes(marker)) {
-                await github.rest.issues.deleteComment({
-                  owner,
-                  repo,
-                  comment_id: comment.id,
-                });
+                try {
+                  await github.rest.issues.deleteComment({
+                    owner,
+                    repo,
+                    comment_id: comment.id,
+                  });
+                } catch (error) {
+                  // Best-effort: a stale comment or transient API failure must
+                  // not abort the run before conventions are reported below.
+                  core.warning(`Could not delete legacy comment ${comment.id}: ${error.message}`);
+                }
               }
             }
 
