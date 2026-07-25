@@ -182,7 +182,6 @@ nonisolated extension Defaults {
         static let useDoubleClickToShowAlwaysHiddenSection = false
         static let enableMenuBarItemOverflow = true
         static let useAXClickDelivery = false
-        static let stampWindowIDOnLegacyMoves = true
 
         // MARK: Search
 
@@ -259,7 +258,6 @@ nonisolated extension Defaults {
         case useDoubleClickToShowAlwaysHiddenSection = "UseDoubleClickToShowAlwaysHiddenSection"
         case enableMenuBarItemOverflow = "EnableMenuBarItemOverflow"
         case useAXClickDelivery = "UseAXClickDelivery"
-        case stampWindowIDOnLegacyMoves = "StampWindowIDOnLegacyMoves"
 
         // MARK: Search
 

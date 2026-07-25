@@ -161,17 +161,6 @@ final class AdvancedSettings {
         }
     }
 
-    /// A Boolean value that controls whether menu bar item move events
-    /// additionally stamp the raw windowID (0x33) CGEvent field, on top of
-    /// the unconditional mouseEventWindowUnderMousePointer* fields.
-    /// Experimental; default on, matching shipped behavior.
-    var stampWindowIDOnLegacyMoves = Defaults.DefaultValue.stampWindowIDOnLegacyMoves {
-        didSet {
-            guard oldValue != stampWindowIDOnLegacyMoves else { return }
-            Defaults.set(stampWindowIDOnLegacyMoves, forKey: .stampWindowIDOnLegacyMoves)
-        }
-    }
-
     /// The order in which menu bar sections appear in the search panel.
     var searchSectionOrder: [MenuBarSection.Name] = Defaults.DefaultValue.searchSectionOrder
         .compactMap(MenuBarSection.Name.init(rawValue:))
@@ -241,7 +230,6 @@ final class AdvancedSettings {
         Defaults.ifPresent(key: .useLCSSortingOnNotchedDisplays, assign: &useLCSSortingOnNotchedDisplays)
         Defaults.ifPresent(key: .enableMenuBarItemOverflow, assign: &enableMenuBarItemOverflow)
         Defaults.ifPresent(key: .useAXClickDelivery, assign: &useAXClickDelivery)
-        Defaults.ifPresent(key: .stampWindowIDOnLegacyMoves, assign: &stampWindowIDOnLegacyMoves)
         Defaults.ifPresent(key: .searchIncludeVisible, assign: &searchIncludeVisible)
         Defaults.ifPresent(key: .searchIncludeHidden, assign: &searchIncludeHidden)
         Defaults.ifPresent(key: .searchIncludeAlwaysHidden, assign: &searchIncludeAlwaysHidden)
@@ -331,8 +319,6 @@ final class AdvancedSettings {
                 enableMenuBarItemOverflow = boolValue
             case "useAXClickDelivery":
                 useAXClickDelivery = boolValue
-            case "stampWindowIDOnLegacyMoves":
-                stampWindowIDOnLegacyMoves = boolValue
             case "searchIncludeVisible":
                 searchIncludeVisible = boolValue
             case "searchIncludeHidden":
