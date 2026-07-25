@@ -135,6 +135,62 @@ nonisolated struct MenuBarItemTag: Hashable, CustomStringConvertible {
         return "\(namespace):\(title)"
     }
 
+    /// A lossless string encoding of this tag, suitable for persistence.
+    ///
+    /// Unlike ``tagIdentifier``, this round-trips the namespace *kind* and the
+    /// instance index, so two items that differ only in those fields do not
+    /// collide. The window identifier is deliberately excluded: window IDs do
+    /// not survive a relaunch.
+    ///
+    /// Format: `<kind>:<namespaceValue>:<instanceIndex>:<title>`, where `kind`
+    /// is `n` (null), `s` (string) or `u` (uuid). The title is the remainder of
+    /// the string, so it may contain `:`.
+    var persistenceKey: String {
+        let kind: String
+        let namespaceValue: String
+        switch namespace {
+        case .null:
+            kind = "n"
+            namespaceValue = ""
+        case let .string(string):
+            kind = "s"
+            namespaceValue = string
+        case let .uuid(uuid):
+            kind = "u"
+            namespaceValue = uuid.uuidString
+        }
+        return "\(kind):\(namespaceValue):\(instanceIndex):\(title)"
+    }
+
+    /// Creates a tag from a string produced by ``persistenceKey``.
+    ///
+    /// Returns `nil` if the string is not a valid encoding. The resulting tag
+    /// has a `nil` window identifier.
+    init?(persistenceKey: String) {
+        let components = persistenceKey.split(separator: ":", maxSplits: 3, omittingEmptySubsequences: false)
+        guard components.count == 4 else { return nil }
+
+        let kind = components[0]
+        let namespaceValue = String(components[1])
+        guard let instanceIndex = Int(components[2]) else { return nil }
+        let title = String(components[3])
+
+        let namespace: Namespace
+        switch kind {
+        case "n":
+            namespace = .null
+        case "s":
+            namespace = .string(namespaceValue)
+        case "u":
+            guard let uuid = UUID(uuidString: namespaceValue) else { return nil }
+            namespace = .uuid(uuid)
+        default:
+            return nil
+        }
+
+        self.init(namespace: namespace, title: title, windowID: nil, instanceIndex: instanceIndex)
+    }
+
     /// Creates a tag with the given namespace, title, window identifier,
     /// and instance index.
     init(namespace: Namespace, title: String, windowID: CGWindowID? = nil, instanceIndex: Int = 0) {

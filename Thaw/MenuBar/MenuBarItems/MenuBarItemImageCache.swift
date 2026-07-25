@@ -324,7 +324,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
                       let pngData = bitmap.representation(using: .png, properties: [:])
                 else { return nil }
 
-                let tagString = "\(tag.namespace):\(tag.title)"
+                let tagString = tag.persistenceKey
                 return (tagString, pngData)
             }.compacted()
 
@@ -336,7 +336,10 @@ final class MenuBarItemImageCache: @unchecked Sendable {
 
                 let json: [String: Any] = [
                     "timestamp": Date().timeIntervalSince1970,
-                    "images": Dictionary(uniqueKeysWithValues: cacheData.map { ($0.0, $0.1.base64EncodedString()) }),
+                    "images": Dictionary(
+                        cacheData.map { ($0.0, $0.1.base64EncodedString()) },
+                        uniquingKeysWith: { _, new in new }
+                    ),
                 ]
                 let jsonData = try JSONSerialization.data(withJSONObject: json, options: [])
                 try jsonData.write(to: url)
@@ -380,12 +383,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
                           let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil)
                     else { continue }
 
-                    let parts = tagString.split(separator: ":", maxSplits: 1)
-                    guard parts.count == 2 else { continue }
-
-                    let namespace = String(parts[0])
-                    let title = String(parts[1])
-                    let tag = MenuBarItemTag(namespace: .string(namespace), title: title, windowID: nil)
+                    guard let tag = MenuBarItemTag(persistenceKey: tagString) else { continue }
 
                     let captured = CapturedImage(cgImage: cgImage, scale: image.size.width > 0 ? CGFloat(cgImage.width) / image.size.width : 1.0)
                     loadedImages[tag] = captured
