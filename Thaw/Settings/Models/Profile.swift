@@ -104,6 +104,7 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
     var useOptionClickToShowAlwaysHiddenSection: Bool
     var useLCSSortingOnNotchedDisplays: Bool
     var enableMenuBarItemOverflow: Bool
+    var useThawBarOnNotchOverflow: Bool
     var searchSectionOrder: [String]
     var searchIncludeVisible: Bool
     var searchIncludeHidden: Bool
@@ -127,6 +128,7 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
             useOptionClickToShowAlwaysHiddenSection: settings.useOptionClickToShowAlwaysHiddenSection,
             useLCSSortingOnNotchedDisplays: settings.useLCSSortingOnNotchedDisplays,
             enableMenuBarItemOverflow: settings.enableMenuBarItemOverflow,
+            useThawBarOnNotchOverflow: settings.useThawBarOnNotchOverflow,
             searchSectionOrder: settings.searchSectionOrder.map(\.rawValue),
             searchIncludeVisible: settings.searchIncludeVisible,
             searchIncludeHidden: settings.searchIncludeHidden,
@@ -153,6 +155,7 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
         settings.useOptionClickToShowAlwaysHiddenSection = useOptionClickToShowAlwaysHiddenSection
         settings.useLCSSortingOnNotchedDisplays = useLCSSortingOnNotchedDisplays
         settings.enableMenuBarItemOverflow = enableMenuBarItemOverflow
+        settings.useThawBarOnNotchOverflow = useThawBarOnNotchOverflow
         settings.searchSectionOrder = AdvancedSettings.sanitizedSearchSectionOrder(from: searchSectionOrder)
         settings.searchIncludeVisible = searchIncludeVisible
         settings.searchIncludeHidden = searchIncludeHidden
@@ -175,6 +178,7 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
         case useOptionClickToShowAlwaysHiddenSection
         case useLCSSortingOnNotchedDisplays
         case enableMenuBarItemOverflow
+        case useThawBarOnNotchOverflow
         case searchSectionOrder
         case searchIncludeVisible
         case searchIncludeHidden
@@ -197,6 +201,7 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
         useOptionClickToShowAlwaysHiddenSection: Bool,
         useLCSSortingOnNotchedDisplays: Bool,
         enableMenuBarItemOverflow: Bool,
+        useThawBarOnNotchOverflow: Bool = Defaults.DefaultValue.useThawBarOnNotchOverflow,
         searchSectionOrder: [String],
         searchIncludeVisible: Bool,
         searchIncludeHidden: Bool,
@@ -217,6 +222,7 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
         self.useOptionClickToShowAlwaysHiddenSection = useOptionClickToShowAlwaysHiddenSection
         self.useLCSSortingOnNotchedDisplays = useLCSSortingOnNotchedDisplays
         self.enableMenuBarItemOverflow = enableMenuBarItemOverflow
+        self.useThawBarOnNotchOverflow = useThawBarOnNotchOverflow
         self.searchSectionOrder = searchSectionOrder
         self.searchIncludeVisible = searchIncludeVisible
         self.searchIncludeHidden = searchIncludeHidden
@@ -270,6 +276,9 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
         enableMenuBarItemOverflow = try container.decodeIfPresent(
             Bool.self, forKey: .enableMenuBarItemOverflow
         ) ?? Defaults.DefaultValue.enableMenuBarItemOverflow
+        useThawBarOnNotchOverflow = try container.decodeIfPresent(
+            Bool.self, forKey: .useThawBarOnNotchOverflow
+        ) ?? Defaults.DefaultValue.useThawBarOnNotchOverflow
         searchSectionOrder = try container.decodeIfPresent(
             [String].self, forKey: .searchSectionOrder
         ) ?? Defaults.DefaultValue.searchSectionOrder
@@ -514,6 +523,7 @@ nonisolated struct Profile: Codable, Identifiable {
             useOptionClickToShowAlwaysHiddenSection: Defaults.DefaultValue.useOptionClickToShowAlwaysHiddenSection,
             useLCSSortingOnNotchedDisplays: Defaults.DefaultValue.useLCSSortingOnNotchedDisplays,
             enableMenuBarItemOverflow: Defaults.DefaultValue.enableMenuBarItemOverflow,
+            useThawBarOnNotchOverflow: Defaults.DefaultValue.useThawBarOnNotchOverflow,
             searchSectionOrder: Defaults.DefaultValue.searchSectionOrder,
             searchIncludeVisible: Defaults.DefaultValue.searchIncludeVisible,
             searchIncludeHidden: Defaults.DefaultValue.searchIncludeHidden,

@@ -71,7 +71,40 @@ final class MenuBarSection {
         guard let appState else { return false }
         let screen = screenForIceBar
         let displayID = screen?.displayID ?? CGMainDisplayID()
-        return appState.settings.displaySettings.useIceBar(for: displayID)
+        if appState.settings.displaySettings.useIceBar(for: displayID) {
+            return true
+        }
+        return Self.forcesIceBarForNotchOverflow(
+            settings: appState.settings.advanced,
+            hasEjectedItems: appState.itemManager.hasNotchOverflowEjectedItems
+        )
+    }
+
+    /// Whether notch overflow forces the Thaw Bar even though the display's own
+    /// Thaw Bar setting is off.
+    ///
+    /// Split out as a pure function so the rule is testable without a live
+    /// menu bar. Requires overflow to be enabled, the "use the Thaw Bar while
+    /// items are overflowed" preference to be on, and items to actually be
+    /// ejected right now.
+    static nonisolated func forcesIceBarForNotchOverflow(
+        overflowEnabled: Bool,
+        useThawBarOnOverflow: Bool,
+        hasEjectedItems: Bool
+    ) -> Bool {
+        overflowEnabled && useThawBarOnOverflow && hasEjectedItems
+    }
+
+    @MainActor
+    private static func forcesIceBarForNotchOverflow(
+        settings: AdvancedSettings,
+        hasEjectedItems: Bool
+    ) -> Bool {
+        forcesIceBarForNotchOverflow(
+            overflowEnabled: settings.enableMenuBarItemOverflow,
+            useThawBarOnOverflow: settings.useThawBarOnNotchOverflow,
+            hasEjectedItems: hasEjectedItems
+        )
     }
 
     /// The gap that macOS leaves to the left and right of the notch (in points).
@@ -292,6 +325,10 @@ final class MenuBarSection {
 
         let displaySettings = appState.settings.displaySettings
         let useIceBar = displaySettings.useIceBar(for: activeScreen.displayID)
+            || Self.forcesIceBarForNotchOverflow(
+                settings: appState.settings.advanced,
+                hasEjectedItems: appState.itemManager.hasNotchOverflowEjectedItems
+            )
 
         // only apply alwaysShowHiddenItems when mouse + active menu bar on same screen
         let alwaysShow: Bool = if let menuBarScreen = NSScreen.screenWithActiveMenuBar,

@@ -51,6 +51,7 @@ nonisolated struct SearchEntry: Identifiable, @unchecked Sendable {
         switch id {
         case "advanced.alwaysUseAppIconForMenuBarItems",
              "advanced.enableMenuBarItemOverflow",
+             "advanced.useThawBarOnNotchOverflow",
              "advanced.menuBarOrderFulfillmentTimeout",
              "advanced.useLCSSortingOnNotchedDisplays":
             .advancedLayoutControls
@@ -526,6 +527,17 @@ nonisolated enum SearchIndex {
             sectionText: "Advanced layout controls",
             keywords: ["overflow", "notch", "fit", "visible", "hidden"],
             property: .advanced("enableMenuBarItemOverflow")
+        ),
+        SearchEntry(
+            id: "advanced.useThawBarOnNotchOverflow",
+            titleKey: "Use the Thaw Bar while items are overflowed",
+            titleText: "Use the Thaw Bar while items are overflowed",
+            descriptionText: "Reveal hidden items through the Thaw Bar while notch overflow has items ejected, since the visible row has no room left to expand into.",
+            pane: .menuBarLayout,
+            sectionKey: "Advanced layout controls",
+            sectionText: "Advanced layout controls",
+            keywords: ["overflow", "notch", "thaw bar", "ice bar", "hidden", "reveal"],
+            property: .advanced("useThawBarOnNotchOverflow")
         ),
         SearchEntry(
             id: "advanced.useLCSSortingOnNotchedDisplays",

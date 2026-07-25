@@ -78,6 +78,9 @@ struct MenuBarLayoutSettingsPane: View {
         IceSection {
             DisclosureGroup("Advanced layout controls", isExpanded: $isAdvancedExpanded) {
                 enableMenuBarItemOverflow
+                if advancedSettings.enableMenuBarItemOverflow {
+                    useThawBarOnNotchOverflow
+                }
                 useLCSSortingOnNotchedDisplays
             }
         }
@@ -104,6 +107,24 @@ struct MenuBarLayoutSettingsPane: View {
                 display. Disable to keep the saved profile layout exactly as \
                 authored even when items would otherwise be pushed under the \
                 notch.
+                """
+            )
+            .padding(.trailing, 75)
+        }
+    }
+
+    private var useThawBarOnNotchOverflow: some View {
+        Toggle(
+            "Use the Thaw Bar while items are overflowed",
+            isOn: $advancedSettings.useThawBarOnNotchOverflow
+        )
+        .annotation {
+            Text(
+                """
+                Reveal hidden items through the Thaw Bar while overflow has items \
+                ejected. The visible row has no room left beside the notch at that \
+                point, so expanding the hidden section inline cannot show them. \
+                Disable to always follow the per-display Thaw Bar setting.
                 """
             )
             .padding(.trailing, 75)
