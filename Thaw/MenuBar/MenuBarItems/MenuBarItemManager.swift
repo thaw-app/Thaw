@@ -204,8 +204,8 @@ final class MenuBarItemManager {
     /// Semaphore to prevent overlapping event operations.
     private let eventSemaphore = SimpleSemaphore(value: 1)
 
-    /// Items whose owners have been seen ignoring synthetic events.
-    let unresponsiveItems = UnresponsiveItemStore()
+    /// The single record of which items have been failing, and how.
+    let failureLedger = MenuBarItemFailureLedger()
 
     /// Actor for managing menu bar item cache operations.
     private let cacheActor = CacheActor()
@@ -423,34 +423,19 @@ final class MenuBarItemManager {
     /// `confirmedDivergence(divergedNow:pendingSince:now:staleness:)`.
     private var pendingDivergenceObservedAt: ContinuousClock.Instant?
 
-    /// Per-item move-failure history for the bulk-apply loops, keyed by
-    /// `uniqueIdentifier`. A failed move records an entry; a successful
-    /// move clears it. Items under backoff are skipped by the next apply
-    /// so one persistently unmovable item (a vanished transient Control
-    /// Center window, an item whose app hangs) can't re-trigger a full
-    /// cursor-hijacking apply loop every cache cycle (#736).
-    private var moveFailureHistory = [String: (count: Int, lastFailure: ContinuousClock.Instant)]()
-
     /// How long a failed item stays excluded from bulk-apply moves.
-    /// Grows linearly with consecutive failures, capped at 5 minutes.
+    ///
+    /// Kept as a forwarding shim so callers and tests do not have to reach
+    /// through to the ledger for a value that reads as a property of the
+    /// manager's retry policy.
     nonisolated static func moveFailureBackoffInterval(failureCount: Int) -> Duration {
-        .seconds(min(30 * max(failureCount, 1), 300))
+        MenuBarItemFailureLedger.backoffInterval(failureCount: failureCount)
     }
 
-    /// Whether the bulk-apply loops should skip moving the given item
-    /// because it failed recently and is still inside its backoff window.
-    private func isUnderMoveFailureBackoff(_ uid: String, now: ContinuousClock.Instant = .now) -> Bool {
-        guard let entry = moveFailureHistory[uid] else { return false }
-        return now - entry.lastFailure < Self.moveFailureBackoffInterval(failureCount: entry.count)
-    }
-
-    private func recordMoveFailure(_ uid: String, now: ContinuousClock.Instant = .now) {
-        let count = (moveFailureHistory[uid]?.count ?? 0) + 1
-        moveFailureHistory[uid] = (count: count, lastFailure: now)
-    }
-
-    private func recordMoveSuccess(_ uid: String) {
-        moveFailureHistory.removeValue(forKey: uid)
+    /// How the failure ledger should file an arbitrary error thrown by a
+    /// move. Only `EventError` carries enough detail to blame the owner.
+    nonisolated static func failureKind(of error: any Error) -> MenuBarItemFailureLedger.FailureKind {
+        (error as? EventError)?.failureKind ?? .other
     }
 
     /// Persisted mapping of item tag identifiers to their original section name for
@@ -2896,6 +2881,11 @@ extension MenuBarItemManager {
             return "Please try again. If the error persists, please file a bug report."
         }
 
+        /// How the failure ledger should file this error.
+        var failureKind: MenuBarItemFailureLedger.FailureKind {
+            indicatesUnresponsiveOwner ? .unresponsiveOwner : .other
+        }
+
         /// Whether this failure means the item's owner never acknowledged
         /// the events we posted.
         ///
@@ -4279,7 +4269,7 @@ extension MenuBarItemManager {
                 // Verify the item actually reached the correct position.
                 if try await itemHasCorrectPosition(item: item, for: destination, on: resolvedDisplayID) {
                     MenuBarItemManager.diagLog.debug("Attempt \(n) succeeded and verified, finished with move")
-                    unresponsiveItems.recordSuccess(for: item.tag)
+                    failureLedger.recordSuccess(for: item)
                     // Validate that item didn't get stuck when moving to hidden section
                     await validateItemPositionAfterMove(item: item, destination: destination, on: resolvedDisplayID)
                     return
@@ -4311,7 +4301,7 @@ extension MenuBarItemManager {
                     MenuBarItemManager.diagLog.warning(
                         "Attempt \(n): \(item.logString) owner is unresponsive, aborting move"
                     )
-                    unresponsiveItems.recordFailure(for: item.tag)
+                    failureLedger.recordFailure(for: item, kind: .unresponsiveOwner)
                     throw error
                 }
                 // An owner with a standing record of ignoring synthetic events
@@ -4324,11 +4314,11 @@ extension MenuBarItemManager {
                 // could never earn the success that clears its record.
                 if let error = error as? EventError,
                    error.indicatesUnresponsiveOwner,
-                   unresponsiveItems.isUnresponsive(item.tag) {
+                   failureLedger.isUnresponsive(item) {
                     MenuBarItemManager.diagLog.warning(
                         "Attempt \(n): \(item.logString) failed the way it always does, aborting move"
                     )
-                    unresponsiveItems.recordFailure(for: item.tag)
+                    failureLedger.recordFailure(for: item, kind: .unresponsiveOwner)
                     throw error
                 }
                 MenuBarItemManager.diagLog.debug("Attempt \(n) failed: \(error)")
@@ -4338,7 +4328,7 @@ extension MenuBarItemManager {
                 }
                 if let error = error as? EventError {
                     if error.indicatesUnresponsiveOwner {
-                        unresponsiveItems.recordFailure(for: item.tag)
+                        failureLedger.recordFailure(for: item, kind: .unresponsiveOwner)
                     }
                     throw error
                 }
@@ -4620,7 +4610,7 @@ extension MenuBarItemManager {
         // instead of three. Retrying it only repeats the cursor warp that the
         // user sees as the item jittering, and the extra attempts have never
         // been what makes such an owner answer.
-        let maxAttempts: Int = if unresponsiveItems.isUnresponsive(item.tag) {
+        let maxAttempts: Int = if failureLedger.isUnresponsive(item) {
             1
         } else {
             max(1, maxAttempts)
@@ -4635,7 +4625,7 @@ extension MenuBarItemManager {
                 try await postClickEvents(item: item, mouseButton: mouseButton)
                 let clickDuration = Date.now.timeIntervalSince(clickStartTime)
                 MenuBarItemManager.diagLog.debug("Attempt \(n) succeeded in \(Int(clickDuration * 1000))ms, finished with click")
-                unresponsiveItems.recordSuccess(for: item.tag)
+                failureLedger.recordSuccess(for: item)
                 return
             } catch {
                 let attemptDuration = Date.now.timeIntervalSince(attemptStartTime)
@@ -4646,7 +4636,7 @@ extension MenuBarItemManager {
                 }
                 if let error = error as? EventError {
                     if error.indicatesUnresponsiveOwner {
-                        unresponsiveItems.recordFailure(for: item.tag)
+                        failureLedger.recordFailure(for: item, kind: .unresponsiveOwner)
                     }
                     throw error
                 }
@@ -7140,7 +7130,7 @@ extension MenuBarItemManager {
                 // Control items are the section anchors of the full sort —
                 // skipping one would misplace everything after it, so they
                 // are exempt from failure backoff.
-                if !isControlUID, isUnderMoveFailureBackoff(uid) {
+                if !isControlUID, failureLedger.isUnderBackoff(key: uid) {
                     MenuBarItemManager.diagLog.warning(
                         "Profile layout (full sort): \(uid) under move-failure backoff, skipping"
                     )
@@ -7153,10 +7143,10 @@ extension MenuBarItemManager {
                 do {
                     try await move(item: item, to: dest, skipInputPause: true)
                     movedCount += 1
-                    recordMoveSuccess(uid)
+                    failureLedger.recordSuccess(for: item)
                     try? await Task.sleep(for: .milliseconds(200))
                 } catch {
-                    recordMoveFailure(uid)
+                    failureLedger.recordFailure(for: item, kind: Self.failureKind(of: error))
                     MenuBarItemManager.diagLog.error("Profile layout (full sort): failed \(uid): \(error)")
                 }
             }
@@ -7493,7 +7483,7 @@ extension MenuBarItemManager {
             for planned in plannedMoves {
                 guard !Task.isCancelled else { break }
 
-                if isUnderMoveFailureBackoff(planned.uid) {
+                if failureLedger.isUnderBackoff(key: planned.uid) {
                     MenuBarItemManager.diagLog.warning(
                         "Profile layout: \(planned.uid) under move-failure backoff, skipping"
                     )
@@ -7532,10 +7522,10 @@ extension MenuBarItemManager {
                 do {
                     try await move(item: item, to: dest, skipInputPause: true)
                     movedCount += 1
-                    recordMoveSuccess(planned.uid)
+                    failureLedger.recordSuccess(for: item)
                     try? await Task.sleep(for: .milliseconds(200))
                 } catch {
-                    recordMoveFailure(planned.uid)
+                    failureLedger.recordFailure(for: item, kind: Self.failureKind(of: error))
                     MenuBarItemManager.diagLog.error(
                         "Profile layout: failed to move \(planned.uid): \(error)"
                     )
