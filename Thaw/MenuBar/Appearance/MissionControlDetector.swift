@@ -28,13 +28,42 @@ import Observation
 /// (Steps 4–5 of plan 009 were not run in this environment because they
 /// require launching the app). If independent per-display displacement is
 /// ever observed, this detector should probe one window per screen instead.
+///
+/// ## Known limitation: display changes while Mission Control is open
+///
+/// `didChangeScreenParametersNotification` clears `probeAtRestOrigin` so the
+/// baseline gets re-latched, but re-latching just adopts whatever origin the
+/// next `tick()` observes. If a display reconfiguration happens *while*
+/// Mission Control is open, that tick latches the **displaced** position as
+/// "at rest". Mission Control then exits, the probe returns to its true
+/// resting position, and the detector reads that as displacement — a
+/// false-positive `isActive` that persists until the next display change.
+/// This is much narrower than the Step 1 bug (which never re-latched at
+/// all, so it stayed wedged forever), but it's real and worth knowing about.
+/// The likely root fix is to stop sampling a baseline entirely and instead
+/// compare the probe window's actual bounds against its own AppKit
+/// `frame.origin`, which per this type's own premise never moves under
+/// Mission Control. That requires a coordinate-space conversion —
+/// `Bridging.getWindowBounds` is top-left origin (window server/Core
+/// Graphics), `NSWindow.frame` is bottom-left origin (AppKit) — and can't be
+/// validated without running the app, so it's out of scope here.
 @MainActor
 @Observable
 final class MissionControlDetector {
     /// The polling interval used while nothing suggests Mission Control
-    /// might be starting or ending. Slow, because most of the time nothing
-    /// is happening and this detector should cost as little as possible.
-    static let idleInterval: TimeInterval = 1.0
+    /// might be starting or ending.
+    ///
+    /// This is the term that bounds how long it takes to *notice*
+    /// displacement has started at all — no step-up signal can help here,
+    /// since Mission Control does not change the active space and so does
+    /// not fire `activeSpaceDidChangeNotification`. Combined with the 0.1s
+    /// confirmation debounce in `tick()`, the worst-case time to flip
+    /// `isActive` to `true` from a cold idle state is roughly
+    /// `idleInterval + 0.1`. Kept close to the old fixed 10 Hz rate's
+    /// ~0.2s detection latency rather than trading detection speed for
+    /// idle-cost savings; the bulk of the win in this type is already
+    /// banked by going from one probe per panel to one for the whole app.
+    static let idleInterval: TimeInterval = 0.2
 
     /// The polling interval used while `isActive` is `true`, or for
     /// `activeSignalWindow` seconds after a step-up signal. Matches the
@@ -45,11 +74,12 @@ final class MissionControlDetector {
 
     /// How long after a step-up signal the probe keeps running at
     /// `activeInterval` before it's allowed to fall back to `idleInterval`.
-    /// Entering Mission Control without a step-up signal firing first would
-    /// otherwise be noticed up to `idleInterval` seconds late, which would
-    /// show as a visible overlay artifact — this window covers the gap
-    /// between the signal firing and Mission Control actually finishing its
-    /// enter/exit animation.
+    /// Step-up signals are `activeSpaceDidChangeNotification` (helps for
+    /// Exposé/space-switch cases, but does not fire for a plain Mission
+    /// Control activation) and the moment `tick()` first observes
+    /// displacement (see `tick()` — this is what actually keeps Mission
+    /// Control's confirmation tick and its exit fast, independent of
+    /// `idleInterval`).
     static let activeSignalWindow: TimeInterval = 2.0
 
     /// A Boolean value that indicates whether Mission Control or App
@@ -229,6 +259,12 @@ final class MissionControlDetector {
                 }
             } else {
                 missionControlDisplacedSince = now
+                // The displacement itself is the best possible step-up
+                // signal — better than waiting for an external notification
+                // that may never come (Mission Control doesn't change the
+                // active space). This gets the confirming tick 0.1s later
+                // instead of waiting out a full idleInterval.
+                lastStepUpSignal = now
             }
         } else {
             missionControlDisplacedSince = nil
