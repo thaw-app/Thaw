@@ -11,8 +11,8 @@ import SwiftUI
 
 struct GeneralSettingsPane: View {
     @EnvironmentObject var appState: AppState
-    @ObservedObject var settings: GeneralSettings
-    @ObservedObject var advancedSettings: AdvancedSettings
+    @Bindable var settings: GeneralSettings
+    @Bindable var advancedSettings: AdvancedSettings
     @State private var isImportingCustomIceIcon = false
     @State private var isPresentingError = false
     @State private var presentedError: LocalizedErrorWrapper?

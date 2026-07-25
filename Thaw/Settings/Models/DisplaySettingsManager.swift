@@ -16,53 +16,103 @@ import Combine
 /// When a display has no explicit configuration, `DisplayIceBarConfiguration.defaultConfiguration`
 /// is returned.
 @MainActor
-final class DisplaySettingsManager: ObservableObject {
+@Observable
+final class DisplaySettingsManager {
+    @ObservationIgnored
     private let diagLog = DiagLog(category: "DisplaySettingsManager")
 
     /// Per-display configurations, keyed by display UUID string.
-    @Published var configurations: [String: DisplayIceBarConfiguration] = [:]
+    ///
+    /// `didSet` both persists the new value and re-derives the active
+    /// display's spacing, replacing the previous `$configurations`
+    /// Combine pipelines (one for persistence, one — `removeDuplicates()`
+    /// — for the spacing reaction). `loadInitialState()` runs from `init`,
+    /// so its assignment does not trigger this `didSet`, matching the old
+    /// `dropFirst()` skip of the initial emission during setup.
+    var configurations: [String: DisplayIceBarConfiguration] = [:] {
+        didSet {
+            guard oldValue != configurations else { return }
+            persistConfigurations()
+            applyActiveDisplaySpacing(reason: "configurationsChanged")
+        }
+    }
 
     /// The global configuration template applied to all displays by the
     /// Apply-to-All action in the Displays pane and used as the seed for
     /// newly connected displays. Persisted independently from
     /// configurations so the template survives display disconnects, and
     /// captured by every Profile so each profile carries its own global.
-    @Published var globalConfiguration: DisplayIceBarConfiguration = .defaultConfiguration
+    var globalConfiguration: DisplayIceBarConfiguration = .defaultConfiguration {
+        didSet {
+            guard oldValue != globalConfiguration else { return }
+            do {
+                let data = try encoder.encode(globalConfiguration)
+                Defaults.set(data, forKey: .globalDisplayConfiguration)
+            } catch {
+                diagLog.error("Failed to encode global display configuration: \(error)")
+            }
+        }
+    }
 
     /// Cache of previously-seen displays (name + notch state), keyed by
     /// display UUID. Lets the Displays pane show settings rows for
     /// disconnected displays so users can edit them without having to
     /// re-connect the display first.
-    @Published var knownDisplays: [String: KnownDisplay] = [:]
+    var knownDisplays: [String: KnownDisplay] = [:] {
+        didSet {
+            guard oldValue != knownDisplays else { return }
+            do {
+                let data = try encoder.encode(knownDisplays)
+                Defaults.set(data, forKey: .knownDisplays)
+            } catch {
+                diagLog.error("Failed to encode known display cache: \(error)")
+            }
+        }
+    }
 
     /// Whether Thaw asks for confirmation before a spacing change relaunches
     /// menu bar apps. When true, the automatic display-transition path shows
     /// a just-in-time prompt and the Displays pane shows its Apply/global
     /// confirmation alerts. When false, both apply without asking.
-    @Published var confirmSpacingRelaunch = Defaults.DefaultValue.confirmSpacingRelaunch
+    var confirmSpacingRelaunch = Defaults.DefaultValue.confirmSpacingRelaunch {
+        didSet {
+            guard oldValue != confirmSpacingRelaunch else { return }
+            Defaults.set(confirmSpacingRelaunch, forKey: .confirmSpacingRelaunch)
+        }
+    }
 
     /// When confirmSpacingRelaunch is off and a profile is active, selects
     /// whether an applied spacing change is saved to the active profile only
     /// or to every profile.
-    @Published var unconfirmedSpacingProfileScope = Defaults.DefaultValue.unconfirmedSpacingProfileScope
+    var unconfirmedSpacingProfileScope = Defaults.DefaultValue.unconfirmedSpacingProfileScope {
+        didSet {
+            guard oldValue != unconfirmedSpacingProfileScope else { return }
+            Defaults.set(unconfirmedSpacingProfileScope.rawValue, forKey: .unconfirmedSpacingProfileScope)
+        }
+    }
 
     /// Storage for internal observers.
+    @ObservationIgnored
     private var cancellables = Set<AnyCancellable>()
 
     /// Task backing the swift-async-algorithms screen-parameters debounce (see
-    /// ``configureCancellables()``). Held so it is cancelled in `deinit`,
+    /// ``configureObservers()``). Held so it is cancelled in `deinit`,
     /// matching the lifetime of the Combine cancellables above; its notification
     /// observer is owned inside the task and removed when it ends.
+    @ObservationIgnored
     private var screenParametersTask: Task<Void, Never>?
 
     /// JSON encoder for persistence.
+    @ObservationIgnored
     private let encoder = JSONEncoder()
 
     /// JSON decoder for persistence.
+    @ObservationIgnored
     private let decoder = JSONDecoder()
 
     /// Reference to AppState for driving spacingManager and itemManager from
     /// active-display configuration changes. Held weakly to avoid retain cycles.
+    @ObservationIgnored
     private weak var appState: AppState?
 
     /// UUID of the active menu bar display the last time spacing was applied.
@@ -80,11 +130,22 @@ final class DisplaySettingsManager: ObservableObject {
         Bridging.getActiveMenuBarDisplayUUID()
     }
 
+    /// Loads persisted state immediately at construction time, before any
+    /// `didSet` observer is armed. Swift's `didSet` does not fire for
+    /// assignments made from within the declaring class's own `init`, so
+    /// running `loadInitialState()` here — rather than from
+    /// ``performSetup(with:)`` — reproduces the old `$configurations`
+    /// `.dropFirst()` Combine pipelines' skip of the initial emission during
+    /// setup, without persisting-back or re-deriving spacing from data that
+    /// was just loaded from the same source.
+    init() {
+        loadInitialState()
+    }
+
     /// Performs the initial setup of the manager.
     func performSetup(with appState: AppState) {
         self.appState = appState
-        loadInitialState()
-        configureCancellables()
+        configureObservers()
         captureCurrentlyConnectedDisplays()
     }
 
@@ -260,51 +321,25 @@ final class DisplaySettingsManager: ObservableObject {
 
     // MARK: - Persistence
 
-    /// Configures Combine sinks to persist configurations on change.
-    private func configureCancellables() {
+    /// Encodes and persists `configurations`, matching the previous
+    /// `$configurations.dropFirst()` persistence sink. Called from
+    /// `configurations`'s `didSet` and from `seedConfigurationsFromSystemSpacing()`.
+    private func persistConfigurations() {
+        do {
+            let data = try encoder.encode(configurations)
+            Defaults.set(data, forKey: .displayIceBarConfigurations)
+        } catch {
+            diagLog.error("Failed to encode per-display configurations: \(error)")
+        }
+    }
+
+    /// Configures the manager's non-persistence internal observers: the
+    /// debounced screen-parameters watcher and the Settings-URI notification
+    /// subscription. Property persistence is now driven by `didSet` on each
+    /// property (see the property declarations above), replacing the
+    /// previous `$property.persistToDefaults`/manual `.dropFirst()` sinks.
+    private func configureObservers() {
         var c = Set<AnyCancellable>()
-
-        $configurations
-            .dropFirst() // Skip the initial emission during setup
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] configs in
-                guard let self else { return }
-                do {
-                    let data = try encoder.encode(configs)
-                    Defaults.set(data, forKey: .displayIceBarConfigurations)
-                } catch {
-                    diagLog.error("Failed to encode per-display configurations: \(error)")
-                }
-            }
-            .store(in: &c)
-
-        $knownDisplays
-            .dropFirst()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] cache in
-                guard let self else { return }
-                do {
-                    let data = try encoder.encode(cache)
-                    Defaults.set(data, forKey: .knownDisplays)
-                } catch {
-                    diagLog.error("Failed to encode known display cache: \(error)")
-                }
-            }
-            .store(in: &c)
-
-        $globalConfiguration
-            .dropFirst()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] config in
-                guard let self else { return }
-                do {
-                    let data = try encoder.encode(config)
-                    Defaults.set(data, forKey: .globalDisplayConfiguration)
-                } catch {
-                    diagLog.error("Failed to encode global display configuration: \(error)")
-                }
-            }
-            .store(in: &c)
 
         // Listen for display connect/disconnect to log changes, refresh the
         // known-display cache, and re-derive the active display's spacing.
@@ -362,18 +397,10 @@ final class DisplaySettingsManager: ObservableObject {
             }
         }
 
-        // Whenever per-display configurations change (user edit, profile
-        // load), re-derive what the active display's spacing should be and
-        // apply it. The no-op guard inside applyOffset() makes this free
-        // when on-disk already matches.
-        $configurations
-            .dropFirst()
-            .removeDuplicates()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.applyActiveDisplaySpacing(reason: "configurationsChanged")
-            }
-            .store(in: &c)
+        // Re-deriving the active display's spacing whenever per-display
+        // configurations change (user edit, profile load) is now handled by
+        // `configurations`'s `didSet`. The no-op guard inside applyOffset()
+        // makes this free when on-disk already matches.
 
         // Listen for external per-display settings changes via Settings URI
         NotificationCenter.default
@@ -383,13 +410,6 @@ final class DisplaySettingsManager: ObservableObject {
                 self?.handleExternalPerDisplaySettingsChange(notification)
             }
             .store(in: &c)
-
-        $confirmSpacingRelaunch.persistToDefaults(key: .confirmSpacingRelaunch, in: &c)
-        $unconfirmedSpacingProfileScope.persistToDefaults(
-            key: .unconfirmedSpacingProfileScope,
-            transform: \.rawValue,
-            in: &c
-        )
 
         cancellables = c
     }

@@ -10,7 +10,7 @@ import SwiftUI
 
 struct HotkeysSettingsPane: View {
     @EnvironmentObject var appState: AppState
-    @ObservedObject var settings: HotkeysSettings
+    let settings: HotkeysSettings
 
     var body: some View {
         IceForm {

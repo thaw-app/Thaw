@@ -8,6 +8,7 @@
 
 import Cocoa
 import Combine
+import Observation
 import os.lock
 
 /// Cache for menu bar item images.
@@ -169,6 +170,10 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
     /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
 
+    /// Task observing `AdvancedSettings.iconRefreshInterval`, which is
+    /// `@Observable` rather than a Combine `ObservableObject`.
+    private var iconRefreshIntervalObservationTask: Task<Void, Never>?
+
     private var memoryPressureSource: DispatchSourceMemoryPressure?
 
     /// The currently running cache update task, if any.
@@ -209,6 +214,7 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
         memoryPressureSource?.cancel()
         currentUpdateTask?.cancel()
         liveRefreshTask?.cancel()
+        iconRefreshIntervalObservationTask?.cancel()
     }
 
     // MARK: Setup
@@ -456,17 +462,21 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
                 }
                 .store(in: &c)
 
-            // Restart the live refresh loop when the icon refresh interval changes
-            appState.settings.advanced.$iconRefreshInterval
-                .removeDuplicates()
-                .receive(on: DispatchQueue.main)
-                .sink { [weak self] _ in
-                    guard let self, self.liveRefreshTask != nil else { return }
+            // Restart the live refresh loop when the icon refresh interval
+            // changes. `AdvancedSettings` is `@Observable` rather than a
+            // Combine `ObservableObject`, so this is observed via the
+            // `Observations` async sequence instead of `$iconRefreshInterval`.
+            let advancedSettings = appState.settings.advanced
+            iconRefreshIntervalObservationTask = Task { @MainActor [weak self] in
+                let changes = Observations { advancedSettings.iconRefreshInterval }
+                for await _ in changes {
+                    guard let self else { return }
+                    guard self.liveRefreshTask != nil else { continue }
                     self.liveRefreshTask?.cancel()
                     self.liveRefreshTask = nil
                     self.startLiveRefreshIfNeeded()
                 }
-                .store(in: &c)
+            }
         }
 
         cancellables = c

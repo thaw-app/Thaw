@@ -11,7 +11,7 @@ import SwiftUI
 struct MenuBarLayoutSettingsPane: View {
     @EnvironmentObject var appState: AppState
     @ObservedObject var itemManager: MenuBarItemManager
-    @ObservedObject var advancedSettings: AdvancedSettings
+    @Bindable var advancedSettings: AdvancedSettings
 
     @State private var loadDeadlineReached = false
     @State private var isResettingLayout = false

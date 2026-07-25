@@ -9,6 +9,7 @@
 import AXSwift6
 import Cocoa
 import Combine
+import Observation
 import os
 
 /// Manager that monitors input events and implements the features
@@ -34,6 +35,12 @@ final class HIDEventManager: ObservableObject {
 
     /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
+
+    /// Task observing `GeneralSettings.showOnHover`, `AdvancedSettings.
+    /// showMenuBarTooltips`, and `DisplaySettingsManager.configurations` —
+    /// all `@Observable` rather than Combine `ObservableObject`s, so they
+    /// can no longer feed the `Publishers.CombineLatest3` this used to be.
+    private var hoverSettingsObservationTask: Task<Void, Never>?
 
     /// Timer that periodically checks whether the event tap is still
     /// valid and attempts to recreate it if the Mach port was invalidated.
@@ -481,24 +488,50 @@ final class HIDEventManager: ObservableObject {
 
             // Start or stop the mouse-moved tap when show-on-hover,
             // menu-bar-tooltips, or per-display configurations change.
-            Publishers.CombineLatest3(
-                appState.settings.general.$showOnHover,
-                appState.settings.advanced.$showMenuBarTooltips,
-                appState.settings.displaySettings.$configurations
-            )
-            .sink { [weak self] showOnHover, _, _ in
-                guard let self, isEnabled else {
-                    return
+            //
+            // `GeneralSettings`, `AdvancedSettings`, and `DisplaySettingsManager`
+            // are `@Observable` rather than Combine `ObservableObject`s, so
+            // this is now driven by the `Observations` async sequence instead
+            // of `Publishers.CombineLatest3`. `continue` below (rather than
+            // `return`) preserves the old sink's per-event early-outs without
+            // ending the observation.
+            let generalSettings = appState.settings.general
+            let advancedSettings = appState.settings.advanced
+            let displaySettings = appState.settings.displaySettings
+            hoverSettingsObservationTask = Task { [weak self] in
+                let changes = Observations {
+                    (generalSettings.showOnHover, advancedSettings.showMenuBarTooltips, displaySettings.configurations)
                 }
-                if needsMouseMovedTap(appState: appState) {
-                    mouseMovedTap.start()
-                } else {
-                    mouseMovedTap.stop()
-                }
+                for await (showOnHover, _, _) in changes {
+                    guard let self else { return }
+                    guard isEnabled else { continue }
+                    if needsMouseMovedTap(appState: appState) {
+                        mouseMovedTap.start()
+                    } else {
+                        mouseMovedTap.stop()
+                    }
 
-                defer { lastShowOnHover = showOnHover }
+                    defer { lastShowOnHover = showOnHover }
 
-                if !showOnHover {
+                    if !showOnHover {
+                        hoverRearmTask?.cancel()
+                        hoverRearmTask = nil
+                        hoverRearmTaskToken = nil
+                        hoverTask?.cancel()
+                        hoverTask = nil
+                        hoverTaskToken = nil
+                        pendingHoverAction = nil
+                        continue
+                    }
+
+                    // Only rearm when showOnHover transitions false→true; skip the
+                    // rearm path when other inputs (tooltips, display config) change
+                    // while showOnHover was already enabled.
+                    guard lastShowOnHover != true else {
+                        continue
+                    }
+
+                    appState.menuBarManager.showOnHoverAllowed = true
                     hoverRearmTask?.cancel()
                     hoverRearmTask = nil
                     hoverRearmTaskToken = nil
@@ -506,27 +539,9 @@ final class HIDEventManager: ObservableObject {
                     hoverTask = nil
                     hoverTaskToken = nil
                     pendingHoverAction = nil
-                    return
+                    scheduleHoverRearmChecks(appState: appState)
                 }
-
-                // Only rearm when showOnHover transitions false→true; skip the
-                // rearm path when other inputs (tooltips, display config) change
-                // while showOnHover was already enabled.
-                guard lastShowOnHover != true else {
-                    return
-                }
-
-                appState.menuBarManager.showOnHoverAllowed = true
-                hoverRearmTask?.cancel()
-                hoverRearmTask = nil
-                hoverRearmTaskToken = nil
-                hoverTask?.cancel()
-                hoverTask = nil
-                hoverTaskToken = nil
-                pendingHoverAction = nil
-                scheduleHoverRearmChecks(appState: appState)
             }
-            .store(in: &c)
 
             // Rebuild the window bounds lookup whenever the item cache changes.
             // This replaces per-event Window Server IPC calls with an in-memory lookup.
@@ -668,6 +683,7 @@ final class HIDEventManager: ObservableObject {
 
     deinit {
         healthCheckTimer?.invalidate()
+        hoverSettingsObservationTask?.cancel()
     }
 }
 

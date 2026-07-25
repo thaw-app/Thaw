@@ -298,11 +298,14 @@ final class AppState: ObservableObject {
                 self?.objectWillChange.send()
             }
             .store(in: &c)
-        settings.objectWillChange
-            .sink { [weak self] in
-                self?.objectWillChange.send()
-            }
-            .store(in: &c)
+        // `settings` (AppSettings) is now @Observable (wave 2), so it no
+        // longer has an `objectWillChange` publisher to forward here. Views
+        // reading `appState.settings.*` properties directly in their body
+        // (or via `.onChange(of:)`, whose value comparison still needs a
+        // body re-render to be scheduled) rely on SwiftUI's Observation
+        // access tracking picking up those reads directly, which it does
+        // even though AppState itself is not @Observable — see the wave 2
+        // migration report for the verification of this across call sites.
         updatesManager.objectWillChange
             .sink { [weak self] in
                 self?.objectWillChange.send()

@@ -10,7 +10,9 @@ import Foundation
 
 /// Model for the app's Hotkeys settings.
 @MainActor
-final class HotkeysSettings: ObservableObject {
+@Observable
+final class HotkeysSettings {
+    @ObservationIgnored
     private let diagLog = DiagLog(category: "HotkeysSettings")
     /// The app's hotkey registry.
     let registry = HotkeyRegistry()
@@ -21,12 +23,15 @@ final class HotkeysSettings: ObservableObject {
     }
 
     /// Encoder for properties.
+    @ObservationIgnored
     private let encoder = JSONEncoder()
 
     /// Decoder for properties.
+    @ObservationIgnored
     private let decoder = JSONDecoder()
 
     /// The shared app state.
+    @ObservationIgnored
     private(set) weak var appState: AppState?
 
     /// Performs the initial setup of the model.

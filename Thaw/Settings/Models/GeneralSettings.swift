@@ -13,22 +13,46 @@ import SwiftUI
 
 /// Model for the app's General settings.
 @MainActor
-final class GeneralSettings: ObservableObject {
+@Observable
+final class GeneralSettings {
     private let diagLog = DiagLog(category: "GeneralSettings")
     /// A Boolean value that indicates whether the Ice icon
     /// should be shown.
-    @Published var showIceIcon = Defaults.DefaultValue.showIceIcon
+    var showIceIcon = Defaults.DefaultValue.showIceIcon {
+        didSet {
+            guard oldValue != showIceIcon else { return }
+            Defaults.set(showIceIcon, forKey: .showIceIcon)
+        }
+    }
 
     /// An icon to show in the menu bar, with a different image
     /// for when items are visible or hidden.
-    @Published var iceIcon = Defaults.DefaultValue.iceIcon
+    var iceIcon = Defaults.DefaultValue.iceIcon {
+        didSet {
+            guard oldValue != iceIcon else { return }
+            if case .custom = iceIcon.name {
+                lastCustomIceIcon = iceIcon
+            }
+            do {
+                let data = try encoder.encode(iceIcon)
+                Defaults.set(data, forKey: .iceIcon)
+            } catch {
+                diagLog.error("Error encoding \(Constants.displayName) icon: \(error)")
+            }
+        }
+    }
 
     /// The last user-selected custom Ice icon.
-    @Published var lastCustomIceIcon: ControlItemImageSet?
+    var lastCustomIceIcon: ControlItemImageSet?
 
     /// A Boolean value that indicates whether custom Ice icons
     /// should be rendered as template images.
-    @Published var customIceIconIsTemplate = Defaults.DefaultValue.customIceIconIsTemplate
+    var customIceIconIsTemplate = Defaults.DefaultValue.customIceIconIsTemplate {
+        didSet {
+            guard oldValue != customIceIconIsTemplate else { return }
+            Defaults.set(customIceIconIsTemplate, forKey: .customIceIconIsTemplate)
+        }
+    }
 
     // MARK: - Deprecated (Per-Display Migration)
 
@@ -37,69 +61,128 @@ final class GeneralSettings: ObservableObject {
 
     /// A Boolean value that indicates whether to show hidden items
     /// in a separate bar below the menu bar.
-    @Published var useIceBar = Defaults.DefaultValue.useIceBar
+    var useIceBar = Defaults.DefaultValue.useIceBar {
+        didSet {
+            guard oldValue != useIceBar else { return }
+            Defaults.set(useIceBar, forKey: .useIceBar)
+        }
+    }
 
     /// A Boolean value that indicates whether to use the Thaw Bar
     /// only on displays with a notch.
-    @Published var useIceBarOnlyOnNotchedDisplay = Defaults.DefaultValue.useIceBarOnlyOnNotchedDisplay
+    var useIceBarOnlyOnNotchedDisplay = Defaults.DefaultValue.useIceBarOnlyOnNotchedDisplay {
+        didSet {
+            guard oldValue != useIceBarOnlyOnNotchedDisplay else { return }
+            Defaults.set(useIceBarOnlyOnNotchedDisplay, forKey: .useIceBarOnlyOnNotchedDisplay)
+        }
+    }
 
     /// The location where the Thaw Bar appears.
-    @Published var iceBarLocation = Defaults.DefaultValue.iceBarLocation
+    var iceBarLocation = Defaults.DefaultValue.iceBarLocation {
+        didSet {
+            guard oldValue != iceBarLocation else { return }
+            Defaults.set(iceBarLocation.rawValue, forKey: .iceBarLocation)
+        }
+    }
 
     /// A Boolean value that indicates whether the Thaw Bar should
     /// appear at the mouse pointer's location when shown by a hotkey.
-    @Published var iceBarLocationOnHotkey = Defaults.DefaultValue.iceBarLocationOnHotkey
+    var iceBarLocationOnHotkey = Defaults.DefaultValue.iceBarLocationOnHotkey {
+        didSet {
+            guard oldValue != iceBarLocationOnHotkey else { return }
+            Defaults.set(iceBarLocationOnHotkey, forKey: .iceBarLocationOnHotkey)
+        }
+    }
 
     /// A Boolean value that indicates whether the hidden section
     /// should be shown when the mouse pointer clicks in an empty
     /// area of the menu bar.
-    @Published var showOnClick = Defaults.DefaultValue.showOnClick
+    var showOnClick = Defaults.DefaultValue.showOnClick {
+        didSet {
+            guard oldValue != showOnClick else { return }
+            Defaults.set(showOnClick, forKey: .showOnClick)
+        }
+    }
 
     /// A Boolean value that indicates whether the always-hidden section
     /// should be shown when the mouse pointer double-clicks in an
     /// empty area of the menu bar.
-    @Published var showOnDoubleClick = Defaults.DefaultValue.showOnDoubleClick
+    var showOnDoubleClick = Defaults.DefaultValue.showOnDoubleClick {
+        didSet {
+            guard oldValue != showOnDoubleClick else { return }
+            Defaults.set(showOnDoubleClick, forKey: .showOnDoubleClick)
+        }
+    }
 
     /// A Boolean value that indicates whether the hidden section
     /// should be shown when the mouse pointer hovers over an
     /// empty area of the menu bar.
-    @Published var showOnHover = Defaults.DefaultValue.showOnHover
+    var showOnHover = Defaults.DefaultValue.showOnHover {
+        didSet {
+            guard oldValue != showOnHover else { return }
+            Defaults.set(showOnHover, forKey: .showOnHover)
+        }
+    }
 
     /// A Boolean value that indicates whether the hidden section
     /// should be shown or hidden when the user scrolls in the
     /// menu bar.
-    @Published var showOnScroll = Defaults.DefaultValue.showOnScroll
+    var showOnScroll = Defaults.DefaultValue.showOnScroll {
+        didSet {
+            guard oldValue != showOnScroll else { return }
+            Defaults.set(showOnScroll, forKey: .showOnScroll)
+        }
+    }
 
     // The offset to apply to the menu bar item spacing and padding.
 
     /// A Boolean value that indicates whether the hidden section
     /// should automatically rehide.
-    @Published var autoRehide = Defaults.DefaultValue.autoRehide
+    var autoRehide = Defaults.DefaultValue.autoRehide {
+        didSet {
+            guard oldValue != autoRehide else { return }
+            Defaults.set(autoRehide, forKey: .autoRehide)
+        }
+    }
 
     /// A strategy that determines how the auto-rehide feature works.
-    @Published var rehideStrategy = Defaults.DefaultValue.rehideStrategy
+    var rehideStrategy = Defaults.DefaultValue.rehideStrategy {
+        didSet {
+            guard oldValue != rehideStrategy else { return }
+            Defaults.set(rehideStrategy.rawValue, forKey: .rehideStrategy)
+        }
+    }
 
     /// A time interval for the auto-rehide feature when its rule
     /// is ``RehideStrategy/timed``.
-    @Published var rehideInterval = Defaults.DefaultValue.rehideInterval
+    var rehideInterval = Defaults.DefaultValue.rehideInterval {
+        didSet {
+            guard oldValue != rehideInterval else { return }
+            Defaults.set(rehideInterval, forKey: .rehideInterval)
+        }
+    }
 
     /// Encoder for properties.
+    @ObservationIgnored
     private let encoder = JSONEncoder()
 
     /// Decoder for properties.
+    @ObservationIgnored
     private let decoder = JSONDecoder()
 
     /// Storage for internal observers.
+    @ObservationIgnored
     private var cancellables = Set<AnyCancellable>()
 
     /// The shared app state.
+    @ObservationIgnored
     private(set) weak var appState: AppState?
 
     /// Performs the initial setup of the model.
     func performSetup(with appState: AppState) {
         self.appState = appState
         loadInitialState()
-        configureCancellables()
+        configureObservers()
     }
 
     /// Loads the model's initial state.
@@ -140,43 +223,13 @@ final class GeneralSettings: ObservableObject {
     }
 
     /// Configures the internal observers for the model.
-    private func configureCancellables() {
+    ///
+    /// Persistence for most properties is now driven by `didSet` on each
+    /// property (see above), replacing the previous `$property.persistToDefaults`
+    /// Combine pipelines. Only the Settings-URI notification subscription
+    /// remains Combine-based here.
+    private func configureObservers() {
         var c = Set<AnyCancellable>()
-
-        $showIceIcon.persistToDefaults(key: .showIceIcon, in: &c)
-
-        // iceIcon requires encoding + custom icon tracking - keep manual
-        $iceIcon
-            .removeDuplicates()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] iceIcon in
-                guard let self else {
-                    return
-                }
-                if case .custom = iceIcon.name {
-                    lastCustomIceIcon = iceIcon
-                }
-                do {
-                    let data = try encoder.encode(iceIcon)
-                    Defaults.set(data, forKey: .iceIcon)
-                } catch {
-                    diagLog.error("Error encoding \(Constants.displayName) icon: \(error)")
-                }
-            }
-            .store(in: &c)
-
-        $customIceIconIsTemplate.persistToDefaults(key: .customIceIconIsTemplate, in: &c)
-        $useIceBar.persistToDefaults(key: .useIceBar, in: &c)
-        $useIceBarOnlyOnNotchedDisplay.persistToDefaults(key: .useIceBarOnlyOnNotchedDisplay, in: &c)
-        $iceBarLocation.persistToDefaults(key: .iceBarLocation, transform: \.rawValue, in: &c)
-        $iceBarLocationOnHotkey.persistToDefaults(key: .iceBarLocationOnHotkey, in: &c)
-        $showOnClick.persistToDefaults(key: .showOnClick, in: &c)
-        $showOnDoubleClick.persistToDefaults(key: .showOnDoubleClick, in: &c)
-        $showOnHover.persistToDefaults(key: .showOnHover, in: &c)
-        $showOnScroll.persistToDefaults(key: .showOnScroll, in: &c)
-        $autoRehide.persistToDefaults(key: .autoRehide, in: &c)
-        $rehideStrategy.persistToDefaults(key: .rehideStrategy, transform: \.rawValue, in: &c)
-        $rehideInterval.persistToDefaults(key: .rehideInterval, in: &c)
 
         // Observe external settings changes via Settings URI
         NotificationCenter.default

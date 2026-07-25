@@ -7,6 +7,7 @@
 //  Licensed under the GNU GPLv3
 
 import Combine
+import Observation
 import SwiftUI
 
 /// Manager for the state of the menu bar.
@@ -44,6 +45,14 @@ final class MenuBarManager: ObservableObject {
 
     /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
+
+    /// Task observing `DisplaySettingsManager.configurations`, which is
+    /// `@Observable` rather than a Combine `ObservableObject`.
+    private var displayConfigurationsObservationTask: Task<Void, Never>?
+
+    deinit {
+        displayConfigurationsObservationTask?.cancel()
+    }
 
     /// Per-item hotkeys, keyed by MenuBarItem.uniqueIdentifier. Each opens the
     /// item's menu when its key combination fires. Mirrors the per-profile
@@ -208,12 +217,14 @@ final class MenuBarManager: ObservableObject {
             .store(in: &c)
 
         if let appState {
-            appState.settings.displaySettings.$configurations
-                .receive(on: DispatchQueue.main)
-                .sink { [weak self] _ in
-                    self?.updateControlItemStates()
+            let displaySettings = appState.settings.displaySettings
+            displayConfigurationsObservationTask = Task { [weak self] in
+                let changes = Observations { displaySettings.configurations }
+                for await _ in changes {
+                    guard let self else { return }
+                    updateControlItemStates()
                 }
-                .store(in: &c)
+            }
 
             // Refresh per-item hotkeys when the set of menu bar items changes,
             // so newly-arrived items become assignable. Debounced because the

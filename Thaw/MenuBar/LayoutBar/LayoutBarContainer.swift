@@ -8,6 +8,7 @@
 
 import Cocoa
 import Combine
+import Observation
 
 /// A container for the items in the menu bar layout interface.
 final class LayoutBarContainer: NSView {
@@ -74,6 +75,15 @@ final class LayoutBarContainer: NSView {
 
     private var cancellables = Set<AnyCancellable>()
 
+    /// Task observing `AdvancedSettings.enableAlwaysHiddenSection`, which is
+    /// `@Observable` rather than a Combine `ObservableObject`, so it can no
+    /// longer take part in the `Publishers.CombineLatest3` below.
+    private var enableAlwaysHiddenSectionObservationTask: Task<Void, Never>?
+
+    deinit {
+        enableAlwaysHiddenSectionObservationTask?.cancel()
+    }
+
     /// Creates a container view with the given app state, section, and spacing.
     ///
     /// - Parameters:
@@ -100,18 +110,31 @@ final class LayoutBarContainer: NSView {
         var c = Set<AnyCancellable>()
 
         if let appState {
-            Publishers.CombineLatest3(
+            Publishers.CombineLatest(
                 appState.itemManager.$itemCache,
-                appState.itemManager.$newItemsPlacement,
-                appState.settings.advanced.$enableAlwaysHiddenSection
+                appState.itemManager.$newItemsPlacement
             )
-            .sink { [weak self] cache, _, _ in
+            .sink { [weak self] cache, _ in
                 guard let self else {
                     return
                 }
                 setArrangedViews(items: cache.managedItems(for: section))
             }
             .store(in: &c)
+
+            // `AdvancedSettings.enableAlwaysHiddenSection` is `@Observable`
+            // rather than a Combine `ObservableObject`, so it can no longer
+            // take part in the `CombineLatest` above — observed separately,
+            // re-running the same re-arrangement using the current item cache.
+            let itemManager = appState.itemManager
+            let advancedSettings = appState.settings.advanced
+            enableAlwaysHiddenSectionObservationTask = Task { [weak self] in
+                let changes = Observations { advancedSettings.enableAlwaysHiddenSection }
+                for await _ in changes {
+                    guard let self else { return }
+                    setArrangedViews(items: itemManager.itemCache.managedItems(for: section))
+                }
+            }
 
             // Observe average color changes to update badge appearance
             appState.menuBarManager.$averageColorInfo

@@ -8,6 +8,7 @@
 
 import Cocoa
 import Combine
+import Observation
 
 // MARK: - ControlItem
 
@@ -173,6 +174,23 @@ final class ControlItem {
     /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
 
+    /// Tasks backing settings-observation reactions in `configureCancellables()`
+    /// and `configureStatusItemCancellables()`. `GeneralSettings` and
+    /// `AdvancedSettings` are `@Observable` (not Combine `ObservableObject`s),
+    /// so their property changes are observed via the `Observations` async
+    /// sequence instead of `$property` publishers.
+    private var showIceIconObservationTask: Task<Void, Never>?
+    private var iceIconObservationTask: Task<Void, Never>?
+    private var sectionDividerStyleObservationTask: Task<Void, Never>?
+    private var alwaysHiddenSectionObservationTask: Task<Void, Never>?
+
+    deinit {
+        showIceIconObservationTask?.cancel()
+        iceIconObservationTask?.cancel()
+        sectionDividerStyleObservationTask?.cancel()
+        alwaysHiddenSectionObservationTask?.cancel()
+    }
+
     /// Storage for observers whose subscriptions are bound to the specific
     /// `NSStatusItem` instance backing `storage`. Combine's KVO publishers
     /// latch onto object identity at subscription time, so these must be
@@ -287,35 +305,33 @@ final class ControlItem {
                 .store(in: &c)
 
             if identifier == .visible {
-                appState.settings.general.$showIceIcon
-                    .removeDuplicates()
-                    .receive(on: DispatchQueue.main)
-                    .sink { [weak self] shouldShow in
-                        guard let self else {
-                            return
-                        }
+                let generalSettings = appState.settings.general
+                showIceIconObservationTask = Task { [weak self] in
+                    let changes = Observations { generalSettings.showIceIcon }
+                    for await shouldShow in changes {
+                        guard let self else { return }
                         setIceIconDisplayed(shouldShow)
                     }
-                    .store(in: &c)
+                }
 
-                appState.settings.general.$iceIcon
-                    .combineLatest(appState.settings.general.$customIceIconIsTemplate)
-                    .removeDuplicates()
-                    .receive(on: DispatchQueue.main)
-                    .sink { [weak self] _ in
-                        self?.updateStatusItem()
+                iceIconObservationTask = Task { [weak self] in
+                    let changes = Observations { (generalSettings.iceIcon, generalSettings.customIceIconIsTemplate) }
+                    for await _ in changes {
+                        guard let self else { return }
+                        updateStatusItem()
                     }
-                    .store(in: &c)
+                }
             }
 
             if isSectionDivider {
-                appState.settings.advanced.$sectionDividerStyle
-                    .removeDuplicates()
-                    .receive(on: DispatchQueue.main)
-                    .sink { [weak self] _ in
-                        self?.updateStatusItem()
+                let advancedSettings = appState.settings.advanced
+                sectionDividerStyleObservationTask = Task { [weak self] in
+                    let changes = Observations { advancedSettings.sectionDividerStyle }
+                    for await _ in changes {
+                        guard let self else { return }
+                        updateStatusItem()
                     }
-                    .store(in: &c)
+                }
             }
         }
 
@@ -362,21 +378,33 @@ final class ControlItem {
             .store(in: &c)
 
         if identifier == .alwaysHidden, let appState {
-            appState.settings.advanced.$enableAlwaysHiddenSection
-                .combineLatest(statusItem.publisher(for: \.isVisible))
+            let advancedSettings = appState.settings.advanced
+            let reactToAlwaysHiddenSectionState: () -> Void = { [weak self] in
+                guard let self else { return }
+                if advancedSettings.enableAlwaysHiddenSection {
+                    addToMenuBar()
+                } else {
+                    removeFromMenuBar()
+                }
+            }
+
+            // Re-derive add/remove whenever isVisible changes (statusItem
+            // KVO, still Combine) — mirrors the previous combineLatest's
+            // re-trigger on the second element, even though only the first
+            // (shouldEnable) was ever read from the emitted pair.
+            statusItem.publisher(for: \.isVisible)
                 .removeDuplicates()
                 .receive(on: DispatchQueue.main)
-                .sink { [weak self] shouldEnable, _ in
-                    guard let self else {
-                        return
-                    }
-                    if shouldEnable {
-                        addToMenuBar()
-                    } else {
-                        removeFromMenuBar()
-                    }
-                }
+                .sink { _ in reactToAlwaysHiddenSectionState() }
                 .store(in: &c)
+
+            alwaysHiddenSectionObservationTask?.cancel()
+            alwaysHiddenSectionObservationTask = Task {
+                let changes = Observations { advancedSettings.enableAlwaysHiddenSection }
+                for await _ in changes {
+                    reactToAlwaysHiddenSectionState()
+                }
+            }
         }
 
         statusItemCancellables = c
