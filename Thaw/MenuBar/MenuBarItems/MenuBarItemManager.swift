@@ -255,8 +255,34 @@ final class MenuBarItemManager {
         menuOpenCheckTask?.cancel()
     }
 
-    /// Continuation to signal when background cache task completes.
-    private var backgroundCacheContinuation: CheckedContinuation<Void, Never>?
+    /// Continuations waiting for a background cache cycle to complete,
+    /// keyed by an opaque token.
+    ///
+    /// A dictionary rather than a single slot: several callers may await a
+    /// cache cycle concurrently, and a shared slot let an unrelated caller's
+    /// early bail resume — or permanently strand — someone else's waiter.
+    private var backgroundCacheWaiters: [Int: CheckedContinuation<Void, Never>] = [:]
+
+    /// Source of tokens for ``backgroundCacheWaiters``.
+    private var nextBackgroundCacheWaiterToken = 0
+
+    /// Registers `continuation` as a waiter and returns its token.
+    private func addBackgroundCacheWaiter(_ continuation: CheckedContinuation<Void, Never>) -> Int {
+        nextBackgroundCacheWaiterToken += 1
+        let token = nextBackgroundCacheWaiterToken
+        backgroundCacheWaiters[token] = continuation
+        return token
+    }
+
+    /// Resumes the waiter for `token`, if it has not already been resumed.
+    ///
+    /// Removing before resuming is what makes this safe to call more than
+    /// once: a second call finds nothing and does nothing. Resuming a
+    /// `CheckedContinuation` twice is a hard crash, so this ordering is
+    /// load-bearing — do not "simplify" it to a lookup followed by a removal.
+    private func resumeBackgroundCacheWaiter(_ token: Int) {
+        backgroundCacheWaiters.removeValue(forKey: token)?.resume()
+    }
 
     // MARK: - Layout coordination state
 
@@ -2272,15 +2298,12 @@ extension MenuBarItemManager {
         _ currentItemWindowIDs: [CGWindowID]? = nil,
         skipRecentMoveCheck: Bool = false,
         resolveSourcePID: Bool = true,
-        skipSavedLayoutApply: Bool = false
+        skipSavedLayoutApply: Bool = false,
+        waiterToken: Int? = nil
     ) async {
         MenuBarItemManager.diagLog.debug(
             "cacheItemsRegardless: entering (skipRecentMoveCheck=\(skipRecentMoveCheck), hasCurrentItemWindowIDs=\(currentItemWindowIDs != nil), resolveSourcePID=\(resolveSourcePID), skipSavedLayoutApply=\(skipSavedLayoutApply))"
         )
-        defer {
-            backgroundCacheContinuation?.resume()
-            backgroundCacheContinuation = nil
-        }
 
         guard skipRecentMoveCheck || !lastMoveOperationOccurred(within: .seconds(1)) else {
             MenuBarItemManager.diagLog.debug("Skipping menu bar item cache due to recent item movement")
@@ -2300,6 +2323,20 @@ extension MenuBarItemManager {
             return
         }
         defer { Task { await cacheGate.end() } }
+
+        // Ownership of the waiter (if any) defaults to this call. Some
+        // paths below (relocation hand-offs) hand ownership to a nested
+        // recache below. Resuming from `defer` means every exit path from
+        // here on — including early returns that cached nothing — releases
+        // the waiter rather than stranding it. A caller that bailed before
+        // the gate above never took ownership, so it cannot resume a waiter
+        // that isn't its to resume.
+        var ownsWaiter = true
+        defer {
+            if ownsWaiter, let waiterToken {
+                resumeBackgroundCacheWaiter(waiterToken)
+            }
+        }
 
         let previousWindowIDs = cacheActor.cachedItemWindowIDs
         let previousCCGenericWindowIDs = cacheActor.cachedControlCenterGenericWindowIDs
@@ -2619,24 +2656,24 @@ extension MenuBarItemManager {
             previousWindowIDs: previousWindowIDs
         ) {
             MenuBarItemManager.diagLog.debug("Relocated new leftmost items; scheduling recache")
-            let continuation = self.backgroundCacheContinuation
-            self.backgroundCacheContinuation = nil
+            // Ownership transfers to the nested recache: the waiter must not
+            // be told the cache is settled until the second cycle finishes.
+            ownsWaiter = false
             Task { [weak self] in
                 try? await Task.sleep(for: MenuBarItemManager.uiSettleDelay)
-                await self?.cacheItemsRegardless(skipRecentMoveCheck: true)
-                continuation?.resume()
+                await self?.cacheItemsRegardless(skipRecentMoveCheck: true, waiterToken: waiterToken)
             }
             return
         }
 
         if await relocatePendingItems(items, controlItems: controlItems) {
             MenuBarItemManager.diagLog.debug("Relocated pending temporarily-shown items; scheduling recache")
-            let continuation = self.backgroundCacheContinuation
-            self.backgroundCacheContinuation = nil
+            // Ownership transfers to the nested recache: the waiter must not
+            // be told the cache is settled until the second cycle finishes.
+            ownsWaiter = false
             Task { [weak self] in
                 try? await Task.sleep(for: MenuBarItemManager.uiSettleDelay)
-                await self?.cacheItemsRegardless(skipRecentMoveCheck: true)
-                continuation?.resume()
+                await self?.cacheItemsRegardless(skipRecentMoveCheck: true, waiterToken: waiterToken)
             }
             return
         }
@@ -2685,8 +2722,6 @@ extension MenuBarItemManager {
                 previousCCGenericWindowIDs: previousCCGenericWindowIDs
             )
             if didApplySavedLayout {
-                backgroundCacheContinuation?.resume()
-                backgroundCacheContinuation = nil
                 return
             }
         }
@@ -5974,6 +6009,7 @@ extension MenuBarItemManager {
     enum LayoutResetError: LocalizedError {
         case missingAppState
         case missingControlItems
+        case alreadyInProgress
 
         var errorDescription: String? {
             switch self {
@@ -5981,6 +6017,8 @@ extension MenuBarItemManager {
                 "Unable to access app state"
             case .missingControlItems:
                 "Couldn't find section dividers in the menu bar"
+            case .alreadyInProgress:
+                "A layout reset is already in progress"
             }
         }
 
@@ -5995,6 +6033,11 @@ extension MenuBarItemManager {
     ///
     /// - Returns: The number of items that failed to move.
     func resetLayoutToFreshState() async throws -> Int {
+        guard !isResettingLayout else {
+            MenuBarItemManager.diagLog.warning("resetLayoutToFreshState: already in progress, rejecting concurrent reset")
+            throw LayoutResetError.alreadyInProgress
+        }
+
         MenuBarItemManager.diagLog.info("Resetting menu bar layout to fresh state")
         // A user-initiated reset is authoritative: end the startup settling period
         // immediately so that the post-reset cache is not blocked from running restore
@@ -6182,9 +6225,25 @@ extension MenuBarItemManager {
         cacheActor.clearCachedItemWindowIDs()
         itemCache = ItemCache(displayID: nil)
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-            self.backgroundCacheContinuation = continuation
+            let token = self.addBackgroundCacheWaiter(continuation)
             Task { [weak self] in
-                await self?.cacheItemsRegardless(skipRecentMoveCheck: true)
+                await self?.cacheItemsRegardless(skipRecentMoveCheck: true, waiterToken: token)
+            }
+            // Watchdog: guarantee this continuation is resumed even if the
+            // cache call above bails before reaching the serialization gate
+            // (in which case it never takes ownership of the waiter and the
+            // defer in cacheItemsRegardless never fires for this token) or
+            // if the nested recache Task it hands off to never runs because
+            // `self` was deallocated first. Whichever side removes the token
+            // from the waiter table first owns the resume; the other is a
+            // no-op.
+            Task { [weak self] in
+                try? await Task.sleep(for: MenuBarItemManager.layoutWatchdogTimeout)
+                guard let self, self.backgroundCacheWaiters[token] != nil else { return }
+                MenuBarItemManager.diagLog.warning(
+                    "resetLayoutToFreshState: background cache wait timed out after \(MenuBarItemManager.layoutWatchdogTimeout); resuming via watchdog"
+                )
+                self.resumeBackgroundCacheWaiter(token)
             }
         }
         suppressNextNewLeftmostItemRelocation = false
