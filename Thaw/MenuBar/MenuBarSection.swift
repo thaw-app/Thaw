@@ -62,6 +62,15 @@ final class MenuBarSection {
     /// is outside of the menu bar.
     private var rehideMonitor: EventMonitor?
 
+    /// The timestamp of the last processed mouse-moved event in the timed
+    /// rehide monitor, used to throttle event handling to ~20 fps.
+    ///
+    /// Stored per-instance rather than as a `static let`: a process-global
+    /// slot would let two concurrently shown sections steal each other's
+    /// throttle window, so each would only see roughly half the events it
+    /// should have.
+    private let timedRehideThrottleClock = OSAllocatedUnfairLock(initialState: TimeInterval(0))
+
     /// The section's diagnostic logger.
     private nonisolated let diagLog = DiagLog(category: "MenuBarSection")
 
@@ -497,6 +506,7 @@ final class MenuBarSection {
     /// Starts running checks to determine when to rehide the section.
     private func startRehideChecks() {
         rehideTask?.cancel()
+        rehideTask = nil
         rehideMonitor?.stop()
 
         guard
@@ -529,14 +539,11 @@ final class MenuBarSection {
                 self.hide()
             }
         case .timed:
-            rehideMonitor = EventMonitor.universal(for: .mouseMoved) { [weak self, weak appState] event in
+            rehideMonitor = EventMonitor.universal(for: .mouseMoved) { [weak self, weak appState, timedRehideThrottleClock] event in
                 // Throttle: process at most ~20fps regardless of mouse polling rate.
-                enum Context {
-                    static let lastTime = OSAllocatedUnfairLock(initialState: TimeInterval(0))
-                }
                 let now = CACurrentMediaTime()
-                guard now - Context.lastTime.withLock({ $0 }) > 0.05 else { return event }
-                Context.lastTime.withLock { $0 = now }
+                guard now - timedRehideThrottleClock.withLock({ $0 }) > 0.05 else { return event }
+                timedRehideThrottleClock.withLock { $0 = now }
 
                 guard
                     let self,
@@ -557,7 +564,7 @@ final class MenuBarSection {
                             guard !Task.isCancelled, let self, let appState else { return }
                             // Don't rehide while the mouse is inside the menu bar or IceBar.
                             if self.isMouseInsideActiveArea() {
-                                self.startRehideChecks()
+                                await self.restartTimedRehideTimer()
                                 return
                             }
                             // Check if any menu bar item has a menu open before hiding.
