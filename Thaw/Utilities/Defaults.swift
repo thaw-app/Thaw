@@ -210,6 +210,10 @@ extension Defaults {
         static let globalDisplayConfiguration: DisplayIceBarConfiguration = .defaultConfiguration
         static let confirmSpacingRelaunch = true
         static let unconfirmedSpacingProfileScope: SpacingProfileSaveScope = .activeProfile
+
+        // MARK: Event Delivery
+
+        static let axMessagingTimeout = 1.0
     }
 }
 
@@ -288,6 +292,21 @@ extension Defaults {
         // MARK: Menu Bar Item Custom Names
 
         case menuBarItemCustomNames = "MenuBarItemCustomNames"
+
+        // MARK: Internal (Event Delivery)
+
+        /// Items whose owners have recently failed to answer synthetic
+        /// events, keyed by namespace and title. Managed by
+        /// ``MenuBarItemFailureLedger``; not exposed in Settings.
+        case unresponsiveMenuBarItems = "UnresponsiveMenuBarItems"
+
+        /// Seconds an accessibility message may block before it fails.
+        ///
+        /// Applied to every element AXSwift6 creates. `0` restores the
+        /// system default of six seconds.
+        ///
+        /// Hidden diagnostic flag; not exposed in Settings. Default: 1.0.
+        case axMessagingTimeout = "axMessagingTimeout"
 
         // MARK: Appearance Settings
 

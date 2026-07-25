@@ -6,6 +6,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import AXSwift6
 import MenuBarModel
 import SwiftUI
 
@@ -40,6 +41,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 return
             }
         #endif
+
+        // Bound accessibility messaging before anything can create an element.
+        // Every AX call is synchronous IPC tied to the target's event loop, so an
+        // app that stops pumping it blocks us for the system default of six
+        // seconds — the delay behind #767. Healthy calls return in well under
+        // 100 ms, so a one second ceiling costs nothing and lets the fallback
+        // paths run while the user is still watching. Override with:
+        //   defaults write com.stonerl.Thaw axMessagingTimeout -float <seconds>
+        UIElement.defaultMessagingTimeout = Float(
+            max(0, (Defaults.object(forKey: .axMessagingTimeout) as? Double) ?? Defaults.DefaultValue.axMessagingTimeout)
+        )
 
         // Initial chore work.
         NSSplitViewItem.swizzle()

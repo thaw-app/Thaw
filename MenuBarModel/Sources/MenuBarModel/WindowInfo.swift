@@ -91,6 +91,29 @@ public struct WindowInfo: Sendable {
         self = window
     }
 
+    /// Creates a window from its individual properties.
+    ///
+    /// The stored properties are otherwise only ever filled in from a live
+    /// window server description, which leaves the rules that read them
+    /// impossible to exercise in isolation. This exists so they can be.
+    public init(
+        windowID: CGWindowID,
+        ownerPID: pid_t,
+        bounds: CGRect,
+        layer: Int,
+        title: String? = nil,
+        ownerName: String? = nil,
+        isOnScreen: Bool = true
+    ) {
+        self.windowID = windowID
+        self.ownerPID = ownerPID
+        self.bounds = bounds
+        self.layer = layer
+        self.title = title
+        self.ownerName = ownerName
+        self.isOnScreen = isOnScreen
+    }
+
     /// Returns the current bounds of the window.
     public func currentBounds() -> CGRect? {
         Bridging.getWindowBounds(for: windowID)

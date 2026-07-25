@@ -199,6 +199,24 @@ final class MenuBarItemManager: ObservableObject {
         return "\(desiredOrder.joined(separator: ">"))|\(item.uniqueIdentifier)|\(side)|\(destination.targetItem.uniqueIdentifier)"
     }
 
+    /// The single record of which items have been failing, and how.
+    let failureLedger = MenuBarItemFailureLedger()
+
+    /// How long a failed item stays excluded from bulk-apply moves.
+    ///
+    /// Kept as a forwarding shim so callers and tests do not have to reach
+    /// through to the ledger for a value that reads as a property of the
+    /// manager's retry policy.
+    nonisolated static func moveFailureBackoffInterval(failureCount: Int) -> Duration {
+        MenuBarItemFailureLedger.backoffInterval(failureCount: failureCount)
+    }
+
+    /// How the failure ledger should file an arbitrary error thrown by a
+    /// move. Only `EventError` carries enough detail to blame the owner.
+    nonisolated static func failureKind(of error: any Error) -> MenuBarItemFailureLedger.FailureKind {
+        (error as? EventError)?.failureKind ?? .other
+    }
+
     /// Cached timeouts for move operations.
     private var moveOperationTimeouts = [MenuBarItemTag: Duration]()
 
@@ -2993,6 +3011,28 @@ extension MenuBarItemManager {
             }
         }
 
+        /// How the failure ledger should file this error.
+        var failureKind: MenuBarItemFailureLedger.FailureKind {
+            indicatesUnresponsiveOwner ? .unresponsiveOwner : .other
+        }
+
+        /// Whether this failure means the item's owner never acknowledged
+        /// the events we posted.
+        ///
+        /// Only failures that are specifically about the owner staying
+        /// silent count. `cannotComplete` is deliberately excluded: it is
+        /// the catch-all, and attributing it to the owner would mark items
+        /// over failures that had nothing to do with them.
+        var indicatesUnresponsiveOwner: Bool {
+            switch self {
+            case .eventOperationTimeout, .itemResponseTimeout:
+                true
+            case .cannotComplete, .invalidEventSource, .missingMouseLocation,
+                 .eventCreationFailure, .itemNotMovable, .missingItemBounds:
+                false
+            }
+        }
+
         var recoverySuggestion: String? {
             if case .itemNotMovable = self {
                 return nil
@@ -4206,6 +4246,7 @@ extension MenuBarItemManager {
                 // Verify the item actually reached the correct position.
                 if try await itemHasCorrectPosition(item: item, for: destination, on: resolvedDisplayID) {
                     MenuBarItemManager.diagLog.debug("Attempt \(n) succeeded and verified, finished with move")
+                    failureLedger.recordSuccess(for: item)
                     // Validate that item didn't get stuck when moving to hidden section
                     await validateItemPositionAfterMove(item: item, destination: destination, on: resolvedDisplayID)
                     return true
@@ -4216,12 +4257,32 @@ extension MenuBarItemManager {
                     continue
                 }
             } catch {
+                // An owner with a standing record of ignoring synthetic events
+                // gets no further attempts once it fails this way again. This
+                // is deliberately narrower than capping maxAttempts up front:
+                // the loop also retries when the owner *did* respond but the
+                // item did not land, which is a different failure and still
+                // deserves its full budget. Capping up front would strip those
+                // retries too, and since the move would then fail, the item
+                // could never earn the success that clears its record.
+                if let error = error as? EventError,
+                   error.indicatesUnresponsiveOwner,
+                   failureLedger.isUnresponsive(item) {
+                    MenuBarItemManager.diagLog.warning(
+                        "Attempt \(n): \(item.logString) failed the way it always does, aborting move"
+                    )
+                    failureLedger.recordFailure(for: item, kind: .unresponsiveOwner)
+                    throw error
+                }
                 MenuBarItemManager.diagLog.debug("Attempt \(n) failed: \(error)")
                 if n < maxAttempts {
                     try await waitForMoveOperationBuffer()
                     continue
                 }
-                if error is EventError {
+                if let error = error as? EventError {
+                    if error.indicatesUnresponsiveOwner {
+                        failureLedger.recordFailure(for: item, kind: .unresponsiveOwner)
+                    }
                     throw error
                 }
                 throw EventError.cannotComplete
@@ -5137,7 +5198,16 @@ extension MenuBarItemManager {
     ///   - maxAttempts: Maximum number of click attempts (default 3).
     ///     Pass `1` from `temporarilyShow` so a single failure returns
     ///     immediately and the caller's fallback path fires promptly.
-    func click(item: MenuBarItem, with mouseButton: CGMouseButton, skipInputPause: Bool = false, maxAttempts: Int = 3) async throws {
+    /// - Returns: What the owner was observed to do in response. Callers
+    ///   that need the window the click opened can read it from here
+    ///   instead of scanning for it themselves.
+    @discardableResult
+    func click(
+        item: MenuBarItem,
+        with mouseButton: CGMouseButton,
+        skipInputPause: Bool = false,
+        maxAttempts: Int = 3
+    ) async throws -> ClickReactionVerifier.Reaction {
         guard let appState else {
             throw EventError.cannotComplete
         }
@@ -5158,7 +5228,15 @@ extension MenuBarItemManager {
             appState.hidEventManager.startAll()
         }
 
-        let maxAttempts = max(1, maxAttempts)
+        // An owner already known to ignore synthetic events gets one attempt
+        // instead of three. Retrying it only repeats the cursor warp that the
+        // user sees as the item jittering, and the extra attempts have never
+        // been what makes such an owner answer.
+        let maxAttempts: Int = if failureLedger.isUnresponsive(item) {
+            1
+        } else {
+            max(1, maxAttempts)
+        }
         let attemptStartTime = Date.now
         for n in 1 ... maxAttempts {
             guard !Task.isCancelled else {
@@ -5166,10 +5244,26 @@ extension MenuBarItemManager {
             }
             do {
                 let clickStartTime = Date.now
+                let snapshot = ClickReactionVerifier.snapshot(for: item)
                 try await postClickEvents(item: item, mouseButton: mouseButton)
                 let clickDuration = Date.now.timeIntervalSince(clickStartTime)
                 MenuBarItemManager.diagLog.debug("Attempt \(n) succeeded in \(Int(clickDuration * 1000))ms, finished with click")
-                return
+
+                // The events landed. Whether the owner did anything with
+                // them is a separate question, and only a yes is allowed
+                // to clear a standing unresponsive mark: an owner that
+                // drops synthetic events acknowledges them exactly like
+                // one that acts on them, so crediting the post itself
+                // would forgive the very behaviour the mark records.
+                let reaction = await ClickReactionVerifier.verify(against: snapshot)
+                if reaction.didReact {
+                    failureLedger.recordSuccess(for: item)
+                } else {
+                    MenuBarItemManager.diagLog.debug(
+                        "\(item.logString) acknowledged the click but was not seen reacting to it"
+                    )
+                }
+                return reaction
             } catch {
                 let attemptDuration = Date.now.timeIntervalSince(attemptStartTime)
                 MenuBarItemManager.diagLog.debug("Attempt \(n) failed after \(Int(attemptDuration * 1000))ms: \(error)")
@@ -5177,12 +5271,19 @@ extension MenuBarItemManager {
                     await eventSleep()
                     continue
                 }
-                if error is EventError {
+                if let error = error as? EventError {
+                    if error.indicatesUnresponsiveOwner {
+                        failureLedger.recordFailure(for: item, kind: .unresponsiveOwner)
+                    }
                     throw error
                 }
                 throw EventError.cannotComplete
             }
         }
+
+        // Unreachable: the loop runs at least once and every path through
+        // it either returns or throws.
+        throw EventError.cannotComplete
     }
 }
 
@@ -5699,6 +5800,11 @@ extension MenuBarItemManager {
         // menu via an Accessibility press once revealed, mirroring the on-screen
         // path. Other apps (and right-clicks) use the synthetic click below. The
         // popup window capture that follows is unaffected by which path opened it.
+        //
+        // The window the click opened, when the click path we took already
+        // watched for it. Saves repeating the scan below.
+        var observedInterfaceWindowID: CGWindowID?
+
         if mouseButton == .left, isElectronItem(clickItem), pressItemViaAccessibility(clickItem) {
             MenuBarItemManager.diagLog.info("Activated \(clickItem.logString) via AX press")
         } else {
@@ -5706,7 +5812,8 @@ extension MenuBarItemManager {
                 // Single attempt: the item is already at a known-good position with
                 // fresh bounds. If it fails, fall through to the fallback path below
                 // rather than spending 3× the semaphore timeout here.
-                try await click(item: clickItem, with: mouseButton, skipInputPause: true, maxAttempts: 1)
+                let reaction = try await click(item: clickItem, with: mouseButton, skipInputPause: true, maxAttempts: 1)
+                observedInterfaceWindowID = reaction.openedWindowID
             } catch {
                 MenuBarItemManager.diagLog.error("Error clicking item (first attempt): \(error); attempting fallback click")
 
@@ -5722,7 +5829,8 @@ extension MenuBarItemManager {
                 // the fallback succeeds, keeping isShowingInterface accurate for
                 // the rehide logic.
                 do {
-                    try await click(item: fallbackItem, with: mouseButton, skipInputPause: true)
+                    let reaction = try await click(item: fallbackItem, with: mouseButton, skipInputPause: true)
+                    observedInterfaceWindowID = reaction.openedWindowID
                 } catch {
                     MenuBarItemManager.diagLog.error("Fallback click also failed for \(item.logString): \(error)")
                     // Icon is visible but both click attempts failed.
@@ -5732,11 +5840,18 @@ extension MenuBarItemManager {
         }
 
         // Capture the popup window opened by whichever click path succeeded.
-        await eventSleep(for: .milliseconds(100))
-        let windowsAfterClick = WindowInfo.createWindows(option: .onScreen)
+        // The synthetic-click paths already waited for it and told us which
+        // one it was; only the AX press path, which posts nothing and so has
+        // nothing to verify, still has to look for itself.
+        if let observedInterfaceWindowID {
+            context.shownInterfaceWindow = WindowInfo(windowID: observedInterfaceWindowID)
+        } else {
+            await eventSleep(for: .milliseconds(100))
+            let windowsAfterClick = WindowInfo.createWindows(option: .onScreen)
 
-        context.shownInterfaceWindow = windowsAfterClick.first { window in
-            window.ownerPID == clickPID && !idsBeforeClick.contains(window.windowID)
+            context.shownInterfaceWindow = windowsAfterClick.first { window in
+                window.ownerPID == clickPID && !idsBeforeClick.contains(window.windowID)
+            }
         }
 
         return .movedAndClicked
@@ -8114,6 +8229,15 @@ extension MenuBarItemManager {
 
             let freshItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
             let isControlUID = uid == hiddenCtrlUID || uid == ahCtrlUID
+            // Control items are the section anchors of the full sort —
+            // skipping one would misplace everything after it, so they
+            // are exempt from failure backoff.
+            if !isControlUID, failureLedger.isUnderBackoff(key: uid) {
+                MenuBarItemManager.diagLog.warning(
+                    "Profile layout (full sort): \(uid) under move-failure backoff, skipping"
+                )
+                continue
+            }
             guard let item = freshItems.first(where: {
                 if isControlUID {
                     return $0.uniqueIdentifier == uid
@@ -8135,8 +8259,10 @@ extension MenuBarItemManager {
                 MenuBarItemManager.diagLog.debug("Profile layout (full sort): \(uid) → .leftOfItem(CC)")
                 try await move(item: item, to: .leftOfItem(controlCenter), skipInputPause: true)
                 movedCount += 1
+                failureLedger.recordSuccess(for: item)
                 try? await Task.sleep(for: .milliseconds(200))
             } catch {
+                failureLedger.recordFailure(for: item, kind: Self.failureKind(of: error))
                 MenuBarItemManager.diagLog.error("Profile layout (full sort): failed \(uid): \(error)")
             }
         }
@@ -8967,6 +9093,13 @@ extension MenuBarItemManager {
                 for planned in plannedMoves {
                     guard !Task.isCancelled else { break }
 
+                    if failureLedger.isUnderBackoff(key: planned.uid) {
+                        MenuBarItemManager.diagLog.warning(
+                            "Profile layout: \(planned.uid) under move-failure backoff, skipping"
+                        )
+                        continue
+                    }
+
                     let allFreshItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
                     var freshItemsCopy = allFreshItems
                     guard let freshControl = ControlItemPair(
@@ -8994,8 +9127,10 @@ extension MenuBarItemManager {
                     do {
                         try await move(item: item, to: dest, skipInputPause: true)
                         movedCount += 1
+                        failureLedger.recordSuccess(for: item)
                         try? await Task.sleep(for: .milliseconds(200))
                     } catch {
+                        failureLedger.recordFailure(for: item, kind: Self.failureKind(of: error))
                         MenuBarItemManager.diagLog.error(
                             "Profile layout: failed to move \(planned.uid): \(error)"
                         )
