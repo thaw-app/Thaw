@@ -161,24 +161,10 @@ final class AdvancedSettings {
         }
     }
 
-    /// A Boolean value that controls whether menu bar item moves are
-    /// delivered via a synthetic Command-drag posted event sequence instead
-    /// of warping the real cursor and stamping the raw windowID (0x33)
-    /// event field. Experimental; default off. When enabled, real user
-    /// mouse input is suppressed for the duration of each move gesture.
-    var useSyntheticCursorMoves = Defaults.DefaultValue.useSyntheticCursorMoves {
-        didSet {
-            guard oldValue != useSyntheticCursorMoves else { return }
-            Defaults.set(useSyntheticCursorMoves, forKey: .useSyntheticCursorMoves)
-        }
-    }
-
-    /// A Boolean value that controls whether legacy menu bar item move
-    /// events additionally stamp the raw windowID (0x33) CGEvent field, on
-    /// top of the unconditional mouseEventWindowUnderMousePointer* fields.
-    /// Experimental; default on, matching shipped behavior. Only affects
-    /// the legacy move path; has no effect when `useSyntheticCursorMoves`
-    /// is enabled.
+    /// A Boolean value that controls whether menu bar item move events
+    /// additionally stamp the raw windowID (0x33) CGEvent field, on top of
+    /// the unconditional mouseEventWindowUnderMousePointer* fields.
+    /// Experimental; default on, matching shipped behavior.
     var stampWindowIDOnLegacyMoves = Defaults.DefaultValue.stampWindowIDOnLegacyMoves {
         didSet {
             guard oldValue != stampWindowIDOnLegacyMoves else { return }
@@ -255,7 +241,6 @@ final class AdvancedSettings {
         Defaults.ifPresent(key: .useLCSSortingOnNotchedDisplays, assign: &useLCSSortingOnNotchedDisplays)
         Defaults.ifPresent(key: .enableMenuBarItemOverflow, assign: &enableMenuBarItemOverflow)
         Defaults.ifPresent(key: .useAXClickDelivery, assign: &useAXClickDelivery)
-        Defaults.ifPresent(key: .useSyntheticCursorMoves, assign: &useSyntheticCursorMoves)
         Defaults.ifPresent(key: .stampWindowIDOnLegacyMoves, assign: &stampWindowIDOnLegacyMoves)
         Defaults.ifPresent(key: .searchIncludeVisible, assign: &searchIncludeVisible)
         Defaults.ifPresent(key: .searchIncludeHidden, assign: &searchIncludeHidden)
@@ -346,8 +331,6 @@ final class AdvancedSettings {
                 enableMenuBarItemOverflow = boolValue
             case "useAXClickDelivery":
                 useAXClickDelivery = boolValue
-            case "useSyntheticCursorMoves":
-                useSyntheticCursorMoves = boolValue
             case "stampWindowIDOnLegacyMoves":
                 stampWindowIDOnLegacyMoves = boolValue
             case "searchIncludeVisible":

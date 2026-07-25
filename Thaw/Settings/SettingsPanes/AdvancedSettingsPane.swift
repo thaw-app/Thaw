@@ -39,7 +39,6 @@ struct AdvancedSettingsPane: View {
                     enableSecondaryContextMenuQuit
                 }
                 useAXClickDelivery
-                useSyntheticCursorMoves
                 stampWindowIDOnLegacyMoves
             }
             IceSection("Permissions") {
@@ -261,23 +260,6 @@ struct AdvancedSettingsPane: View {
                 instead of a simulated click. Falls back automatically to the simulated \
                 click if the accessibility action fails. Only affects left-clicks from \
                 the IceBar; moves and right-clicks are unaffected.
-                """
-            )
-            .padding(.trailing, 75)
-        }
-    }
-
-    private var useSyntheticCursorMoves: some View {
-        Toggle(
-            "Use synthetic cursor moves for menu bar item drags (Experimental)",
-            isOn: $settings.useSyntheticCursorMoves
-        )
-        .annotation {
-            Text(
-                """
-                Move menu bar items using a posted synthetic Command-drag event sequence \
-                instead of warping the real cursor. Real mouse input is briefly suppressed \
-                while an item is being moved.
                 """
             )
             .padding(.trailing, 75)
