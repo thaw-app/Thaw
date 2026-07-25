@@ -68,6 +68,64 @@ public func cgsSetConnectionProperty(
 @_silgen_name("CGSCopyActiveMenuBarDisplayIdentifier")
 public func cgsCopyActiveMenuBarDisplayIdentifier(_ cid: CGSConnectionID) -> Unmanaged<CFString>?
 
+// MARK: - SLSMenuBar
+
+// Signatures recovered by disassembling SkyLight on macOS 27.0 (26A5388g) and
+// confirmed by a live unentitled probe: every one returns err=0 from an ordinary
+// main window-server connection, with no entitlement gate. Unlike MenuBarAgent's
+// menu-bar services — all of which require an unobtainable `com.apple.private.*`
+// entitlement — this surface is WindowServer IPC and is genuinely reachable.
+//
+// Note the asymmetry: `SLSGetSpaceMenuBarReveal` takes a *space* ID and no
+// connection (it calls `CGSGetMainConnectionMachPort()` internally), and returns
+// the reveal fraction directly rather than through an out-parameter.
+
+// These are resolved with `dlsym` rather than `@_silgen_name` because they live
+// in SkyLight, which the app does not link. Linking a private framework to reach
+// them would turn a symbol that disappears in some future macOS into a launch
+// failure; an unresolved `dlsym` is just a nil pointer the callers already treat
+// as "no information".
+public enum SLSMenuBar {
+    /// How far through an autohide reveal the menu bar is on `sid`, 0...1.
+    /// Takes a *space* ID and no connection: it resolves the connection itself.
+    public typealias GetSpaceMenuBarReveal = @convention(c) (CGSSpaceID) -> Float
+    /// Bounds of the menu bar while revealed. Zero when nothing is revealed.
+    public typealias GetRevealedMenuBarBounds =
+        @convention(c) (CGSConnectionID, UnsafeMutablePointer<CGRect>) -> CGError
+    /// Whether the menu bar is set to autohide.
+    public typealias GetMenuBarAutohideEnabled =
+        @convention(c) (CGSConnectionID, UnsafeMutablePointer<Int32>) -> CGError
+    /// Whether the menu bar is currently visible on `sid`.
+    public typealias IsMenuBarVisibleOnSpace = @convention(c) (CGSConnectionID, CGSSpaceID) -> Int32
+
+    // Resolved once at first use and never mutated, so unchecked is accurate.
+    private nonisolated(unsafe) static let handle: UnsafeMutableRawPointer? =
+        dlopen("/System/Library/PrivateFrameworks/SkyLight.framework/SkyLight", RTLD_LAZY)
+
+    private static func symbol<T>(_ name: String, as _: T.Type) -> T? {
+        guard let handle, let address = dlsym(handle, name) else { return nil }
+        return unsafeBitCast(address, to: T.self)
+    }
+
+    public nonisolated(unsafe) static let getSpaceMenuBarReveal =
+        symbol("SLSGetSpaceMenuBarReveal", as: GetSpaceMenuBarReveal.self)
+    public nonisolated(unsafe) static let getRevealedMenuBarBounds =
+        symbol("SLSGetRevealedMenuBarBounds", as: GetRevealedMenuBarBounds.self)
+    public nonisolated(unsafe) static let getMenuBarAutohideEnabled =
+        symbol("SLSGetMenuBarAutohideEnabled", as: GetMenuBarAutohideEnabled.self)
+    public nonisolated(unsafe) static let isMenuBarVisibleOnSpace =
+        symbol("SLSIsMenuBarVisibleOnSpace", as: IsMenuBarVisibleOnSpace.self)
+
+    /// Whether every symbol resolved. False on an OS that has moved or renamed
+    /// them, in which case reveal state is simply unavailable.
+    public static var isAvailable: Bool {
+        getSpaceMenuBarReveal != nil
+            && getRevealedMenuBarBounds != nil
+            && getMenuBarAutohideEnabled != nil
+            && isMenuBarVisibleOnSpace != nil
+    }
+}
+
 // MARK: - CGSEvent
 
 @_silgen_name("CGSEventIsAppUnresponsive")
