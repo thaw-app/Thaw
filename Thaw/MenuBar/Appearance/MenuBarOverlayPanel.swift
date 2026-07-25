@@ -121,41 +121,12 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
     /// The screen that owns the panel.
     let owningScreen: NSScreen
 
-    /// A tiny invisible window used to detect Mission Control.
-    ///
-    /// This window is NOT stationary, so it moves during Mission Control.
-    /// By comparing its actual on-screen position with its intended position,
-    /// we can reliably detect if Mission Control is active.
-    private lazy var missionControlProbeWindow: NSPanel = {
-        let window = NSPanel(
-            contentRect: CGRect(x: owningScreen.frame.midX, y: owningScreen.frame.midY, width: 1, height: 1),
-            styleMask: [.borderless, .nonactivatingPanel],
-            backing: .buffered,
-            defer: false
-        )
-        window.backgroundColor = .clear
-        window.alphaValue = 0.0
-        window.isOpaque = false
-        window.hasShadow = false
-        window.isReleasedWhenClosed = false
-        window.ignoresMouseEvents = true
-        window.canHide = false
-        window.hidesOnDeactivate = false
-        window.isExcludedFromWindowsMenu = true
-        // Specifically NOT .stationary or .transient to allow movement.
-        // .ignoresCycle and .fullScreenAuxiliary help hide the 'Thaw' label.
-        window.collectionBehavior = [.ignoresCycle, .fullScreenAuxiliary]
-        // Low enough for Mission Control to arrange (both axes move).
-        // Positioned at screen center so MC grid displaces it in both x and y.
-        window.level = .floating
-        return window
-    }()
-
-    /// The origin of the probe window when it is at rest (not in Mission Control).
-    private var probeAtRestOrigin: CGPoint?
-
-    /// The time when the probe window first became displaced.
-    private var missionControlDisplacedSince: Date?
+    /// Task observing the shared `MissionControlDetector.isActive`, which
+    /// replaces this panel's own Mission Control probe timer/window (moved
+    /// to `MissionControlDetector`, owned by `MenuBarAppearanceManager`, so
+    /// the whole app polls the window server once instead of once per
+    /// panel).
+    private var missionControlObservationTask: Task<Void, Never>?
 
     /// Creates an overlay panel with the given app state and owning screen.
     init(appState: AppState, owningScreen: NSScreen) {
@@ -185,8 +156,6 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
         ]
         self.contentView = MenuBarOverlayPanelContentView()
         configureCancellables()
-
-        missionControlProbeWindow.orderFrontRegardless()
     }
 
     /// Updates `alphaValue` based on the combination of
@@ -208,69 +177,6 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
             .sink { [weak self] _ in
                 self?.isMissionControlActive = false
                 self?.needsShow = true
-            }
-            .store(in: &c)
-
-        // Poll the mission control probe window to detect if it has moved/scaled.
-        Timer.publish(every: 0.1, on: .main, in: .common)
-            .autoconnect()
-            .sink { [weak self] _ in
-                guard let self else { return }
-                let windowID = CGWindowID(self.missionControlProbeWindow.windowNumber)
-                guard let actualBounds = Bridging.getWindowBounds(for: windowID) else {
-                    // No bounds: we can't observe displacement this tick, so
-                    // don't keep asserting Mission Control is active — that
-                    // would suppress the overlay indefinitely if the query
-                    // never succeeds again.
-                    self.missionControlDisplacedSince = nil
-                    if self.isMissionControlActive {
-                        self.isMissionControlActive = false
-                    }
-                    return
-                }
-                let actualOrigin = actualBounds.origin
-
-                // Capture the "at-rest" origin when we're reasonably sure we're not in Mission Control
-                if self.probeAtRestOrigin == nil {
-                    self.probeAtRestOrigin = actualOrigin
-                    return
-                }
-
-                guard let atRest = self.probeAtRestOrigin else { return }
-
-                let isActive = abs(actualOrigin.x - atRest.x) > 1.0 &&
-                    abs(actualOrigin.y - atRest.y) > 1.0
-
-                let now = Date()
-
-                if isActive {
-                    if let displacedSince = self.missionControlDisplacedSince {
-                        if now.timeIntervalSince(displacedSince) > 0.1 {
-                            self.isMissionControlActive = true
-                        }
-                    } else {
-                        self.missionControlDisplacedSince = now
-                    }
-                } else {
-                    self.missionControlDisplacedSince = nil
-                    self.isMissionControlActive = false
-                }
-            }
-            .store(in: &c)
-
-        // Re-latch the probe's at-rest baseline after a display
-        // configuration change (resolution, menu bar height, arrangement).
-        // The old baseline no longer reflects the probe window's correct
-        // resting position; a stale baseline can wedge the probe into a
-        // false-positive "Mission Control active" state that never clears
-        // (the displacement check above never sees the origin return to
-        // the old, now-incorrect, at-rest position).
-        NotificationCenter.default
-            .publisher(for: NSApplication.didChangeScreenParametersNotification)
-            .sink { [weak self] _ in
-                guard let self else { return }
-                self.probeAtRestOrigin = nil
-                self.missionControlDisplacedSince = nil
             }
             .store(in: &c)
 
@@ -432,6 +338,17 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
                     self.updateWindowLevel()
                 }
             }
+
+            // Mirror the shared `MissionControlDetector.isActive` into this
+            // panel's own `isMissionControlActive`, instead of each panel
+            // running its own probe timer/window.
+            missionControlObservationTask = Task { [weak self, weak appState] in
+                let changes = Observations { appState?.appearanceManager.missionControlDetector.isActive ?? false }
+                for await isActive in changes {
+                    guard let self else { return }
+                    self.isMissionControlActive = isActive
+                }
+            }
         }
 
         cancellables = c
@@ -555,7 +472,6 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
         // Clear all published state to release retained objects
         applicationMenuFrame = nil
         updateFlags.removeAll()
-        probeAtRestOrigin = nil
     }
 
     override func close() {
@@ -567,14 +483,14 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
         menuBarManagerObservationTask = nil
         appearanceConfigurationObservationTask?.cancel()
         appearanceConfigurationObservationTask = nil
+        missionControlObservationTask?.cancel()
+        missionControlObservationTask = nil
         // Clear publishers to release references
         cancellables.removeAll()
         // Clear captured wallpaper image and other state
         cleanupReferences()
         // Release content view
         contentView = nil
-        // Close the mission control probe window
-        missionControlProbeWindow.close()
         super.close()
         #if DEBUG
             diagLog.debug("Overlay panel closed. Active windows: \(NSApplication.shared.windows.count)")

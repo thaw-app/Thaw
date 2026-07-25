@@ -53,9 +53,7 @@ final class MenuBarAppearanceManager {
                 }
             } else {
                 if !needsOverlayPanels(for: configuration) {
-                    while let panel = overlayPanels.popFirst() {
-                        panel.close()
-                    }
+                    closeAllOverlayPanels()
                 }
             }
         }
@@ -98,6 +96,14 @@ final class MenuBarAppearanceManager {
     /// The currently managed menu bar overlay panels.
     private(set) var overlayPanels = Set<MenuBarOverlayPanel>()
 
+    /// The shared Mission Control detector used by all overlay panels.
+    ///
+    /// Owned here, alongside `overlayPanels`, rather than one per panel:
+    /// probing the window server for displacement is a synchronous IPC
+    /// call, and running it once for the whole app instead of once per
+    /// screen is the point of this type. See `MissionControlDetector`.
+    let missionControlDetector = MissionControlDetector()
+
     /// The amount to inset the menu bar if called for by the configuration.
     let menuBarInsetAmount: CGFloat = 3.5
 
@@ -135,9 +141,7 @@ final class MenuBarAppearanceManager {
                 guard let self else {
                     return
                 }
-                while let panel = overlayPanels.popFirst() {
-                    panel.close()
-                }
+                closeAllOverlayPanels()
                 if Set(overlayPanels.map(\.owningScreen)) != Set(NSScreen.managedScreens) {
                     configureOverlayPanels(with: configuration)
                 }
@@ -160,9 +164,7 @@ final class MenuBarAppearanceManager {
                     configureOverlayPanels(with: configuration)
                 } else if !needsOverlayPanels(for: configuration) {
                     // Configuration no longer needs panels, close them
-                    while let panel = overlayPanels.popFirst() {
-                        panel.close()
-                    }
+                    closeAllOverlayPanels()
                 }
             }
         }
@@ -198,9 +200,7 @@ final class MenuBarAppearanceManager {
         force: Bool = false
     ) {
         // Close existing panels to prevent memory leaks and duplicate windows
-        while let panel = overlayPanels.popFirst() {
-            panel.close()
-        }
+        closeAllOverlayPanels()
 
         guard
             let appState,
@@ -217,5 +217,22 @@ final class MenuBarAppearanceManager {
         }
 
         self.overlayPanels = overlayPanels
+
+        // Mission Control displaces every on-screen window together, so one
+        // representative screen is enough to drive the shared detector for
+        // all panels.
+        if let representativeScreen = NSScreen.managedScreens.first {
+            missionControlDetector.start(representativeScreen: representativeScreen)
+        }
+    }
+
+    /// Closes all currently managed overlay panels and stops the shared
+    /// Mission Control detector, since nothing needs it while there are no
+    /// panels to drive.
+    private func closeAllOverlayPanels() {
+        while let panel = overlayPanels.popFirst() {
+            panel.close()
+        }
+        missionControlDetector.stop()
     }
 }
