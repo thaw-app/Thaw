@@ -35,11 +35,15 @@ final class PlanNotchOverflowTests: XCTestCase {
         alwaysHidden: [String] = []
     ) -> [String] {
         var result = [String]()
-        if let chevron { result.append(chevron) }
+        if let chevron {
+            result.append(chevron)
+        }
         result.append(contentsOf: visible)
         result.append(hiddenCtrl)
         result.append(contentsOf: hidden)
-        if let ahCtrl { result.append(ahCtrl) }
+        if let ahCtrl {
+            result.append(ahCtrl)
+        }
         result.append(contentsOf: alwaysHidden)
         return result
     }
@@ -515,5 +519,124 @@ final class PlanNotchOverflowTests: XCTestCase {
             activeHasNotch: true,
             activeIsMainDisplay: true
         ))
+    }
+
+    // MARK: - Inverted / missing control-item order guard (Plan 004)
+
+    /// MenuBarItemManager.enforceControlItemOrder exists because control items
+    /// can transiently appear out of order. If the always-hidden control sits
+    /// BEFORE the hidden control in desiredFiltered, hiddenEnd < hiddenStart and
+    /// the rebuild slice would trap. The planner must bail with inputs unchanged
+    /// instead of crashing.
+    func testInvertedControlOrderYieldsNoOverflowInsteadOfTrapping() {
+        // ahCtrl appears before hiddenCtrl — inverted from the expected order.
+        let desired = [chevron, "a", "b", ahCtrl, hiddenCtrl]
+        let widths: [String: CGFloat] = [chevron: 24, "a": 24, "b": 24]
+        let sectionMap = ["a": "visible", "b": "visible"]
+
+        let result = LayoutSolver.planNotchOverflow(
+            desiredFiltered: desired,
+            unmanagedUIDs: [],
+            controlUIDs: ControlUIDs(visible: chevron, hidden: hiddenCtrl, alwaysHidden: ahCtrl),
+            sectionMap: sectionMap,
+            uidWidths: widths,
+            availableWidth: 24 // only chevron fits — overflow would otherwise be computed
+        )
+
+        XCTAssertEqual(result.overflowUIDs, [], "must not eject items when control order is inverted")
+        XCTAssertEqual(result.updatedDesiredFiltered, desired)
+        XCTAssertEqual(result.updatedSectionMap, sectionMap)
+    }
+
+    /// The hidden control can be missing entirely (e.g. during a display
+    /// reconnect) while the always-hidden control is still present. That makes
+    /// hiddenStart fall back to endIndex, which can land after hiddenEnd — the
+    /// same trap shape as inverted order. Must bail, not crash.
+    func testHiddenControlAbsentAlwaysHiddenPresentYieldsNoOverflow() {
+        // hiddenCtrl is absent from desiredFiltered entirely.
+        let desired = [chevron, "a", "b", ahCtrl]
+        let widths: [String: CGFloat] = [chevron: 24, "a": 24, "b": 24]
+        let sectionMap = ["a": "visible", "b": "visible"]
+
+        let result = LayoutSolver.planNotchOverflow(
+            desiredFiltered: desired,
+            unmanagedUIDs: [],
+            controlUIDs: ControlUIDs(visible: chevron, hidden: hiddenCtrl, alwaysHidden: ahCtrl),
+            sectionMap: sectionMap,
+            uidWidths: widths,
+            availableWidth: 24 // only chevron fits — overflow would otherwise be computed
+        )
+
+        XCTAssertEqual(result.overflowUIDs, [], "must not eject items when the hidden control is missing")
+        XCTAssertEqual(result.updatedDesiredFiltered, desired)
+        XCTAssertEqual(result.updatedSectionMap, sectionMap)
+    }
+
+    /// Guard rail on the guard itself: when hiddenCtrl and ahCtrl are adjacent
+    /// and in the correct order, hiddenStart == hiddenEnd (an empty, but valid,
+    /// hidden section). An over-eager `<` instead of `<=` would silently disable
+    /// overflow for every user with an empty hidden section, so this must still
+    /// compute overflow normally.
+    func testEmptyHiddenSectionInCorrectOrderStillOverflowsNormally() {
+        // Same shape as testProfileFitsUnmanagedOverflowsLeftmostFirst: hiddenCtrl
+        // and ahCtrl are adjacent (no items between them) via the default empty
+        // hidden/alwaysHidden lists in makeSequence.
+        let desired = makeSequence(
+            chevron: chevron,
+            visible: ["a", "u1", "u2"],
+            hiddenCtrl: hiddenCtrl,
+            ahCtrl: ahCtrl
+        )
+        let widths: [String: CGFloat] = [chevron: 24, "a": 24, "u1": 24, "u2": 24]
+        let sectionMap = ["a": "visible", "u1": "visible", "u2": "visible"]
+
+        let result = LayoutSolver.planNotchOverflow(
+            desiredFiltered: desired,
+            unmanagedUIDs: ["u1", "u2"],
+            controlUIDs: ControlUIDs(visible: chevron, hidden: hiddenCtrl, alwaysHidden: ahCtrl),
+            sectionMap: sectionMap,
+            uidWidths: widths,
+            availableWidth: 90
+        )
+
+        XCTAssertEqual(result.overflowUIDs, ["u1"], "empty-but-correctly-ordered hidden section must not suppress overflow")
+        XCTAssertEqual(
+            result.updatedDesiredFiltered,
+            [chevron, "a", "u2", hiddenCtrl, "u1", ahCtrl],
+            "overflowed item must land between hiddenCtrl and ahCtrl"
+        )
+    }
+
+    /// Both control items can be absent from desiredFiltered at once. hiddenStart
+    /// and hiddenEnd both fall back to endIndex (trivially equal), so the guard
+    /// must not trap — the rebuild proceeds normally and (re)inserts the control
+    /// items, since the rebuild always stamps them in regardless of whether they
+    /// were present in the input.
+    ///
+    /// Deliberately NOT asserting "inputs returned unchanged" here: with both
+    /// controls absent, hiddenStart == hiddenEnd == endIndex, so the `<=` guard
+    /// passes and the function proceeds to a normal rebuild rather than taking
+    /// the early-return path. Asserting the actual rebuilt output is correct;
+    /// do not "fix" this back to an unchanged-inputs assertion.
+    func testBothControlsAbsentYieldsNoTrap() {
+        let desired = [chevron, "a", "b"]
+        let widths: [String: CGFloat] = [chevron: 24, "a": 24, "b": 24]
+        let sectionMap = ["a": "visible", "b": "visible"]
+
+        let result = LayoutSolver.planNotchOverflow(
+            desiredFiltered: desired,
+            unmanagedUIDs: [],
+            controlUIDs: ControlUIDs(visible: chevron, hidden: hiddenCtrl, alwaysHidden: ahCtrl),
+            sectionMap: sectionMap,
+            uidWidths: widths,
+            availableWidth: 24 // only chevron fits — forces the profile-exceeds-budget branch
+        )
+
+        XCTAssertEqual(Set(result.overflowUIDs), Set(["a", "b"]), "overflow still computed when both controls are absent")
+        XCTAssertEqual(
+            result.updatedDesiredFiltered,
+            [chevron, hiddenCtrl, "a", "b", ahCtrl],
+            "rebuild must not trap and control items are reinserted even though absent from input"
+        )
     }
 }

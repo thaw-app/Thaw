@@ -533,15 +533,31 @@ nonisolated enum LayoutSolver {
         var controlSet: Set<String> = [controlUIDs.hidden]
         if let ahUID = controlUIDs.alwaysHidden { controlSet.insert(ahUID) }
 
-        let hiddenStart = desiredFiltered.firstIndex(of: controlUIDs.hidden)
-            .map { $0 + 1 } ?? desiredFiltered.endIndex
-        let hiddenEnd = controlUIDs.alwaysHidden.flatMap { desiredFiltered.firstIndex(of: $0) }
-            ?? desiredFiltered.endIndex
+        let hiddenIndex = desiredFiltered.firstIndex(of: controlUIDs.hidden)
+        let alwaysHiddenIndex = controlUIDs.alwaysHidden
+            .flatMap { desiredFiltered.firstIndex(of: $0) }
+
+        let hiddenStart = hiddenIndex.map { $0 + 1 } ?? desiredFiltered.endIndex
+        let hiddenEnd = alwaysHiddenIndex ?? desiredFiltered.endIndex
+
+        // The control items can transiently appear out of order (see
+        // MenuBarItemManager.enforceControlItemOrder), and the hidden control
+        // can be missing entirely during a display reconnect. Either case makes
+        // the hidden-section slice below an invalid range, which would trap.
+        // A layout we cannot describe is one we must not rewrite: leave the
+        // inputs untouched until the ordering settles.
+        guard hiddenStart <= hiddenEnd else {
+            return NotchOverflowResult(
+                overflowUIDs: [],
+                updatedDesiredFiltered: desiredFiltered,
+                updatedSectionMap: sectionMap
+            )
+        }
+
         let existingHidden = desiredFiltered[hiddenStart ..< hiddenEnd]
             .filter { !controlSet.contains($0) }
 
-        let ahStart = controlUIDs.alwaysHidden.flatMap { desiredFiltered.firstIndex(of: $0) }
-            .map { $0 + 1 } ?? desiredFiltered.endIndex
+        let ahStart = alwaysHiddenIndex.map { $0 + 1 } ?? desiredFiltered.endIndex
         let existingAH = desiredFiltered[ahStart...]
             .filter { !controlSet.contains($0) }
 
