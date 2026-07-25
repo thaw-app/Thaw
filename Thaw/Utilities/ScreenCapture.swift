@@ -181,6 +181,11 @@ nonisolated enum ScreenCapture {
         let displayFrame = display.frame
         let scale = Double(filter.pointPixelScale)
 
+        guard Bridging.isValidCaptureBounds(screenBounds, scale: CGFloat(scale)) else {
+            diagLog.error("captureScreenBelowWindow: refusing capture with invalid screenBounds=\(screenBounds) scale=\(scale) — see issue #759")
+            return nil
+        }
+
         let localSourceRect = CGRect(
             x: screenBounds.origin.x - displayFrame.origin.x,
             y: screenBounds.origin.y - displayFrame.origin.y,
