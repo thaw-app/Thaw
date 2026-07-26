@@ -104,10 +104,16 @@ public struct MenuBarItem: CustomStringConvertible, Sendable {
         // Denylisted hiding-unsupported items stay forced-visible even under the
         // experimental toggle: the editor may reorder them, but they can never be
         // assigned to a hidden section. See ``MenuBarItemTag/isHidingUnsupported``.
+        //
+        // MenuBarAgent children are deliberately *not* excluded here. They are
+        // forced visible by ``MenuBarItemTag/isMenuBarAgentItemForcedVisible``
+        // in the base policy, which is what the toggle exists to override —
+        // Clock, Control Center, Sound and Wi-Fi are precisely the items the
+        // "hide native macOS items" setting is meant to reach. With the toggle
+        // off the base policy still stands, so they stay pinned to Visible.
         guard experimentalSystemItemHiding,
               basePolicy.isForcedVisible,
-              !tag.isHidingUnsupported,
-              !tag.isMenuBarAgentItemForcedVisible
+              !tag.isHidingUnsupported
         else {
             return basePolicy
         }

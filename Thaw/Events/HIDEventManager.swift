@@ -514,7 +514,14 @@ final class HIDEventManager: ObservableObject {
 
         let recentItems = appState.itemManager.lastOnScreenMenuBarItems.0
         let cachedItems = appState.itemManager.itemCache.managedItems
+        // Both item sets are snapshots, so a Clock that was concealed a moment
+        // ago still carries the bounds and `isOnScreen` it had while visible.
+        // Whatever now occupies that strip — Thaw's own chevron, most often —
+        // would then be read as a Clock click and open Notification Center.
+        // A Clock assigned to a hidden section has no visible hit region, so no
+        // click can legitimately be one; only a Visible Clock can be bridged.
         guard let clickedClock = Self.systemClockItem(at: event.location, in: recentItems + cachedItems),
+              controller.section(for: clickedClock) == .visible,
               controller.beginClockActivationBridge()
         else {
             return event

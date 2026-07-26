@@ -416,7 +416,7 @@ final class MenuBarItemTagTests: XCTestCase {
     }
 
     @MainActor
-    func testMacOS27NonGovernableMenuBarAgentModulesStayVisibleButMovable() throws {
+    func testMacOS27NonGovernableMenuBarAgentModulesAreHideableOnlyUnderTheToggle() throws {
         guard #available(macOS 27, *) else {
             throw XCTSkip("MenuBarAgent policy is macOS 27-specific")
         }
@@ -428,9 +428,17 @@ final class MenuBarItemTagTests: XCTestCase {
             XCTAssertTrue(tag.isMovable, title)
             XCTAssertEqual(tag.sectionManagementPolicy, .forcedVisible, title)
             XCTAssertFalse(item.canBeHidden(experimentalSystemItemHiding: false), title)
-            XCTAssertFalse(item.canBeHidden(experimentalSystemItemHiding: true), title)
+            XCTAssertTrue(item.canBeHidden(experimentalSystemItemHiding: true), title)
             XCTAssertTrue(item.isPhysicallyOrderable(experimentalSystemItemHiding: false), title)
             XCTAssertFalse(
+                MenuBarSectionController.canAssign(
+                    item,
+                    to: .hidden,
+                    experimentalSystemItemHiding: false
+                ),
+                title
+            )
+            XCTAssertTrue(
                 MenuBarSectionController.canAssign(
                     item,
                     to: .hidden,
@@ -1136,17 +1144,42 @@ final class MacOS27LayoutAnchorOrderingTests: XCTestCase {
         let wifi = MenuBarItemTag(namespace: .menuBarAgent, title: "com.apple.menuextra.wifi").tagIdentifier
         let unknown = MenuBarItemTag(namespace: .menuBarAgent, title: "Item-0").tagIdentifier
 
-        let sanitized = MenuBarSectionController.sanitizedSectionAssignment([
-            sound: .hidden,
-            displays: .alwaysHidden,
-            wifi: .hidden,
-            unknown: .hidden,
-        ])
+        let sanitized = MenuBarSectionController.sanitizedSectionAssignment(
+            [
+                sound: .hidden,
+                displays: .alwaysHidden,
+                wifi: .hidden,
+                unknown: .hidden,
+            ],
+            experimentalSystemItemHiding: false
+        )
 
         XCTAssertNil(sanitized[sound])
         XCTAssertNil(sanitized[displays])
         XCTAssertNil(sanitized[wifi])
         XCTAssertNil(sanitized[unknown])
+    }
+
+    /// The "hide native macOS items" toggle exists to reach exactly these
+    /// modules, so their assignments must survive sanitizing while it is on.
+    @MainActor
+    func testSanitizedAssignmentKeepsMenuBarAgentModulesUnderExperimentalHiding() {
+        let sound = MenuBarItemTag(namespace: .menuBarAgent, title: "Sound").tagIdentifier
+        let displays = MenuBarItemTag(namespace: .menuBarAgent, title: "com.apple.menuextra.displays").tagIdentifier
+        let clock = MenuBarItemTag(namespace: .menuBarAgent, title: "com.apple.menuextra.clock").tagIdentifier
+
+        let sanitized = MenuBarSectionController.sanitizedSectionAssignment(
+            [
+                sound: .hidden,
+                displays: .alwaysHidden,
+                clock: .hidden,
+            ],
+            experimentalSystemItemHiding: true
+        )
+
+        XCTAssertEqual(sanitized[sound], .hidden)
+        XCTAssertEqual(sanitized[displays], .alwaysHidden)
+        XCTAssertEqual(sanitized[clock], .hidden)
     }
 
     @MainActor
@@ -1933,38 +1966,30 @@ final class MacOS27LayoutAnchorOrderingTests: XCTestCase {
         XCTAssertTrue(clock.isPhysicallyOrderable(experimentalSystemItemHiding: true))
         XCTAssertTrue(siri.isMovable(experimentalSystemItemHiding: true))
         XCTAssertFalse(siri.isPhysicallyOrderable(experimentalSystemItemHiding: true))
-        // MenuBarAgent children stay assignment-visible even under experimental
-        // system-item hiding; legacy SystemUIServer Siri remains assignment-hideable.
-        XCTAssertFalse(clock.canBeHidden(experimentalSystemItemHiding: true))
+        // The experimental toggle is what makes MenuBarAgent children hideable
+        // at all — Clock and Control Center are exactly the items the "hide
+        // native macOS items" setting exists to reach. With the toggle off they
+        // stay pinned to Visible. Legacy SystemUIServer Siri behaves the same.
+        XCTAssertFalse(clock.canBeHidden(experimentalSystemItemHiding: false))
+        XCTAssertTrue(clock.canBeHidden(experimentalSystemItemHiding: true))
         XCTAssertTrue(siri.canBeHidden(experimentalSystemItemHiding: true))
         XCTAssertFalse(MenuBarSectionController.canAssign(clock, to: .hidden, experimentalSystemItemHiding: false))
-        XCTAssertFalse(MenuBarSectionController.canAssign(clock, to: .hidden, experimentalSystemItemHiding: true))
+        XCTAssertTrue(MenuBarSectionController.canAssign(clock, to: .hidden, experimentalSystemItemHiding: true))
         XCTAssertFalse(MenuBarSectionController.canAssign(siri, to: .hidden, experimentalSystemItemHiding: false))
         XCTAssertTrue(MenuBarSectionController.canAssign(siri, to: .hidden, experimentalSystemItemHiding: true))
         XCTAssertTrue(MenuBarSectionController.isProtectedAssignmentItem(clock, experimentalSystemItemHiding: false))
-        // Layout anchors are unprotected for cleanup purposes when experimental
-        // hiding is on, but MenuBarAgent assignment policy still rejects them.
         XCTAssertFalse(MenuBarSectionController.isProtectedAssignmentItem(clock, experimentalSystemItemHiding: true))
 
-        XCTAssertTrue(
-            MenuBarSectionController.canAssign(siri, to: .hidden, experimentalSystemItemHiding: true),
-            siri.logString
-        )
         XCTAssertFalse(
             MenuBarSectionController.isProtectedAssignmentItem(siri, experimentalSystemItemHiding: true),
             siri.logString
         )
-        XCTAssertFalse(
-            MenuBarSectionController.canAssign(clock, to: .hidden, experimentalSystemItemHiding: true),
-            clock.logString
-        )
         let controlCenter = systemItem(title: "BentoBox-0", x: 72, windowID: 100)
-        XCTAssertFalse(MenuBarSectionController.canAssign(controlCenter, to: .hidden, experimentalSystemItemHiding: true))
+        XCTAssertTrue(MenuBarSectionController.canAssign(controlCenter, to: .hidden, experimentalSystemItemHiding: true))
         XCTAssertFalse(MenuBarSectionController.isProtectedAssignmentItem(controlCenter, experimentalSystemItemHiding: true))
 
-        // SystemUIServer Siri assignments survive invalid-assignment cleanup when
-        // experimental system-item hiding is on. MenuBarAgent Clock/CC do not —
-        // they remain forced-visible and are stripped from Hidden.
+        // With the toggle on, every one of these assignments is valid and must
+        // survive cleanup; with it off, all three are stripped from Hidden.
         let assignment = [
             clock.uniqueIdentifier: MenuBarSection.Name.hidden,
             siri.uniqueIdentifier: .hidden,
@@ -1976,7 +2001,7 @@ final class MacOS27LayoutAnchorOrderingTests: XCTestCase {
                 liveItems: [clock, siri, controlCenter],
                 experimentalSystemItemHiding: true
             ),
-            [clock.uniqueIdentifier, controlCenter.uniqueIdentifier]
+            []
         )
         XCTAssertEqual(
             MenuBarSectionController.invalidAssignmentIdentifiers(

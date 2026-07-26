@@ -753,15 +753,28 @@ final class MenuBarSectionController: ObservableObject {
     }
 
     /// Drops assignments that can never be valid hidden-section entries.
+    ///
+    /// MenuBarAgent children are only rejected while the experimental
+    /// system-item hiding toggle is off. That toggle is what makes Clock,
+    /// Control Center, Sound and Wi-Fi hideable in the first place (see
+    /// ``MenuBarItem/sectionManagementPolicy(experimentalSystemItemHiding:)``),
+    /// so stripping their assignments unconditionally would delete the very
+    /// state the setting exists to record. The parameter defaults to the live
+    /// setting so the fifteen existing call sites keep working unchanged;
+    /// tests pass it explicitly.
     static func sanitizedSectionAssignment(
-        _ assignment: [String: MenuBarSection.Name]
+        _ assignment: [String: MenuBarSection.Name],
+        experimentalSystemItemHiding: Bool = Defaults.bool(forKey: .enableExperimentalSystemItemHiding)
     ) -> [String: MenuBarSection.Name] {
         assignment.filter { identifier, section in
             section != .visible &&
                 !isControlItemAssignmentIdentifier(identifier) &&
                 !isOwnAppAssignmentIdentifier(identifier) &&
                 !isHidingUnsupportedAssignmentIdentifier(identifier) &&
-                !MenuBarItemTag.isMenuBarAgentForcedVisibleIdentifier(identifier)
+                (
+                    experimentalSystemItemHiding ||
+                        !MenuBarItemTag.isMenuBarAgentForcedVisibleIdentifier(identifier)
+                )
         }
     }
 
