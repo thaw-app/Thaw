@@ -41,6 +41,29 @@ final class IceBarPanel: NSPanel {
     /// Background cache task started when the panel is shown.
     private var cacheTask: Task<Void, Never>?
 
+    /// Spike flag for plan 025 — see ``Defaults/Key/debugOverlayFlushMode``.
+    ///
+    /// Read live rather than cached so it can be toggled with `defaults write`
+    /// and observed on the next show, without relaunching Thaw.
+    static var isFlushOverlayMode: Bool {
+        UserDefaults.standard.bool(forKey: Defaults.Key.debugOverlayFlushMode.rawValue)
+    }
+
+    /// Spike flag for plan 031 overflow rescue — see
+    /// ``Defaults/Key/debugOverlayParkedMode``. Parks the bar as an
+    /// *interactive* flush panel in the dead strip beside the notch: items
+    /// there are assertion-hidden from the real bar but painted and clickable
+    /// here, in space macOS refuses to lay items into.
+    static var isParkedOverlayMode: Bool {
+        UserDefaults.standard.bool(forKey: Defaults.Key.debugOverlayParkedMode.rawValue)
+    }
+
+    /// Whether either overlay spike wants menu-bar-native chrome (square
+    /// corners, no shadow, no padding, true-geometry layout).
+    static var isFlushChromeActive: Bool {
+        isFlushOverlayMode || isParkedOverlayMode
+    }
+
     /// Creates a new Thaw Bar panel with Liquid Glass support.
     init() {
         super.init(
@@ -196,6 +219,45 @@ final class IceBarPanel: NSPanel {
             }
         }
 
+        // Parked mode (plan 031 overflow-rescue spike): sit on the strip with
+        // the panel's right edge against the notch's left edge — the dead
+        // space macOS refuses to lay items into. `debugSimulateNotch` provides
+        // a synthetic 120 pt notch on displays without one. Interactive, so
+        // it must land where no real item ever sits.
+        if Self.isParkedOverlayMode {
+            let menuBarHeight = screen.getMenuBarHeightEstimate()
+            let anchorMaxX = screen.frameOfNotch?.minX ?? (screen.frame.midX - 60)
+            let x = (anchorMaxX - frame.width)
+                .clamped(to: screen.frame.minX ... max(screen.frame.minX, screen.frame.maxX - frame.width))
+            setFrameOrigin(CGPoint(x: x, y: screen.frame.maxY - menuBarHeight))
+            return
+        }
+
+        // Flush overlay mode ignores the configured location entirely: the
+        // point is to sit *on* the menu bar strip, not below it. Every branch
+        // above anchors to `defaultOriginY`, which is deliberately one menu bar
+        // height lower.
+        if Self.isFlushOverlayMode {
+            let menuBarHeight = screen.getMenuBarHeightEstimate()
+            // Anchor the panel's right edge to the visible section's left
+            // edge: revealed hidden items live between the Thaw control item
+            // and the visible items, not against the screen edge (maintainer
+            // observation, 2026-07-26). Screen-edge anchoring is only the
+            // fallback when no visible item is on screen to measure.
+            let visibleMinX = appState.itemManager.itemCache.managedItems(for: .visible)
+                .filter {
+                    $0.isOnScreen && $0.bounds.width > 0
+                        && $0.bounds.minX >= screen.frame.minX && $0.bounds.maxX <= screen.frame.maxX
+                }
+                .map(\.bounds.minX)
+                .min()
+            let anchorMaxX = visibleMinX ?? screen.frame.maxX
+            let x = (anchorMaxX - frame.width)
+                .clamped(to: screen.frame.minX ... max(screen.frame.minX, screen.frame.maxX - frame.width))
+            setFrameOrigin(CGPoint(x: x, y: screen.frame.maxY - menuBarHeight))
+            return
+        }
+
         let location = appState.settings.displaySettings.iceBarLocation(for: screen.displayID)
         setFrameOrigin(getOrigin(for: location))
     }
@@ -222,6 +284,21 @@ final class IceBarPanel: NSPanel {
         """)
 
         hotkeyLocationOverride = triggeredByHotkey && appState.settings.general.iceBarLocationOnHotkey
+
+        // Applied per-show rather than in `init` so the spike flags can be
+        // flipped with `defaults write` and evaluated without relaunching.
+        // A drop shadow gives the overlay away instantly, so it goes in both
+        // spike modes. Mouse handling differs: the flush mask passes clicks
+        // through to the real bar, while parked mode IS the interaction
+        // surface — its items are assertion-hidden and clickable only here.
+        let flush = Self.isFlushChromeActive
+        hasShadow = !flush
+        ignoresMouseEvents = Self.isFlushOverlayMode && !Self.isParkedOverlayMode
+        if Self.isParkedOverlayMode {
+            diagLog.notice("show: parked overlay mode active (plan 031 overflow-rescue spike)")
+        } else if flush {
+            diagLog.notice("show: flush overlay mode active (plan 025 spike)")
+        }
 
         // IMPORTANT: We must set the navigation state and current section
         // before updating the caches.
@@ -457,7 +534,7 @@ private struct IceBarContentView: View {
     }
 
     private var horizontalPadding: CGFloat {
-        3
+        IceBarPanel.isFlushChromeActive ? 0 : 3
     }
 
     private var verticalPadding: CGFloat {
@@ -521,11 +598,83 @@ private struct IceBarContentView: View {
     }
 
     private var clipShape: some InsettableShape {
-        if configuration.hasRoundedShape {
+        if IceBarPanel.isFlushChromeActive {
+            // Square corners: the menu bar has none, and a rounded edge is the
+            // single most obvious tell that this is a panel.
+            RoundedRectangle(cornerRadius: 0, style: .continuous)
+        } else if configuration.hasRoundedShape {
             RoundedRectangle(cornerRadius: contentHeight / 2, style: .circular)
         } else {
             RoundedRectangle(cornerRadius: contentHeight / 4, style: .continuous)
         }
+    }
+
+    /// Plan 031 step 3: geometry-faithful layout for the flush overlay.
+    ///
+    /// The real menu bar packs items edge to edge — each item's captured crop
+    /// already spans its full window bounds, native horizontal padding
+    /// included — so faithful geometry is the crops at native width with zero
+    /// added spacing, in section order. Width preference: live capture, then
+    /// the persisted index (the transition case, where the item is concealed
+    /// and cannot be measured), then the item's last known bounds.
+    private func flushItemWidth(for item: MenuBarItem) -> CGFloat {
+        if let captured = imageCache.image(for: item.tag) {
+            return captured.scaledSize.width
+        }
+        if let indexed = imageCache.volatilityIndex.indexedWidth(for: item.tag) {
+            return indexed
+        }
+        let boundsWidth = item.bounds.width
+        return boundsWidth > 0 && boundsWidth < 500 ? boundsWidth : 30
+    }
+
+    /// Inter-item gap and trailing inset, measured from the live on-screen
+    /// visible-section items rather than assumed. Screenshot comparison
+    /// (2026-07-26) showed zero spacing packs the overlay noticeably denser
+    /// than the real bar, and a flush right edge clips the last item — the
+    /// real bar keeps a trailing margin. Measuring at show time tracks
+    /// whatever the current OS actually does; the fallbacks only apply when
+    /// no visible items are on screen to measure.
+    private var flushMetrics: (gap: CGFloat, rightInset: CGFloat) {
+        let visible = itemManager.itemCache.managedItems(for: .visible)
+            .filter { $0.isOnScreen && $0.bounds.width > 0 && $0.bounds.minX >= screen.frame.minX }
+            .sorted { $0.bounds.minX < $1.bounds.minX }
+
+        var gaps: [CGFloat] = []
+        for (left, right) in zip(visible, visible.dropFirst()) {
+            let gap = right.bounds.minX - left.bounds.maxX
+            if gap >= 0, gap < 40 {
+                gaps.append(gap)
+            }
+        }
+        let gap = gaps.isEmpty ? 8 : gaps.sorted()[gaps.count / 2]
+
+        // The panel's right edge sits against the visible section's left edge
+        // (see `updateOrigin`), so the trailing inset is one standard gap —
+        // the space the real bar keeps between the last hidden item and the
+        // first visible one — not a screen-edge margin.
+        return (gap, gap)
+    }
+
+    private var flushGeometryContent: some View {
+        let metrics = flushMetrics
+        return HStack(spacing: metrics.gap) {
+            ForEach(items, id: \.uniqueIdentifier) { item in
+                IceBarItemView(
+                    itemManager: itemManager,
+                    menuBarManager: menuBarManager,
+                    item: item,
+                    section: section,
+                    displayID: screen.displayID,
+                    maxHeight: itemMaxHeight,
+                    tooltipDelay: appState.settings.advanced.tooltipDelay,
+                    displayImage: image(for: item)
+                )
+                .frame(width: flushItemWidth(for: item), height: contentHeight)
+            }
+        }
+        .padding(.trailing, metrics.rightInset)
+        .frame(height: contentHeight)
     }
 
     private func image(for item: MenuBarItem) -> NSImage? {
@@ -561,14 +710,16 @@ private struct IceBarContentView: View {
             .foregroundStyle(colorManager.colorInfo?.isBright(for: screen) == true ? .black : .white)
             .clipShape(clipShape)
 
-            if configuration.current.hasBorder {
+            if configuration.current.hasBorder, !IceBarPanel.isFlushChromeActive {
                 clipShape
                     .inset(by: configuration.current.borderWidth / 2)
                     .stroke(lineWidth: configuration.current.borderWidth)
                     .foregroundStyle(Color(cgColor: configuration.current.borderColor))
             }
         }
-        .padding(5)
+        // The 5pt inset is what makes this read as a floating bar. Flush mode
+        // must reach the screen edge and the strip's full height instead.
+        .padding(IceBarPanel.isFlushChromeActive ? 0 : 5)
         .frame(maxWidth: screen.frame.width)
         .fixedSize(horizontal: true, vertical: layout == .horizontal)
         .onAppear {
@@ -706,6 +857,8 @@ private struct IceBarContentView: View {
             .onAppear {
                 Self.diagLog.warning("IceBar content: showing '\(self.cacheGracePeriodActive ? "Loading…" : "Unable to display")' for section \(self.section.logString) — imageCache.cacheFailed=true (grace period active: \(self.cacheGracePeriodActive), loadingTimedOut: \(self.loadingTimedOut), cached images count: \(self.imageCache.images.count), items in section: \(self.itemManager.itemCache[self.section].count))")
             }
+        } else if IceBarPanel.isFlushChromeActive {
+            flushGeometryContent
         } else {
             Group {
                 switch layout {

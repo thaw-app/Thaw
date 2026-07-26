@@ -120,9 +120,19 @@ final class AppState: ObservableObject {
         menuBarManager.performSetup(with: self)
         diagLog.debug("setupTask: settings and menuBarManager setup complete")
 
-        diagLog.debug("setupTask: starting MenuBarItemService XPC connection")
-        await MenuBarItemService.Connection.shared.start()
-        diagLog.debug("setupTask: MenuBarItemService XPC connection started")
+        // MenuBarItemService is the macOS ≤26 source-PID helper. On macOS 27 it
+        // cannot connect (measured: the `.start` request stalls ~10 s before the
+        // system reports "Underlying connection interrupted", and setup was
+        // serialized behind it), and no caller sends it traffic there — the
+        // sourcePID paths are gated upstream. Skip it entirely on 27; plan 028
+        // is the candidate to repurpose the service as an AX-read helper.
+        if #unavailable(macOS 27) {
+            diagLog.debug("setupTask: starting MenuBarItemService XPC connection")
+            await MenuBarItemService.Connection.shared.start()
+            diagLog.debug("setupTask: MenuBarItemService XPC connection started")
+        } else {
+            diagLog.debug("setupTask: skipping MenuBarItemService XPC connection (macOS ≤26 helper, unused on 27)")
+        }
 
         appearanceManager.performSetup(with: self)
         hidEventManager.performSetup(with: self)

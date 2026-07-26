@@ -9,6 +9,7 @@
 import AXSwift6
 import Cocoa
 import MenuBarModel
+import PlatformRuntimeKit
 
 nonisolated enum NativeOverflowObservation: Equatable, Sendable {
     case unavailable
@@ -325,10 +326,27 @@ nonisolated enum MenuBarItemAXProvider {
             }
             return frame
         }
-        if frames.isEmpty, attributeReadFailed || !(attributedControls + labeledControls).isEmpty {
+        // The tree walk above finds only the notch-era `AXOverflowButton`. The
+        // notchless macOS 27 indicator is a composited `AXImage` that is NOT a
+        // child of the extras bar (confirmed: the walk returned `absent` while
+        // the chevron was on screen and being clicked). Fall back to a strip
+        // hit-test when the walk found nothing. The hit-test lives in
+        // PlatformRuntimeKit (`RuntimeOverflowChevronProbe`) so any consumer of
+        // the runtime kit inherits chevron detection; this whole type is
+        // already `@available(macOS 27, *)` and the chevron is 27-exclusive, so
+        // that OS gate is the only gate needed.
+        var mergedFrames = frames
+        if frames.isEmpty {
+            for frame in RuntimeOverflowChevronProbe.detectChevrons(in: displayBounds)
+            where seenFrames.insert(frame).inserted {
+                mergedFrames.append(frame)
+            }
+        }
+
+        if mergedFrames.isEmpty, attributeReadFailed || !(attributedControls + labeledControls).isEmpty {
             return .unavailable
         }
-        return frames.isEmpty ? .absent : .present(frames)
+        return mergedFrames.isEmpty ? .absent : .present(mergedFrames)
     }
 
     // MARK: Assembly
@@ -456,6 +474,13 @@ nonisolated enum MenuBarItemAXProvider {
         return [identityTitle, displayTitle].contains { title in
             let normalized = title.filter { !$0.isWhitespace }
             if normalized.caseInsensitiveCompare("AXOverflowButton") == .orderedSame {
+                return true
+            }
+            // macOS 27 notchless: the collapsed-group indicator describes itself
+            // as "Double backward chevron" (SF Symbol chevron.backward.2), not a
+            // glyph string. Any MenuBarAgent element whose title/description
+            // mentions "chevron" is this indicator — no real menu extra is.
+            if title.range(of: "chevron", options: .caseInsensitive) != nil {
                 return true
             }
             let glyphs = normalized

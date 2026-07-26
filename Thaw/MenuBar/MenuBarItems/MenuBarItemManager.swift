@@ -95,8 +95,11 @@ final class MenuBarItemManager: ObservableObject {
     private static let restrictionChangeLayoutSettleWindow: Duration = .seconds(10)
 
     /// Whether the assessment-mode assertion was rebuilt recently enough that
-    /// automatic visible-section reorders should stand down.
-    private var isWithinRestrictionReflowSettleWindow: Bool {
+    /// automatic visible-section reorders should stand down. Internal (not
+    /// private) so the image cache's volatility recording can also stand down:
+    /// a reflow shifts every item's crop, and pixel-diffing across one marks
+    /// unrelated items as changed on the same tick.
+    var isWithinRestrictionReflowSettleWindow: Bool {
         guard let lastRestrictionChange = lastRestrictionChangeTimestamp else {
             return false
         }

@@ -160,6 +160,11 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
 
     /// LRU tracking: maps each tag to a monotonic counter value.
     /// Lower values are least recently used. O(1) update vs O(n) array removal.
+    /// Per-item record of how often each item's image actually changes,
+    /// populated from the pixel comparison `refreshImages` already performs.
+    /// Read it through ``volatility(for:)``.
+    let volatilityIndex = MenuBarItemVolatilityIndex()
+
     private var accessTimestamps: [MenuBarItemTag: UInt64] = [:]
 
     /// Monotonic counter incremented on each access, used for LRU ordering.
@@ -403,8 +408,31 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
             .appending(path: "imageCache.json", directoryHint: .notDirectory)
     }
 
-    /// Maximum age of disk cache before it's considered stale (30 seconds).
+    /// Maximum age of a disk-cached image for items with no (or an untrusted)
+    /// volatility classification (30 seconds). Before plan 031 step 2 this was
+    /// the whole cache's lifetime, which is why every relaunch showed app-icon
+    /// fallbacks flickering into real glyphs one by one.
     private static nonisolated let maxCacheAgeSeconds: TimeInterval = 30
+
+    /// Maximum age for items classified `occasional` (10 minutes).
+    private static nonisolated let occasionalCacheAgeSeconds: TimeInterval = 10 * 60
+
+    /// Maximum age for items classified `stable` (7 days). An item only earns
+    /// `stable` after 24+ consecutive unchanged observations with zero changes
+    /// ever, so serving its cached glyph across relaunches is safe; the live
+    /// refresh loop still replaces it the moment it actually changes.
+    private static nonisolated let stableCacheAgeSeconds: TimeInterval = 7 * 24 * 60 * 60
+
+    /// The per-item TTL ladder (plan 031 step 2).
+    private static nonisolated func diskCacheTTL(
+        for volatility: MenuBarItemVolatilityIndex.Volatility?
+    ) -> TimeInterval {
+        switch volatility {
+        case .stable: stableCacheAgeSeconds
+        case .occasional: occasionalCacheAgeSeconds
+        case .live, .unknown, nil: maxCacheAgeSeconds
+        }
+    }
 
     /// Bump when the capture/display semantics change enough that old images
     /// can be misleading.
@@ -495,17 +523,29 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
                     return
                 }
 
-                // Check if cache is stale (older than 30 seconds)
+                // Per-item TTL (plan 031 step 2): the file carries one save
+                // timestamp, but each item's allowed age depends on its
+                // volatility class. Only when even `stable` items would be
+                // expired is the file itself dead.
                 let cacheAge = Date().timeIntervalSince1970 - timestamp
-                if cacheAge > Self.maxCacheAgeSeconds {
+                if cacheAge > Self.stableCacheAgeSeconds {
                     MenuBarItemImageCache.diagLog.debug("Disk cache is \(Int(cacheAge))s old, deleting stale cache")
                     try? FileManager.default.removeItem(at: url)
                     return
                 }
 
+                let classifications = await MainActor.run {
+                    self.volatilityIndex.classificationsByKey()
+                }
+
                 var loadedImages = [MenuBarItemTag: CapturedImage]()
+                var expiredCount = 0
 
                 for (tagString, base64) in imagesDict {
+                    guard cacheAge <= Self.diskCacheTTL(for: classifications[tagString]) else {
+                        expiredCount += 1
+                        continue
+                    }
                     guard let data = Data(base64Encoded: base64),
                           let image = NSImage(data: data),
                           let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil)
@@ -525,11 +565,14 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
                 if !loadedImages.isEmpty {
                     let imagesToLoad = loadedImages
                     let loadedCount = loadedImages.count
+                    let skipped = expiredCount
                     await MainActor.run {
                         for (tag, image) in imagesToLoad {
                             self.images[tag] = image
                         }
-                        MenuBarItemImageCache.diagLog.debug("Loaded \(loadedCount) images from disk cache (\(Int(cacheAge))s old)")
+                        MenuBarItemImageCache.diagLog.debug(
+                            "Loaded \(loadedCount) images from disk cache (\(Int(cacheAge))s old, \(skipped) expired by volatility TTL)"
+                        )
                     }
                 }
             } catch {
@@ -2022,7 +2065,20 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
 
         await MainActor.run { [newImages] in
             var updatedCount = 0
-            for (tag, newImage) in newImages where !CapturedImage.isVisuallyEqual(self.images[tag], newImage) {
+            for (tag, newImage) in newImages {
+                let changed = !CapturedImage.isVisuallyEqual(self.images[tag], newImage)
+                // The comparison above is the volatility signal, and it is
+                // already paid for here. Record it before acting on it.
+                // Items absent from the cache are a first sighting, not a
+                // change, so they must not count against stability.
+                //
+                // This path is macOS <=26 only: on 27 the live refresh loop
+                // takes the `updateCacheWithoutChecks` branch instead and
+                // never reaches here, so that function carries the same hook.
+                if self.images[tag] != nil {
+                    volatilityIndex.record(tag: tag, changed: changed, width: newImage.scaledSize.width)
+                }
+                guard changed else { continue }
                 self.images[tag] = newImage
                 accessCounter += 1
                 accessTimestamps[tag] = accessCounter
@@ -2031,6 +2087,12 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
             if updatedCount > 0 {
                 MenuBarItemImageCache.diagLog.debug("refreshImages: ✓ updated \(updatedCount)/\(newImages.count) items (visually changed)")
             }
+            // Prune against the item cache (every managed item, hidden ones
+            // included), NOT `images.keys`: at cold start the image cache is
+            // near-empty (30 s disk TTL), and pruning on it destroyed 14 of 16
+            // freshly-loaded persisted records (observed 2026-07-26).
+            volatilityIndex.prune(keeping: Set(appState?.itemManager.itemCache.managedItems.map(\.tag) ?? []))
+            volatilityIndex.logDistributionIfChanged()
 
             _ = validateAndCleanupInvalidEntries()
             if images.count > Self.maxCacheSize {
@@ -2561,11 +2623,42 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
                 accessTimestamps.removeValue(forKey: tag)
             }
 
+            // Record volatility before merging. This is the macOS 27 hook:
+            // `refreshImages` (the other observation point) is unreachable on
+            // 27 because the live refresh loop routes here instead — see the
+            // `#available(macOS 27, *)` branch in `runLiveRefreshLoop`. Items
+            // absent from `images` are a first sighting, not a change, so they
+            // must not count against stability.
+            //
+            // Stand down entirely inside the restriction settle window: an
+            // assertion rebuild shifts every item's crop, so pixel-diffing
+            // across one marks unrelated items as changed on the same tick
+            // (observed 2026-07-26: three unrelated items at identical change
+            // rates). Skipping is cheap; polluted tallies are not.
+            let isSettling = appState.itemManager.isWithinRestrictionReflowSettleWindow
+            if !isSettling {
+                for (tag, newImage) in newImages {
+                    guard let existing = images[tag] else { continue }
+                    volatilityIndex.record(
+                        tag: tag,
+                        changed: !CapturedImage.isVisuallyEqual(existing, newImage),
+                        width: newImage.scaledSize.width
+                    )
+                }
+            }
+
             // Merge in the new images, preferring settled glyphs over blank
             // or much-narrower (chevron-bleed) candidates.
             images.merge(newImages) { existing, new in
                 Self.preferredCachedImage(existing: existing, candidate: new)
             }
+
+            // Prune against the item cache (every managed item, hidden ones
+            // included), NOT `images.keys`: at cold start the image cache is
+            // near-empty (30 s disk TTL), and pruning on it destroyed 14 of 16
+            // freshly-loaded persisted records (observed 2026-07-26).
+            volatilityIndex.prune(keeping: Set(appState.itemManager.itemCache.managedItems.map(\.tag)))
+            volatilityIndex.logDistributionIfChanged()
 
             // Enforce cache size limit using LRU eviction, but never evict
             // items that still exist in the menu bar (valid item tags).
@@ -3095,6 +3188,7 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
         accessTimestamps.removeAll()
         accessCounter = 0
         failedCapturesLock.withLock { $0.removeAll() }
+        volatilityIndex.removeAll()
     }
 
     // MARK: Cache Failed

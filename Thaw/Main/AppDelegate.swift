@@ -57,6 +57,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSSplitViewItem.swizzle()
         MigrationManager(appState: appState).migrateAll()
 
+        // Debug-only overflow spacer (plan 031 chevron-herding experiment).
+        // Inert unless `Thaw.debugOverflowSpacerWidth` is set to a positive
+        // width; observes the default live so no relaunch is needed.
+        OverflowSpacerExperiment.shared.performSetup(with: appState)
+
         // Register thaw:// URL events early so external tools (e.g. Raycast)
         // can trigger actions even when Thaw is not currently in the foreground;
         // depending on the action, the app may still be activated as needed.

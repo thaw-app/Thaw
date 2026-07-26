@@ -99,6 +99,10 @@ final class MenuBarManager: ObservableObject {
     /// visibility restriction. `nil` on macOS <=26.
     private(set) var sectionController: MenuBarSectionController?
 
+    /// macOS 27 only: covers the native overflow chevron (plan 031). Owned here
+    /// because it needs the section controller's overflow observation.
+    private let chevronCover = MenuBarChevronCover()
+
     /// Whether the assertion controller is currently revealed because the
     /// active display's persistent "Always show hidden items" setting asked
     /// for it, rather than because the user temporarily toggled a section.
@@ -147,6 +151,7 @@ final class MenuBarManager: ObservableObject {
             let controller = MenuBarSectionController(appState: appState)
             controller.start()
             sectionController = controller
+            chevronCover.performSetup(with: appState)
             synchronizeAlwaysShowHiddenItems()
         }
         rebuildItemHotkeys()

@@ -275,6 +275,28 @@ extension Defaults {
         case diagnosticAssessmentModeSceneProbes = "Thaw.diagnosticAssessmentModeSceneProbes"
         case diagnosticAssessmentModeProbeHiddenTriggerPress = "Thaw.diagnosticAssessmentModeProbeHiddenTriggerPress"
         case debugSimulateNotch = "Thaw.debugSimulateNotch"
+        /// Spike flag for plan 025. Parks Thaw Bar flush against the menu bar
+        /// strip with its chrome stripped, so the only open question — can it
+        /// be made pixel-convincing against the real menu bar? — can be
+        /// answered by eye before any transition machinery is written.
+        case debugOverlayFlushMode = "Thaw.debugOverlayFlushMode"
+        /// Persisted per-item volatility records (plan 031 step 1). JSON blob
+        /// keyed by `tagIdentifier`; see `MenuBarItemVolatilityIndex`.
+        case menuBarItemVolatilityIndex = "MenuBarItemVolatilityIndex"
+        /// Spike flag for plan 031 overflow rescue. Parks Thaw Bar as an
+        /// *interactive* flush panel beside the (real or simulated) notch, so
+        /// assertion-hidden items stay visible and clickable in strip space
+        /// macOS refuses to lay items into. Pairs with `debugSimulateNotch`
+        /// on non-notched displays.
+        case debugOverlayParkedMode = "Thaw.debugOverlayParkedMode"
+        /// Width in points of the debug overflow spacer status item (plan 031
+        /// chevron-herding experiment). 0 or absent = no spacer. See
+        /// `OverflowSpacerExperiment`.
+        case debugOverflowSpacerWidth = "Thaw.debugOverflowSpacerWidth"
+        /// Covers the native macOS 27 overflow chevron with a menu-bar-matched
+        /// strip (plan 031). See `MenuBarChevronCover`. Off by default while it
+        /// proves out.
+        case debugChevronCover = "Thaw.debugChevronCover"
 
         // MARK: Search
 
