@@ -200,7 +200,13 @@ public extension Bridging {
         var psn = ProcessSerialNumber()
         let result = getProcessForPID(pid, &psn)
         guard result == noErr else {
-            diagLog.error("getProcessForPID failed with error \(result)")
+            // -600 (procNotFound) just means the owner has already quit — it is
+            // not "unresponsive", and this is an expected, frequent condition
+            // (a menu bar item's owner terminating while a view still polls it),
+            // so treat it quietly instead of spamming the error log every tick.
+            if result != -600 {
+                diagLog.error("getProcessForPID failed with error \(result)")
+            }
             return false
         }
         return cgsEventIsAppUnresponsive(getMainConnection(), &psn)
