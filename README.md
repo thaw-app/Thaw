@@ -7,9 +7,9 @@
 </p>
 
 <p align="center">
-  <strong>Unfreeze your menu bar.</strong><br />
-  Thaw is a menu bar manager for macOS. Its core job is hiding and showing menu bar items — with search, hotkeys, profiles, and appearance options so the bar stays useful without the clutter.<br />
-  Free and open source. Private by design — no tracking, no account.
+  Thaw hides and shows macOS menu bar items and adds search, hotkeys, profiles, and appearance controls to keep the bar clean without losing access.
+  <br>
+  Free and open source. Private by design: no tracking, no account required.
 </p>
 
 <p align="center">
