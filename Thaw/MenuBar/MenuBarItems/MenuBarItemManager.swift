@@ -1439,8 +1439,7 @@ final class MenuBarItemManager {
             // about to disappear and re-register, churning the bar for a few
             // seconds. Start a settling period keyed on its bundle ID so the
             // move pass (applyProfileLayout waits on waitForStartupSettlingToEnd)
-            // and the virtual-display provoke (guarded by isSettling) both hold
-            // off until the item has re-paired. Without this the bulk apply ran
+            // holds off until the item has re-paired. Without this the bulk apply ran
             // on the transient layout and swept hidden items into the visible
             // section. The period exits the instant the bundle ID reappears
             // with a resolved PID (median ~3s in field logs); maxDuration is
@@ -2182,38 +2181,6 @@ extension MenuBarItemManager {
             }
         }
         MenuBarItemManager.diagLog.debug("Updated menu bar item cache: visible=\(context.cache[.visible].count), hidden=\(context.cache[.hidden].count), alwaysHidden=\(context.cache[.alwaysHidden].count)")
-    }
-
-    /// Whether a startup or profile-apply settling period is currently active.
-    ///
-    /// During settling the menu bar is still converging and items are
-    /// transiently unresolved before the spatial AX, marker-pair, and
-    /// elimination passes finish. Consumers that react to unresolved items
-    /// (VirtualDisplayProvoker) must wait until this is false, otherwise they
-    /// would treat normal cold-boot churn as genuinely-stuck orphans.
-    ///
-    /// Tracks `isInStartupSettling` only: that flag is cleared when the period
-    /// ends, whereas `startupSettlingTask` keeps referencing the finished task
-    /// and so would report settling forever after the first period.
-    var isSettling: Bool {
-        isInStartupSettling
-    }
-
-    /// The window IDs of currently-cached menu bar items that have no resolved
-    /// source PID and are not Thaw control items.
-    ///
-    /// These are the items that may still need marker-pair resolution. On a
-    /// single display the bundle-ID marker windows are absent, so these stay
-    /// unresolved; VirtualDisplayProvoker uses this to decide when to briefly
-    /// add a virtual display so the markers publish. The caller is expected to
-    /// ignore the result while isSettling is true, since cold-boot churn
-    /// surfaces transient unresolved items here.
-    func unresolvedOrphanWindowIDs() -> Set<CGWindowID> {
-        Set(
-            itemCache.managedItems
-                .filter { $0.sourcePID == nil && !$0.isControlItem }
-                .map(\.windowID)
-        )
     }
 
     /// Whether bundleID owns a menu bar item Thaw already tracks: an entry

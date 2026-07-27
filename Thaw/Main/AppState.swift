@@ -58,18 +58,6 @@ final class AppState {
     /// Manager for settings profiles.
     let profileManager = ProfileManager()
 
-    /// Briefly adds a virtual display on single-display machines so the window
-    /// server publishes the marker windows needed to resolve unidentified menu
-    /// bar items, then tears it down.
-    ///
-    /// `@ObservationIgnored`: the Observation macro cannot generate its
-    /// tracked-access init accessor for a `lazy` property (it closes over
-    /// `self` in a context the macro can't express), so this is exempted
-    /// from observation tracking. No view reads this property directly in
-    /// its body, so the exemption has no UI-observability effect.
-    @ObservationIgnored
-    private(set) lazy var virtualDisplayProvoker = VirtualDisplayProvoker(appState: self)
-
     /// Manager for app updates.
     let updatesManager = UpdatesManager()
 
@@ -88,14 +76,6 @@ final class AppState {
     /// the old `$isDraggingMenuBarItem.removeDuplicates().sink` subscription.
     private var hidEventManagerObservationTask: Task<Void, Never>?
 
-    /// Observes `itemManager.itemCache` (wave 4), which is `@Observable`
-    /// rather than a Combine `ObservableObject`, replacing the old
-    /// `$itemCache.debounce(for: .seconds(0.5), scheduler:
-    /// DispatchQueue.main).sink` subscription that let the virtual display
-    /// provoker decide whether to briefly add a virtual display after each
-    /// cache cycle settles.
-    private var itemCacheProvokerObservationTask: Task<Void, Never>?
-
     /// Observes `NSApplication.didChangeScreenParametersNotification` via
     /// `NotificationCenter.notifications(named:)`, replacing a
     /// `NotificationCenter.publisher(for:).debounce(for:scheduler:).sink`
@@ -107,7 +87,7 @@ final class AppState {
     private var openWindows = Set<IceWindowIdentifier>()
 
     /// Track last known screen count to detect disconnects.
-    private var lastKnownScreenCount = NSScreen.managedScreens.count
+    private var lastKnownScreenCount = NSScreen.screens.count
 
     /// Prevent repeated restart attempts.
     private var isRestarting = false
@@ -350,24 +330,8 @@ final class AppState {
         // tracking, which composes transparently across nested `@Observable`
         // object graphs without any manual forwarding.
 
-        // After each cache cycle settles, let the provoker decide whether to
-        // briefly add a virtual display to resolve any single-display
-        // orphans. `itemManager` is now `@Observable` (wave 4), so it no
-        // longer has an `$itemCache` publisher; `Observations { }` is an
-        // `AsyncSequence`, so the debounce is reproduced with
-        // AsyncAlgorithms' `.debounce(for:)`.
-        let itemManagerForProvoker = itemManager
-        itemCacheProvokerObservationTask = Task { [weak self] in
-            let changes = Observations { itemManagerForProvoker.itemCache }
-            for await _ in changes.debounce(for: .seconds(0.5)) {
-                guard let self else { return }
-                self.virtualDisplayProvoker.considerProvoking()
-            }
-        }
-
-        // Mirrors DisplaySettingsManager.configureObservers' screenParametersTask
-        // (and itemCacheProvokerObservationTask above): a plain
-        // NotificationCenter.publisher().debounce(scheduler:) chain here would
+        // Mirrors DisplaySettingsManager.configureObservers' screenParametersTask:
+        // a plain NotificationCenter.publisher().debounce(scheduler:) chain here would
         // be the only remaining Combine cancellable doing what an async
         // sequence already does better elsewhere in the codebase, so it's
         // reproduced with an AsyncStream fed by a NotificationCenter observer,
@@ -385,7 +349,7 @@ final class AppState {
             defer { NotificationCenter.default.removeObserver(observer) }
             for await _ in screenParameterEvents.debounce(for: .seconds(0.5)) {
                 guard let self else { return }
-                let count = NSScreen.managedScreens.count
+                let count = NSScreen.screens.count
                 defer { self.lastKnownScreenCount = count }
                 if count < self.lastKnownScreenCount {
                     self.diagLog.info("Display disconnected: refresh item cache + cleanup image cache")

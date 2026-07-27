@@ -179,9 +179,14 @@ nonisolated enum MarkerPairResolver {
     /// matched app IS Control Center and the window carries a generic Item-N
     /// title, writing Control Center's PID would tag the item as a transient
     /// CC widget (isTransientControlCenterItem true, canBeHidden false), hiding
-    /// it from profile management and the virtual-display provoke's orphan
-    /// scan. The window must be left unresolved so marker-pair can supply the
-    /// real owner PID. Named CC items (BentoBox-0, Clock, WiFi, NowPlaying, ...)
+    /// it from profile management. The window is left unresolved so marker-pair
+    /// can supply the real owner PID.
+    ///
+    /// On a single display macOS 26 does not publish the bundle-ID marker
+    /// windows marker-pair needs, so these items can stay unresolved for the
+    /// session. That is accepted: attributing them to Control Center would
+    /// mislabel them permanently, which is worse than leaving them unowned.
+    /// Named CC items (BentoBox-0, Clock, WiFi, NowPlaying, ...)
     /// carry non-generic titles and are unaffected; a widget that publishes its
     /// own extras-bar child (The Clock, com.fabriceleyne.theclock) matches via
     /// that app, not Control Center, so it is never flagged here.

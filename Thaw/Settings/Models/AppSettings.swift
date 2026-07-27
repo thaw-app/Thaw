@@ -6,6 +6,8 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Observation
+
 /// Top-level model for the app's settings.
 ///
 /// Now that its four children (`advanced`, `general`, `hotkeys`,

@@ -129,7 +129,7 @@ nonisolated struct DisplayIceBarConfiguration: Codable, Equatable {
         location: IceBarLocation
     ) -> [String: DisplayIceBarConfiguration] {
         var configs = [String: DisplayIceBarConfiguration]()
-        for screen in NSScreen.managedScreens {
+        for screen in NSScreen.screens {
             guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else {
                 continue
             }

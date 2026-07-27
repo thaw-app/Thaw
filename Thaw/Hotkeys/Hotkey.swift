@@ -6,6 +6,8 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Observation
+
 // MARK: - Hotkey
 
 /// A combination of a key and modifiers that can be used to

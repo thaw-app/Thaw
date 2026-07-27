@@ -413,12 +413,15 @@ actor SourcePIDCache {
                     // CC-hosted; it does not identify the owning app. Writing
                     // Control Center's PID would tag the item as a transient CC
                     // widget (isTransientControlCenterItem true, canBeHidden
-                    // false), hiding it from profile management and the
-                    // virtual-display provoke's orphan scan. Leaving it
+                    // false), hiding it from profile management. Leaving it
                     // unresolved lets the marker-pair pass below supply the real
                     // owner PID; named CC items (BentoBox-0, Clock, WiFi,
                     // NowPlaying) carry non-generic titles and resolve to Control
                     // Center normally.
+                    //
+                    // On a single display the marker windows may never publish,
+                    // in which case the item stays unresolved for the session.
+                    // Accepted: a permanent mislabel is worse than no owner.
                     if let matchedWindow = allWindows.first(where: {
                         $0.bounds.center.distance(to: childCenter) <= 1
                     }), !MarkerPairResolver.isCCHostedGenericSlot(

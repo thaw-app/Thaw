@@ -20,7 +20,7 @@ import XCTest
 ///
 ///   - Little Snitch publishes NO extras-bar child of its own, so the only AX
 ///     child on its icon is Control Center's. Binding it to Control Center
-///     misattributes it and starves marker-pair / the provoke. It must stay
+///     misattributes it and starves marker-pair resolution. It must stay
 ///     unresolved.
 ///   - The Clock publishes its OWN extras-bar child on the same icon, so it
 ///     must resolve to com.fabriceleyne.theclock.
@@ -71,7 +71,7 @@ final class ControlCenterHostedMatchLogReplayTests: XCTestCase {
 
     /// RED before the gate, GREEN after. Little Snitch's icon must NOT bind to
     /// Control Center; it has to stay unresolved so it remains an orphan that
-    /// reaches marker-pair resolution and the virtual-display provoke.
+    /// reaches marker-pair resolution.
     func testLittleSnitchIconDoesNotBindToControlCenter() throws {
         let scenario = try XCTUnwrap(
             ControlCenterHostedResolutionReplay.parse(ControlCenterHostedResolutionLog.littleSnitch)
@@ -119,7 +119,7 @@ final class ControlCenterHostedMatchLogReplayTests: XCTestCase {
 
     /// A generic Item-N icon matched by Control Center itself (Little Snitch, or
     /// a transient Live Activity) is a bare CC-hosted slot: it must be left
-    /// unresolved so it stays an orphan for marker-pair / the provoke.
+    /// unresolved so it stays an orphan for marker-pair resolution.
     func testGenericControlCenterHostedSlotDetected() {
         for title in ["Item-0", "Item-5", "Item-38"] {
             XCTAssertTrue(

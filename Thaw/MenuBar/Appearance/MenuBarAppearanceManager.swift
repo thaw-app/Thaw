@@ -142,7 +142,7 @@ final class MenuBarAppearanceManager {
                     return
                 }
                 closeAllOverlayPanels()
-                if Set(overlayPanels.map(\.owningScreen)) != Set(NSScreen.managedScreens) {
+                if Set(overlayPanels.map(\.owningScreen)) != Set(NSScreen.screens) {
                     configureOverlayPanels(with: configuration)
                 }
             }
@@ -210,7 +210,7 @@ final class MenuBarAppearanceManager {
         }
 
         var overlayPanels = Set<MenuBarOverlayPanel>()
-        for screen in NSScreen.managedScreens {
+        for screen in NSScreen.screens {
             let panel = MenuBarOverlayPanel(appState: appState, owningScreen: screen)
             overlayPanels.insert(panel)
             panel.needsShow = true
@@ -221,7 +221,7 @@ final class MenuBarAppearanceManager {
         // Mission Control displaces every on-screen window together, so one
         // representative screen is enough to drive the shared detector for
         // all panels.
-        if let representativeScreen = NSScreen.managedScreens.first {
+        if let representativeScreen = NSScreen.screens.first {
             missionControlDetector.start(representativeScreen: representativeScreen)
         }
     }

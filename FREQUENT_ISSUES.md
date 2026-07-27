@@ -166,7 +166,7 @@ Corrupted Control Center state from CodexBar 0.29.x can also cause **Little Snit
 
 ## Multi-monitor / plugging in a display
 
-Connecting, disconnecting, or switching displays can cause brief visual glitches: resolution flicker, extra spacing, or a short virtual-display handshake. These are often transient.
+Connecting, disconnecting, or switching displays can cause brief visual glitches: resolution flicker or extra spacing. These are often transient.
 
 Thaw may **relaunch apps with menu bar items** when a display transition requires applying different menu bar spacing. That can produce duplicate icons if the host app also relaunches its agent — the duplicate usually belongs to the app, not Thaw.
 

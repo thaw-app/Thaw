@@ -162,7 +162,7 @@ final class DisplaySettingsManager {
         var changed = false
         var seededConfigurations = configurations
         var configurationsChanged = false
-        for screen in NSScreen.managedScreens {
+        for screen in NSScreen.screens {
             guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else {
                 continue
             }
@@ -290,7 +290,7 @@ final class DisplaySettingsManager {
         }
         let offset = Double(onDisk - Self.systemSpacingDefault)
         var seeded = configurations
-        for screen in NSScreen.managedScreens {
+        for screen in NSScreen.screens {
             guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else {
                 continue
             }
@@ -373,17 +373,7 @@ final class DisplaySettingsManager {
             defer { NotificationCenter.default.removeObserver(observer) }
             for await _ in screenParameterEvents.debounce(for: .seconds(1)) {
                 guard let self else { break }
-                // Ignore the self-inflicted parameter change from the virtual
-                // display the provoker briefly creates and tears down. Reacting
-                // to it (a no-op spacing preflight) cancels the in-flight item
-                // cache cycle mid-resolution and surfaces a bar of orphans for
-                // several seconds. The phantom never changes the active menu bar
-                // display, so there is nothing here to apply.
-                if let until = VirtualDisplayProvoker.displayReactionsSuppressedUntil, Date() < until {
-                    diagLog.info("Screen parameters changed during virtual-display provoke; ignoring self-inflicted event")
-                    continue
-                }
-                diagLog.info("Screen parameters changed — \(NSScreen.managedScreens.count) screen(s) connected")
+                diagLog.info("Screen parameters changed — \(NSScreen.screens.count) screen(s) connected")
                 captureCurrentlyConnectedDisplays()
                 let currentUUID = Bridging.getActiveMenuBarDisplayUUID()
                 if Self.shouldSkipSpacingApply(
@@ -526,7 +516,7 @@ final class DisplaySettingsManager {
 
         // Validate specific UUID if provided (defense-in-depth)
         if let uuid = specificUUID {
-            let connectedUUIDs = NSScreen.managedScreens.compactMap { Bridging.getDisplayUUIDString(for: $0.displayID) }
+            let connectedUUIDs = NSScreen.screens.compactMap { Bridging.getDisplayUUIDString(for: $0.displayID) }
             let hasConfig = configurations[uuid] != nil
             guard connectedUUIDs.contains(uuid) || hasConfig else {
                 diagLog.warning("DisplaySettingsManager: Ignoring change for unknown display UUID '\(uuid)'")
@@ -656,7 +646,7 @@ final class DisplaySettingsManager {
     private func setIceBarLocation(_ location: IceBarLocation, scope: SettingsURIHandler.PerDisplayScope) {
         if scope == .allEnabledDisplays {
             // Update all displays that have IceBar enabled
-            for screen in NSScreen.managedScreens {
+            for screen in NSScreen.screens {
                 guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else { continue }
                 let config = configurations[uuid] ?? .defaultConfiguration
                 if config.useIceBar {
@@ -678,7 +668,7 @@ final class DisplaySettingsManager {
     /// Sets iceBarLayout for displays based on scope.
     private func setIceBarLayout(_ layout: IceBarLayout, scope: SettingsURIHandler.PerDisplayScope) {
         if scope == .allEnabledDisplays {
-            for screen in NSScreen.managedScreens {
+            for screen in NSScreen.screens {
                 guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else { continue }
                 let config = configurations[uuid] ?? .defaultConfiguration
                 if config.useIceBar {
@@ -700,7 +690,7 @@ final class DisplaySettingsManager {
     /// Sets gridColumns for displays based on scope.
     private func setGridColumns(_ columns: Int, scope: SettingsURIHandler.PerDisplayScope) {
         if scope == .allEnabledDisplays {
-            for screen in NSScreen.managedScreens {
+            for screen in NSScreen.screens {
                 guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else { continue }
                 let config = configurations[uuid] ?? .defaultConfiguration
                 if config.useIceBar {
@@ -723,7 +713,7 @@ final class DisplaySettingsManager {
     private func setAlwaysShowHiddenItems(_ value: Bool, scope: SettingsURIHandler.PerDisplayScope) {
         if scope == .allNonIceBarDisplays {
             // Update all displays that do NOT have IceBar enabled
-            for screen in NSScreen.managedScreens {
+            for screen in NSScreen.screens {
                 guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else { continue }
                 let config = configurations[uuid] ?? .defaultConfiguration
                 if !config.useIceBar {
@@ -739,7 +729,7 @@ final class DisplaySettingsManager {
     private func toggleAlwaysShowHiddenItems(scope: SettingsURIHandler.PerDisplayScope) {
         if scope == .allNonIceBarDisplays {
             // Toggle on all displays that do NOT have IceBar enabled
-            for screen in NSScreen.managedScreens {
+            for screen in NSScreen.screens {
                 guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else { continue }
                 let config = configurations[uuid] ?? .defaultConfiguration
                 if !config.useIceBar {
@@ -880,7 +870,7 @@ final class DisplaySettingsManager {
 
     /// Returns info about all currently connected displays.
     func connectedDisplays() -> [DisplayInfo] {
-        NSScreen.managedScreens.compactMap { screen in
+        NSScreen.screens.compactMap { screen in
             guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else {
                 return nil
             }
