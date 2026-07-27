@@ -307,6 +307,15 @@ extension MenuBarItem {
         // CGS path depends on. Enumerate through the Accessibility tree instead,
         // which still exposes every item with direct source attribution.
         if #available(macOS 27, *) {
+            // Enumeration stays in-process: it runs on the move/settle verify
+            // loop hundreds of times per session, and routing that hot path
+            // through the XPC helper made every call a round trip the single
+            // helper could not service (measured: 18 hits vs 323 nils), so
+            // moves never confirmed. The helper earns its keep only for the
+            // narrow, off-hot-path jobs where its killability matters — reading
+            // a *specific* wedged owner and the startup prewarm — not blanket
+            // enumeration. See `MenuBarItemAXProvider.items(fromSnapshots:on:)`.
+
             // The AX walk makes a synchronous round trip to every running app's
             // accessibility server. Run it off the main actor so an unresponsive
             // app can't block `mach_msg` on the main thread and freeze the whole

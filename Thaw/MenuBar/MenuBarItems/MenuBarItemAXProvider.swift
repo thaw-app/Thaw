@@ -201,6 +201,71 @@ nonisolated enum MenuBarItemAXProvider {
         return items
     }
 
+    /// Builds items from out-of-process AX snapshots (the macOS 27 XPC helper),
+    /// applying the same filtering and identity rules as ``menuBarItems(on:option:)``
+    /// so the result is interchangeable with the in-process walk. Cheap — it
+    /// processes already-fetched data and makes no AX round trips.
+    static func items(
+        fromSnapshots snapshots: [MenuBarItemService.MenuBarItemAXSnapshot],
+        on display: CGDirectDisplayID? = nil
+    ) -> [MenuBarItem] {
+        let displayBounds = display.map { CGDisplayBounds($0) }
+        var raw: [RawItem] = []
+
+        // Group by owner so the untitled-item fallback index stays per-owner and
+        // positional, matching the per-app walk. `Dictionary(grouping:)` keeps
+        // each owner's snapshots in their arrival (AX child) order.
+        for (ownerPID, ownerSnapshots) in Dictionary(grouping: snapshots, by: \.ownerPID) {
+            guard let runningApp = NSRunningApplication(processIdentifier: ownerPID) else {
+                continue
+            }
+            let namespace = namespace(for: runningApp)
+            var fallbackIndex = 0
+            for snapshot in ownerSnapshots {
+                guard let frame = snapshot.frame, frame.height > 0, frame.height <= maxItemHeight else {
+                    continue
+                }
+                if let displayBounds, !Self.frame(frame, isWithin: displayBounds) {
+                    continue
+                }
+                let identifier = snapshot.identifier?.nonEmpty
+                let accessibilityDescription = snapshot.axDescription?.nonEmpty
+                let axTitle = snapshot.title?.nonEmpty
+                let fallbackTitle = "Item-\(fallbackIndex)"
+                let displayTitle = axTitle ?? accessibilityDescription ?? identifier ?? fallbackTitle
+                if axTitle == nil, accessibilityDescription == nil, identifier == nil {
+                    fallbackIndex += 1
+                }
+                let identityTitle = identityTitle(
+                    namespace: namespace,
+                    identifier: identifier,
+                    accessibilityDescription: accessibilityDescription,
+                    displayTitle: displayTitle
+                )
+                if isNativeOverflowChevronPlaceholder(
+                    namespace: namespace,
+                    identityTitle: identityTitle,
+                    displayTitle: displayTitle
+                ) {
+                    continue
+                }
+                raw.append(
+                    RawItem(
+                        namespace: namespace,
+                        identityTitle: identityTitle,
+                        displayTitle: displayTitle,
+                        bounds: frame,
+                        ownerPID: snapshot.ownerPID
+                    )
+                )
+            }
+        }
+
+        let items = assemble(raw)
+        diagLog.debug("items(fromSnapshots:): built \(items.count) items from \(snapshots.count) snapshot(s)")
+        return items
+    }
+
     /// Presses the system Clock without walking every running application's AX
     /// tree. The Clock may expose the press action on either its extras-bar
     /// container or a nested button, so try both representations.

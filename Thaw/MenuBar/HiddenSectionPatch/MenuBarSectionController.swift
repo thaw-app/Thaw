@@ -25,6 +25,23 @@ protocol RuntimeSessionControllering: AnyObject {
     func markExternallyTornDown()
     @discardableResult
     func refreshAvailability() -> Bool
+    /// Optimistic cold-start concealment from persisted state, before the first
+    /// AX walk. See `RuntimeSessionController.applyPersisted`.
+    @discardableResult
+    func applyPersisted(sectionAssignment: [String: MenuBarSection.Name], knownBundleIDs: [String: String]) -> Bool
+    /// The learned identifier→bundle-ID map, for persistence across launches.
+    var persistableBundleIDMap: [String: String] { get }
+}
+
+extension RuntimeSessionControllering {
+    // Defaults so non-runtime conformers (e.g. the test fake) need not implement
+    // the persisted-restore seam. The real runtime backend overrides both.
+    @discardableResult
+    func applyPersisted(sectionAssignment: [String: MenuBarSection.Name], knownBundleIDs: [String: String]) -> Bool {
+        false
+    }
+
+    var persistableBundleIDMap: [String: String] { [:] }
 }
 
 extension RuntimeSessionController: RuntimeSessionControllering {}
@@ -367,6 +384,50 @@ final class MenuBarSectionController: ObservableObject {
 
         configureRecoveryDriver()
         startRuntimeStateObservers()
+        restorePersistedConcealmentAtLaunch()
+    }
+
+    /// The `uniqueIdentifier → owner bundle ID` map last written to disk, so the
+    /// per-tick persistence only touches `UserDefaults` when the map changed.
+    private var lastPersistedConcealBundleIDMap: [String: String] = [:]
+
+    /// Persists the backend's learned identifier→bundle map so the *next* launch
+    /// can conceal the last-known hidden items before its first AX walk. Cheap:
+    /// writes only when the map actually changed. macOS 27 only (the assertion
+    /// backend is the sole restore consumer).
+    private func persistConcealBundleIDMapIfChanged() {
+        guard #available(macOS 27, *) else { return }
+        let map = backend.persistableBundleIDMap
+        guard map != lastPersistedConcealBundleIDMap else { return }
+        lastPersistedConcealBundleIDMap = map
+        UserDefaults.standard.set(map, forKey: Defaults.Key.menuBarConcealBundleIDMap.rawValue)
+    }
+
+    /// Optimistic cold-start restore: replays the last-known concealment from the
+    /// persisted section assignment (already reconstructed from saved order in
+    /// `init`) plus the persisted bundle map, so the menu bar opens in its hidden
+    /// arrangement instead of flashing every icon for the ~3 s the first AX walk
+    /// takes. The first live restriction pass reconciles (apps that quit are
+    /// no-ops; apps that launched since get corrected). Opt-in while it proves
+    /// out.
+    private func restorePersistedConcealmentAtLaunch() {
+        guard #available(macOS 27, *),
+              UserDefaults.standard.bool(forKey: Defaults.Key.debugConcealRestore.rawValue),
+              backend.isHidingAvailable,
+              let map = UserDefaults.standard.dictionary(
+                  forKey: Defaults.Key.menuBarConcealBundleIDMap.rawValue
+              ) as? [String: String],
+              !map.isEmpty
+        else { return }
+        lastPersistedConcealBundleIDMap = map
+        let assignment = assertionAssignmentInput()
+        guard assignment.values.contains(where: { $0 == .hidden || $0 == .alwaysHidden }) else {
+            return
+        }
+        let didApply = backend.applyPersisted(sectionAssignment: assignment, knownBundleIDs: map)
+        diagLog.info(
+            "cold-start conceal restore: \(didApply ? "applied" : "no-op") from \(map.count) known owner(s)"
+        )
     }
 
     isolated deinit {
@@ -2073,6 +2134,7 @@ final class MenuBarSectionController: ObservableObject {
                 allItems: allItems
             )
         }
+        persistConcealBundleIDMapIfChanged()
         if didChangeRestriction {
             appState.itemManager.noteRestrictionChange()
             if hasConcealedItems {

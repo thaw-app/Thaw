@@ -24,12 +24,26 @@ enum AXSnapshotReader {
             let app = AXUIElementCreateApplication(pid)
             guard let bar = extrasMenuBar(of: app) else { continue }
             for child in children(of: bar) {
+                // Scan one level deeper for identity metadata: some apps publish
+                // the identifier/description on the status-bar button rather than
+                // its container. Matches the in-process AX walk so snapshots are
+                // field-for-field comparable.
+                let nested = children(of: child)
+                let identifier = string(child, kAXIdentifierAttribute)
+                    ?? nested.lazy.compactMap { string($0, kAXIdentifierAttribute) }.first
+                let axDescription = string(child, kAXDescriptionAttribute)
+                    ?? nested.lazy.compactMap { string($0, kAXDescriptionAttribute) }.first
+                // Direct attribution: the owning process is the one that
+                // published this child (fall back to the walked app), matching
+                // the in-process walk.
+                var childPID: pid_t = 0
+                let ownerPID = AXUIElementGetPid(child, &childPID) == .success ? childPID : pid
                 results.append(
                     MenuBarItemService.MenuBarItemAXSnapshot(
-                        ownerPID: pid,
-                        identifier: string(child, kAXIdentifierAttribute),
+                        ownerPID: ownerPID,
+                        identifier: identifier,
                         role: string(child, kAXRoleAttribute),
-                        axDescription: string(child, kAXDescriptionAttribute),
+                        axDescription: axDescription,
                         title: string(child, kAXTitleAttribute),
                         frame: frame(of: child)
                     )

@@ -301,6 +301,12 @@ extension Defaults {
         /// logs a comparison of XPC snapshots against in-process enumeration
         /// without feeding results into item management. See `XPCAXReadProbe`.
         case debugXPCAXReads = "Thaw.debugXPCAXReads"
+        /// Replays the last-known concealment from persisted state at macOS 27
+        /// launch, before the first AX walk, so the menu bar opens hidden
+        /// instead of flashing every icon for the cold-walk duration. Reconciled
+        /// by the first live restriction pass. Off by default while it proves
+        /// out. See `MenuBarSectionController.restorePersistedConcealmentAtLaunch`.
+        case debugConcealRestore = "Thaw.debugConcealRestore"
 
         // MARK: Search
 
@@ -335,6 +341,13 @@ extension Defaults {
         /// a version change the marks are dropped so a Thaw or OS fix re-tests
         /// every item. Managed by ``MenuBarItemFailureLedger``.
         case menuBarFailureLedgerVersion = "MenuBarFailureLedgerVersion"
+
+        /// Persisted `uniqueIdentifier → owner bundle ID` map from the runtime
+        /// session controller, so a macOS 27 launch can conceal the last-known
+        /// hidden items immediately — before the first AX walk — instead of
+        /// flashing every icon for the ~3 s the cold walk takes. Reconciled by
+        /// the first live restriction pass. Managed by ``MenuBarSectionController``.
+        case menuBarConcealBundleIDMap = "MenuBarConcealBundleIDMap"
 
         /// Seconds an accessibility message may block before it fails.
         ///
