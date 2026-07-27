@@ -37,7 +37,7 @@ nonisolated enum Constants {
     }
 
     /// Label for the macOS 27 preview build shown in About.
-    static let macOS27PreviewName = "macOS 27 Preview 5"
+    static let macOS27PreviewName = "macOS 27 Preview 6"
 
     // swiftlint:enable force_unwrapping
 

@@ -65,7 +65,7 @@ struct AboutSettingsPane: View {
 
     private var versionLabelResource: LocalizedStringResource {
         if #available(macOS 27, *) {
-            LocalizedStringResource("\(Constants.macOS27PreviewName) (\(Constants.versionString))(\(Constants.buildString))")
+            LocalizedStringResource("\(Constants.macOS27PreviewName) (2.1.0)")
         } else {
             LocalizedStringResource("Version \(Constants.versionString) (\(Constants.buildString))")
         }
