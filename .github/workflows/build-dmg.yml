@@ -20,7 +20,7 @@ jobs:
       - run: sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
 
       - name: Configure signing
-        uses: ./.github/actions/configure-signing
+        uses: thaw-app/org-ci/actions/configure-signing@bfdd9ad0c1ec61c47f1eae872909a99f16c13357
         with:
           apple-application-cert: ${{ secrets.APPLE_APPLICATION_CERT }}
           apple-application-cert-password: ${{ secrets.APPLE_APPLICATION_CERT_PASSWORD }}
@@ -29,19 +29,22 @@ jobs:
           apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
 
       - name: Build
-        uses: ./.github/actions/build
+        uses: thaw-app/org-ci/actions/build@bfdd9ad0c1ec61c47f1eae872909a99f16c13357
         with:
           apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
+          project-name: Thaw.xcodeproj
+          scheme-name: Thaw
+          deployment-target: "26.0"
 
       - name: Export Archive
-        uses: ./.github/actions/export-and-package
+        uses: thaw-app/org-ci/actions/export-and-package@bfdd9ad0c1ec61c47f1eae872909a99f16c13357
         with:
           apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
           app-name: ${{ env.APP_NAME }}
           dmg-name: ${{ env.DMG_NAME }}
 
       - name: Notarize
-        uses: ./.github/actions/notarize-and-validate
+        uses: thaw-app/org-ci/actions/notarize-and-validate@bfdd9ad0c1ec61c47f1eae872909a99f16c13357
         with:
           dmg-name: ${{ env.DMG_NAME }}
           app-name: ${{ env.APP_NAME }}
