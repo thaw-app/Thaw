@@ -248,6 +248,12 @@ final class MenuBarItemManager: ObservableObject {
     /// above `rehideTimer` for why no explicit isolation marker is needed.
     private var cacheTickCancellable: AnyCancellable?
 
+    /// Last menu-bar window-list read by the periodic `cacheItemsIfNeeded` cheap
+    /// gate (macOS 27). While this is unchanged tick-to-tick the bar is stable,
+    /// so the full identity-signature AX walk is skipped entirely. `nil` until
+    /// the first gated tick.
+    private var periodicWindowListSignature: [CGWindowID]?
+
     /// Persisted identifiers of menu bar items we've already seen.
     var knownItemIdentifiers = Set<String>()
     /// Suppresses the next automatic relocation of newly seen leftmost items.
@@ -2918,6 +2924,30 @@ extension MenuBarItemManager {
     /// arranging them into valid positions if needed.
     func cacheItemsIfNeeded() async {
         let backend = MenuBarBackendProvider.current
+
+        // Cheap pre-gate (macOS 27): the assertion backend's synthetic window
+        // IDs force a full AX walk just to build a change-detection signature,
+        // every tick. First compare a cheap menu-bar window-list read — the same
+        // signal the legacy path already uses — and skip the walk entirely while
+        // the bar is unchanged. A real add/remove/move (or a reveal/hide, which
+        // conceals or exposes owners) shifts the window list, so the walk still
+        // runs exactly when it matters.
+        if backend.usesAssertionHiding,
+           UserDefaults.standard.bool(forKey: Defaults.Key.debugCheapWalkGate.rawValue) {
+            let rawWindowIDs = Bridging.getMenuBarWindowList(option: [.itemsOnly, .activeSpace])
+            let cloneIDs = cacheActor.cachedCloneWindowIDs
+            let cheap = cloneIDs.isEmpty
+                ? rawWindowIDs
+                : rawWindowIDs.filter { !cloneIDs.contains($0) }
+            if let last = periodicWindowListSignature, last == cheap {
+                return
+            }
+            MenuBarItemManager.diagLog.debug(
+                "cacheItemsIfNeeded: cheap window-list gate changed (\(periodicWindowListSignature?.count ?? -1) -> \(cheap.count)); walking"
+            )
+            periodicWindowListSignature = cheap
+        }
+
         let items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
         if let signature = backend.itemCacheSignature(items) {
             // Assertion-backed menu bar items use synthetic window IDs, so

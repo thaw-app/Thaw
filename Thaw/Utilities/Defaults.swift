@@ -307,6 +307,12 @@ extension Defaults {
         /// by the first live restriction pass. Off by default while it proves
         /// out. See `MenuBarSectionController.restorePersistedConcealmentAtLaunch`.
         case debugConcealRestore = "Thaw.debugConcealRestore"
+        /// On macOS 27, gates the periodic `cacheItemsIfNeeded` full AX walk
+        /// behind a cheap menu-bar window-list change check, so a stable bar
+        /// stops re-walking every 3 s just to compute a change-detection
+        /// signature. Off by default while it proves out. See
+        /// `MenuBarItemManager.cacheItemsIfNeeded`.
+        case debugCheapWalkGate = "Thaw.debugCheapWalkGate"
 
         // MARK: Search
 
