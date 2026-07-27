@@ -17,9 +17,8 @@ import Foundation
 
 // The SkyLight source-PID cache is a macOS <=26 role: on macOS 27 menu-bar
 // hosting moved to MenuBarAgent and the SkyLight source-PID path is retired, so
-// its observers are not started there. The listener's macOS 27 role is
-// out-of-process Accessibility reads (`menuBarItemSnapshots`), which need no
-// cache. Branching the two roles avoids running obsolete SkyLight work on 27.
+// its observers are not started there. Gating it avoids running obsolete
+// SkyLight work on 27.
 if #unavailable(macOS 27) {
     SourcePIDCache.shared.start()
 }

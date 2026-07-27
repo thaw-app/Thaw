@@ -297,10 +297,6 @@ extension Defaults {
         /// strip. See `MenuBarChevronCover`. Off by default while it
         /// proves out.
         case debugChevronCover = "Thaw.debugChevronCover"
-        /// Verifies out-of-process AX reads via the XPC service on macOS 27:
-        /// logs a comparison of XPC snapshots against in-process enumeration
-        /// without feeding results into item management. See `XPCAXReadProbe`.
-        case debugXPCAXReads = "Thaw.debugXPCAXReads"
 
         // MARK: Search
 

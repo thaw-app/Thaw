@@ -55,13 +55,6 @@ final class Listener: Sendable {
                 let pids = SourcePIDCache.shared.pids(for: windows)
                 diagLog.debug("Listener: sourcePIDs batch response (\(pids.compactMap(\.self).count) resolved)")
                 return .sourcePIDs(pids)
-            case let .menuBarItemSnapshots(pids):
-                guard #available(macOS 27, *) else {
-                    return .menuBarItemSnapshots([])
-                }
-                let snapshots = AXSnapshotReader.snapshots(forOwnerPIDs: pids)
-                diagLog.debug("Listener: menuBarItemSnapshots for \(pids.count) pid(s) -> \(snapshots.count) item(s)")
-                return .menuBarItemSnapshots(snapshots)
             }
         } catch {
             diagLog.error("Listener failed to handle message with error \(error)")
