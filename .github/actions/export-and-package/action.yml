@@ -21,6 +21,15 @@ runs:
       shell: bash
       run: brew install create-dmg
 
+    - name: Fetch DMG background from brand-assets
+      uses: actions/checkout@v4
+      with:
+        repository: thaw-app/brand-assets
+        sparse-checkout: |
+          packaging/dmg-background@2x.png
+        sparse-checkout-cone-mode: false
+        path: brand-assets
+
     - name: Export archive and create signed DMG
       shell: bash
       env:
@@ -48,6 +57,7 @@ runs:
 
         vol_name="${APP_NAME%.app}"
         staging="$RUNNER_TEMP/dmg-staging"
+        dmg_bg="brand-assets/packaging/dmg-background@2x.png"
 
         rm -rf "$staging"
         mkdir -p "$staging"
@@ -57,7 +67,7 @@ runs:
 
         create-dmg \
           --volname "$vol_name" \
-          --background "Resources/background@2x.png" \
+          --background "$dmg_bg" \
           --window-size 582 300 \
           --icon-size 100 \
           --hide-extension "$APP_NAME" \

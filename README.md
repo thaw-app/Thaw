@@ -1,8 +1,8 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" width="400" srcset="Resources/headers/Header_Dark.svg">
-    <source media="(prefers-color-scheme: light)" width="400" srcset="Resources/headers/Header_Light.svg">
-    <img src="Resources/headers/Header_Light.svg" width="400" alt="Thaw Header" />
+    <source media="(prefers-color-scheme: dark)" width="400" srcset="https://raw.githubusercontent.com/thaw-app/brand-assets/main/headers/thaw-dark.svg">
+    <source media="(prefers-color-scheme: light)" width="400" srcset="https://raw.githubusercontent.com/thaw-app/brand-assets/main/headers/thaw-light.svg">
+    <img src="https://raw.githubusercontent.com/thaw-app/brand-assets/main/headers/thaw-light.svg" width="400" alt="Thaw Header" />
   </picture>
 </p>
 
