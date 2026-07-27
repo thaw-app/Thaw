@@ -22,9 +22,9 @@
 </p>
 
 <p align="center">
-  <a href="https://www.raycast.com/diazdesandi/thaw"><img alt="Works with Raycast" src="Resources/badges/works-with-raycast.svg" height="42" /></a>
+  <a href="https://www.raycast.com/diazdesandi/thaw"><img alt="Works with Raycast" src="https://raw.githubusercontent.com/thaw-app/brand-assets/main/badges/works-with-raycast.svg" height="42" /></a>
   &nbsp;&nbsp;
-  <a href="https://getdroppy.app/"><img alt="Works with Droppy" src="Resources/badges/works-with-droppy.svg" height="42" /></a>
+  <a href="https://getdroppy.app/"><img alt="Works with Droppy" src="https://raw.githubusercontent.com/thaw-app/brand-assets/main/badges/works-with-droppy.svg" height="42" /></a>
 </p>
 
 <p align="center">
