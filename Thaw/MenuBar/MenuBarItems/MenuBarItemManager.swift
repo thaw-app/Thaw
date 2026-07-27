@@ -3903,7 +3903,13 @@ extension MenuBarItemManager {
         // is ever force-reset by its watchdog mid-sequence, is what turns
         // into the cursor visibly "yanked" across every remaining item's
         // move (#723). Skip it and rely on the sequence-level hide.
-        if !isBulkApplyInProgress {
+        // Sampled once and reused by the defer below. Reading the flag a
+        // second time at defer time is not safe: a bulk apply can start
+        // while this move is parked on one of the awaits in between, which
+        // would pair a hide here with no show at all and strand the cursor
+        // hidden until the bulk apply's 30 s watchdog fires.
+        let ownsCursorVisibility = !isBulkApplyInProgress
+        if ownsCursorVisibility {
             MouseHelpers.hideCursor()
         }
         if warpIsOnScreen {
@@ -3939,7 +3945,7 @@ extension MenuBarItemManager {
             // Mirrors the skipped hideCursor() above: during a bulk apply
             // the sequence-level restoration (applyProfileLayout Phase 7)
             // owns showing the cursor once, at the end.
-            if !isBulkApplyInProgress {
+            if ownsCursorVisibility {
                 MouseHelpers.showCursor()
             }
             lastMoveOperationTimestamp = .now
@@ -7104,9 +7110,29 @@ extension MenuBarItemManager {
         // *containing* screen instead of the primary, so on vertically
         // stacked or mixed-height multi-monitor setups the restore warped
         // the cursor onto the wrong display.
+        //
+        // The hide is released by `restoreCursor()` as soon as the last move
+        // lands, *not* at function exit: everything after Phase 6 (control
+        // item width restoration, the settling sleeps, the closing
+        // getMenuBarItems pass, state persistence) moves no cursor, so
+        // keeping it hidden there only lengthens the window in which the
+        // user has no pointer. The `defer` is the balance for the early
+        // return paths that never reach the end of Phase 6.
         let savedCursorPosition = MouseHelpers.locationCoreGraphics
+        var cursorRestored = false
+        func restoreCursor() {
+            guard !cursorRestored else { return }
+            cursorRestored = true
+            // savedCursorPosition is already in CoreGraphics coordinates, so
+            // warp back directly with no AppKit→CG flip (and no dependence on
+            // which screen contains it).
+            if let savedCursorPosition {
+                MouseHelpers.warpCursor(to: savedCursorPosition)
+            }
+            MouseHelpers.showCursor()
+        }
         MouseHelpers.hideCursor(watchdogTimeout: .seconds(30))
-        defer { MouseHelpers.showCursor() }
+        defer { restoreCursor() }
 
         // Spans the whole move sequence below (Phase 6). Lets
         // postMoveEvents skip its own per-item hide/show — this hide
@@ -7194,6 +7220,11 @@ extension MenuBarItemManager {
             }
 
             MenuBarItemManager.diagLog.info("Profile layout (full sort): completed with \(movedCount) move(s)")
+
+            // No further cursor motion below — hand the pointer back now
+            // instead of holding it hidden through the control item
+            // restoration and its settling sleeps.
+            restoreCursor()
 
             // Give macOS a moment to finalize positions before restoring
             // control item widths.
@@ -7575,16 +7606,16 @@ extension MenuBarItemManager {
             }
 
             MenuBarItemManager.diagLog.info("Profile layout: completed with \(movedCount) move(s)")
+
+            // Last move has landed; nothing below touches the cursor.
+            restoreCursor()
         }
 
         // MARK: Phase 7: finalize (cursor, snapshot, cache, UI refresh)
 
-        // Restore cursor to its original position. savedCursorPosition is
-        // already in CoreGraphics coordinates, so warp back directly with no
-        // AppKit→CG flip (and no dependence on which screen contains it).
-        if let savedCursorPosition {
-            MouseHelpers.warpCursor(to: savedCursorPosition)
-        }
+        // No-op on the paths that already restored at the end of Phase 6;
+        // covers any branch that reaches here with the cursor still hidden.
+        restoreCursor()
 
         // Re-fetch items after moves and update the snapshot so the
         // late-arrival detection doesn't re-trigger for items we just sorted.
