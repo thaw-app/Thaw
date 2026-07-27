@@ -408,11 +408,9 @@ final class MenuBarSectionController: ObservableObject {
     /// `init`) plus the persisted bundle map, so the menu bar opens in its hidden
     /// arrangement instead of flashing every icon for the ~3 s the first AX walk
     /// takes. The first live restriction pass reconciles (apps that quit are
-    /// no-ops; apps that launched since get corrected). Opt-in while it proves
-    /// out.
+    /// no-ops; apps that launched since get corrected).
     private func restorePersistedConcealmentAtLaunch() {
         guard #available(macOS 27, *),
-              UserDefaults.standard.bool(forKey: Defaults.Key.debugConcealRestore.rawValue),
               backend.isHidingAvailable,
               let map = UserDefaults.standard.dictionary(
                   forKey: Defaults.Key.menuBarConcealBundleIDMap.rawValue

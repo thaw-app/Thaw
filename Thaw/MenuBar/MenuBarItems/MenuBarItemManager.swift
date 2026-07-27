@@ -2932,8 +2932,7 @@ extension MenuBarItemManager {
         // the bar is unchanged. A real add/remove/move (or a reveal/hide, which
         // conceals or exposes owners) shifts the window list, so the walk still
         // runs exactly when it matters.
-        if backend.usesAssertionHiding,
-           UserDefaults.standard.bool(forKey: Defaults.Key.debugCheapWalkGate.rawValue) {
+        if backend.usesAssertionHiding {
             let rawWindowIDs = Bridging.getMenuBarWindowList(option: [.itemsOnly, .activeSpace])
             let cloneIDs = cacheActor.cachedCloneWindowIDs
             let cheap = cloneIDs.isEmpty
