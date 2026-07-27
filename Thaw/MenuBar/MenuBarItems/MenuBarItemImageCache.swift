@@ -8,6 +8,7 @@
 
 import Algorithms
 import Cocoa
+import Collections
 import Combine
 import Observation
 import os.lock
@@ -144,12 +145,18 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     /// Maximum number of images to cache to prevent memory growth
     private static let maxCacheSize = 200
 
-    /// LRU tracking: maps each tag to a monotonic counter value.
-    /// Lower values are least recently used. O(1) update vs O(n) array removal.
-    private var accessTimestamps: [MenuBarItemTag: UInt64] = [:]
+    /// LRU tracking from least to most recently used.
+    /// Cache reads update this from SwiftUI bodies, so it must not invalidate them.
+    @ObservationIgnored private var accessOrder = OrderedSet<MenuBarItemTag>()
 
-    /// Monotonic counter incremented on each access, used for LRU ordering.
-    private var accessCounter: UInt64 = 0
+    /// Serializes every WindowServer capture path, including explicit cache
+    /// rebuilds and the live refresh loop.
+    private let captureSemaphore = SimpleSemaphore(value: 1)
+
+    init(images: [MenuBarItemTag: CapturedImage] = [:]) {
+        self.images = images
+        accessOrder = OrderedSet(images.keys)
+    }
 
     /// Failed capture tracking to skip repeatedly failing items
     private struct FailedCapture: Hashable {
@@ -418,6 +425,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
                     await MainActor.run {
                         for (tag, image) in imagesToLoad {
                             self.images[tag] = image
+                            self.updateAccessOrder(for: tag)
                         }
                         MenuBarItemImageCache.diagLog.debug("Loaded \(loadedCount) images from disk cache (\(Int(cacheAge))s old)")
                     }
@@ -848,7 +856,9 @@ final class MenuBarItemImageCache: @unchecked Sendable {
                     }
                     lastSCKRefreshAt = now
                     MenuBarItemImageCache.diagLog.debug("liveRefresh (SCK): section=\(section.logString) displayID=\(screen.displayID) backingScaleFactor=\(Double(scale)) hasNotch=\(screen.hasNotch) items=\(items.count) menuBarHeight=\(Double(screen.getMenuBarHeightEstimate()))")
-                    await refreshImages(of: items, scale: scale, viaSCK: true)
+                    await withCapturePermit {
+                        await refreshImages(of: items, scale: scale, viaSCK: true)
+                    }
                 } else {
                     offscreenBatch.append(contentsOf: items)
                     offscreenSectionLabels.append("\(section.logString)=\(items.count)")
@@ -868,7 +878,9 @@ final class MenuBarItemImageCache: @unchecked Sendable {
                 } else {
                     lastSkyLightBatchAt = now
                     MenuBarItemImageCache.diagLog.debug("liveRefresh (SkyLight): batched \(offscreenBatch.count) offscreen items [\(offscreenSectionLabels.joined(separator: ", "))]")
-                    await refreshImages(of: offscreenBatch, scale: scale)
+                    await withCapturePermit {
+                        await refreshImages(of: offscreenBatch, scale: scale)
+                    }
                 }
             }
         }
@@ -1236,8 +1248,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             var updatedCount = 0
             for (tag, newImage) in newImages where !CapturedImage.isVisuallyEqual(self.images[tag], newImage) {
                 self.images[tag] = newImage
-                accessCounter += 1
-                accessTimestamps[tag] = accessCounter
+                updateAccessOrder(for: tag)
                 updatedCount += 1
             }
             if updatedCount > 0 {
@@ -1350,7 +1361,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
 
             for tag in tagsToRemove {
                 images.removeValue(forKey: tag)
-                accessTimestamps.removeValue(forKey: tag)
+                accessOrder.remove(tag)
             }
             MenuBarItemImageCache.diagLog.info(
                 "Memory pressure: Cleared \(tagsToRemove.count) items from cache"
@@ -1359,29 +1370,28 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     }
 
     /// Returns the `count` least recently used tags, sorted by access time (oldest first).
-    private func leastRecentlyUsedTags(
+    func leastRecentlyUsedTags(
         count: Int,
         excluding excludedTags: Set<MenuBarItemTag> = []
     ) -> [MenuBarItemTag] {
-        let candidates: [(tag: MenuBarItemTag, timestamp: UInt64)] = if excludedTags.isEmpty {
-            images.keys.map { ($0, accessTimestamps[$0] ?? 0) }
-        } else {
-            images.keys
-                .filter { !excludedTags.contains($0) }
-                .map { ($0, accessTimestamps[$0] ?? 0) }
+        var candidates = images.keys.filter {
+            !accessOrder.contains($0) && !excludedTags.contains($0)
         }
-        return candidates
-            .sorted { $0.timestamp < $1.timestamp }
-            .prefix(count)
-            .map(\.tag)
+        candidates.append(contentsOf: accessOrder.lazy.filter {
+            self.images[$0] != nil && !excludedTags.contains($0)
+        })
+        return Array(candidates.prefix(count))
     }
 
     // MARK: Cache Access
 
     /// Updates the access order for a given tag to mark it as most recently used.
     private func updateAccessOrder(for tag: MenuBarItemTag) {
-        accessCounter += 1
-        accessTimestamps[tag] = accessCounter
+        if accessOrder.contains(tag) {
+            accessOrder.move(members: CollectionOfOne(tag), to: accessOrder.endIndex)
+        } else {
+            accessOrder.append(tag)
+        }
     }
 
     /// Gets an image from the cache and updates its access order.
@@ -1448,7 +1458,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
 
     /// Returns the number of tracked LRU entries for debugging.
     var lruEntryCount: Int {
-        accessTimestamps.count
+        accessOrder.count
     }
 
     /// Validates cache entries and removes items with invalid window IDs.
@@ -1487,7 +1497,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
 
         for invalidTag in invalidTags {
             images.removeValue(forKey: invalidTag)
-            accessTimestamps.removeValue(forKey: invalidTag)
+            accessOrder.remove(invalidTag)
             removedCount += 1
         }
 
@@ -1519,15 +1529,14 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     /// This method is NOT called automatically - you must call it explicitly.
     func logCacheStatus(_ context: String = "Manual check") {
         let imageSize = images.count
-        let lruSize = accessTimestamps.count
+        let lruSize = accessOrder.count
         let maxSize = Self.maxCacheSize
         let usagePercent = (imageSize * 100) / maxSize
         let (failedCount, blacklistedCount) = failedCapturesLock.withLock { dict in
             (dict.count, dict.values.count(where: { $0.failureCount >= Self.maxFailuresBeforeBlacklist }))
         }
 
-        let lruSorted = accessTimestamps.sorted { $0.value < $1.value }
-        let lruDescription = lruSorted.map { "\($0.key)" }.joined(separator: ", ")
+        let lruDescription = accessOrder.map { "\($0)" }.joined(separator: ", ")
 
         MenuBarItemImageCache.diagLog.info(
             """
@@ -1548,6 +1557,25 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     /// caching is necessary.
     @MainActor
     func updateCacheWithoutChecks(sections: [MenuBarSection.Name]) async {
+        await withCapturePermit {
+            await performCacheUpdateWithoutChecks(sections: sections)
+        }
+    }
+
+    /// Runs one capture operation at a time across live and explicit refreshes.
+    @MainActor
+    func withCapturePermit(_ operation: @MainActor () async -> Void) async {
+        do {
+            try await captureSemaphore.wait()
+        } catch {
+            return
+        }
+        await operation()
+        await captureSemaphore.signal()
+    }
+
+    @MainActor
+    private func performCacheUpdateWithoutChecks(sections: [MenuBarSection.Name]) async {
         guard let appState else {
             MenuBarItemImageCache.diagLog.warning("updateCacheWithoutChecks: appState is nil, aborting")
             return
@@ -1643,8 +1671,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
 
             // Mark all newly captured images as most recently used
             for tag in newImages.keys {
-                accessCounter += 1
-                accessTimestamps[tag] = accessCounter
+                updateAccessOrder(for: tag)
             }
 
             // Remove old entries whose (namespace, title, instanceIndex) matches a
@@ -1660,7 +1687,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             }
             for tag in staleKeys {
                 images.removeValue(forKey: tag)
-                accessTimestamps.removeValue(forKey: tag)
+                accessOrder.remove(tag)
             }
 
             // Merge in the new images
@@ -1680,7 +1707,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
 
                 for tag in tagsToRemove {
                     images.removeValue(forKey: tag)
-                    accessTimestamps.removeValue(forKey: tag)
+                    accessOrder.remove(tag)
                 }
 
                 if !tagsToRemove.isEmpty {
@@ -1690,11 +1717,11 @@ final class MenuBarItemImageCache: @unchecked Sendable {
                 }
             }
 
-            // Remove stale timestamps for images that no longer exist
-            accessTimestamps = accessTimestamps.filter { images.keys.contains($0.key) }
+            // Remove stale LRU entries for images that no longer exist.
+            accessOrder = OrderedSet(accessOrder.lazy.filter { self.images[$0] != nil })
 
             let afterCount = images.count
-            let finalAccessOrderCount = accessTimestamps.count
+            let finalAccessOrderCount = accessOrder.count
             let totalRemoved = beforeCount - afterCount
 
             // Log cache status for monitoring (verbose only when needed)
@@ -1820,7 +1847,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
         let tags = Set(appState.itemManager.itemCache[section].map(\.tag))
         images = images.filter { !tags.contains($0.key) }
         for tag in tags {
-            accessTimestamps.removeValue(forKey: tag)
+            accessOrder.remove(tag)
         }
     }
 
@@ -1828,8 +1855,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     @MainActor
     func clearAll() {
         images.removeAll()
-        accessTimestamps.removeAll()
-        accessCounter = 0
+        accessOrder.removeAll()
         failedCapturesLock.withLock { $0.removeAll() }
     }
 
