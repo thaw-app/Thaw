@@ -1,5 +1,6 @@
 $(SRCROOT)/MenuBarHost/Package.swift
 $(SRCROOT)/MenuBarHost/Sources/MenuBarHost/HostMenuBarBackend.swift
+$(SRCROOT)/MenuBarItemService/AXSnapshotReader.swift
 $(SRCROOT)/MenuBarItemService/Listener.swift
 $(SRCROOT)/MenuBarItemService/main.swift
 $(SRCROOT)/MenuBarItemService/SourcePIDCache.swift
@@ -109,6 +110,7 @@ $(SRCROOT)/Thaw/MenuBar/MenuBarItems/PendingLedger.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/SimpleSemaphore.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/SyntheticMoveEngine.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/WindowServerReading.swift
+$(SRCROOT)/Thaw/MenuBar/MenuBarItems/XPCAXReadProbe.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarManager.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarSection.swift
 $(SRCROOT)/Thaw/MenuBar/Search/KeyCapView.swift

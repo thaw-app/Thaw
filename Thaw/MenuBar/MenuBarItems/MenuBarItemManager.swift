@@ -559,6 +559,7 @@ final class MenuBarItemManager: ObservableObject {
             !$0.isControlItem &&
                 !$0.tag.isHidingUnsupported &&
                 !postRestrictionUnrepairableItemIDs.contains(postRestrictionRepairItemID(for: $0)) &&
+                !failureLedger.cannotCompleteMarked($0) &&
                 controller.section(for: $0) == .visible
         }
         var liveParkedIDs = parkedSetAndBarMidY(in: liveItems).parkedIDs
@@ -598,6 +599,7 @@ final class MenuBarItemManager: ObservableObject {
             !$0.isControlItem &&
                 !$0.tag.isHidingUnsupported &&
                 !postRestrictionUnrepairableItemIDs.contains(postRestrictionRepairItemID(for: $0)) &&
+                !failureLedger.cannotCompleteMarked($0) &&
                 controller.section(for: $0) == .visible &&
                 liveParkedIDs.contains($0.windowID)
         }
@@ -619,6 +621,9 @@ final class MenuBarItemManager: ObservableObject {
                     guard !Task.isCancelled else { return false }
                     failedUnparkIDs.insert(item.windowID)
                     postRestrictionUnrepairableItemIDs.insert(postRestrictionRepairItemID(for: item))
+                    // Persist the "won't move" verdict so it survives relaunch
+                    // (the in-memory set above is keyed by a per-session PID).
+                    failureLedger.recordFailure(for: item, kind: .cannotComplete)
                     MenuBarItemManager.diagLog.warning(
                         "post-restriction repair: suppressing future repair pulses for unmovable \(item.logString)"
                     )
@@ -626,6 +631,7 @@ final class MenuBarItemManager: ObservableObject {
                     guard !Task.isCancelled else { return false }
                     failedUnparkIDs.insert(item.windowID)
                     postRestrictionUnrepairableItemIDs.insert(postRestrictionRepairItemID(for: item))
+                    failureLedger.recordFailure(for: item, kind: .cannotComplete)
                     MenuBarItemManager.diagLog.warning(
                         "post-restriction repair: suppressing future repair pulses after move could not complete for \(item.logString)"
                     )
@@ -635,6 +641,9 @@ final class MenuBarItemManager: ObservableObject {
                     guard !Task.isCancelled else { return false }
                     failedUnparkIDs.insert(item.windowID)
                     postRestrictionUnrepairableItemIDs.insert(postRestrictionRepairItemID(for: item))
+                    // A one-off error is only session backoff, not a persisted
+                    // verdict — it may not mean the item is unmovable.
+                    failureLedger.recordFailure(for: item, kind: .other)
                     MenuBarItemManager.diagLog.warning(
                         "post-restriction repair: suppressing future repair pulses after move failed for \(item.logString): \(error)"
                     )
@@ -689,6 +698,7 @@ final class MenuBarItemManager: ObservableObject {
             !$0.isControlItem &&
                 !$0.tag.isHidingUnsupported &&
                 !postRestrictionUnrepairableItemIDs.contains(postRestrictionRepairItemID(for: $0)) &&
+                !failureLedger.cannotCompleteMarked($0) &&
                 !failedUnparkIDs.contains($0.windowID) &&
                 controller.section(for: $0) == .visible &&
                 afterParkedIDs.contains($0.windowID)

@@ -106,6 +106,23 @@ extension MenuBarItemService {
                 return Array(repeating: nil, count: windows.count)
             }
         }
+
+        /// macOS 27: reads the menu-bar item Accessibility snapshots owned by
+        /// the given process identifiers, out of process, so a wedged owner
+        /// blocks the helper rather than Thaw's main actor.
+        func menuBarItemSnapshots(for pids: [pid_t]) async -> [MenuBarItemService.MenuBarItemAXSnapshot] {
+            let response = await session.sendAsync(request: .menuBarItemSnapshots(pids))
+            guard let response else {
+                diagLog.error("menuBarItemSnapshots request returned nil")
+                return []
+            }
+            if case let .menuBarItemSnapshots(snapshots) = response {
+                return snapshots
+            } else {
+                diagLog.error("menuBarItemSnapshots request returned invalid response \(String(describing: response))")
+                return []
+            }
+        }
     }
 }
 

@@ -30,7 +30,7 @@ import MenuBarModel
 /// behaviour. Being wrong in that direction is cheap (a redundant capture);
 /// being wrong the other way puts a stale glyph on screen.
 ///
-/// Records persist across launches (plan 031 step 1): observations only accrue
+/// Records persist across launches: observations only accrue
 /// while a capture consumer is open, so a single session rarely sees enough of
 /// them — persistence turns many short sessions into one long one. Keys are
 /// `tagIdentifier` strings, which the 2026-07-25 identity audit showed are
@@ -53,8 +53,7 @@ final class MenuBarItemVolatilityIndex {
         case occasional
 
         /// Changes on most refreshes. Clocks, CPU meters, network throughput
-        /// readouts — the items whose titles Lounge persisted and then could
-        /// never match again.
+        /// readouts — items whose rendered content changes almost every tick.
         case live
     }
 
@@ -79,7 +78,7 @@ final class MenuBarItemVolatilityIndex {
         private(set) var unchangedStreak = 0
         private(set) var lastObserved = Date.distantPast
 
-        /// Last captured width in points (plan 031 step 3 geometry). Optional
+        /// Last captured width in points. Optional
         /// so records persisted before this field existed still decode.
         private(set) var lastWidth: Double?
 

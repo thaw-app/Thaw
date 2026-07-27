@@ -2075,6 +2075,11 @@ final class MenuBarSectionController: ObservableObject {
         }
         if didChangeRestriction {
             appState.itemManager.noteRestrictionChange()
+            if hasConcealedItems {
+                // Cover the incoming overflow chevron before it renders.
+                // No-op unless the cover feature is active.
+                appState.menuBarManager.coverChevronPreemptively()
+            }
             restoreVisibleControlItemAfterRestrictionChange()
             diagLog.info("restriction changed; restored visible control item state")
             runPostRestrictionSceneProbes()

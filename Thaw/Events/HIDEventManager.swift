@@ -1064,9 +1064,9 @@ extension HIDEventManager {
             return
         }
 
-        // Match Lounge's bounded menu-dismiss wait: keep the assertion released
-        // while the panel is visible, but never strand it after an observation
-        // failure or a panel that remains open indefinitely.
+        // Bounded menu-dismiss wait: keep the assertion released while the
+        // panel is visible, but never strand it after an observation failure
+        // or a panel that remains open indefinitely.
         var closedSamples = 0
         for _ in 0 ..< 300 {
             guard !Task.isCancelled else { return }

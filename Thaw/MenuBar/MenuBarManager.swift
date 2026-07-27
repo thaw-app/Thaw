@@ -99,9 +99,15 @@ final class MenuBarManager: ObservableObject {
     /// visibility restriction. `nil` on macOS <=26.
     private(set) var sectionController: MenuBarSectionController?
 
-    /// macOS 27 only: covers the native overflow chevron (plan 031). Owned here
-    /// because it needs the section controller's overflow observation.
+    /// macOS 27 only: covers the native overflow chevron.
     private let chevronCover = MenuBarChevronCover()
+
+    /// Covers the native overflow chevron pre-emptively at its last-known
+    /// position — call the moment items are concealed, so the cover is in place
+    /// before the chevron renders (no flash). No-op unless the cover is active.
+    func coverChevronPreemptively() {
+        chevronCover.coverPreemptively()
+    }
 
     /// Whether the assertion controller is currently revealed because the
     /// active display's persistent "Always show hidden items" setting asked

@@ -41,7 +41,7 @@ final class IceBarPanel: NSPanel {
     /// Background cache task started when the panel is shown.
     private var cacheTask: Task<Void, Never>?
 
-    /// Spike flag for plan 025 — see ``Defaults/Key/debugOverlayFlushMode``.
+    /// Debug flag — see ``Defaults/Key/debugOverlayFlushMode``.
     ///
     /// Read live rather than cached so it can be toggled with `defaults write`
     /// and observed on the next show, without relaunching Thaw.
@@ -49,7 +49,7 @@ final class IceBarPanel: NSPanel {
         UserDefaults.standard.bool(forKey: Defaults.Key.debugOverlayFlushMode.rawValue)
     }
 
-    /// Spike flag for plan 031 overflow rescue — see
+    /// Debug flag for overflow rescue — see
     /// ``Defaults/Key/debugOverlayParkedMode``. Parks the bar as an
     /// *interactive* flush panel in the dead strip beside the notch: items
     /// there are assertion-hidden from the real bar but painted and clickable
@@ -219,7 +219,7 @@ final class IceBarPanel: NSPanel {
             }
         }
 
-        // Parked mode (plan 031 overflow-rescue spike): sit on the strip with
+        // Parked mode (overflow-rescue spike): sit on the strip with
         // the panel's right edge against the notch's left edge — the dead
         // space macOS refuses to lay items into. `debugSimulateNotch` provides
         // a synthetic 120 pt notch on displays without one. Interactive, so
@@ -295,9 +295,9 @@ final class IceBarPanel: NSPanel {
         hasShadow = !flush
         ignoresMouseEvents = Self.isFlushOverlayMode && !Self.isParkedOverlayMode
         if Self.isParkedOverlayMode {
-            diagLog.notice("show: parked overlay mode active (plan 031 overflow-rescue spike)")
+            diagLog.notice("show: parked overlay mode active (overflow-rescue spike)")
         } else if flush {
-            diagLog.notice("show: flush overlay mode active (plan 025 spike)")
+            diagLog.notice("show: flush overlay mode active (flush spike)")
         }
 
         // IMPORTANT: We must set the navigation state and current section
@@ -609,7 +609,7 @@ private struct IceBarContentView: View {
         }
     }
 
-    /// Plan 031 step 3: geometry-faithful layout for the flush overlay.
+    /// Geometry-faithful layout for the flush overlay.
     ///
     /// The real menu bar packs items edge to edge — each item's captured crop
     /// already spans its full window bounds, native horizontal padding

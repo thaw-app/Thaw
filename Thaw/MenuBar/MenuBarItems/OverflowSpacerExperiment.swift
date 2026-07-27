@@ -11,7 +11,7 @@ import Cocoa
 import Combine
 import MenuBarModel
 
-/// Debug instrument for the "chevron herding" question (plan 031): does the
+/// Debug instrument for the "chevron herding" question: does the
 /// native macOS 27 overflow control's position track item layout, and can a
 /// deliberately wide spacer item therefore force overflow to happen — and the
 /// chevron to appear — inside the region Thaw manages, instead of wherever the

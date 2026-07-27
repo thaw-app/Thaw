@@ -15,7 +15,14 @@ import Foundation
 // logged before the configureLogging request arrives still reaches
 // OSLog; only the on-disk diagnostic file is gated.
 
-SourcePIDCache.shared.start()
+// The SkyLight source-PID cache is a macOS <=26 role: on macOS 27 menu-bar
+// hosting moved to MenuBarAgent and the SkyLight source-PID path is retired, so
+// its observers are not started there. The listener's macOS 27 role is
+// out-of-process Accessibility reads (`menuBarItemSnapshots`), which need no
+// cache. Branching the two roles avoids running obsolete SkyLight work on 27.
+if #unavailable(macOS 27) {
+    SourcePIDCache.shared.start()
+}
 Listener.shared.activate()
 
 // Run the RunLoop in a loop that drains an autoreleasepool every

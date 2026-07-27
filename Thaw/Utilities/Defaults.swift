@@ -275,28 +275,32 @@ extension Defaults {
         case diagnosticAssessmentModeSceneProbes = "Thaw.diagnosticAssessmentModeSceneProbes"
         case diagnosticAssessmentModeProbeHiddenTriggerPress = "Thaw.diagnosticAssessmentModeProbeHiddenTriggerPress"
         case debugSimulateNotch = "Thaw.debugSimulateNotch"
-        /// Spike flag for plan 025. Parks Thaw Bar flush against the menu bar
+        /// Debug flag. Parks Thaw Bar flush against the menu bar
         /// strip with its chrome stripped, so the only open question — can it
         /// be made pixel-convincing against the real menu bar? — can be
         /// answered by eye before any transition machinery is written.
         case debugOverlayFlushMode = "Thaw.debugOverlayFlushMode"
-        /// Persisted per-item volatility records (plan 031 step 1). JSON blob
+        /// Persisted per-item volatility records. JSON blob
         /// keyed by `tagIdentifier`; see `MenuBarItemVolatilityIndex`.
         case menuBarItemVolatilityIndex = "MenuBarItemVolatilityIndex"
-        /// Spike flag for plan 031 overflow rescue. Parks Thaw Bar as an
+        /// Debug flag for overflow rescue. Parks Thaw Bar as an
         /// *interactive* flush panel beside the (real or simulated) notch, so
         /// assertion-hidden items stay visible and clickable in strip space
         /// macOS refuses to lay items into. Pairs with `debugSimulateNotch`
         /// on non-notched displays.
         case debugOverlayParkedMode = "Thaw.debugOverlayParkedMode"
-        /// Width in points of the debug overflow spacer status item (plan 031
-        /// chevron-herding experiment). 0 or absent = no spacer. See
+        /// Width in points of the debug overflow spacer status item
+        /// (chevron-herding experiment). 0 or absent = no spacer. See
         /// `OverflowSpacerExperiment`.
         case debugOverflowSpacerWidth = "Thaw.debugOverflowSpacerWidth"
         /// Covers the native macOS 27 overflow chevron with a menu-bar-matched
-        /// strip (plan 031). See `MenuBarChevronCover`. Off by default while it
+        /// strip. See `MenuBarChevronCover`. Off by default while it
         /// proves out.
         case debugChevronCover = "Thaw.debugChevronCover"
+        /// Verifies out-of-process AX reads via the XPC service on macOS 27:
+        /// logs a comparison of XPC snapshots against in-process enumeration
+        /// without feeding results into item management. See `XPCAXReadProbe`.
+        case debugXPCAXReads = "Thaw.debugXPCAXReads"
 
         // MARK: Search
 
@@ -321,6 +325,16 @@ extension Defaults {
         /// events, keyed by namespace and title. Managed by
         /// ``MenuBarItemFailureLedger``; not exposed in Settings.
         case unresponsiveMenuBarItems = "UnresponsiveMenuBarItems"
+
+        /// Items whose moves have repeatedly returned `cannotComplete` and are
+        /// treated as unmovable across launches. Managed by
+        /// ``MenuBarItemFailureLedger``; not exposed in Settings.
+        case cannotCompleteMenuBarItems = "CannotCompleteMenuBarItems"
+
+        /// Build string the failure-ledger marks were last written against. On
+        /// a version change the marks are dropped so a Thaw or OS fix re-tests
+        /// every item. Managed by ``MenuBarItemFailureLedger``.
+        case menuBarFailureLedgerVersion = "MenuBarFailureLedgerVersion"
 
         /// Seconds an accessibility message may block before it fails.
         ///

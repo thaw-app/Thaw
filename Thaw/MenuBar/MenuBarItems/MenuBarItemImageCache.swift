@@ -409,7 +409,7 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
     }
 
     /// Maximum age of a disk-cached image for items with no (or an untrusted)
-    /// volatility classification (30 seconds). Before plan 031 step 2 this was
+    /// volatility classification (30 seconds). Previously this was
     /// the whole cache's lifetime, which is why every relaunch showed app-icon
     /// fallbacks flickering into real glyphs one by one.
     private static nonisolated let maxCacheAgeSeconds: TimeInterval = 30
@@ -423,7 +423,7 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
     /// refresh loop still replaces it the moment it actually changes.
     private static nonisolated let stableCacheAgeSeconds: TimeInterval = 7 * 24 * 60 * 60
 
-    /// The per-item TTL ladder (plan 031 step 2).
+    /// The per-item TTL ladder.
     private static nonisolated func diskCacheTTL(
         for volatility: MenuBarItemVolatilityIndex.Volatility?
     ) -> TimeInterval {
@@ -523,7 +523,7 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
                     return
                 }
 
-                // Per-item TTL (plan 031 step 2): the file carries one save
+                // Per-item TTL: the file carries one save
                 // timestamp, but each item's allowed age depends on its
                 // volatility class. Only when even `stable` items would be
                 // expired is the file itself dead.

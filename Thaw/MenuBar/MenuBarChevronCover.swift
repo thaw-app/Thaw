@@ -12,7 +12,7 @@ import MenuBarModel
 import PlatformRuntimeKit
 
 /// Covers the native macOS 27 overflow chevron with a clean, menu-bar-matched
-/// strip (plan 031).
+/// strip.
 ///
 /// Five independent reverse-engineering passes established that the chevron —
 /// the `‹···›` / "Double backward chevron" indicator MenuBarAgent draws when
@@ -44,10 +44,24 @@ final class MenuBarChevronCover {
     /// One cover panel per display that currently shows a chevron.
     private var panels: [CGDirectDisplayID: NSPanel] = [:]
 
+    /// Last detected chevron bounds per display, in top-left CG-global
+    /// coordinates. The chevron reappears at ~the same spot each time items are
+    /// concealed, so this is the prediction used to cover pre-emptively (before
+    /// the real chevron renders) via ``coverPreemptively()``.
+    private var lastKnownBounds: [CGDirectDisplayID: CGRect] = [:]
+
     private let diagLog = DiagLog(category: "MenuBarChevronCover")
 
     private var isEnabled: Bool {
         UserDefaults.standard.bool(forKey: Defaults.Key.debugChevronCover.rawValue)
+    }
+
+    /// Whether Thaw is currently concealing any items — the only condition
+    /// under which the native chevron can appear.
+    private var hidingActive: Bool {
+        guard let cache = appState?.itemManager.itemCache else { return false }
+        return !cache.managedItems(for: .hidden).isEmpty
+            || !cache.managedItems(for: .alwaysHidden).isEmpty
     }
 
     func performSetup(with appState: AppState) {
@@ -75,6 +89,16 @@ final class MenuBarChevronCover {
         }
 
         let additionalOwners = Self.additionalChevronOwners()
+
+        // A chevron can only exist while Thaw is concealing items (a hidden or
+        // always-hidden section is populated). When nothing is concealed, skip
+        // the per-display AX hit-test scan entirely so the poll stays cheap —
+        // unless a test rig has opted a bundle in, which has no hidden section.
+        guard hidingActive || !additionalOwners.isEmpty else {
+            teardownAll()
+            return
+        }
+
         var covered = Set<CGDirectDisplayID>()
 
         for screen in NSScreen.screens {
@@ -83,7 +107,9 @@ final class MenuBarChevronCover {
                 in: CGDisplayBounds(displayID),
                 additionalOwnerBundleIDs: additionalOwners
             )
-            guard let coverRect = coverFrame(for: chevrons) else { continue }
+            guard let cgBounds = Self.unionBounds(chevrons) else { continue }
+            lastKnownBounds[displayID] = cgBounds
+            guard let coverRect = Self.cocoaRect(from: cgBounds) else { continue }
             present(displayID: displayID, coverRect: coverRect)
             covered.insert(displayID)
         }
@@ -93,25 +119,47 @@ final class MenuBarChevronCover {
         }
     }
 
-    /// The union of the chevron bounds, converted from top-left CG global
-    /// coordinates to bottom-left Cocoa global coordinates, or `nil` when there
-    /// is nothing to cover.
-    private func coverFrame(for bounds: [CGRect]) -> CGRect? {
+    /// Covers each display's chevron *pre-emptively* at its last-known position,
+    /// called the moment Thaw conceals items — before the real chevron renders,
+    /// so there is no flash of a bare chevron. The next detection poll
+    /// reconciles the panel to the actual bounds (or tears it down if no
+    /// chevron appears). Does nothing on a display with no prior sighting; the
+    /// reactive poll covers that (only the first-ever concealment can flash).
+    func coverPreemptively() {
+        guard isEnabled, hidingActive else { return }
+        for screen in NSScreen.screens {
+            let displayID = screen.displayID
+            guard let cgBounds = lastKnownBounds[displayID],
+                  let coverRect = Self.cocoaRect(from: cgBounds)
+            else {
+                continue
+            }
+            present(displayID: displayID, coverRect: coverRect)
+        }
+    }
+
+    /// The union of the chevron bounds in top-left CG-global coordinates, or
+    /// `nil` when there is nothing to cover.
+    private static func unionBounds(_ bounds: [CGRect]) -> CGRect? {
         let valid = bounds.filter { !$0.isNull && !$0.isEmpty }
         guard var union = valid.first else { return nil }
         for rect in valid.dropFirst() {
             union = union.union(rect)
         }
-        // Both CG-global and Cocoa-global share the primary display's left
-        // origin; they differ only by a vertical flip about the primary's
-        // height. `NSScreen.screens.first` is the primary (menu-bar) screen,
-        // whose frame origin is (0, 0).
+        return union
+    }
+
+    /// Converts a top-left CG-global rect to a bottom-left Cocoa-global rect.
+    /// Both share the primary display's left origin and differ only by a
+    /// vertical flip about the primary's height. `NSScreen.screens.first` is
+    /// the primary (menu-bar) screen, whose frame origin is (0, 0).
+    private static func cocoaRect(from cgRect: CGRect) -> CGRect? {
         guard let primaryMaxY = NSScreen.screens.first?.frame.maxY else { return nil }
         return CGRect(
-            x: union.origin.x,
-            y: primaryMaxY - union.maxY,
-            width: union.width,
-            height: union.height
+            x: cgRect.origin.x,
+            y: primaryMaxY - cgRect.maxY,
+            width: cgRect.width,
+            height: cgRect.height
         )
     }
 
