@@ -142,32 +142,35 @@ struct AboutSettingsPane: View {
                     .font(.system(size: 14))
                     .foregroundStyle(.secondary)
 
-                HStack(spacing: 10) {
-                    Button("Support \(Constants.displayName)", systemImage: "heart.circle.fill") {
-                        openURL(Constants.donateURL)
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 10) {
+                        Button("Support \(Constants.displayName)", systemImage: "heart.circle.fill") {
+                            openURL(Constants.donateURL)
+                        }
+                        .buttonStyle(.plain)
+
+                        Menu {
+                            Button("Acknowledgements", action: openAcknowledgements)
+                            Divider()
+                            Button("Contribute") {
+                                openURL(Constants.repositoryURL)
+                            }
+                            Button("Report a Bug") {
+                                openURL(Constants.issuesURL)
+                            }
+                        } label: {
+                            Label("More", systemImage: "ellipsis.circle")
+                                .labelStyle(.iconOnly)
+                        }
+                        .menuStyle(.borderlessButton)
+                        .fixedSize()
+                        .help("More project links")
+                    }
+
+                    Button("Help translate \(Constants.displayName)", systemImage: "globe") {
+                        openURL(Constants.translateURL)
                     }
                     .buttonStyle(.plain)
-
-                    Menu {
-                        Button("Help translate \(Constants.displayName)") {
-                            openURL(Constants.translateURL)
-                        }
-                        Divider()
-                        Button("Acknowledgements", action: openAcknowledgements)
-                        Divider()
-                        Button("Contribute") {
-                            openURL(Constants.repositoryURL)
-                        }
-                        Button("Report a Bug") {
-                            openURL(Constants.issuesURL)
-                        }
-                    } label: {
-                        Label("More", systemImage: "ellipsis.circle")
-                            .labelStyle(.iconOnly)
-                    }
-                    .menuStyle(.borderlessButton)
-                    .fixedSize()
-                    .help("More project links")
                 }
                 .font(.system(size: 13))
                 .foregroundStyle(.secondary)
@@ -182,27 +185,56 @@ struct AboutSettingsPane: View {
     }
 
     private var updatesSection: some View {
-        VStack(spacing: 12) {
-            automaticallyCheckForUpdates
-            automaticallyDownloadUpdates
-            updateChannel
-            checkForUpdates
+        // A hand-built grouped card — NOT a Form/List. On the About pane the
+        // detail surface is the same `.hudWindow` behind-window material as the
+        // sidebar; a real grouped List backing on top of that makes AppKit drop
+        // the sidebar's vibrancy region and it renders transparent (vanishes).
+        // A plain rounded container introduces no list backing, so the sidebar
+        // stays. No inter-row separators, matching the requested look.
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Updates")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .padding(.leading, 6)
+
+            VStack(spacing: 14) {
+                automaticallyCheckForUpdates
+                automaticallyDownloadUpdates
+                updateChannel
+                checkForUpdates
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(Color(nsColor: .controlBackgroundColor).opacity(0.55))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .strokeBorder(Color(nsColor: .separatorColor), lineWidth: 0.5)
+            )
         }
-        .frame(maxWidth: 600)
+        .frame(maxWidth: 460)
     }
 
     private var automaticallyCheckForUpdates: some View {
-        Toggle(
-            "Automatically check for updates",
-            isOn: $updatesManager.automaticallyChecksForUpdates
-        )
+        // Spread manually (label leading, switch trailing) — a plain Toggle only
+        // spreads inside a Form, and this card is deliberately not a Form.
+        HStack {
+            Text("Automatically check for updates")
+            Spacer()
+            Toggle("", isOn: $updatesManager.automaticallyChecksForUpdates)
+                .labelsHidden()
+        }
     }
 
     private var automaticallyDownloadUpdates: some View {
-        Toggle(
-            "Automatically download updates",
-            isOn: $updatesManager.automaticallyDownloadsUpdates
-        )
+        HStack {
+            Text("Automatically download updates")
+            Spacer()
+            Toggle("", isOn: $updatesManager.automaticallyDownloadsUpdates)
+                .labelsHidden()
+        }
     }
 
     private var updateChannel: some View {
