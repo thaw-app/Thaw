@@ -35,7 +35,14 @@ final class MouseMovedThrottleTests: XCTestCase {
         let lastProcessTime = OSAllocatedUnfairLock(initialState: TimeInterval(0))
         let interval = HIDEventManager.mouseMovedThrottleInterval
         let first: TimeInterval = 100
-        let second = first + interval
+        // `first + interval` does not round-trip: the interval is 1/30, and
+        // adding it to a timestamp of this magnitude drops low bits that
+        // subtracting `first` back out cannot recover, leaving the difference
+        // a couple of femtoseconds *under* one interval. Step to the next
+        // representable value so "one interval later" is actually expressible.
+        // A strict `>` in the gate still fails this, which is the regression
+        // the test is here to catch.
+        let second = (first + interval).nextUp
 
         XCTAssertTrue(HIDEventManager.shouldProcessMouseMoved(now: first, lastProcessTime: lastProcessTime))
         XCTAssertTrue(HIDEventManager.shouldProcessMouseMoved(now: second, lastProcessTime: lastProcessTime))
