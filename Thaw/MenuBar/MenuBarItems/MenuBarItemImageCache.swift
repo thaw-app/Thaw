@@ -133,6 +133,14 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     /// The cached item images, keyed by their corresponding tags.
     private(set) var images = [MenuBarItemTag: CapturedImage]()
 
+    /// Memoized results of ``trimmedImage(for:)``, keyed by tag, each paired
+    /// with the `CGImage` it was derived from so a recapture invalidates it.
+    ///
+    /// Deliberately not observable: this is derived data, and writing it from
+    /// inside a SwiftUI body — which is exactly where it is filled — must not
+    /// invalidate the view that just read it.
+    @ObservationIgnored private var trimmedImages = [MenuBarItemTag: (source: CGImage, image: NSImage)]()
+
     /// Maximum number of images to cache to prevent memory growth
     private static let maxCacheSize = 200
 
@@ -1352,6 +1360,42 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             return entry.value
         }
         return nil
+    }
+
+    /// Returns the item's image with its transparent left and right margins
+    /// trimmed off, ready to display at its captured scale.
+    ///
+    /// Memoized. Trimming allocates a `CGContext`, draws the image into it,
+    /// and scans the result's alpha channel — cheap once, but its callers are
+    /// SwiftUI bodies that re-evaluate for *every* row on every keystroke, so
+    /// computing it on demand made the cost scale with item count × typing
+    /// speed. The memo is keyed on the `CGImage` the trim came from, so a
+    /// recapture (new icon state) still refreshes it.
+    func trimmedImage(for tag: MenuBarItemTag) -> NSImage? {
+        guard let captured = image(for: tag) else {
+            trimmedImages.removeValue(forKey: tag)
+            return nil
+        }
+        if let memo = trimmedImages[tag], memo.source === captured.cgImage {
+            return memo.image
+        }
+        guard let trimmed = captured.cgImage.trimmingTransparency(around: [.minXEdge, .maxXEdge]) else {
+            return nil
+        }
+        let image = NSImage(
+            cgImage: trimmed,
+            size: CGSize(
+                width: CGFloat(trimmed.width) / captured.scale,
+                height: CGFloat(trimmed.height) / captured.scale
+            )
+        )
+        // Entries are only ever added here, so drop the ones whose images have
+        // since left the cache rather than pruning at all 15 mutation sites.
+        if trimmedImages.count > images.count {
+            trimmedImages = trimmedImages.filter { images[$0.key] != nil }
+        }
+        trimmedImages[tag] = (captured.cgImage, image)
+        return image
     }
 
     /// Returns the current cache size for monitoring purposes.

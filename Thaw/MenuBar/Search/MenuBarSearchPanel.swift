@@ -125,6 +125,9 @@ final class MenuBarSearchPanel: NSPanel {
             names[uniqueIdentifier] = newName
         }
         Defaults.set(names, forKey: .menuBarItemCustomNames)
+        // Renaming is the one thing that can change a display name while the
+        // panel is open, so it owns invalidating the memo.
+        ItemNameCache.clear()
         // The rendered row (`MenuBarSearchItemView`) reads its display name
         // from `Defaults`/`item.customName` directly rather than from a
         // tracked `model` property, so writing to `Defaults` above doesn't
@@ -334,6 +337,8 @@ final class MenuBarSearchPanel: NSPanel {
             model.searchText = ""
         }
         model.editingItemTag = nil
+        AppIconCache.clear()
+        ItemNameCache.clear()
         super.close()
         contentView = nil
         mouseDownMonitor.stop()
@@ -707,7 +712,7 @@ private struct MenuBarSearchContentView: View {
                     } content: {
                         MenuBarSearchItemView(model: model, item: item)
                     }
-                    items.append(SearchItem(listItem: listItem, title: item.displayName))
+                    items.append(SearchItem(listItem: listItem, title: ItemNameCache.displayName(for: item)))
                 }
             }
 
@@ -890,6 +895,61 @@ private let controlCenterIcon: NSImage? = {
     return app.icon
 }()
 
+/// Memoizes owning-application icons for the search rows.
+///
+/// `NSRunningApplication(processIdentifier:)` is a Launch Services lookup and
+/// `.icon` decodes on first access per instance. Row bodies re-evaluate for
+/// every item on every keystroke, and each one built a fresh instance, so the
+/// lookup ran N times per keypress. Cleared when the panel closes, which also
+/// keeps a recycled PID from being served a dead app's icon.
+@MainActor
+private enum AppIconCache {
+    private static var icons = [pid_t: NSImage?]()
+
+    static func icon(forPID pid: pid_t) -> NSImage? {
+        if let cached = icons[pid] {
+            return cached
+        }
+        let icon = NSRunningApplication(processIdentifier: pid)?.icon
+        icons[pid] = icon
+        return icon
+    }
+
+    static func clear() {
+        icons.removeAll()
+    }
+}
+
+/// Memoizes item display names for the search rows.
+///
+/// `MenuBarItem.displayName` is far from a stored property: it reads the whole
+/// `menuBarItemCustomNames` dictionary out of `UserDefaults` and bridges it,
+/// then — for the common case with no custom name — resolves the owning
+/// application through Launch Services and runs the title through a couple of
+/// regexes. The search panel asks for it once per item to build the fuzzy
+/// search corpus *and* once per rendered row, on every keystroke, so the cost
+/// scaled with item count × typing speed.
+///
+/// Cleared when the panel closes and when a name is edited, which is the only
+/// thing that can change an item's name while the panel is open.
+@MainActor
+private enum ItemNameCache {
+    private static var names = [MenuBarItemTag: String]()
+
+    static func displayName(for item: MenuBarItem) -> String {
+        if let cached = names[item.tag] {
+            return cached
+        }
+        let name = item.displayName
+        names[item.tag] = name
+        return name
+    }
+
+    static func clear() {
+        names.removeAll()
+    }
+}
+
 private struct MenuBarSearchItemView: View {
     @Environment(\.menuBarSearchPanel) var panel
     @Environment(AppState.self) var appState: AppState
@@ -900,30 +960,18 @@ private struct MenuBarSearchItemView: View {
     @FocusState private var isEditing: Bool
 
     private var itemImage: NSImage {
-        guard
-            let cached = imageCache.images[item.tag],
-            let trimmed = cached.cgImage.trimmingTransparency(around: [
-                .minXEdge, .maxXEdge,
-            ])
-        else {
-            return NSImage()
-        }
-        let size = CGSize(
-            width: CGFloat(trimmed.width) / cached.scale,
-            height: CGFloat(trimmed.height) / cached.scale
-        )
-        return NSImage(cgImage: trimmed, size: size)
+        imageCache.trimmedImage(for: item.tag) ?? NSImage()
     }
 
     private var appIcon: NSImage? {
-        guard let app = item.sourceApplication else {
-            return nil
-        }
         switch item.tag.namespace {
         case .controlCenter, .systemUIServer, .textInputMenuAgent:
             return controlCenterIcon
         default:
-            return app.icon
+            guard let sourcePID = item.sourcePID else {
+                return nil
+            }
+            return AppIconCache.icon(forPID: sourcePID)
         }
     }
 
@@ -979,7 +1027,7 @@ private struct MenuBarSearchItemView: View {
     }
 
     private var labelText: some View {
-        Text(item.displayName)
+        Text(ItemNameCache.displayName(for: item))
     }
 
     @ViewBuilder
