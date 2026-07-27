@@ -227,6 +227,21 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     /// Minimum spacing enforced between offscreen SkyLight batch captures.
     private static let minSkyLightBatchInterval: Duration = .seconds(1)
 
+    /// Timestamp of the last visible-section SCK capture, used to rate-limit
+    /// the on-screen path the same way the offscreen one already is.
+    private var lastSCKRefreshAt: ContinuousClock.Instant?
+
+    /// Minimum spacing enforced between visible-section SCK captures.
+    ///
+    /// The tick rate comes from the user's `iconRefreshInterval` (the "Icon
+    /// refresh rate" slider, up to 30 fps), and the consumers that ask for
+    /// every section — item search, the layout pane, the hotkey list — turned
+    /// that into up to 30 composite captures per second for as long as their
+    /// panel stayed open, which is enough to pin a core. Icon animation does
+    /// not need more than this; the slider still controls everything below the
+    /// floor.
+    private static let minSCKRefreshInterval: Duration = .milliseconds(250)
+
     /// Tracks whether the MenuBarLayoutSettingsPane is currently open.
     /// Used to gate background cache prewarming so captures only occur while the
     /// user has the layout settings open, rather than staying stuck on for the
@@ -769,7 +784,23 @@ final class MenuBarItemImageCache: @unchecked Sendable {
                 && nav.settingsNavigationIdentifier == .hotkeys
                 && isItemHotkeyListExpanded
             if nav.isSearchPresented || isLayoutPane || isHotkeyListVisible {
-                sections = MenuBarSection.Name.allCases
+                if nav.isSearchPresented, !isLayoutPane, !isHotkeyListVisible {
+                    // Search is the only consumer here that can be told to
+                    // leave whole sections out of its results; capturing icons
+                    // for rows it will never render is pure waste. The layout
+                    // pane and the hotkey list always show every section, so
+                    // they keep the unfiltered set.
+                    let advanced = appState.settings.advanced
+                    sections = MenuBarSection.Name.allCases.filter { name in
+                        switch name {
+                        case .visible: advanced.searchIncludeVisible
+                        case .hidden: advanced.searchIncludeHidden
+                        case .alwaysHidden: advanced.searchIncludeAlwaysHidden
+                        }
+                    }
+                } else {
+                    sections = MenuBarSection.Name.allCases
+                }
             } else if nav.isIceBarPresented,
                       let current = appState.menuBarManager.iceBarPanel.currentSection
             {
@@ -804,6 +835,18 @@ final class MenuBarItemImageCache: @unchecked Sendable {
                 guard !items.isEmpty else { continue }
 
                 if section == .visible {
+                    // Rate-limit the on-screen SCK path, mirroring the
+                    // offscreen SkyLight limit below. Skips only this section
+                    // for this tick, so the offscreen batch still gets its
+                    // chance at its own cadence.
+                    let now = ContinuousClock.now
+                    if let lastSCKRefreshAt,
+                       now - lastSCKRefreshAt < Self.minSCKRefreshInterval
+                    {
+                        MenuBarItemImageCache.diagLog.debug("liveRefresh (SCK): skipping \(items.count) visible items, rate-limited")
+                        continue
+                    }
+                    lastSCKRefreshAt = now
                     MenuBarItemImageCache.diagLog.debug("liveRefresh (SCK): section=\(section.logString) displayID=\(screen.displayID) backingScaleFactor=\(Double(scale)) hasNotch=\(screen.hasNotch) items=\(items.count) menuBarHeight=\(Double(screen.getMenuBarHeightEstimate()))")
                     await refreshImages(of: items, scale: scale, viaSCK: true)
                 } else {
