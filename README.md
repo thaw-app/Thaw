@@ -7,7 +7,9 @@
 </p>
 
 <p align="center">
-  Thaw is a powerful menu bar management tool for macOS. While its primary function is hiding and showing menu bar items, it aims to cover a wide variety of additional features to make it one of the most versatile menu bar tools available.
+  <strong>Unfreeze your menu bar.</strong><br />
+  Thaw is a menu bar manager for macOS. Its core job is hiding and showing menu bar items — with search, hotkeys, profiles, and appearance options so the bar stays useful without the clutter.<br />
+  Free and open source. Private by design — no tracking, no account.
 </p>
 
 <p align="center">
@@ -44,49 +46,29 @@
 ![thaw-banner](https://github.com/user-attachments/assets/9584065d-f840-4545-9a42-cfc5534b5ac3)
 
 > [!NOTE]
-> **Thaw** is a fork of [Ice](https://github.com/jordanbaird/Ice) by Jordan Baird.
-> As the original project appears to be inactive, Thaw aims to keep the project alive fixing bugs, ensuring compatibility with the latest macOS releases, and eventually implementing the remaining roadmap features.
+> Thaw is an actively maintained fork of [Ice](https://github.com/jordanbaird/Ice), focused on fixes, compatibility, and new features.
 
 ## Install
 
-### Manual Installation
+### Latest release (.zip)
 
-Download the `Thaw_<version>.zip` file from the [latest release](https://github.com/stonerl/Thaw/releases/latest) and move the unzipped app into your `Applications` folder.
+Download `Thaw_<version>.zip` from [latest release](https://github.com/stonerl/Thaw/releases/latest), unzip it, then move `Thaw.app` to `Applications`.
 
 ### Homebrew
-
-Install the latest **stable** release:
 
 ```sh
 brew install thaw
 ```
 
-Install the latest **beta** (or stable, whichever is newer):
+Beta (or stable, whichever is newer):
 
 ```sh
 brew install thaw@beta
 ```
 
-### Integrations
+## Language Support
 
-- **[Raycast](https://www.raycast.com/diazdesandi/thaw)** — toggle hidden sections and search the menu bar from the keyboard
-- **[Droppy](https://github.com/iordv/Droppy)** — install Thaw as a Droplet and keep it updated automatically
-
-For `thaw://` actions and settings automation, see [URI schemes](docs/URI_SCHEMES.md).
-
-Having trouble after installing? Check [Frequent Issues](FREQUENT_ISSUES.md) before opening a new report.
-
-## Contributing
-
-Pull requests are welcome. Please open them against the **`development`** branch, follow the PR template, and read [Contributing](.github/CONTRIBUTING.md).
-
-Looking for something to do? See [Ways to contribute](https://github.com/stonerl/Thaw/issues/316).
-
-**Translations** are managed on [Crowdin](https://crowdin.com/project/thaw) — translation PRs are not accepted in this repo.
-
-## Translations
-
-Thaw is currently available in the following languages:
+Thaw is translated into the languages listed below. Translations are managed on [Crowdin](https://crowdin.com/project/thaw), and you can request additional languages there.
 
 <table frame="void" rules="none">
     <tr>
@@ -119,16 +101,20 @@ Thaw is currently available in the following languages:
     </tr>
 </table>
 
-_Note: languages marked with (\*) are currently only available in the development branch._
+_Languages marked with (\*) are currently only available in the development branch._
 
-Help translate Thaw via [Crowdin](https://crowdin.com/project/thaw).
+## Highlights
 
-If a language you'd like to help translate is not listed here, let us know and we will add it on Crowdin.
+- **Declutter your menu bar** — hide icons you do not need and keep an always-hidden section for the rest
+- **Reveal items fast** — show hidden icons by hover, click, scroll/swipe, or hotkey
+- **Search and jump** — find any menu bar item instantly from the keyboard
+- **Switch layouts by context** — save profiles for work, focus, and presenting
+- **Built for modern macOS** — supports macOS 26 and 27, including notch-friendly layouts via the Thaw Bar
 
-## Features
+Automation via `thaw://` URI schemes: [docs/URI_SCHEMES.md](docs/URI_SCHEMES.md).
 
 <details>
-<summary>Click to view the full features list</summary>
+<summary>Full feature list</summary>
 
 ### Menu bar item management
 
@@ -166,17 +152,10 @@ If a language you'd like to help translate is not listed here, let us know and w
 
 ## Roadmap
 
-<details>
-<summary>Click to view the roadmap</summary>
-
-<br>
-
 - **Menu bar item management** — individual spacer items; menu bar item groups; show menu bar items when trigger conditions are met
 - **Menu bar appearance** — rounded screen corners
 - **Hotkeys** — enable/disable auto rehide; temporarily show individual menu bar items
 - **Other** — menu bar widgets
-
-</details>
 
 ## Gallery
 
@@ -215,6 +194,8 @@ If a language you'd like to help translate is not listed here, let us know and w
 ## Contributors
 
 This project exists thanks to the awesome people who contribute code and documentation:
+
+Want to contribute? Start with [Ways to contribute](https://github.com/stonerl/Thaw/issues/316). Pull requests are welcome against the `development` branch (see [Contributing](.github/CONTRIBUTING.md)).
 
 <a href="https://github.com/stonerl/Thaw/graphs/contributors"><img alt="Gallery of all contributors' profile photos" src="https://contrib.rocks/image?repo=stonerl/Thaw&columns=16" width="100%" /></a>
 
