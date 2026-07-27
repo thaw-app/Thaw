@@ -1701,6 +1701,27 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
                 rawCroppedImage.detachedCopy()
             }
 
+            // A concealed / off-screen item is not rendered on the on-screen
+            // strip, so its crop is never the item's glyph — it is either
+            // transparent, or (over non-uniform wallpaper, where the background
+            // knock-out can't fully clear) an opaque background rectangle. The
+            // transparent guard below only catches the former; the latter used
+            // to be stored and drawn as a misleading "blank strip". Reject
+            // off-screen crops regardless of transparency so the layout bar
+            // shows the honest app-icon fallback instead. Scoped to off-screen
+            // items, so a genuinely revealed on-screen glyph is never dropped.
+            // Denylisted hiding-unsupported items keep their transient-blank
+            // handling in the guard below (they retain their last good image).
+            if !item.isOnScreen, !item.tag.isHidingUnsupported {
+                MenuBarItemImageCache.diagLog.debug(
+                    "axBoundsCapture: off-screen \(item.logString) has no on-screen glyph to " +
+                        "capture; clearing prior image for app-icon fallback (position-hidden)"
+                )
+                result.excluded.append(item)
+                result.invalidatedTags.insert(item.tag)
+                continue
+            }
+
             guard !croppedImage.isTransparent(alphaThreshold: 0.05) else {
                 // Denylisted hiding-unsupported apps transiently render blank during
                 // Assessment Mode reflows — the assertion recomposites the whole
@@ -1718,22 +1739,10 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
                     result.excluded.append(item)
                     continue
                 }
-                // Position-hidden items are parked off-screen (a large
-                // `TrailingItemPreferredPositions` weight), so their glyph region
-                // in the composite is empty and crops to blank.
-                // That is expected, not a capture failure: recording it would
-                // blacklist the item for 30 s and leave a grey box in the layout
-                // bar. Drop the prior capture so IceBar / layout show the app
-                // icon until the item is revealed and captured again.
-                if !item.isOnScreen {
-                    MenuBarItemImageCache.diagLog.debug(
-                        "axBoundsCapture: blank image for off-screen \(item.logString); " +
-                            "clearing prior image for app-icon fallback (position-hidden)"
-                    )
-                    result.excluded.append(item)
-                    result.invalidatedTags.insert(item.tag)
-                    continue
-                }
+                // Off-screen (position-hidden / concealed) items are handled
+                // before this guard — their crop is never the glyph regardless of
+                // transparency. Anything reaching here is on-screen.
+                //
                 // On-screen blanks during display-scale / MenuBarAgent reflows used
                 // to keep stale priors — including Finder menu-chrome crops from
                 // bad geometry. Clear so LayoutBar falls back to the app icon.
