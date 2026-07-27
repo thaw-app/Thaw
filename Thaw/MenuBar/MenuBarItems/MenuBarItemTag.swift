@@ -191,6 +191,69 @@ nonisolated struct MenuBarItemTag: Hashable, CustomStringConvertible {
         self.init(namespace: namespace, title: title, windowID: nil, instanceIndex: instanceIndex)
     }
 
+    // MARK: Volatile-Title Canonicalization
+
+    /// Bundle identifier of the iStat Menus status agent, whose items title
+    /// themselves with the metric they are currently displaying.
+    static let iStatMenusStatusBundleID = "com.bjango.istatmenus.status"
+
+    /// Collapses a live metric title to the shape it will still have a second
+    /// from now.
+    ///
+    /// iStat Menus names its status items after the value on screen — "CPU
+    /// 12%" becomes "CPU 43%", "3.4 MB/s" becomes "918 KB/s" — so every
+    /// identifier derived from the title is a *different* identifier on the
+    /// next sample. Anything keyed by that identifier (a persisted section
+    /// assignment, a saved order, a dedup set) therefore stops matching the
+    /// item it was written for, and the item reads as brand new.
+    ///
+    /// Numbers become `#` and byte units are normalized so magnitude changes
+    /// (`KB` → `MB`) don't split the key either. Everything else is left
+    /// alone, so "CPU" and "Network" stay distinguishable.
+    static func canonicalMetricTitle(_ raw: String) -> String {
+        raw
+            .replacing(/[-+]?\d+(?:[.,]\d+)?/, with: "#")
+            .replacing(/#\s*[KMGTPE]?[Bb]\/s/, with: "# B/s")
+            .replacing(/#\s*[KMGTPE]?[Bb]/, with: "# B")
+    }
+
+    /// The canonical form of a `namespace:title[:index]` identifier.
+    ///
+    /// A no-op for every owner except the volatile-title ones above, so it is
+    /// safe to apply to identifiers of unknown provenance — including ones
+    /// read back from a profile written before this existed.
+    static func canonicalPersistentIdentifier(_ identifier: String) -> String {
+        let prefix = "\(iStatMenusStatusBundleID):"
+        guard identifier.hasPrefix(prefix) else {
+            return identifier
+        }
+
+        let suffix = String(identifier.dropFirst(prefix.count))
+        // A trailing `:<digits>` is the instance index, not part of the
+        // title — split it off so it survives canonicalization intact.
+        if let separator = suffix.lastIndex(of: ":") {
+            let title = String(suffix[..<separator])
+            let instance = String(suffix[suffix.index(after: separator)...])
+            if Int(instance) != nil {
+                return "\(prefix)\(canonicalMetricTitle(title)):\(instance)"
+            }
+        }
+        return "\(prefix)\(canonicalMetricTitle(suffix))"
+    }
+
+    /// Canonicalizes a list of identifiers, dropping duplicates that only
+    /// differed by their volatile portion and preserving first-seen order.
+    static func canonicalPersistentIdentifiers(_ identifiers: [String]) -> [String] {
+        var seen = Set<String>()
+        return identifiers.compactMap { identifier in
+            let canonical = canonicalPersistentIdentifier(identifier)
+            guard seen.insert(canonical).inserted else {
+                return nil
+            }
+            return canonical
+        }
+    }
+
     /// Creates a tag with the given namespace, title, window identifier,
     /// and instance index.
     init(namespace: Namespace, title: String, windowID: CGWindowID? = nil, instanceIndex: Int = 0) {

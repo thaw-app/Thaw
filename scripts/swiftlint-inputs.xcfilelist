@@ -55,9 +55,11 @@ $(SRCROOT)/Thaw/MenuBar/LayoutBar/LayoutBarScrollView.swift
 $(SRCROOT)/Thaw/MenuBar/LayoutBar/NotchIndicatorOverlay.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/AXIdentityCatalog.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/AXItemActivator.swift
+$(SRCROOT)/Thaw/MenuBar/MenuBarItems/ClickReactionVerifier.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/LayoutReconciler.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/LayoutSolver.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItem.swift
+$(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemFailureLedger.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemImageCache.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemManager.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemServiceConnection.swift

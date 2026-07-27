@@ -200,7 +200,13 @@ nonisolated extension Bridging {
         var psn = ProcessSerialNumber()
         let result = getProcessForPID(pid, &psn)
         guard result == noErr else {
-            diagLog.error("getProcessForPID failed with error \(result)")
+            // procNotFound just means the owner has already quit — that is not
+            // "unresponsive", and it is an expected, frequent condition (an
+            // item's owner terminating while a view still polls it), so treat
+            // it quietly instead of logging an error on every tick.
+            if result != procNotFound {
+                diagLog.error("getProcessForPID failed with error \(result)")
+            }
             return false
         }
         return cgsEventIsAppUnresponsive(getMainConnection(), &psn)

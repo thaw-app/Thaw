@@ -243,7 +243,7 @@ nonisolated enum LayoutSolver {
     ) -> LeftmostMove {
         // Items sitting left of the hidden divider. The Thaw icon is a
         // control item but must always be visible, so we admit it here.
-        let leftmostItems = items
+        let leftmostCandidates = items
             .filter { item in
                 // Generic Control Center placeholders are not draggable, but
                 // the planner must still see them so the unresolved-sourcePID
@@ -256,7 +256,10 @@ nonisolated enum LayoutSolver {
                     (item.isMovable || isUnresolvedControlCenterPlaceholder) &&
                     (!item.isControlItem || item.tag == .visibleControlItem)
             }
-            .sorted { $0.bounds.minX < $1.bounds.minX }
+        // Tie-broken: `first` on this list picks the item to relocate, so a
+        // minX tie during reflow must not hand the decision to a different
+        // item on an otherwise identical pass.
+        let leftmostItems = MenuBarItem.sortByLeadingEdgeThenIdentifier(leftmostCandidates)
 
         guard !leftmostItems.isEmpty else {
             return .noop(reason: .noLeftmostItems)
@@ -296,6 +299,17 @@ nonisolated enum LayoutSolver {
             guard let section = sectionName(forPersistedKey: sectionKeyString) else { continue }
             for identifier in identifiers {
                 savedSectionForIdentifier[identifier] = section
+                // Also file the saved entry under its canonical form. Owners
+                // that title their items after a live metric were persisted
+                // under whatever value was on screen at save time, which no
+                // longer matches the item today; without this the item looks
+                // like it has no saved section and gets relocated as new.
+                // Additive, so identifiers persisted before canonicalization
+                // existed keep matching under their raw key too.
+                let canonical = MenuBarItemTag.canonicalPersistentIdentifier(identifier)
+                if canonical != identifier {
+                    savedSectionForIdentifier[canonical] = section
+                }
             }
         }
 
@@ -305,7 +319,10 @@ nonisolated enum LayoutSolver {
             // Items with a saved section belong to restoreItemsToSaved-
             // Sections, not to the new-item relocation path.
             let hasSavedSection = savedSectionForIdentifier[identifier] != nil ||
-                savedSectionForIdentifier[item.uniqueIdentifier] != nil
+                savedSectionForIdentifier[item.uniqueIdentifier] != nil ||
+                savedSectionForIdentifier[
+                    MenuBarItemTag.canonicalPersistentIdentifier(item.uniqueIdentifier)
+                ] != nil
             guard !hasSavedSection else { return false }
 
             let isNewIdentity = !knownItemIdentifiers.contains(identifier)

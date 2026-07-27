@@ -8320,7 +8320,10 @@ extension MenuBarItemManager {
             bySection[section, default: []].append(item)
         }
         for key in bySection.keys {
-            bySection[key]?.sort { $0.bounds.minX < $1.bounds.minX }
+            // Tie-broken sort: this order is persisted as the layout of
+            // record, so items sharing a minX mid-reflow must not land in a
+            // different relative order from one snapshot to the next.
+            bySection[key] = MenuBarItem.sortByLeadingEdgeThenIdentifier(bySection[key] ?? [])
         }
 
         var flat = (bySection[.visible] ?? []).map(\.uniqueIdentifier)

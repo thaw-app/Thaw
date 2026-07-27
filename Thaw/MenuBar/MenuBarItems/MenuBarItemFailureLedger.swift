@@ -61,6 +61,17 @@ final class MenuBarItemFailureLedger {
 
     private static nonisolated let diagLog = DiagLog(category: "MenuBarItemFailureLedger")
 
+    /// The build string persisted marks are valid for; a change drops them.
+    ///
+    /// Without this, a mark outlives the bug that earned it: ship a fix that
+    /// makes a previously unmovable item movable and the item still sits out
+    /// bulk applies for the remainder of its two-week lifetime, because
+    /// nothing re-attempts it often enough to renew *or* retire the mark. The
+    /// build stamp makes an update the natural clearing event.
+    private static var currentBuildVersion: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "unknown"
+    }
+
     /// How long a failed item stays excluded from bulk-apply moves.
     /// Grows linearly with consecutive failures, capped at 5 minutes.
     nonisolated static func backoffInterval(failureCount: Int) -> Duration {
@@ -88,13 +99,22 @@ final class MenuBarItemFailureLedger {
     private var provisionalMarks = Set<String>()
 
     init() {
-        let stored = Defaults.dictionary(forKey: .unresponsiveMenuBarItems) as? [String: Double] ?? [:]
+        let storedBuild = Defaults.string(forKey: .unresponsiveMenuBarItemsBuild)
+        let versionChanged = storedBuild != Self.currentBuildVersion
+
+        let stored = versionChanged
+            ? [:]
+            : Defaults.dictionary(forKey: .unresponsiveMenuBarItems) as? [String: Double] ?? [:]
         let cutoff = Date.now.addingTimeInterval(-Self.markLifetime)
         markDates = stored.compactMapValues { interval in
             let date = Date(timeIntervalSinceReferenceDate: interval)
             return date > cutoff ? date : nil
         }
-        if markDates.count != stored.count {
+
+        if versionChanged {
+            Self.diagLog.info("Build changed (\(storedBuild ?? "none") -> \(Self.currentBuildVersion)); dropping persisted failure marks")
+        }
+        if versionChanged || markDates.count != stored.count {
             persist()
         }
     }
@@ -108,7 +128,9 @@ final class MenuBarItemFailureLedger {
     /// stored against — so this ledger uses it rather than inventing a
     /// second scheme that would drift from it.
     private static func key(for item: MenuBarItem) -> String {
-        item.uniqueIdentifier
+        // Canonicalized so an owner that retitles itself every sample earns
+        // one verdict rather than a fresh unmarked key on every failure.
+        MenuBarItemTag.canonicalPersistentIdentifier(item.uniqueIdentifier)
     }
 
     /// Whether an item's key means anything after a relaunch.
@@ -214,6 +236,10 @@ final class MenuBarItemFailureLedger {
     }
 
     private func persist() {
+        // Stamped on every write, including the empty one: the stamp records
+        // which build the stored set belongs to, so it has to stay in step
+        // with the set even when the set is cleared.
+        Defaults.set(Self.currentBuildVersion, forKey: .unresponsiveMenuBarItemsBuild)
         if markDates.isEmpty {
             Defaults.removeObject(forKey: .unresponsiveMenuBarItems)
         } else {

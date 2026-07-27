@@ -292,6 +292,12 @@ nonisolated extension Defaults {
         /// ``UnresponsiveItemStore``; not exposed in Settings.
         case unresponsiveMenuBarItems = "UnresponsiveMenuBarItems"
 
+        /// The app build the persisted unresponsive-item marks were recorded
+        /// against. A change drops the marks, so a fix that makes a
+        /// previously stuck item movable is not hidden behind the two-week
+        /// mark lifetime. Managed by ``MenuBarItemFailureLedger``.
+        case unresponsiveMenuBarItemsBuild = "UnresponsiveMenuBarItemsBuild"
+
         // MARK: Appearance Settings
 
         case menuBarAppearanceConfigurationV2 = "MenuBarAppearanceConfigurationV2"
