@@ -105,11 +105,11 @@ _Languages marked with (\*) are currently only available in the development bran
 
 ## Highlights
 
-- **Declutter your menu bar** — hide icons you do not need and keep an always-hidden section for the rest
-- **Reveal items fast** — show hidden icons by hover, click, scroll/swipe, or hotkey
-- **Search and jump** — find any menu bar item instantly from the keyboard
-- **Switch layouts by context** — save profiles for work, focus, and presenting
-- **Built for modern macOS** — supports macOS 26 and 27, including notch-friendly layouts via the Thaw Bar
+- **Declutter your menu bar**: hide icons you do not need and keep an always-hidden section for the rest
+- **Reveal items fast**: show hidden icons by hover, click, scroll/swipe, or hotkey
+- **Search and jump**: find any menu bar item instantly from the keyboard
+- **Switch layouts by context**: save profiles for work, focus, and presenting
+- **Built for modern macOS**: supports macOS 26 and 27, including notch-friendly layouts via the Thaw Bar
 
 Automation via `thaw://` URI schemes: [docs/URI_SCHEMES.md](docs/URI_SCHEMES.md).
 
@@ -152,10 +152,10 @@ Automation via `thaw://` URI schemes: [docs/URI_SCHEMES.md](docs/URI_SCHEMES.md)
 
 ## Roadmap
 
-- **Menu bar item management** — individual spacer items; menu bar item groups; show menu bar items when trigger conditions are met
-- **Menu bar appearance** — rounded screen corners
-- **Hotkeys** — enable/disable auto rehide; temporarily show individual menu bar items
-- **Other** — menu bar widgets
+- **Menu bar item management**: individual spacer items; menu bar item groups; show menu bar items when trigger conditions are met
+- **Menu bar appearance**: rounded screen corners
+- **Hotkeys**: enable/disable auto rehide; temporarily show individual menu bar items
+- **Other**: menu bar widgets
 
 ## Gallery
 
