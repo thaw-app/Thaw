@@ -22,7 +22,7 @@ runs:
       run: brew install create-dmg
 
     - name: Fetch DMG background from brand-assets
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
       with:
         repository: thaw-app/brand-assets
         sparse-checkout: |
