@@ -3940,7 +3940,7 @@ extension MenuBarItemManager {
         }
         defer {
             if let mouseLocation {
-                MouseHelpers.warpCursor(to: mouseLocation)
+                MouseHelpers.restoreCursorPosition(to: mouseLocation)
             }
             // Mirrors the skipped hideCursor() above: during a bulk apply
             // the sequence-level restoration (applyProfileLayout Phase 7)
@@ -4231,7 +4231,7 @@ extension MenuBarItemManager {
         // without giving up the safety net for genuinely stuck states.
         MouseHelpers.hideCursor(watchdogTimeout: watchdogTimeout ?? .seconds(10))
         defer {
-            MouseHelpers.warpCursor(to: mouseLocation)
+            MouseHelpers.restoreCursorPosition(to: mouseLocation)
             MouseHelpers.showCursor()
         }
 
@@ -4433,7 +4433,7 @@ extension MenuBarItemManager {
         try await Task.sleep(for: .milliseconds(10))
         MouseHelpers.hideCursor()
         defer {
-            MouseHelpers.warpCursor(to: mouseLocation)
+            MouseHelpers.restoreCursorPosition(to: mouseLocation)
             MouseHelpers.showCursor()
         }
 
@@ -7125,9 +7125,10 @@ extension MenuBarItemManager {
             cursorRestored = true
             // savedCursorPosition is already in CoreGraphics coordinates, so
             // warp back directly with no AppKit→CG flip (and no dependence on
-            // which screen contains it).
+            // which screen contains it). Skipped if the user grabbed the
+            // mouse mid-apply — their position wins over the saved one.
             if let savedCursorPosition {
-                MouseHelpers.warpCursor(to: savedCursorPosition)
+                MouseHelpers.restoreCursorPosition(to: savedCursorPosition)
             }
             MouseHelpers.showCursor()
         }
