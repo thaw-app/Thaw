@@ -1,54 +1,26 @@
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" width="400" srcset="https://raw.githubusercontent.com/thaw-app/brand-assets/main/headers/thaw-dark.svg">
-    <source media="(prefers-color-scheme: light)" width="400" srcset="https://raw.githubusercontent.com/thaw-app/brand-assets/main/headers/thaw-light.svg">
-    <img src="https://raw.githubusercontent.com/thaw-app/brand-assets/main/headers/thaw-light.svg" width="400" alt="Thaw Header" />
-  </picture>
-</p>
-
-<p align="center">
-  Thaw hides and shows macOS menu bar items and adds search, hotkeys, profiles, and appearance controls to keep the bar clean without losing access.
-  <br>
-  Free and open source. Private by design: no tracking, no account required.
-</p>
+![Thaw](./docs/assets/thaw-wordmark-light.png#gh-light-mode-only)
+![Thaw](./docs/assets/thaw-wordmark-dark.png#gh-dark-mode-only)
 
 <p align="center">
   <a href="https://github.com/stonerl/Thaw/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/stonerl/Thaw?style=flat-square&label=latest&color=555555" /></a>
-  <a href="https://github.com/stonerl/Thaw/releases"><img alt="Beta / pre-release" src="https://img.shields.io/github/v/release/stonerl/Thaw?include_prereleases&style=flat-square&label=beta&color=555555" /></a>
+  &nbsp;
   <img alt="Requirements" src="https://img.shields.io/badge/macOS-26%2B-555555?style=flat-square" />
+  &nbsp;
   <a href="https://github.com/stonerl/Thaw/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/stonerl/Thaw/ci.yml?style=flat-square&label=CI" /></a>
+  &nbsp;
   <a href="https://www.bestpractices.dev/projects/13303"><img alt="OpenSSF Best Practices" src="https://img.shields.io/cii/summary/13303?style=flat-square&label=OpenSSF" /></a>
-  <a href="https://github.com/sponsors/stonerl"><img alt="Sponsor" src="https://img.shields.io/badge/Sponsor-%E2%9D%A4-555555?style=flat-square" /></a>
+  &nbsp;
   <a href="https://discord.gg/5cnKkKbMFd"><img alt="Discord" src="https://img.shields.io/badge/Discord-7289DA?style=flat-square&logo=discord&logoColor=white" /></a>
+  &nbsp;
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/stonerl/Thaw?style=flat-square&color=555555" /></a>
 </p>
 
 <p align="center">
-  <a href="https://www.raycast.com/diazdesandi/thaw"><img alt="Works with Raycast" src="https://raw.githubusercontent.com/thaw-app/brand-assets/main/badges/works-with-raycast.svg" height="42" /></a>
-  &nbsp;&nbsp;
-  <a href="https://getdroppy.app/"><img alt="Works with Droppy" src="https://raw.githubusercontent.com/thaw-app/brand-assets/main/badges/works-with-droppy.svg" height="42" /></a>
+  <b>Thaw hides and shows macOS menu bar items — with search, hotkeys, profiles, and appearance controls — so the bar stays clean without losing access.</b><br />
+  <b>Free and open source. Private by design: no tracking, no account required.</b>
 </p>
-
-<p align="center">
-  <strong>
-    <a href="https://github.com/stonerl/Thaw/issues/687">
-      macOS 27 (Golden Gate) status and preview builds
-    </a>
-  </strong>
-</p>
-
-<div align="center">
-<a href="https://trendshift.io/repositories/21173" target="_blank"><img src="https://trendshift.io/api/badge/repositories/21173" alt="stonerl%2FThaw | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
-</div>
-
-> [!NOTE]
-> Thaw is an actively maintained fork of [Ice](https://github.com/jordanbaird/Ice), focused on fixes, compatibility, and new features.
 
 ## Install
-
-### Latest release (.zip)
-
-Download `Thaw_<version>.zip` from [latest release](https://github.com/stonerl/Thaw/releases/latest), unzip it, then move `Thaw.app` to `Applications`.
 
 ### Homebrew
 
@@ -61,6 +33,29 @@ Beta (or stable, whichever is newer):
 ```sh
 brew install thaw@beta
 ```
+
+### Latest release (.zip)
+
+Download `Thaw_<version>.zip` from [latest release](https://github.com/stonerl/Thaw/releases/latest), unzip it, then move `Thaw.app` to `Applications`.
+
+<p align="center">
+  <a href="https://github.com/stonerl/Thaw/releases"><img alt="Beta / pre-release" src="https://img.shields.io/github/v/release/stonerl/Thaw?include_prereleases&style=flat-square&label=beta&color=555555" /></a>
+  &nbsp;
+  <a href="https://github.com/sponsors/stonerl"><img alt="Sponsor" src="https://img.shields.io/badge/Sponsor-%E2%9D%A4-555555?style=flat-square" /></a>
+</p>
+
+<p align="center">
+  <a href="https://www.raycast.com/diazdesandi/thaw"><img alt="Works with Raycast" src="https://raw.githubusercontent.com/thaw-app/brand-assets/main/badges/works-with-raycast.svg" height="36" /></a>
+  &nbsp;&nbsp;
+  <a href="https://getdroppy.app/"><img alt="Works with Droppy" src="https://raw.githubusercontent.com/thaw-app/brand-assets/main/badges/works-with-droppy.svg" height="36" /></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/stonerl/Thaw/issues/687"><b>macOS 27 (Golden Gate) status and preview builds</b></a>
+</p>
+
+> [!NOTE]
+> Thaw is an actively maintained fork of [Ice](https://github.com/jordanbaird/Ice), focused on fixes, compatibility, and new features.
 
 ## Language Support
 
