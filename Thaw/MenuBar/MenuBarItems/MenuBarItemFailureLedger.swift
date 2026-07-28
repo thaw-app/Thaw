@@ -204,7 +204,7 @@ final class MenuBarItemFailureLedger {
     ///
     /// Callers should use this to bound their effort, not to skip the item.
     func isUnresponsive(_ item: MenuBarItem) -> Bool {
-        isMarked(item, in: &markDates)
+        isMarked(item, in: .unresponsiveOwner)
     }
 
     /// Whether the item has a standing record of returning `cannotComplete`.
@@ -217,16 +217,31 @@ final class MenuBarItemFailureLedger {
            Self.shippedUnmovableOwners.contains(bundleID) {
             return true
         }
-        return isMarked(item, in: &cannotCompleteDates)
+        return isMarked(item, in: .cannotComplete)
     }
 
-    private func isMarked(_ item: MenuBarItem, in dates: inout [String: Date]) -> Bool {
+    private func isMarked(_ item: MenuBarItem, in kind: FailureKind) -> Bool {
         let key = Self.key(for: item)
+        let dates: [String: Date] = switch kind {
+        case .unresponsiveOwner:
+            markDates
+        case .cannotComplete:
+            cannotCompleteDates
+        case .other:
+            [:]
+        }
         guard let date = dates[key] else {
             return false
         }
         guard date > Date.now.addingTimeInterval(-Self.markLifetime) else {
-            dates[key] = nil
+            switch kind {
+            case .unresponsiveOwner:
+                markDates[key] = nil
+            case .cannotComplete:
+                cannotCompleteDates[key] = nil
+            case .other:
+                break
+            }
             persist()
             return false
         }
@@ -253,9 +268,11 @@ final class MenuBarItemFailureLedger {
         }
         switch kind {
         case .unresponsiveOwner:
-            mark(key, in: &markDates, provisional: &provisionalMarks, label: "unresponsive to synthetic events")
+            let result = Self.mark(key, in: &markDates, provisional: &provisionalMarks)
+            persistMark(result, key: key, label: "unresponsive to synthetic events")
         case .cannotComplete:
-            mark(key, in: &cannotCompleteDates, provisional: &provisionalCannotComplete, label: "unmovable (cannotComplete)")
+            let result = Self.mark(key, in: &cannotCompleteDates, provisional: &provisionalCannotComplete)
+            persistMark(result, key: key, label: "unmovable (cannotComplete)")
         case .other:
             break
         }
@@ -263,20 +280,33 @@ final class MenuBarItemFailureLedger {
 
     /// Applies the two-strike rule: a lone failure is only provisional; a
     /// second promotes it to a persisted, dated mark.
-    private func mark(
+    private static func mark(
         _ key: String,
         in dates: inout [String: Date],
-        provisional: inout Set<String>,
-        label: String
-    ) {
+        provisional: inout Set<String>
+    ) -> (shouldPersist: Bool, newlyMarked: Bool) {
         let wasMarked = dates[key] != nil
         guard wasMarked || !provisional.insert(key).inserted else {
             Self.diagLog.debug("\(key) failed once; waiting for a second failure before marking it")
-            return
+            return (false, false)
         }
         dates[key] = .now
+        return (true, !wasMarked)
+    }
+
+    /// Persists only after the `inout` access in `mark` has ended. Calling
+    /// `persist()` from inside that access reads both dictionaries and trips
+    /// Swift's exclusivity enforcement in Xcode 27 beta 4.
+    private func persistMark(
+        _ result: (shouldPersist: Bool, newlyMarked: Bool),
+        key: String,
+        label: String
+    ) {
+        guard result.shouldPersist else {
+            return
+        }
         persist()
-        if !wasMarked {
+        if result.newlyMarked {
             Self.diagLog.info("Marked \(key) as \(label)")
         }
     }
