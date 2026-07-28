@@ -5,7 +5,9 @@ are met for its intended environment: a **local macOS menu bar utility** used by
 a single interactive user on their own Mac.
 
 Update it when trust boundaries or major features change. It supports OpenSSF
-Silver (`assurance_case`) and related Baseline security-assessment criteria.
+Best Practices documentation criteria (`assurance_case`, security requirements,
+architecture). OpenSSF Silver **`test_statement_coverage80` is not yet claimed**
+— see residual risks.
 
 ## 1. Security requirements (summary)
 
@@ -123,8 +125,15 @@ defect classes before merge.
    first into [`thaw-app`](https://github.com/thaw-app) (three owners:
    `stonerl`, `nightah`, `diazdesandi`). Full repo transfer is planned but
    deliberately gradual so signing, Sparkle, and install URLs do not break.
-4. Statement coverage may sit below OpenSSF Silver’s 80% bar; tests reduce but
-   do not eliminate logic risk in UI-heavy modules excluded from coverage gates.
+4. **OpenSSF Silver statement coverage (`test_statement_coverage80`) is deferred.**
+   SonarCloud currently reports about **44%** coverage for `stonerl_Thaw` (not
+   ≥80%). CI collects coverage XML and uploads to SonarCloud
+   (`.github/workflows/ci.yml`, `sonar-project.properties`), but there is **no
+   80% gate** and this assurance case does **not** claim that criterion is Met.
+   Raise coverage (or document an accepted exclusion set with measured coverage
+   of the remainder) before marking Silver coverage Met. Tests still reduce
+   logic risk; UI-heavy modules excluded from coverage requirements remain a
+   residual testing gap.
 
 ## 7. Evidence pointers
 
@@ -135,10 +144,12 @@ defect classes before merge.
 | Update authenticity | `SUFeedURL` / `SUPublicEDKey` in `Thaw/Resources/Info.plist`; Sparkle release actions |
 | Architecture | `docs/ARCHITECTURE.md` |
 | Automated analysis | `.github/workflows/ci.yml`, SonarCloud project `stonerl_Thaw` |
+| Test coverage (measured, not Silver-met) | SonarCloud `coverage` measure; CI `coverage.xml` — **~44%, Silver 80% deferred** |
 | Dependency monitoring | `.github/dependabot.yml` |
 
 ## Revision
 
 | Date | Note |
 | --- | --- |
-| 2026-07-27 | Initial version from `development` for OpenSSF Silver |
+| 2026-07-27 | Initial version from `development` for OpenSSF docs |
+| 2026-07-27 | Deferred Silver coverage claim; measured ~44% |

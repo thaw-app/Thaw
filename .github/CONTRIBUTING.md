@@ -57,7 +57,7 @@ We use **CodeRabbit** and **SonarCloud** on pull requests. Treat their findings 
 
 **We reserve the right** to reject contributions or block automated committers / assistant-driven submission paths when they harm the project (spam, unsafe automation, or repeated low-quality work).
 
-Pull requests that are clear **AI slop**, or that ignore established procedures (wrong base branch, missing issue where required, no tests/docs when expected, unsigned commits, unchecked PR template, drive-by refactors with no issue), **will be closed**. Using AI does not lower the bar.
+Pull requests **will be closed** when they show observable process or quality failures — for example unreviewed generated content pasted without human cleanup, missing required tests or documentation, failing CI or review checks left unaddressed, ignored maintainer feedback, wrong base branch, missing issue where required, unsigned commits, unchecked PR template, or drive-by refactors with no issue. Using AI does not lower the bar.
 
 Maintainer bandwidth is limited. If we request changes and there is **no meaningful follow-up** within a reasonable window, the PR **will be closed**. You can always open a new PR later that addresses the feedback.
 

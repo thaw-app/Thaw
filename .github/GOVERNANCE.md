@@ -37,9 +37,9 @@ only describes how *this* project operates.
 
 | Role | Who (GitHub) | Responsibilities |
 | --- | --- | --- |
-| **Project Lead** | [@stonerl](https://github.com/stonerl) | Final product decisions; release authority for Thaw; app-repo admin (today under `stonerl/`); OpenSSF badge entry; security advisory publishing |
-| **Organization owner** | [@stonerl](https://github.com/stonerl), [@nightah](https://github.com/nightah), [@diazdesandi](https://github.com/diazdesandi) | Admin of [`thaw-app`](https://github.com/thaw-app): org settings, org-owned repos/assets (brand assets, shared CI, etc.), membership; eventual home for the application repo |
-| **Maintainer** | Write collaborators on the application repo (today [stonerl/Thaw](https://github.com/stonerl/Thaw); later under `thaw-app`) | Review/merge PRs; triage issues; approve routine releases when delegated; enforce Code of Conduct with Lead |
+| **Project Lead** | [@stonerl](https://github.com/stonerl) | Final product decisions; primary release authority for Thaw; app-repo admin (today under `stonerl/`); OpenSSF badge entry; security advisory publishing; release-secret stewardship (see below) |
+| **Organization owner** | [@stonerl](https://github.com/stonerl), [@nightah](https://github.com/nightah), [@diazdesandi](https://github.com/diazdesandi) | Admin of [`thaw-app`](https://github.com/thaw-app): org settings, org-owned repos/assets (brand assets, shared CI, etc.), membership; eventual home for the application repo; **continuity access** to release secrets and Environments under least privilege (see [Release secrets](#release-secrets)) |
+| **Maintainer** | Write collaborators on the application repo (today [stonerl/Thaw](https://github.com/stonerl/Thaw); later under `thaw-app`) | Review/merge PRs; triage issues; approve routine releases when delegated; enforce Code of Conduct with Lead. **No** routine access to signing/notarization/Sparkle private keys |
 | **Contributor** | Anyone submitting issues, PRs, Crowdin translations, or docs | Follow [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md) |
 | **Security contact** | Project Lead (via [private vulnerability reporting](https://github.com/stonerl/Thaw/security/advisories/new)) | Acknowledge and coordinate vulnerability reports |
 
@@ -73,14 +73,77 @@ Org profile: https://github.com/thaw-app
 | **Current** | [stonerl/Thaw](https://github.com/stonerl/Thaw) | Canonical app source, issues, releases, CI |
 | **Target** | `thaw-app/Thaw` (name TBD) under [`thaw-app`](https://github.com/thaw-app) | Planned transfer when release/signing/Pages dependencies are stable enough |
 
-Sensitive Actions secrets for Developer ID signing, notarization, and Sparkle
-EdDSA updates are configured on the application repository and/or org as
-applicable. Write collaborators (in addition to the Project Lead) include
-maintainers such as `nightah`, `diazdesandi`, and others granted write on the
-repo.
+Write collaborators (in addition to the Project Lead) include maintainers such
+as `nightah`, `diazdesandi`, and others granted write on the repo. Write access
+alone does **not** include release-secret administration.
 
 Public contributor history:
 https://github.com/stonerl/Thaw/graphs/contributors
+
+## Release secrets
+
+Credentials used to ship signed builds (Apple Developer ID certificate material,
+notarization credentials, Sparkle EdDSA **private** key, and related CI tokens)
+are treated as **release secrets**. They are injected only via GitHub Actions
+Secrets / Environments — never committed to git.
+
+### Who may access what (least privilege)
+
+| Access | Who | Purpose |
+| --- | --- | --- |
+| **View / edit release secrets** | Organization owners (`stonerl`, `nightah`, `diazdesandi`), scoped to the repo or org secret store that holds them | Continuity: any one owner unavailable must not block a hotfix |
+| **Trigger release workflows that consume secrets** | Project Lead by default; other org owners when delegated for a specific release | Cut signed/notarized builds |
+| **Write collaborators / contributors** | Everyone else with repo write | Code and docs only — no secret read |
+
+Prefer GitHub **Environments** (e.g. `release`) with required reviewers so
+secret-consuming jobs need an org-owner approval. Prefer **org-owned** secrets
+under [`thaw-app`](https://github.com/thaw-app) as migration progresses so
+admin is not tied to one personal account.
+
+### Approval path
+
+1. Routine releases: Project Lead (or delegated org owner) starts the release
+   workflow; Environment protection rules require approval from an org owner
+   when configured.
+2. Secret create / rotate / delete: proposed by an org owner; a **second** org
+   owner confirms out-of-band (Discord or GitHub) before the change is applied,
+   except true emergencies (compromised key) where one owner may rotate
+   immediately and must notify the others within 24 hours.
+3. Granting a new person secret access requires unanimous agreement of the
+   current org owners and an update to this document.
+
+### Audit and logging
+
+- Prefer GitHub’s built-in audit log / Actions run history for who approved
+  Environment jobs and which workflow run used secrets (values are never logged).
+- Record secret rotations (what rotated, by whom, when) in a private maintainer
+  note or closed tracking issue — not in public issues with secret material.
+- Do not print secret values in workflow logs.
+
+### Rotation
+
+- Rotate after known or suspected compromise immediately.
+- Rotate when an owner leaves the project or loses devices used for 2FA.
+- Periodic rotation of long-lived credentials is encouraged (at least annually
+  for notarization app-specific passwords / similar); Apple certificates follow
+  Apple’s expiry and re-issuance cycle.
+- After rotation, update GitHub Secrets, confirm a dry-run or staging release
+  path still works, then ship.
+
+### Recovery and continuity
+
+If the Project Lead is unavailable, the remaining org owners must be able to:
+
+1. Access the secret store (org/repo Secrets and/or Environment).
+2. Approve or run the release workflow.
+3. Publish the Sparkle appcast / GitHub Release artifacts.
+
+Recovery of lost Apple account access follows Apple’s account recovery; Sparkle
+key recovery requires the offline backup held by org owners (password manager or
+equivalent). At least **two** owners must be able to recover signing material
+without the third.
+
+Document the private backup location among owners only — never in this repo.
 
 ## Repository migration
 
@@ -132,12 +195,10 @@ remaining maintainers should still be able to:
    assets and planning.
 2. **Repository access:** Multiple maintainers have **write** access on the
    application repo so issues and PRs are not single-person blocked.
-3. **Admin / secrets:** Release-signing and notarization credentials used by
-   GitHub Actions are available to the Project Lead and, for continuity, to
-   the other org owners as needed so a release can still be cut if one person
-   is unavailable. As workflows move to org-owned reusable actions/secrets,
-   prefer **org-level** secrets owned by `thaw-app` so all three owners share
-   administrative access without depending on one personal account.
+3. **Admin / secrets:** Follow [Release secrets](#release-secrets). All three
+   org owners have continuity access under least privilege; write collaborators
+   do not. Prefer org-level secrets and Environment approvals under `thaw-app`
+   as migration progresses.
 4. **Release tags:** Important release tags are GPG-signed by the releaser.
 5. **Update feed / Pages:** The Sparkle appcast is published to GitHub Pages
    (`stonerl.github.io/Thaw`). Continuity requires that at least one remaining

@@ -9,7 +9,7 @@ them.
 | Layer | What it proves | How it is produced |
 | --- | --- | --- |
 | **Apple Developer ID + notarization** | Binary came from the Thaw developer team and passed Apple’s notarization checks | Release GitHub Actions (signing + `notarytool`) |
-| **Sparkle EdDSA** | Appcast / update payload matches the project’s Sparkle private key | Sparkle tools in release pipeline; public key embedded in the app |
+| **Sparkle EdDSA** | Downloaded **update archives** (e.g. release ZIPs) match signatures produced with the project’s Sparkle private key; the app verifies them with `SUPublicEDKey` | Sparkle tools in the release pipeline sign update packages; public key embedded in the app (`Info.plist`). The appcast lists those updates over HTTPS; **feed-level** signing (`SURequireSignedFeed`) is not enabled |
 | **Git tag signatures** | Important version tags are GPG-signed by the releaser | `git tag -s` (or equivalent) on release tags |
 
 The Sparkle **private** key and Apple signing credentials are stored as CI
@@ -52,13 +52,29 @@ cask/bottle verification in addition to Apple’s checks.
 
 ## Check a Git version tag
 
+1. Fetch tags and identify the release tag (e.g. `2.0.0-rc.1`).
+2. **Before trusting a new key:** obtain the releaser’s **full GPG fingerprint**
+   from a source you already trust (for example the Project Lead’s GitHub
+   profile GPG keys page, or a fingerprint previously confirmed out-of-band).
+   Compare that fingerprint **character-for-character** to the key you are about
+   to import. Do not import or trust a key solely because `git verify-tag`
+   downloaded it from a keyserver.
+3. Verify the tag signature, then confirm the tag points at the intended release
+   commit (the commit published for that GitHub Release).
+
 ```sh
-git fetch --tags
+git fetch --tags origin
+
+# After importing a key whose full fingerprint you already matched to a trusted source:
 git verify-tag <tag>    # e.g. 2.0.0-rc.1
+
+# Tag must resolve to the intended release commit:
+git rev-parse <tag>^{}
+# Compare to the commit SHA shown on the GitHub Release page for that tag.
 ```
 
-Import the releaser’s public GPG key from their GitHub profile or a published
-keyserver if `git verify-tag` reports an unknown key.
+If `git verify-tag` reports an unknown key, import only after the fingerprint
+check above succeeds.
 
 ## Install channels
 
