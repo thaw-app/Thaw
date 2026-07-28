@@ -137,7 +137,7 @@ jobs:
 
       - name: Sparkle ZIP and appcast
         id: sparkle
-        uses: thaw-app/org-ci/actions/sparkle-release@9944dd9543eeb383493e428f92e262cb299dc1ff
+        uses: thaw-app/org-ci/actions/sparkle-release@1426ab64607a0b42c02b409486eeb47ef7b9ba25
         with:
           tag: ${{ steps.meta.outputs.tag }}
           channel: ${{ steps.meta.outputs.channel }}
@@ -170,18 +170,6 @@ jobs:
           echo "Update assets (thaw-app/updates):"
           cat "$list"
 
-      - name: Create Thaw GitHub Release (DMG)
-        uses: softprops/action-gh-release@v3
-        with:
-          tag_name: ${{ steps.meta.outputs.tag }}
-          files: build/${{ env.DMG_NAME }}
-          generate_release_notes: false
-          # Draft unless publish_release is checked.
-          draft: ${{ !inputs.publish_release }}
-          prerelease: ${{ steps.meta.outputs.prerelease == 'true' }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Create updates GitHub Release (ZIP + deltas)
         uses: softprops/action-gh-release@v3
         with:
@@ -198,6 +186,18 @@ jobs:
             Installer DMG: https://github.com/${{ github.repository }}/releases/tag/${{ steps.meta.outputs.tag }}
         env:
           GITHUB_TOKEN: ${{ secrets.UPDATES_GITHUB_TOKEN }}
+
+      - name: Create Thaw GitHub Release (DMG)
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          files: build/${{ env.DMG_NAME }}
+          generate_release_notes: false
+          # Draft unless publish_release is checked.
+          draft: ${{ !inputs.publish_release }}
+          prerelease: ${{ steps.meta.outputs.prerelease == 'true' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish appcast to updates gh-pages
         if: inputs.publish_appcast && inputs.publish_release
