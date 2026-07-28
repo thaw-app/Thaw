@@ -12,7 +12,7 @@ jobs:
       actions: write
       issues: write
     steps:
-      - uses: actions/stale@v10
+      - uses: actions/stale@v11
         with:
           operations-per-run: 100
           days-before-stale: 30
