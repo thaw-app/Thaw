@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <b>Take back your menu bar. Hide what you don't need, find anything in a keystroke, and make the bar look the way you want.</b><br />
+  <b>Take back your menu bar. Hide what you don't need, find anything in a keystroke,<br />  and make the bar look the way you want.</b><br />
   <b>Free and open source. Private by design: no tracking, no account, nothing ever leaves your Mac.</b>
 </p>
 
