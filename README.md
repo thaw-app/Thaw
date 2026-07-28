@@ -16,7 +16,7 @@
 </p>
 
 <p align="center">
-  <b>Thaw hides and shows macOS menu bar items — with search, hotkeys, profiles, and appearance controls — so the bar stays clean without losing access.</b><br />
+  <b>Thaw hides and shows macOS menu bar items and adds search, hotkeys, profiles, and appearance controls to keep the bar clean without losing access.</b><br />
   <b>Free and open source. Private by design: no tracking, no account required.</b>
 </p>
 
