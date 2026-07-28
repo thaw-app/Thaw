@@ -41,10 +41,6 @@
 <a href="https://trendshift.io/repositories/21173" target="_blank"><img src="https://trendshift.io/api/badge/repositories/21173" alt="stonerl%2FThaw | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 </div>
 
-<br>
-
-![thaw-banner](https://github.com/user-attachments/assets/9584065d-f840-4545-9a42-cfc5534b5ac3)
-
 > [!NOTE]
 > Thaw is an actively maintained fork of [Ice](https://github.com/jordanbaird/Ice), focused on fixes, compatibility, and new features.
 
@@ -164,6 +160,11 @@ and contribution practices. Items may slip; the list is intent, not a contract.
 ## Gallery
 
 > Click any screenshot to view it full size.
+
+<p align="center">
+  <a href="https://github.com/user-attachments/assets/9584065d-f840-4545-9a42-cfc5534b5ac3"><img alt="Thaw overview" src="https://github.com/user-attachments/assets/9584065d-f840-4545-9a42-cfc5534b5ac3" width="800" /></a><br />
+  <sub><b>Overview</b></sub>
+</p>
 
 <table>
   <tr>
