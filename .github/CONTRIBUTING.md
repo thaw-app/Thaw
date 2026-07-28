@@ -16,6 +16,31 @@ Please read and follow our [Code of Conduct][coc].
 
 Looking for a concrete task? See the living list in **[Ways to contribute (#316)](https://github.com/stonerl/Thaw/issues/316)** (docs/screenshots, triage, small cleanups, and more).
 
+## Developer Certificate of Origin (DCO)
+
+Thaw requires contributors to certify that they have the right to submit their
+work under the project’s license. We use the
+[Developer Certificate of Origin (DCO) v1.1](https://developercertificate.org/).
+
+By adding a `Signed-off-by` line to each commit, you assert the DCO. Use your
+real name (not a pseudonym) as in:
+
+```bash
+git commit -s -m "fix(menubar): explain the change"
+```
+
+which appends:
+
+```text
+Signed-off-by: Your Name <your.email@example.com>
+```
+
+Pull requests whose commits lack a valid sign-off may be asked to amend or
+re-push with sign-off before merge.
+
+> **Note:** This is not a CLA and does not transfer copyright. It is an
+> attestation that you can contribute the change under GPL-3.0.
+
 ## Before You Start
 
 Regardless of the type of contribution, you'll need a GitHub account and a fork of the repository:
@@ -87,6 +112,11 @@ This includes but is not limited to:
 
 Thaw uses [SwiftLint](https://github.com/realm/SwiftLint) and [SwiftFormat](https://github.com/nicklockwood/SwiftFormat) to enforce consistent code style.
 
+Primary language style guides are embodied in:
+
+- [`.swiftlint.yml`](../.swiftlint.yml)
+- [`.swiftformat`](../.swiftformat)
+
 Before submitting a request, run:
 
 ```bash
@@ -96,12 +126,20 @@ swiftlint lint --strict
 
 Pull requests are automatically reviewed by SonarCloud for code quality and CodeRabbit for AI-assisted review. You may receive automated comments from these tools, so please address any findings before requesting a human review.
 
+### Tests
+
+Major new functionality must include automated tests in `ThawTests` (or the
+relevant package test target) unless a maintainer agrees that no seam exists.
+Bug fixes should add a regression test when practical. The PR template checklist
+asks you to confirm this.
+
 ### Project conventions
 
 - **Branch & base:** All external PRs must target `development` (not `main`), unless a maintainer asks otherwise.
 - **PR size:** Aim for ≤500 lines / ≤20 files per PR. If you expect to exceed this, say why in the Summary and link the design/issue.
 - **Templates & issues:** Bugfix and feature PRs should always reference a GitHub issue (`Closes: #123`, or `Closes: N/A` when agreed).
 - **Commit / PR titles:** Prefer conventional commits, e.g. `fix(menubar): …`, `feat(settings): …`.
+- **DCO:** Every commit must be signed off (`git commit -s`).
 - **Code review bots:** CodeRabbit and SonarCloud comments are treated as *required* unless a maintainer marks them won’t-fix. If you’re unsure, wait for a maintainer reply before large refactors spurred by bots alone.
 - **Sensitive areas:** Expect deeper review and stronger tests when touching menu bar hiding/layout, IceBar / Thaw Bar, triggers/automation, logging, or permissions.
 
@@ -109,14 +147,26 @@ Pull requests are automatically reviewed by SonarCloud for code quality and Code
 
 Open a pull request via the [Thaw pull requests page][pr] and select the [appropriate template][prt] — it will guide you through the required information and checklist.
 
+## Project docs (orientation)
+
+- [Governance][gov] — roles and decision-making
+- [Architecture][arch] — high-level design
+- [Security policy][sec] — reporting and security requirements
+- [URI schemes][uri] — external automation surface
+
 ## Resources
 
 - [How to Contribute to Open Source](https://opensource.guide/how-to-contribute/)
 - [Using Issues](https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues)
 - [Using Pull Requests](https://help.github.com/articles/about-pull-requests/)
+- [Developer Certificate of Origin](https://developercertificate.org/)
 
 [coc]: CODE_OF_CONDUCT.md
 [fq]: ../FREQUENT_ISSUES.md
 [it]: https://github.com/stonerl/Thaw/issues
 [pr]: https://github.com/stonerl/Thaw/pulls
 [prt]: https://github.com/stonerl/Thaw/blob/development/.github/pull_request_template.md
+[gov]: GOVERNANCE.md
+[arch]: ../docs/ARCHITECTURE.md
+[sec]: SECURITY.md
+[uri]: ../docs/URI_SCHEMES.md

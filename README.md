@@ -66,6 +66,13 @@ Beta (or stable, whichever is newer):
 brew install thaw@beta
 ```
 
+### Verifying releases
+
+Release builds are Developer ID–signed and notarized. In-app updates use Sparkle
+with an embedded EdDSA public key. See
+[docs/VERIFYING_RELEASES.md](docs/VERIFYING_RELEASES.md) for how to check a
+download or Git tag.
+
 ## Language Support
 
 Thaw is translated into the languages listed below. Translations are managed on [Crowdin](https://crowdin.com/project/thaw), and you can request additional languages there.
@@ -152,6 +159,10 @@ Automation via `thaw://` URI schemes: [docs/URI_SCHEMES.md](docs/URI_SCHEMES.md)
 
 ## Roadmap
 
+Near-term direction (roughly the next year): keep Thaw compatible with current
+macOS releases, finish menu-bar layout/trigger work below, and harden release
+and contribution practices. Items may slip; the list is intent, not a contract.
+
 - **Menu bar item management**: individual spacer items; menu bar item groups; show menu bar items when trigger conditions are met
 - **Menu bar appearance**: rounded screen corners
 - **Hotkeys**: enable/disable auto rehide; temporarily show individual menu bar items
@@ -208,6 +219,16 @@ Want to contribute? Start with [Ways to contribute](https://github.com/stonerl/T
     <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=stonerl/Thaw&type=Date" width="100%" />
   </picture>
 </a>
+
+## Project documentation
+
+- [Contributing](.github/CONTRIBUTING.md)
+- [Governance](.github/GOVERNANCE.md)
+- [Security policy](.github/SECURITY.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Assurance case](docs/ASSURANCE_CASE.md)
+- [Verifying releases](docs/VERIFYING_RELEASES.md)
+- [URI schemes](docs/URI_SCHEMES.md)
 
 ## License
 
