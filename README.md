@@ -136,8 +136,7 @@ Every core action is a `thaw://` deep link, so Thaw plugs into the launcher you 
 
 - **[Raycast](https://www.raycast.com/diazdesandi/thaw)** — official extension. Toggle sections, open search, and change settings without leaving Raycast.
 - **[Droppy](https://getdroppy.app/)** — pair Thaw with Droppy's shelf and extras for a full menu bar suite.
-- **Alfred** — workflow in progress. The `thaw://` scheme already works today.
-- **Anything else** — Shortcuts, Keyboard Maestro, BetterTouchTool, or a shell script.
+- **Anything else** — Alfred, Shortcuts, Keyboard Maestro, BetterTouchTool, or a shell script.
 
 ```sh
 open "thaw://toggle-hidden"
@@ -165,7 +164,38 @@ Needs macOS 26+. Thaw asks for Accessibility on first launch to move menu bar it
 
 Thaw speaks 20 languages, thanks to translators around the world.
 
-🇮🇩 Bahasa Indonesia · 🇨🇿 Čeština · 🇩🇪 Deutsch · 🇬🇧 English · 🇪🇸 Español · 🇫🇷 Français · 🇮🇹 Italiano · 🇯🇵 日本語 · 🇰🇷 한국어 · 🇭🇺 Magyar · 🇳🇱 Nederlands · 🇵🇱 Polski · 🇧🇷 Português (Brasil) · 🇷🇺 Русский · 🇹🇭 ภาษาไทย · 🇹🇷 Türkçe · 🇺🇦 Українська\* · 🇻🇳 Tiếng Việt\* · 🇨🇳 简体中文 · 🇹🇼 正體中文
+<table frame="void" rules="none">
+  <tr>
+    <td>🇮🇩 Bahasa Indonesia</td>
+    <td>🇨🇿 Čeština</td>
+    <td>🇩🇪 🇦🇹 Deutsch</td>
+    <td>🇬🇧 🇺🇸 English</td>
+  </tr>
+  <tr>
+    <td>🇪🇸 🇲🇽 Español</td>
+    <td>🇫🇷 Français</td>
+    <td>🇮🇹 Italiano</td>
+    <td>🇭🇺 Magyar</td>
+  </tr>
+  <tr>
+    <td>🇳🇱 🇧🇪 Nederlands</td>
+    <td>🇵🇱 Polski</td>
+    <td>🇧🇷 Português (Brasil)</td>
+    <td>🇹🇷 Türkçe</td>
+  </tr>
+  <tr>
+    <td>🇷🇺 Русский</td>
+    <td>🇺🇦 Українська<sup>*</sup></td>
+    <td>🇹🇭 ภาษาไทย</td>
+    <td>🇻🇳 Tiếng Việt<sup>*</sup></td>
+  </tr>
+  <tr>
+    <td>🇯🇵 日本語</td>
+    <td>🇰🇷 한국어</td>
+    <td>🇨🇳 简体中文</td>
+    <td>🇹🇼 正體中文</td>
+  </tr>
+</table>
 
 Missing yours, or spotted something off? [Translate Thaw on Crowdin](https://crowdin.com/project/thaw) — you can request new languages there too.
 

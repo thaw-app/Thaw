@@ -19,6 +19,11 @@ and contribution practices. Items may slip; the list is intent, not a contract.
 - Enable/disable auto rehide
 - Temporarily show individual menu bar items
 
+## Integrations
+
+- Official Alfred workflow. The `thaw://` scheme already works with Alfred today
+  (see [URI schemes](URI_SCHEMES.md)); this covers a packaged, installable workflow
+
 ## Other
 
 - Menu bar widgets
