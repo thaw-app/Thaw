@@ -24,21 +24,37 @@ import XCTest
 /// user's domain modified.
 @MainActor
 final class MenuBarItemFailureLedgerTests: XCTestCase {
-    private var savedValue: Any?
+    private var savedValues: (unresponsive: Any?, cannotComplete: Any?, version: Any?)?
 
     override func setUp() {
         super.setUp()
-        savedValue = Defaults.object(forKey: .unresponsiveMenuBarItems)
+        savedValues = (
+            Defaults.object(forKey: .unresponsiveMenuBarItems),
+            Defaults.object(forKey: .cannotCompleteMenuBarItems),
+            Defaults.object(forKey: .menuBarFailureLedgerVersion)
+        )
         Defaults.removeObject(forKey: .unresponsiveMenuBarItems)
+        Defaults.removeObject(forKey: .cannotCompleteMenuBarItems)
+        Defaults.removeObject(forKey: .menuBarFailureLedgerVersion)
     }
 
     override func tearDown() {
-        if let savedValue {
-            Defaults.set(savedValue, forKey: .unresponsiveMenuBarItems)
+        if let value = savedValues?.unresponsive {
+            Defaults.set(value, forKey: .unresponsiveMenuBarItems)
         } else {
             Defaults.removeObject(forKey: .unresponsiveMenuBarItems)
         }
-        savedValue = nil
+        if let value = savedValues?.cannotComplete {
+            Defaults.set(value, forKey: .cannotCompleteMenuBarItems)
+        } else {
+            Defaults.removeObject(forKey: .cannotCompleteMenuBarItems)
+        }
+        if let value = savedValues?.version {
+            Defaults.set(value, forKey: .menuBarFailureLedgerVersion)
+        } else {
+            Defaults.removeObject(forKey: .menuBarFailureLedgerVersion)
+        }
+        savedValues = nil
         super.tearDown()
     }
 
@@ -112,6 +128,22 @@ final class MenuBarItemFailureLedgerTests: XCTestCase {
         // A second instance reads only what was persisted, which is what a
         // relaunch does.
         XCTAssertTrue(MenuBarItemFailureLedger().isUnresponsive(item))
+    }
+
+    func testCannotCompleteMarkIsIndependentAndSurvivesANewStore() {
+        let item = item("com.example.cannot-complete", "Item-0")
+        let ledger = MenuBarItemFailureLedger()
+
+        ledger.recordFailure(for: item, kind: .cannotComplete)
+        XCTAssertFalse(ledger.cannotCompleteMarked(item))
+
+        ledger.recordFailure(for: item, kind: .cannotComplete)
+        XCTAssertTrue(ledger.cannotCompleteMarked(item))
+        XCTAssertFalse(ledger.isUnresponsive(item))
+
+        let reloaded = MenuBarItemFailureLedger()
+        XCTAssertTrue(reloaded.cannotCompleteMarked(item))
+        XCTAssertFalse(reloaded.isUnresponsive(item))
     }
 
     func testSuccessClearsTheRecordForGood() {

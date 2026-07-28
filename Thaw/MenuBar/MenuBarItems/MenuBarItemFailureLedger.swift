@@ -204,7 +204,7 @@ final class MenuBarItemFailureLedger {
     ///
     /// Callers should use this to bound their effort, not to skip the item.
     func isUnresponsive(_ item: MenuBarItem) -> Bool {
-        isMarked(item, in: .unresponsiveOwner)
+        isMarked(item, in: \.markDates)
     }
 
     /// Whether the item has a standing record of returning `cannotComplete`.
@@ -217,31 +217,19 @@ final class MenuBarItemFailureLedger {
            Self.shippedUnmovableOwners.contains(bundleID) {
             return true
         }
-        return isMarked(item, in: .cannotComplete)
+        return isMarked(item, in: \.cannotCompleteDates)
     }
 
-    private func isMarked(_ item: MenuBarItem, in kind: FailureKind) -> Bool {
+    private func isMarked(
+        _ item: MenuBarItem,
+        in dates: ReferenceWritableKeyPath<MenuBarItemFailureLedger, [String: Date]>
+    ) -> Bool {
         let key = Self.key(for: item)
-        let dates: [String: Date] = switch kind {
-        case .unresponsiveOwner:
-            markDates
-        case .cannotComplete:
-            cannotCompleteDates
-        case .other:
-            [:]
-        }
-        guard let date = dates[key] else {
+        guard let date = self[keyPath: dates][key] else {
             return false
         }
         guard date > Date.now.addingTimeInterval(-Self.markLifetime) else {
-            switch kind {
-            case .unresponsiveOwner:
-                markDates[key] = nil
-            case .cannotComplete:
-                cannotCompleteDates[key] = nil
-            case .other:
-                break
-            }
+            self[keyPath: dates][key] = nil
             persist()
             return false
         }
@@ -284,29 +272,29 @@ final class MenuBarItemFailureLedger {
         _ key: String,
         in dates: inout [String: Date],
         provisional: inout Set<String>
-    ) -> (shouldPersist: Bool, newlyMarked: Bool) {
+    ) -> Bool? {
         let wasMarked = dates[key] != nil
         guard wasMarked || !provisional.insert(key).inserted else {
             Self.diagLog.debug("\(key) failed once; waiting for a second failure before marking it")
-            return (false, false)
+            return nil
         }
         dates[key] = .now
-        return (true, !wasMarked)
+        return !wasMarked
     }
 
     /// Persists only after the `inout` access in `mark` has ended. Calling
     /// `persist()` from inside that access reads both dictionaries and trips
     /// Swift's exclusivity enforcement in Xcode 27 beta 4.
     private func persistMark(
-        _ result: (shouldPersist: Bool, newlyMarked: Bool),
+        _ newlyMarked: Bool?,
         key: String,
         label: String
     ) {
-        guard result.shouldPersist else {
+        guard let newlyMarked else {
             return
         }
         persist()
-        if result.newlyMarked {
+        if newlyMarked {
             Self.diagLog.info("Marked \(key) as \(label)")
         }
     }
