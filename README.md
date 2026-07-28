@@ -66,13 +66,6 @@ Beta (or stable, whichever is newer):
 brew install thaw@beta
 ```
 
-### Verifying releases
-
-Release builds are Developer ID–signed and notarized. In-app updates use Sparkle
-with an embedded EdDSA public key. See
-[docs/VERIFYING_RELEASES.md](docs/VERIFYING_RELEASES.md) for how to check a
-download or Git tag.
-
 ## Language Support
 
 Thaw is translated into the languages listed below. Translations are managed on [Crowdin](https://crowdin.com/project/thaw), and you can request additional languages there.
@@ -227,7 +220,6 @@ Want to contribute? Start with [Ways to contribute](https://github.com/stonerl/T
 - [Security policy](.github/SECURITY.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Assurance case](docs/ASSURANCE_CASE.md)
-- [Verifying releases](docs/VERIFYING_RELEASES.md)
 - [URI schemes](docs/URI_SCHEMES.md)
 
 ## License
