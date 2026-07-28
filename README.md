@@ -3,19 +3,12 @@
 
 <p align="center">
   <a href="https://github.com/stonerl/Thaw/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/stonerl/Thaw?style=flat-square&label=latest&color=555555" /></a>
-  &nbsp;
   <a href="https://github.com/stonerl/Thaw/releases"><img alt="Beta / pre-release" src="https://img.shields.io/github/v/release/stonerl/Thaw?include_prereleases&style=flat-square&label=beta&color=555555" /></a>
-  &nbsp;
   <img alt="Requirements" src="https://img.shields.io/badge/macOS-26%2B-555555?style=flat-square" />
-  &nbsp;
   <a href="https://github.com/stonerl/Thaw/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/stonerl/Thaw/ci.yml?style=flat-square&label=CI" /></a>
-  &nbsp;
   <a href="https://www.bestpractices.dev/projects/13303"><img alt="OpenSSF Best Practices" src="https://img.shields.io/cii/summary/13303?style=flat-square&label=OpenSSF" /></a>
-  &nbsp;
   <a href="https://discord.gg/5cnKkKbMFd"><img alt="Discord" src="https://img.shields.io/badge/Discord-7289DA?style=flat-square&logo=discord&logoColor=white" /></a>
-  &nbsp;
   <a href="https://github.com/sponsors/stonerl"><img alt="Sponsor" src="https://img.shields.io/badge/Sponsor-%E2%9D%A4-555555?style=flat-square" /></a>
-  &nbsp;
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/stonerl/Thaw?style=flat-square&color=555555" /></a>
 </p>
 
@@ -26,6 +19,7 @@
 
 <p align="center">
   <a href="https://github.com/stonerl/Thaw/releases">Download</a> ·
+  <a href="https://github.com/stonerl/Thaw/issues/687">Golden Gate status</a> ·
   <a href="#install">Install</a> ·
   <a href="#roadmap">Roadmap</a> ·
   <a href=".github/CONTRIBUTING.md">Contributing</a>
@@ -37,34 +31,8 @@
 
 <p align="center">
   <a href="https://www.raycast.com/diazdesandi/thaw"><img alt="Works with Raycast" src="https://raw.githubusercontent.com/thaw-app/brand-assets/main/badges/works-with-raycast.svg" height="36" /></a>
-  &nbsp;&nbsp;
   <a href="https://getdroppy.app/"><img alt="Works with Droppy" src="https://raw.githubusercontent.com/thaw-app/brand-assets/main/badges/works-with-droppy.svg" height="36" /></a>
 </p>
-
-## Install
-
-### Homebrew
-
-```sh
-brew install thaw
-```
-
-Beta (or stable, whichever is newer):
-
-```sh
-brew install thaw@beta
-```
-
-### Latest release (.zip)
-
-Download `Thaw_<version>.zip` from [latest release](https://github.com/stonerl/Thaw/releases/latest), unzip it, then move `Thaw.app` to `Applications`.
-
-<p align="center">
-  <a href="https://github.com/stonerl/Thaw/issues/687"><b>macOS 27 (Golden Gate) status and preview builds</b></a>
-</p>
-
-> [!NOTE]
-> Thaw is an actively maintained fork of [Ice](https://github.com/jordanbaird/Ice), focused on fixes, compatibility, and new features.
 
 ## Highlights
 
@@ -112,6 +80,27 @@ Automation via `thaw://` URI schemes: [docs/URI_SCHEMES.md](docs/URI_SCHEMES.md)
 - Toggle application menus
 
 </details>
+
+## Install
+
+### Homebrew
+
+```sh
+brew install thaw
+```
+
+Beta (or stable, whichever is newer):
+
+```sh
+brew install thaw@beta
+```
+
+### Latest release (.zip)
+
+Download `Thaw_<version>.zip` from [latest release](https://github.com/stonerl/Thaw/releases/latest), unzip it, then move `Thaw.app` to `Applications`.
+
+> [!NOTE]
+> Thaw is an actively maintained fork of [Ice](https://github.com/jordanbaird/Ice), focused on fixes, compatibility, and new features.
 
 ## Language Support
 
