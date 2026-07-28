@@ -221,6 +221,7 @@ jobs:
             if git clone --depth 1 --branch gh-pages "$remote" "$work" 2>/dev/null; then
               :
             else
+              rm -rf "$work"
               git clone --depth 1 "$remote" "$work"
               git -C "$work" checkout --orphan gh-pages
               git -C "$work" rm -rf . >/dev/null 2>&1 || true
