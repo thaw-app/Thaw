@@ -197,13 +197,13 @@ Thaw speaks 20 languages, thanks to translators around the world.
   </tr>
 </table>
 
-Missing yours, or spotted something off? [Translate Thaw on Crowdin](https://crowdin.com/project/thaw) — you can request new languages there too.
+Missing yours, or spotted something off? [Translate Thaw on Crowdin](https://crowdin.com/project/thaw) — you can request new languages there too. Everyone who has translated Thaw is named in [Credits](CREDITS.md).
 
 <sub>\* Currently only in the <code>development</code> branch.</sub>
 
 ## Contributors
 
-This project exists thanks to the awesome people who contribute code and documentation:
+This project exists thanks to the awesome people who contribute code and documentation. Translations happen on Crowdin rather than in git, so translators are credited separately in [Credits](CREDITS.md).
 
 Want to contribute? Start with [Ways to contribute](https://github.com/thaw-app/Thaw/issues/316). Pull requests are welcome against the `development` branch (see [Contributing](.github/CONTRIBUTING.md)).
 
@@ -212,6 +212,7 @@ Want to contribute? Start with [Ways to contribute](https://github.com/thaw-app/
 ## Project documentation
 
 - [Contributing](.github/CONTRIBUTING.md)
+- [Credits](CREDITS.md)
 - [Governance](.github/GOVERNANCE.md)
 - [Security policy](.github/SECURITY.md)
 - [Roadmap](docs/ROADMAP.md)
