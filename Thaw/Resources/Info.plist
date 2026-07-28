@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>SUFeedURL</key>
-	<string>https://stonerl.github.io/Thaw/appcast.xml</string>
+	<string>https://thaw-app.github.io/updates/appcast.xml</string>
 	<key>SUPublicEDKey</key>
 	<string>fQ2kWqCLfAPAxQX1rp8gVNoG9hlAV/Gmm7kMBbxFe+A=</string>
 	<key>CFBundleURLTypes</key>
