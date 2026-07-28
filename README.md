@@ -2,15 +2,15 @@
 ![Thaw](https://raw.githubusercontent.com/thaw-app/brand-assets/main/headers/dark_header.svg#gh-dark-mode-only)
 
 <p align="center">
-  <a href="https://github.com/stonerl/Thaw/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/stonerl/Thaw?style=flat-square&label=latest&color=555555" /></a>
-  <a href="https://github.com/stonerl/Thaw/releases"><img alt="Beta / pre-release" src="https://img.shields.io/github/v/release/stonerl/Thaw?include_prereleases&style=flat-square&label=beta&color=555555" /></a>
+  <a href="https://github.com/thaw-app/Thaw/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/thaw-app/Thaw?style=flat-square&label=latest&color=555555" /></a>
+  <a href="https://github.com/thaw-app/Thaw/releases"><img alt="Beta / pre-release" src="https://img.shields.io/github/v/release/thaw-app/Thaw?include_prereleases&style=flat-square&label=beta&color=555555" /></a>
   <img alt="Requirements" src="https://img.shields.io/badge/macOS-26%2B-555555?style=flat-square" />
-  <a href="https://github.com/stonerl/Thaw/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/stonerl/Thaw/ci.yml?style=flat-square&label=CI" /></a>
+  <a href="https://github.com/thaw-app/Thaw/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/thaw-app/Thaw/ci.yml?style=flat-square&label=CI" /></a>
   <a href="https://www.bestpractices.dev/projects/13303"><img alt="OpenSSF Best Practices" src="https://img.shields.io/cii/summary/13303?style=flat-square&label=OpenSSF" /></a>
   <a href="https://crowdin.com/project/thaw"><img alt="Translated into 20 languages" src="https://img.shields.io/badge/translated-20_languages-555555?style=flat-square&logo=crowdin&logoColor=white" /></a>
   <a href="https://discord.gg/5cnKkKbMFd"><img alt="Discord" src="https://img.shields.io/badge/Discord-7289DA?style=flat-square&logo=discord&logoColor=white" /></a>
   <a href="https://github.com/sponsors/stonerl"><img alt="Sponsor" src="https://img.shields.io/badge/Sponsor-%E2%9D%A4-555555?style=flat-square" /></a>
-  <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/stonerl/Thaw?style=flat-square&color=555555" /></a>
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/thaw-app/Thaw?style=flat-square&color=555555" /></a>
 </p>
 
 <p align="center">
@@ -19,11 +19,11 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/stonerl/Thaw/releases">Download</a> ·
+  <a href="https://github.com/thaw-app/Thaw/releases">Download</a> ·
   <a href="#install">Install</a> ·
   <a href="#features">Features</a> ·
   <a href="#integrations">Integrations</a> ·
-  <a href="https://github.com/stonerl/Thaw/issues/687">macOS 27 status</a> ·
+  <a href="https://github.com/thaw-app/Thaw/issues/687">macOS 27 status</a> ·
   <a href=".github/CONTRIBUTING.md">Contributing</a>
 </p>
 
@@ -33,7 +33,7 @@
 </p>
 
 <div align="center">
-  <a href="https://trendshift.io/repositories/21173" target="_blank"><img src="https://trendshift.io/api/badge/repositories/21173" alt="stonerl/Thaw | Trendshift" style="width: 250px; height: 55px;" width="250" height="55" /></a>
+  <a href="https://trendshift.io/repositories/21173" target="_blank"><img src="https://trendshift.io/api/badge/repositories/21173" alt="thaw-app/Thaw | Trendshift" style="width: 250px; height: 55px;" width="250" height="55" /></a>
 </div>
 
 <p align="center">
@@ -153,7 +153,7 @@ brew install thaw        # stable
 brew install thaw@beta   # beta, or stable if it is newer
 ```
 
-Or grab the `.dmg` from the [latest release](https://github.com/stonerl/Thaw/releases/latest) and drag Thaw to Applications.
+Or grab the `.dmg` from the [latest release](https://github.com/thaw-app/Thaw/releases/latest) and drag Thaw to Applications.
 
 Needs macOS 26+. Thaw asks for Accessibility on first launch to move menu bar items; Screen Recording is optional. Stuck? See [Frequent issues](FREQUENT_ISSUES.md).
 
@@ -205,9 +205,9 @@ Missing yours, or spotted something off? [Translate Thaw on Crowdin](https://cro
 
 This project exists thanks to the awesome people who contribute code and documentation:
 
-Want to contribute? Start with [Ways to contribute](https://github.com/stonerl/Thaw/issues/316). Pull requests are welcome against the `development` branch (see [Contributing](.github/CONTRIBUTING.md)).
+Want to contribute? Start with [Ways to contribute](https://github.com/thaw-app/Thaw/issues/316). Pull requests are welcome against the `development` branch (see [Contributing](.github/CONTRIBUTING.md)).
 
-<a href="https://github.com/stonerl/Thaw/graphs/contributors"><img alt="Gallery of all contributors' profile photos" src="https://contrib.rocks/image?repo=stonerl/Thaw&columns=16" width="100%" /></a>
+<a href="https://github.com/thaw-app/Thaw/graphs/contributors"><img alt="Gallery of all contributors' profile photos" src="https://contrib.rocks/image?repo=thaw-app/Thaw&columns=16" width="100%" /></a>
 
 ## Project documentation
 

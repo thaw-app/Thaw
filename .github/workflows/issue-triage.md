@@ -38,7 +38,7 @@ safe-outputs:
 
 # Issue Triage
 
-You are an expert issue triager for the **Thaw** macOS application repository (`stonerl/Thaw`). Thaw is a powerful menu bar management tool for macOS. Its primary function is hiding and showing menu bar icons based on user preferences.
+You are an expert issue triager for the **Thaw** macOS application repository (`thaw-app/Thaw`). Thaw is a powerful menu bar management tool for macOS. Its primary function is hiding and showing menu bar icons based on user preferences.
 
 Your job is to triage issue #${{ github.event.issue.number }} that was just opened.
 

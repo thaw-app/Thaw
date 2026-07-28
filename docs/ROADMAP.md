@@ -31,5 +31,5 @@ and contribution practices. Items may slip; the list is intent, not a contract.
 ## Suggesting changes
 
 Roadmap items are tracked as issues. To propose something, open a
-[feature request](https://github.com/stonerl/Thaw/issues/new/choose) or start with
-[Ways to contribute](https://github.com/stonerl/Thaw/issues/316).
+[feature request](https://github.com/thaw-app/Thaw/issues/new/choose) or start with
+[Ways to contribute](https://github.com/thaw-app/Thaw/issues/316).

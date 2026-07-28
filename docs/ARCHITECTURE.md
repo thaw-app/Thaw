@@ -101,7 +101,7 @@ by the main app after launch.
   [`thaw-app`](https://github.com/thaw-app) org.
 - **Release:** Signed with Developer ID, notarized, packaged (ZIP/DMG), Sparkle
   appcast updated. See [VERIFYING_RELEASES.md](VERIFYING_RELEASES.md).
-- **Hosting:** Canonical source is [stonerl/Thaw](https://github.com/stonerl/Thaw)
+- **Hosting:** Canonical source is [thaw-app/Thaw](https://github.com/thaw-app/Thaw)
   today; governance targets a later transfer into `thaw-app` once fragile
   release paths are stable (see [GOVERNANCE.md](../.github/GOVERNANCE.md)).
 

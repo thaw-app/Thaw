@@ -14,7 +14,7 @@ Please read and follow our [Code of Conduct][coc].
 - Code
 - Translations
 
-Looking for a concrete task? See the living list in **[Ways to contribute (#316)](https://github.com/stonerl/Thaw/issues/316)** (docs/screenshots, triage, small cleanups, and more).
+Looking for a concrete task? See the living list in **[Ways to contribute (#316)](https://github.com/thaw-app/Thaw/issues/316)** (docs/screenshots, triage, small cleanups, and more).
 
 ## Developer Certificate of Origin (DCO)
 
@@ -79,7 +79,7 @@ Regardless of the type of contribution, you'll need a GitHub account and a fork 
    git checkout -b your-branch-name
    ```
 
-5. When ready, open a pull request against `stonerl/Thaw:development`
+5. When ready, open a pull request against `thaw-app/Thaw:development`
 
 ## Non-technical contributions
 
@@ -116,7 +116,7 @@ This includes but is not limited to:
 - macOS 26+
 
 > [!NOTE]
-> macOS 27 (Golden Gate) experimental work happens on `feat/macos-27-experimental` and is tracked in [issue #687](https://github.com/stonerl/Thaw/issues/687).
+> macOS 27 (Golden Gate) experimental work happens on `feat/macos-27-experimental` and is tracked in [issue #687](https://github.com/thaw-app/Thaw/issues/687).
 
 ### Getting Started
 
@@ -183,9 +183,9 @@ Open a pull request via the [Thaw pull requests page][pr] and select the [approp
 
 [coc]: CODE_OF_CONDUCT.md
 [fq]: ../FREQUENT_ISSUES.md
-[it]: https://github.com/stonerl/Thaw/issues
-[pr]: https://github.com/stonerl/Thaw/pulls
-[prt]: https://github.com/stonerl/Thaw/blob/development/.github/pull_request_template.md
+[it]: https://github.com/thaw-app/Thaw/issues
+[pr]: https://github.com/thaw-app/Thaw/pulls
+[prt]: https://github.com/thaw-app/Thaw/blob/development/.github/pull_request_template.md
 [gov]: GOVERNANCE.md
 [arch]: ../docs/ARCHITECTURE.md
 [sec]: SECURITY.md

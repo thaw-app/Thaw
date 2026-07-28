@@ -78,7 +78,7 @@ check above succeeds.
 
 ## Install channels
 
-- **GitHub Releases:** https://github.com/stonerl/Thaw/releases  
+- **GitHub Releases:** https://github.com/thaw-app/Thaw/releases  
 - **Homebrew:** `brew install thaw` / `brew install thaw@beta`  
 - **In-app updates:** Sparkle (stable / beta channels in Settings)
 
