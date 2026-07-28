@@ -13,16 +13,22 @@
 </p>
 
 <p align="center">
-  <b>Thaw hides and shows macOS menu bar items and adds search, hotkeys, profiles, and appearance controls to keep the bar clean without losing access.</b><br />
-  <b>Free and open source. Private by design: no tracking, no account required.</b>
+  <b>Take back your menu bar. Hide what you don't need, find anything in a keystroke, and make the bar look the way you want.</b><br />
+  <b>Free and open source. Private by design: no tracking, no account, and Screen Recording stays optional.</b>
 </p>
 
 <p align="center">
   <a href="https://github.com/stonerl/Thaw/releases">Download</a> ·
-  <a href="https://github.com/stonerl/Thaw/issues/687">Golden Gate status</a> ·
   <a href="#install">Install</a> ·
-  <a href="#roadmap">Roadmap</a> ·
+  <a href="#features">Features</a> ·
+  <a href="#integrations">Integrations</a> ·
+  <a href="https://github.com/stonerl/Thaw/issues/687">macOS 27 status</a> ·
   <a href=".github/CONTRIBUTING.md">Contributing</a>
+</p>
+
+<p align="center">
+  <a href="https://www.raycast.com/diazdesandi/thaw"><img alt="Works with Raycast" src="https://raw.githubusercontent.com/thaw-app/brand-assets/main/badges/works-with-raycast.svg" height="36" /></a>
+  <a href="https://getdroppy.app/"><img alt="Works with Droppy" src="https://raw.githubusercontent.com/thaw-app/brand-assets/main/badges/works-with-droppy.svg" height="36" /></a>
 </p>
 
 <div align="center">
@@ -30,22 +36,29 @@
 </div>
 
 <p align="center">
-  <a href="https://www.raycast.com/diazdesandi/thaw"><img alt="Works with Raycast" src="https://raw.githubusercontent.com/thaw-app/brand-assets/main/badges/works-with-raycast.svg" height="36" /></a>
-  <a href="https://getdroppy.app/"><img alt="Works with Droppy" src="https://raw.githubusercontent.com/thaw-app/brand-assets/main/badges/works-with-droppy.svg" height="36" /></a>
+  <a href="https://github.com/user-attachments/assets/9584065d-f840-4545-9a42-cfc5534b5ac3"><img alt="Thaw overview" src="https://github.com/user-attachments/assets/9584065d-f840-4545-9a42-cfc5534b5ac3" width="800" /></a>
 </p>
 
-## Highlights
+## Why Thaw
+
+- **Free, and free to keep.** No purchase, no subscription, and no upgrade fee when macOS ships a new version.
+- **Open source, GPL-3.0.** Read the code, build it yourself, fork it.
+- **No tracking, no account.** No analytics, no telemetry, no sign-up.
+- **Screen Recording is optional.** Hiding, revealing, and rearranging items all work without it. Grant it only if you want menu bar item previews and appearance tinting.
+- **Light on your Mac.** A small, steady memory footprint, and no background bloat.
+- **Signed and notarized by Apple**, with [verifiable releases](docs/VERIFYING_RELEASES.md) and security practices tracked against the [OpenSSF Best Practices](https://www.bestpractices.dev/projects/13303) criteria.
+
+## Features
 
 - **Declutter your menu bar**: hide icons you do not need and keep an always-hidden section for the rest
 - **Reveal items fast**: show hidden icons by hover, click, scroll/swipe, or hotkey
 - **Search and jump**: find any menu bar item instantly from the keyboard
 - **Switch layouts by context**: save profiles for work, focus, and presenting
+- **Style the bar**: tint, gradient, shadow, border, and custom shapes, per light/dark mode
 - **Built for modern macOS**: supports macOS 26 and 27, including notch-friendly layouts via the Thaw Bar
 
-Automation via `thaw://` URI schemes: [docs/URI_SCHEMES.md](docs/URI_SCHEMES.md).
-
 <details>
-<summary>Full feature list</summary>
+<summary><b>Full feature list</b> — 20+ more, including drag-and-drop arrangement, item spacing, and hotkeys</summary>
 
 ### Menu bar item management
 
@@ -81,23 +94,68 @@ Automation via `thaw://` URI schemes: [docs/URI_SCHEMES.md](docs/URI_SCHEMES.md)
 
 </details>
 
+<details>
+<summary><b>Screenshots</b></summary>
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <a href="https://github.com/user-attachments/assets/f2f6b9a6-55c5-40b3-910f-b27b114577dd"><img alt="Item layout" src="https://github.com/user-attachments/assets/f2f6b9a6-55c5-40b3-910f-b27b114577dd" width="400" /></a><br />
+      <sub><b>Item layout</b></sub>
+    </td>
+    <td align="center" width="50%">
+      <a href="https://github.com/user-attachments/assets/c6ac6364-30f8-4c92-8f6f-9efe15f99573"><img alt="Show hidden menu bar items below the menu bar" src="https://github.com/user-attachments/assets/c6ac6364-30f8-4c92-8f6f-9efe15f99573" width="400" /></a><br />
+      <sub><b>Show hidden items below the menu bar</b></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <a href="https://github.com/user-attachments/assets/54273d41-fcf3-4c9a-834b-e62a162a6b0c"><img alt="Drag-and-drop interface to arrange menu bar items" src="https://github.com/user-attachments/assets/54273d41-fcf3-4c9a-834b-e62a162a6b0c" width="400" /></a><br />
+      <sub><b>Drag-and-drop arrangement</b></sub>
+    </td>
+    <td align="center" width="50%">
+      <a href="https://github.com/user-attachments/assets/d95302df-26b0-4608-896e-4966c822fb5e"><img alt="Customize the menu bar's appearance" src="https://github.com/user-attachments/assets/d95302df-26b0-4608-896e-4966c822fb5e" width="400" /></a><br />
+      <sub><b>Customize the appearance</b></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <a href="https://github.com/user-attachments/assets/ebafc745-7220-46c9-9297-f7a00ef6c15d"><img alt="Menu bar item search" src="https://github.com/user-attachments/assets/ebafc745-7220-46c9-9297-f7a00ef6c15d" width="400" /></a><br />
+      <sub><b>Menu bar item search</b></sub>
+    </td>
+    <td width="50%"></td>
+  </tr>
+</table>
+
+</details>
+
+## Integrations
+
+Every core action is a `thaw://` deep link, so Thaw plugs into the launcher you already use.
+
+- **[Raycast](https://www.raycast.com/diazdesandi/thaw)** — official extension. Toggle sections, open search, and change settings without leaving Raycast.
+- **[Droppy](https://getdroppy.app/)** — pair Thaw with Droppy's shelf and extras for a full menu bar suite.
+- **Alfred** — workflow in progress. The `thaw://` scheme already works today.
+- **Anything else** — Shortcuts, Keyboard Maestro, BetterTouchTool, or a shell script.
+
+```sh
+open "thaw://toggle-hidden"
+open "thaw://search"
+open "thaw://open-settings"
+```
+
+Full reference, including reading and writing settings: [docs/URI_SCHEMES.md](docs/URI_SCHEMES.md).
+
 ## Install
 
-### Homebrew
-
 ```sh
-brew install thaw
+brew install thaw        # stable
+brew install thaw@beta   # beta, or stable if it is newer
 ```
 
-Beta (or stable, whichever is newer):
+Or grab the `.dmg` from the [latest release](https://github.com/stonerl/Thaw/releases/latest) and drag Thaw to Applications.
 
-```sh
-brew install thaw@beta
-```
-
-### Latest release (.zip)
-
-Download `Thaw_<version>.zip` from [latest release](https://github.com/stonerl/Thaw/releases/latest), unzip it, then move `Thaw.app` to `Applications`.
+Needs macOS 26+. Thaw asks for Accessibility on first launch to move menu bar items; Screen Recording is optional. Stuck? See [Frequent issues](FREQUENT_ISSUES.md).
 
 > [!NOTE]
 > Thaw is an actively maintained fork of [Ice](https://github.com/jordanbaird/Ice), focused on fixes, compatibility, and new features.
@@ -139,17 +197,6 @@ Thaw is translated into the languages listed below. Translations are managed on 
 
 _Languages marked with (\*) are currently only available in the development branch._
 
-## Roadmap
-
-Near-term direction (roughly the next year): keep Thaw compatible with current
-macOS releases, finish menu-bar layout/trigger work below, and harden release
-and contribution practices. Items may slip; the list is intent, not a contract.
-
-- **Menu bar item management**: individual spacer items; menu bar item groups; show menu bar items when trigger conditions are met
-- **Menu bar appearance**: rounded screen corners
-- **Hotkeys**: enable/disable auto rehide; temporarily show individual menu bar items
-- **Other**: menu bar widgets
-
 ## Contributors
 
 This project exists thanks to the awesome people who contribute code and documentation:
@@ -163,6 +210,7 @@ Want to contribute? Start with [Ways to contribute](https://github.com/stonerl/T
 - [Contributing](.github/CONTRIBUTING.md)
 - [Governance](.github/GOVERNANCE.md)
 - [Security policy](.github/SECURITY.md)
+- [Roadmap](docs/ROADMAP.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Assurance case](docs/ASSURANCE_CASE.md)
 - [Verifying releases](docs/VERIFYING_RELEASES.md)
