@@ -41,6 +41,26 @@ re-push with sign-off before merge.
 > **Note:** This is not a CLA and does not transfer copyright. It is an
 > attestation that you can contribute the change under GPL-3.0.
 
+### AI-assisted contributions
+
+We are **friendly to AI-assisted work**. Using coding assistants is fine when the result is high quality and follows this guide.
+
+The DCO still applies to the **human who signs off**. By adding `Signed-off-by`, you certify that you have the right to contribute the change under GPL-3.0 — including any AI-generated portions. The tool is not a DCO party; you are responsible for the commit.
+
+In practice:
+
+- Prefer tools whose terms allow contributing output to GPL-licensed projects.
+- Do not feed clearly proprietary or third-party-restricted code into an assistant and commit the result as if it were yours.
+- You must understand and be able to explain the change in review.
+
+We use **CodeRabbit** and **SonarCloud** on pull requests. Treat their findings as part of the review bar unless a maintainer marks something won’t-fix. We expect fixes and high quality before (and during) human review.
+
+**We reserve the right** to reject contributions or block automated committers / assistant-driven submission paths when they harm the project (spam, unsafe automation, or repeated low-quality work).
+
+Pull requests that are clear **AI slop**, or that ignore established procedures (wrong base branch, missing issue where required, no tests/docs when expected, unsigned commits, unchecked PR template, drive-by refactors with no issue), **will be closed**. Using AI does not lower the bar.
+
+Maintainer bandwidth is limited. If we request changes and there is **no meaningful follow-up** within a reasonable window, the PR **will be closed**. You can always open a new PR later that addresses the feedback.
+
 ## Before You Start
 
 Regardless of the type of contribution, you'll need a GitHub account and a fork of the repository:
