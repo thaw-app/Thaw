@@ -1,5 +1,5 @@
-![Thaw](./docs/assets/thaw-wordmark-light.png#gh-light-mode-only)
-![Thaw](./docs/assets/thaw-wordmark-dark.png#gh-dark-mode-only)
+![Thaw](https://raw.githubusercontent.com/thaw-app/brand-assets/main/headers/light_header.svg#gh-light-mode-only)
+![Thaw](https://raw.githubusercontent.com/thaw-app/brand-assets/main/headers/dark_header.svg#gh-dark-mode-only)
 
 <p align="center">
   <a href="https://github.com/stonerl/Thaw/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/stonerl/Thaw?style=flat-square&label=latest&color=555555" /></a>
