@@ -79,6 +79,7 @@ struct ThawPermissionsView: View {
 }
 
 private struct OnboardingPermissionCard: View {
+    @Environment(AppState.self) private var appState
     let permission: Permission
 
     var body: some View {
@@ -134,5 +135,15 @@ private struct OnboardingPermissionCard: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 16))
         .animation(.easeOut(duration: 0.3), value: permission.hasPermission)
+        .onChange(of: permission.hasPermission) { _, hasPermission in
+            // Granting a permission sends the user off to System Settings;
+            // once the grant lands, bring the app (and this window) back to
+            // the front — same recovery the standalone PermissionsView does.
+            guard hasPermission else {
+                return
+            }
+            appState.activate(withPolicy: .regular)
+            appState.openWindow(.permissions)
+        }
     }
 }
