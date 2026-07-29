@@ -661,11 +661,15 @@ private final class MenuBarOverlayPanelContentView: NSView {
                 // longer has an `$averageColors` publisher.
                 averageColorsObservationTask?.cancel()
                 averageColorsObservationTask = Task { [weak self, weak appState] in
+                    var previous: MenuBarAverageColorInfo?
                     let changes = Observations { appState?.menuBarManager.averageColors ?? [:] }
                     for await colors in changes {
                         guard let self else { return }
                         guard let displayID = self.overlayPanel?.owningScreen.displayID else { continue }
-                        self.averageColorInfo = colors[displayID]
+                        let info = colors[displayID]
+                        guard info != previous else { continue }
+                        previous = info
+                        self.averageColorInfo = info
                     }
                 }
 
