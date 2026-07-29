@@ -542,8 +542,14 @@ final class MenuBarSection {
             rehideMonitor = EventMonitor.universal(for: .mouseMoved) { [weak self, weak appState, timedRehideThrottleClock] event in
                 // Throttle: process at most ~20fps regardless of mouse polling rate.
                 let now = CACurrentMediaTime()
-                guard now - timedRehideThrottleClock.withLock({ $0 }) > 0.05 else { return event }
-                timedRehideThrottleClock.withLock { $0 = now }
+                // Check and update the timestamp in a single critical section
+                // so concurrent deliveries cannot both pass the throttle.
+                let shouldProcess = timedRehideThrottleClock.withLock { last in
+                    guard now - last > 0.05 else { return false }
+                    last = now
+                    return true
+                }
+                guard shouldProcess else { return event }
 
                 guard
                     let self,
