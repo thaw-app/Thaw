@@ -239,38 +239,44 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// - `thaw://set?key=X&value=Y` — set a boolean setting
     /// - `thaw://toggle?key=X` — toggle a boolean setting
     private func handleURL(_ url: URL, senderBundleId: String? = nil) {
-        let host = url.host?.lowercased() ?? ""
+        let request = SettingsURIParser.parse(url)
 
-        // Handle settings manipulation URLs
-        switch host {
-        case "set", "toggle", "get", "authorize":
-            handleSettingsURL(url, host: host, senderBundleId: senderBundleId)
-            return
-        default:
-            break
-        }
-
-        // Handle action URLs
-        switch host {
-        case "toggle-hidden":
-            HotkeyAction.toggleHiddenSection.perform(appState: appState)
-        case "toggle-always-hidden":
-            HotkeyAction.toggleAlwaysHiddenSection.perform(appState: appState)
-        case "search":
-            HotkeyAction.searchMenuBarItems.perform(appState: appState)
-        case "toggle-thawbar":
-            HotkeyAction.enableIceBar.perform(appState: appState)
-        case "toggle-application-menus":
-            HotkeyAction.toggleApplicationMenus.perform(appState: appState)
-        case "open-settings":
-            openSettingsWindow()
-        default:
+        switch request.route {
+        case .set, .toggle, .get, .authorize:
+            handleSettingsURL(url, request: request, senderBundleId: senderBundleId)
+        case let .action(action):
+            perform(action)
+        case let .malformed(host):
+            // Rejected ahead of the authorization gate: an incomplete URL must
+            // not be able to raise an approval dialog.
+            appState.diagLog.warning(
+                "Settings URI \(host): missing required parameters in \(url.absoluteString)"
+            )
+        case .unrecognized:
             appState.diagLog.warning("Received unrecognized thaw:// URL: \(url.absoluteString)")
         }
     }
 
+    /// Performs a parameterless `thaw://` action.
+    private func perform(_ action: SettingsURIAction) {
+        switch action {
+        case .toggleHidden:
+            HotkeyAction.toggleHiddenSection.perform(appState: appState)
+        case .toggleAlwaysHidden:
+            HotkeyAction.toggleAlwaysHiddenSection.perform(appState: appState)
+        case .search:
+            HotkeyAction.searchMenuBarItems.perform(appState: appState)
+        case .toggleThawbar:
+            HotkeyAction.enableIceBar.perform(appState: appState)
+        case .toggleApplicationMenus:
+            HotkeyAction.toggleApplicationMenus.perform(appState: appState)
+        case .openSettings:
+            openSettingsWindow()
+        }
+    }
+
     /// Handles settings manipulation URLs (set/toggle).
-    private func handleSettingsURL(_ url: URL, host: String, senderBundleId: String?) {
+    private func handleSettingsURL(_ url: URL, request: SettingsURIRequest, senderBundleId: String?) {
         // Check if Settings URI feature is enabled
         guard SettingsURIHandler.isEnabled() else {
             appState.diagLog.debug("Settings URI is disabled, ignoring: \(url.absoluteString)")
@@ -278,22 +284,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         // Handle version get request without auth (read-only metadata)
-        if host == "get",
-           let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-           components.queryItems?.first(where: { $0.name == "key" })?.value == "version"
-        {
-            handleGetURL(url, sender: nil)
+        if request.isVersionQuery {
+            handleGet(request)
             return
         }
 
         // Determine effective bundle ID (auto-detected or manual override)
-        guard let effectiveBundleId = determineEffectiveBundleId(url: url, senderBundleId: senderBundleId) else {
+        guard let effectiveBundleId = determineEffectiveBundleId(
+            request: request,
+            senderBundleId: senderBundleId
+        ) else {
             appState.diagLog.debug("Settings URI: Cannot determine sender bundle ID, ignoring: \(url.absoluteString)")
             return
         }
 
         // Handle authorize request - triggers auth dialog if not already authorized
-        if host == "authorize" {
+        if case .authorize = request.route {
             if !SettingsURIHandler.isWhitelisted(bundleIdentifier: effectiveBundleId) {
                 _ = SettingsURIHandler.promptForAuthorization(bundleId: effectiveBundleId)
             }
@@ -311,13 +317,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         // Process the settings URL
-        switch host {
-        case "set":
-            handleSetURL(url, sender: effectiveBundleId)
-        case "toggle":
-            handleToggleURL(url, sender: effectiveBundleId)
-        case "get":
-            handleGetURL(url, sender: effectiveBundleId)
+        switch request.route {
+        case let .set(key, value, displayUUID):
+            let success = SettingsURIHandler.handleSet(
+                key: key,
+                value: value,
+                sender: effectiveBundleId,
+                displayUUID: displayUUID
+            )
+            if !success {
+                appState.diagLog.warning("Settings URI set: failed to set \(key) = \(value)")
+            }
+        case let .toggle(key, displayUUID):
+            let success = SettingsURIHandler.handleToggle(
+                key: key,
+                sender: effectiveBundleId,
+                displayUUID: displayUUID
+            )
+            if !success {
+                appState.diagLog.warning("Settings URI toggle: failed to toggle \(key)")
+            }
+        case .get:
+            handleGet(request)
         default:
             break
         }
@@ -325,7 +346,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Determines the effective bundle ID for authorization.
     /// Uses manual override (DEBUG only) if auto-detection fails.
-    private func determineEffectiveBundleId(url: URL, senderBundleId: String?) -> String? {
+    private func determineEffectiveBundleId(
+        request: SettingsURIRequest,
+        senderBundleId: String?
+    ) -> String? {
         // If we have auto-detected sender, use it
         if let sender = senderBundleId {
             return sender
@@ -334,7 +358,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         #if DEBUG
             // In DEBUG builds, allow manual bundleId override for testing
             // when auto-detection fails (e.g., from Terminal 'open' command)
-            if let manualBundleId = extractManualBundleId(from: url) {
+            if let manualBundleId = request.bundleIdOverride {
                 appState.diagLog.warning("Settings URI: Using DEBUG manual bundleId=\(manualBundleId) - FOR TESTING ONLY")
                 return manualBundleId
             }
@@ -365,69 +389,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         sender.reply(toApplicationShouldTerminate: true)
     }
 
-    #if DEBUG
-        /// Extracts manual bundleId from URL query parameter (DEBUG builds only).
-        private func extractManualBundleId(from url: URL) -> String? {
-            guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-                  let bundleId = components.queryItems?.first(where: { $0.name == "bundleId" })?.value,
-                  !bundleId.isEmpty
-            else {
-                return nil
-            }
-            return bundleId
-        }
-    #endif
-
-    /// Handles thaw://set?key=X&value=Y URL.
-    private func handleSetURL(_ url: URL, sender: String?) {
-        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-              let key = components.queryItems?.first(where: { $0.name == "key" })?.value,
-              let value = components.queryItems?.first(where: { $0.name == "value" })?.value
-        else {
-            appState.diagLog.warning("Settings URI set: missing key or value in \(url.absoluteString)")
+    /// Handles `thaw://get?key=X&callback=Y`.
+    private func handleGet(_ request: SettingsURIRequest) {
+        guard case let .get(key, displayUUID, callback, broadcast, requestId) = request.route else {
             return
         }
-
-        // Extract optional display UUID parameter for per-display settings
-        let displayUUID = components.queryItems?.first(where: { $0.name == "display" })?.value
-
-        let success = SettingsURIHandler.handleSet(key: key, value: value, sender: sender, displayUUID: displayUUID)
-        if !success {
-            appState.diagLog.warning("Settings URI set: failed to set \(key) = \(value)")
-        }
-    }
-
-    /// Handles thaw://toggle?key=X URL.
-    private func handleToggleURL(_ url: URL, sender: String?) {
-        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-              let key = components.queryItems?.first(where: { $0.name == "key" })?.value
-        else {
-            appState.diagLog.warning("Settings URI toggle: missing key in \(url.absoluteString)")
-            return
-        }
-
-        // Extract optional display UUID parameter for per-display settings
-        let displayUUID = components.queryItems?.first(where: { $0.name == "display" })?.value
-
-        let success = SettingsURIHandler.handleToggle(key: key, sender: sender, displayUUID: displayUUID)
-        if !success {
-            appState.diagLog.warning("Settings URI toggle: failed to toggle \(key)")
-        }
-    }
-
-    /// Handles thaw://get?key=X&callback=Y URLs.
-    private func handleGetURL(_ url: URL, sender _: String?) {
-        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
-            appState.diagLog.warning("Settings URI get: invalid URL \(url.absoluteString)")
-            return
-        }
-
-        // Extract parameters
-        let key = components.queryItems?.first(where: { $0.name == "key" })?.value
-        let displayUUID = components.queryItems?.first(where: { $0.name == "display" })?.value
-        let callback = components.queryItems?.first(where: { $0.name == "callback" })?.value
-        let broadcast = components.queryItems?.first(where: { $0.name == "broadcast" })?.value == "true"
-        let requestId = components.queryItems?.first(where: { $0.name == "requestId" })?.value
 
         let success = SettingsURIHandler.handleGet(
             key: key,

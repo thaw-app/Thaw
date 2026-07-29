@@ -1,0 +1,1 @@
+../../../Thaw/Utilities/SettingsURIParser.swift

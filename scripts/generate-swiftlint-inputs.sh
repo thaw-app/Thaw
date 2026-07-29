@@ -8,8 +8,11 @@ output="${1:-$root/scripts/swiftlint-inputs.xcfilelist}"
 
 cd "$root"
 
+# LC_ALL=C keeps the ordering byte-wise so the list is identical on macOS and
+# on the Linux CI runner; locale collation would otherwise reorder entries that
+# differ only in case and fail the verification step.
 git ls-files '*.swift' \
     | grep -E '^(MenuBarItemService|Shared|Thaw)/' \
-    | sort \
+    | LC_ALL=C sort \
     | sed 's|^|$(SRCROOT)/|' \
     > "$output"
