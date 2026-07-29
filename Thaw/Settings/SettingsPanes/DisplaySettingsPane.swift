@@ -719,9 +719,6 @@ private struct IceBarConfigurationControls<ExtraControls: View>: View {
     var body: some View {
         Toggle("Always show hidden items", isOn: $alwaysShowHiddenItems)
             .disabled(useIceBar)
-            .onAppear {
-                maxSliderLabelWidth = 0
-            }
             .annotation {
                 if useIceBar {
                     switch context {
@@ -772,6 +769,11 @@ private struct IceBarConfigurationControls<ExtraControls: View>: View {
                 } label: {
                     Text("Columns")
                         .frame(minWidth: maxSliderLabelWidth, alignment: .leading)
+                        .onAppear {
+                            // Clear any stale accumulated width before the
+                            // label is (re)measured below.
+                            maxSliderLabelWidth = 0
+                        }
                         .onFrameChange { frame in
                             maxSliderLabelWidth = max(maxSliderLabelWidth, frame.width)
                         }

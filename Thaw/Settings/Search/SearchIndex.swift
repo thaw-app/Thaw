@@ -68,42 +68,10 @@ nonisolated enum SearchIndex {
     private static let sharedEntries: [SearchEntry] = paneEntries + generalEntries + revealEntries + advancedEntries
         + displayEntries + hotkeyEntries + layoutEntries + appearanceEntries
 
-    /// macOS 27-only settings rows, appended when the sidebar search UI is available.
-    private static let macOS27Entries: [SearchEntry] = [
-        SearchEntry(
-            id: "advanced.enableExperimentalSystemItemHiding",
-            titleKey: "Allow hiding macOS system items",
-            titleText: "Allow hiding macOS system items",
-            descriptionText: "Allows items such as Clock, Control Center, and Siri to be moved into hidden sections.",
-            pane: .menuBarLayout,
-            sectionKey: nil,
-            sectionText: nil,
-            keywords: ["system items", "clock", "control center", "siri", "hide", "macOS"],
-            property: .advanced("enableExperimentalSystemItemHiding")
-        ),
-        SearchEntry(
-            id: "advanced.alwaysUseAppIconForMenuBarItems",
-            titleKey: "Use app icons instead of live previews",
-            titleText: "Use app icons instead of live previews",
-            descriptionText: "Show each item's app icon in the Thaw Bar and layout editor instead of a live screenshot.",
-            pane: .menuBarLayout,
-            sectionKey: "Advanced layout controls",
-            sectionText: "Advanced layout controls",
-            keywords: ["app icon", "live preview", "screenshot", "capture", "overflow", "notch"],
-            property: .advanced("alwaysUseAppIconForMenuBarItems")
-        ),
-        SearchEntry(
-            id: "advanced.menuBarOrderFulfillmentTimeout",
-            titleKey: "Reorder timeout",
-            titleText: "Reorder timeout",
-            descriptionText: "How long Thaw waits for macOS to apply a menu bar reorder before continuing with remaining layout work.",
-            pane: .menuBarLayout,
-            sectionKey: "Advanced layout controls",
-            sectionText: "Advanced layout controls",
-            keywords: ["reorder", "timeout", "wait", "layout", "seconds"],
-            property: .advanced("menuBarOrderFulfillmentTimeout")
-        ),
-    ]
+    /// macOS 27-only settings rows, appended when the sidebar search UI is
+    /// available. Currently empty: rows are only added here once a matching
+    /// control is actually exposed in a settings pane.
+    private static let macOS27Entries: [SearchEntry] = []
 
     /// All searchable settings entries, in pane order.
     ///

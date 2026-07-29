@@ -180,6 +180,21 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
             }
             .store(in: &c)
 
+        // Toggling Reduce Transparency changes whether the system menu bar
+        // material is opaque, which decides whether the panel must sit above
+        // or behind the menu bar. Re-evaluate the window level and re-show.
+        NSWorkspace.shared.notificationCenter
+            .publisher(for: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification)
+            .debounce(for: 0.1, scheduler: DispatchQueue.main)
+            .sink { [weak self] _ in
+                guard let self else {
+                    return
+                }
+                updateWindowLevel()
+                needsShow = true
+            }
+            .store(in: &c)
+
         // Update application menu frame when the menu bar owning or frontmost app changes.
         Publishers.Merge(
             NSWorkspace.shared.publisher(
@@ -499,11 +514,20 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
 
     /// Moves the panel behind the menu bar whenever a tint or shape is active
     /// so the menu bar's own blur blends the content and items stay crisp.
+    ///
+    /// When Reduce Transparency is enabled, the menu bar's material is opaque,
+    /// so content composited behind it can never show through and the panel
+    /// would be invisible. In that case the panel is placed at `.statusBar`,
+    /// above the opaque menu bar background, so the tint stays visible.
     private func updateWindowLevel() {
         guard let appState else { return }
         let config = appState.appearanceManager.configuration
         if config.current.tintKind != .noTint || config.shapeKind != .noShape || config.current.backgroundKind != .none {
-            level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.statusWindow)) - 1)
+            if NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency {
+                level = .statusBar
+            } else {
+                level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.statusWindow)) - 1)
+            }
         } else {
             level = .statusBar
         }
@@ -661,11 +685,15 @@ private final class MenuBarOverlayPanelContentView: NSView {
                 // longer has an `$averageColors` publisher.
                 averageColorsObservationTask?.cancel()
                 averageColorsObservationTask = Task { [weak self, weak appState] in
+                    var previous: MenuBarAverageColorInfo?
                     let changes = Observations { appState?.menuBarManager.averageColors ?? [:] }
                     for await colors in changes {
                         guard let self else { return }
                         guard let displayID = self.overlayPanel?.owningScreen.displayID else { continue }
-                        self.averageColorInfo = colors[displayID]
+                        let info = colors[displayID]
+                        guard info != previous else { continue }
+                        previous = info
+                        self.averageColorInfo = info
                     }
                 }
 

@@ -115,7 +115,10 @@ final class CustomTooltipPanel: NSPanel {
         ) else {
             // The point doesn't fall inside any known screen, which is the
             // source of the #734 "random position" reports (stale/parked
-            // bounds). Don't show a tooltip we can't place sanely.
+            // bounds). Don't show a tooltip we can't place sanely — and
+            // dismiss any tooltip that's already visible so stale content
+            // and ownership don't linger on screen.
+            dismiss()
             return
         }
 

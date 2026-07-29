@@ -51,10 +51,16 @@ final class UpdatesManager: NSObject {
     /// A Boolean value that indicates whether the user wants to receive beta updates.
     var allowsBetaUpdates: Bool {
         get {
-            UserDefaults.standard.bool(forKey: "AllowsBetaUpdates")
+            // Computed over UserDefaults, so the @Observable macro cannot
+            // track it automatically; register/notify Observation manually
+            // (same pattern as the Sparkle-backed properties below).
+            access(keyPath: \.allowsBetaUpdates)
+            return UserDefaults.standard.bool(forKey: "AllowsBetaUpdates")
         }
         set {
-            UserDefaults.standard.set(newValue, forKey: "AllowsBetaUpdates")
+            withMutation(keyPath: \.allowsBetaUpdates) {
+                UserDefaults.standard.set(newValue, forKey: "AllowsBetaUpdates")
+            }
             Task {
                 guard hasStartedUpdater else { return }
                 updater.checkForUpdatesInBackground()

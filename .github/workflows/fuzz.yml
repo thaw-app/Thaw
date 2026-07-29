@@ -1,0 +1,83 @@
+name: Fuzz
+
+# Swift's `-sanitize=fuzzer` is Linux-only (it is rejected on both arm64 and
+# x86_64 Apple targets), so fuzzing runs in a Swift Linux container rather than
+# on a macOS runner. SettingsURIParser depends on Foundation alone, which is
+# what makes that possible.
+on:
+  schedule:
+    # Nightly, offset from the hour to avoid GitHub's cron pileup.
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+    inputs:
+      duration:
+        description: Seconds to fuzz for
+        required: false
+        type: string
+        default: "300"
+  push:
+    branches:
+      - development
+    paths:
+      - "Fuzzing/**"
+      - "Thaw/Utilities/SettingsURIParser.swift"
+      - ".github/workflows/fuzz.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  fuzz:
+    name: SettingsURIParser
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container:
+      image: swift@sha256:dd349c6dfc3cd3040910a84ab3e5bd5d08efdd547e5fb9f77b765abed16fe5ff # 6.2-noble
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      # The corpus grows across runs; restoring it means each night starts from
+      # the coverage the previous nights reached instead of from the seeds.
+      - name: Restore corpus
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: Fuzzing/Corpus/SettingsURI
+          key: fuzz-corpus-settingsuri-${{ github.run_id }}
+          restore-keys: |
+            fuzz-corpus-settingsuri-
+
+      - name: Build fuzzer
+        run: |
+          set -euo pipefail
+          swift build --package-path Fuzzing -c release \
+            -Xswiftc -sanitize=fuzzer,address \
+            -Xswiftc -parse-as-library
+
+      - name: Fuzz
+        env:
+          DURATION: ${{ inputs.duration || '300' }}
+        run: |
+          set -euo pipefail
+          mkdir -p Fuzzing/Corpus/SettingsURI artifacts
+          ./Fuzzing/.build/release/FuzzSettingsURI \
+            -max_total_time="$DURATION" \
+            -print_final_stats=1 \
+            -artifact_prefix=artifacts/ \
+            Fuzzing/Corpus/SettingsURI
+
+      # A crash or failed property leaves a reproducer behind. Keep it: it is
+      # the input needed to turn the finding into a regression test.
+      - name: Upload reproducers
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: fuzz-reproducers
+          path: artifacts/
+          if-no-files-found: ignore
+          retention-days: 30

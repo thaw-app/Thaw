@@ -574,12 +574,12 @@ final class HIDEventManager {
             let generalSettings = appState.settings.general
             let advancedSettings = appState.settings.advanced
             let displaySettings = appState.settings.displaySettings
-            hoverSettingsObservationTask = Task { [weak self] in
-                let changes = Observations {
-                    (generalSettings.showOnHover, advancedSettings.showMenuBarTooltips, displaySettings.configurations)
+            hoverSettingsObservationTask = Task { [weak self, weak appState] in
+                let changes = Observations { [weak generalSettings, weak advancedSettings, weak displaySettings] in
+                    (generalSettings?.showOnHover, advancedSettings?.showMenuBarTooltips, displaySettings?.configurations)
                 }
                 for await (showOnHover, _, _) in changes {
-                    guard let self else { return }
+                    guard let self, let appState, let showOnHover else { return }
                     guard isEnabled else { continue }
                     if needsMouseMovedTap(appState: appState) {
                         mouseMovedTap.start()

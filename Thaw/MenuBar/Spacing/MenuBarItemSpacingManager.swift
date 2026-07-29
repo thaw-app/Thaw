@@ -72,6 +72,10 @@ final class MenuBarItemSpacingManager {
     /// Delay before force terminating an app.
     private let forceTerminateDelay = 5
 
+    /// Small cap on captured standard error from the spacing subprocess,
+    /// following the `HookRunner` output-limit pattern.
+    private static let errorByteLimit = 16 * 1024
+
     /// The offset to apply to the default spacing and padding.
     /// Does not take effect until ``applyOffset()`` is called.
     var offset = 0
@@ -92,13 +96,13 @@ final class MenuBarItemSpacingManager {
 
     /// Runs a command with the given arguments.
     private func runCommand(_ command: String, with arguments: [String]) async throws {
-        let result: ExecutionRecord<DiscardedOutput, DiscardedOutput>
+        let result: ExecutionRecord<DiscardedOutput, StringOutput<UTF8>>
         do {
             result = try await Subprocess.run(
                 .path(FilePath(Constants.menuBarItemSpacingExecutableURL.path)),
                 arguments: Arguments([command] + arguments),
                 output: .discarded,
-                error: .discarded
+                error: .string(limit: Self.errorByteLimit)
             )
         } catch {
             throw MenuBarItemSpacingError(
@@ -113,6 +117,10 @@ final class MenuBarItemSpacingManager {
             case let .exited(code): code
             case let .signaled(code): code
             }
+            let stderr = (result.standardError ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            MenuBarItemSpacingManager.diagLog.error(
+                "\(command) \(arguments.joined(separator: " ")) exited with status \(exitStatus): \(stderr)"
+            )
             throw MenuBarItemSpacingError(
                 kind: .nonZeroExitStatus(exitStatus),
                 command: command,

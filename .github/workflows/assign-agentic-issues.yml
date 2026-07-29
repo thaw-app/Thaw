@@ -8,6 +8,9 @@ on:
   issues:
     types: [opened, labeled, reopened]
 
+permissions:
+  contents: read
+
 jobs:
   assign:
     if: contains(github.event.issue.labels.*.name, 'agentic-workflows')
@@ -16,7 +19,7 @@ jobs:
       issues: write
     steps:
       - name: Assign maintainer
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const maintainer = 'diazdesandi';

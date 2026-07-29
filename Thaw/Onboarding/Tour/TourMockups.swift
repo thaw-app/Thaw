@@ -241,6 +241,7 @@ final class ThawAppearanceMockupModel {
     }
 
     func select(_ index: Int) {
+        guard index != styleIndex else { return }
         withAnimation(.spring(duration: 0.4)) { styleIndex = index }
     }
 }
@@ -269,8 +270,7 @@ struct AppearanceSlideMockup: View {
             )
             SlideHUD {
                 HStack(spacing: 0) {
-                    ForEach(ThawAppearanceMockupModel.styleLabels, id: \.self) { label in
-                        let i = ThawAppearanceMockupModel.styleLabels.firstIndex(of: label) ?? 0
+                    ForEach(Array(ThawAppearanceMockupModel.styleLabels.enumerated()), id: \.offset) { i, label in
                         Button(label) {
                             onInteraction()
                             model.select(i)
@@ -404,8 +404,7 @@ struct ProfilesSlideMockup: View {
 
             SlideHUD {
                 HStack(spacing: 0) {
-                    ForEach(ThawProfilesMockupModel.focusModes, id: \.name) { mode in
-                        let i = ThawProfilesMockupModel.focusModes.firstIndex { $0.name == mode.name } ?? 0
+                    ForEach(Array(ThawProfilesMockupModel.focusModes.enumerated()), id: \.offset) { i, mode in
                         Button {
                             onInteraction()
                             model.select(i)

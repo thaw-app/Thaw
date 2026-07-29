@@ -105,17 +105,17 @@ final class MenuBarManager {
     private var settingsWindowVisibilityCancellable: AnyCancellable?
 
     /// Cancellable for the periodic average-color refresh when adaptive background is active.
-    private var adaptiveColorRefreshCancellable: AnyCancellable?
+    @ObservationIgnored private var adaptiveColorRefreshCancellable: AnyCancellable?
 
     /// Per-screen colors cached before sleep, restored on wake to avoid stale/white flash.
-    private var sleepColorCache: [CGDirectDisplayID: MenuBarAverageColorInfo]?
+    @ObservationIgnored private var sleepColorCache: [CGDirectDisplayID: MenuBarAverageColorInfo]?
 
     /// Polling state for adaptive wake stabilization.
-    private var wakePollTimer: AnyCancellable?
-    private var wakePollPrevColors: [CGDirectDisplayID: MenuBarAverageColorInfo]?
-    private var wakePollStableCount = 0
-    private var wakePollDidChange = false
-    private var wakePollStartTime: Date?
+    @ObservationIgnored private var wakePollTimer: AnyCancellable?
+    @ObservationIgnored private var wakePollPrevColors: [CGDirectDisplayID: MenuBarAverageColorInfo]?
+    @ObservationIgnored private var wakePollStableCount = 0
+    @ObservationIgnored private var wakePollDidChange = false
+    @ObservationIgnored private var wakePollStartTime: Date?
 
     /// A Boolean value that indicates whether the application menus are hidden.
     private var isHidingApplicationMenus = false
@@ -285,7 +285,15 @@ final class MenuBarManager {
             let changes = Observations { self?.settingsWindow }
             for await window in changes {
                 guard let self else { return }
-                guard let window else { continue }
+                guard let window else {
+                    // A closed (nil) window must not leave its visibility
+                    // sink or the periodic refresh timer active.
+                    settingsWindowVisibilityCancellable?.cancel()
+                    settingsWindowVisibilityCancellable = nil
+                    averageColorRefreshCancellable?.cancel()
+                    averageColorRefreshCancellable = nil
+                    continue
+                }
                 settingsWindowVisibilityCancellable = window.publisher(for: \.isVisible)
                     .removeDuplicates()
                     .receive(on: DispatchQueue.main)
@@ -669,8 +677,18 @@ final class MenuBarManager {
                     try? await Task.sleep(for: .seconds(1))
                 }
                 await self.updateAverageColorInfoAsync()
-                let allCaptured = NSScreen.screens.allSatisfy {
-                    self.averageColors.keys.contains($0.displayID)
+                // Only wait on screens updateAverageColorInfoAsync can actually
+                // capture: displays without a resolvable menu bar or wallpaper
+                // window are skipped there, so treat them as satisfied instead
+                // of burning every retry on them.
+                let windows = WindowInfo.createWindows(option: .onScreen)
+                let allCaptured = NSScreen.screens.allSatisfy { screen in
+                    let displayID = screen.displayID
+                    if self.averageColors.keys.contains(displayID) {
+                        return true
+                    }
+                    return WindowInfo.menuBarWindow(from: windows, for: displayID) == nil
+                        || WindowInfo.wallpaperWindow(from: windows, for: displayID) == nil
                 }
                 if allCaptured { return }
             }

@@ -26,9 +26,12 @@ final class DisplaySettingsManager {
     /// `didSet` both persists the new value and re-derives the active
     /// display's spacing, replacing the previous `$configurations`
     /// Combine pipelines (one for persistence, one — `removeDuplicates()`
-    /// — for the spacing reaction). `loadInitialState()` runs from `init`,
-    /// so its assignment does not trigger this `didSet`, matching the old
-    /// `dropFirst()` skip of the initial emission during setup.
+    /// — for the spacing reaction). Note that assignments made in
+    /// `loadInitialState()` DO trigger this `didSet` (the exemption only
+    /// covers assignments written directly in `init`, not in methods it
+    /// calls): the resulting persistence is a harmless round-trip of the
+    /// just-loaded data, and the spacing apply is a no-op because
+    /// `appState` is still nil at that point.
     var configurations: [String: DisplayIceBarConfiguration] = [:] {
         didSet {
             guard oldValue != configurations else { return }
@@ -130,14 +133,13 @@ final class DisplaySettingsManager {
         Bridging.getActiveMenuBarDisplayUUID()
     }
 
-    /// Loads persisted state immediately at construction time, before any
-    /// `didSet` observer is armed. Swift's `didSet` does not fire for
-    /// assignments made from within the declaring class's own `init`, so
-    /// running `loadInitialState()` here — rather than from
-    /// ``performSetup(with:)`` — reproduces the old `$configurations`
-    /// `.dropFirst()` Combine pipelines' skip of the initial emission during
-    /// setup, without persisting-back or re-deriving spacing from data that
-    /// was just loaded from the same source.
+    /// Loads persisted state immediately at construction time. Swift's
+    /// `didSet` skips only assignments written directly in the declaring
+    /// class's own `init`; assignments made inside `loadInitialState()` (an
+    /// ordinary method called from here) DO fire the observers. That is
+    /// safe: persisting back the just-loaded data is an identical
+    /// round-trip, and `applyActiveDisplaySpacing` returns early because
+    /// `appState` is not wired up until ``performSetup(with:)``.
     init() {
         loadInitialState()
     }
@@ -275,10 +277,9 @@ final class DisplaySettingsManager {
     /// value. Without this, applyActiveDisplaySpacing on first launch reads
     /// the default offset of 0, computes target = 16, sees on-disk = N, and
     /// fires a relaunch wave that rewrites the user's manual setting back to
-    /// 16. The seeded entries are written to Defaults inline because the
-    /// persistence sink is not yet wired at loadInitialState time; without
-    /// the explicit save, subsequent launches would re-seed on every start
-    /// instead of remembering the adopted value. The padding key is not
+    /// 16. The assignment to `configurations` below triggers its `didSet`,
+    /// which persists the seeded entries, so subsequent launches remember
+    /// the adopted value instead of re-seeding. The padding key is not
     /// consulted because Thaw drives both keys from a single offset; users
     /// whose padding diverges from spacing will see one normalising relaunch
     /// on first launch but no recurring waves thereafter.
@@ -301,15 +302,9 @@ final class DisplaySettingsManager {
         }
         guard seeded != configurations else { return }
         configurations = seeded
-        do {
-            let data = try encoder.encode(seeded)
-            Defaults.set(data, forKey: .displayIceBarConfigurations)
-            diagLog.info(
-                "Seeded itemSpacingOffset=\(offset) from external NSStatusItemSpacing=\(onDisk) for \(seeded.count) display(s)"
-            )
-        } catch {
-            diagLog.error("Failed to persist seeded per-display configurations: \(error)")
-        }
+        diagLog.info(
+            "Seeded itemSpacingOffset=\(offset) from external NSStatusItemSpacing=\(onDisk) for \(seeded.count) display(s)"
+        )
     }
 
     deinit {
@@ -323,7 +318,8 @@ final class DisplaySettingsManager {
 
     /// Encodes and persists `configurations`, matching the previous
     /// `$configurations.dropFirst()` persistence sink. Called from
-    /// `configurations`'s `didSet` and from `seedConfigurationsFromSystemSpacing()`.
+    /// `configurations`'s `didSet` (including the seeding assignment in
+    /// `seedConfigurationsFromSystemSpacing()`).
     private func persistConfigurations() {
         do {
             let data = try encoder.encode(configurations)

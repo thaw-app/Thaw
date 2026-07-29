@@ -76,14 +76,23 @@ final class HotkeysSettings {
         for hotkey in hotkeys {
             hotkey.keyCombinationDidChange = { [weak self, weak hotkey] in
                 guard let self, let hotkey else { return }
-                do {
-                    let data = try encoder.encode(hotkey.keyCombination)
+                if let keyCombination = hotkey.keyCombination {
+                    do {
+                        let data = try encoder.encode(keyCombination)
+                        withMutableCopy(of: Defaults.dictionary(forKey: .hotkeys) ?? [:]) { dictionary in
+                            dictionary[hotkey.action.rawValue] = data
+                            Defaults.set(dictionary, forKey: .hotkeys)
+                        }
+                    } catch {
+                        self.diagLog.error("Error encoding hotkey: \(error)")
+                    }
+                } else {
+                    // A cleared binding removes the entry entirely instead of
+                    // persisting an encoded nil.
                     withMutableCopy(of: Defaults.dictionary(forKey: .hotkeys) ?? [:]) { dictionary in
-                        dictionary[hotkey.action.rawValue] = data
+                        dictionary.removeValue(forKey: hotkey.action.rawValue)
                         Defaults.set(dictionary, forKey: .hotkeys)
                     }
-                } catch {
-                    self.diagLog.error("Error encoding hotkey: \(error)")
                 }
             }
         }

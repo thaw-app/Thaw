@@ -67,10 +67,10 @@ struct MenuBarAppearanceEditor: View {
                 case .settings = location,
                 appState.settings.advanced.enableSecondaryContextMenu
             {
-                Text("Tip: You can also edit these settings by right-clicking in an empty area of the menu bar.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                SettingsWarningPill(
+                    message: "Tip: You can also edit these settings by right-clicking in an empty area of the menu bar.",
+                    systemImage: "lightbulb.circle.fill"
+                )
             }
 
             IceSection {
@@ -102,10 +102,10 @@ struct MenuBarAppearanceEditor: View {
                 || appearanceManager.configuration.shapeKind != .noShape
                 || appearanceManager.configuration.current.backgroundKind != .none
             {
-                Text("If effects are not visible, disable \"Show menu bar background\" in System Settings \(Constants.menuArrow) Menu Bar")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                SettingsWarningPill(
+                    message: "If effects are not visible, disable \"Show menu bar background\" in System Settings \(Constants.menuArrow) Menu Bar",
+                    systemImage: "info.circle.fill"
+                )
             }
         }
     }
@@ -199,22 +199,23 @@ private struct UnlabeledBackgroundEditor: View {
     }
 
     var body: some View {
-        VStack(spacing: 24) {
-            if showTitle {
-                IceSection("Background") {
-                    styleSection
-                }
-            } else {
-                IceSection {
-                    styleSection
-                }
+        // No wrapping VStack: `IceSection` is a native grouped `Section` and
+        // must remain a direct child of the enclosing `IceForm` list, which
+        // provides the inter-section spacing.
+        if showTitle {
+            IceSection("Background") {
+                styleSection
             }
+        } else {
             IceSection {
-                backgroundBorderToggle
-                if configuration.backgroundHasBorder {
-                    backgroundBorderColor
-                    backgroundBorderWidth
-                }
+                styleSection
+            }
+        }
+        IceSection {
+            backgroundBorderToggle
+            if configuration.backgroundHasBorder {
+                backgroundBorderColor
+                backgroundBorderWidth
             }
         }
     }
@@ -348,17 +349,18 @@ private struct UnlabeledShapeEditor: View {
     @Binding var configuration: MenuBarAppearancePartialConfiguration
 
     var body: some View {
-        VStack(spacing: 24) {
-            IceSection {
-                tintPicker
-                tintOpacity
-                shadowToggle
-            }
-            IceSection {
-                borderToggle
-                borderColor
-                borderWidth
-            }
+        // No wrapping VStack: `IceSection` is a native grouped `Section` and
+        // must remain a direct child of the enclosing `IceForm` list, which
+        // provides the inter-section spacing.
+        IceSection {
+            tintPicker
+            tintOpacity
+            shadowToggle
+        }
+        IceSection {
+            borderToggle
+            borderColor
+            borderWidth
         }
     }
 

@@ -1,42 +1,108 @@
 # Security Policy
 
-Thank you for helping keep Thaw secure. We take the security of our users and their data seriously. 
+Thank you for helping keep Thaw secure. We take the security of our users and
+their data seriously.
 
 ## Supported Versions
 
-Since Thaw is a macOS menu bar manager, we primarily support security updates for the latest stable release. Please ensure you are running the most recent version of Thaw before submitting a vulnerability report.
+Thaw is a macOS menu bar manager. We primarily support security updates for the
+**latest stable release**. Please run the most recent version before submitting
+a vulnerability report. Upgrade via [GitHub Releases](https://github.com/thaw-app/Thaw/releases),
+Homebrew, or in-app Sparkle updates.
 
 | Version | Supported          |
 | ------- | ------------------ |
 | Latest  | :white_check_mark: |
 | Older   | :x:                |
 
+## Security requirements (what users can and cannot expect)
+
+This section is the project’s security requirements statement for the software
+Thaw produces.
+
+### You can expect
+
+- **Local-first:** Thaw does not require an account and does not operate a
+  first-party tracking or analytics backend.
+- **Explicit permissions:** Features that need Accessibility or Screen Recording
+  ask via normal macOS TCC prompts and do not work without those grants.
+- **Guarded automation:** Settings changes via `thaw://` require a
+  user-approved application allowlist and matching code-signing Team ID. See
+  [docs/URI_SCHEMES.md](../docs/URI_SCHEMES.md).
+- **Authenticated updates:** Release builds are Developer ID–signed and
+  notarized. In-app updates use HTTPS + Sparkle EdDSA. See
+  [docs/VERIFYING_RELEASES.md](../docs/VERIFYING_RELEASES.md).
+- **Coordinated disclosure:** Private reporting channel and a target
+  acknowledgement window (below).
+
+### You cannot expect
+
+- Protection against attackers who already control your unlocked Mac session,
+  or who share the same powerful TCC rights.
+- Server-style multi-tenant isolation (Thaw is a single-user desktop app).
+- Security maintenance of outdated releases.
+- That third-party menu bar apps Thaw interacts with are themselves secure.
+
+A longer argument (threat model, trust boundaries, design principles) lives in
+[docs/ASSURANCE_CASE.md](../docs/ASSURANCE_CASE.md). Architecture overview:
+[docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md).
+
 ## Scope of Security Reports
 
-As a macOS application, Thaw may interact with local system APIs and require certain permissions (like Accessibility or Screen Recording, depending on features). 
+**In scope**
 
-**We consider the following in-scope for security reports:**
-- Privilege escalation (e.g., escaping the app sandbox if applicable, or unauthorized root access).
+- Privilege escalation (e.g. escaping intended privilege boundaries, unauthorized
+  root access).
 - Unauthorized access to local user data managed by the app.
-- Execution of arbitrary code via malicious input or crafted configuration files.
+- Execution of arbitrary code via malicious input, crafted configuration, or
+  abused `thaw://` automation.
+- Bypass of settings-URI allowlist / code-signature checks.
+- Compromised or forgeable update paths attributable to Thaw’s release process.
 
-**The following are generally out of scope:**
-- Bugs that crash the application without a viable exploit path (e.g., standard Null Pointer Dereferences).
-- Issues requiring physical access to the user's unlocked Mac.
-- Issues related to third-party macOS libraries, unless there is a specific mitigation Thaw needs to implement.
+**Generally out of scope**
+
+- Crashes without a viable exploit path.
+- Issues requiring physical access to an unlocked Mac.
+- Issues solely in third-party macOS components or other apps, unless Thaw needs
+  a specific mitigation.
+- Social engineering of maintainers outside the product.
 
 ## Reporting a Vulnerability
 
-Please **do not** report security vulnerabilities through public GitHub issues. 
+Please **do not** report security vulnerabilities through public GitHub issues.
 
-Instead, please report them using [GitHub's Private Vulnerability Reporting](https://github.com/stonerl/Thaw/security/advisories/new) if it is enabled for this repository. 
+Use [GitHub Private Vulnerability Reporting](https://github.com/thaw-app/Thaw/security/advisories/new)
+when enabled for this repository.
 
-If private vulnerability reporting is not enabled, please reach out privately by contacting the maintainer directly or checking the maintainer's GitHub profile for a public email address. 
+If private vulnerability reporting is unavailable, contact the Project Lead
+privately via the email or contact method on their GitHub profile.
 
-Please include the following in your report:
+Include:
+
 - A detailed description of the vulnerability.
-- Steps to reproduce the issue.
-- Your macOS version and the version of Thaw you are testing against.
-- Any potential impact on the user.
+- Steps to reproduce.
+- Your macOS version and Thaw version.
+- Potential impact.
 
-We will try to acknowledge your report within 48 hours and provide an estimated timeline for a fix. We ask that you keep the vulnerability confidential until we have released an update that mitigates the issue.
+## Vulnerability response process
+
+1. **Acknowledge** the report within **48 hours** (best effort).
+2. **Triage** severity, affected versions, and exploitability.
+3. **Fix** on a private branch when needed; prepare a release for the latest
+   supported line.
+4. **Credit** reporters in the advisory / release notes unless they request
+   anonymity ([OpenSSF vulnerability_report_credit](https://www.bestpractices.dev/)).
+5. **Disclose** via GitHub Security Advisories (and CVE when appropriate) after
+   a fix is available or per coordinated timing with the reporter.
+6. Ask reporters to keep issues confidential until a mitigating release ships.
+
+We aim to fix critical, exploitable issues promptly; timelines depend on
+complexity and whether an OS update is also required.
+
+## Public vulnerability history
+
+Published advisories (when any exist):  
+https://github.com/thaw-app/Thaw/security/advisories
+
+If there are no published advisories, that means none have been disclosed yet—not
+that the project ignores reports.

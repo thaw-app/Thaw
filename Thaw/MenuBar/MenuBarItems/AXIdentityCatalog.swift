@@ -44,6 +44,11 @@ enum AXIdentityCatalog {
     /// shape.
     private static let maxElementsVisited = 512
 
+    /// Maximum wall-clock time spent across an entire snapshot, across all
+    /// hosts. Even with per-call messaging timeouts, hundreds of slow AX
+    /// calls can add up; this bounds the aggregate MainActor stall.
+    private static let maxSnapshotDuration = Duration.milliseconds(500)
+
     /// Minimum fraction of the smaller rect's area that must be covered by
     /// the intersection for a correlation to be considered confident.
     /// Correlations below this threshold return `nil` rather than guessing.
@@ -57,29 +62,33 @@ enum AXIdentityCatalog {
     static func snapshot(hosts: [NSRunningApplication]) -> [AXItemIdentity] {
         var results = [AXItemIdentity]()
         var visited = 0
+        let deadline = ContinuousClock.now.advanced(by: maxSnapshotDuration)
 
         for host in hosts {
-            guard visited < maxElementsVisited else { break }
+            guard visited < maxElementsVisited, ContinuousClock.now < deadline else { break }
             guard let app = AXHelpers.application(for: host) else { continue }
             try? app.setMessagingTimeout(messagingTimeout)
             guard let extrasMenuBar = AXHelpers.extrasMenuBar(for: app) else { continue }
             try? extrasMenuBar.setMessagingTimeout(messagingTimeout)
 
-            walk(extrasMenuBar, depth: 0, visited: &visited, into: &results)
+            walk(extrasMenuBar, depth: 0, visited: &visited, deadline: deadline, into: &results)
         }
 
         return results
     }
 
-    /// Depth-limited, element-capped walk collecting identities from `element`
-    /// and its children.
+    /// Depth-limited, element-capped, time-budgeted walk collecting
+    /// identities from `element` and its children.
     private static func walk(
         _ element: UIElement,
         depth: Int,
         visited: inout Int,
+        deadline: ContinuousClock.Instant,
         into results: inout [AXItemIdentity]
     ) {
-        guard depth <= maxWalkDepth, visited < maxElementsVisited else { return }
+        guard depth <= maxWalkDepth, visited < maxElementsVisited,
+              ContinuousClock.now < deadline
+        else { return }
         visited += 1
 
         try? element.setMessagingTimeout(messagingTimeout)
@@ -97,8 +106,8 @@ enum AXIdentityCatalog {
 
         guard depth < maxWalkDepth else { return }
         for child in AXHelpers.children(for: element) {
-            guard visited < maxElementsVisited else { return }
-            walk(child, depth: depth + 1, visited: &visited, into: &results)
+            guard visited < maxElementsVisited, ContinuousClock.now < deadline else { return }
+            walk(child, depth: depth + 1, visited: &visited, deadline: deadline, into: &results)
         }
     }
 

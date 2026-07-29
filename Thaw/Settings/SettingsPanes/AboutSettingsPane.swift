@@ -132,12 +132,6 @@ struct AboutSettingsPane: View {
                     .accessibilityLabel(didCopyVersion ? "Copied" : "Copy version info")
                 }
 
-                if #available(macOS 27, *) {
-                    Text("Based on Thaw \(Constants.versionString) (\(Constants.buildString))")
-                        .font(.system(size: 13))
-                        .foregroundStyle(.tertiary)
-                }
-
                 Text(Constants.copyrightString)
                     .font(.system(size: 14))
                     .foregroundStyle(.secondary)

@@ -90,6 +90,7 @@ final class LayoutBarContainer: NSView {
     /// Replaces the old `CombineLatest($itemCache, $newItemsPlacement).sink`.
     private var itemCacheObservationTask: Task<Void, Never>?
 
+    @MainActor
     deinit {
         enableAlwaysHiddenSectionObservationTask?.cancel()
         averageColorInfoObservationTask?.cancel()

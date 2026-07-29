@@ -268,7 +268,9 @@ final class MissionControlDetector {
             }
         } else {
             missionControlDisplacedSince = nil
-            isActive = false
+            if isActive {
+                isActive = false
+            }
         }
     }
 
