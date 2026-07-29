@@ -26,7 +26,7 @@ final class CustomTooltipPanelTests: XCTestCase {
 
     private let panelSize = NSSize(width: 60, height: 20)
 
-    func testPlacementOriginInsideScreenIsBelowPointAndWithinVisibleFrame() {
+    func testPlacementOriginInsideScreenIsBelowPointAndWithinVisibleFrame() throws {
         let screenFrame = NSRect(x: 0, y: 0, width: 1440, height: 900)
         let visibleFrame = NSRect(x: 0, y: 25, width: 1440, height: 875)
         let point = NSPoint(x: 700, y: 500)
@@ -38,7 +38,7 @@ final class CustomTooltipPanelTests: XCTestCase {
             preferred: nil
         )
 
-        let unwrapped = try! XCTUnwrap(origin)
+        let unwrapped = try XCTUnwrap(origin)
         XCTAssertTrue(visibleFrame.contains(NSRect(origin: unwrapped, size: panelSize)))
         XCTAssertLessThan(unwrapped.y, point.y, "Tooltip should be placed below the point")
     }
@@ -58,7 +58,7 @@ final class CustomTooltipPanelTests: XCTestCase {
         XCTAssertNil(origin, "A point outside every screen must not produce a placement")
     }
 
-    func testPlacementOriginNearBottomEdgeIsClampedInsideVisibleFrame() {
+    func testPlacementOriginNearBottomEdgeIsClampedInsideVisibleFrame() throws {
         let screenFrame = NSRect(x: 0, y: 0, width: 1440, height: 900)
         let visibleFrame = NSRect(x: 0, y: 25, width: 1440, height: 875)
         let point = NSPoint(x: 700, y: 30)
@@ -70,11 +70,11 @@ final class CustomTooltipPanelTests: XCTestCase {
             preferred: nil
         )
 
-        let unwrapped = try! XCTUnwrap(origin)
+        let unwrapped = try XCTUnwrap(origin)
         XCTAssertTrue(visibleFrame.contains(NSRect(origin: unwrapped, size: panelSize)))
     }
 
-    func testPlacementOriginOnSecondScreenClampsToSecondScreenVisibleFrame() {
+    func testPlacementOriginOnSecondScreenClampsToSecondScreenVisibleFrame() throws {
         let firstFrame = NSRect(x: 0, y: 0, width: 1440, height: 900)
         let firstVisible = NSRect(x: 0, y: 25, width: 1440, height: 875)
         let secondFrame = NSRect(x: 1440, y: 0, width: 1920, height: 1080)
@@ -91,7 +91,7 @@ final class CustomTooltipPanelTests: XCTestCase {
             preferred: nil
         )
 
-        let unwrapped = try! XCTUnwrap(origin)
+        let unwrapped = try XCTUnwrap(origin)
         XCTAssertTrue(secondVisible.contains(NSRect(origin: unwrapped, size: panelSize)))
         XCTAssertFalse(firstVisible.intersects(NSRect(origin: unwrapped, size: panelSize)))
     }

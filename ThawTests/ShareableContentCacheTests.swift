@@ -41,9 +41,9 @@ final class ShareableContentCacheTests: XCTestCase {
             return n
         }
 
-        let first = try await cache.content(maxAge: .milliseconds(20), fetch: fetch)
-        try await Task.sleep(for: .milliseconds(60))
-        let second = try await cache.content(maxAge: .milliseconds(20), fetch: fetch)
+        let first = try await cache.content(maxAge: .milliseconds(100), fetch: fetch)
+        try await Task.sleep(for: .milliseconds(300))
+        let second = try await cache.content(maxAge: .milliseconds(100), fetch: fetch)
 
         XCTAssertEqual(first, 1)
         XCTAssertEqual(second, 2)

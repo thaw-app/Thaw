@@ -92,6 +92,22 @@ final class DivergencePersistenceGateTests: XCTestCase {
         XCTAssertEqual(result.newPendingSince, now)
     }
 
+    /// A second divergent observation at exactly the staleness boundary is
+    /// still within the window (the comparison is inclusive), so it confirms
+    /// rather than re-arming.
+    func testObservationAtExactStalenessBoundaryConfirms() {
+        let armedAt = clock.now
+        let now = armedAt.advanced(by: .seconds(30))
+        let result = MenuBarItemManager.confirmedDivergence(
+            divergedNow: true,
+            pendingSince: armedAt,
+            now: now,
+            staleness: .seconds(30)
+        )
+        XCTAssertTrue(result.confirmed)
+        XCTAssertNil(result.newPendingSince)
+    }
+
     /// No divergence observed: never confirms, and any pending arm is
     /// cleared regardless of what was previously armed.
     func testNoDivergenceAlwaysReturnsFalseNil() {
