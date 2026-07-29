@@ -706,6 +706,12 @@ nonisolated enum LayoutSolver {
     /// Returns an empty array when the current order already matches the
     /// desired order (no moves needed) or when desired is empty.
     ///
+    /// Items already in the correct relative order at the left of the bar
+    /// are trimmed from the replay. Every replayed item lands at the right in
+    /// sequence order, so the final order is the untouched physical prefix
+    /// followed by the replayed suffix. This avoids re-dragging an entire
+    /// notched layout when a transient item is the only divergence.
+    ///
     /// Pure over its inputs. The orchestrator handles per-item live
     /// fetching, the move() loop, and control-item state restoration.
     static nonisolated func planFullSortSequence(
@@ -741,7 +747,58 @@ nonisolated enum LayoutSolver {
         fullSequence.append(contentsOf: hiddenUIDs)
         fullSequence.append(hiddenCtrlUID)
         fullSequence.append(contentsOf: visibleUIDs)
-        return fullSequence
+
+        // currentFlat is flattened visible-first, with the hidden and
+        // always-hidden control IDs between their respective sections.
+        // Reconstruct the physical left-to-right order before finding the
+        // longest already-ordered prefix of the target sequence.
+        var visible = [String]()
+        var hidden = [String]()
+        var alwaysHidden = [String]()
+        var section = 0
+        var sawHiddenControl = false
+        var sawAlwaysHiddenControl = false
+        for uid in currentFlat {
+            if uid == hiddenCtrlUID {
+                section = 1
+                sawHiddenControl = true
+                continue
+            }
+            if let ahCtrlUID, uid == ahCtrlUID {
+                section = 2
+                sawAlwaysHiddenControl = true
+                continue
+            }
+            switch section {
+            case 0: visible.append(uid)
+            case 1: hidden.append(uid)
+            default: alwaysHidden.append(uid)
+            }
+        }
+
+        var physicalOrder = alwaysHidden
+        if sawAlwaysHiddenControl, let ahCtrlUID {
+            physicalOrder.append(ahCtrlUID)
+        }
+        physicalOrder.append(contentsOf: hidden)
+        if sawHiddenControl {
+            physicalOrder.append(hiddenCtrlUID)
+        }
+        physicalOrder.append(contentsOf: visible)
+
+        var positions = [String: Int]()
+        for (index, uid) in physicalOrder.enumerated() where positions[uid] == nil {
+            positions[uid] = index
+        }
+
+        var previousPosition = -1
+        var prefixCount = 0
+        for uid in fullSequence {
+            guard let position = positions[uid], position > previousPosition else { break }
+            previousPosition = position
+            prefixCount += 1
+        }
+        return Array(fullSequence.dropFirst(prefixCount))
     }
 
     // MARK: - Saved-position lookup
