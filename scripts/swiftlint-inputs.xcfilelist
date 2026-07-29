@@ -1,6 +1,6 @@
 $(SRCROOT)/MenuBarItemService/Listener.swift
-$(SRCROOT)/MenuBarItemService/main.swift
 $(SRCROOT)/MenuBarItemService/SourcePIDCache.swift
+$(SRCROOT)/MenuBarItemService/main.swift
 $(SRCROOT)/Shared/Bridging/Bridging.swift
 $(SRCROOT)/Shared/Bridging/Shims.swift
 $(SRCROOT)/Shared/Services/MenuBarItemService.swift
@@ -124,10 +124,10 @@ $(SRCROOT)/Thaw/UI/IceUI/IceSection.swift
 $(SRCROOT)/Thaw/UI/IceUI/IceSlider.swift
 $(SRCROOT)/Thaw/UI/IceUI/IceWindow.swift
 $(SRCROOT)/Thaw/UI/Modifiers/LocalEventMonitorModifier.swift
-$(SRCROOT)/Thaw/UI/Modifiers/Once.swift
 $(SRCROOT)/Thaw/UI/Modifiers/OnFrameChange.swift
 $(SRCROOT)/Thaw/UI/Modifiers/OnKeyDown.swift
 $(SRCROOT)/Thaw/UI/Modifiers/OnWindowChange.swift
+$(SRCROOT)/Thaw/UI/Modifiers/Once.swift
 $(SRCROOT)/Thaw/UI/Shapes/AnyInsettableShape.swift
 $(SRCROOT)/Thaw/UI/Utilities/IceColor.swift
 $(SRCROOT)/Thaw/UI/Utilities/IceGradient.swift
@@ -157,6 +157,7 @@ $(SRCROOT)/Thaw/Utilities/ObjectStorage.swift
 $(SRCROOT)/Thaw/Utilities/Predicates.swift
 $(SRCROOT)/Thaw/Utilities/ScreenCapture.swift
 $(SRCROOT)/Thaw/Utilities/SettingsURIHandler.swift
+$(SRCROOT)/Thaw/Utilities/SettingsURIParser.swift
 $(SRCROOT)/Thaw/Utilities/SpaceInfo.swift
 $(SRCROOT)/Thaw/Utilities/Swizzling.swift
 $(SRCROOT)/Thaw/Utilities/SystemAppearance.swift

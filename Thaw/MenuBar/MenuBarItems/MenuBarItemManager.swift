@@ -198,6 +198,13 @@ final class MenuBarItemManager {
     /// is groundwork for a future tooltip/display-name path.
     private(set) var degradedItemAXIdentities = [CGWindowID: AXIdentityCatalog.AXItemIdentity]()
 
+    /// Gates the AX enrichment pass in `cacheItemsRegardless`. No consumer of
+    /// `degradedItemAXIdentities` exists yet (see its declaration), so the
+    /// per-cycle `AXIdentityCatalog.snapshot` and per-item window bounds
+    /// lookups run only when explicitly enabled for diagnostics.
+    nonisolated static let isDegradedIdentityEnrichmentEnabled =
+        UserDefaults.standard.bool(forKey: "EnableDegradedItemAXEnrichment")
+
     /// Diagnostic logger for the menu bar item manager.
     fileprivate static nonisolated let diagLog = DiagLog(category: "MenuBarItemManager")
 
@@ -256,6 +263,7 @@ final class MenuBarItemManager {
         rehideCancellable?.cancel()
         cacheTickCancellable?.cancel()
         menuOpenCheckTask?.cancel()
+        navigationStateObservationTask?.cancel()
     }
 
     /// Continuations waiting for a background cache cycle to complete,
@@ -1508,12 +1516,13 @@ final class MenuBarItemManager {
         // becoming true while identifier is already .menuBarLayout), so they
         // are combined into a single Observations-Task tracking both.
         navigationStateObservationTask = Task { [weak self] in
-            guard let self, let appState = self.appState else { return }
-            let changes = Observations { [navigationState = appState.navigationState] in
-                (navigationState.settingsNavigationIdentifier, navigationState.isSettingsPresented)
+            guard let appState = self?.appState else { return }
+            let changes = Observations { [weak navigationState = appState.navigationState] in
+                (navigationState?.settingsNavigationIdentifier, navigationState?.isSettingsPresented)
             }
             for await (identifier, isPresented) in changes {
-                guard isPresented, identifier == .menuBarLayout else { continue }
+                guard isPresented == true, identifier == .menuBarLayout else { continue }
+                guard let self else { return }
                 await self.appState?.imageCache.updateCache(sections: MenuBarSection.Name.allCases)
             }
         }
@@ -1898,7 +1907,15 @@ extension MenuBarItemManager {
             let candidates = items.enumerated().map { index, item in
                 CandidateFrame(index: index, bounds: item.bounds, isOwnProcess: item.sourcePID == ourPID)
             }
-            let axFrames = snapshot.map(\.frame)
+            // Exclude the visible control item's AX child before correlation
+            // so its frame can never confidently match a candidate and be
+            // returned as the hidden or always-hidden control item.
+            let axFrames = snapshot
+                .filter { identity in
+                    identity.identifier != ControlItem.Identifier.visible.rawValue
+                        && identity.title != ControlItem.Identifier.visible.rawValue
+                }
+                .map(\.frame)
 
             guard let matchedIndices = Self.selectViaAXFrame(candidates: candidates, axFrames: axFrames),
                   let hiddenIdx = matchedIndices.first
@@ -2545,8 +2562,12 @@ extension MenuBarItemManager {
                 controlItemLookupFailureStreak = 0
                 // Schedule one immediate recache so the freshly rebuilt
                 // status items are picked up right away rather than waiting
-                // for the next externally triggered cache cycle.
+                // for the next externally triggered cache cycle. Briefly wait
+                // first so the deferred cacheGate.end() from this cycle can
+                // complete (otherwise the recache is dropped at the gate) and
+                // the newly created NSStatusItems can register their windows.
                 Task { [weak self] in
+                    try? await Task.sleep(for: .milliseconds(100))
                     await self?.cacheItemsRegardless()
                 }
             }
@@ -2566,7 +2587,11 @@ extension MenuBarItemManager {
 
         MenuBarItemManager.diagLog.debug("cacheItemsRegardless: found control items, hidden windowID=\(controlItems.hidden.windowID), alwaysHidden=\(controlItems.alwaysHidden.map { "\($0.windowID)" } ?? "nil")")
 
-        enrichDegradedItemIdentities(in: items)
+        if Self.isDegradedIdentityEnrichmentEnabled {
+            enrichDegradedItemIdentities(in: items)
+        } else if !degradedItemAXIdentities.isEmpty {
+            degradedItemAXIdentities = [:]
+        }
 
         guard !Task.isCancelled else {
             MenuBarItemManager.diagLog.debug("cacheItemsRegardless: cancelled after control item discovery")
@@ -3411,7 +3436,18 @@ extension MenuBarItemManager {
     ) -> [EventTap] {
         var eventTaps = [EventTap]()
         if discardsStrayMoveEvents {
-            eventTaps.append(makeStrayEventDiscardTap(context: context))
+            let strayEventDiscardTap = makeStrayEventDiscardTap(context: context)
+            if strayEventDiscardTap.isValid {
+                eventTaps.append(strayEventDiscardTap)
+            } else {
+                MenuBarItemManager.diagLog.error(
+                    """
+                    Failed to create stray move event discard tap for \
+                    \(context.item.logString); continuing without stray echo \
+                    protection for this operation
+                    """
+                )
+            }
         }
         eventTaps.append(
             contentsOf: [
@@ -5918,10 +5954,10 @@ extension MenuBarItemManager {
 
         if let cachedAt = menuOpenCheckCachedAt,
            cachedAt.duration(to: .now) <= cacheFreshness,
-           menuOpenCheckCachedResult == true
+           let cachedResult = menuOpenCheckCachedResult
         {
-            MenuBarItemManager.diagLog.debug("Menu open check: using cached result true")
-            return true
+            MenuBarItemManager.diagLog.debug("Menu open check: using cached result \(cachedResult)")
+            return cachedResult
         }
 
         if let existingTask = menuOpenCheckTask {
@@ -6038,13 +6074,12 @@ extension MenuBarItemManager {
         menuOpenCheckTask = task
         let result = await task.value
         menuOpenCheckTask = nil
-        if result {
-            menuOpenCheckCachedResult = true
-            menuOpenCheckCachedAt = .now
-        } else {
-            menuOpenCheckCachedResult = nil
-            menuOpenCheckCachedAt = nil
-        }
+        // Cache negative results too: bulk move operations (applyProfileLayout)
+        // call this guard once per move, and re-enumerating on-screen windows
+        // for every move when no menu is open is the common, expensive case.
+        // Both polarities share the same freshness window.
+        menuOpenCheckCachedResult = result
+        menuOpenCheckCachedAt = .now
         return result
     }
 

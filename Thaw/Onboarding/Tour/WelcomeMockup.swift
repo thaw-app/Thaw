@@ -195,7 +195,7 @@ struct ThawWelcomeMockup: View {
 
     // Squash is chosen so that even the innermost ring's radiusY (its
     // closest approach to center, at the top/bottom of the ellipse) clears
-    // the icon's own half-height (58pt for a 116pt icon) — so the "always
+    // the icon's own half-height (46.5pt for a 93pt icon) — so the "always
     // behind" glyphs never have to visibly clip through it.
     private let squash: CGFloat = 0.5
     private let ring1Radius: CGFloat = 96
@@ -250,6 +250,13 @@ struct ThawWelcomeMockup: View {
                     .opacity(model.iconAppeared ? 1 : 0)
             }
             .buttonStyle(.plain)
+            // The button is icon-only; without a label VoiceOver has nothing
+            // to announce for it. Describe what tapping it does right now.
+            .accessibilityLabel(
+                model.itemsHidden
+                    ? String(localized: "Show menu bar items")
+                    : String(localized: "Hide menu bar items")
+            )
             .zIndex(0)
         }
         .frame(width: 400, height: 272)

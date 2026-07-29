@@ -904,6 +904,9 @@ private let controlCenterIcon: NSImage? = {
 /// keeps a recycled PID from being served a dead app's icon.
 @MainActor
 private enum AppIconCache {
+    /// The double-optional value intentionally caches negative results:
+    /// a stored `nil` icon means the lookup already ran and found no icon,
+    /// so it is not retried on every access.
     private static var icons = [pid_t: NSImage?]()
 
     static func icon(forPID pid: pid_t) -> NSImage? {
@@ -934,14 +937,16 @@ private enum AppIconCache {
 /// thing that can change an item's name while the panel is open.
 @MainActor
 private enum ItemNameCache {
-    private static var names = [MenuBarItemTag: String]()
+    /// Keyed by `uniqueIdentifier` — the identity persisted custom names
+    /// use — so items sharing a tag cannot collide in the cache.
+    private static var names = [String: String]()
 
     static func displayName(for item: MenuBarItem) -> String {
-        if let cached = names[item.tag] {
+        if let cached = names[item.uniqueIdentifier] {
             return cached
         }
         let name = item.displayName
-        names[item.tag] = name
+        names[item.uniqueIdentifier] = name
         return name
     }
 

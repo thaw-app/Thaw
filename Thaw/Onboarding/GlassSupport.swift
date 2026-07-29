@@ -15,25 +15,48 @@ import SwiftUI
 /// rather than a synthetic colored backdrop standing in for it.
 struct VisualEffectBackground: NSViewRepresentable {
     func makeNSView(context _: Context) -> NSVisualEffectView {
-        let view = NSVisualEffectView()
+        let view = WindowTransparencyEffectView()
         view.blendingMode = .behindWindow
         view.material = .underWindowBackground
         view.state = .active
-        makeWindowTransparent(view)
         return view
     }
 
-    func updateNSView(_ nsView: NSVisualEffectView, context _: Context) {
-        makeWindowTransparent(nsView)
+    func updateNSView(_ nsView: NSVisualEffectView, context _: Context) {}
+}
+
+/// An `NSVisualEffectView` that makes its window non-opaque with a clear
+/// background for as long as it's attached, and restores the window's
+/// original opacity and background color when it leaves — so a window that
+/// merely *hosts* this view temporarily (like the settings window presenting
+/// an onboarding sheet) gets its normal chrome back afterwards.
+private final class WindowTransparencyEffectView: NSVisualEffectView {
+    private weak var transparentizedWindow: NSWindow?
+    private var savedIsOpaque = true
+    private var savedBackgroundColor: NSColor?
+
+    override func viewWillMove(toWindow newWindow: NSWindow?) {
+        super.viewWillMove(toWindow: newWindow)
+        restoreWindowAppearance(unless: newWindow)
     }
 
-    private func makeWindowTransparent(_ view: NSView) {
-        // Deferred one turn: view.window is nil until the view is attached.
-        Task { @MainActor in
-            guard let window = view.window else { return }
-            window.isOpaque = false
-            window.backgroundColor = .clear
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        guard let window else { return }
+        if transparentizedWindow !== window {
+            transparentizedWindow = window
+            savedIsOpaque = window.isOpaque
+            savedBackgroundColor = window.backgroundColor
         }
+        window.isOpaque = false
+        window.backgroundColor = .clear
+    }
+
+    private func restoreWindowAppearance(unless newWindow: NSWindow?) {
+        guard let window = transparentizedWindow, window !== newWindow else { return }
+        window.isOpaque = savedIsOpaque
+        window.backgroundColor = savedBackgroundColor
+        transparentizedWindow = nil
     }
 }
 

@@ -11,7 +11,10 @@ import Foundation
 import XPC
 
 /// A wrapper around an XPC listener object.
-final class Listener: @unchecked Sendable {
+///
+/// Explicitly nonisolated: XPC callbacks arrive on arbitrary threads, and the
+/// target's default actor isolation is MainActor.
+nonisolated final class Listener: @unchecked Sendable {
     private let diagLog = DiagLog(category: "Listener")
     /// The shared listener.
     static let shared = Listener()
@@ -40,8 +43,23 @@ final class Listener: @unchecked Sendable {
                 diagLog.debug("Listener received start request")
                 return .start
             case let .configureLogging(filePath):
-                DiagnosticLogger.shared.attachToFile(at: URL(fileURLWithPath: filePath))
-                diagLog.debug("Listener attached diagnostic logging to \(filePath)")
+                // Only attach to files inside the app's approved log
+                // directory. The path arrives from the XPC peer, and in
+                // teamless (ad-hoc) builds the listener has no peer
+                // requirement, so an arbitrary path could otherwise make
+                // this service open and append to any user-writable file.
+                let requested = URL(fileURLWithPath: filePath)
+                    .standardizedFileURL.resolvingSymlinksInPath()
+                let approvedDir = DiagnosticLogger.shared.logDirectory
+                    .standardizedFileURL.resolvingSymlinksInPath()
+                guard requested.path.hasPrefix(approvedDir.path + "/") else {
+                    diagLog.error(
+                        "Listener rejected configureLogging path outside approved log directory: \(filePath)"
+                    )
+                    return nil
+                }
+                DiagnosticLogger.shared.attachToFile(at: requested)
+                diagLog.debug("Listener attached diagnostic logging to \(requested.path)")
                 return .configureLogging
             case let .sourcePID(window):
                 diagLog.debug("Listener: sourcePID request for windowID=\(window.windowID) title=\(window.title ?? "nil")")
@@ -81,6 +99,9 @@ final class Listener: @unchecked Sendable {
                 self.handleMessage(message)
             }
         }
+        diagLog.warning(
+            "Listener is active WITHOUT peer validation (ad-hoc/teamless build): any local process may connect"
+        )
     }
 
     /// Activates the listener.

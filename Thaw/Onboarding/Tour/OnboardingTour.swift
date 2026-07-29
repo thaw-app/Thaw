@@ -90,7 +90,7 @@ struct ThawOnboardingTour: View {
 
     private var pageDots: some View {
         HStack(spacing: 8) {
-            ForEach(slides.dropFirst()) { slide in
+            ForEach(Array(slides.dropFirst().enumerated()), id: \.element) { position, slide in
                 let index = slide.rawValue
                 Button {
                     guard beginNavigation() else { return }
@@ -105,11 +105,14 @@ struct ThawOnboardingTour: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(String(localized: "Page \(index + 1) of \(slides.count)"))
+                // VoiceOver counts only the visible dots: the welcome slide
+                // has no dot, so the loop's first slide is "Page 1".
+                .accessibilityLabel(String(localized: "Page \(position + 1) of \(slides.count - 1)"))
             }
         }
         .opacity(isWelcome ? 0 : 1)
         .allowsHitTesting(!isWelcome)
+        .accessibilityHidden(isWelcome)
         .padding(.top, 2)
     }
 
