@@ -2,13 +2,13 @@ name: CI
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
-# Always run on PRs/pushes so Scorecard CI-Tests / SAST see checks on nearly
-# every merge. Heavy macOS work stays gated behind path detection below.
+# Always run on PRs and on pushes to the default branch (development) so
+# Scorecard CI-Tests / SAST see checks on nearly every merge. Heavy macOS
+# work stays gated behind path detection below.
 on:
   pull_request:
   push:
     branches:
-      - main
       - development
   workflow_dispatch:
 
