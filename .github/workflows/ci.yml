@@ -205,6 +205,11 @@ jobs:
           unzip -oq xcresultparser.zip
           NEWEST_BUNDLE=$(ls -td Build/Logs/Test/*.xcresult 2>/dev/null | head -n1)
           ./product/xcresultparser -c -o xml "$NEWEST_BUNDLE" > coverage.xml
+          # xcresultparser writes absolute macOS paths, but the Sonar scan runs
+          # on ubuntu-latest under a different workspace root. Unresolved paths
+          # are dropped silently and the project reports 0% coverage, so rewrite
+          # them to repo-relative form before uploading.
+          python3 scripts/normalize-coverage.py coverage.xml
 
       - name: Upload Coverage XML
         if: needs.changes.outputs.code == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
