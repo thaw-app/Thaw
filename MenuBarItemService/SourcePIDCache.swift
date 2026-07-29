@@ -188,8 +188,13 @@ actor SourcePIDCache {
     /// can add seconds of IPC without yielding new information.
     private static let unresolvedDiagDumpInterval: Duration = .seconds(300)
 
-    /// Only accessed while `scanLock` is held, where diagnostics are emitted.
-    private var lastUnresolvedDiagDump: (windowIDs: Set<CGWindowID>, at: ContinuousClock.Instant)?
+    /// Rate-limits unresolved diagnostic dumps. Kept in its own lock because
+    /// `pidBody` (which emits diagnostics under `scanLock`) is `nonisolated`
+    /// and cannot touch actor-isolated storage. Concurrent access is still
+    /// serialized in practice by `scanLock` around the dump site.
+    private nonisolated let lastUnresolvedDiagDump = OSAllocatedUnfairLock<
+        (windowIDs: Set<CGWindowID>, at: ContinuousClock.Instant)?
+    >(initialState: nil)
 
     /// The cache's protected state.
     ///
@@ -671,15 +676,16 @@ actor SourcePIDCache {
         // than once per interval for the same unresolved set.
         var shouldDumpUnresolvedDiagnostics = false
         if !unresolvedWindows.isEmpty {
-            if let last = lastUnresolvedDiagDump {
-                shouldDumpUnresolvedDiagnostics = last.windowIDs != unresolvedWindows
-                    || ContinuousClock.now >= last.at + Self.unresolvedDiagDumpInterval
-            } else {
-                shouldDumpUnresolvedDiagnostics = true
+            shouldDumpUnresolvedDiagnostics = lastUnresolvedDiagDump.withLock { last in
+                if let last {
+                    return last.windowIDs != unresolvedWindows
+                        || ContinuousClock.now >= last.at + Self.unresolvedDiagDumpInterval
+                }
+                return true
             }
         }
         if shouldDumpUnresolvedDiagnostics {
-            lastUnresolvedDiagDump = (unresolvedWindows, ContinuousClock.now)
+            lastUnresolvedDiagDump.withLock { $0 = (unresolvedWindows, ContinuousClock.now) }
             SourcePIDCache.diagLog.debug(
                 "SourcePIDCache diag: \(unresolvedWindows.count) window(s) unresolved after batch, dumping details"
             )
