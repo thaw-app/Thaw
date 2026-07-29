@@ -1,13 +1,18 @@
 name: Release
 
+# Sparkle / channel releases are manual only (workflow_dispatch).
+# Pushing semver tags does NOT run this workflow — safe for backfilling
+# release history or pointing tags at old commits without distributing.
+#
+# Artifact split:
+#   - thaw-app/Thaw releases: DMG only (human installers)
+#   - thaw-app/updates releases + Pages: Sparkle ZIP, deltas, appcast.xml
+
 on:
-  push:
-    tags:
-      - "*.*.*"
   workflow_dispatch:
     inputs:
       tag:
-        description: Release tag to publish (for example, 1.2.3 or 2.0.0-rc.1)
+        description: Existing release tag to publish (for example, 1.2.3 or 2.0.0-rc.1)
         required: true
         type: string
       channel:
@@ -26,31 +31,40 @@ on:
         type: boolean
         default: false
       publish_appcast:
-        description: Push signed appcast.xml to gh-pages
+        description: Push signed appcast.xml to thaw-app/updates gh-pages
         required: false
         type: boolean
         default: true
+
+concurrency:
+  group: sparkle-appcast
+  cancel-in-progress: false
+
+permissions:
+  contents: read
 
 jobs:
   release:
     runs-on: xcode-27
     permissions:
       contents: write
+      id-token: write
     env:
       APP_NAME: "Thaw.app"
       DMG_NAME: "Thaw.dmg"
+      UPDATES_REPOSITORY: thaw-app/updates
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
-          ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/tags/{0}', inputs.tag) || github.ref }}
+          ref: refs/tags/${{ inputs.tag }}
 
       - name: Resolve tag and channel
         id: meta
         env:
-          TAG_NAME: ${{ inputs.tag || github.ref_name }}
-          CHANNEL_INPUT: ${{ inputs.channel || 'auto' }}
+          TAG_NAME: ${{ inputs.tag }}
+          CHANNEL_INPUT: ${{ inputs.channel }}
         run: |
           set -euo pipefail
 
@@ -96,7 +110,7 @@ jobs:
       - run: sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
 
       - name: Configure signing
-        uses: ./.github/actions/configure-signing
+        uses: thaw-app/org-ci/actions/configure-signing@d8439b09dfc7dda7323906cd0daeef1752c4bb2a
         with:
           apple-application-cert: ${{ secrets.APPLE_APPLICATION_CERT }}
           apple-application-cert-password: ${{ secrets.APPLE_APPLICATION_CERT_PASSWORD }}
@@ -105,41 +119,48 @@ jobs:
           apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
 
       - name: Build
-        uses: ./.github/actions/build
+        uses: thaw-app/org-ci/actions/build@d8439b09dfc7dda7323906cd0daeef1752c4bb2a
         with:
           apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
+          project-name: Thaw.xcodeproj
+          scheme-name: Thaw
+          deployment-target: "26.0"
 
       - name: Export Archive
-        uses: ./.github/actions/export-and-package
+        uses: thaw-app/org-ci/actions/export-and-package@d8439b09dfc7dda7323906cd0daeef1752c4bb2a
         with:
           apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
           app-name: ${{ env.APP_NAME }}
           dmg-name: ${{ env.DMG_NAME }}
 
       - name: Notarize
-        uses: ./.github/actions/notarize-and-validate
+        uses: thaw-app/org-ci/actions/notarize-and-validate@d8439b09dfc7dda7323906cd0daeef1752c4bb2a
         with:
           dmg-name: ${{ env.DMG_NAME }}
           app-name: ${{ env.APP_NAME }}
 
       - name: Sparkle ZIP and appcast
         id: sparkle
-        uses: ./.github/actions/sparkle-release
+        uses: thaw-app/org-ci/actions/sparkle-release@1426ab64607a0b42c02b409486eeb47ef7b9ba25
         with:
           tag: ${{ steps.meta.outputs.tag }}
           channel: ${{ steps.meta.outputs.channel }}
           app-name: ${{ env.APP_NAME }}
+          asset-prefix: Thaw
+          appcast-title: Thaw
           sparkle-private-key: ${{ secrets.SPARKLE_ED25519_PRIVATE_KEY }}
+          updates-repository: ${{ env.UPDATES_REPOSITORY }}
+          updates-token: ${{ secrets.UPDATES_GITHUB_TOKEN }}
+          release-html-url: https://github.com/${{ github.repository }}/releases/tag/${{ steps.meta.outputs.tag }}
           publish-appcast: "false"
 
-      - name: Collect release assets
-        id: assets
+      - name: Collect update assets
+        id: update-assets
         run: |
           set -euo pipefail
 
-          list="$RUNNER_TEMP/release-assets.txt"
+          list="$RUNNER_TEMP/update-assets.txt"
           : > "$list"
-          printf '%s\n' "build/${DMG_NAME}" >> "$list"
           printf '%s\n' "${{ steps.sparkle.outputs.zip-path }}" >> "$list"
 
           shopt -s nullglob
@@ -150,63 +171,110 @@ jobs:
           echo "files<<EOF" >> "$GITHUB_OUTPUT"
           cat "$list" >> "$GITHUB_OUTPUT"
           echo "EOF" >> "$GITHUB_OUTPUT"
-          echo "Release assets:"
+          echo "Update assets (thaw-app/updates):"
           cat "$list"
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v3
+      - name: Create updates GitHub Release (ZIP + deltas)
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3
+        with:
+          repository: ${{ env.UPDATES_REPOSITORY }}
+          tag_name: ${{ steps.meta.outputs.tag }}
+          target_commitish: main
+          files: ${{ steps.update-assets.outputs.files }}
+          generate_release_notes: false
+          draft: ${{ !inputs.publish_release }}
+          prerelease: ${{ steps.meta.outputs.prerelease == 'true' }}
+          body: |
+            Sparkle update payloads for Thaw `${{ steps.meta.outputs.tag }}`.
+
+            Installer DMG: https://github.com/${{ github.repository }}/releases/tag/${{ steps.meta.outputs.tag }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.UPDATES_GITHUB_TOKEN }}
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@d7543c93d881b35a8faa02e8e3605f69b7a1ce62 # v3.10.0
+
+      - name: Sign installer DMG (Sigstore)
+        env:
+          COSIGN_YES: "true"
+          DMG_PATH: build/${{ env.DMG_NAME }}
+        run: |
+          set -euo pipefail
+          cosign version
+          cosign sign-blob --bundle "${DMG_PATH}.sigstore.json" "$DMG_PATH"
+          ls -la "${DMG_PATH}.sigstore.json"
+
+      - name: Create Thaw GitHub Release (DMG)
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3
         with:
           tag_name: ${{ steps.meta.outputs.tag }}
-          files: ${{ steps.assets.outputs.files }}
+          files: |
+            build/${{ env.DMG_NAME }}
+            build/${{ env.DMG_NAME }}.sigstore.json
           generate_release_notes: false
-          # Tag pushes publish immediately so Sparkle download URLs work.
-          # workflow_dispatch stays draft unless publish_release is checked.
-          draft: ${{ github.event_name == 'workflow_dispatch' && !inputs.publish_release }}
+          # Draft unless publish_release is checked.
+          draft: ${{ !inputs.publish_release }}
           prerelease: ${{ steps.meta.outputs.prerelease == 'true' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Publish appcast to gh-pages
-        if: >-
-          (github.event_name != 'workflow_dispatch' || inputs.publish_appcast)
-          && (github.event_name != 'workflow_dispatch' || inputs.publish_release)
+      - name: Publish appcast to updates gh-pages
+        if: inputs.publish_appcast && inputs.publish_release
         env:
           TAG: ${{ steps.meta.outputs.tag }}
           CHANNEL: ${{ steps.meta.outputs.channel }}
           APPCAST_PATH: ${{ steps.sparkle.outputs.appcast-path }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          UPDATES_REPO: ${{ env.UPDATES_REPOSITORY }}
+          UPDATES_TOKEN: ${{ secrets.UPDATES_GITHUB_TOKEN }}
         run: |
           set -euo pipefail
 
-          work="$RUNNER_TEMP/gh-pages-work"
-          rm -rf "$work"
+          work="$RUNNER_TEMP/updates-gh-pages-work"
+          remote="https://x-access-token:${UPDATES_TOKEN}@github.com/${UPDATES_REPO}.git"
+          max_attempts=5
+          attempt=1
 
-          git clone --depth 1 --branch gh-pages \
-            "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
-            "$work" 2>/dev/null \
-          || {
-            git clone --depth 1 \
-              "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
-              "$work"
-            git -C "$work" checkout --orphan gh-pages
-            git -C "$work" rm -rf . >/dev/null 2>&1 || true
-          }
+          while true; do
+            rm -rf "$work"
 
-          cp "$APPCAST_PATH" "$work/appcast.xml"
-          if [[ ! -f "$work/.gitignore" ]]; then
-            printf '*\n!appcast.xml\n!.gitignore\n' > "$work/.gitignore"
-          fi
+            if git clone --depth 1 --branch gh-pages "$remote" "$work" 2>/dev/null; then
+              :
+            else
+              rm -rf "$work"
+              git clone --depth 1 "$remote" "$work"
+              git -C "$work" checkout --orphan gh-pages
+              git -C "$work" rm -rf . >/dev/null 2>&1 || true
+            fi
 
-          git -C "$work" config user.name "github-actions[bot]"
-          git -C "$work" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git -C "$work" add appcast.xml .gitignore
-          if git -C "$work" diff --staged --quiet; then
-            echo "appcast.xml unchanged"
-            exit 0
-          fi
+            cp "$APPCAST_PATH" "$work/appcast.xml"
+            if [[ ! -f "$work/.gitignore" ]]; then
+              printf '*\n!appcast.xml\n!.gitignore\n' > "$work/.gitignore"
+            fi
 
-          git -C "$work" commit -m "chore(sparkle): publish appcast for ${TAG} (${CHANNEL})"
-          git -C "$work" push origin HEAD:gh-pages
+            git -C "$work" config user.name "github-actions[bot]"
+            git -C "$work" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git -C "$work" add appcast.xml .gitignore
+            if git -C "$work" diff --staged --quiet; then
+              echo "appcast.xml unchanged"
+              exit 0
+            fi
+
+            git -C "$work" commit -m "chore(sparkle): publish appcast for ${TAG} (${CHANNEL})"
+
+            if git -C "$work" push origin HEAD:gh-pages; then
+              echo "Published appcast to ${UPDATES_REPO}@gh-pages"
+              exit 0
+            fi
+
+            if [[ "$attempt" -ge "$max_attempts" ]]; then
+              echo "Failed to push gh-pages after $max_attempts attempts"
+              exit 1
+            fi
+
+            echo "gh-pages push failed (attempt $attempt/$max_attempts); refetching…"
+            attempt=$((attempt + 1))
+            sleep $((attempt * 2))
+          done
 
       - name: Cleanup keychain
         if: always()

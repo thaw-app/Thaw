@@ -14,6 +14,53 @@ Please read and follow our [Code of Conduct][coc].
 - Code
 - Translations
 
+Looking for a concrete task? See the living list in **[Ways to contribute (#316)](https://github.com/thaw-app/Thaw/issues/316)** (docs/screenshots, triage, small cleanups, and more).
+
+## Developer Certificate of Origin (DCO)
+
+Thaw requires contributors to certify that they have the right to submit their
+work under the project’s license. We use the
+[Developer Certificate of Origin (DCO) v1.1](https://developercertificate.org/).
+
+By adding a `Signed-off-by` line to each commit, you assert the DCO. Use your
+real name (not a pseudonym) as in:
+
+```bash
+git commit -s -m "fix(menubar): explain the change"
+```
+
+which appends:
+
+```text
+Signed-off-by: Your Name <your.email@example.com>
+```
+
+Pull requests whose commits lack a valid sign-off may be asked to amend or
+re-push with sign-off before merge.
+
+> **Note:** This is not a CLA and does not transfer copyright. It is an
+> attestation that you can contribute the change under GPL-3.0.
+
+### AI-assisted contributions
+
+We are **friendly to AI-assisted work**. Using coding assistants is fine when the result is high quality and follows this guide.
+
+The DCO still applies to the **human who signs off**. By adding `Signed-off-by`, you certify that you have the right to contribute the change under GPL-3.0 — including any AI-generated portions. The tool is not a DCO party; you are responsible for the commit.
+
+In practice:
+
+- Prefer tools whose terms allow contributing output to GPL-licensed projects.
+- Do not feed clearly proprietary or third-party-restricted code into an assistant and commit the result as if it were yours.
+- You must understand and be able to explain the change in review.
+
+We use **CodeRabbit** and **SonarCloud** on pull requests. Treat their findings as part of the review bar unless a maintainer marks something won’t-fix. We expect fixes and high quality before (and during) human review.
+
+**We reserve the right** to reject contributions or block automated committers / assistant-driven submission paths when they harm the project (spam, unsafe automation, or repeated low-quality work).
+
+Pull requests **will be closed** when they show observable process or quality failures — for example unreviewed generated content pasted without human cleanup, missing required tests or documentation, failing CI or review checks left unaddressed, ignored maintainer feedback, wrong base branch, missing issue where required, unsigned commits, unchecked PR template, or drive-by refactors with no issue. Using AI does not lower the bar.
+
+Maintainer bandwidth is limited. If we request changes and there is **no meaningful follow-up** within a reasonable window, the PR **will be closed**. You can always open a new PR later that addresses the feedback.
+
 ## Before You Start
 
 Regardless of the type of contribution, you'll need a GitHub account and a fork of the repository:
@@ -32,7 +79,7 @@ Regardless of the type of contribution, you'll need a GitHub account and a fork 
    git checkout -b your-branch-name
    ```
 
-5. When ready, open a pull request against `stonerl/Thaw:development`
+5. When ready, open a pull request against `thaw-app/Thaw:development`
 
 ## Non-technical contributions
 
@@ -69,7 +116,7 @@ This includes but is not limited to:
 - macOS 26+
 
 > [!NOTE]
-> macOS 27 (Golden Gate) experimental work happens on `feat/macos-27-experimental` and is tracked in [issue #687](https://github.com/stonerl/Thaw/issues/687).
+> macOS 27 (Golden Gate) experimental work happens on `feat/macos-27-experimental` and is tracked in [issue #687](https://github.com/thaw-app/Thaw/issues/687).
 
 ### Getting Started
 
@@ -85,6 +132,11 @@ This includes but is not limited to:
 
 Thaw uses [SwiftLint](https://github.com/realm/SwiftLint) and [SwiftFormat](https://github.com/nicklockwood/SwiftFormat) to enforce consistent code style.
 
+Primary language style guides are embodied in:
+
+- [`.swiftlint.yml`](../.swiftlint.yml)
+- [`.swiftformat`](../.swiftformat)
+
 Before submitting a request, run:
 
 ```bash
@@ -94,12 +146,20 @@ swiftlint lint --strict
 
 Pull requests are automatically reviewed by SonarCloud for code quality and CodeRabbit for AI-assisted review. You may receive automated comments from these tools, so please address any findings before requesting a human review.
 
+### Tests
+
+Major new functionality must include automated tests in `ThawTests` (or the
+relevant package test target) unless a maintainer agrees that no seam exists.
+Bug fixes should add a regression test when practical. The PR template checklist
+asks you to confirm this.
+
 ### Project conventions
 
 - **Branch & base:** All external PRs must target `development` (not `main`), unless a maintainer asks otherwise.
 - **PR size:** Aim for ≤500 lines / ≤20 files per PR. If you expect to exceed this, say why in the Summary and link the design/issue.
 - **Templates & issues:** Bugfix and feature PRs should always reference a GitHub issue (`Closes: #123`, or `Closes: N/A` when agreed).
 - **Commit / PR titles:** Prefer conventional commits, e.g. `fix(menubar): …`, `feat(settings): …`.
+- **DCO:** Every commit must be signed off (`git commit -s`).
 - **Code review bots:** CodeRabbit and SonarCloud comments are treated as *required* unless a maintainer marks them won’t-fix. If you’re unsure, wait for a maintainer reply before large refactors spurred by bots alone.
 - **Sensitive areas:** Expect deeper review and stronger tests when touching menu bar hiding/layout, IceBar / Thaw Bar, triggers/automation, logging, or permissions.
 
@@ -107,14 +167,26 @@ Pull requests are automatically reviewed by SonarCloud for code quality and Code
 
 Open a pull request via the [Thaw pull requests page][pr] and select the [appropriate template][prt] — it will guide you through the required information and checklist.
 
+## Project docs (orientation)
+
+- [Governance][gov] — roles and decision-making
+- [Architecture][arch] — high-level design
+- [Security policy][sec] — reporting and security requirements
+- [URI schemes][uri] — external automation surface
+
 ## Resources
 
 - [How to Contribute to Open Source](https://opensource.guide/how-to-contribute/)
 - [Using Issues](https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues)
 - [Using Pull Requests](https://help.github.com/articles/about-pull-requests/)
+- [Developer Certificate of Origin](https://developercertificate.org/)
 
 [coc]: CODE_OF_CONDUCT.md
 [fq]: ../FREQUENT_ISSUES.md
-[it]: https://github.com/stonerl/Thaw/issues
-[pr]: https://github.com/stonerl/Thaw/pulls
-[prt]: https://github.com/stonerl/Thaw/blob/development/.github/pull_request_template.md
+[it]: https://github.com/thaw-app/Thaw/issues
+[pr]: https://github.com/thaw-app/Thaw/pulls
+[prt]: https://github.com/thaw-app/Thaw/blob/development/.github/pull_request_template.md
+[gov]: GOVERNANCE.md
+[arch]: ../docs/ARCHITECTURE.md
+[sec]: SECURITY.md
+[uri]: ../docs/URI_SCHEMES.md

@@ -1,5 +1,5 @@
 blank_issues_enabled: false
 contact_links:
   - name: macOS 27 (Golden Gate) support & preview builds
-    url: https://github.com/stonerl/Thaw/issues/687
+    url: https://github.com/thaw-app/Thaw/issues/687
     about: Use the tracking issue for general macOS 27 / Golden Gate status, preview builds, and incomplete support. Do not open a new issue for that.
