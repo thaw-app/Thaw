@@ -31,14 +31,16 @@ final class CaptureBoundsValidationTests: XCTestCase {
         XCTAssertFalse(Bridging.isValidCaptureBounds(bounds))
     }
 
-    func testNegativeWidthIsInvalid() {
+    func testNegativeWidthIsStandardizedAndValid() {
+        // A negative width describes the same geometric rectangle as its
+        // standardized form, so validation accepts it after standardizing.
         let bounds = CGRect(x: 0, y: 0, width: -100, height: 33)
-        XCTAssertFalse(Bridging.isValidCaptureBounds(bounds))
+        XCTAssertTrue(Bridging.isValidCaptureBounds(bounds))
     }
 
-    func testNegativeHeightIsInvalid() {
+    func testNegativeHeightIsStandardizedAndValid() {
         let bounds = CGRect(x: 0, y: 0, width: 100, height: -33)
-        XCTAssertFalse(Bridging.isValidCaptureBounds(bounds))
+        XCTAssertTrue(Bridging.isValidCaptureBounds(bounds))
     }
 
     func testNonFiniteOriginIsInvalid() {
