@@ -1005,6 +1005,56 @@ final class MenuBarItemImageCache: @unchecked Sendable {
 
     /// Captures an image of each of the given items individually, then
     /// returns the result.
+    /// The scale a captured image was actually taken at, or `nil` when the
+    /// image cannot be trusted at any scale.
+    ///
+    /// `expected` is the scale of the display Thaw resolved for the menu
+    /// bar; the image's pixel width divided by the item's point width is the
+    /// scale the window server actually captured at. Normally they agree.
+    /// When they do not, the captured value is the truthful one — it is
+    /// measured from the image in hand rather than inferred from a display
+    /// that may not be the one ScreenCaptureKit chose.
+    ///
+    /// A derived scale that is not near a real backing scale factor means
+    /// the bounds and the image describe different things (stale bounds, a
+    /// window resized mid-capture), so there is no safe scale to cache
+    /// under and the caller should drop the item. A missing icon is a
+    /// recoverable degraded state; a wrongly-scaled one is not, because it
+    /// gets cached and reused.
+    ///
+    /// - Parameters:
+    ///   - imagePixelWidth: Width of the captured image, in pixels.
+    ///   - boundsWidth: Width of the item's window, in points.
+    ///   - expected: The scale of the display resolved for the menu bar.
+    nonisolated static func resolvedScale(
+        imagePixelWidth: Int,
+        boundsWidth: CGFloat,
+        expected: CGFloat
+    ) -> CGFloat? {
+        guard boundsWidth > 0, imagePixelWidth > 0, expected > 0 else {
+            return nil
+        }
+
+        let derived = CGFloat(imagePixelWidth) / boundsWidth
+
+        // Integer pixel widths make the derived value slightly noisy for
+        // narrow items, so compare with a tolerance rather than exactly.
+        if abs(derived - expected) <= scaleTolerance {
+            return expected
+        }
+
+        // Only trust a disagreement that lands on a real backing scale
+        // factor. Anything else is not a scale mismatch, it is bad input.
+        return plausibleBackingScales.first { abs(derived - $0) <= scaleTolerance }
+    }
+
+    /// Backing scale factors macOS actually reports for a display.
+    private nonisolated static let plausibleBackingScales: [CGFloat] = [1, 2, 3]
+
+    /// How far a derived scale may sit from a candidate before it stops
+    /// counting as that scale.
+    private nonisolated static let scaleTolerance: CGFloat = 0.05
+
     private nonisolated func individualCapture(
         _ items: [MenuBarItem],
         scale: CGFloat
@@ -1047,12 +1097,40 @@ final class MenuBarItemImageCache: @unchecked Sendable {
                 continue
             }
 
+            // `scale` comes from the display Thaw believes owns the menu
+            // bar, but ScreenCaptureKit captures at the scale of whichever
+            // display it selects by frame intersection. On a mixed-scale
+            // multi-display setup those disagree, and caching an image under
+            // the wrong scale doubles every consumer's idea of its point
+            // size — the oversized Layout rows in #851/#736.
+            // `compositeCapture` and `refreshImages` both reject a
+            // pixel/point mismatch; this path did not, and it is precisely
+            // the fallback that runs after `compositeCapture` rejects one.
+            guard let resolvedScale = MenuBarItemImageCache.resolvedScale(
+                imagePixelWidth: image.width,
+                boundsWidth: item.bounds.width,
+                expected: scale
+            ) else {
+                MenuBarItemImageCache.diagLog.warning(
+                    "individualCapture: implausible scale for \(item.logString) — \(image.width)px wide for bounds width \(item.bounds.width) at expected scale \(scale), excluding"
+                )
+                recordCaptureFailure(for: item)
+                result.excluded.append(item)
+                continue
+            }
+
+            if resolvedScale != scale {
+                MenuBarItemImageCache.diagLog.warning(
+                    "individualCapture: capture scale \(resolvedScale) differs from display scale \(scale) for \(item.logString); using the captured scale"
+                )
+            }
+
             // Record success and cache
             capturedCount += 1
             recordCaptureSuccess(for: item)
             result.images[item.tag] = CapturedImage(
                 cgImage: image,
-                scale: scale
+                scale: resolvedScale
             )
         }
 
