@@ -278,6 +278,7 @@ final class AppState {
             }
             .store(in: &c)
 
+        hidEventManagerObservationTask?.cancel()
         hidEventManagerObservationTask = Task { [weak self, weak hidEventManager] in
             let changes = Observations { hidEventManager?.isDraggingMenuBarItem ?? false }
             for await isDragging in changes {
@@ -297,6 +298,7 @@ final class AppState {
         // navigation (not high-frequency), so per-change firing is
         // equivalent in practice and avoids reimplementing throttle(latest:)
         // by hand.
+        navigationStateObservationTask?.cancel()
         navigationStateObservationTask = Task { [weak self] in
             guard let self else { return }
             let changes = Observations { [navigationState] in
@@ -340,13 +342,17 @@ final class AppState {
         // the stream carries Void and the count is re-read from NSScreen
         // (MainActor-isolated, like the rest of this task's body) per event.
         let (screenParameterEvents, screenParameterContinuation) = AsyncStream<Void>.makeStream()
+        // Register the observer synchronously during setup (not inside the
+        // task body) so notifications posted before the task first runs are
+        // still captured; the task removes it when it finishes.
+        let screenParameterObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didChangeScreenParametersNotification,
+            object: nil,
+            queue: .main
+        ) { _ in screenParameterContinuation.yield(()) }
+        screenParametersObservationTask?.cancel()
         screenParametersObservationTask = Task { @MainActor [weak self] in
-            let observer = NotificationCenter.default.addObserver(
-                forName: NSApplication.didChangeScreenParametersNotification,
-                object: nil,
-                queue: .main
-            ) { _ in screenParameterContinuation.yield(()) }
-            defer { NotificationCenter.default.removeObserver(observer) }
+            defer { NotificationCenter.default.removeObserver(screenParameterObserver) }
             for await _ in screenParameterEvents.debounce(for: .seconds(0.5)) {
                 guard let self else { return }
                 let count = NSScreen.screens.count

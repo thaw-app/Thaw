@@ -286,7 +286,10 @@ final nonisolated class EventTap: @unchecked Sendable {
         let tapLabel = self.label
         // Clean up the old tap without setting isInvalidated (we want to reuse this instance).
         Self.unregisterTap(self)
-        state.withLock { state in
+        // Record whether the mach port cleanup requires balancing the retain
+        // taken at creation, but perform the release only after the lock
+        // scope exits (see the matching comment in `invalidate()`).
+        let needsRelease = state.withLock { state -> Bool in
             if let source = state.source {
                 CFRunLoopRemoveSource(runLoop, source, .commonModes)
                 state.source = nil
@@ -295,8 +298,12 @@ final nonisolated class EventTap: @unchecked Sendable {
                 CGEvent.tapEnable(tap: machPort, enable: false)
                 CFMachPortInvalidate(machPort)
                 state.machPort = nil
-                Unmanaged.passUnretained(self).release()
+                return true
             }
+            return false
+        }
+        if needsRelease {
+            Unmanaged.passUnretained(self).release()
         }
 
         guard Self.requestTapCreation() else {
@@ -344,7 +351,12 @@ final nonisolated class EventTap: @unchecked Sendable {
             return
         }
         Self.unregisterTap(self)
-        state.withLock { state in
+        // Record whether the mach port cleanup requires balancing the retain
+        // taken at creation, but perform the release only after the lock
+        // scope exits: releasing `self` inside the critical section could
+        // trigger `deinit` (and thus re-entrant locking) while the lock is
+        // still held.
+        let needsRelease = state.withLock { state -> Bool in
             if let source = state.source {
                 CFRunLoopRemoveSource(runLoop, source, .commonModes)
                 state.source = nil
@@ -353,8 +365,12 @@ final nonisolated class EventTap: @unchecked Sendable {
                 CGEvent.tapEnable(tap: machPort, enable: false)
                 CFMachPortInvalidate(machPort)
                 state.machPort = nil
-                Unmanaged.passUnretained(self).release()
+                return true
             }
+            return false
+        }
+        if needsRelease {
+            Unmanaged.passUnretained(self).release()
         }
     }
 
