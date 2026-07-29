@@ -40,18 +40,22 @@ concurrency:
   group: sparkle-appcast
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
   release:
     runs-on: xcode-27
     permissions:
       contents: write
+      id-token: write
     env:
       APP_NAME: "Thaw.app"
       DMG_NAME: "Thaw.dmg"
       UPDATES_REPOSITORY: thaw-app/updates
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
           ref: refs/tags/${{ inputs.tag }}
@@ -171,7 +175,7 @@ jobs:
           cat "$list"
 
       - name: Create updates GitHub Release (ZIP + deltas)
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3
         with:
           repository: ${{ env.UPDATES_REPOSITORY }}
           tag_name: ${{ steps.meta.outputs.tag }}
@@ -187,11 +191,26 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.UPDATES_GITHUB_TOKEN }}
 
+      - name: Install cosign
+        uses: sigstore/cosign-installer@d7543c93d881b35a8faa02e8e3605f69b7a1ce62 # v3.10.0
+
+      - name: Sign installer DMG (Sigstore)
+        env:
+          COSIGN_YES: "true"
+          DMG_PATH: build/${{ env.DMG_NAME }}
+        run: |
+          set -euo pipefail
+          cosign version
+          cosign sign-blob --bundle "${DMG_PATH}.sigstore.json" "$DMG_PATH"
+          ls -la "${DMG_PATH}.sigstore.json"
+
       - name: Create Thaw GitHub Release (DMG)
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3
         with:
           tag_name: ${{ steps.meta.outputs.tag }}
-          files: build/${{ env.DMG_NAME }}
+          files: |
+            build/${{ env.DMG_NAME }}
+            build/${{ env.DMG_NAME }}.sigstore.json
           generate_release_notes: false
           # Draft unless publish_release is checked.
           draft: ${{ !inputs.publish_release }}

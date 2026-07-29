@@ -10,6 +10,7 @@ them.
 | --- | --- | --- |
 | **Apple Developer ID + notarization** | Binary came from the Thaw developer team and passed Apple’s notarization checks | Release GitHub Actions (signing + `notarytool`) |
 | **Sparkle EdDSA** | Downloaded **update archives** (e.g. release ZIPs) match signatures produced with the project’s Sparkle private key; the app verifies them with `SUPublicEDKey` | Sparkle tools in the release pipeline sign update packages; public key embedded in the app (`Info.plist`). The appcast lists those updates over HTTPS; **feed-level** signing (`SURequireSignedFeed`) is not enabled |
+| **Sigstore (cosign)** | GitHub Release **DMG** blobs match a keyless cosign signature bundle uploaded beside the installer | Release workflow runs `cosign sign-blob` and attaches `*.sigstore.json` to the Thaw release |
 | **Git tag signatures** | Important version tags are GPG-signed by the releaser | `git tag -s` (or equivalent) on release tags |
 
 The Sparkle **private** key and Apple signing credentials are stored as CI
@@ -54,6 +55,21 @@ codesign -dv --verbose=4 /path/to/Thaw.app 2>&1 | grep -E 'Authority|TeamIdentif
 Expect a **Developer ID Application** certificate and a successful assessment
 for notarized release builds. Homebrew-installed builds follow Homebrew’s own
 cask/bottle verification in addition to Apple’s checks.
+
+## Check a release DMG with Sigstore
+
+Release installers on `thaw-app/Thaw` include a companion
+`Thaw.dmg.sigstore.json` (or similarly named) asset produced by cosign keyless
+signing in CI.
+
+```sh
+# Download DMG + bundle from the GitHub Release, then:
+cosign verify-blob \
+  --bundle Thaw.dmg.sigstore.json \
+  --certificate-identity-regexp 'https://github.com/thaw-app/Thaw/' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  Thaw.dmg
+```
 
 ## Check a Git version tag
 

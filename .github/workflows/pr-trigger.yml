@@ -4,6 +4,9 @@ on:
   issue_comment:
     types: [created]
 
+permissions:
+  contents: read
+
 jobs:
   trigger-build:
     if: github.event.issue.pull_request && startsWith(github.event.comment.body, '.build')
