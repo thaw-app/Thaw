@@ -247,6 +247,21 @@ final class ControlItemPrimaryActionTests: XCTestCase {
         )
     }
 
+    func testMirroredSecondaryClickSkipsRevealOrderSynchronization() {
+        XCTAssertFalse(
+            ControlItem.shouldSynchronizeRevealOrder(
+                clickDisplayID: 3,
+                statusItemDisplayID: 1
+            )
+        )
+        XCTAssertTrue(
+            ControlItem.shouldSynchronizeRevealOrder(
+                clickDisplayID: 1,
+                statusItemDisplayID: 1
+            )
+        )
+    }
+
     private func primaryAction(
         modifierFlags: NSEvent.ModifierFlags = [],
         clickCount: Int = 1,

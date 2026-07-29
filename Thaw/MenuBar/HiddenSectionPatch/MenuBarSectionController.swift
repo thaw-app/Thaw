@@ -1107,7 +1107,8 @@ final class MenuBarSectionController: ObservableObject {
         // second click can rehide the section. The delayed batch restore below
         // then only has to place the newly revealed items around this stable
         // visible segment.
-        if #available(macOS 27, *),
+        if synchronizeOrder,
+           #available(macOS 27, *),
            !MenuBarBackendProvider.current.supportsLegacySectionHiding
         {
             appState?.itemManager.prepareMacOS27RevealedOrder()

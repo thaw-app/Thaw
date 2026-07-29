@@ -292,7 +292,10 @@ final class MenuBarSection {
     }
 
     /// Shows the section.
-    func show(triggeredByHotkey: Bool = false) {
+    func show(
+        triggeredByHotkey: Bool = false,
+        synchronizeOrder: Bool = true
+    ) {
         guard let menuBarManager, isEnabled, isHidden else {
             if name == .alwaysHidden {
                 diagLog.debug("show(alwaysHidden) aborted: menuBarManager=\(self.menuBarManager != nil), isEnabled=\(isEnabled), isHidden=\(isHidden)")
@@ -324,7 +327,10 @@ final class MenuBarSection {
 
             // Otherwise reveal the items in place via the assertion-based section controller.
             menuBarManager.iceBarPanel.close()
-            menuBarManager.sectionController?.show(name)
+            menuBarManager.sectionController?.show(
+                name,
+                synchronizeOrder: synchronizeOrder
+            )
             switch name {
             case .visible, .hidden:
                 for section in menuBarManager.sections {
@@ -512,9 +518,15 @@ final class MenuBarSection {
     }
 
     /// Toggles the visibility of the section.
-    func toggle(triggeredByHotkey: Bool = false) {
+    func toggle(
+        triggeredByHotkey: Bool = false,
+        synchronizeOrder: Bool = true
+    ) {
         if isHidden {
-            show(triggeredByHotkey: triggeredByHotkey)
+            show(
+                triggeredByHotkey: triggeredByHotkey,
+                synchronizeOrder: synchronizeOrder
+            )
         } else {
             hide()
         }

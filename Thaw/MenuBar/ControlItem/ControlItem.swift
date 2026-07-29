@@ -86,6 +86,16 @@ final class ControlItem: NSObject {
         return renderedWidth + 0.5
     }
 
+    static nonisolated func shouldSynchronizeRevealOrder(
+        clickDisplayID: CGDirectDisplayID?,
+        statusItemDisplayID: CGDirectDisplayID?
+    ) -> Bool {
+        guard let clickDisplayID, let statusItemDisplayID else {
+            return true
+        }
+        return clickDisplayID == statusItemDisplayID
+    }
+
     /// A namespace for control item lengths.
     fileprivate enum Lengths {
         static let standard: CGFloat = NSStatusItem.variableLength
@@ -1002,7 +1012,8 @@ final class ControlItem: NSObject {
         // hidden section offscreen. NSApp.currentSystemPresentationOptions is
         // per-app and does not reflect another app's fullscreen state, so the
         // items-list signal is used directly.
-        let screenForCheck = window?.screen ?? NSScreen.main
+        let statusItemScreen = window?.screen
+        let screenForCheck = NSScreen.screenWithMouse ?? statusItemScreen ?? NSScreen.main
         if let screen = screenForCheck, !screen.isSystemMenuBarVisible() {
             return
         }
@@ -1148,7 +1159,12 @@ final class ControlItem: NSObject {
         switch intent {
         case .toggleSection:
             if let section = menuBarManager.section(withName: sectionName), section.isEnabled {
-                section.toggle()
+                section.toggle(
+                    synchronizeOrder: Self.shouldSynchronizeRevealOrder(
+                        clickDisplayID: screenForCheck?.displayID,
+                        statusItemDisplayID: statusItemScreen?.displayID
+                    )
+                )
             }
         case .showAlwaysHidden:
             if let section = menuBarManager.section(withName: .alwaysHidden), section.isEnabled {
