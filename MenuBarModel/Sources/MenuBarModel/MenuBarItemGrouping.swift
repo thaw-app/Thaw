@@ -58,7 +58,7 @@ public enum MenuBarItemGrouping {
     public static func isGroupable(_ tag: MenuBarItemTag) -> Bool {
         guard tag.namespace.isString else { return false }
         guard !tag.isSystemItem else { return false }
-        guard !tag.namespace.isMenuBarHostingNamespace else { return false }
+        guard tag.namespace != .menuBarAgent else { return false }
         guard !tag.isThawOwnedNamespace else { return false }
         guard !tag.isLayoutAnchoredSystemItem else { return false }
         return tag.isMovable
