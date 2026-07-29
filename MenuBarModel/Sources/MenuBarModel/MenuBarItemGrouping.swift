@@ -2,6 +2,7 @@
 //  MenuBarItemGrouping.swift
 //  Project: Thaw
 //
+//  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
@@ -57,7 +58,7 @@ public enum MenuBarItemGrouping {
     public static func isGroupable(_ tag: MenuBarItemTag) -> Bool {
         guard tag.namespace.isString else { return false }
         guard !tag.isSystemItem else { return false }
-        guard !tag.namespace.isMenuBarHostingNamespace else { return false }
+        guard tag.namespace != .menuBarAgent else { return false }
         guard !tag.isThawOwnedNamespace else { return false }
         guard !tag.isLayoutAnchoredSystemItem else { return false }
         return tag.isMovable
