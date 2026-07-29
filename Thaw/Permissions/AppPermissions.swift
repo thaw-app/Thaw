@@ -9,21 +9,9 @@
 import Combine
 import Foundation
 
-/// An abstraction over ``AppPermissions`` that lets views depend on just the
-/// pieces they read, so previews can supply lightweight stand-ins instead of
-/// the real manager and its associated app machinery.
-@MainActor
-protocol PermissionsManaging: ObservableObject {
-    /// The state of the app's granted permissions.
-    var permissionsState: AppPermissions.PermissionsState { get }
-
-    /// The permissions required for full app functionality.
-    var allPermissions: [Permission] { get }
-}
-
 /// A type that manages the permissions of the app.
 @MainActor
-final class AppPermissions: ObservableObject, PermissionsManaging {
+final class AppPermissions: ObservableObject {
     /// Keys to access individual permissions.
     enum PermissionKey {
         /// Identifies ``AppPermissions/accessibility``.
@@ -89,20 +77,19 @@ final class AppPermissions: ObservableObject, PermissionsManaging {
         }
     }
 
+    /// Refreshes permission grants from the system immediately.
+    func refreshPermissionsState() {
+        for permission in allPermissions {
+            permission.refreshStatus()
+        }
+        updatePermissionsState()
+    }
+
     /// Stops running all permissions checks.
     func stopAllChecks() {
         diagLog.info("Stopping all permissions checks")
         for permission in allPermissions {
             permission.stopCheck()
-        }
-    }
-
-    /// Refreshes permission state when the app becomes active again. This
-    /// catches grants and revocations made in System Settings while Thaw was
-    /// in the background.
-    func refreshAllPermissions() {
-        for permission in allPermissions {
-            permission.refresh()
         }
     }
 }

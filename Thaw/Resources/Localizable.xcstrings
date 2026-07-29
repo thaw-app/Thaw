@@ -1,6 +1,30 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Active profile" : {
+      "comment" : "Picker option: save spacing changes to the active profile only when relaunch confirmations are disabled."
+    },
+    "All profiles" : {
+      "comment" : "Picker option: save spacing changes to every profile when relaunch confirmations are disabled."
+    },
+    "Apply menu bar spacing change?" : {
+      "comment" : "Title of the just-in-time confirmation shown before a display transition relaunches menu bar apps to apply new spacing."
+    },
+    "Before a display change or spacing edit relaunches your menu bar apps, Thaw asks you to confirm. Turn this off to apply spacing changes and relaunch apps without confirmation." : {
+      "comment" : "Annotation for the Confirm before relaunching apps toggle in the Displays pane."
+    },
+    "Confirm before relaunching apps" : {
+      "comment" : "Toggle in the Displays pane controlling whether spacing changes ask for confirmation before relaunching menu bar apps."
+    },
+    "Don't ask again" : {
+      "comment" : "Suppression checkbox on the spacing relaunch confirmation; disables future confirmations."
+    },
+    "When a profile is active, choose whether spacing changes save to just the active profile or to every profile." : {
+      "comment" : "Annotation for the profile-target picker shown when relaunch confirmations are disabled."
+    },
+    "Without confirmation, save spacing to" : {
+      "comment" : "Label for the picker choosing which profiles receive a spacing change when relaunch confirmations are disabled."
+    },
     "(no script selected)" : {
       "comment" : "A placeholder displayed in the \"Path\" column of a hook row when no script is selected.",
       "localizations" : {
@@ -119,12 +143,6 @@
           }
         }
       }
-    },
-    "%@ (not present)" : {
-
-    },
-    "%@ (not running)" : {
-
     },
     "%@ %@ Section" : {
       "comment" : "A menu item title that toggles the visibility of a section in the menu bar. The argument is the name of the section.",
@@ -1937,9 +1955,6 @@
         }
       }
     },
-    "%lld m" : {
-
-    },
     "%lld seconds" : {
       "comment" : "Text that describes the rehide interval, in seconds. The argument is the number of seconds.",
       "localizations" : {
@@ -2907,9 +2922,6 @@
         }
       }
     },
-    "Active profile" : {
-      "comment" : "Picker option: save spacing changes to the active profile only when relaunch confirmations are disabled."
-    },
     "Adaptive" : {
       "comment" : "Text for the adaptive background option in the menu bar.",
       "localizations" : {
@@ -3267,9 +3279,6 @@
         }
       }
     },
-    "Add a trigger to reveal a menu bar item when a condition is met." : {
-
-    },
     "Add Application Manually" : {
       "comment" : "A heading for the section where users can add apps manually.",
       "localizations" : {
@@ -3389,15 +3398,6 @@
         }
       }
     },
-    "Add Condition" : {
-
-    },
-    "Add Trigger" : {
-
-    },
-    "Adds the emergency trigger-feature shutoff to the three-dot menu. Keep this off unless a trigger source is disrupting normal computer use." : {
-
-    },
     "Advanced" : {
       "comment" : "The \"Advanced\" section in the \"Settings\" interface.",
       "localizations" : {
@@ -3516,15 +3516,6 @@
           }
         }
       }
-    },
-    "All Off" : {
-
-    },
-    "All profiles" : {
-      "comment" : "Picker option: save spacing changes to every profile when relaunch confirmations are disabled."
-    },
-    "All Trigger Features Off" : {
-
     },
     "Allow" : {
       "comment" : "Button title for allowing the app to control Thaw settings.",
@@ -3891,12 +3882,6 @@
     },
     "Almost there! %@ needs the permissions below to manage your menu bar." : {
       "comment" : "Subtitle on the permissions screen reassuring the user they're nearly done. The argument is the name of the app."
-    },
-    "Also move" : {
-
-    },
-    "Also move another item" : {
-
     },
     "Always show hidden items" : {
       "comment" : "A toggle that allows users to configure whether hidden menu bar items should always be visible in the native menu bar on a particular display.",
@@ -4493,9 +4478,6 @@
         }
       }
     },
-    "Another enabled trigger also targets this item. Priority runs top to bottom; the first active trigger wins." : {
-
-    },
     "Appearance" : {
       "comment" : "The localized string key for the \"Appearance\" section in the \"Settings\" interface.",
       "localizations" : {
@@ -4614,9 +4596,6 @@
           }
         }
       }
-    },
-    "Application" : {
-
     },
     "Apply" : {
       "comment" : "A button that applies the current value of a slider to a setting.",
@@ -5212,9 +5191,6 @@
           }
         }
       }
-    },
-    "Apply menu bar spacing change?" : {
-      "comment" : "Title of the just-in-time confirmation shown before a display transition relaunches menu bar apps to apply new spacing."
     },
     "Apply spacing change?" : {
       "comment" : "Title of the alert shown before applying a menu bar item spacing change.",
@@ -7611,9 +7587,6 @@
         }
       }
     },
-    "Automatically reveal a menu bar item while a condition is met, then hide it again when the condition no longer applies. Enable additional condition types in the Developer pane." : {
-
-    },
     "Automation" : {
       "comment" : "The \"Automation\" tab in the settings interface.",
       "localizations" : {
@@ -8208,12 +8181,6 @@
           }
         }
       }
-    },
-    "Battery level" : {
-
-    },
-    "Before a display change or spacing edit relaunches your menu bar apps, Thaw asks you to confirm. Turn this off to apply spacing changes and relaunch apps without confirmation." : {
-      "comment" : "Annotation for the Confirm before relaunching apps toggle in the Displays pane."
     },
     "BETA" : {
       "comment" : "The text displayed in the badge.",
@@ -9285,15 +9252,6 @@
           }
         }
       }
-    },
-    "Capture Reference" : {
-
-    },
-    "Captures the icon now as a reference, then reveals the item when the icon later changes from it. Requires screen recording permission." : {
-
-    },
-    "Capturing…" : {
-
     },
     "Change the menu bar's appearance." : {
       "comment" : "Detail about the \"Screen Recording\" permission, describing how to change the menu bar's appearance.",
@@ -10605,12 +10563,6 @@
         }
       }
     },
-    "Choose an app…" : {
-
-    },
-    "Choose an item…" : {
-
-    },
     "Choose image…" : {
       "comment" : "A button to import a custom icon for the app.",
       "localizations" : {
@@ -10967,9 +10919,6 @@
           }
         }
       }
-    },
-    "Choose…" : {
-
     },
     "Clear" : {
       "comment" : "A glass style that is clear.",
@@ -11450,9 +11399,6 @@
     "Click menu bar items on your behalf, such as when using the search bar." : {
 
     },
-    "Collapse trigger" : {
-
-    },
     "Columns" : {
       "comment" : "A label displayed above a stepper that lets the user select the number of columns in the grid layout.",
       "localizations" : {
@@ -11571,12 +11517,6 @@
           }
         }
       }
-    },
-    "Condition" : {
-
-    },
-    "Conditional Triggers" : {
-
     },
     "Confirm" : {
       "comment" : "A label displayed as a button in the edit actions hint.",
@@ -11697,9 +11637,6 @@
         }
       }
     },
-    "Confirm before relaunching apps" : {
-      "comment" : "Toggle in the Displays pane controlling whether spacing changes ask for confirmation before relaunching menu bar apps."
-    },
     "Conflicting Menu Bar Manager Detected" : {
       "comment" : "Title of an alert that appears when a conflicting menu bar manager is detected.",
       "localizations" : {
@@ -11815,6 +11752,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "偵測到衝突的選單列管理工具"
+          }
+        }
+      }
+    },
+    "When a display transition requires Thaw to apply a different menu bar spacing, Thaw relaunches apps with menu bar items. Relaunching apps may cause unsaved input, progress, or transient app state to be lost." : {
+      "comment" : "A warning that a display transition requiring a different menu bar spacing relaunches menu bar apps, which can lose unsaved state.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "When a display transition requires Thaw to apply a different menu bar spacing, Thaw relaunches apps with menu bar items. Relaunching apps may cause unsaved input, progress, or transient app state to be lost."
           }
         }
       }
@@ -12771,9 +12719,6 @@
         }
       }
     },
-    "Custom delay" : {
-
-    },
     "Custom icon uses dynamic appearance" : {
       "comment" : "A toggle that lets the user choose whether the custom ice icon should use a dynamic appearance.",
       "localizations" : {
@@ -13369,9 +13314,6 @@
         }
       }
     },
-    "Delete this trigger" : {
-
-    },
     "Deny" : {
       "comment" : "Button title for denying access to the settings URI.",
       "localizations" : {
@@ -13491,13 +13433,7 @@
         }
       }
     },
-    "Detect menu bar items." : {
-
-    },
     "Detect the menu bar items on your Mac and where they're positioned." : {
-
-    },
-    "Developer" : {
 
     },
     "Development" : {
@@ -14333,9 +14269,6 @@
           }
         }
       }
-    },
-    "Don't ask again" : {
-      "comment" : "Suppression checkbox on the spacing relaunch confirmation; disables future confirmations."
     },
     "Don't Check" : {
       "comment" : "A button that disables automatic update checking.",
@@ -15288,9 +15221,6 @@
           }
         }
       }
-    },
-    "Drag to change trigger priority" : {
-
     },
     "Due to a bug in a previous version of the app, the data for %@'s menu bar sections was corrupted and had to be reset." : {
       "comment" : "Text in an alert that informs the user that the preferred positions of some menu bar controls have been reset because they were corrupted.",
@@ -16362,9 +16292,6 @@
           }
         }
       }
-    },
-    "Enable experimental trigger sources one at a time. Each flag turns on its condition in the Triggers pane and starts its background monitor. Battery and power conditions are always available." : {
-
     },
     "Enable menu bar item overflow" : {
       "comment" : "A toggle that enables or disables the overflow of menu bar items.",
@@ -17678,9 +17605,6 @@
         }
       }
     },
-    "Expand trigger" : {
-
-    },
     "Export" : {
       "comment" : "A menu item that exports a profile to a file.",
       "localizations" : {
@@ -18518,9 +18442,6 @@
       }
     },
     "Found existing settings. Icon positions can't be restored." : {
-
-    },
-    "From" : {
 
     },
     "Full" : {
@@ -20314,9 +20235,6 @@
     },
     "Hide or show menu bar items on demand. Drag items between sections, keep your favorites always visible, and tuck the rest away in the always-hidden section." : {
       "comment" : "Description of the menu bar management onboarding slide."
-    },
-    "Hide the item while the condition is met (invert)" : {
-
     },
     "Hold to Preview" : {
       "comment" : "A button that, when held, allows users to preview changes in a menu bar.",
@@ -24377,9 +24295,6 @@
         }
       }
     },
-    "Live System State" : {
-
-    },
     "Loading menu bar items…" : {
       "comment" : "A message displayed while waiting for menu bar items to load.",
       "localizations" : {
@@ -24856,9 +24771,6 @@
         }
       }
     },
-    "Match" : {
-
-    },
     "max" : {
       "comment" : "Text displayed in a setting that allows the user to select the maximum item spacing.",
       "localizations" : {
@@ -25215,9 +25127,6 @@
           }
         }
       }
-    },
-    "Menu bar item" : {
-
     },
     "Menu bar item is not movable." : {
       "comment" : "Message text in an alert that appears when a menu bar item is not movable.",
@@ -26888,9 +26797,6 @@
         }
       }
     },
-    "Move items on your behalf." : {
-
-    },
     "Move menu bar items from the visible section into the hidden section when they don't fit beside the notch on a notched display. Disable to keep the saved profile layout exactly as authored even when items would otherwise be pushed under the notch." : {
       "comment" : "A tooltip that describes the effect of enabling or disabling the overflow.",
       "localizations" : {
@@ -27131,12 +27037,6 @@
           }
         }
       }
-    },
-    "Move trigger down" : {
-
-    },
-    "Move trigger up" : {
-
     },
     "Move up" : {
       "comment" : "Accessibility label for the up-chevron button that reorders a row to a higher position in a list.",
@@ -27733,9 +27633,6 @@
         }
       }
     },
-    "No location captured" : {
-
-    },
     "No menu bar items available" : {
       "comment" : "Text shown in the per-item hotkeys list when there are no menu bar items to assign a hotkey to."
     },
@@ -28096,8 +27993,10 @@
         }
       }
     },
-    "No reference yet" : {
-
+    "No settings found" : {
+      "comment" : "Text shown in the settings sidebar search when no settings match the search query.",
+      "localizations" : {
+      }
     },
     "No shape kind selected" : {
       "comment" : "A message displayed when the user hasn't selected a shape kind for the menu bar.",
@@ -28217,9 +28116,6 @@
           }
         }
       }
-    },
-    "No triggers yet" : {
-
     },
     "No whitelisted apps" : {
       "comment" : "A message displayed when there are no whitelisted apps.",
@@ -29292,9 +29188,6 @@
         }
       }
     },
-    "Notify when this reveals the item" : {
-
-    },
     "Off" : {
       "comment" : "A label for the icon refresh rate when it is set to 0.",
       "localizations" : {
@@ -30218,12 +30111,6 @@
           }
         }
       }
-    },
-    "Otherwise hide in" : {
-
-    },
-    "Overridden by %@. Move this trigger above them to give it priority." : {
-
     },
     "Page %lld of %lld" : {
       "localizations" : {
@@ -31547,9 +31434,6 @@
         }
       }
     },
-    "Radius" : {
-
-    },
     "Record Hotkey" : {
       "comment" : "A label for the button that starts recording a hotkey.",
       "localizations" : {
@@ -31668,9 +31552,6 @@
           }
         }
       }
-    },
-    "Reference captured" : {
-
     },
     "Regular" : {
       "comment" : "A description of a glass style.",
@@ -32028,9 +31909,6 @@
           }
         }
       }
-    },
-    "Remove this condition" : {
-
     },
     "Rename" : {
       "comment" : "A menu item that lets the user rename a profile.",
@@ -34769,9 +34647,6 @@
         }
       }
     },
-    "Runs your script about every 30 seconds. Reveals when it exits 0, or — if an expected output is set — when its output contains that text." : {
-
-    },
     "s" : {
       "comment" : "Seconds unit suffix for timeout field",
       "localizations" : {
@@ -34892,9 +34767,6 @@
       }
     },
     "Sample colors from the menu bar to adjust its tint and appearance." : {
-
-    },
-    "Sample colors from the menu bar." : {
 
     },
     "Save Current" : {
@@ -36209,6 +36081,11 @@
         }
       }
     },
+    "Search settings…" : {
+      "comment" : "A placeholder text for the search field in the settings window sidebar.",
+      "localizations" : {
+      }
+    },
     "Section divider style" : {
       "comment" : "Label for a picker that lets the user choose the style of divider to use between menu bar sections.",
       "localizations" : {
@@ -37167,9 +37044,6 @@
         }
       }
     },
-    "Show All Off in menu bar dropdown" : {
-
-    },
     "Show all sections when ⌘ Command + dragging menu bar items" : {
       "comment" : "A toggle that enables or disables showing all menu bar sections when dragging them with ⌘ Command.",
       "localizations" : {
@@ -37884,9 +37758,6 @@
         }
       }
     },
-    "Show in" : {
-
-    },
     "Show Item" : {
       "comment" : "A button label that shows the user how to display an item.",
       "localizations" : {
@@ -38007,9 +37878,6 @@
       }
     },
     "Show live previews of your menu bar items." : {
-
-    },
-    "Show live previews." : {
 
     },
     "Show Log Files in Finder" : {
@@ -41591,9 +41459,6 @@
         }
       }
     },
-    "This condition is turned off in Developer settings, so the trigger won't run." : {
-
-    },
     "This will overwrite the settings of %lld display with the global template. If the active display's spacing changes, Thaw will relaunch each app with a menu bar item. Relaunching apps may cause unsaved input, progress, or transient app state to be lost." : {
       "comment" : "A confirmation message that appears when the user is prompted to apply a global template. The argument is the number of displays that will be affected.",
       "localizations" : {
@@ -42084,9 +41949,6 @@
         }
       }
     },
-    "Threshold" : {
-
-    },
     "Timed" : {
       "comment" : "Localized string key for the \"Timed\" option in the \"Auto-rehide\" settings.",
       "localizations" : {
@@ -42562,9 +42424,6 @@
           }
         }
       }
-    },
-    "To" : {
-
     },
     "To switch profiles with Focus modes, add %@ as a Focus Filter in System Settings %@ Focus %@ [Mode] %@ Focus Filters. When a Focus mode deactivates, the display profile is automatically restored." : {
       "comment" : "A description of how to use Focus Filters to switch profiles.",
@@ -43407,21 +43266,6 @@
     },
     "Trigger any action with a keystroke. Combine auto-rehide timers and Focus Filter integration so Thaw adapts to whatever you're doing." : {
       "comment" : "Description of the hotkeys and automation onboarding slide."
-    },
-    "Trigger Feature Flags" : {
-
-    },
-    "Trigger list" : {
-
-    },
-    "Trigger list view" : {
-
-    },
-    "Triggers" : {
-
-    },
-    "Turn on the Location flag in Developer settings and grant permission to capture your current location." : {
-
     },
     "Type Hotkey" : {
       "comment" : "A label displayed in the leading segment of the hotkey recorder when it is recording.",
@@ -45089,9 +44933,6 @@
         }
       }
     },
-    "Use Current Location" : {
-
-    },
     "Use dynamic appearance" : {
       "comment" : "A toggle that lets the user choose whether to use different appearance settings based on the current system appearance.",
       "localizations" : {
@@ -46282,9 +46123,6 @@
         }
       }
     },
-    "Watched item" : {
-
-    },
     "We found existing settings from Ice, the original app." : {
       "comment" : "A description of the feature that allows users to import settings from the original app, Ice.",
       "extractionState" : "stale",
@@ -46407,20 +46245,6 @@
     },
     "Welcome to Thaw" : {
       "comment" : "Title of the welcome onboarding slide."
-    },
-    "When a display transition requires Thaw to apply a different menu bar spacing, Thaw relaunches apps with menu bar items. Relaunching apps may cause unsaved input, progress, or transient app state to be lost." : {
-      "comment" : "A warning that a display transition requiring a different menu bar spacing relaunches menu bar apps, which can lose unsaved state.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "When a display transition requires Thaw to apply a different menu bar spacing, Thaw relaunches apps with menu bar items. Relaunching apps may cause unsaved input, progress, or transient app state to be lost."
-          }
-        }
-      }
-    },
-    "When a profile is active, choose whether spacing changes save to just the active profile or to every profile." : {
-      "comment" : "Annotation for the profile-target picker shown when relaunch confirmations are disabled."
     },
     "When an app sends a thaw:// URL to change settings, Thaw checks if that app is whitelisted." : {
       "comment" : "A step in the process of how to use Thaw.",
@@ -46785,9 +46609,6 @@
         }
       }
     },
-    "Without confirmation, save spacing to" : {
-      "comment" : "Label for the picker choosing which profiles receive a spacing change when relaunch confirmations are disabled."
-    },
     "Would you like to import your existing configuration?" : {
       "comment" : "A question displayed to the user when they first open the app, asking if they would like to import their existing configuration.",
       "extractionState" : "stale",
@@ -47148,7 +46969,31 @@
     },
     "Your data stays on your Mac — nothing is ever collected or shared." : {
       "comment" : "A privacy reassurance shown on the permissions screen."
-    }
+    },
+    "Add a trigger to reveal a menu bar item when a condition is met.": {},
+    "Add Trigger": {},
+    "Adds the emergency trigger-feature shutoff to the three-dot menu. Keep this off unless a trigger source is disrupting normal computer use.": {},
+    "All Trigger Features Off": {},
+    "Another enabled trigger also targets this item. Priority runs top to bottom; the first active trigger wins.": {},
+    "Automatically reveal a menu bar item while a condition is met, then hide it again when the condition no longer applies. Enable additional condition types in the Developer pane.": {},
+    "Battery level": {},
+    "Collapse trigger": {},
+    "Conditional Triggers": {},
+    "Delete this trigger": {},
+    "Developer": {},
+    "Drag to change trigger priority": {},
+    "Enable experimental trigger sources one at a time. Each flag turns on its condition in the Triggers pane and starts its background monitor. Battery and power conditions are always available.": {},
+    "Expand trigger": {},
+    "Move trigger down": {},
+    "Move trigger up": {},
+    "No triggers yet": {},
+    "Overridden by %@. Move this trigger above them to give it priority.": {},
+    "This condition is turned off in Developer settings, so the trigger won't run.": {},
+    "Trigger Feature Flags": {},
+    "Trigger list": {},
+    "Trigger list view": {},
+    "Triggers": {},
+    "Turn on the Location flag in Developer settings and grant permission to capture your current location.": {}
   },
   "version" : "1.1"
 }

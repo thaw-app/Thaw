@@ -12,35 +12,6 @@ import XCTest
 /// Characterization tests for the savedPosition lookup helpers used by
 /// the position-aware restore and unmanaged-placement work.
 final class SavedPositionLookupTests: XCTestCase {
-    func testSavedSectionKeepsSplitInstancesInTheirOwnSections() {
-        let saved = [
-            "visible": ["com.example.app:Status"],
-            "hidden": ["com.example.app:Status:1"],
-        ]
-
-        XCTAssertEqual(
-            MenuBarItemManager.savedSection(
-                forIdentifier: "com.example.app:Status",
-                in: saved
-            ),
-            .visible
-        )
-        XCTAssertEqual(
-            MenuBarItemManager.savedSection(
-                forIdentifier: "com.example.app:Status:1",
-                in: saved
-            ),
-            .hidden
-        )
-        XCTAssertNil(
-            MenuBarItemManager.savedSection(
-                forIdentifier: "com.example.app:Status:5",
-                in: saved
-            ),
-            "A changed suffix must not choose one of two intentionally split sections."
-        )
-    }
-
     // MARK: - savedPosition (exact match)
 
     /// An identifier present in a saved section returns its (section, index).
@@ -126,59 +97,10 @@ final class SavedPositionLookupTests: XCTestCase {
         // the first saved instance.
         let result = LayoutSolver.savedPositionByBaseID(
             for: "com.example.app:Status:5",
-            in: saved,
-            knownBaseIdentifiers: ["com.example.app:Status"]
+            in: saved
         )
         XCTAssertEqual(result, LayoutSolver.SavedPosition(section: .hidden, index: 0),
                        "baseID fallback should return the first matching saved instance")
-    }
-
-    func testBaseIDFallbackRejectsInstancesSplitAcrossSections() {
-        let saved: [String: [String]] = [
-            "visible": ["com.example.app:Status"],
-            "hidden": ["com.example.app:Status:1"],
-        ]
-
-        XCTAssertNil(
-            LayoutSolver.savedPositionByBaseID(
-                for: "com.example.app:Status:5",
-                in: saved,
-                knownBaseIdentifiers: ["com.example.app:Status"]
-            ),
-            "A changed suffix must not arbitrarily move a split instance into one saved section."
-        )
-    }
-
-    func testBaseIDFallbackKeepsColonBearingTitlesDistinct() {
-        let saved = [
-            "visible": ["com.example.app:CPU: 10%:1"],
-            "hidden": ["com.example.app:CPU: 20%:1"],
-        ]
-
-        XCTAssertEqual(
-            LayoutSolver.savedPositionByBaseID(
-                for: "com.example.app:CPU: 20%:2",
-                in: saved,
-                knownBaseIdentifiers: ["com.example.app:CPU: 10%", "com.example.app:CPU: 20%"]
-            ),
-            LayoutSolver.SavedPosition(section: .hidden, index: 0)
-        )
-    }
-
-    func testBaseIDFallbackKeepsNumericColonTitleDistinctFromPrefixItem() {
-        let saved = [
-            "visible": ["com.example.app:Meeting"],
-            "hidden": ["com.example.app:Meeting:30"],
-        ]
-
-        XCTAssertEqual(
-            LayoutSolver.savedPositionByBaseID(
-                for: "com.example.app:Meeting:30",
-                in: saved,
-                knownBaseIdentifiers: ["com.example.app:Meeting", "com.example.app:Meeting:30"]
-            ),
-            LayoutSolver.SavedPosition(section: .hidden, index: 0)
-        )
     }
 
     /// Malformed identifier with no colon never matches.

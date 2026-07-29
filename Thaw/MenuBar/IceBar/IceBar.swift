@@ -682,11 +682,6 @@ private struct IceBarContentView: View {
                         let rows = stride(from: 0, to: items.count, by: gridColumns).map { start in
                             Array(items[start ..< Swift.min(start + gridColumns, items.count)])
                         }
-                        // Bind once and access by safe index: columnWidths is empty
-                        // when itemMaxHeight is nil (a transient 0 menu-bar height
-                        // during display reconfig), so force-indexing it while
-                        // laying out a multi-row grid would crash.
-                        let colWidths = columnWidths
                         ForEach(Array(rows.enumerated()), id: \.offset) { rowIndex, rowItems in
                             HStack(spacing: itemSpacing) {
                                 ForEach(Array(rowItems.enumerated()), id: \.element.windowID) { colIndex, item in
@@ -702,9 +697,9 @@ private struct IceBarContentView: View {
                                         tooltipDelay: appState.settings.advanced.tooltipDelay,
                                         isLightBackground: isLightBackground
                                     )
-                                    if rows.count > 1, colIndex < colWidths.count {
+                                    if rows.count > 1 {
                                         itemView
-                                            .frame(width: colWidths[colIndex], alignment: .center)
+                                            .frame(width: columnWidths[colIndex], alignment: .center)
                                     } else {
                                         itemView
                                     }
@@ -713,10 +708,8 @@ private struct IceBarContentView: View {
                                 // so partial rows align with the columns above.
                                 if rows.count > 1, rowIndex == rows.count - 1, rowItems.count < gridColumns {
                                     ForEach(rowItems.count ..< gridColumns, id: \.self) { colIndex in
-                                        if colIndex < colWidths.count {
-                                            Color.clear
-                                                .frame(width: colWidths[colIndex], height: contentHeight)
-                                        }
+                                        Color.clear
+                                            .frame(width: columnWidths[colIndex], height: contentHeight)
                                     }
                                 }
                             }

@@ -6,6 +6,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import AppKit
 import CoreGraphics
 import Foundation
 import os.lock
@@ -14,6 +15,7 @@ import os.lock
 /// A namespace for screen capture operations.
 enum ScreenCapture {
     private static let diagLog = DiagLog(category: "ScreenCapture")
+    private static let cachedPermissionResult = OSAllocatedUnfairLock<Bool?>(initialState: nil)
 
     // MARK: Permissions
 
@@ -22,6 +24,7 @@ enum ScreenCapture {
     static func checkPermissions() -> Bool {
         let windowIDs = Bridging.getMenuBarWindowList(option: [.itemsOnly, .activeSpace])
         diagLog.debug("checkPermissions: checking \(windowIDs.count) menu bar window(s) for title access")
+        var windowTitles = [String?]()
 
         for windowID in windowIDs {
             guard
@@ -32,74 +35,110 @@ enum ScreenCapture {
             }
             let hasTitle = window.title != nil
             diagLog.debug("checkPermissions: windowID=\(windowID) pid=\(window.ownerPID) owner=\"\(window.ownerName ?? "nil")\" title=\"\(window.title ?? "nil")\" → hasTitle=\(hasTitle)")
-            return hasTitle
+            windowTitles.append(window.title)
         }
-        // CGPreflightScreenCaptureAccess() only returns an initial value,
-        // but we can use it as a fallback.
+
         let preflightResult = CGPreflightScreenCaptureAccess()
-        diagLog.debug("checkPermissions: no suitable non-owned windows found, fallback CGPreflightScreenCaptureAccess() → \(preflightResult)")
-        return preflightResult
+        let result = permissionGranted(
+            windowTitles: windowTitles,
+            preflightResult: preflightResult
+        )
+        diagLog.debug("checkPermissions: titledWindow=\(windowTitles.contains { $0 != nil }), CGPreflightScreenCaptureAccess()=\(preflightResult) → \(result)")
+        return result
     }
 
-    /// How long a `cachedCheckPermissions` result is trusted before the
-    /// permission is re-probed. Bounds the cost of the relatively expensive
-    /// window-title probe on hot callers while observing both grants and
-    /// revocations during a running session.
-    private static let permissionTTL: DispatchTimeInterval = .milliseconds(1000)
-
-    /// Cached permission state for ``cachedCheckPermissions(reset:)``.
-    private struct CachedPermission {
-        /// The most recently observed permission state, or `nil` when unknown.
-        var granted: Bool?
-        /// When the latest probe ran, used to expire either cached result.
-        var lastProbe: DispatchTime?
+    /// Resolves screen capture access from all eligible window titles and the
+    /// Core Graphics preflight result. A single untitled window must not mask
+    /// a later titled window that proves access.
+    static func permissionGranted(
+        windowTitles: [String?],
+        preflightResult: Bool
+    ) -> Bool {
+        preflightResult || windowTitles.contains { $0 != nil }
     }
-
-    private static let cachedPermission = OSAllocatedUnfairLock(initialState: CachedPermission())
 
     /// Returns a Boolean value that indicates whether the app has screen
     /// capture permissions.
     ///
-    /// Both results are cached only briefly (``permissionTTL``). Screen
-    /// Recording can be granted or revoked while Thaw is running, and a
-    /// session-long positive cache otherwise keeps capture-only features
-    /// available after the user has withdrawn access.
-    /// Pass `true` to `reset` to discard the cached result and recompute.
+    /// This function caches its initial result and returns it on subsequent
+    /// calls. Pass `true` to the `reset` parameter to replace the cached
+    /// result with a newly computed value.
     static func cachedCheckPermissions(reset: Bool = false) -> Bool {
-        let cached: Bool? = cachedPermission.withLock { state in
-            if reset {
-                state = CachedPermission()
-            }
-            if let granted = state.granted,
-               let lastProbe = state.lastProbe,
-               DispatchTime.now() < lastProbe + permissionTTL
-            {
-                return granted
-            }
-            return nil
+        if !reset, let result = cachedPermissionResult.withLock({ $0 }) {
+            return result
         }
-        if let cached {
-            return cached
-        }
-
         let result = checkPermissions()
-        diagLog.debug("cachedCheckPermissions: computed fresh result = \(result) (reset=\(reset))")
-        cachedPermission.withLock { state in
-            state.granted = result
-            state.lastProbe = DispatchTime.now()
-        }
+        diagLog.debug("cachedCheckPermissions: computed fresh result = \(result) (reset=\(reset), wasCached=\(cachedPermissionResult.withLock { $0 != nil }))")
+        cachedPermissionResult.withLock { $0 = result }
         return result
     }
 
+    private static func setCachedPermissionResult(_ result: Bool?) {
+        cachedPermissionResult.withLock { $0 = result }
+    }
+
+    static func restoreActivationPolicyAfterScreenCapturePrompt(
+        currentPolicy: NSApplication.ActivationPolicy,
+        setActivationPolicy: @escaping (NSApplication.ActivationPolicy) -> Bool,
+        activate: () -> Void
+    ) -> (() -> Void)? {
+        guard currentPolicy != .regular else {
+            activate()
+            return nil
+        }
+
+        _ = setActivationPolicy(.regular)
+        activate()
+
+        return {
+            _ = setActivationPolicy(currentPolicy)
+        }
+    }
+
     /// Requests screen capture permissions.
+    @MainActor
     static func requestPermissions() {
         diagLog.debug("requestPermissions: requesting screen capture access")
-        // CGRequestScreenCaptureAccess() is broken on newer macOS versions.
-        // Use SCShareableContent.getWithCompletionHandler to trigger the
-        // system screen capture permission prompt instead.
-        SCShareableContent.getWithCompletionHandler { _, _ in
-            // Intentionally empty: the call is only used to trigger the
-            // system screen capture permission prompt.
+        setCachedPermissionResult(nil)
+
+        // Thaw is an LSUIElement (agent) app with no Dock icon. The system
+        // permission prompt for Screen Recording is only reliably surfaced
+        // — and the app only reliably registered in System Settings' list —
+        // when the requesting process is a normal frontmost app. Temporarily
+        // switch out of agent mode for the request, then restore it after the
+        // TCC request has been kicked off.
+        let restoreActivationPolicy = restoreActivationPolicyAfterScreenCapturePrompt(
+            currentPolicy: NSApp.activationPolicy(),
+            setActivationPolicy: { NSApp.setActivationPolicy($0) },
+            activate: { NSApp.activate(ignoringOtherApps: true) }
+        )
+
+        // CGRequestScreenCaptureAccess() was reported broken on macOS 15
+        // (didn't reliably prompt), so this used to rely solely on
+        // SCShareableContent to trigger the prompt. On macOS 27 that alone
+        // has been observed to leave the app entirely absent from the
+        // Screen Recording list, even after the call completes and even
+        // after a full relaunch. Call both: CGRequestScreenCaptureAccess()
+        // is the documented public API for adding an app to that list, and
+        // SCShareableContent is kept as a fallback trigger.
+        let cgResult = CGRequestScreenCaptureAccess()
+        if cgResult {
+            setCachedPermissionResult(true)
+        }
+        diagLog.debug("requestPermissions: CGRequestScreenCaptureAccess() = \(cgResult)")
+
+        SCShareableContent.getWithCompletionHandler { content, error in
+            if let error {
+                diagLog.debug("requestPermissions: SCShareableContent request failed: \(error)")
+            } else {
+                setCachedPermissionResult(true)
+                diagLog.debug("requestPermissions: SCShareableContent request succeeded (\(content?.windows.count ?? 0) windows)")
+            }
+        }
+
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(1))
+            restoreActivationPolicy?()
         }
     }
 

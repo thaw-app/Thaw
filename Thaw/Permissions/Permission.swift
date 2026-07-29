@@ -31,6 +31,14 @@ class Permission: ObservableObject, Identifiable {
     /// Descriptive details for the permission.
     let details: [String]
 
+    /// Shorter copy for onboarding cards; falls back to ``details`` when unset.
+    let shortDetails: [String]?
+
+    /// Details shown in compact onboarding layouts.
+    var onboardingDetails: [String] {
+        shortDetails ?? details
+    }
+
     /// A Boolean value that indicates if the app can work without this permission.
     let isRequired: Bool
 
@@ -46,14 +54,16 @@ class Permission: ObservableObject, Identifiable {
     /// Observer that runs on a timer to check permissions.
     private var timerCancellable: AnyCancellable?
 
-    /// Observer that observes the ``hasPermission`` property.
-    private var hasPermissionCancellable: AnyCancellable?
+    /// Refreshes permission state when the app becomes active after opening
+    /// ``settingsURL`` (e.g. returning from System Settings).
+    private var settingsReturnCancellable: AnyCancellable?
 
     /// Creates a permission.
     ///
     /// - Parameters:
     ///   - title: The title of the permission.
     ///   - details: Descriptive details for the permission.
+    ///   - shortDetails: Optional shorter onboarding copy.
     ///   - isRequired: A Boolean value that indicates if the app can work without this permission.
     ///   - settingsURL: The URL of the settings pane to open.
     ///   - check: A function that checks permissions.
@@ -63,6 +73,7 @@ class Permission: ObservableObject, Identifiable {
         iconName: String,
         iconColor: Color,
         details: [String],
+        shortDetails: [String]? = nil,
         isRequired: Bool,
         settingsURL: URL?,
         check: @escaping () -> Bool,
@@ -72,6 +83,7 @@ class Permission: ObservableObject, Identifiable {
         self.iconName = iconName
         self.iconColor = iconColor
         self.details = details
+        self.shortDetails = shortDetails
         self.isRequired = isRequired
         self.settingsURL = settingsURL
         self.check = check
@@ -86,9 +98,9 @@ class Permission: ObservableObject, Identifiable {
     /// point the timer cancels itself — there's no need to keep checking once
     /// the app already has what it needs.
     private func configureCancellables() {
-        guard !hasPermission else { return }
         timerCancellable = Timer.publish(every: 3, tolerance: 0.5, on: .main, in: .default)
             .autoconnect()
+            .merge(with: Just(.now))
             .sink { [weak self] _ in
                 guard let self else {
                     return
@@ -98,67 +110,45 @@ class Permission: ObservableObject, Identifiable {
                 if granted {
                     timerCancellable?.cancel()
                     timerCancellable = nil
+                    settingsReturnCancellable?.cancel()
+                    settingsReturnCancellable = nil
                 }
             }
-    }
 
-    /// Rechecks a permission after the app returns to the foreground.
-    ///
-    /// Permissions may be revoked while Thaw is in System Settings. When a
-    /// formerly granted permission is now missing, resume the existing
-    /// low-frequency poll so a subsequent grant is observed without requiring
-    /// an app relaunch.
-    func refresh() {
-        let granted = check()
-        hasPermission = granted
-        if !granted, timerCancellable == nil {
-            configureCancellables()
-        }
+        settingsReturnCancellable?.cancel()
+        settingsReturnCancellable = NotificationCenter.default
+            .publisher(for: NSApplication.didBecomeActiveNotification)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.refreshStatus()
+            }
     }
 
     /// Performs the request and opens the System Settings app to the appropriate pane.
     func performRequest() {
         request()
+        stopCheck()
+        configureCancellables()
         if let settingsURL {
             NSWorkspace.shared.open(settingsURL)
         }
     }
 
-    /// Asynchronously waits for the app to be granted this permission.
-    func waitForPermission() async {
-        hasPermissionCancellable?.cancel()
-        configureCancellables()
-        guard !hasPermission else {
-            return
+    /// Re-checks current system authorization immediately.
+    func refreshStatus() {
+        let granted = check()
+        hasPermission = granted
+        if granted {
+            stopCheck()
         }
-        await withCheckedContinuation { continuation in
-            hasPermissionCancellable = $hasPermission.sink { [weak self] hasPermission in
-                guard let self else {
-                    continuation.resume()
-                    return
-                }
-                guard hasPermission else {
-                    return
-                }
-                // Tear the subscription down before resuming. @Published does
-                // not dedupe, so a repeated `hasPermission = true` would emit
-                // again and resume this continuation a second time — a fatal
-                // double-resume. Cancelling first guarantees a single resume.
-                self.hasPermissionCancellable?.cancel()
-                self.hasPermissionCancellable = nil
-                continuation.resume()
-            }
-        }
-        hasPermissionCancellable?.cancel()
-        hasPermissionCancellable = nil
     }
 
     /// Stops running the permission check.
     func stopCheck() {
         timerCancellable?.cancel()
         timerCancellable = nil
-        hasPermissionCancellable?.cancel()
-        hasPermissionCancellable = nil
+        settingsReturnCancellable?.cancel()
+        settingsReturnCancellable = nil
     }
 }
 
@@ -176,6 +166,10 @@ final class AccessibilityPermission: Permission {
                 String(localized: "Detect the menu bar items on your Mac and where they're positioned."),
                 String(localized: "Move menu bar items to rearrange or hide them."),
                 String(localized: "Click menu bar items on your behalf, such as when using the search bar."),
+            ],
+            shortDetails: [
+                String(localized: "Detect menu bar items on your Mac and where they're positioned."),
+                String(localized: "Move menu bar items to rearrange or hide them."),
             ],
             isRequired: true,
             settingsURL: nil,
@@ -205,10 +199,14 @@ final class ScreenRecordingPermission: Permission {
                 String(localized: "Sample colors from the menu bar to adjust its tint and appearance."),
                 String(localized: "Find menu bar items visually when searching."),
             ],
+            shortDetails: [
+                String(localized: "Show live previews of your menu bar items."),
+                String(localized: "Sample colors from the menu bar to adjust tint."),
+            ],
             isRequired: false,
             settingsURL: URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"),
             check: {
-                ScreenCapture.checkPermissions()
+                ScreenCapture.cachedCheckPermissions(reset: true)
             },
             request: {
                 ScreenCapture.requestPermissions()

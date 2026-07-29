@@ -77,54 +77,6 @@ final class WindowIDsChangedGateTests: XCTestCase {
         )
     }
 
-    /// ControlItemPair discovery strips the hidden/always-hidden control items
-    /// out of the items array, but the previous cycle's stored window list
-    /// still contains their windowIDs. The set handed to the gate must union
-    /// the control item windowIDs back in; otherwise the gate reads the
-    /// control items as "missing" on every cycle and dispatches a spurious
-    /// full bulk apply on every recache (the field-reported symptom: the bar
-    /// re-sorts itself and warps the cursor whenever any app launches or a
-    /// transient Control Center item appears).
-    func testCurrentWindowIDSetIncludesStrippedControlItems() {
-        let hiddenWID: CGWindowID = 364
-        let alwaysHiddenWID: CGWindowID = 366
-        let controlItems = MenuBarItemManager.ControlItemPair.fixture(
-            hiddenAt: CGRect(x: 500, y: 0, width: 8, height: 22),
-            alwaysHiddenAt: CGRect(x: 200, y: 0, width: 8, height: 22),
-            hiddenWindowID: hiddenWID,
-            alwaysHiddenWindowID: alwaysHiddenWID
-        )
-        let items = [
-            MenuBarItem.fixture(tag: .appItem(bundleID: "com.example.a", title: "Item-0"), windowID: 10),
-            MenuBarItem.fixture(tag: .appItem(bundleID: "com.example.b", title: "Item-0"), windowID: 11),
-        ]
-
-        let current = MenuBarItemManager.currentWindowIDSet(items: items, controlItems: controlItems)
-        XCTAssertEqual(current, [10, 11, hiddenWID, alwaysHiddenWID])
-
-        // Steady state: previous stored list (raw, includes control items)
-        // against the reconstructed current set. Nothing disappeared, so the
-        // gate must not fire.
-        XCTAssertFalse(
-            MenuBarItemManager.windowIDsChanged(
-                previous: [10, 11, hiddenWID, alwaysHiddenWID],
-                current: current,
-                previousDisplayID: d1,
-                currentDisplayID: d1
-            )
-        )
-
-        // A transient item appearing (pure addition) must not fire either.
-        XCTAssertFalse(
-            MenuBarItemManager.windowIDsChanged(
-                previous: [10, hiddenWID, alwaysHiddenWID],
-                current: current,
-                previousDisplayID: d1,
-                currentDisplayID: d1
-            )
-        )
-    }
-
     /// Unknown display on either side (nil): fall back to the plain
     /// windowID-disappearance signal rather than suppressing a real change.
     func testNilDisplayFallsBackToWindowIDSignal() {

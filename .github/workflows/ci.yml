@@ -1,6 +1,6 @@
 name: CI
 concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref}}
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 on:
   pull_request:
@@ -22,9 +22,9 @@ on:
 
 jobs:
   static_analysis:
-    runs-on: macos-26
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Validate XCStrings
@@ -42,19 +42,55 @@ jobs:
             python3 -m json.tool "$file" > /dev/null
           done
 
-      - name: Install SwiftLint
-        run: brew install swiftlint
+      - name: Verify SwiftLint input file list
+        run: |
+          set -euo pipefail
+          chmod +x scripts/generate-swiftlint-inputs.sh
+          scripts/generate-swiftlint-inputs.sh /tmp/swiftlint-inputs.xcfilelist
+          diff -u scripts/swiftlint-inputs.xcfilelist /tmp/swiftlint-inputs.xcfilelist
+
       - name: Run SwiftLint
-        run: swiftlint --strict
+        run: |
+          docker run --rm -v "$PWD:/work" -w /work \
+            ghcr.io/realm/swiftlint:0.63.3 \
+            swiftlint --strict
 
   build:
     runs-on: macos-26
     needs: static_analysis
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: 1
     steps:
-      - uses: actions/checkout@v6
-
-      # Issues with other Xcode versions, so we need to specify the version explicitly
+      - uses: actions/checkout@v7
       - run: sudo xcode-select -s /Applications/Xcode_26.5.app/Contents/Developer
+
+      - name: Cache SwiftPM
+        uses: actions/cache@v5
+        with:
+          path: |
+            Build/SourcePackages
+            ~/Library/Caches/org.swift.swiftpm
+          key: spm-${{ runner.os }}-${{ hashFiles('**/Package.resolved') }}
+          restore-keys: |
+            spm-${{ runner.os }}-
+
+      - name: Compute cache week
+        id: cache-week
+        run: echo "week=$(date +%Y-%U)" >> "$GITHUB_OUTPUT"
+
+      # COMPILATION_CACHE_ENABLE_CACHING = YES writes a content-addressed cache to
+      # Build/CompilationCache.noindex (the default CAS path under -derivedDataPath).
+      # Persisting it across runs turns most of the build into cache hits instead of
+      # a full recompile. Keyed by week so the cache periodically rotates rather than
+      # growing unbounded; restore-keys still reuses the prior week's cache as a base.
+      - name: Cache Swift compilation cache
+        uses: actions/cache@v5
+        with:
+          path: Build/CompilationCache.noindex
+          key: compilation-cache-${{ runner.os }}-${{ github.ref_name }}-${{ steps.cache-week.outputs.week }}
+          restore-keys: |
+            compilation-cache-${{ runner.os }}-${{ github.ref_name }}-
+            compilation-cache-${{ runner.os }}-
 
       - name: Build and Test
         run: |
@@ -68,37 +104,43 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
 
-      - name: Upload Coverage Only
+      - name: Convert coverage to XML
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          XCRESULTPARSER_VERSION: "2.0.1"
+        run: |
+          set -euo pipefail
+          curl -fsSL -o xcresultparser.zip \
+            "https://github.com/a7ex/xcresultparser/releases/download/${XCRESULTPARSER_VERSION}/xcresultparser.zip"
+          unzip -oq xcresultparser.zip
+          NEWEST_BUNDLE=$(ls -td Build/Logs/Test/*.xcresult 2>/dev/null | head -n1)
+          ./product/xcresultparser -c -o xml "$NEWEST_BUNDLE" > coverage.xml
+
+      - name: Upload Coverage XML
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         uses: actions/upload-artifact@v7
         with:
           name: coverage-data
-          path: Build/Logs/Test/*.xcresult
+          path: coverage.xml
           retention-days: 1
           if-no-files-found: error
 
   sonarqube:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     needs: build
-    runs-on: macos-26
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
-      - name: Download Coverage Only
-        uses: actions/download-artifact@v7
+      - name: Download Coverage XML
+        uses: actions/download-artifact@v8
         with:
           name: coverage-data
-          path: Build/Logs/Test/
-
-      - name: Process coverage & Scan
-        run: |
-          brew install a7ex/homebrew-formulae/xcresultparser
-          NEWEST_BUNDLE=$(ls -td Build/Logs/Test/*.xcresult 2>/dev/null | head -n1)
-          xcresultparser -c -o xml "$NEWEST_BUNDLE" > coverage.xml
 
       - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v6
+        uses: SonarSource/sonarqube-scan-action@v8.2.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 

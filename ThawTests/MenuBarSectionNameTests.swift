@@ -113,33 +113,6 @@ final class MenuBarSectionNameTests: XCTestCase {
         XCTAssertEqual(mode, .inline)
     }
 
-    func testCanHideApplicationMenusWhenOnlyMenuBarReservesSpace() {
-        XCTAssertTrue(
-            MenuBarSection.canHideApplicationMenusWithoutDockResize(
-                screenFrame: CGRect(x: 0, y: 0, width: 1200, height: 800),
-                visibleFrame: CGRect(x: 0, y: 0, width: 1200, height: 776)
-            )
-        )
-    }
-
-    func testCannotHideApplicationMenusWhenDockReservesSideSpace() {
-        XCTAssertFalse(
-            MenuBarSection.canHideApplicationMenusWithoutDockResize(
-                screenFrame: CGRect(x: 0, y: 0, width: 1200, height: 800),
-                visibleFrame: CGRect(x: 80, y: 0, width: 1120, height: 776)
-            )
-        )
-    }
-
-    func testCannotHideApplicationMenusWhenDockReservesBottomSpace() {
-        XCTAssertFalse(
-            MenuBarSection.canHideApplicationMenusWithoutDockResize(
-                screenFrame: CGRect(x: 0, y: 0, width: 1200, height: 800),
-                visibleFrame: CGRect(x: 0, y: 72, width: 1200, height: 704)
-            )
-        )
-    }
-
     func testPresentationModeFallsBackToIceBarWhenItemsDoNotFitAndHidingMenusIsDisabled() {
         let mode = MenuBarSection.presentationMode(
             totalItemsWidth: 1000,

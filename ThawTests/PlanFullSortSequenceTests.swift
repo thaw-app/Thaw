@@ -18,18 +18,6 @@ final class PlanFullSortSequenceTests: XCTestCase {
     private let hiddenCtrl = "thaw:HiddenControlItem"
     private let ahCtrl = "thaw:AlwaysHiddenControlItem"
 
-    func testEmptyDesiredSequenceIsNoOpEvenWithControlItemsAvailable() {
-        let sequence = LayoutSolver.planFullSortSequence(
-            currentFlat: [],
-            desiredFiltered: [],
-            sectionMap: [:],
-            hiddenCtrlUID: hiddenCtrl,
-            ahCtrlUID: ahCtrl
-        )
-
-        XCTAssertTrue(sequence.isEmpty)
-    }
-
     /// Items group by section in the order AH → AH ctrl → hidden → hidden
     /// ctrl → visible. Control items land at the section boundaries.
     func testItemsGroupAlwaysHiddenThenHiddenThenVisible() {
@@ -96,93 +84,6 @@ final class PlanFullSortSequenceTests: XCTestCase {
         // Empty AH section, empty hidden section, one visible item.
         // Sequence: AH ctrl, hidden ctrl, v1.
         XCTAssertEqual(sequence, [ahCtrl, hiddenCtrl, "v1"])
-    }
-
-    /// A single item sitting in the wrong section replays only from the
-    /// first physical divergence, not the whole bar. Field case: Control
-    /// Center's transient Now Playing widget reappears in the visible
-    /// section while the saved layout wants it hidden; the four
-    /// always-hidden-side items that are already in order must not move.
-    func testTrimsAlreadyOrderedPrefixForSingleOutOfPlaceItem() {
-        // Physical target (left to right):
-        //   ah1, ah2, ahCtrl, h1, nowPlaying, hiddenCtrl, v1, v2, v3
-        let desired = ["v1", "v2", "v3", hiddenCtrl, "h1", "nowPlaying", ahCtrl, "ah1", "ah2"]
-        let sectionMap: [String: String] = [
-            "v1": "visible", "v2": "visible", "v3": "visible",
-            "h1": "hidden", "nowPlaying": "hidden",
-            "ah1": "alwaysHidden", "ah2": "alwaysHidden",
-        ]
-        // Current physical order: nowPlaying sits in the visible section
-        // (between v2 and v3); everything else already matches. currentFlat
-        // is flattened visible-first with left-to-right section blocks.
-        let currentFlat = ["v1", "v2", "nowPlaying", "v3", hiddenCtrl, "h1", ahCtrl, "ah1", "ah2"]
-
-        let sequence = LayoutSolver.planFullSortSequence(
-            currentFlat: currentFlat,
-            desiredFiltered: desired,
-            sectionMap: sectionMap,
-            hiddenCtrlUID: hiddenCtrl,
-            ahCtrlUID: ahCtrl
-        )
-
-        // Physical prefix ah1, ah2, ahCtrl, h1 is already in order, and
-        // nowPlaying's current position (in visible) is still to the right
-        // of h1, so the replay starts at the first item that must cross it:
-        // the hidden control divider.
-        XCTAssertEqual(sequence, [hiddenCtrl, "v1", "v2", "v3"])
-    }
-
-    /// A swap at the far left keeps the item that still forms an ordered
-    /// prefix (ah1) and replays everything that must land to its right.
-    func testLeftEdgeSwapReplaysFromFirstOutOfOrderItem() {
-        let desired = ["v1", hiddenCtrl, "h1", ahCtrl, "ah1", "ah2"]
-        let sectionMap: [String: String] = [
-            "v1": "visible",
-            "h1": "hidden",
-            "ah1": "alwaysHidden", "ah2": "alwaysHidden",
-        ]
-        // ah2 and ah1 are swapped at the leftmost positions.
-        let currentFlat = ["v1", hiddenCtrl, "h1", ahCtrl, "ah2", "ah1"]
-
-        let sequence = LayoutSolver.planFullSortSequence(
-            currentFlat: currentFlat,
-            desiredFiltered: desired,
-            sectionMap: sectionMap,
-            hiddenCtrlUID: hiddenCtrl,
-            ahCtrlUID: ahCtrl
-        )
-
-        // ah1 (physical position 1) is an ordered prefix on its own; ah2
-        // (position 0) breaks the increasing order, so the replay starts
-        // there. Replaying [ah2, ahCtrl, h1, hiddenCtrl, v1] to the right
-        // of the unmoved ah1 yields the target order.
-        XCTAssertEqual(sequence, ["ah2", ahCtrl, "h1", hiddenCtrl, "v1"])
-    }
-
-    /// Unmanaged items interleaved with the untouched prefix don't affect
-    /// the trim; they're never moved on either path.
-    func testUnmanagedItemsDoNotBreakPrefixTrim() {
-        let desired = ["v1", "v2", hiddenCtrl, "h1"]
-        let sectionMap: [String: String] = [
-            "v1": "visible", "v2": "visible",
-            "h1": "hidden",
-        ]
-        // "unmanaged" is not part of the desired sequence and sits next to
-        // h1 in the hidden section; v2 and v1 are swapped in the visible
-        // section. h1, hiddenCtrl, and v1 form an ordered physical prefix,
-        // so only v2 replays: extracted from its position left of v1 and
-        // re-appended at the far right.
-        let currentFlat = ["v2", "v1", hiddenCtrl, "h1", "unmanaged"]
-
-        let sequence = LayoutSolver.planFullSortSequence(
-            currentFlat: currentFlat,
-            desiredFiltered: desired,
-            sectionMap: sectionMap,
-            hiddenCtrlUID: hiddenCtrl,
-            ahCtrlUID: nil
-        )
-
-        XCTAssertEqual(sequence, ["v2"])
     }
 
     /// If currentFlat already filtered against desiredFiltered matches

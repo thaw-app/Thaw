@@ -172,16 +172,6 @@ final class VirtualDisplayProvoker {
             return
         }
 
-        if let screen = screenWithDockReservedSpace() {
-            if shouldLogDecision {
-                lastDecisionLog = now
-                diagLog.info(
-                    "VirtualDisplayProvoke: skipping because the Dock reserves screen space (display \(screen.displayID), frame \(screen.frame.debugDescription), visibleFrame \(screen.visibleFrame.debugDescription))"
-                )
-            }
-            return
-        }
-
         // Claim the in-flight slot synchronously so a concurrent call cannot
         // spawn a second provoke before the task starts.
         isProvoking = true
@@ -206,20 +196,6 @@ final class VirtualDisplayProvoker {
             self.recheckScheduled = false
             self.considerProvoking()
         }
-    }
-
-    /// Returns the single managed screen when the Dock is reserving one of its
-    /// edges. Creating a temporary display in that state makes macOS recompute
-    /// visible frames, which can bounce the Dock and resize normal app windows.
-    private func screenWithDockReservedSpace() -> NSScreen? {
-        guard let screen = NSScreen.managedScreens.first else {
-            return nil
-        }
-        let canRunWithoutDockResize = MenuBarSection.canHideApplicationMenusWithoutDockResize(
-            screenFrame: screen.frame,
-            visibleFrame: screen.visibleFrame
-        )
-        return canRunWithoutDockResize ? nil : screen
     }
 
     private func runProvoke(targets: Set<CGWindowID>) async {

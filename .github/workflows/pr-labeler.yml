@@ -1,0 +1,91 @@
+name: "PR Auto Label"
+
+on:
+  pull_request_target:
+    types: [opened, edited, synchronize, reopened]
+
+jobs:
+  label:
+    runs-on: ubuntu-slim
+    permissions:
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Apply labels from PR template
+        uses: actions/github-script@v9
+        with:
+          script: |
+
+            const pr = context.payload.pull_request;
+            if (!pr) return;
+
+            const body = pr.body || '';
+
+            // Map "PR Type" checkbox text to repo labels.
+            const typeLabels = {
+              'Bugfix': ['bug'],
+              'CI/CD': ['ci', 'cd'],
+              'Documentation': ['docs'],
+              'Feature': ['feature'],
+              'Refactor': ['refactor'],
+              'Performance improvement': ['performance'],
+              'Test addition or update': ['test'],
+            };
+
+            // Extract the contents of a "## <heading>" section.
+            const getSection = (heading) => {
+              const re = new RegExp(`##\\s*${heading}\\s*\\n([\\s\\S]*?)(?=\\n##\\s|$)`, 'i');
+              const match = body.match(re);
+              return match ? match[1] : '';
+            };
+
+            const isChecked = (section, text) => {
+              const escaped = text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+              const re = new RegExp(`-\\s*\\[[xX]\\]\\s*${escaped}`);
+              return re.test(section);
+            };
+
+            const prTypeSection = getSection('PR Type');
+            const breakingSection = getSection('Does this PR introduce a breaking change\\?');
+
+            const toAdd = [];
+            const toRemove = [];
+            for (const [text, labels] of Object.entries(typeLabels)) {
+              if (isChecked(prTypeSection, text)) {
+                toAdd.push(...labels);
+              } else {
+                toRemove.push(...labels);
+              }
+            }
+
+            if (isChecked(breakingSection, 'Yes')) {
+              toAdd.push('breaking-change');
+            } else {
+              toRemove.push('breaking-change');
+            }
+
+            const existing = (await github.paginate(github.rest.issues.listLabelsOnIssue, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+            })).map(l => l.name);
+
+            if (toAdd.length > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                labels: toAdd,
+              });
+            }
+
+            for (const label of toRemove) {
+              if (existing.includes(label)) {
+                await github.rest.issues.removeLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: pr.number,
+                  name: label,
+                });
+              }
+            }

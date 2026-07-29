@@ -83,28 +83,6 @@ final class LayoutReconcilerTests: XCTestCase {
         )
     }
 
-    /// The profile application path receives live tag bases, so a changed
-    /// instance suffix can recover the saved position without guessing about
-    /// titles that merely end in a number.
-    func testUnmanagedPlanUsesLiveBaseForInstanceDrift() {
-        let desired = DesiredLayout.fromSavedSectionOrder(
-            ["hidden": ["com.example.app:Status"]],
-            newItemsPlacement: placement(section: "visible")
-        )
-
-        let result = LayoutReconciler.unmanagedPlacementPlan(
-            desired: desired,
-            unmanagedUIDs: ["com.example.app:Status:7"],
-            currentUIDs: ["com.example.app:Status:7"],
-            currentBaseIdentifiers: ["com.example.app:Status"]
-        )
-
-        XCTAssertEqual(
-            result["com.example.app:Status:7"],
-            .saved(section: .hidden, index: 0)
-        )
-    }
-
     // MARK: - resolveDestination
 
     /// .leftOfUID with an anchor present in items resolves to

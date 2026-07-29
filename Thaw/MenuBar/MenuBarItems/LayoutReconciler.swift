@@ -206,15 +206,13 @@ enum LayoutReconciler {
     static func unmanagedPlacementPlan(
         desired: DesiredLayout,
         unmanagedUIDs: [String],
-        currentUIDs: Set<String>,
-        currentBaseIdentifiers: Set<String> = []
+        currentUIDs: Set<String>
     ) -> [String: LayoutSolver.UnmanagedPlacement] {
         LayoutSolver.planUnmanagedPlacement(
             unmanagedUIDs: unmanagedUIDs,
             savedSectionOrder: desired.sectionOrderAsPersistedDict,
             newItemsPlacement: desired.newItemsPlacement,
-            currentUIDs: currentUIDs,
-            currentBaseIdentifiers: currentBaseIdentifiers
+            currentUIDs: currentUIDs
         )
     }
 

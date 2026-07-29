@@ -127,18 +127,24 @@ final class AppState: ObservableObject {
     }
 
     /// Presents the onboarding sheet if the user hasn't seen it yet.
+    ///
+    /// Only ever fires as a self-heal *after* first-launch setup has already
+    /// completed — during first launch itself, the dedicated `.permissions`
+    /// window owns onboarding. Without this guard, a Settings window restored
+    /// by AppKit's window-restoration at launch (e.g. after `defaults
+    /// delete`) can race with the `.permissions` window and show the tour
+    /// twice.
     func presentOnboardingIfNeeded() {
+        guard Defaults.bool(forKey: .hasCompletedFirstLaunch) else { return }
         if !Defaults.bool(forKey: .hasSeenOnboarding) {
             isOnboardingPresented = true
         }
     }
 
     /// Completes first-launch setup based on the permissions currently granted,
-    /// then brings the app to regular activation and opens Settings. Shared by
-    /// the permissions window's Continue button and onboarding's final slide.
+    /// then brings the app to regular activation and opens Settings.
     func completeFirstLaunchSetup() {
         dismissWindow(.permissions)
-        Defaults.set(true, forKey: .hasSeenOnboarding)
 
         let hasPermissions = permissions.permissionsState != .missing
         performSetup(hasPermissions: hasPermissions)
@@ -192,18 +198,6 @@ final class AppState: ObservableObject {
     /// Configures the internal observers for the app state.
     private func configureCancellables() {
         var c = Set<AnyCancellable>()
-
-        // Screen Recording can be changed in System Settings while Thaw is
-        // inactive. Refresh both the feature gate and the observable
-        // permission model before the user returns to a settings pane that
-        // depends on them.
-        NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                _ = ScreenCapture.cachedCheckPermissions(reset: true)
-                self?.permissions.refreshAllPermissions()
-            }
-            .store(in: &c)
 
         // Listen for changes to the active space. We need handle some special
         // cases that NSWorkspace.shared.notificationCenter seems to miss.

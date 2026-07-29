@@ -25,13 +25,5 @@
 	<string>file:///usr/bin/env</string>
 	<key>ThawSkyLightFrameworkPath</key>
 	<string>/System/Library/PrivateFrameworks/SkyLight.framework/SkyLight</string>
-	<key>NSLocationUsageDescription</key>
-	<string>Thaw uses your location to read the current Wi-Fi network name and to detect when you are near a saved place, so it can reveal or hide menu bar items based on the Wi-Fi network or your location. This is optional and used solely for the Wi-Fi and location trigger conditions.</string>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Thaw uses your location to read the current Wi-Fi network name and to detect when you are near a saved place, so it can reveal or hide menu bar items based on the Wi-Fi network or your location. This is optional and used solely for the Wi-Fi and location trigger conditions.</string>
-	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>Thaw checks which Bluetooth devices are connected so it can reveal or hide menu bar items based on connected devices. This is optional and used solely for the Bluetooth trigger condition.</string>
-	<key>NSFocusStatusUsageDescription</key>
-	<string>Thaw checks whether a Focus is active so it can reveal or hide menu bar items based on your Focus. This is optional and used solely for the Focus trigger condition.</string>
 </dict>
 </plist>

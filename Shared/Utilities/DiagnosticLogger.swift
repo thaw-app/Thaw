@@ -87,23 +87,21 @@ final class DiagnosticLogger: @unchecked Sendable {
         category: "DiagnosticLogger"
     )
 
-    /// Date formatter for log timestamps. DateFormatter is mutable, so every
-    /// use is serialized: diagnostic messages can originate on any queue.
-    private let timestampFormatter = OSAllocatedUnfairLock(initialState: {
+    /// Date formatter for log timestamps.
+    private let timestampFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd HH:mm:ss.SSS"
         formatter.locale = Locale(identifier: "en_US_POSIX")
         return formatter
-    }())
+    }()
 
-    /// Date formatter for log file names, likewise protected from concurrent
-    /// enable/attach calls.
-    private let fileNameFormatter = OSAllocatedUnfairLock(initialState: {
+    /// Date formatter for log file names.
+    private let fileNameFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd_HH-mm-ss"
         formatter.locale = Locale(identifier: "en_US_POSIX")
         return formatter
-    }())
+    }()
 
     /// Serial queue for file I/O.
     private let writeQueue = DispatchQueue(
@@ -151,7 +149,7 @@ final class DiagnosticLogger: @unchecked Sendable {
             return
         }
 
-        let fileName = "thaw_\(fileNameString(from: Date())).log"
+        let fileName = "thaw_\(fileNameFormatter.string(from: Date())).log"
         openLogFile(at: dir.appendingPathComponent(fileName))
     }
 
@@ -206,7 +204,7 @@ final class DiagnosticLogger: @unchecked Sendable {
         let header = """
         ========================================
         Thaw Diagnostic Log
-        Started: \(timestampString(from: Date()))
+        Started: \(timestampFormatter.string(from: Date()))
         Process: \(ProcessInfo.processInfo.processName)
         Version: \(version) (\(build)) commit \(sha)
         macOS: \(ProcessInfo.processInfo.operatingSystemVersionString)
@@ -226,7 +224,7 @@ final class DiagnosticLogger: @unchecked Sendable {
     private func closeLogFile() {
         fileHandleLock.withLock { handle in
             if let handle {
-                let ts = timestampString(from: Date())
+                let ts = timestampFormatter.string(from: Date())
                 let footer = "\n\(ts) [DiagnosticLogger] Diagnostic logging stopped\n"
                 if let data = footer.data(using: .utf8) {
                     handle.write(data)
@@ -288,10 +286,10 @@ final class DiagnosticLogger: @unchecked Sendable {
     ///   - level: The severity level.
     ///   - category: The logger category (e.g. "MenuBarItemManager").
     ///   - message: The log message.
-    func log(level: Level, category: String, at date: Date = Date(), message: String) {
+    func log(level: Level, category: String, message: String) {
         guard isEnabled else { return }
 
-        let timestamp = timestampString(from: date)
+        let timestamp = timestampFormatter.string(from: Date())
         let line = "\(timestamp) [\(level.rawValue)] [\(category)] \(message)\n"
 
         guard let data = line.data(using: .utf8) else { return }
@@ -301,14 +299,6 @@ final class DiagnosticLogger: @unchecked Sendable {
                 handle?.write(data)
             }
         }
-    }
-
-    private func timestampString(from date: Date) -> String {
-        timestampFormatter.withLock { $0.string(from: date) }
-    }
-
-    private func fileNameString(from date: Date) -> String {
-        fileNameFormatter.withLock { $0.string(from: date) }
     }
 }
 
@@ -325,15 +315,6 @@ final class DiagnosticLogger: @unchecked Sendable {
 struct DiagLog {
     private let osLogger: Logger
     private let category: String
-    /// A single lock protects the mutable formatter used by every lightweight
-    /// logger. DiagLog values are commonly shared by main-actor and detached
-    /// work, so an instance formatter would still be raced by those callers.
-    private static let timestampFormatter = OSAllocatedUnfairLock(initialState: {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm:ss.SSS"
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        return formatter
-    }())
 
     init(category: String) {
         self.osLogger = Logger(
@@ -343,53 +324,33 @@ struct DiagLog {
         self.category = category
     }
 
-    /// Shared emission for all five levels: evaluate the message once,
-    /// capture a single timestamp instant, forward it to os_log (with the
-    /// per-level emitter closure) and to the diagnostic file when that
-    /// optional file sink is enabled.
-    ///
-    /// Console logging is intentionally independent of the file-logging
-    /// setting. The setting promises to avoid disk writes, not to remove
-    /// normal OSLog visibility for startup, layout, and permission paths.
-    private func emit(
-        level: DiagnosticLogger.Level,
-        message: () -> String,
-        toOSLog: (String) -> Void
-    ) {
-        let now = Date()
-        let msg = message()
-        let timestamp = Self.timestampFormatter.withLock { $0.string(from: now) }
-        toOSLog("[\(timestamp)] \(msg)")
-        DiagnosticLogger.shared.log(level: level, category: category, at: now, message: msg)
-    }
-
     func debug(_ message: @autoclosure () -> String) {
-        emit(level: .debug, message: message) {
-            osLogger.debug("\($0, privacy: .public)")
-        }
+        let msg = message()
+        osLogger.debug("\(msg, privacy: .public)")
+        DiagnosticLogger.shared.log(level: .debug, category: category, message: msg)
     }
 
     func info(_ message: @autoclosure () -> String) {
-        emit(level: .info, message: message) {
-            osLogger.info("\($0, privacy: .public)")
-        }
+        let msg = message()
+        osLogger.info("\(msg, privacy: .public)")
+        DiagnosticLogger.shared.log(level: .info, category: category, message: msg)
     }
 
     func notice(_ message: @autoclosure () -> String) {
-        emit(level: .notice, message: message) {
-            osLogger.notice("\($0, privacy: .public)")
-        }
+        let msg = message()
+        osLogger.notice("\(msg, privacy: .public)")
+        DiagnosticLogger.shared.log(level: .notice, category: category, message: msg)
     }
 
     func warning(_ message: @autoclosure () -> String) {
-        emit(level: .warning, message: message) {
-            osLogger.warning("\($0, privacy: .public)")
-        }
+        let msg = message()
+        osLogger.warning("\(msg, privacy: .public)")
+        DiagnosticLogger.shared.log(level: .warning, category: category, message: msg)
     }
 
     func error(_ message: @autoclosure () -> String) {
-        emit(level: .error, message: message) {
-            osLogger.error("\($0, privacy: .public)")
-        }
+        let msg = message()
+        osLogger.error("\(msg, privacy: .public)")
+        DiagnosticLogger.shared.log(level: .error, category: category, message: msg)
     }
 }

@@ -169,54 +169,6 @@ enum LayoutSolver {
         return result
     }
 
-    /// Reconstructs the physical left-to-right screen order from a flat
-    /// sequence produced by `flattenCurrentSections`.
-    ///
-    /// The inverse of `flattenCurrentSections`: that helper concatenates
-    /// blocks in `[visible][hiddenCtrl][hidden][ahCtrl][alwaysHidden]` order,
-    /// which is right-to-left on screen (visible sits nearest Control Center
-    /// at the right edge). This returns the same items in
-    /// `[alwaysHidden][ahCtrl][hidden][hiddenCtrl][visible]` order — the
-    /// left-to-right order the full-sort executor places items in. A control
-    /// UID joins the result only if `currentFlat` actually contained it, so a
-    /// caller reconstructing from partial data never gets a fabricated
-    /// divider position.
-    static nonisolated func physicalOrderFromFlat(
-        _ currentFlat: [String],
-        hiddenCtrlUID: String,
-        ahCtrlUID: String?
-    ) -> [String] {
-        var visibleBlock = [String]()
-        var hiddenBlock = [String]()
-        var ahBlock = [String]()
-        var blockIndex = 0
-        var sawHiddenCtrl = false
-        var sawAHCtrl = false
-        for uid in currentFlat {
-            if uid == hiddenCtrlUID {
-                blockIndex = 1
-                sawHiddenCtrl = true
-                continue
-            }
-            if let ahCtrlUID, uid == ahCtrlUID {
-                blockIndex = 2
-                sawAHCtrl = true
-                continue
-            }
-            switch blockIndex {
-            case 0: visibleBlock.append(uid)
-            case 1: hiddenBlock.append(uid)
-            default: ahBlock.append(uid)
-            }
-        }
-        var physicalOrder = ahBlock
-        if sawAHCtrl, let ahCtrlUID { physicalOrder.append(ahCtrlUID) }
-        physicalOrder.append(contentsOf: hiddenBlock)
-        if sawHiddenCtrl { physicalOrder.append(hiddenCtrlUID) }
-        physicalOrder.append(contentsOf: visibleBlock)
-        return physicalOrder
-    }
-
     // MARK: - Unmanaged partition
 
     /// Returns the subset of currentFlat that should be routed through
@@ -374,6 +326,61 @@ enum LayoutSolver {
         return .newHideableItem(candidate, identifierToMark: identifierToMark)
     }
 
+    // MARK: - Geometry readiness
+
+    /// Whether the menu bar geometry is settled enough to run a layout pass on
+    /// a notched display.
+    ///
+    /// `rightBoundary` is Control Center's left edge (or the screen's right edge
+    /// when Control Center is absent), the same value the notch-overflow budget
+    /// is derived from. A finite value to the right of the notch's right edge is
+    /// a valid layout anchor. A value at or left of the notch (or non-finite)
+    /// means Control Center was reported at a stale off-screen position, which
+    /// happens transiently during a display reconnect or Control Center widget
+    /// churn. Running the placement and move logic against that geometry
+    /// mis-positions the control items (the Thaw visible icon jumps to the far
+    /// left), so the pass must be deferred until the geometry settles.
+    static nonisolated func isMenuBarGeometryReady(
+        rightBoundary: CGFloat,
+        notchMaxX: CGFloat
+    ) -> Bool {
+        rightBoundary.isFinite && rightBoundary > notchMaxX
+    }
+
+    /// Whether the given menu bar items currently occupy more than one display.
+    ///
+    /// Each center is matched to the screen frame that contains it. Frames and
+    /// centers are expected in the global CoreGraphics coordinate space
+    /// (top-left origin), so a secondary display above the main one has a
+    /// negative y origin. Centers that fall on no screen are intentionally
+    /// parked off-screen hidden items (the control item shoves them thousands
+    /// of points to the left) and are ignored. When the remaining on-screen
+    /// items resolve to more than one distinct screen the active menu bar is
+    /// relocating between displays: macOS migrates the status item windows
+    /// asynchronously, so for a window of time some items sit on the old screen
+    /// and some on the new one. A bulk apply dispatched then resolves each
+    /// move against a different display and cannot converge, leaving items
+    /// stranded where they read as un-hidden; a section order persisted then
+    /// bakes that transition artifact into the saved layout. Both callers defer
+    /// until the items collapse back onto a single display.
+    static nonisolated func itemsSpanMultipleDisplays(
+        itemCenters: [CGPoint],
+        screenFrames: [CGRect]
+    ) -> Bool {
+        guard screenFrames.count > 1 else { return false }
+        var hitScreens = Set<Int>()
+        for center in itemCenters {
+            guard let index = screenFrames.firstIndex(where: { $0.contains(center) }) else {
+                continue
+            }
+            hitScreens.insert(index)
+            if hitScreens.count > 1 {
+                return true
+            }
+        }
+        return false
+    }
+
     // MARK: - Notch overflow
 
     /// Decides which visible items must overflow into hidden to fit the
@@ -503,13 +510,16 @@ enum LayoutSolver {
             .filter { !controlSet.contains($0) }
 
         let overflowSet = Set(overflowUIDs)
-        let remainingNonChevron = nonChevronUIDs.filter { !overflowSet.contains($0) }
+        // Keep the visible items in their saved order and drop only the
+        // overflowed ones. The visible control item is never in overflowSet, so
+        // filtering preserves its saved position instead of forcing it to the
+        // front of the visible section. Prepending the chevron relocated the
+        // always-visible Thaw icon to the leftmost slot on every overflow even
+        // though it was never the item that overflowed.
+        let remainingVisible = visibleUIDs.filter { !overflowSet.contains($0) }
 
         var rebuilt = [String]()
-        if let chevron = controlUIDs.visible {
-            rebuilt.append(chevron)
-        }
-        rebuilt.append(contentsOf: remainingNonChevron)
+        rebuilt.append(contentsOf: remainingVisible)
         rebuilt.append(controlUIDs.hidden)
         rebuilt.append(contentsOf: existingHidden)
         rebuilt.append(contentsOf: overflowUIDs)
@@ -627,17 +637,6 @@ enum LayoutSolver {
     /// Returns an empty array when the current order already matches the
     /// desired order (no moves needed) or when desired is empty.
     ///
-    /// Items that already sit in the correct relative order at the left of
-    /// the bar are trimmed from the front of the sequence: because every
-    /// unmoved item keeps its position and every replayed item lands at the
-    /// far right in sequence order, the final order is (current physical
-    /// order minus replayed items) followed by the replayed suffix. The
-    /// longest prefix of the target sequence whose members appear in
-    /// increasing physical order therefore never needs to move. Without the
-    /// trim, a single out-of-place item — Control Center's transient
-    /// Now Playing widget reappearing in the visible section — replayed the
-    /// whole bar with one synthetic drag per item.
-    ///
     /// Pure over its inputs. The orchestrator handles per-item live
     /// fetching, the move() loop, and control-item state restoration.
     static nonisolated func planFullSortSequence(
@@ -647,10 +646,12 @@ enum LayoutSolver {
         hiddenCtrlUID: String,
         ahCtrlUID: String?
     ) -> [String] {
-        // There is no requested layout to replay. In particular, do not emit
-        // synthetic control-item moves merely because an always-hidden
-        // divider is available to the caller.
-        guard !desiredFiltered.isEmpty else { return [] }
+        // Skip if current order already matches the desired order.
+        let desiredSet = Set(desiredFiltered)
+        let currentFiltered = currentFlat.filter { desiredSet.contains($0) }
+        if currentFiltered == desiredFiltered {
+            return []
+        }
 
         var controlSet: Set<String> = [hiddenCtrlUID]
         if let ahUID = ahCtrlUID { controlSet.insert(ahUID) }
@@ -671,39 +672,7 @@ enum LayoutSolver {
         fullSequence.append(contentsOf: hiddenUIDs)
         fullSequence.append(hiddenCtrlUID)
         fullSequence.append(contentsOf: visibleUIDs)
-
-        // Reconstruct the current physical (left-to-right) order via the
-        // named inverse of flattenCurrentSections. The prefix-trim below
-        // subsumes the old `currentFiltered == desiredFiltered` no-op
-        // early-return: when the order already matches, every fullSequence
-        // member appears in increasing physical order, so the whole
-        // sequence trims away to [].
-        let physicalOrder = physicalOrderFromFlat(
-            currentFlat,
-            hiddenCtrlUID: hiddenCtrlUID,
-            ahCtrlUID: ahCtrlUID
-        )
-
-        var positionByUID = [String: Int]()
-        for (offset, uid) in physicalOrder.enumerated() where positionByUID[uid] == nil {
-            positionByUID[uid] = offset
-        }
-
-        // Trim the longest prefix of the target sequence whose members
-        // appear in increasing physical order. Non-sequence items (e.g.
-        // unresolved generic Control Center widgets that are deliberately
-        // not repositioned) may interleave with the untouched prefix; they
-        // are never moved on either path, so they don't affect the managed
-        // items' relative order. An item missing from the physical order is
-        // treated as the divergence point.
-        var lastPosition = -1
-        var untouchedPrefixCount = 0
-        for uid in fullSequence {
-            guard let position = positionByUID[uid], position > lastPosition else { break }
-            lastPosition = position
-            untouchedPrefixCount += 1
-        }
-        return Array(fullSequence.dropFirst(untouchedPrefixCount))
+        return fullSequence
     }
 
     // MARK: - Saved-position lookup
@@ -728,41 +697,31 @@ enum LayoutSolver {
     /// Looks up the saved position for the given identifier, falling back
     /// to baseID matching when the exact instanceIndex differs.
     ///
-    /// Multi-instance apps may receive a different :N suffix on relaunch.
-    /// This variant first tries an exact identifier, then uses an explicitly
-    /// supplied set of live namespace/title bases to resolve a suffix only
-    /// when it is unambiguous. Without live tags, legacy strings alone cannot
-    /// distinguish an instance suffix from a title ending in `:number`.
+    /// Multi-instance apps may receive a different :N suffix on relaunch
+    /// (instance indices are reassigned by windowID sort order after each
+    /// assignStableInstanceIndices pass). This variant first tries an
+    /// exact-identifier match, then a baseID-prefix match against any
+    /// instance saved for the same namespace:title. Returns the first
+    /// baseID match found.
     static nonisolated func savedPositionByBaseID(
         for uid: String,
-        in savedSectionOrder: [String: [String]],
-        knownBaseIdentifiers: Set<String> = []
+        in savedSectionOrder: [String: [String]]
     ) -> SavedPosition? {
         if let exact = savedPosition(for: uid, in: savedSectionOrder) {
             return exact
         }
-        guard let baseID = baseID(forIdentifier: uid, knownBaseIdentifiers: knownBaseIdentifiers) else {
-            return nil
-        }
-        var fallback: SavedPosition?
-        var matchingSections = Set<MenuBarSection.Name>()
+        let baseID = uid.split(separator: ":", maxSplits: 2).prefix(2).joined(separator: ":")
+        guard baseID.contains(":") else { return nil }
         for (sectionKeyString, identifiers) in savedSectionOrder {
             guard let section = sectionName(forPersistedKey: sectionKeyString) else { continue }
             for (index, identifier) in identifiers.enumerated() {
-                guard let savedBaseID = Self.baseID(
-                    forIdentifier: identifier,
-                    knownBaseIdentifiers: knownBaseIdentifiers
-                ) else { continue }
+                let savedBaseID = identifier.split(separator: ":", maxSplits: 2).prefix(2).joined(separator: ":")
                 if savedBaseID == baseID {
-                    matchingSections.insert(section)
-                    if fallback == nil {
-                        fallback = SavedPosition(section: section, index: index)
-                    }
+                    return SavedPosition(section: section, index: index)
                 }
             }
         }
-        guard matchingSections.count == 1 else { return nil }
-        return fallback
+        return nil
     }
 
     // MARK: - Unmanaged placement
@@ -781,19 +740,14 @@ enum LayoutSolver {
         unmanagedUIDs: [String],
         savedSectionOrder: [String: [String]],
         newItemsPlacement: MenuBarItemManager.NewItemsPlacement,
-        currentUIDs: Set<String>,
-        currentBaseIdentifiers: Set<String> = []
+        currentUIDs: Set<String>
     ) -> [String: UnmanagedPlacement] {
         var result = [String: UnmanagedPlacement]()
         let newItemsSection = sectionName(forPersistedKey: newItemsPlacement.sectionKey) ?? .hidden
 
         for uid in unmanagedUIDs {
             // 1. Saved-position lookup (exact then baseID).
-            if let position = savedPositionByBaseID(
-                for: uid,
-                in: savedSectionOrder,
-                knownBaseIdentifiers: currentBaseIdentifiers
-            ) {
+            if let position = savedPositionByBaseID(for: uid, in: savedSectionOrder) {
                 result[uid] = .saved(section: position.section, index: position.index)
                 continue
             }
@@ -912,10 +866,9 @@ enum LayoutSolver {
             // Stale instance index: the app is back with a different
             // :N suffix. The cache already has it under its new uid;
             // drop the stale saved entry.
-            if let base = baseID(
-                forIdentifier: savedUID,
-                knownBaseIdentifiers: allCurrentBaseIdentifiers
-            ), allCurrentBaseIdentifiers.contains(base) {
+            let base = savedUID.split(separator: ":", maxSplits: 2)
+                .prefix(2).joined(separator: ":")
+            if allCurrentBaseIdentifiers.contains(base) {
                 continue
             }
 
@@ -993,16 +946,9 @@ enum LayoutSolver {
         return result
     }
 
-    /// Resolves a legacy identifier against known live tag bases. See
-    /// MenuBarItemTag.resolvedBaseIdentifier for the ambiguity contract.
-    private static nonisolated func baseID(
-        forIdentifier id: String,
-        knownBaseIdentifiers: Set<String>
-    ) -> String? {
-        MenuBarItemTag.resolvedBaseIdentifier(
-            for: id,
-            knownBaseIdentifiers: knownBaseIdentifiers
-        )
+    /// Extracts the baseID (namespace:title) prefix from a uniqueIdentifier.
+    private static nonisolated func baseID(forIdentifier id: String) -> String {
+        id.split(separator: ":", maxSplits: 2).prefix(2).joined(separator: ":")
     }
 
     /// Maps a persisted section key string to its enum value.

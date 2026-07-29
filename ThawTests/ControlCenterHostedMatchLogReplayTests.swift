@@ -67,22 +67,6 @@ final class ControlCenterHostedMatchLogReplayTests: XCTestCase {
         )
     }
 
-    func testParserRecoversSpacedTitlesAndCandidateNames() throws {
-        let scenario = try XCTUnwrap(ControlCenterHostedResolutionReplay.parse(
-            """
-            SourcePIDCache diag unresolved: windowID=42 title=Menu Item With Spaces cgOwner=com.apple.controlcenter:pid=123 nearest=[Example App@0(enabled=true), com.apple.controlcenter@42.5(enabled=nil)]
-            """
-        ))
-
-        XCTAssertEqual(scenario.windowID, 42)
-        XCTAssertEqual(scenario.title, "Menu Item With Spaces")
-        XCTAssertEqual(scenario.cgOwnerBundleID, cc)
-        XCTAssertEqual(
-            scenario.candidates.first,
-            .init(appBundleID: "Example App", distance: 0, enabled: true)
-        )
-    }
-
     // MARK: - Regression locks: the mutually-protective pair
 
     /// RED before the gate, GREEN after. Little Snitch's icon must NOT bind to
@@ -208,17 +192,17 @@ enum ControlCenterHostedResolutionReplay {
         else {
             return nil
         }
-        let title = field(in: line, after: "title=", before: [" bounds=", " | cgOwner=", " cgOwner="])
-        let cgOwner = field(in: line, after: "cgOwner=", before: [":pid="])
+        let title = line.firstMatch(of: /title=(\S+)/).map { String($0.output.1) }
+        let cgOwner = line.firstMatch(of: /cgOwner=([A-Za-z0-9._-]+):pid=/).map { String($0.output.1) }
 
         var candidates = [CandidateChild]()
         if let nearest = line.firstMatch(of: /nearest=\[(.*)\]/) {
             for match in String(nearest.output.1)
-                .matches(of: /([^@,\]]+)@([0-9.]+)\(enabled=(nil|true|false)\)/)
+                .matches(of: /([A-Za-z0-9._-]+)@([0-9.]+)\(enabled=(nil|true|false)\)/)
             {
                 let enabled: Bool? = match.output.3 == "nil" ? nil : (match.output.3 == "true")
                 candidates.append(CandidateChild(
-                    appBundleID: String(match.output.1).trimmingCharacters(in: .whitespacesAndNewlines),
+                    appBundleID: String(match.output.1),
                     distance: Double(match.output.2).map { CGFloat($0) } ?? .greatestFiniteMagnitude,
                     enabled: enabled
                 ))
@@ -226,19 +210,6 @@ enum ControlCenterHostedResolutionReplay {
         }
 
         return WindowScenario(windowID: windowID, title: title, cgOwnerBundleID: cgOwner, candidates: candidates)
-    }
-
-    private static func field(in line: String, after start: String, before delimiters: [String]) -> String? {
-        guard let startRange = line.range(of: start) else {
-            return nil
-        }
-
-        let tail = line[startRange.upperBound...]
-        let endIndex = delimiters
-            .compactMap { tail.range(of: $0)?.lowerBound }
-            .min()
-        let value = endIndex.map { tail[..<$0] } ?? tail[...]
-        return String(value).trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     /// Replays the strict 1pt spatial pass for one window through the real

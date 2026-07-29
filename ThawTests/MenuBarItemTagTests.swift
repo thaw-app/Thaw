@@ -12,23 +12,6 @@ import XCTest
 // MARK: - MenuBarItemTag.Namespace Tests
 
 final class MenuBarItemTagNamespaceTests: XCTestCase {
-    func testForeignControlCenterHostedThawControlIsNotTaggedAsOurs() {
-        XCTAssertFalse(
-            MenuBarItem.isOwnControlItemWindow(
-                title: "Thaw.ControlItem.Hidden",
-                ownerPID: 999_999,
-                sourcePID: nil
-            )
-        )
-        XCTAssertTrue(
-            MenuBarItem.isOwnControlItemWindow(
-                title: "Thaw.ControlItem.Hidden",
-                ownerPID: 999_999,
-                sourcePID: ProcessInfo.processInfo.processIdentifier
-            )
-        )
-    }
-
     // MARK: - Initialization Tests
 
     func testNullNamespace() {
@@ -243,16 +226,6 @@ final class MenuBarItemTagTests: XCTestCase {
 
         XCTAssertEqual(tag.tagIdentifier, "com.example.app:TestItem")
         XCTAssertFalse(tag.tagIdentifier.hasSuffix(":0"))
-    }
-
-    func testResolvedBaseIdentifierAcceptsLegacyZeroSuffixWhenBaseIsKnown() {
-        XCTAssertEqual(
-            MenuBarItemTag.resolvedBaseIdentifier(
-                for: "com.example.app:TestItem:0",
-                knownBaseIdentifiers: ["com.example.app:TestItem"]
-            ),
-            "com.example.app:TestItem"
-        )
     }
 
     // MARK: - System Item Tests

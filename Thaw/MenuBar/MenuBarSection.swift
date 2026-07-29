@@ -87,19 +87,6 @@ final class MenuBarSection {
         case iceBar
     }
 
-    /// Returns whether automatic app-menu hiding can run without causing the
-    /// Dock to release reserved screen space and make other apps resize.
-    static nonisolated func canHideApplicationMenusWithoutDockResize(
-        screenFrame: CGRect,
-        visibleFrame: CGRect
-    ) -> Bool {
-        let tolerance: CGFloat = 1
-        let dockUsesSideEdge = visibleFrame.minX > screenFrame.minX + tolerance ||
-            visibleFrame.maxX < screenFrame.maxX - tolerance
-        let dockUsesBottomEdge = visibleFrame.minY > screenFrame.minY + tolerance
-        return !dockUsesSideEdge && !dockUsesBottomEdge
-    }
-
     /// Calculates the usable inline width for menu bar items on a screen.
     static nonisolated func usableInlineWidth(
         from appMenuRightEdge: CGFloat?,
@@ -188,11 +175,7 @@ final class MenuBarSection {
             screenFrameMinX: screen.frame.minX,
             screenVisibleMaxX: screen.visibleFrame.maxX,
             notchFrame: screen.frameOfNotch,
-            allowHidingApplicationMenus: appState.settings.advanced.hideApplicationMenus &&
-                Self.canHideApplicationMenusWithoutDockResize(
-                    screenFrame: screen.frame,
-                    visibleFrame: screen.visibleFrame
-                )
+            allowHidingApplicationMenus: appState.settings.advanced.hideApplicationMenus
         )
     }
 
