@@ -1132,10 +1132,15 @@ final class ControlItem: NSObject {
             return
         }
 
-        let screenForCheck = window?.screen ?? NSScreen.main
+        let statusItemScreen = window?.screen
+        let screenForCheck = NSScreen.screenWithMouse ?? statusItemScreen ?? NSScreen.main
         if let screen = screenForCheck, !screen.isSystemMenuBarVisible() {
             return
         }
+        let synchronizeOrder = Self.shouldSynchronizeRevealOrder(
+            clickDisplayID: screenForCheck?.displayID,
+            statusItemDisplayID: statusItemScreen?.displayID
+        )
 
         let event = NSApp.currentEvent
         let modifierFlags = event?.modifierFlags ?? []
@@ -1159,12 +1164,7 @@ final class ControlItem: NSObject {
         switch intent {
         case .toggleSection:
             if let section = menuBarManager.section(withName: sectionName), section.isEnabled {
-                section.toggle(
-                    synchronizeOrder: Self.shouldSynchronizeRevealOrder(
-                        clickDisplayID: screenForCheck?.displayID,
-                        statusItemDisplayID: statusItemScreen?.displayID
-                    )
-                )
+                section.toggle()
             }
         case .showAlwaysHidden:
             if let section = menuBarManager.section(withName: .alwaysHidden), section.isEnabled {
@@ -1185,7 +1185,10 @@ final class ControlItem: NSObject {
                     s.desiredState = .showSection
                     s.updateControlItemState(for: nil)
                 }
-                menuBarManager.sectionController?.show(.alwaysHidden)
+                menuBarManager.sectionController?.show(
+                    .alwaysHidden,
+                    synchronizeOrder: synchronizeOrder
+                )
             } else {
                 diagLog.debug("performPrimaryAction: showAlwaysHidden — section found=\(menuBarManager.section(withName: .alwaysHidden) != nil), isEnabled=\(menuBarManager.section(withName: .alwaysHidden)?.isEnabled ?? false)")
             }
@@ -1200,7 +1203,10 @@ final class ControlItem: NSObject {
                     s.updateControlItemState(for: nil)
                 }
                 if makeVisible {
-                    menuBarManager.sectionController?.show(.alwaysHidden)
+                    menuBarManager.sectionController?.show(
+                        .alwaysHidden,
+                        synchronizeOrder: synchronizeOrder
+                    )
                 } else {
                     menuBarManager.sectionController?.hideRevealedSections()
                     menuBarManager.iceBarPanel.close()

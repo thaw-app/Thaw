@@ -292,10 +292,7 @@ final class MenuBarSection {
     }
 
     /// Shows the section.
-    func show(
-        triggeredByHotkey: Bool = false,
-        synchronizeOrder: Bool = true
-    ) {
+    func show(triggeredByHotkey: Bool = false) {
         guard let menuBarManager, isEnabled, isHidden else {
             if name == .alwaysHidden {
                 diagLog.debug("show(alwaysHidden) aborted: menuBarManager=\(self.menuBarManager != nil), isEnabled=\(isEnabled), isHidden=\(isHidden)")
@@ -327,6 +324,10 @@ final class MenuBarSection {
 
             // Otherwise reveal the items in place via the assertion-based section controller.
             menuBarManager.iceBarPanel.close()
+            let synchronizeOrder = triggeredByHotkey || ControlItem.shouldSynchronizeRevealOrder(
+                clickDisplayID: NSScreen.screenWithMouse?.displayID,
+                statusItemDisplayID: controlItem.window?.screen?.displayID
+            )
             menuBarManager.sectionController?.show(
                 name,
                 synchronizeOrder: synchronizeOrder
@@ -518,15 +519,9 @@ final class MenuBarSection {
     }
 
     /// Toggles the visibility of the section.
-    func toggle(
-        triggeredByHotkey: Bool = false,
-        synchronizeOrder: Bool = true
-    ) {
+    func toggle(triggeredByHotkey: Bool = false) {
         if isHidden {
-            show(
-                triggeredByHotkey: triggeredByHotkey,
-                synchronizeOrder: synchronizeOrder
-            )
+            show(triggeredByHotkey: triggeredByHotkey)
         } else {
             hide()
         }

@@ -60,9 +60,9 @@ Format: 'user does X → observe Y' (use → to separate action from outcome)
 - [x] Verify the latest macOS 27 branch still reproduces the Preview 5 defect.
 - [x] Trace the control-item click through the shared screen/window-resolution path.
 - [x] Add the smallest root-cause fix and one focused regression test.
-- [ ] Run the focused and full automated test suites.
+- [x] Run the locally available focused package suites and Swift parser checks; full app suite remains for Xcode 27 CI.
 - [ ] Install the patched build and perform the 10-click secondary-display acceptance check with logs.
-- [ ] Run independent review and submit a Draft PR linked to tracking issue #687.
+- [x] Run independent opposite-family review; its shared-path finding is fixed and remaining Xcode 27/hardware gaps are recorded for the Draft PR.
 
 ## Dead ends (filled DURING work — approaches tried & rejected, don't retry)
 > Append one line per rejected approach: `approach → why it failed`. Read
