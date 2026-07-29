@@ -676,16 +676,19 @@ actor SourcePIDCache {
         // than once per interval for the same unresolved set.
         var shouldDumpUnresolvedDiagnostics = false
         if !unresolvedWindows.isEmpty {
+            let unresolvedSnapshot = unresolvedWindows
             shouldDumpUnresolvedDiagnostics = lastUnresolvedDiagDump.withLock { last in
                 if let last {
-                    return last.windowIDs != unresolvedWindows
+                    return last.windowIDs != unresolvedSnapshot
                         || ContinuousClock.now >= last.at + Self.unresolvedDiagDumpInterval
                 }
                 return true
             }
+            if shouldDumpUnresolvedDiagnostics {
+                lastUnresolvedDiagDump.withLock { $0 = (unresolvedSnapshot, ContinuousClock.now) }
+            }
         }
         if shouldDumpUnresolvedDiagnostics {
-            lastUnresolvedDiagDump.withLock { $0 = (unresolvedWindows, ContinuousClock.now) }
             SourcePIDCache.diagLog.debug(
                 "SourcePIDCache diag: \(unresolvedWindows.count) window(s) unresolved after batch, dumping details"
             )
