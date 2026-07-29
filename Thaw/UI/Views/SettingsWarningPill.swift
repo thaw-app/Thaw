@@ -97,7 +97,10 @@ struct SettingsWarningPill: View {
         }
         .shadow(color: tint.opacity(0.12), radius: 10, y: 3)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityElement(children: .combine)
+        // Combine the pill into a single element when it is text-only; when
+        // an action is present, contain the children instead so the button
+        // remains independently focusable and activatable.
+        .accessibilityElement(children: action != nil ? .contain : .combine)
         .listRowBackground(Color.clear)
     }
 

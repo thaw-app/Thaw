@@ -473,10 +473,14 @@ struct ProfileSettingsPane: View {
         }
 
         let connectedIDs = Set(displays.map(\.id))
+        // Multiple profiles can share an associated display; track the UUIDs
+        // already appended so ForEach receives unique identities.
+        var seenUUIDs = connectedIDs
         for profile in profileManager.profiles {
             guard let uuid = profile.associatedDisplayUUID,
-                  !connectedIDs.contains(uuid)
+                  !seenUUIDs.contains(uuid)
             else { continue }
+            seenUUIDs.insert(uuid)
             let cachedName = profile.associatedDisplayName ?? uuid
             displays.append(DisplayInfo(
                 id: uuid,
