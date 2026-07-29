@@ -94,7 +94,7 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         run: |
           docker run --rm -v "$PWD:/work" -w /work \
-            ghcr.io/realm/swiftlint:0.63.3 \
+            ghcr.io/realm/swiftlint:0.63.3@sha256:b70b763c949399cc3e4fdcfbc7588944d9503d498b6d96e853dfa07a944256e6 \
             swiftlint --strict
 
   build:

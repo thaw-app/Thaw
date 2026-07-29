@@ -14,8 +14,10 @@ on:
   workflow_dispatch:
 
 # Declare default permissions as read only.
-# Publishing requires no workflow-level write permissions.
-permissions: read-all
+# Publishing requires no workflow-level write permissions. The analysis job
+# declares its own full permission set, which replaces this default outright.
+permissions:
+  contents: read
 
 jobs:
   analysis:
