@@ -387,7 +387,29 @@ nonisolated extension MenuBarItem {
                 windows[i].ownerPID == ownPID
         })
 
-        let pids = await MenuBarItemService.Connection.shared.sourcePIDs(for: windows)
+        // Control item windows have a locally-known PID. Their AX children are
+        // disabled divider elements, so asking the XPC service to resolve them
+        // guarantees an unresolved cache miss and can initiate an expensive
+        // scan of every running app's extras menu bar.
+        let indicesToResolve = windows.indices.filter { !controlItemIndices.contains($0) }
+        let resolvedPIDs: [pid_t?] = if indicesToResolve.isEmpty {
+            []
+        } else {
+            await MenuBarItemService.Connection.shared.sourcePIDs(
+                for: indicesToResolve.map { windows[$0] }
+            )
+        }
+
+        var pids = [pid_t?](repeating: nil, count: windows.count)
+        if resolvedPIDs.count == indicesToResolve.count {
+            for (resolvedIndex, windowIndex) in indicesToResolve.enumerated() {
+                pids[windowIndex] = resolvedPIDs[resolvedIndex]
+            }
+        } else if !indicesToResolve.isEmpty {
+            diagLog.error(
+                "getMenuBarItems: sourcePIDs returned \(resolvedPIDs.count) entries for \(indicesToResolve.count) windows; treating all as unresolved"
+            )
+        }
 
         var items = windows.enumerated().map { index, window in
             let pid: pid_t? = controlItemIndices.contains(index) ? ownPID : pids[index]
