@@ -9,7 +9,10 @@
 import Foundation
 
 /// A parameterless action reachable via `thaw://`.
-enum SettingsURIAction: String, CaseIterable, Equatable {
+///
+/// Explicitly `nonisolated`: the Thaw target defaults to MainActor isolation,
+/// but URI parsing is pure Foundation work (and is fuzzed off the main actor).
+nonisolated enum SettingsURIAction: String, CaseIterable, Equatable, Sendable {
     case toggleHidden = "toggle-hidden"
     case toggleAlwaysHidden = "toggle-always-hidden"
     case search
@@ -19,7 +22,7 @@ enum SettingsURIAction: String, CaseIterable, Equatable {
 }
 
 /// The decoded intent of an incoming `thaw://` URL.
-enum SettingsURIRoute: Equatable {
+nonisolated enum SettingsURIRoute: Equatable, Sendable {
     case set(key: String, value: String, displayUUID: String?)
     case toggle(key: String, displayUUID: String?)
     case get(
@@ -44,7 +47,7 @@ enum SettingsURIRoute: Equatable {
 /// ``SettingsURIRoute/unrecognized(host:)`` rather than being discarded. This
 /// keeps the decision of *what to do* with bad input at the call site, where
 /// the diagnostic log and the authorization gate live.
-struct SettingsURIRequest: Equatable {
+nonisolated struct SettingsURIRequest: Equatable, Sendable {
     let route: SettingsURIRoute
 
     /// Manual sender override supplied via the `bundleId` query item.
@@ -76,7 +79,7 @@ struct SettingsURIRequest: Equatable {
 ///
 /// This is deliberately free of AppKit, app state, and I/O so that the one
 /// parser handling attacker-reachable input can be unit tested and fuzzed.
-enum SettingsURIParser {
+nonisolated enum SettingsURIParser {
     static func parse(_ url: URL) -> SettingsURIRequest {
         let host = url.host?.lowercased() ?? ""
         let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
