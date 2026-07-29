@@ -557,6 +557,11 @@ nonisolated extension Bridging {
         let boundsDesc = bounds.isNull ? "null (auto)" : String(format: "(%.0f,%.0f %.0fx%.0f)", bounds.origin.x, bounds.origin.y, bounds.width, bounds.height)
         diagLog.debug("captureWindowsImage: using SkyLight API, bounds=\(boundsDesc), windowCount=\(windowIDs.count), options=\(options.rawValue)")
 
+        guard isValidCaptureBounds(bounds) else {
+            diagLog.error("captureWindowsImage: refusing capture with invalid bounds \(boundsDesc) for \(windowIDs.count) windows — see issue #759")
+            return nil
+        }
+
         // Use SkyLight's private API instead of deprecated CGWindowListCreateImageFromArray
         guard let image = fn(bounds, windowArray as CFArray, options)?.takeRetainedValue() else {
             diagLog.warning("captureWindowsImage: SLWindowListCreateImageFromArray returned nil for \(windowIDs.count) windows (IDs: \(windowIDs.prefix(5)))")
@@ -565,6 +570,66 @@ nonisolated extension Bridging {
 
         diagLog.debug("captureWindowsImage: captured \(windowIDs.count) windows → \(image.width)×\(image.height)px")
         return image
+    }
+
+    /// The largest texture dimension the window server will accept for a
+    /// capture, in pixels.
+    ///
+    /// Metal's texture limit on every Apple silicon family is 16384; the
+    /// window server builds an `MTLTexture` for the requested capture size,
+    /// and `-[MTLTextureDescriptorInternal validateWithDevice:]` calls
+    /// `abort()` — inside **WindowServer**, taking down the whole graphical
+    /// session — when the descriptor exceeds it. See issue #759.
+    static let maximumCaptureDimension = 16384
+
+    /// Returns `true` if `bounds` is safe to send to the window server as a
+    /// capture rectangle.
+    ///
+    /// `CGRect.null` is explicitly allowed: both `SLWindowListCreateImageFromArray`
+    /// and this file's ScreenCaptureKit path treat a null rect as "compute the
+    /// bounds automatically", which is a legitimate and common request.
+    ///
+    /// Everything else must describe a real, drawable region. A degenerate
+    /// rectangle does not fail gracefully — it crashes WindowServer for the
+    /// whole machine (issue #759), so this is a hard precondition, not a
+    /// tidiness check.
+    ///
+    /// - Parameters:
+    ///   - bounds: The capture rectangle, in points.
+    ///   - scale: The point-to-pixel scale that will be applied. The window
+    ///     server allocates the *pixel* size, so the limit must be checked
+    ///     after scaling.
+    static func isValidCaptureBounds(_ bounds: CGRect, scale: CGFloat = 1.0) -> Bool {
+        if bounds.isNull {
+            return true
+        }
+        // NOTE: there is no public `CGRect.isFinite`. A member by that name
+        // exists, but it is `package`-visibility inside SwiftUICore and is
+        // inaccessible here. Check the four components instead —
+        // `FloatingPoint.isFinite` is genuinely public and rejects both NaN
+        // and infinity, which also covers the `CGRect.infinite` sentinel.
+        guard
+            bounds.origin.x.isFinite,
+            bounds.origin.y.isFinite,
+            bounds.size.width.isFinite,
+            bounds.size.height.isFinite,
+            scale.isFinite,
+            scale > 0
+        else {
+            return false
+        }
+        guard bounds.width > 0, bounds.height > 0 else {
+            return false
+        }
+        let pixelWidth = (bounds.width * scale).rounded()
+        let pixelHeight = (bounds.height * scale).rounded()
+        guard
+            pixelWidth <= CGFloat(maximumCaptureDimension),
+            pixelHeight <= CGFloat(maximumCaptureDimension)
+        else {
+            return false
+        }
+        return true
     }
 }
 
@@ -633,6 +698,11 @@ nonisolated extension Bridging {
             return unionBounds
         }()
 
+        guard isValidCaptureBounds(effectiveBounds) else {
+            diagLog.error("captureWindowsImageSCK: refusing capture with invalid effectiveBounds=\(effectiveBounds) (screenBounds=\(String(describing: screenBounds)), unionBounds=\(unionBounds)) — see issue #759")
+            return nil
+        }
+
         // Pick the display that holds the largest share of unionBounds. A
         // strict frame.contains check rejected status-item windows whose
         // bounds overshoot NSScreen.frame.maxX by a handful of pixels
@@ -666,6 +736,11 @@ nonisolated extension Bridging {
         let scale: CGFloat = options.contains(.nominalResolution)
             ? 1.0
             : CGFloat(filter.pointPixelScale)
+
+        guard isValidCaptureBounds(effectiveBounds, scale: scale) else {
+            diagLog.error("captureWindowsImageSCK: refusing capture, scaled size exceeds \(maximumCaptureDimension)px: effectiveBounds=\(effectiveBounds) scale=\(scale) — see issue #759")
+            return nil
+        }
 
         configuration.sourceRect = CGRect(
             x: effectiveBounds.origin.x - display.frame.origin.x,
