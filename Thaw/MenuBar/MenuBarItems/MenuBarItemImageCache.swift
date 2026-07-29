@@ -259,19 +259,16 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     /// While collapsed, the pane has no visible item-icon consumer, so the live
     /// capture loop stays off rather than paying the off-screen SkyLight capture
     /// cost for items the user cannot see.
-    private(set) var isItemHotkeyListExpanded = false {
-        didSet {
-            guard oldValue != isItemHotkeyListExpanded else { return }
-            startLiveRefreshIfNeeded()
-        }
-    }
+    private(set) var isItemHotkeyListExpanded = false
 
-    /// Updates isItemHotkeyListExpanded from the Hotkeys settings UI.
+    /// Updates isItemHotkeyListExpanded from the Hotkeys settings UI and
+    /// starts/stops the live refresh loop when the value actually changes.
     func setItemHotkeyListExpanded(_ expanded: Bool) {
         guard isItemHotkeyListExpanded != expanded else {
             return
         }
         isItemHotkeyListExpanded = expanded
+        startLiveRefreshIfNeeded()
     }
 
     @MainActor
@@ -541,6 +538,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             // debounced 50ms; since `startLiveRefreshIfNeeded()` is itself
             // idempotent (guards internally against redundant starts), the
             // debounce is dropped in favor of firing directly on each change.
+            navigationStateObservationTask?.cancel()
             navigationStateObservationTask = Task { @MainActor [weak self, navigationState = appState.navigationState] in
                 let changes = Observations {
                     (
@@ -559,8 +557,8 @@ final class MenuBarItemImageCache: @unchecked Sendable {
 
             // Start/stop the live refresh when the Hotkeys pane's per-item list
             // is expanded or collapsed, since that gates its capture consumer.
-            // Replaced by `isItemHotkeyListExpanded`'s `didSet` above now
-            // that this class is @Observable (no more `$isItemHotkeyListExpanded`
+            // Handled by `setItemHotkeyListExpanded(_:)` above now that this
+            // class is @Observable (no more `$isItemHotkeyListExpanded`
             // Combine projection to subscribe to).
 
             // Restart the live refresh loop when the icon refresh interval
@@ -568,6 +566,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             // Combine `ObservableObject`, so this is observed via the
             // `Observations` async sequence instead of `$iconRefreshInterval`.
             let advancedSettings = appState.settings.advanced
+            iconRefreshIntervalObservationTask?.cancel()
             iconRefreshIntervalObservationTask = Task { @MainActor [weak self] in
                 let changes = Observations { advancedSettings.iconRefreshInterval }
                 for await _ in changes {
