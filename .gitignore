@@ -26,3 +26,9 @@ MenuBarModel/.swiftpm/
 ThawCtl/.build/
 xcode-skills
 xcuserdata/
+
+# ftask: per-slug runtime files (env + sim artifacts) — never committed
+.ftask/*/.env
+.ftask/*/sim_artifacts/
+.ftask/*/STATE.json
+.ftask/*/STATE.json.tmp
