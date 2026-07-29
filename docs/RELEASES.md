@@ -80,10 +80,12 @@ channels in the release workflow (`-beta` / `-rc` → beta, `-alpha` / `-nightly
 
 ## Legacy installs
 
-Older builds may still poll `https://stonerl.github.io/Thaw/appcast.xml`. That
-host is expected to **HTTP-redirect** to the `updates` appcast so existing
-installs keep updating. New builds ship the `thaw-app.github.io/updates` URL
-directly.
+Older builds may still poll `https://stonerl.github.io/Thaw/appcast.xml`
+(GitHub Pages from [`stonerl/Thaw`](https://github.com/stonerl/Thaw) `main`,
+path `/appcast.xml`). Release CI **mirrors** the same signed `appcast.xml` to
+that repo after publishing to `thaw-app/updates`, so existing installs keep
+updating without an HTTP redirect. Bridge / new builds ship the
+`thaw-app.github.io/updates` `SUFeedURL` directly.
 
 Historical enclosure URLs already in the appcast (for example old
 `stonerl/Thaw` release ZIP links) stay as-is so EdDSA signatures remain valid.

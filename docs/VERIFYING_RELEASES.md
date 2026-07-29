@@ -27,8 +27,8 @@ fQ2kWqCLfAPAxQX1rp8gVNoG9hlAV/Gmm7kMBbxFe+A=
 
 Source of truth in-tree: `Thaw/Resources/Info.plist` key `SUPublicEDKey`.  
 Appcast URL: `https://thaw-app.github.io/updates/appcast.xml` (`SUFeedURL`).
-Legacy installs may still poll `https://stonerl.github.io/Thaw/appcast.xml`
-until that host redirects here.
+Legacy installs may still poll `https://stonerl.github.io/Thaw/appcast.xml`;
+release CI mirrors the same `appcast.xml` there (see [RELEASES.md](RELEASES.md)).
 
 How installers vs Sparkle payloads are split across repos:
 [Release and update distribution](RELEASES.md).
