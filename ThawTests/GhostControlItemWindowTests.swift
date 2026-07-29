@@ -11,6 +11,7 @@ import CoreGraphics
 import Testing
 @testable import Thaw
 
+@MainActor
 @Suite("GhostControlItemWindow")
 struct GhostControlItemWindowTests {
     private let hiddenTitle = "Thaw.ControlItem.Hidden"
