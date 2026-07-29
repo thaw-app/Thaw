@@ -4,9 +4,12 @@ A brief description of the changes proposed in this pull request.
 
 **Scope:** This PR changes one focused thing (bugfix or feature) plus minimal plumbing. Larger refactors need prior agreement in the issue.
 
+> We are on the process of migrating from XCTest to Swift Test. If you are adding new tests, please use Swift Test.
 > **External contributors:** before opening a PR for a bug fix or new feature, please make sure there's a corresponding issue in the [issue tracker](https://github.com/thaw-app/Thaw/issues). PRs that fix or change things that haven't been reported/agreed on may be closed without review.
 
-Closes: (Required for bugfix/feature PRs; use `Closes: #123` or `N/A`)
+Closes: N/A
+
+Replace `N/A` with `#<issue_number>` (e.g. `Closes: #123`) when this PR fixes/implements a specific issue.
 
 ## PR Type
 

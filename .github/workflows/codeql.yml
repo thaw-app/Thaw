@@ -1,0 +1,56 @@
+name: CodeQL
+
+on:
+  push:
+    branches:
+      - development
+  schedule:
+    # Weekly, offset from the hour to avoid GitHub's cron pileup.
+    - cron: "31 4 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze Swift
+    runs-on: xcode-27
+    timeout-minutes: 90
+    permissions:
+      security-events: write
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@c54b30b7df092240050e69945842bc67aee0f0f4 # v4.37.3
+        with:
+          languages: swift
+          build-mode: manual
+
+      # CodeQL traces this build to construct the database. Tests are not run;
+      # compilation is all the extractor needs.
+      - name: Build
+        run: |
+          set -euo pipefail
+          xcodebuild build \
+            -project Thaw.xcodeproj \
+            -scheme Thaw \
+            -derivedDataPath Build/ \
+            -destination 'platform=macOS' \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@c54b30b7df092240050e69945842bc67aee0f0f4 # v4.37.3
+        with:
+          category: "/language:swift"
