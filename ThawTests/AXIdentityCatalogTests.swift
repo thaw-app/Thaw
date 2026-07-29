@@ -5,14 +5,18 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import AppKit
 @testable import Thaw
 import XCTest
 
 /// Covers the pure, non-AX helpers `AXIdentityCatalog` and
-/// `MenuBarItemManager.ControlItemPair` use for frame correlation. Taking a
-/// live AX snapshot (walking a real `extrasMenuBar`) requires the
-/// Accessibility permission (TCC) and a real menu bar, so it is not
-/// unit-testable in CI and is intentionally not scaffolded here.
+/// `MenuBarItemManager.ControlItemPair` use for frame correlation.
+///
+/// Walking a real `extrasMenuBar` requires the Accessibility permission
+/// (TCC) and a live menu bar, so the identities a snapshot would actually
+/// collect are not assertable in CI. What is assertable — and covered
+/// below — is that `snapshot(hosts:)` degrades quietly when those reads
+/// fail rather than trapping or hanging.
 final class AXIdentityCatalogTests: XCTestCase {
     // MARK: - AXIdentityCatalog.identity(for:in:)
 
@@ -91,6 +95,76 @@ final class AXIdentityCatalogTests: XCTestCase {
         let result = AXIdentityCatalog.identity(for: target, in: [partial, full])
 
         XCTAssertEqual(result?.frame, target)
+    }
+
+    func testIdentityReplacesAnEarlierBestWithAStrictlyBetterOne() {
+        // Both candidates clear the threshold, so the first becomes the
+        // standing best and the second has to displace it. The
+        // above-threshold-then-better ordering is what distinguishes this
+        // from testIdentityTakesHighestOverlapAmongMultipleCandidates,
+        // where the weaker candidate never qualifies at all.
+        let target = CGRect(x: 0, y: 0, width: 20, height: 20)
+        let good = identity(frame: CGRect(x: 6, y: 0, width: 20, height: 20)) // 280pt², 70%
+        let better = identity(frame: target) // 400pt², 100%
+
+        let result = AXIdentityCatalog.identity(for: target, in: [good, better])
+
+        XCTAssertEqual(result?.frame, target)
+    }
+
+    func testIdentityIgnoresAWeakerCandidateArrivingAfterTheBest() {
+        // The same pair in the opposite order: the standing best must
+        // survive a later, qualifying-but-worse candidate.
+        let target = CGRect(x: 0, y: 0, width: 20, height: 20)
+        let better = identity(frame: target)
+        let good = identity(frame: CGRect(x: 6, y: 0, width: 20, height: 20))
+
+        let result = AXIdentityCatalog.identity(for: target, in: [better, good])
+
+        XCTAssertEqual(result?.frame, target)
+    }
+
+    func testIdentityRecoversFromAnEarlierTieWhenABetterCandidateArrives() {
+        // A tie only makes the result ambiguous while it is still the best
+        // score. Something strictly better resolves the ambiguity, so the
+        // tie flag has to be cleared rather than latched.
+        let target = CGRect(x: 0, y: 0, width: 20, height: 20)
+        let tiedA = identity(frame: CGRect(x: 6, y: 0, width: 20, height: 20)) // 280pt²
+        let tiedB = identity(frame: CGRect(x: -6, y: 0, width: 20, height: 20)) // 280pt²
+        let winner = identity(frame: target) // 400pt²
+
+        let result = AXIdentityCatalog.identity(for: target, in: [tiedA, tiedB, winner])
+
+        XCTAssertEqual(result?.frame, target)
+    }
+
+    func testIdentityIgnoresZeroAreaCandidates() {
+        // A zero-area frame can never cover more than half of itself, and
+        // dividing by its area would be undefined.
+        let target = CGRect(x: 0, y: 0, width: 20, height: 20)
+        let degenerate = identity(frame: CGRect(x: 5, y: 5, width: 0, height: 0))
+
+        XCTAssertNil(AXIdentityCatalog.identity(for: target, in: [degenerate]))
+    }
+
+    // MARK: - AXIdentityCatalog.snapshot(hosts:)
+
+    @MainActor
+    func testSnapshotOfNoHostsIsEmpty() {
+        // The host list is empty whenever none of the known menu bar hosts
+        // are running, which must be a quiet no-op rather than an error.
+        XCTAssertTrue(AXIdentityCatalog.snapshot(hosts: []).isEmpty)
+    }
+
+    @MainActor
+    func testSnapshotWithoutAccessibilityPermissionDegradesQuietly() {
+        // Without the Accessibility permission (the CI case) every AX read
+        // fails, so the walk finds no extras menu bar to descend into. The
+        // contract under test is that this degrades to a well-formed
+        // snapshot instead of trapping or hanging on the messaging timeout.
+        let snapshot = AXIdentityCatalog.snapshot(hosts: [.current])
+
+        XCTAssertTrue(snapshot.allSatisfy { !$0.frame.isNull })
     }
 
     // MARK: - MenuBarItemManager.ControlItemPair.selectViaAXFrame(candidates:axFrames:)

@@ -150,4 +150,74 @@ final class ClickReactionVerifierTests: XCTestCase {
         XCTAssertNil(ClickReactionVerifier.Reaction.itemChanged.openedWindowID)
         XCTAssertNil(ClickReactionVerifier.Reaction.unobserved.openedWindowID)
     }
+
+    // MARK: Snapshot
+
+    func testSnapshotCarriesBothProcessesThatCouldReact() {
+        // Helper-hosted items are common: the window belongs to one process
+        // and the app that reacts is another, so a reaction from either
+        // counts.
+        let item = MenuBarItem.fixture(
+            tag: .appItem(bundleID: "com.example.helper", title: "Status"),
+            windowID: 77,
+            bounds: CGRect(x: 100, y: 0, width: 24, height: 24),
+            sourcePID: helperPID,
+            ownerPID: ownerPID
+        )
+
+        let snapshot = ClickReactionVerifier.snapshot(for: item)
+
+        XCTAssertEqual(snapshot.pids, [ownerPID, helperPID])
+        XCTAssertEqual(snapshot.itemWindowID, 77)
+        XCTAssertEqual(snapshot.itemBounds, item.bounds)
+    }
+
+    func testSnapshotOfAnItemWithNoSourceKeepsOnlyItsOwner() {
+        // Control items have no source PID. The compactMap must drop it
+        // rather than admitting a bogus entry that could credit a stranger.
+        let item = MenuBarItem.fixture(
+            tag: .appItem(bundleID: "com.example.app", title: "Status"),
+            windowID: 78,
+            sourcePID: nil,
+            ownerPID: ownerPID
+        )
+
+        let snapshot = ClickReactionVerifier.snapshot(for: item)
+
+        XCTAssertEqual(snapshot.pids, [ownerPID])
+    }
+
+    func testSnapshotRecordsTheWindowsAlreadyOnScreen() {
+        // Windows open at snapshot time must not later be mistaken for
+        // ones the click opened. The test host itself is running, so the
+        // window server always has something to report here.
+        let item = MenuBarItem.fixture(
+            tag: .appItem(bundleID: "com.example.app", title: "Status"),
+            windowID: 79
+        )
+
+        let snapshot = ClickReactionVerifier.snapshot(for: item)
+
+        XCTAssertFalse(snapshot.onScreenWindowIDs.isEmpty)
+    }
+
+    // MARK: Verification
+
+    func testAnItemWindowThatIsNotOnScreenReadsAsAReaction() async {
+        // The verifier is asked about a window ID the window server does
+        // not know, which is the same observation as an item that removed
+        // itself in response to the click. It has to resolve on the first
+        // look rather than spending the whole budget.
+        let snapshot = ClickReactionVerifier.Snapshot(
+            pids: [ownerPID],
+            itemWindowID: .max,
+            itemBounds: CGRect(x: 100, y: 0, width: 24, height: 24),
+            onScreenWindowIDs: Set(Bridging.getWindowList(option: .onScreen))
+        )
+
+        let reaction = await ClickReactionVerifier.verify(against: snapshot)
+
+        XCTAssertEqual(reaction, .itemChanged)
+        XCTAssertTrue(reaction.didReact)
+    }
 }
