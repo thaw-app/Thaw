@@ -121,10 +121,12 @@ defect classes before merge.
    must trust Thaw similarly to other AX utilities.
 2. Private/undocumented WindowServer interactions increase compatibility and
    maintenance risk across macOS versions.
-3. Application repo is still under `stonerl/Thaw` while shared assets/CI move
-   first into [`thaw-app`](https://github.com/thaw-app) (three owners:
-   `stonerl`, `nightah`, `diazdesandi`). Full repo transfer is planned but
-   deliberately gradual so signing, Sparkle, and install URLs do not break.
+3. Update delivery depends on a GitHub Pages path. The Sparkle appcast is
+   served from a `github.io` origin, which does **not** redirect across a
+   repository owner transfer, so builds released before the move to
+   [`thaw-app`](https://github.com/thaw-app) (three owners: `stonerl`,
+   `nightah`, `diazdesandi`) rely on the previous path continuing to serve the
+   feed. Moving the appcast to a project-controlled domain is planned.
 4. **OpenSSF Silver statement coverage (`test_statement_coverage80`) is deferred.**
    SonarCloud currently reports about **44%** coverage for `stonerl_Thaw` (not
    ≥80%). CI collects coverage XML and uploads to SonarCloud

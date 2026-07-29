@@ -7,7 +7,7 @@ their data seriously.
 
 Thaw is a macOS menu bar manager. We primarily support security updates for the
 **latest stable release**. Please run the most recent version before submitting
-a vulnerability report. Upgrade via [GitHub Releases](https://github.com/stonerl/Thaw/releases),
+a vulnerability report. Upgrade via [GitHub Releases](https://github.com/thaw-app/Thaw/releases),
 Homebrew, or in-app Sparkle updates.
 
 | Version | Supported          |
@@ -71,7 +71,7 @@ A longer argument (threat model, trust boundaries, design principles) lives in
 
 Please **do not** report security vulnerabilities through public GitHub issues.
 
-Use [GitHub Private Vulnerability Reporting](https://github.com/stonerl/Thaw/security/advisories/new)
+Use [GitHub Private Vulnerability Reporting](https://github.com/thaw-app/Thaw/security/advisories/new)
 when enabled for this repository.
 
 If private vulnerability reporting is unavailable, contact the Project Lead
@@ -102,7 +102,7 @@ complexity and whether an OS update is also required.
 ## Public vulnerability history
 
 Published advisories (when any exist):  
-https://github.com/stonerl/Thaw/security/advisories
+https://github.com/thaw-app/Thaw/security/advisories
 
 If there are no published advisories, that means none have been disclosed yet—not
 that the project ignores reports.

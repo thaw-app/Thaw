@@ -16,16 +16,16 @@ maintainer team, backed by shared **organization admin** access:
    decisions that affect the codebase or releases.
 2. **Disputes and final decisions:** The **Project Lead** has final say on
    roadmap direction, breaking changes, security policy, licensing, and
-   application-repository settings for [stonerl/Thaw](https://github.com/stonerl/Thaw).
+   application-repository settings for [thaw-app/Thaw](https://github.com/thaw-app/Thaw).
 3. **Consensus preferred:** Maintainers seek rough consensus in issues/PRs
    (and Discord when useful) before the Project Lead decides. Silence after a
    reasonable discussion window is treated as assent for non-breaking changes.
 4. **Organization:** Shared project assets and CI building blocks already live
    under the [`thaw-app`](https://github.com/thaw-app) GitHub organization. Org
    **owners** can administer org settings and org-owned repositories if any one
-   owner is unavailable. The application repository is still
-   [stonerl/Thaw](https://github.com/stonerl/Thaw); migrating it into `thaw-app`
-   is a **planned, gradual** move (see [Repository migration](#repository-migration)).
+   owner is unavailable. The application repository lives in the organization at
+   [thaw-app/Thaw](https://github.com/thaw-app/Thaw) (see
+   [Repository migration](#repository-migration)).
 5. **Security:** Vulnerability handling follows
    [SECURITY.md](SECURITY.md). Public discussion of unfixed vulnerabilities is
    not appropriate.
@@ -37,11 +37,11 @@ only describes how *this* project operates.
 
 | Role | Who (GitHub) | Responsibilities |
 | --- | --- | --- |
-| **Project Lead** | [@stonerl](https://github.com/stonerl) | Final product decisions; primary release authority for Thaw; app-repo admin (today under `stonerl/`); OpenSSF badge entry; security advisory publishing; release-secret stewardship (see below) |
-| **Organization owner** | [@stonerl](https://github.com/stonerl), [@nightah](https://github.com/nightah), [@diazdesandi](https://github.com/diazdesandi) | Admin of [`thaw-app`](https://github.com/thaw-app): org settings, org-owned repos/assets (brand assets, shared CI, etc.), membership; eventual home for the application repo; **continuity access** to release secrets and Environments under least privilege (see [Release secrets](#release-secrets)) |
-| **Maintainer** | Write collaborators on the application repo (today [stonerl/Thaw](https://github.com/stonerl/Thaw); later under `thaw-app`) | Review/merge PRs; triage issues; approve routine releases when delegated; enforce Code of Conduct with Lead. **No** routine access to signing/notarization/Sparkle private keys |
+| **Project Lead** | [@stonerl](https://github.com/stonerl) | Final product decisions; primary release authority for Thaw; app-repo admin; OpenSSF badge entry; security advisory publishing; release-secret stewardship (see below) |
+| **Organization owner** | [@stonerl](https://github.com/stonerl), [@nightah](https://github.com/nightah), [@diazdesandi](https://github.com/diazdesandi) | Admin of [`thaw-app`](https://github.com/thaw-app): org settings, org-owned repos/assets (brand assets, shared CI, etc.), membership; home of the application repo; **continuity access** to release secrets and Environments under least privilege (see [Release secrets](#release-secrets)) |
+| **Maintainer** | Write collaborators on the application repo ([thaw-app/Thaw](https://github.com/thaw-app/Thaw)) | Review/merge PRs; triage issues; approve routine releases when delegated; enforce Code of Conduct with Lead. **No** routine access to signing/notarization/Sparkle private keys |
 | **Contributor** | Anyone submitting issues, PRs, Crowdin translations, or docs | Follow [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md) |
-| **Security contact** | Project Lead (via [private vulnerability reporting](https://github.com/stonerl/Thaw/security/advisories/new)) | Acknowledge and coordinate vulnerability reports |
+| **Security contact** | Project Lead (via [private vulnerability reporting](https://github.com/thaw-app/Thaw/security/advisories/new)) | Acknowledge and coordinate vulnerability reports |
 
 Translations are reviewed via [Crowdin](https://crowdin.com/project/thaw), not
 via translation PRs.
@@ -50,7 +50,7 @@ via translation PRs.
 
 | Channel | Purpose |
 | --- | --- |
-| [GitHub Issues / PRs](https://github.com/stonerl/Thaw) | Bugs, features, code review, durable decisions |
+| [GitHub Issues / PRs](https://github.com/thaw-app/Thaw) | Bugs, features, code review, durable decisions |
 | [Discord](https://discord.gg/5cnKkKbMFd) | Day-to-day maintainer and community discussion |
 | [Crowdin](https://crowdin.com/project/thaw) | Localization |
 
@@ -66,19 +66,18 @@ via translation PRs.
 
 Org profile: https://github.com/thaw-app
 
-### Application repository (current and target)
+### Application repository
 
-| Stage | Location | Status |
-| --- | --- | --- |
-| **Current** | [stonerl/Thaw](https://github.com/stonerl/Thaw) | Canonical app source, issues, releases, CI |
-| **Target** | `thaw-app/Thaw` (name TBD) under [`thaw-app`](https://github.com/thaw-app) | Planned transfer when release/signing/Pages dependencies are stable enough |
+| Location | Status |
+| --- | --- |
+| [thaw-app/Thaw](https://github.com/thaw-app/Thaw) | Canonical app source, issues, releases, CI |
 
 Write collaborators (in addition to the Project Lead) include maintainers such
 as `nightah`, `diazdesandi`, and others granted write on the repo. Write access
 alone does **not** include release-secret administration.
 
 Public contributor history:
-https://github.com/stonerl/Thaw/graphs/contributors
+https://github.com/thaw-app/Thaw/graphs/contributors
 
 ## Release secrets
 
@@ -147,32 +146,43 @@ Document the private backup location among owners only — never in this repo.
 
 ## Repository migration
 
-The long-term home for Thaw is the [`thaw-app`](https://github.com/thaw-app)
-organization. Migration is **intentional and incremental**: pieces move when
-they are safe to move, not as a single cutover.
+Thaw now lives in the [`thaw-app`](https://github.com/thaw-app) organization.
+Migration was **intentional and incremental**: shared assets moved first, and
+the application repository transferred once release and signing wiring was
+stable.
 
-Already under or consumed via `thaw-app` (examples; list may grow):
+Now under or consumed via `thaw-app`:
 
 - Brand / marketing assets
 - Shared CI building blocks used by release workflows
-
-Still on the personal namespace until transfer is low-risk:
-
 - Application git history, issues, Discussions, and GitHub Releases
 - Release signing / notarization wiring and Sparkle appcast publish path
-- User-facing URLs (clone URL, badge links, Homebrew taps, docs) that must be
-  redirected without breaking installs or updates
 
-Guiding rules until the app repo lives in the org:
+Rules that continue to apply:
 
-1. Prefer extracting **shared, non-fragile** pieces into `thaw-app` first.
-2. Keep a single canonical app repository at any time (no long-lived dual
+1. Keep a single canonical app repository at any time (no long-lived dual
    masters).
-3. After transfer, GitHub’s repository redirect should preserve old
-   `stonerl/Thaw` links; update Homebrew, Sparkle feed, and docs in the same
-   release window as the move.
-4. Org owners (`stonerl`, `nightah`, `diazdesandi`) jointly decide when the app
-   repo is ready to transfer.
+2. Prefer **org-owned** secrets, assets, and Environments over personally owned
+   equivalents, so admin is never tied to one account.
+3. Org owners (`stonerl`, `nightah`, `diazdesandi`) jointly decide any future
+   moves.
+
+### Lessons from the transfer
+
+GitHub’s repository redirect preserves old `github.com` links, but that
+redirect is not a substitute for updating references, and it does **not** cover
+everything:
+
+- **GitHub Pages does not redirect across an owner transfer.** The Sparkle
+  appcast published to Pages changed origin, which broke update checks for
+  already-installed builds until the old path was served again. Any future move
+  must treat the appcast URL as a blocking migration step, and the feed should
+  live on a project-controlled domain rather than a `github.io` path.
+- **Release asset URLs embedded in a published appcast** keep pointing at the
+  old owner and survive only via the repository redirect. Rewrite them before
+  reclaiming the old namespace.
+- Update Homebrew, the Sparkle feed, and docs in the same release window as any
+  move.
 
 ## Access continuity
 
@@ -189,10 +199,9 @@ remaining maintainers should still be able to:
 
 1. **Organization owners:** Three people (`stonerl`, `nightah`, `diazdesandi`)
    are owners of [`thaw-app`](https://github.com/thaw-app). Loss of any one
-   owner does not remove org admin capability. Migrating the app repo into the
-   org further reduces single-namespace risk; until then, continuity relies on
-   write collaborators on `stonerl/Thaw` plus the three org owners for shared
-   assets and planning.
+   owner does not remove org admin capability. With the app repo in the org,
+   single-namespace risk is removed: continuity rests on the three org owners
+   plus write collaborators on `thaw-app/Thaw`.
 2. **Repository access:** Multiple maintainers have **write** access on the
    application repo so issues and PRs are not single-person blocked.
 3. **Admin / secrets:** Follow [Release secrets](#release-secrets). All three
