@@ -2221,12 +2221,24 @@ extension MenuBarItemManager {
             isRestoringItemOrderTimestamp = nil
         }
 
+        // The always-hidden divider is what tells always-hidden items apart
+        // from hidden ones. If this cycle resolved the hidden divider but
+        // not the always-hidden one, findSection has already collapsed the
+        // always-hidden section into hidden; persisting that reading is what
+        // made #849 permanent.
+        let alwaysHiddenSectionResolved = LayoutSolver.isAlwaysHiddenSectionResolved(
+            hasAlwaysHiddenControlItem: context.controlItems.alwaysHidden != nil,
+            isAlwaysHiddenSectionEnabled: appState?.menuBarManager
+                .section(withName: .alwaysHidden)?.isEnabled ?? false
+        )
+
         if LayoutSolver.shouldPersistSavedOrder(
             isRestoringItemOrder: isRestoringItemOrder,
             isResettingLayout: isResettingLayout,
             isInStartupSettling: isInStartupSettling,
             isApplyingProfileLayout: isApplyingProfileLayout,
-            temporarilyShownItemContextsIsEmpty: temporarilyShownItemContexts.isEmpty
+            temporarilyShownItemContextsIsEmpty: temporarilyShownItemContexts.isEmpty,
+            alwaysHiddenSectionResolved: alwaysHiddenSectionResolved
         ) {
             // Don't persist if any items are in a transient blocked state (x=-1).
             // Wait for the next cache cycle when bounds are reliable.
@@ -2261,6 +2273,14 @@ extension MenuBarItemManager {
             } else {
                 saveSectionOrder(from: context.cache)
             }
+        } else if !alwaysHiddenSectionResolved {
+            // Logged at warning level, and separately from the gate's other
+            // inputs, because this is the one that silently rewrites the
+            // user's layout when it goes wrong (#849). A run of these means
+            // the always-hidden divider keeps failing to resolve.
+            MenuBarItemManager.diagLog.warning(
+                "Skipping saveSectionOrder; always-hidden divider unresolved while its section is enabled"
+            )
         }
         MenuBarItemManager.diagLog.debug("Updated menu bar item cache: visible=\(context.cache[.visible].count), hidden=\(context.cache[.hidden].count), alwaysHidden=\(context.cache[.alwaysHidden].count)")
     }

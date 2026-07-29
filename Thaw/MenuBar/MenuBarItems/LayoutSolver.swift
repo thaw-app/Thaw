@@ -1112,13 +1112,37 @@ nonisolated enum LayoutSolver {
         isResettingLayout: Bool,
         isInStartupSettling: Bool,
         isApplyingProfileLayout: Bool,
-        temporarilyShownItemContextsIsEmpty: Bool
+        temporarilyShownItemContextsIsEmpty: Bool,
+        alwaysHiddenSectionResolved: Bool
     ) -> Bool {
         !isRestoringItemOrder &&
             !isResettingLayout &&
             !isInStartupSettling &&
             !isApplyingProfileLayout &&
-            temporarilyShownItemContextsIsEmpty
+            temporarilyShownItemContextsIsEmpty &&
+            alwaysHiddenSectionResolved
+    }
+
+    /// Whether the always-hidden section is resolved well enough for the
+    /// current cache snapshot to be an order of record.
+    ///
+    /// The always-hidden divider is the only boundary separating always-
+    /// hidden items from hidden ones. When it is missing,
+    /// `CacheContext.findSection` has no boundary to test against and
+    /// degrades every always-hidden item to `.hidden` — a lossy but
+    /// recoverable misreading, until `saveSectionOrder` writes it down and
+    /// makes it the user's layout. That is #849: the divider went
+    /// unresolved for a single cache cycle and the whole always-hidden
+    /// section was persisted as visible.
+    ///
+    /// A nil divider is only a problem when the section is enabled. Users
+    /// who never turned the always-hidden section on have no divider by
+    /// design, and must still be able to persist their layout.
+    static nonisolated func isAlwaysHiddenSectionResolved(
+        hasAlwaysHiddenControlItem: Bool,
+        isAlwaysHiddenSectionEnabled: Bool
+    ) -> Bool {
+        hasAlwaysHiddenControlItem || !isAlwaysHiddenSectionEnabled
     }
 
     // MARK: - Pending rehide identifiers

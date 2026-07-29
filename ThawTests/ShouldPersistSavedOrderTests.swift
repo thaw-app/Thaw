@@ -26,7 +26,8 @@ final class ShouldPersistSavedOrderTests: XCTestCase {
             isResettingLayout: false,
             isInStartupSettling: false,
             isApplyingProfileLayout: false,
-            temporarilyShownItemContextsIsEmpty: true
+            temporarilyShownItemContextsIsEmpty: true,
+            alwaysHiddenSectionResolved: true
         ))
     }
 
@@ -39,7 +40,8 @@ final class ShouldPersistSavedOrderTests: XCTestCase {
             isResettingLayout: false,
             isInStartupSettling: false,
             isApplyingProfileLayout: false,
-            temporarilyShownItemContextsIsEmpty: true
+            temporarilyShownItemContextsIsEmpty: true,
+            alwaysHiddenSectionResolved: true
         ))
     }
 
@@ -51,7 +53,8 @@ final class ShouldPersistSavedOrderTests: XCTestCase {
             isResettingLayout: true,
             isInStartupSettling: false,
             isApplyingProfileLayout: false,
-            temporarilyShownItemContextsIsEmpty: true
+            temporarilyShownItemContextsIsEmpty: true,
+            alwaysHiddenSectionResolved: true
         ))
     }
 
@@ -64,7 +67,8 @@ final class ShouldPersistSavedOrderTests: XCTestCase {
             isResettingLayout: false,
             isInStartupSettling: true,
             isApplyingProfileLayout: false,
-            temporarilyShownItemContextsIsEmpty: true
+            temporarilyShownItemContextsIsEmpty: true,
+            alwaysHiddenSectionResolved: true
         ))
     }
 
@@ -78,7 +82,8 @@ final class ShouldPersistSavedOrderTests: XCTestCase {
             isResettingLayout: false,
             isInStartupSettling: false,
             isApplyingProfileLayout: true,
-            temporarilyShownItemContextsIsEmpty: true
+            temporarilyShownItemContextsIsEmpty: true,
+            alwaysHiddenSectionResolved: true
         ))
     }
 
@@ -94,7 +99,8 @@ final class ShouldPersistSavedOrderTests: XCTestCase {
             isResettingLayout: false,
             isInStartupSettling: false,
             isApplyingProfileLayout: false,
-            temporarilyShownItemContextsIsEmpty: false
+            temporarilyShownItemContextsIsEmpty: false,
+            alwaysHiddenSectionResolved: true
         ))
     }
 
@@ -107,14 +113,90 @@ final class ShouldPersistSavedOrderTests: XCTestCase {
             isResettingLayout: true,
             isInStartupSettling: false,
             isApplyingProfileLayout: false,
-            temporarilyShownItemContextsIsEmpty: true
+            temporarilyShownItemContextsIsEmpty: true,
+            alwaysHiddenSectionResolved: true
         ))
         XCTAssertFalse(LayoutSolver.shouldPersistSavedOrder(
             isRestoringItemOrder: false,
             isResettingLayout: false,
             isInStartupSettling: true,
             isApplyingProfileLayout: true,
-            temporarilyShownItemContextsIsEmpty: true
+            temporarilyShownItemContextsIsEmpty: true,
+            alwaysHiddenSectionResolved: true
+        ))
+    }
+
+    // MARK: - Always-hidden divider (#849)
+
+    /// The regression itself: the always-hidden divider went unresolved
+    /// for a single cache cycle, findSection collapsed the always-hidden
+    /// section into hidden, and the save wrote that reading down as the
+    /// user's layout. Every other flag is clear here, which is what let
+    /// the old gate through.
+    func testUnresolvedAlwaysHiddenSectionBlocks() {
+        XCTAssertFalse(LayoutSolver.shouldPersistSavedOrder(
+            isRestoringItemOrder: false,
+            isResettingLayout: false,
+            isInStartupSettling: false,
+            isApplyingProfileLayout: false,
+            temporarilyShownItemContextsIsEmpty: true,
+            alwaysHiddenSectionResolved: false
+        ))
+    }
+
+    /// A resolved divider is the ordinary case and must not be blocked.
+    func testResolvedAlwaysHiddenSectionPersists() {
+        XCTAssertTrue(LayoutSolver.shouldPersistSavedOrder(
+            isRestoringItemOrder: false,
+            isResettingLayout: false,
+            isInStartupSettling: false,
+            isApplyingProfileLayout: false,
+            temporarilyShownItemContextsIsEmpty: true,
+            alwaysHiddenSectionResolved: true
+        ))
+    }
+}
+
+// MARK: - IsAlwaysHiddenSectionResolvedTests
+
+/// Covers the predicate feeding the gate's always-hidden input. The
+/// distinction it draws is what keeps the #849 fix from becoming a bug of
+/// its own: a missing divider is only evidence of a problem when the
+/// section that owns it is turned on.
+final class IsAlwaysHiddenSectionResolvedTests: XCTestCase {
+    /// Divider present, section on: the normal healthy state.
+    func testPresentDividerIsResolved() {
+        XCTAssertTrue(LayoutSolver.isAlwaysHiddenSectionResolved(
+            hasAlwaysHiddenControlItem: true,
+            isAlwaysHiddenSectionEnabled: true
+        ))
+    }
+
+    /// The #849 state: the section is on, so its items are real, but the
+    /// boundary that identifies them is missing this cycle.
+    func testMissingDividerWithEnabledSectionIsUnresolved() {
+        XCTAssertFalse(LayoutSolver.isAlwaysHiddenSectionResolved(
+            hasAlwaysHiddenControlItem: false,
+            isAlwaysHiddenSectionEnabled: true
+        ))
+    }
+
+    /// Users who never enabled the always-hidden section have no divider
+    /// by design. Treating that as unresolved would block their layout
+    /// from ever being saved — trading #849 for a worse bug.
+    func testMissingDividerWithDisabledSectionIsResolved() {
+        XCTAssertTrue(LayoutSolver.isAlwaysHiddenSectionResolved(
+            hasAlwaysHiddenControlItem: false,
+            isAlwaysHiddenSectionEnabled: false
+        ))
+    }
+
+    /// A divider that exists while the section is off is still not a
+    /// reason to block.
+    func testPresentDividerWithDisabledSectionIsResolved() {
+        XCTAssertTrue(LayoutSolver.isAlwaysHiddenSectionResolved(
+            hasAlwaysHiddenControlItem: true,
+            isAlwaysHiddenSectionEnabled: false
         ))
     }
 }
