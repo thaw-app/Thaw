@@ -5,14 +5,16 @@ on:
     - cron: "0 0 */3 * *" # Once every 3 days
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   stale:
     runs-on: ubuntu-slim
     permissions:
-      actions: write
       issues: write
     steps:
-      - uses: actions/stale@v11
+      - uses: actions/stale@4391f3da665fdf50b6810c1a66712fb9ba21aa93 # v11.0.0
         with:
           operations-per-run: 100
           days-before-stale: 30

@@ -62,7 +62,7 @@ payloads.
 1. Build and notarize.
 2. Create Sparkle ZIP (and deltas when prior ZIPs exist).
 3. Publish ZIP + deltas to **`thaw-app/updates`** (same tag).
-4. Publish DMG to **`thaw-app/Thaw`**.
+4. Cosign-sign the installer DMG and publish DMG + `*.sigstore.json` to **`thaw-app/Thaw`**.
 5. Push signed `appcast.xml` to **`thaw-app/updates`** `gh-pages`.
 
 Workflow: [`.github/workflows/release.yml`](../.github/workflows/release.yml).  

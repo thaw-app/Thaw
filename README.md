@@ -7,6 +7,7 @@
   <img alt="Requirements" src="https://img.shields.io/badge/macOS-26%2B-555555?style=flat-square" />
   <a href="https://github.com/thaw-app/Thaw/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/thaw-app/Thaw/ci.yml?style=flat-square&label=CI" /></a>
   <a href="https://www.bestpractices.dev/projects/13303"><img alt="OpenSSF Best Practices" src="https://img.shields.io/cii/summary/13303?style=flat-square&label=OpenSSF" /></a>
+  <a href="https://scorecard.dev/viewer/?uri=github.com/thaw-app/Thaw"><img alt="OpenSSF Scorecard" src="https://api.scorecard.dev/projects/github.com/thaw-app/Thaw/badge" /></a>
   <a href="https://crowdin.com/project/thaw"><img alt="Translated into 20 languages" src="https://img.shields.io/badge/translated-20_languages-555555?style=flat-square&logo=crowdin&logoColor=white" /></a>
   <a href="https://discord.gg/5cnKkKbMFd"><img alt="Discord" src="https://img.shields.io/badge/Discord-7289DA?style=flat-square&logo=discord&logoColor=white" /></a>
   <a href="https://github.com/sponsors/stonerl"><img alt="Sponsor" src="https://img.shields.io/badge/Sponsor-%E2%9D%A4-555555?style=flat-square" /></a>
@@ -47,7 +48,7 @@
 - **No tracking, no account.** No analytics, no telemetry, no sign-up.
 - **Screen Recording is optional.** Hiding, revealing, and rearranging items all work without it. Grant it only if you want menu bar item previews and appearance tinting.
 - **Light on your Mac.** A small, steady memory footprint, and no background bloat.
-- **Signed and notarized by Apple**, with [verifiable releases](docs/VERIFYING_RELEASES.md) and security practices tracked against the [OpenSSF Best Practices](https://www.bestpractices.dev/projects/13303) criteria.
+- **Signed and notarized by Apple**, with [verifiable releases](docs/VERIFYING_RELEASES.md), security practices tracked against the [OpenSSF Best Practices](https://www.bestpractices.dev/projects/13303) criteria, and an [OpenSSF Scorecard](https://scorecard.dev/viewer/?uri=github.com/thaw-app/Thaw) for supply-chain posture.
 
 ## Features
 

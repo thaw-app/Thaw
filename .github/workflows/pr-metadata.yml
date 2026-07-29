@@ -15,6 +15,9 @@ concurrency:
   group: pr-metadata-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   metadata:
     runs-on: ubuntu-slim
@@ -24,7 +27,7 @@ jobs:
       issues: write
     steps:
       - name: Apply labels from PR template and changed paths
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const pr = context.payload.pull_request;
@@ -217,7 +220,7 @@ jobs:
             }
 
       - name: Check PR conventions
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const pr = context.payload.pull_request;
