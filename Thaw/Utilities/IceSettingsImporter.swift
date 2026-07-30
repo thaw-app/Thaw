@@ -178,14 +178,31 @@ struct IceSettingsImporter {
             imported += 1
             diagLog.debug("Imported appearance configuration V2")
         }
-        // Fallback to V1 if V2 not available
+        // Fall back to V1, converting it here rather than leaving it for
+        // `MigrationManager`: migrations run at launch, before this import,
+        // so by the time the old data arrives their work is already done.
         else if let appearanceData = iceSettings["MenuBarAppearanceConfiguration"] as? Data {
-            // This will be handled by the existing migration system
-            Defaults.set(appearanceData, forKey: .menuBarAppearanceConfiguration)
-            imported += 1
-            diagLog.debug("Imported appearance configuration V1")
+            imported += importAppearanceConfigurationV1(appearanceData)
         }
 
         return imported
+    }
+
+    /// Converts a V1 appearance configuration from Ice to the current format
+    /// and stores it.
+    ///
+    /// - Returns: The number of settings imported.
+    private func importAppearanceConfigurationV1(_ data: Data) -> Int {
+        do {
+            let oldConfiguration = try JSONDecoder().decode(MenuBarAppearanceConfigurationV1.self, from: data)
+            let configuration = MenuBarAppearanceConfigurationV2(migrating: oldConfiguration)
+            let newData = try JSONEncoder().encode(configuration)
+            Defaults.set(newData, forKey: .menuBarAppearanceConfigurationV2)
+            diagLog.debug("Imported appearance configuration V1")
+            return 1
+        } catch {
+            diagLog.error("Failed to convert Ice's appearance configuration: \(error)")
+            return 0
+        }
     }
 }

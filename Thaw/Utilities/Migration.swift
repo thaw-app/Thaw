@@ -39,7 +39,6 @@ extension MigrationManager {
 
         results += [
             migrateForRelease0101(),
-            migrateForRelease01110(),
             migrateForRelease01113(),
             migrateForRelease011131(),
             migratePerDisplayIceBar(),
@@ -254,74 +253,6 @@ extension MigrationManager {
             return .successButShowAlert(alert)
         }
 
-        return .success
-    }
-}
-
-// MARK: - Migrate 0.11.10
-
-extension MigrationManager {
-    /// Performs all migrations for the `0.11.10` release.
-    private func migrateForRelease01110() -> MigrationResult {
-        guard !Defaults.bool(forKey: .hasMigrated0_11_10) else {
-            return .success
-        }
-        let result = migrateAppearanceConfigurationForRelease01110()
-        switch result {
-        case .success, .successButShowAlert:
-            Defaults.set(true, forKey: .hasMigrated0_11_10)
-            diagLog.info("Successfully migrated to 0.11.10 settings")
-        case .failureAndLogError:
-            break
-        }
-        return result
-    }
-
-    private func migrateAppearanceConfigurationForRelease01110() -> MigrationResult {
-        guard let oldData = Defaults.data(forKey: .menuBarAppearanceConfiguration) else {
-            if Defaults.object(forKey: .menuBarAppearanceConfiguration) != nil {
-                diagLog.warning("Previous menu bar appearance data is corrupted")
-            }
-            // This is either the first launch, or the data is malformed.
-            // Either way, not much to do here.
-            return .success
-        }
-        do {
-            let oldConfiguration = try decoder.decode(MenuBarAppearanceConfigurationV1.self, from: oldData)
-            let newConfiguration = withMutableCopy(of: MenuBarAppearanceConfigurationV2.defaultConfiguration) { configuration in
-                let partialConfiguration = MenuBarAppearancePartialConfiguration(
-                    hasShadow: oldConfiguration.hasShadow,
-                    hasBorder: oldConfiguration.hasBorder,
-                    borderColor: oldConfiguration.borderColor,
-                    borderWidth: oldConfiguration.borderWidth,
-                    tintKind: oldConfiguration.tintKind,
-                    tintColor: oldConfiguration.tintColor,
-                    tintGradient: oldConfiguration.tintGradient,
-                    tintOpacity: MenuBarAppearancePartialConfiguration.defaultConfiguration.tintOpacity,
-                    backgroundKind: MenuBarAppearancePartialConfiguration.defaultConfiguration.backgroundKind,
-                    backgroundColor: MenuBarAppearancePartialConfiguration.defaultConfiguration.backgroundColor,
-                    backgroundGradient: MenuBarAppearancePartialConfiguration.defaultConfiguration.backgroundGradient,
-                    backgroundOpacity: MenuBarAppearancePartialConfiguration.defaultConfiguration.backgroundOpacity,
-                    backgroundHasShadow: MenuBarAppearancePartialConfiguration.defaultConfiguration.backgroundHasShadow,
-                    backgroundHasBorder: MenuBarAppearancePartialConfiguration.defaultConfiguration.backgroundHasBorder,
-                    backgroundBorderColor: MenuBarAppearancePartialConfiguration.defaultConfiguration.backgroundBorderColor,
-                    backgroundBorderWidth: MenuBarAppearancePartialConfiguration.defaultConfiguration.backgroundBorderWidth,
-                    backgroundGlassStyle: MenuBarAppearancePartialConfiguration.defaultConfiguration.backgroundGlassStyle,
-                    tintGlassStyle: MenuBarAppearancePartialConfiguration.defaultConfiguration.tintGlassStyle
-                )
-                configuration.lightModeConfiguration = partialConfiguration
-                configuration.darkModeConfiguration = partialConfiguration
-                configuration.staticConfiguration = partialConfiguration
-                configuration.shapeKind = oldConfiguration.shapeKind
-                configuration.fullShapeInfo = oldConfiguration.fullShapeInfo
-                configuration.splitShapeInfo = oldConfiguration.splitShapeInfo
-                configuration.isInset = oldConfiguration.isInset
-            }
-            let newData = try encoder.encode(newConfiguration)
-            Defaults.set(newData, forKey: .menuBarAppearanceConfigurationV2)
-        } catch {
-            return .failureAndLogError(.appearanceConfigurationMigrationError(error))
-        }
         return .success
     }
 }

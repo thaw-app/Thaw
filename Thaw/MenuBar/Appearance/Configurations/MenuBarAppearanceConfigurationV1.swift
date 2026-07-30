@@ -115,6 +115,40 @@ extension MenuBarAppearanceConfigurationV1 {
     )
 }
 
+// MARK: - Conversion to the Current Configuration
+
+extension MenuBarAppearanceConfigurationV2 {
+    /// Creates a configuration from a V1 configuration, which is the format
+    /// Ice used before its `0.11.10` release.
+    ///
+    /// V1 had a single set of appearance values rather than one per system
+    /// appearance, so the old values are applied to all three of the current
+    /// configuration's slots. Values V1 had no equivalent for keep their
+    /// defaults.
+    init(migrating oldConfiguration: MenuBarAppearanceConfigurationV1) {
+        self = withMutableCopy(of: Self.defaultConfiguration) { configuration in
+            let partialConfiguration = withMutableCopy(
+                of: MenuBarAppearancePartialConfiguration.defaultConfiguration
+            ) { partial in
+                partial.hasShadow = oldConfiguration.hasShadow
+                partial.hasBorder = oldConfiguration.hasBorder
+                partial.borderColor = oldConfiguration.borderColor
+                partial.borderWidth = oldConfiguration.borderWidth
+                partial.tintKind = oldConfiguration.tintKind
+                partial.tintColor = oldConfiguration.tintColor
+                partial.tintGradient = oldConfiguration.tintGradient
+            }
+            configuration.lightModeConfiguration = partialConfiguration
+            configuration.darkModeConfiguration = partialConfiguration
+            configuration.staticConfiguration = partialConfiguration
+            configuration.shapeKind = oldConfiguration.shapeKind
+            configuration.fullShapeInfo = oldConfiguration.fullShapeInfo
+            configuration.splitShapeInfo = oldConfiguration.splitShapeInfo
+            configuration.isInset = oldConfiguration.isInset
+        }
+    }
+}
+
 // MARK: MenuBarAppearanceConfigurationV1: Codable
 
 extension MenuBarAppearanceConfigurationV1: Codable {
