@@ -113,9 +113,15 @@ nonisolated enum SearchIndex {
         return baseNonSearchableProperties.union(macOS27AdvancedNonSearchableProperties)
     }
 
+    /// ``entries`` bucketed by pane, resolved once for the same reason
+    /// ``entries`` itself is: the search path reads it per keystroke, and a
+    /// filter per lookup rescans the whole index for each pane.
+    private static let entriesByPane: [SettingsNavigationIdentifier: [SearchEntry]] =
+        Dictionary(grouping: entries, by: \.pane)
+
     /// Returns the entries that belong to the given pane.
     static func entries(for pane: SettingsNavigationIdentifier) -> [SearchEntry] {
-        entries.filter { $0.pane == pane }
+        entriesByPane[pane] ?? []
     }
 
     /// Pure relevance sort: Fuse's `diffScore` is `0` for a perfect match and

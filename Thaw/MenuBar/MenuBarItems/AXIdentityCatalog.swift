@@ -6,6 +6,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Algorithms
 import AXSwift6
 import Cocoa
 
@@ -122,33 +123,30 @@ enum AXIdentityCatalog {
         for windowBounds: CGRect,
         in snapshot: [AXItemIdentity]
     ) -> AXItemIdentity? {
-        var best: (identity: AXItemIdentity, area: CGFloat)?
-        var bestIsTied = false
+        let targetArea = windowBounds.width * windowBounds.height
 
-        for candidate in snapshot {
+        // Candidates whose overlap clears the confidence threshold, paired
+        // with the area that ranks them.
+        let scored = snapshot.compactMap { candidate -> (identity: AXItemIdentity, area: CGFloat)? in
             let intersection = candidate.frame.intersection(windowBounds)
-            guard !intersection.isNull, !intersection.isEmpty else { continue }
+            guard !intersection.isNull, !intersection.isEmpty else { return nil }
 
             let intersectionArea = intersection.width * intersection.height
             let candidateArea = candidate.frame.width * candidate.frame.height
-            let targetArea = windowBounds.width * windowBounds.height
             let smallerArea = min(candidateArea, targetArea)
-            guard smallerArea > 0, intersectionArea > smallerArea * minOverlapFraction else { continue }
+            guard smallerArea > 0, intersectionArea > smallerArea * minOverlapFraction else { return nil }
 
-            if let current = best {
-                if intersectionArea > current.area {
-                    best = (candidate, intersectionArea)
-                    bestIsTied = false
-                } else if intersectionArea == current.area {
-                    bestIsTied = true
-                }
-            } else {
-                best = (candidate, intersectionArea)
-                bestIsTied = false
-            }
+            return (candidate, intersectionArea)
         }
 
-        guard let best, !bestIsTied else { return nil }
+        // Ranking the top two is the whole decision: the larger one wins,
+        // and a tie between them means the frame cannot pick a side, which
+        // is a nil rather than a guess. Tracking that with a running best
+        // and a tie flag instead invites the flag to latch after a tie is
+        // later beaten -- a bug this shape cannot express.
+        let top = scored.max(count: 2, sortedBy: { $0.area < $1.area })
+        guard let best = top.last else { return nil }
+        guard top.count < 2 || top[0].area != best.area else { return nil }
         return best.identity
     }
 }
