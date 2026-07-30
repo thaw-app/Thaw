@@ -212,7 +212,7 @@ nonisolated extension Defaults {
         static let inputPauseThresholdMs = 50
         static let discardStrayMoveEvents = true
         static let failFastOnEventWindowMismatch = false
-        static let axMessagingTimeout = 1.0
+        static let axMessagingTimeout = SharedConstants.axMessagingTimeout
     }
 }
 
