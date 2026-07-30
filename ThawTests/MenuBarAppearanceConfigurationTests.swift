@@ -91,7 +91,7 @@ final class MenuBarAppearanceConfigurationV2Tests: XCTestCase {
     }
 }
 
-// MARK: - MenuBarAppearanceConfigurationV1MigrationTests
+// MARK: - MenuBarAppearanceV1MigrationTests
 
 /// Tests for converting V1 appearance data — the format Ice used before its
 /// `0.11.10` release — which reaches Thaw only through the Ice importer.
@@ -99,7 +99,7 @@ final class MenuBarAppearanceConfigurationV2Tests: XCTestCase {
 /// `MenuBarAppearanceConfigurationV1` is main-actor isolated, as is the
 /// importer that reads it, so these tests are too.
 @MainActor
-final class MenuBarAppearanceConfigurationV1MigrationTests: XCTestCase {
+final class MenuBarAppearanceV1MigrationTests: XCTestCase {
     private var oldConfiguration: MenuBarAppearanceConfigurationV1 {
         withMutableCopy(of: MenuBarAppearanceConfigurationV1.defaultConfiguration) { configuration in
             configuration.hasShadow = true

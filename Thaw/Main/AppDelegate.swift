@@ -61,7 +61,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Initial chore work.
         NSSplitViewItem.swizzle()
-        MigrationManager(appState: appState).migrateAll()
+        MigrationManager().migrateAll()
 
         // Register thaw:// URL events early so external tools (e.g. Raycast)
         // can trigger actions even when Thaw is not currently in the foreground;

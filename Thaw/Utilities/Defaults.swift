@@ -304,12 +304,6 @@ nonisolated extension Defaults {
 
         // MARK: Migration
 
-        case hasMigrated0_8_0
-        case hasMigrated0_10_0
-        case hasMigrated0_10_1
-        case hasMigrated0_11_10
-        case hasMigrated0_11_13
-        case hasMigrated0_11_13_1
         case hasMigratedPerDisplayIceBar
 
         // MARK: First Launch
@@ -334,29 +328,6 @@ nonisolated extension Defaults {
 
         case globalPreProfileHook = "GlobalPreProfileHook"
         case globalPostProfileHook = "GlobalPostProfileHook"
-
-        // MARK: Deprecated (Appearance Settings)
-
-        case menuBarHasBorder = "MenuBarHasBorder"
-        case menuBarBorderColor = "MenuBarBorderColor"
-        case menuBarBorderWidth = "MenuBarBorderWidth"
-        case menuBarHasShadow = "MenuBarHasShadow"
-        case menuBarTintKind = "MenuBarTintKind"
-        case menuBarTintColor = "MenuBarTintColor"
-        case menuBarTintGradient = "MenuBarTintGradient"
-        case menuBarShapeKind = "MenuBarShapeKind"
-        case menuBarFullShapeInfo = "MenuBarFullShapeInfo"
-        case menuBarSplitShapeInfo = "MenuBarSplitShapeInfo"
-        case menuBarAppearanceConfiguration = "MenuBarAppearanceConfiguration"
-
-        // MARK: Deprecated (Advanced Settings)
-
-        case showSectionDividers = "ShowSectionDividers"
-        case canToggleAlwaysHiddenSection = "CanToggleAlwaysHiddenSection"
-
-        // MARK: Deprecated (Other)
-
-        case sections = "Sections"
 
         // MARK: Hidden Diagnostic Flags
 
