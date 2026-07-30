@@ -1424,7 +1424,7 @@ final class MenuBarItemManager {
     }
 
     /// Configures the internal observers for the manager.
-    private func configureCancellables(with appState: AppState) {
+    private func configureCancellables(with _: AppState) {
         var c = Set<AnyCancellable>()
 
         // When any app launches, refresh the cache to detect new menu bar items

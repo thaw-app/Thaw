@@ -353,16 +353,29 @@ actor SourcePIDCache {
         // an already-cached resolved one, and the scan only ever ran at
         // session start.
         let now = ContinuousClock.now
-        if let unresolved = windows.first(where: { window in
-            state.withLock { state in
-                state.pids[window.windowID] == nil
-                    && (state.negativeUntil[window.windowID].map { $0 <= now } ?? true)
-            }
-        }) {
+        if let unresolved = windows.first(where: { couldLearnFromScan($0, now: now) }) {
             _ = pidBody(for: unresolved)
         }
         return windows.map { window in
             state.withLock { $0.pids[window.windowID] }
+        }
+    }
+
+    /// Whether a scan could still learn something about `window`: it has no
+    /// cached PID, and it is not sitting inside a negative-cache shadow from
+    /// an earlier scan that already failed to resolve it.
+    private nonisolated func couldLearnFromScan(
+        _ window: WindowInfo,
+        now: ContinuousClock.Instant
+    ) -> Bool {
+        state.withLock { state in
+            guard state.pids[window.windowID] == nil else {
+                return false
+            }
+            guard let deadline = state.negativeUntil[window.windowID] else {
+                return true
+            }
+            return deadline <= now
         }
     }
 

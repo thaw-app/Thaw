@@ -141,7 +141,11 @@ final class MenuBarSearchPanel: NSPanel {
         // implicit equality check), so this is a genuine, Observation-
         // visible mutation of the exact property the row list renders from,
         // forcing SwiftUI to re-evaluate each row (and pick up the new name).
-        model.displayedItems = model.displayedItems
+        // Read into a local first: a literal `x = x` is indistinguishable
+        // from a typo to both readers and static analysis, and the round
+        // trip through `items` is what makes the intent legible.
+        let items = model.displayedItems
+        model.displayedItems = items
     }
 
     /// The default screen to show the panel on.

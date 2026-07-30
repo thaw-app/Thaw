@@ -22,7 +22,10 @@ struct VisualEffectBackground: NSViewRepresentable {
         return view
     }
 
-    func updateNSView(_ nsView: NSVisualEffectView, context _: Context) {}
+    // Nothing to update: every property this view needs is fixed at
+    // creation, and the transparency behavior it exists for is driven by
+    // the view's own attach/detach lifecycle rather than by SwiftUI state.
+    func updateNSView(_: NSVisualEffectView, context _: Context) {}
 }
 
 /// An `NSVisualEffectView` that makes its window non-opaque with a clear

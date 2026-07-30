@@ -360,6 +360,41 @@ nonisolated extension MenuBarItem {
         return items
     }
 
+    /// Scatters the PIDs the service resolved back onto the full window
+    /// list, or returns `nil` when the reply cannot be trusted.
+    ///
+    /// Only the windows that needed resolving are sent to the XPC service,
+    /// so the reply is a dense array indexed against `indices`, not against
+    /// the windows. Lining them back up by position is the whole job, and
+    /// getting it wrong would attribute one app's PID to another's item.
+    ///
+    /// A reply whose length does not match the request is refused outright
+    /// rather than zipped as far as it goes: the misalignment means the
+    /// positional correspondence itself is broken, so every entry is
+    /// suspect, not just the missing tail.
+    ///
+    /// - Parameters:
+    ///   - resolved: PIDs returned by the service, in request order.
+    ///   - indices: Positions in the window list that were sent, in the
+    ///     same order.
+    ///   - windowCount: Total number of windows, including the ones that
+    ///     were never sent.
+    static func scatterSourcePIDs(
+        _ resolved: [pid_t?],
+        toIndices indices: [Int],
+        windowCount: Int
+    ) -> [pid_t?]? {
+        guard resolved.count == indices.count else {
+            return indices.isEmpty ? [pid_t?](repeating: nil, count: windowCount) : nil
+        }
+        var pids = [pid_t?](repeating: nil, count: windowCount)
+        for (resolvedIndex, windowIndex) in indices.enumerated()
+            where pids.indices.contains(windowIndex) {
+            pids[windowIndex] = resolved[resolvedIndex]
+        }
+        return pids
+    }
+
     @available(macOS 26.0, *)
     @MainActor
     private static func getMenuBarItemsExperimental(
@@ -400,16 +435,17 @@ nonisolated extension MenuBarItem {
             )
         }
 
-        var pids = [pid_t?](repeating: nil, count: windows.count)
-        if resolvedPIDs.count == indicesToResolve.count {
-            for (resolvedIndex, windowIndex) in indicesToResolve.enumerated() {
-                pids[windowIndex] = resolvedPIDs[resolvedIndex]
-            }
-        } else if !indicesToResolve.isEmpty {
+        let scattered = Self.scatterSourcePIDs(
+            resolvedPIDs,
+            toIndices: indicesToResolve,
+            windowCount: windows.count
+        )
+        if scattered == nil, !indicesToResolve.isEmpty {
             diagLog.error(
                 "getMenuBarItems: sourcePIDs returned \(resolvedPIDs.count) entries for \(indicesToResolve.count) windows; treating all as unresolved"
             )
         }
+        let pids = scattered ?? [pid_t?](repeating: nil, count: windows.count)
 
         var items = windows.enumerated().map { index, window in
             let pid: pid_t? = controlItemIndices.contains(index) ? ownPID : pids[index]

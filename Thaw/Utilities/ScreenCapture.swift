@@ -267,15 +267,23 @@ nonisolated enum ScreenCapture {
         let content = try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
                 box.setContinuation(continuation)
-                Task {
-                    await settleFromCurrentContent(into: box)
-                }
+                startSettling(into: box)
             }
         } onCancel: {
             // Resume with cancellation error if still pending.
             box.takeContinuation()?.resume(throwing: CancellationError())
         }
         return ShareableContentSnapshot(content: content)
+    }
+
+    /// Starts the fetch that eventually settles `box`. Kept out of the
+    /// continuation closure so the nesting there stays shallow enough to
+    /// read; the task is deliberately unawaited, since the continuation is
+    /// what carries the result back.
+    private static func startSettling(into box: ContinuationBox<SCShareableContent, any Error>) {
+        Task {
+            await settleFromCurrentContent(into: box)
+        }
     }
 
     private static func settleFromCurrentContent(
