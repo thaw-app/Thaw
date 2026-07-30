@@ -77,6 +77,7 @@ enum HookRunner {
     /// Outcome of racing the subprocess against the timeout.
     private enum RaceOutcome {
         case completed(ExecutionRecord<StringOutput<UTF8>, StringOutput<UTF8>>)
+        case failed(any Error)
         case timedOut
     }
 
@@ -155,10 +156,12 @@ enum HookRunner {
 
         let clamped = hook.timeoutSeconds.clamped(to: 1.0 ... 300.0)
 
-        // On timeout or outer-task cancellation, Subprocess runs this
-        // teardown sequence against the child before this call returns,
-        // so there is no need to poll isRunning or manually escalate
-        // signals here.
+        // Cancelling the subprocess runs this teardown sequence against the
+        // process Subprocess launched. Note that it reaches *that* process
+        // only: a `#!/bin/sh` wrapper does not forward the signal to its own
+        // child and then waits for it, so the signal alone cannot bound how
+        // long the hook keeps running. That is why the wait below is bounded
+        // separately rather than relying on teardown to end it.
         let platformOptions: PlatformOptions = {
             var options = PlatformOptions()
             options.teardownSequence = [
@@ -167,42 +170,64 @@ enum HookRunner {
             return options
         }()
 
-        // Race the subprocess against a timeout task. Whichever finishes
-        // first wins; cancelAll() then cancels the other, which for the
-        // subprocess task triggers the teardown sequence above.
-        let outcome: RaceOutcome
-        do {
-            outcome = try await withThrowingTaskGroup(of: RaceOutcome.self) { group in
-                group.addTask {
-                    let result = try await Subprocess.run(
-                        .path(executablePath),
-                        arguments: Arguments(arguments),
-                        environment: environment,
-                        platformOptions: platformOptions,
-                        output: .string(limit: outputByteLimit),
-                        error: .string(limit: outputByteLimit)
-                    )
-                    return .completed(result)
-                }
-                group.addTask {
-                    try await Task.sleep(for: .seconds(clamped))
-                    return .timedOut
-                }
-                defer { group.cancelAll() }
-                guard let first = try await group.next() else {
-                    throw CancellationError()
-                }
-                return first
+        // Both arms report into a one-shot channel and the first value wins.
+        //
+        // The subprocess deliberately runs in an unstructured task: as a
+        // structured child of a task group it would have to finish before
+        // the group could return, which handed the hook's own child process
+        // control over when `run` returns -- a `sleep 30` behind a 1s budget
+        // blocked the caller for the full 30s. Awaiting `Task.value` instead
+        // does not help either, since that await is not cancellable from the
+        // waiting side. The channel is what lets the wait end on time while
+        // the process finishes on its own.
+        let (outcomes, continuation) = AsyncStream.makeStream(of: RaceOutcome.self)
+
+        let subprocessTask = Task {
+            do {
+                let result = try await Subprocess.run(
+                    .path(executablePath),
+                    arguments: Arguments(arguments),
+                    environment: environment,
+                    platformOptions: platformOptions,
+                    output: .string(limit: outputByteLimit),
+                    error: .string(limit: outputByteLimit)
+                )
+                continuation.yield(.completed(result))
+            } catch {
+                continuation.yield(.failed(error))
             }
-        } catch is CancellationError {
-            throw CancellationError()
-        } catch {
-            throw HookError.runFailed(path: hook.path, error: error)
+        }
+
+        let timeoutTask = Task {
+            try? await Task.sleep(for: .seconds(clamped))
+            continuation.yield(.timedOut)
+        }
+        defer { timeoutTask.cancel() }
+
+        // Yields to a channel nobody is reading are dropped, so whichever
+        // arm loses the race simply has no effect.
+        var outcome: RaceOutcome?
+        for await first in outcomes {
+            outcome = first
+            break
         }
 
         switch outcome {
+        case .none:
+            // Both arms were cancelled, so the caller went away.
+            subprocessTask.cancel()
+            throw CancellationError()
         case .timedOut:
+            // Ask it to stop, but do not wait to find out whether it did.
+            // The hook may be a wrapper whose child ignores the signal, or
+            // one that deliberately outlives the apply.
+            subprocessTask.cancel()
+            diagLog.warning(
+                "hook exceeded its \(clamped)s budget; abandoning it and continuing: \(hook.path)"
+            )
             throw HookError.timedOut(after: clamped)
+        case let .failed(error):
+            throw HookError.runFailed(path: hook.path, error: error)
         case let .completed(result):
             let stdout = (result.standardOutput ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
             let stderr = (result.standardError ?? "").trimmingCharacters(in: .whitespacesAndNewlines)

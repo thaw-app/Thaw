@@ -269,10 +269,8 @@ final class HookRunnerTests {
     @Test("A hook that outlives its timeout is reported as timed out")
     func timedOutHookIsReported() async throws {
         // The configured 0.1s is below the clamp floor, so the effective
-        // budget is 1s. `exec` replaces the shell with sleep so the
-        // teardown signal reaches the sleeping process directly; see
-        // `timedOutHookWaitsForAChildThatOutlivesTheSignal` for what
-        // happens when it does not.
+        // budget is 1s. `exec` replaces the shell with sleep, so the
+        // teardown signal reaches the sleeping process directly.
         let path = try writeScript("#!/bin/sh\nexec sleep 30\n")
         let hook = HookScript(path: path, timeoutSeconds: 0.1)
 
@@ -283,14 +281,17 @@ final class HookRunnerTests {
         #expect(after == 1.0)
     }
 
-    @Test("The timeout does not bound the caller's wall-clock time", .timeLimit(.minutes(1)))
-    func timedOutHookWaitsForAChildThatOutlivesTheSignal() async throws {
-        // Documents a real limitation rather than an intended design: the
-        // teardown sequence signals the process Subprocess launched, but a
-        // plain `sh` wrapper does not forward that signal to its own child,
-        // so `run` does not return until the grandchild exits on its own.
-        // The reported budget is still 1s; the elapsed time is not.
-        let path = try writeScript("#!/bin/sh\nsleep 3\n")
+    @Test("The timeout bounds the caller's wall-clock time", .timeLimit(.minutes(1)))
+    func timeoutBoundsTheCallersWallClockTime() async throws {
+        // The regression this guards: `sh` does not forward the teardown
+        // signal to its own child and then waits for that child, so the
+        // signal cannot end the hook. `run` used to stay blocked for the
+        // child's full lifetime — 30s against a 1s budget — because the
+        // subprocess was a structured child of the race and the group could
+        // not return until it finished. It is now an independent task that
+        // gets abandoned at the budget, so the caller returns on time while
+        // the orphan finishes on its own.
+        let path = try writeScript("#!/bin/sh\nsleep 30\n")
         let hook = HookScript(path: path, timeoutSeconds: 0.1)
 
         let start = ContinuousClock.now
@@ -302,9 +303,23 @@ final class HookRunnerTests {
 
         #expect(after == 1.0)
         #expect(
-            elapsed > .seconds(2),
-            "the child outliving the signal is the behavior under test; a prompt return means HookRunner started killing the process group and this test's premise is stale"
+            elapsed < .seconds(5),
+            "the caller must return at its budget rather than waiting out the hook's child"
         )
+    }
+
+    @Test("A slow hook does not stall the apply pipeline", .timeLimit(.minutes(1)))
+    func runIfEnabledReturnsAtTheBudget() async throws {
+        // Why the above matters: runIfEnabled is awaited inside the
+        // profile-apply path, so a hook that shells out to anything slow
+        // used to hold the whole apply for the child's lifetime.
+        let hook = HookScript(path: try writeScript("#!/bin/sh\nsleep 30\n"), timeoutSeconds: 0.1)
+
+        let start = ContinuousClock.now
+        await HookRunner.runIfEnabled(hook, context: context())
+        let elapsed = ContinuousClock.now - start
+
+        #expect(elapsed < .seconds(5))
     }
 
     @Test("A launch failure is reported as runFailed")
