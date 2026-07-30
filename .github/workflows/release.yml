@@ -7,6 +7,7 @@ name: Release
 # Artifact split:
 #   - thaw-app/Thaw releases: DMG only (human installers)
 #   - thaw-app/updates releases + Pages: Sparkle ZIP, deltas, appcast.xml
+#   - stonerl/Thaw main: mirrored appcast.xml for legacy SUFeedURL installs
 
 on:
   workflow_dispatch:
@@ -53,6 +54,7 @@ jobs:
       APP_NAME: "Thaw.app"
       DMG_NAME: "Thaw.dmg"
       UPDATES_REPOSITORY: thaw-app/updates
+      LEGACY_APPCAST_REPOSITORY: stonerl/Thaw
     steps:
       - name: Checkout code
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -272,6 +274,54 @@ jobs:
             fi
 
             echo "gh-pages push failed (attempt $attempt/$max_attempts); refetching…"
+            attempt=$((attempt + 1))
+            sleep $((attempt * 2))
+          done
+
+
+      - name: Mirror appcast to legacy stonerl Pages
+        if: inputs.publish_appcast && inputs.publish_release
+        env:
+          TAG: ${{ steps.meta.outputs.tag }}
+          CHANNEL: ${{ steps.meta.outputs.channel }}
+          APPCAST_PATH: ${{ steps.sparkle.outputs.appcast-path }}
+          LEGACY_REPO: ${{ env.LEGACY_APPCAST_REPOSITORY }}
+          LEGACY_TOKEN: ${{ secrets.LEGACY_APPCAST_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          work="$RUNNER_TEMP/legacy-appcast-work"
+          remote="https://x-access-token:${LEGACY_TOKEN}@github.com/${LEGACY_REPO}.git"
+          max_attempts=3
+          attempt=1
+
+          while true; do
+            rm -rf "$work"
+            git clone --depth 1 --branch main "$remote" "$work"
+
+            cp "$APPCAST_PATH" "$work/appcast.xml"
+
+            git -C "$work" config user.name "github-actions[bot]"
+            git -C "$work" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git -C "$work" add appcast.xml
+            if git -C "$work" diff --staged --quiet; then
+              echo "legacy appcast.xml unchanged"
+              exit 0
+            fi
+
+            git -C "$work" commit -m "chore(sparkle): mirror appcast for ${TAG} (${CHANNEL})"
+
+            if git -C "$work" push origin HEAD:main; then
+              echo "Mirrored appcast to ${LEGACY_REPO}@main"
+              exit 0
+            fi
+
+            if [[ "$attempt" -ge "$max_attempts" ]]; then
+              echo "Failed to push legacy appcast after $max_attempts attempts"
+              exit 1
+            fi
+
+            echo "legacy main push failed (attempt $attempt/$max_attempts); refetching…"
             attempt=$((attempt + 1))
             sleep $((attempt * 2))
           done
