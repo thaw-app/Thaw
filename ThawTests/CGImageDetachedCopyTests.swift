@@ -7,6 +7,7 @@
 //  Licensed under the GNU GPLv3
 
 import CoreGraphics
+import Foundation
 @testable import Thaw
 import XCTest
 
@@ -86,6 +87,42 @@ final class CGImageDetachedCopyTests: XCTestCase {
         // its own dimensions, not the parent's.
         XCTAssertNotEqual(cropped.dataProvider, detached.dataProvider)
         XCTAssertEqual(detached.bytesPerRow * detached.height, detached.dataProvider?.data.map(CFDataGetLength) ?? -1)
+    }
+
+    /// Creates a `width` x `height` 8-bit mask. A mask has no color space,
+    /// which is the condition that sends `detachedCopy` down its fallback.
+    private func makeMaskImage(width: Int, height: Int) -> CGImage? {
+        let bytes = [UInt8](repeating: 128, count: width * height)
+        guard let provider = CGDataProvider(data: Data(bytes) as CFData) else {
+            return nil
+        }
+        return CGImage(
+            maskWidth: width,
+            height: height,
+            bitsPerComponent: 8,
+            bitsPerPixel: 8,
+            bytesPerRow: width,
+            provider: provider,
+            decode: nil,
+            shouldInterpolate: false
+        )
+    }
+
+    func testDetachedCopyFallsBackToDeviceRGBForAColorSpacelessImage() throws {
+        // Every other case here is device-RGB, so it is served by the
+        // preserve-the-source-color-space path and never reaches the
+        // fallback. A mask reports a nil color space, so there is nothing
+        // to preserve and the device-RGB path is the only way to produce a
+        // detached buffer at all.
+        let mask = try XCTUnwrap(makeMaskImage(width: 12, height: 9))
+        XCTAssertNil(mask.colorSpace, "a mask is only a valid fixture here while it has no color space")
+
+        let detached = mask.detachedCopy()
+
+        XCTAssertEqual(detached.width, 12)
+        XCTAssertEqual(detached.height, 9)
+        XCTAssertEqual(detached.colorSpace?.model, .rgb, "the fallback redraws into device RGB")
+        XCTAssertNotEqual(mask.dataProvider, detached.dataProvider, "the copy must own its buffer")
     }
 
     func testDetachedCopyHandlesDegenerateOnePixelImage() {
