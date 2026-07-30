@@ -815,7 +815,7 @@ final class MenuBarItemManager {
         // ambiguous Control-Center identifiers, and writing that snapshot
         // would poison the saved layout every apply matches against (#784).
         let managedItems = cache.managedItems
-        let unresolvedCount = managedItems.filter { $0.sourcePID == nil }.count
+        let unresolvedCount = managedItems.count { $0.sourcePID == nil }
         if Self.majorityOfSourcePIDsUnresolved(unresolvedCount: unresolvedCount, itemCount: managedItems.count) {
             MenuBarItemManager.diagLog.info(
                 "saveSectionOrder: skipping, \(unresolvedCount)/\(managedItems.count) items have unresolved sourcePIDs"
@@ -959,30 +959,49 @@ final class MenuBarItemManager {
         // some left-side sibling and the anchor; finding that left
         // sibling and placing rightOfThatSibling reproduces the saved
         // position. Symmetric for rightOfAnchor.
-        if walkLeftFirst {
-            for i in stride(from: anchorPos - 1, through: 0, by: -1) {
-                if let idx = itemIdentifiers.firstIndex(of: profileOrder[i]) {
-                    return idx + 1
-                }
-            }
-            for i in (anchorPos + 1) ..< profileOrder.count {
-                if let idx = itemIdentifiers.firstIndex(of: profileOrder[i]) {
-                    return idx
-                }
-            }
-        } else {
-            for i in (anchorPos + 1) ..< profileOrder.count {
-                if let idx = itemIdentifiers.firstIndex(of: profileOrder[i]) {
-                    return idx
-                }
-            }
-            for i in stride(from: anchorPos - 1, through: 0, by: -1) {
-                if let idx = itemIdentifiers.firstIndex(of: profileOrder[i]) {
-                    return idx + 1
-                }
+        return Self.badgeIndex(
+            profileOrder: profileOrder,
+            anchorPos: anchorPos,
+            itemIdentifiers: itemIdentifiers,
+            walkLeftFirst: walkLeftFirst
+        )
+    }
+
+    /// Returns the badge index reproducing a saved position, by finding the
+    /// nearest profile sibling that is still present.
+    ///
+    /// Both directions are searched; the caller's preferred direction wins when
+    /// each finds a sibling. A left-side match places the badge after that
+    /// sibling, a right-side match places it before.
+    ///
+    /// - Parameters:
+    ///   - profileOrder: The saved identifier order for the section.
+    ///   - anchorPos: The anchor's position within `profileOrder`.
+    ///   - itemIdentifiers: The identifiers currently in the section.
+    ///   - walkLeftFirst: Whether the badge sat left of the anchor.
+    ///
+    /// - Returns: An index into `itemIdentifiers`, or `nil` when no sibling
+    ///   from the saved order is still present.
+    static nonisolated func badgeIndex(
+        profileOrder: [String],
+        anchorPos: Int,
+        itemIdentifiers: [String],
+        walkLeftFirst: Bool
+    ) -> Int? {
+        let leftward = {
+            profileOrder[..<anchorPos].reversed().firstNonNil { identifier in
+                itemIdentifiers.firstIndex(of: identifier).map { $0 + 1 }
             }
         }
-        return nil
+        let rightward = {
+            profileOrder[(anchorPos + 1)...].firstNonNil { identifier in
+                itemIdentifiers.firstIndex(of: identifier)
+            }
+        }
+
+        return walkLeftFirst
+            ? leftward() ?? rightward()
+            : rightward() ?? leftward()
     }
 
     /// Updates the preferred destination for newly detected menu bar items using the
@@ -1968,7 +1987,7 @@ extension MenuBarItemManager {
             }
 
             let ourPID = ProcessInfo.processInfo.processIdentifier
-            let candidates = items.enumerated().map { index, item in
+            let candidates = items.indexed().map { index, item in
                 CandidateFrame(index: index, bounds: item.bounds, isOwnProcess: item.sourcePID == ourPID)
             }
             // Exclude the visible control item's AX child before correlation
@@ -7052,7 +7071,7 @@ extension MenuBarItemManager {
         // itemOrder/itemSectionMap) is derived from sourcePID via
         // MenuBarItemTag's namespace, so an unresolved-PID majority means
         // the identifiers used for matching are unreliable.
-        let unresolvedSourcePIDCount = items.filter { $0.sourcePID == nil }.count
+        let unresolvedSourcePIDCount = items.count { $0.sourcePID == nil }
         if Self.majorityOfSourcePIDsUnresolved(unresolvedCount: unresolvedSourcePIDCount, itemCount: items.count) {
             MenuBarItemManager.diagLog.info(
                 "applyProfileLayout: skipping, \(unresolvedSourcePIDCount)/\(items.count) items have unresolved sourcePIDs (XPC resolution likely failed)"
@@ -8276,7 +8295,7 @@ extension MenuBarItemManager {
         // Skip the bulk apply while the majority of items have no resolved
         // sourcePID — mirrors relocateNewLeftmostItems's unresolved-sourcePID
         // noop.
-        let unresolvedSourcePIDCount = items.filter { $0.sourcePID == nil }.count
+        let unresolvedSourcePIDCount = items.count { $0.sourcePID == nil }
         if Self.majorityOfSourcePIDsUnresolved(unresolvedCount: unresolvedSourcePIDCount, itemCount: items.count) {
             MenuBarItemManager.diagLog.info(
                 "applySavedLayout: skipping, \(unresolvedSourcePIDCount)/\(items.count) items have unresolved sourcePIDs (XPC resolution likely failed)"
