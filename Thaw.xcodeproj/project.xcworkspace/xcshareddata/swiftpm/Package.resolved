@@ -42,8 +42,8 @@
       "kind": "remoteSourceControl",
       "location": "https://github.com/thaw-app/prk-bin",
       "state": {
-        "revision": "d1da48cfed9ee60a8cf2e6feb33c32d18f91543f",
-        "version": "0.0.13"
+        "revision": "7134c870b9c8ed5378f6fb9b55c91bc6330d75c1",
+        "version": "0.0.14"
       }
     },
     {
