@@ -159,6 +159,15 @@ final class ControlItem {
     /// The control item's frame, if it is onscreen (`@Published`).
     @Published private(set) var onScreenFrame: CGRect?
 
+    /// Whether the menu bar accepted this control item but is not rendering
+    /// it — most often because macOS parked it in the notch dead zone
+    /// (`@Published`).
+    ///
+    /// Derived from `NSWindow.occlusionState`, so unlike the image cache it
+    /// needs no Screen Recording grant. See ``ControlItemOcclusion`` for why
+    /// the underlying signal is debounced before it reaches this property.
+    @Published private(set) var isOccluded = false
+
     /// The control item's identifier.
     let identifier: Identifier
 
@@ -173,6 +182,16 @@ final class ControlItem {
 
     /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
+
+    /// The control item's diagnostic logger.
+    private nonisolated let diagLog = DiagLog(category: "ControlItem")
+
+    /// Debounces the raw `occlusionState` readings behind ``isOccluded``.
+    private var occlusionEvaluator = ControlItemOcclusion.Evaluator()
+
+    /// When the displays were last reconfigured, used to discard the occlusion
+    /// readings taken while the new layout is still settling.
+    private var lastDisplayChange: Date?
 
     /// Tasks backing settings-observation reactions in `configureCancellables()`
     /// and `configureStatusItemCancellables()`. `GeneralSettings` and
@@ -414,7 +433,98 @@ final class ControlItem {
             }
         }
 
+        configureOcclusionObservers(storingIn: &c)
+
         statusItemCancellables = c
+    }
+
+    /// Wires up the permission-free occlusion signal behind ``isOccluded``.
+    ///
+    /// Subscriptions live alongside the rest of `statusItemCancellables`
+    /// because they are bound to the current `NSStatusItem` — both the
+    /// visibility publisher and the window whose occlusion is sampled belong
+    /// to it, so `recreateStatusItem()` must re-subscribe them.
+    private func configureOcclusionObservers(storingIn c: inout Set<AnyCancellable>) {
+        let displayChanges = NotificationCenter.default
+            .publisher(for: NSApplication.didChangeScreenParametersNotification)
+            .replace(with: ())
+
+        // Record the reconfiguration first, so the samples that the same
+        // notification triggers below are already inside the grace window.
+        displayChanges
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] in
+                guard let self else {
+                    return
+                }
+                lastDisplayChange = .now
+                occlusionEvaluator.reset()
+            }
+            .store(in: &c)
+
+        // A window that is already occluded posts nothing further once the new
+        // layout settles, so the delayed leg re-samples after the grace window
+        // closes rather than waiting for an event that may never arrive.
+        let settledAfterDisplayChange = displayChanges
+            .delay(
+                for: .seconds(ControlItemOcclusion.displayChangeGrace + 0.1),
+                scheduler: DispatchQueue.main
+            )
+            .eraseToAnyPublisher()
+
+        let occlusionChanges = NotificationCenter.default
+            .publisher(for: NSWindow.didChangeOcclusionStateNotification)
+            .compactMap { $0.object as? NSWindow }
+            .filter { [weak self] window in
+                window === self?.window
+            }
+            .replace(with: ())
+            .eraseToAnyPublisher()
+
+        let visibilityChanges = statusItem.publisher(for: \.isVisible)
+            .removeDuplicates()
+            .replace(with: ())
+            .eraseToAnyPublisher()
+
+        Publishers.MergeMany(occlusionChanges, visibilityChanges, settledAfterDisplayChange)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] in
+                self?.sampleOcclusion()
+            }
+            .store(in: &c)
+    }
+
+    /// Takes one occlusion reading and publishes the verdict if it changed.
+    private func sampleOcclusion() {
+        guard let window else {
+            // No window to read. Leave the last verdict alone unless it
+            // claimed occlusion, which can no longer be substantiated.
+            occlusionEvaluator.reset()
+            if isOccluded {
+                isOccluded = false
+            }
+            return
+        }
+
+        let sample = ControlItemOcclusion.Sample(
+            isOccluded: !window.occlusionState.contains(.visible),
+            isInMenuBar: statusItem.isVisible,
+            secondsSinceDisplayChange: lastDisplayChange
+                .map { Date.now.timeIntervalSince($0) } ?? .greatestFiniteMagnitude
+        )
+
+        guard let verdict = occlusionEvaluator.evaluate(sample) else {
+            return
+        }
+
+        isOccluded = verdict
+        if verdict {
+            diagLog.warning(
+                "\(identifier.rawValue) is occluded — the menu bar accepted the status item but is not rendering it"
+            )
+        } else {
+            diagLog.notice("\(identifier.rawValue) is no longer occluded")
+        }
     }
 
     /// Rebuilds the control item's underlying `NSStatusItem` from scratch.
