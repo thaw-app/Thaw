@@ -87,28 +87,63 @@ enum AXIdentityCatalog {
         deadline: ContinuousClock.Instant,
         into results: inout [AXItemIdentity]
     ) {
-        guard depth <= maxWalkDepth, visited < maxElementsVisited,
-              ContinuousClock.now < deadline
-        else { return }
-        visited += 1
+        walk(
+            element,
+            depth: depth,
+            visited: &visited,
+            deadline: deadline,
+            into: &results,
+            identityFor: { element in
+                try? element.setMessagingTimeout(messagingTimeout)
 
-        try? element.setMessagingTimeout(messagingTimeout)
-
-        if let frame = AXHelpers.frame(for: element) {
-            results.append(
-                AXItemIdentity(
+                guard let frame = AXHelpers.frame(for: element) else {
+                    return nil
+                }
+                return AXItemIdentity(
                     identifier: AXHelpers.identifier(for: element),
                     title: AXHelpers.title(for: element),
                     help: AXHelpers.help(for: element),
                     frame: frame
                 )
-            )
+            },
+            childrenFor: { AXHelpers.children(for: $0) }
+        )
+    }
+
+    /// Walks a bounded identity tree. The generic traversal keeps the safety
+    /// rules independent of live Accessibility handles so they can be verified
+    /// with deterministic trees while the adapter above remains responsible
+    /// for AX reads and messaging timeouts.
+    static func walk<Node>(
+        _ element: Node,
+        depth: Int,
+        visited: inout Int,
+        deadline: ContinuousClock.Instant,
+        into results: inout [AXItemIdentity],
+        identityFor: (Node) -> AXItemIdentity?,
+        childrenFor: (Node) -> [Node]
+    ) {
+        guard depth <= maxWalkDepth, visited < maxElementsVisited,
+              ContinuousClock.now < deadline
+        else { return }
+        visited += 1
+
+        if let identity = identityFor(element) {
+            results.append(identity)
         }
 
         guard depth < maxWalkDepth else { return }
-        for child in AXHelpers.children(for: element) {
+        for child in childrenFor(element) {
             guard visited < maxElementsVisited, ContinuousClock.now < deadline else { return }
-            walk(child, depth: depth + 1, visited: &visited, deadline: deadline, into: &results)
+            walk(
+                child,
+                depth: depth + 1,
+                visited: &visited,
+                deadline: deadline,
+                into: &results,
+                identityFor: identityFor,
+                childrenFor: childrenFor
+            )
         }
     }
 
