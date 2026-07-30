@@ -131,11 +131,26 @@ nonisolated enum LayoutSolver {
     /// rebuilt from cache state. previousWindowIDs is the windowID
     /// snapshot from the prior cache cycle, used to distinguish a
     /// genuinely new item from one whose identifier migrated when
-    /// sourcePID resolution succeeded.
+    /// sourcePID resolution succeeded. recentWindowIDs widens that
+    /// same test over the last several cycles so one degraded
+    /// enumeration cannot make an established item look new.
     struct LeftmostObservation {
         let hiddenBounds: CGRect
         let sectionByWindowID: [CGWindowID: MenuBarSection.Name]
         let previousWindowIDs: [CGWindowID]
+        let recentWindowIDs: Set<CGWindowID>
+
+        init(
+            hiddenBounds: CGRect,
+            sectionByWindowID: [CGWindowID: MenuBarSection.Name],
+            previousWindowIDs: [CGWindowID],
+            recentWindowIDs: Set<CGWindowID> = []
+        ) {
+            self.hiddenBounds = hiddenBounds
+            self.sectionByWindowID = sectionByWindowID
+            self.previousWindowIDs = previousWindowIDs
+            self.recentWindowIDs = recentWindowIDs
+        }
     }
 
     // MARK: - Current flat construction
@@ -281,7 +296,14 @@ nonisolated enum LayoutSolver {
 
         // Path 3: hideable candidate selection.
         let hideableLeftmost = leftmostItems.filter(\.canBeHidden)
+        // Continuity is judged over several cycles, not just the previous one.
+        // A single degraded enumeration — a Space switch, a partially
+        // published window list — drops an item's windowID from the previous
+        // cycle, and the item then reads as brand new on the cycle after
+        // (#849). `recentWindowIDs` carries the windowIDs seen across the last
+        // several cycles so those gaps can't manufacture a new item.
         let previousIDs = Set(observation.previousWindowIDs)
+            .union(observation.recentWindowIDs)
 
         // Unresolved sourcePID short-circuit. Without sourcePID
         // resolution, third-party items hosted by Control Center fall
@@ -313,16 +335,49 @@ nonisolated enum LayoutSolver {
             }
         }
 
+        // Namespace-level fallback for owners whose item title is not stable.
+        // The same physical status item is tagged `<bundleID>:Item-0` while
+        // macOS still hosts it as a generic Control Center slot, and
+        // `<bundleID>:<the owner's own window title>` once sourcePID
+        // resolution renames it. A saved entry filed under one form misses
+        // the other, so the item looks like it has no saved section and gets
+        // relocated as new — which is how an item the user put in Always
+        // Hidden gets dragged back out (#849).
+        //
+        // Only consulted where it cannot be ambiguous: the owner must have
+        // exactly one saved entry and exactly one live item, so there is only
+        // one item the saved entry could refer to. Like the canonical-form
+        // lookup above, this can only ever conclude that an item *does* have
+        // a saved section, so it suppresses relocations and never causes one.
+        let savedCountByNamespace = Dictionary(
+            savedSectionOrder.lazy
+                .filter { sectionName(forPersistedKey: $0.key) != nil }
+                .flatMap(\.value)
+                .map { (namespace(forIdentifier: $0), 1) },
+            uniquingKeysWith: +
+        )
+        let liveCountByNamespace = Dictionary(
+            items.lazy.map { ($0.tag.namespace.description, 1) },
+            uniquingKeysWith: +
+        )
+
         let candidate = hideableLeftmost.first { item in
             let identifier = "\(item.tag.namespace):\(item.tag.title)"
 
             // Items with a saved section belong to restoreItemsToSaved-
             // Sections, not to the new-item relocation path.
-            let hasSavedSection = savedSectionForIdentifier[identifier] != nil ||
+            var hasSavedSection = savedSectionForIdentifier[identifier] != nil ||
                 savedSectionForIdentifier[item.uniqueIdentifier] != nil ||
                 savedSectionForIdentifier[
                     MenuBarItemTag.canonicalPersistentIdentifier(item.uniqueIdentifier)
                 ] != nil
+            if !hasSavedSection {
+                let itemNamespace = item.tag.namespace.description
+                hasSavedSection = item.tag.namespace.isString &&
+                    item.tag.namespace != .controlCenter &&
+                    savedCountByNamespace[itemNamespace] == 1 &&
+                    liveCountByNamespace[itemNamespace] == 1
+            }
             guard !hasSavedSection else { return false }
 
             let isNewIdentity = !knownItemIdentifiers.contains(identifier)
@@ -1075,6 +1130,15 @@ nonisolated enum LayoutSolver {
     /// Extracts the baseID (namespace:title) prefix from a uniqueIdentifier.
     private static nonisolated func baseID(forIdentifier id: String) -> String {
         id.split(separator: ":", maxSplits: 2).prefix(2).joined(separator: ":")
+    }
+
+    /// Extracts the namespace prefix from a uniqueIdentifier.
+    ///
+    /// Every namespace form renders without a colon — a bundle ID, a UUID
+    /// string, or the literal `null` — so the first component is the whole
+    /// namespace.
+    private static nonisolated func namespace(forIdentifier id: String) -> String {
+        String(id.prefix { $0 != ":" })
     }
 
     /// Maps a persisted section key string to its enum value.

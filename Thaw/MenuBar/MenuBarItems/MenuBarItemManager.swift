@@ -205,6 +205,70 @@ final class MenuBarItemManager {
     nonisolated static let isDegradedIdentityEnrichmentEnabled =
         UserDefaults.standard.bool(forKey: "EnableDegradedItemAXEnrichment")
 
+    /// Widest a control item can be while still counting as a marker rather
+    /// than a collapsed section's stretched divider.
+    ///
+    /// A collapsed section sets its control item to `Lengths.expanded`
+    /// (10000 pt, which the window server clamps to roughly the span of the
+    /// displays); an expanded one uses `NSStatusItem.variableLength`, which
+    /// measures in single digits. Anything between the two is not a real
+    /// state, so the exact value only has to separate them.
+    private static nonisolated let markerWidthCeiling: CGFloat = 256
+
+    /// Whether a divider's geometry contradicts its section's logical state,
+    /// meaning the snapshot was taken part-way through an expand or collapse.
+    ///
+    /// The two do not move together: `section.show()` drags the control item
+    /// and resizes it in separate steps, so a cache pass can observe items
+    /// already at their revealed coordinates while the divider still carries
+    /// the stretched width of the collapsed layout. Classifying against that
+    /// mixture puts the whole hidden section into `visible` — which is what
+    /// empties the hidden row in the layout editor while it sits open (#851).
+    ///
+    /// - Parameters:
+    ///   - dividerWidth: Width of the section's control item.
+    ///   - isSectionCollapsed: Whether the section's logical state is hidden.
+    ///
+    /// - Returns: `true` when geometry and logical state disagree.
+    static nonisolated func isMidSectionTransition(
+        dividerWidth: CGFloat,
+        isSectionCollapsed: Bool
+    ) -> Bool {
+        (dividerWidth > markerWidthCeiling) != isSectionCollapsed
+    }
+
+    /// The item windowIDs enumerated in each of the last few cache cycles,
+    /// oldest first.
+    ///
+    /// The relocation planner distinguishes a genuinely new item from one
+    /// whose identifier merely changed by asking whether it has seen the
+    /// windowID before, and the only history it had was the immediately
+    /// preceding cycle. A single degraded enumeration is enough to lose an
+    /// established windowID — a Space switch drops the whole list, and the
+    /// menu bar item window list is published incrementally after a display
+    /// change — after which the item reads as brand new and gets dragged out
+    /// of the section the user put it in (#849).
+    ///
+    /// Keeping several cycles of history absorbs those gaps. It is deliberately
+    /// not "every windowID ever seen": the window server recycles windowIDs,
+    /// and a recycled ID mistaken for a known one would silently skip
+    /// relocating a genuinely new item.
+    private var recentItemWindowIDCycles: Deque<Set<CGWindowID>> = []
+
+    /// Consecutive cache passes discarded as mid expand/collapse.
+    ///
+    /// Bounds the guard: if geometry and logical state disagree persistently
+    /// rather than transiently, the cache must still be allowed to move
+    /// forward instead of serving a stale layout indefinitely.
+    private var midTransitionSkipStreak = 0
+
+    /// How many consecutive passes may be discarded as mid expand/collapse
+    /// before one is accepted regardless.
+    private static let maxMidTransitionSkips = 3
+
+    /// How many cache cycles a windowID stays eligible as "recently seen".
+    private static let recentWindowIDCycleWindow = 10
+
     /// Diagnostic logger for the menu bar item manager.
     fileprivate static nonisolated let diagLog = DiagLog(category: "MenuBarItemManager")
 
@@ -2211,6 +2275,16 @@ extension MenuBarItemManager {
             return
         }
 
+        // Discard a pass whose divider geometry disagrees with the section's
+        // logical state. Keeping the previous cache costs one cycle; accepting
+        // the mixture reclassifies a whole section (#851).
+        if !itemCache.managedItems.isEmpty, let section = await midTransitionSection(in: context) {
+            MenuBarItemManager.diagLog.debug(
+                "Not updating menu bar item cache: \(section.logString) is mid expand/collapse, keeping last-known-good cache"
+            )
+            return
+        }
+
         itemCache = context.cache
 
         // Reset isRestoringItemOrder if it's been stuck for too long (10 seconds).
@@ -2367,6 +2441,73 @@ extension MenuBarItemManager {
         degradedItemAXIdentities = enrichment
     }
 
+    /// Returns the hideable section whose divider geometry contradicts its
+    /// logical state, or `nil` when both sections agree.
+    ///
+    /// See ``isMidSectionTransition(dividerWidth:isSectionCollapsed:)`` for why
+    /// the two can disagree.
+    private func midTransitionSection(in context: CacheContext) async -> MenuBarSection.Name? {
+        var widths: [(MenuBarSection.Name, CGFloat)] = [
+            (.hidden, context.hiddenControlItemBounds.width),
+        ]
+        if let alwaysHiddenBounds = context.alwaysHiddenControlItemBounds.first {
+            widths.append((.alwaysHidden, alwaysHiddenBounds.width))
+        }
+
+        let mismatch = await MainActor.run { [weak self] () -> MenuBarSection.Name? in
+            guard let menuBarManager = self?.appState?.menuBarManager else {
+                return nil
+            }
+            return widths.first { name, width in
+                guard
+                    let section = menuBarManager.section(withName: name),
+                    section.isEnabled
+                else {
+                    return false
+                }
+                return MenuBarItemManager.isMidSectionTransition(
+                    dividerWidth: width,
+                    isSectionCollapsed: section.isHidden
+                )
+            }?.0
+        }
+
+        guard let mismatch else {
+            midTransitionSkipStreak = 0
+            return nil
+        }
+
+        midTransitionSkipStreak += 1
+        guard midTransitionSkipStreak <= MenuBarItemManager.maxMidTransitionSkips else {
+            MenuBarItemManager.diagLog.warning(
+                "midTransitionSection: \(mismatch.logString) still mid expand/collapse after \(midTransitionSkipStreak) passes, accepting this one"
+            )
+            midTransitionSkipStreak = 0
+            return nil
+        }
+
+        return mismatch
+    }
+
+    /// Records this enumeration's windowIDs and returns the set that counts as
+    /// recently seen.
+    ///
+    /// See ``recentItemWindowIDCycles`` for why continuity is judged over
+    /// several cycles rather than only the preceding one.
+    ///
+    /// - Parameter items: The items enumerated this cycle, after clones and
+    ///   ghost control windows have been dropped.
+    ///
+    /// - Returns: Every windowID enumerated within the last
+    ///   ``recentWindowIDCycleWindow`` cycles, including this one.
+    private func recordRecentItemWindowIDs(_ items: [MenuBarItem]) -> Set<CGWindowID> {
+        recentItemWindowIDCycles.append(Set(items.lazy.map(\.windowID)))
+        while recentItemWindowIDCycles.count > MenuBarItemManager.recentWindowIDCycleWindow {
+            recentItemWindowIDCycles.removeFirst()
+        }
+        return recentItemWindowIDCycles.reduce(into: Set()) { $0.formUnion($1) }
+    }
+
     /// Caches the current menu bar items, regardless of whether the
     /// items have changed since the previous cache.
     ///
@@ -2436,6 +2577,20 @@ extension MenuBarItemManager {
                 option: .activeSpace,
                 resolveSourcePID: resolveSourcePID
             )
+
+            // Still nothing, but the cache holds items. The menu bar does not
+            // empty itself, so this is the `.activeSpace` filter resolving a
+            // space ID that no longer matches the windows (a Space switch, a
+            // display reconfiguration). Replacing a populated cache with the
+            // empty reading is what blanks the layout editor mid-session
+            // (#851); hold the last known good cache and let the next cycle
+            // read the menu bar again.
+            if items.isEmpty, !itemCache.managedItems.isEmpty {
+                MenuBarItemManager.diagLog.warning(
+                    "cacheItemsRegardless: getMenuBarItems returned ZERO items twice, keeping last-known-good cache of \(itemCache.managedItems.count) item(s)"
+                )
+                return
+            }
         }
 
         MenuBarItemManager.diagLog.debug("cacheItemsRegardless: getMenuBarItems returned \(items.count) items")
@@ -2461,6 +2616,10 @@ extension MenuBarItemManager {
         // windows from every cache decision so they cannot be treated as new
         // unmanaged items or make the normal window-ID comparison churn.
         let ghostControlWindowIDs = dropGhostControlItemWindows(from: &items)
+
+        // Recorded only after clones and ghost windows are dropped, so their
+        // throwaway windowIDs never enter the continuity history.
+        let recentWindowIDs = recordRecentItemWindowIDs(items)
 
         // Reconcile resolved sourcePIDs against previously known values to
         // prevent transient resolution errors (e.g. stale AX data after item
@@ -2745,7 +2904,8 @@ extension MenuBarItemManager {
         if await relocateNewLeftmostItems(
             items,
             controlItems: controlItems,
-            previousWindowIDs: previousWindowIDs
+            previousWindowIDs: previousWindowIDs,
+            recentWindowIDs: recentWindowIDs
         ) {
             MenuBarItemManager.diagLog.debug("Relocated new leftmost items; scheduling recache")
             // Ownership transfers to the nested recache: the waiter must not
@@ -2884,6 +3044,21 @@ extension MenuBarItemManager {
             ? rawWindowIDs
             : rawWindowIDs.filter { !cloneIDs.contains($0) }
         let cachedIDs = cacheActor.cachedItemWindowIDs
+
+        // An empty reading against a populated cache is a failed observation,
+        // not the menu bar emptying out. The `.activeSpace` filter resolves
+        // the space ID separately from the window list, so during a Space
+        // switch it matches the outgoing space and nothing passes the filter
+        // — the next reading, milliseconds later, returns the full set again.
+        // Treating the zero as real is what makes the layout editor blink its
+        // items away and back while it sits open (#851).
+        if itemWindowIDs.isEmpty, !cachedIDs.isEmpty {
+            MenuBarItemManager.diagLog.debug(
+                "cacheItemsIfNeeded: ignoring empty window ID reading against \(cachedIDs.count) cached, likely a Space switch"
+            )
+            return
+        }
+
         if cachedIDs != itemWindowIDs {
             MenuBarItemManager.diagLog.debug("cacheItemsIfNeeded: window IDs changed (\(cachedIDs.count) cached vs \(itemWindowIDs.count) current), triggering recache")
             await cacheItemsRegardless(itemWindowIDs)
@@ -5649,7 +5824,8 @@ extension MenuBarItemManager {
     private func relocateNewLeftmostItems(
         _ items: [MenuBarItem],
         controlItems: ControlItemPair,
-        previousWindowIDs: [CGWindowID]
+        previousWindowIDs: [CGWindowID],
+        recentWindowIDs: Set<CGWindowID>
     ) async -> Bool {
         guard appState != nil else { return false }
 
@@ -5712,7 +5888,8 @@ extension MenuBarItemManager {
             observation: LayoutSolver.LeftmostObservation(
                 hiddenBounds: hiddenBounds,
                 sectionByWindowID: sectionByWindowID,
-                previousWindowIDs: previousWindowIDs
+                previousWindowIDs: previousWindowIDs,
+                recentWindowIDs: recentWindowIDs
             ),
             savedSectionOrder: savedSectionOrder,
             knownItemIdentifiers: knownItemIdentifiers,
