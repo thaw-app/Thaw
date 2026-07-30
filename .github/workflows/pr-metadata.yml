@@ -1,7 +1,8 @@
 name: "PR Metadata"
 
-# Labels (type/area) + shape checks (base/title/Closes; size warn-only).
+# Labels (type/area) + shape checks (base/title/Closes/DCO; size warn-only).
 # Uses pull_request_target so fork PRs can still receive labels.
+# DCO is verified via the Pulls commits API only (no checkout of PR code).
 # Crowdin sync PRs are skipped — they are translation-only and often huge.
 #
 # Spam guard: do not run on `edited` (title/body tweaks). Size heads-ups go to
@@ -259,6 +260,50 @@ jobs:
             if (!/\bCloses:\s*(?:#\d+|N\/A)\b/i.test(body)) {
               failures.push(
                 `PR body must include a \`Closes:\` line (e.g. \`Closes: #123\` or \`Closes: N/A\`).`,
+              );
+            }
+
+            // DCO: every non-merge, non-bot commit needs Signed-off-by matching the author email.
+            const dcoBotLogins = new Set([
+              'dependabot[bot]',
+              'renovate[bot]',
+              'github-actions[bot]',
+              'crowdin[bot]',
+              'crowdin-bot',
+            ]);
+            const commits = await github.paginate(github.rest.pulls.listCommits, {
+              owner,
+              repo,
+              pull_number: pr.number,
+              per_page: 100,
+            });
+            const dcoMissing = [];
+            for (const entry of commits) {
+              const login = entry.author?.login || '';
+              if (dcoBotLogins.has(login) || login.toLowerCase().includes('crowdin')) {
+                continue;
+              }
+              if ((entry.parents || []).length > 1) {
+                continue; // merge commit
+              }
+              const authorEmail = (entry.commit?.author?.email || '').trim().toLowerCase();
+              const message = entry.commit?.message || '';
+              if (!authorEmail) {
+                dcoMissing.push(entry.sha.slice(0, 8));
+                continue;
+              }
+              const signoffEmails = [];
+              for (const line of message.split('\n')) {
+                const match = line.match(/^Signed-off-by:\s*.+<([^>]+)>\s*$/i);
+                if (match) signoffEmails.push(match[1].trim().toLowerCase());
+              }
+              if (!signoffEmails.includes(authorEmail)) {
+                dcoMissing.push(entry.sha.slice(0, 8));
+              }
+            }
+            if (dcoMissing.length > 0) {
+              failures.push(
+                `DCO: commit(s) missing a \`Signed-off-by\` trailer matching the author email: \`${dcoMissing.join('`, `')}\`. Use \`git commit -s\` (or \`git rebase --signoff\` then force-push). See CONTRIBUTING.`,
               );
             }
 

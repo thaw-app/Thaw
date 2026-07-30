@@ -97,17 +97,28 @@ by the main app after launch.
 
 - **Dev loop:** Open `Thaw.xcodeproj` in Xcode 26+, build/run.
 - **CI:** `.github/workflows/ci.yml` — SwiftLint, `xcodebuild test`, SonarCloud.
-  Shared release/CI pieces are gradually moving into the
-  [`thaw-app`](https://github.com/thaw-app) org.
+  Shared release/CI pieces live in [`thaw-app/org-ci`](https://github.com/thaw-app/org-ci).
 - **Release:** Signed with Developer ID, notarized, packaged (ZIP/DMG), Sparkle
-  appcast updated. See [VERIFYING_RELEASES.md](VERIFYING_RELEASES.md).
-- **Hosting:** Canonical source is [thaw-app/Thaw](https://github.com/thaw-app/Thaw)
-  today; governance targets a later transfer into `thaw-app` once fragile
-  release paths are stable (see [GOVERNANCE.md](../.github/GOVERNANCE.md)).
+  appcast updated. See [VERIFYING_RELEASES.md](VERIFYING_RELEASES.md) and
+  [RELEASES.md](RELEASES.md).
+- **Hosting:** Canonical source is [thaw-app/Thaw](https://github.com/thaw-app/Thaw).
+
+## Related organization repositories
+
+Thaw’s product surface spans more than this git tree. Inventory for maintainers
+and supply-chain review:
+
+| Repository | Role |
+| --- | --- |
+| [thaw-app/Thaw](https://github.com/thaw-app/Thaw) | Application source, issues, DMG releases, CI |
+| [thaw-app/updates](https://github.com/thaw-app/updates) | Sparkle appcast + update ZIP / deltas |
+| [thaw-app/brand-assets](https://github.com/thaw-app/brand-assets) | Shared brand artwork and README badges |
+| [thaw-app/org-ci](https://github.com/thaw-app/org-ci) | Reusable Actions (e.g. Sparkle release) |
+| [thaw-app/raycast-extension](https://github.com/thaw-app/raycast-extension) | Official Raycast extension |
 
 ## Related documents
 
 - [ASSURANCE_CASE.md](ASSURANCE_CASE.md) — threat model and security argument
 - [URI_SCHEMES.md](URI_SCHEMES.md) — external URL/API surface
 - [SECURITY.md](../.github/SECURITY.md) — security requirements and reporting
-- [GOVERNANCE.md](../.github/GOVERNANCE.md) — project roles
+- [GOVERNANCE.md](../.github/GOVERNANCE.md) — project roles and org repo inventory

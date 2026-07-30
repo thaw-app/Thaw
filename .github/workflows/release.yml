@@ -5,7 +5,7 @@ name: Release
 # release history or pointing tags at old commits without distributing.
 #
 # Artifact split:
-#   - thaw-app/Thaw releases: DMG only (human installers)
+#   - thaw-app/Thaw releases: DMG, cosign bundles, CycloneDX SBOM
 #   - thaw-app/updates releases + Pages: Sparkle ZIP, deltas, appcast.xml
 #   - stonerl/Thaw main: mirrored appcast.xml for legacy SUFeedURL installs
 
@@ -141,6 +141,41 @@ jobs:
           dmg-name: ${{ env.DMG_NAME }}
           app-name: ${{ env.APP_NAME }}
 
+      - name: Generate CycloneDX SBOM
+        id: sbom-meta
+        env:
+          TAG: ${{ steps.meta.outputs.tag }}
+          APP_NAME: ${{ env.APP_NAME }}
+          # Pin Syft for reproducible release tooling (matches anchore/sbom-action v0.24.0).
+          SYFT_VERSION: v1.42.3
+        run: |
+          set -euo pipefail
+
+          app="build/Export/${APP_NAME}"
+          test -d "$app"
+
+          bin="$RUNNER_TEMP/syft-bin"
+          mkdir -p "$bin"
+          curl -sSfL "https://raw.githubusercontent.com/anchore/syft/${SYFT_VERSION}/install.sh" \
+            | sh -s -- -b "$bin" "$SYFT_VERSION"
+          export PATH="$bin:$PATH"
+          syft version
+
+          sbom_name="Thaw_${TAG}.cdx.json"
+          sbom_path="build/${sbom_name}"
+          syft "$app" -o "cyclonedx-json=${sbom_path}"
+          test -f "$sbom_path"
+          ls -la "$sbom_path"
+
+          # Basename-only checksum so `shasum -c` works after downloading the release assets.
+          (
+            cd build
+            shasum -a 256 "$sbom_name" | tee "${sbom_name}.sha256"
+          )
+
+          echo "path=${sbom_path}" >> "$GITHUB_OUTPUT"
+          echo "name=${sbom_name}" >> "$GITHUB_OUTPUT"
+
       - name: Sparkle ZIP and appcast
         id: sparkle
         uses: thaw-app/org-ci/actions/sparkle-release@1426ab64607a0b42c02b409486eeb47ef7b9ba25
@@ -196,23 +231,28 @@ jobs:
       - name: Install cosign
         uses: sigstore/cosign-installer@d7543c93d881b35a8faa02e8e3605f69b7a1ce62 # v3.10.0
 
-      - name: Sign installer DMG (Sigstore)
+      - name: Sign installer DMG and SBOM (Sigstore)
         env:
           COSIGN_YES: "true"
           DMG_PATH: build/${{ env.DMG_NAME }}
+          SBOM_PATH: ${{ steps.sbom-meta.outputs.path }}
         run: |
           set -euo pipefail
           cosign version
           cosign sign-blob --bundle "${DMG_PATH}.sigstore.json" "$DMG_PATH"
-          ls -la "${DMG_PATH}.sigstore.json"
+          cosign sign-blob --bundle "${SBOM_PATH}.sigstore.json" "$SBOM_PATH"
+          ls -la "${DMG_PATH}.sigstore.json" "${SBOM_PATH}.sigstore.json"
 
-      - name: Create Thaw GitHub Release (DMG)
+      - name: Create Thaw GitHub Release (DMG + SBOM)
         uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3
         with:
           tag_name: ${{ steps.meta.outputs.tag }}
           files: |
             build/${{ env.DMG_NAME }}
             build/${{ env.DMG_NAME }}.sigstore.json
+            ${{ steps.sbom-meta.outputs.path }}
+            ${{ steps.sbom-meta.outputs.path }}.sigstore.json
+            ${{ steps.sbom-meta.outputs.path }}.sha256
           generate_release_notes: false
           # Draft unless publish_release is checked.
           draft: ${{ !inputs.publish_release }}

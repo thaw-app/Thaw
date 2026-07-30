@@ -10,7 +10,8 @@ them.
 | --- | --- | --- |
 | **Apple Developer ID + notarization** | Binary came from the Thaw developer team and passed Apple’s notarization checks | Release GitHub Actions (signing + `notarytool`) |
 | **Sparkle EdDSA** | Downloaded **update archives** (e.g. release ZIPs) match signatures produced with the project’s Sparkle private key; the app verifies them with `SUPublicEDKey` | Sparkle tools in the release pipeline sign update packages; public key embedded in the app (`Info.plist`). The appcast lists those updates over HTTPS; **feed-level** signing (`SURequireSignedFeed`) is not enabled |
-| **Sigstore (cosign)** | GitHub Release **DMG** blobs match a keyless cosign signature bundle uploaded beside the installer | Release workflow runs `cosign sign-blob` and attaches `*.sigstore.json` to the Thaw release |
+| **Sigstore (cosign)** | GitHub Release **DMG** (and **SBOM**) blobs match a keyless cosign signature bundle uploaded beside the asset | Release workflow runs `cosign sign-blob` and attaches `*.sigstore.json` |
+| **CycloneDX SBOM** | Machine-readable inventory of components observed in the shipped `Thaw.app` | Syft on the exported app in the release workflow; uploaded as `Thaw_<tag>.cdx.json` |
 | **Git tag signatures** | Important version tags are GPG-signed by the releaser | `git tag -s` (or equivalent) on release tags |
 
 The Sparkle **private** key and Apple signing credentials are stored as CI
@@ -70,6 +71,30 @@ cosign verify-blob \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
   Thaw.dmg
 ```
+
+## Check the release SBOM
+
+Each Thaw GitHub Release that went through the current release workflow includes:
+
+| Asset | Purpose |
+| --- | --- |
+| `Thaw_<tag>.cdx.json` | CycloneDX Software Bill of Materials for the exported app |
+| `Thaw_<tag>.cdx.json.sha256` | SHA-256 of the SBOM file |
+| `Thaw_<tag>.cdx.json.sigstore.json` | Cosign keyless signature bundle for the SBOM |
+
+```sh
+# After downloading the three files from the GitHub Release:
+shasum -a 256 -c Thaw_2.0.0.cdx.json.sha256
+
+cosign verify-blob \
+  --bundle Thaw_2.0.0.cdx.json.sigstore.json \
+  --certificate-identity-regexp 'https://github.com/thaw-app/Thaw/' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  Thaw_2.0.0.cdx.json
+```
+
+The SBOM lists observed components (for example SwiftPM-linked libraries). It is
+a best-effort inventory from the built app, not a legal license notice.
 
 ## Check a Git version tag
 

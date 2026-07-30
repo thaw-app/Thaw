@@ -35,8 +35,11 @@ which appends:
 Signed-off-by: Your Name <your.email@example.com>
 ```
 
-Pull requests whose commits lack a valid sign-off may be asked to amend or
-re-push with sign-off before merge.
+CI enforces this on pull requests (see `.github/workflows/pr-metadata.yml`):
+every non-merge commit must include a `Signed-off-by` trailer whose email
+matches the commit author. Bot/automation commits (Dependabot, Crowdin, etc.)
+are exempt. PRs that fail DCO will not pass the PR Metadata check until you
+amend or rebase with sign-off (`git rebase --signoff` then force-push).
 
 > **Note:** This is not a CLA and does not transfer copyright. It is an
 > attestation that you can contribute the change under GPL-3.0.
@@ -146,6 +149,19 @@ swiftlint lint --strict
 
 Pull requests are automatically reviewed by SonarCloud for code quality and CodeRabbit for AI-assisted review. You may receive automated comments from these tools, so please address any findings before requesting a human review.
 
+### SCA / SAST expectations
+
+Thaw treats automated security and quality findings as part of the merge bar:
+
+| Signal | Where | Expectation |
+| --- | --- | --- |
+| **Dependabot** | Dependency / Actions update PRs | Review and merge promptly; do not leave known vulnerable pins open without a documented waiver |
+| **SonarCloud** | PR decoration + quality gate | Fix new issues / smells called out on the PR unless a maintainer marks won’t-fix |
+| **CodeQL** | Security analysis workflow (when enabled on the branch) | Address high/critical findings before merge; discuss false positives with maintainers |
+| **CodeRabbit** | PR review comments | Treat as required unless a maintainer marks won’t-fix (same bar as above) |
+
+Do not merge with a failing required check. If a finding is a false positive, say so in the PR and link evidence; maintainers may waive it.
+
 ### Tests
 
 Major new functionality must include automated tests in `ThawTests` (or the
@@ -159,7 +175,8 @@ asks you to confirm this.
 - **PR size:** Aim for ≤500 lines / ≤20 files per PR. If you expect to exceed this, say why in the Summary and link the design/issue.
 - **Templates & issues:** Bugfix and feature PRs should always reference a GitHub issue (`Closes: #123`, or `Closes: N/A` when agreed).
 - **Commit / PR titles:** Prefer conventional commits, e.g. `fix(menubar): …`, `feat(settings): …`.
-- **DCO:** Every commit must be signed off (`git commit -s`).
+- **DCO:** Every commit must be signed off (`git commit -s`). CI enforces this
+  on PRs via PR Metadata (author-email must match the trailer).
 - **Code review bots:** CodeRabbit and SonarCloud comments are treated as *required* unless a maintainer marks them won’t-fix. If you’re unsure, wait for a maintainer reply before large refactors spurred by bots alone.
 - **Sensitive areas:** Expect deeper review and stronger tests when touching menu bar hiding/layout, IceBar / Thaw Bar, triggers/automation, logging, or permissions.
 
