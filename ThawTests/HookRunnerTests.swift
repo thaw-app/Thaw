@@ -55,6 +55,13 @@ final class HookRunnerTests {
         return url.path
     }
 
+    /// Whether a process with the given identifier is still alive.
+    ///
+    /// `EPERM` counts as alive: the process exists but is not ours to signal.
+    private func isRunning(_ pid: pid_t) -> Bool {
+        kill(pid, 0) == 0 || errno == EPERM
+    }
+
     private func context(
         phase: HookPhase = .pre,
         scope: HookScope = .profile,
@@ -284,13 +291,12 @@ final class HookRunnerTests {
     @Test("The timeout bounds the caller's wall-clock time", .timeLimit(.minutes(1)))
     func timeoutBoundsTheCallersWallClockTime() async throws {
         // The regression this guards: `sh` does not forward the teardown
-        // signal to its own child and then waits for that child, so the
-        // signal cannot end the hook. `run` used to stay blocked for the
-        // child's full lifetime — 30s against a 1s budget — because the
-        // subprocess was a structured child of the race and the group could
-        // not return until it finished. It is now an independent task that
-        // gets abandoned at the budget, so the caller returns on time while
-        // the orphan finishes on its own.
+        // signal to its own child and then waits for that child, so
+        // signalling the wrapper alone cannot end the hook. `run` used to
+        // stay blocked for the child's full lifetime — 30s against a 1s
+        // budget. Teardown now targets the hook's whole process group, so
+        // the wrapper's child goes down with it and the wait ends at the
+        // budget.
         let path = try writeScript("#!/bin/sh\nsleep 30\n")
         let hook = HookScript(path: path, timeoutSeconds: 0.1)
 
@@ -306,6 +312,39 @@ final class HookRunnerTests {
             elapsed < .seconds(5),
             "the caller must return at its budget rather than waiting out the hook's child"
         )
+    }
+
+    @Test("A timed-out hook takes its descendants down with it", .timeLimit(.minutes(1)))
+    func timedOutHookLeavesNoDescendants() async throws {
+        // The other half of the same problem: a wrapper's child used to be
+        // abandoned at the budget and run to completion as an orphan. The
+        // teardown sequence targets the process group, and the implicit kill
+        // that ends it inherits that, so the descendant is terminated rather
+        // than left behind. `createSession` is what keeps those signals off
+        // Thaw's own process group.
+        let pidFile = tempDirectory.appendingPathComponent("descendant.pid").path
+        let path = try writeScript("#!/bin/sh\nsleep 30 &\necho $! > \(pidFile)\nwait\n")
+        let hook = HookScript(path: path, timeoutSeconds: 0.1)
+
+        guard case .timedOut? = await hookError(from: hook) else {
+            Issue.record("expected timedOut")
+            return
+        }
+
+        let recorded = try String(contentsOfFile: pidFile, encoding: .utf8)
+        let descendant = try #require(
+            pid_t(recorded.trimmingCharacters(in: .whitespacesAndNewlines)),
+            "the hook should have recorded its child's pid"
+        )
+
+        // The kill lands as the run returns, so give the descendant a moment
+        // to actually go away before concluding that it survived.
+        let deadline = ContinuousClock.now + .seconds(5)
+        while isRunning(descendant), ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(50))
+        }
+
+        #expect(!isRunning(descendant), "the hook's descendant must not outlive the timeout")
     }
 
     @Test("A slow hook does not stall the apply pipeline", .timeLimit(.minutes(1)))
