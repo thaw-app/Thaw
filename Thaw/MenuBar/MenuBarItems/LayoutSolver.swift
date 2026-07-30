@@ -1113,14 +1113,16 @@ nonisolated enum LayoutSolver {
         isInStartupSettling: Bool,
         isApplyingProfileLayout: Bool,
         temporarilyShownItemContextsIsEmpty: Bool,
-        alwaysHiddenSectionResolved: Bool
+        alwaysHiddenSectionResolved: Bool,
+        hiddenSectionHasRoom: Bool
     ) -> Bool {
         !isRestoringItemOrder &&
             !isResettingLayout &&
             !isInStartupSettling &&
             !isApplyingProfileLayout &&
             temporarilyShownItemContextsIsEmpty &&
-            alwaysHiddenSectionResolved
+            alwaysHiddenSectionResolved &&
+            hiddenSectionHasRoom
     }
 
     /// Whether the always-hidden section is resolved well enough for the
@@ -1143,6 +1145,52 @@ nonisolated enum LayoutSolver {
         isAlwaysHiddenSectionEnabled: Bool
     ) -> Bool {
         hasAlwaysHiddenControlItem || !isAlwaysHiddenSectionEnabled
+    }
+
+    /// Whether the hidden section has physical room between the two
+    /// dividers for the items the saved layout puts there.
+    ///
+    /// The hidden section is the span between the always-hidden divider's
+    /// trailing edge and the hidden divider's leading edge. When that span
+    /// closes to zero, `CacheContext.findSection` can no longer satisfy the
+    /// strict test for `.hidden` (it would need `minX >= ah.maxX` and
+    /// `maxX <= hidden.minX` at the same coordinate), so every item falls
+    /// through to the midpoint tie-break and the on-screen ones resolve
+    /// `.visible`. Persisting that reading moves the user's hidden items
+    /// into the visible section for good.
+    ///
+    /// Observed on a docked topology — external non-notched main display,
+    /// notched built-in secondary at negative X — where the gap between the
+    /// dividers went from 677pt to 0 across a single launch (#795).
+    ///
+    /// Two conditions keep this from firing on healthy layouts:
+    ///
+    /// - Without an always-hidden divider there is no second boundary and
+    ///   so no span to close; everything left of the hidden divider is
+    ///   `.hidden` by definition.
+    /// - A user whose saved layout puts nothing in the hidden section has
+    ///   no reason for the dividers to be apart, and must still be able to
+    ///   persist. Only a saved layout that *expects* hidden items makes a
+    ///   closed span evidence of a misread.
+    ///
+    /// - Parameters:
+    ///   - hiddenControlItemMinX: Leading edge of the hidden divider.
+    ///   - alwaysHiddenControlItemMaxX: Trailing edge of the always-hidden
+    ///     divider, or `nil` when the section has no divider.
+    ///   - savedHiddenItemCount: How many items the saved layout assigns to
+    ///     the hidden section.
+    static nonisolated func hiddenSectionHasRoom(
+        hiddenControlItemMinX: CGFloat,
+        alwaysHiddenControlItemMaxX: CGFloat?,
+        savedHiddenItemCount: Int
+    ) -> Bool {
+        guard let alwaysHiddenControlItemMaxX else {
+            return true
+        }
+        guard savedHiddenItemCount > 0 else {
+            return true
+        }
+        return hiddenControlItemMinX - alwaysHiddenControlItemMaxX > 0
     }
 
     // MARK: - Pending rehide identifiers

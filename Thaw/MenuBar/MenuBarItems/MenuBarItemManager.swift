@@ -2232,13 +2232,24 @@ extension MenuBarItemManager {
                 .section(withName: .alwaysHidden)?.isEnabled ?? false
         )
 
+        // The hidden section is the span between the two dividers. When it
+        // closes to zero, findSection can no longer classify anything as
+        // .hidden by the strict test and the midpoint tie-break resolves
+        // on-screen items as .visible instead (#795, docked topology).
+        let hiddenSectionHasRoom = LayoutSolver.hiddenSectionHasRoom(
+            hiddenControlItemMinX: context.hiddenControlItemBounds.minX,
+            alwaysHiddenControlItemMaxX: context.alwaysHiddenControlItemBounds.first?.maxX,
+            savedHiddenItemCount: savedSectionOrder[sectionKey(for: .hidden)]?.count ?? 0
+        )
+
         if LayoutSolver.shouldPersistSavedOrder(
             isRestoringItemOrder: isRestoringItemOrder,
             isResettingLayout: isResettingLayout,
             isInStartupSettling: isInStartupSettling,
             isApplyingProfileLayout: isApplyingProfileLayout,
             temporarilyShownItemContextsIsEmpty: temporarilyShownItemContexts.isEmpty,
-            alwaysHiddenSectionResolved: alwaysHiddenSectionResolved
+            alwaysHiddenSectionResolved: alwaysHiddenSectionResolved,
+            hiddenSectionHasRoom: hiddenSectionHasRoom
         ) {
             // Don't persist if any items are in a transient blocked state (x=-1).
             // Wait for the next cache cycle when bounds are reliable.
@@ -2280,6 +2291,15 @@ extension MenuBarItemManager {
             // the always-hidden divider keeps failing to resolve.
             MenuBarItemManager.diagLog.warning(
                 "Skipping saveSectionOrder; always-hidden divider unresolved while its section is enabled"
+            )
+        } else if !hiddenSectionHasRoom {
+            // Same reasoning as above: this one is a geometry fault rather
+            // than a resolution fault, and it is worth being able to grep
+            // the two apart. A run of these means the dividers have
+            // collapsed and the menu bar is visibly wrong to the user, not
+            // merely at risk of a bad save.
+            MenuBarItemManager.diagLog.warning(
+                "Skipping saveSectionOrder; hidden section has zero width between the dividers (hidden.minX=\(context.hiddenControlItemBounds.minX), alwaysHidden.maxX=\(context.alwaysHiddenControlItemBounds.first?.maxX.description ?? "nil"))"
             )
         }
         MenuBarItemManager.diagLog.debug("Updated menu bar item cache: visible=\(context.cache[.visible].count), hidden=\(context.cache[.hidden].count), alwaysHidden=\(context.cache[.alwaysHidden].count)")
