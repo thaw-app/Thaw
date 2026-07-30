@@ -48,6 +48,7 @@ block on them. Cross-cutting or disputed calls still follow the decision model
 above (consensus among reachable leads; Project Lead as final say).
 
 ## Community channels
+
 | Channel | Purpose |
 | --- | --- |
 | [GitHub Issues / PRs](https://github.com/thaw-app/Thaw) | Bugs, features, code review, durable decisions |
@@ -55,6 +56,7 @@ above (consensus among reachable leads; Project Lead as final say).
 | [Crowdin](https://crowdin.com/project/thaw) | Localization |
 
 ## Members with repository access
+
 ### `thaw-app` organization (admins / owners)
 
 | GitHub login  | Org role | Lead role        |
@@ -227,8 +229,13 @@ remaining maintainers should still be able to:
    [`thaw-app/updates`](https://github.com/thaw-app/updates) (GitHub Pages at
    `thaw-app.github.io/updates`). Continuity requires that at least one
    remaining owner can update that feed; relocating to a project-controlled
-   domain remains desirable when practical. Legacy installs may still hit
-   `stonerl.github.io/Thaw` via redirect.
+   domain remains desirable when practical. Already-installed legacy builds
+   poll `stonerl.github.io/Thaw/appcast.xml`, which GitHub Pages does **not**
+   redirect (see [Lessons from the transfer](#lessons-from-the-transfer)); the
+   release workflow mirrors the same signed `appcast.xml` to `stonerl/Thaw`
+   `main` to keep those installs updating. Continuity therefore also requires
+   a working mirror token — see [RELEASES.md](../docs/RELEASES.md) under
+   *Legacy installs*.
 
 ## Bus factor
 

@@ -60,11 +60,12 @@ Order matters: update assets are published **before** the Thaw DMG so a failed
 payloads.
 
 1. Build and notarize.
-2. Generate a CycloneDX SBOM from the exported `Thaw.app` (`Thaw_<tag>.cdx.json`).
+2. Generate a CycloneDX SBOM of the resolved SwiftPM dependencies with Syft
+   (`Thaw_<tag>.cdx.json`), and checksum the DMG.
 3. Create Sparkle ZIP (and deltas when prior ZIPs exist).
 4. Publish ZIP + deltas to **`thaw-app/updates`** (same tag).
 5. Cosign-sign the installer DMG and SBOM; publish DMG + SBOM + `*.sigstore.json`
-   (+ SBOM `.sha256`) to **`thaw-app/Thaw`**.
+   + `*.sha256` to **`thaw-app/Thaw`**.
 6. Push signed `appcast.xml` to **`thaw-app/updates`** `gh-pages`.
 
 Workflow: [`.github/workflows/release.yml`](../.github/workflows/release.yml).  

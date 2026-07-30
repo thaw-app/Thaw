@@ -145,32 +145,54 @@ jobs:
         id: sbom-meta
         env:
           TAG: ${{ steps.meta.outputs.tag }}
-          APP_NAME: ${{ env.APP_NAME }}
-          # Pin Syft for reproducible release tooling (matches anchore/sbom-action v0.24.0).
-          SYFT_VERSION: v1.42.3
+          DMG_NAME: ${{ env.DMG_NAME }}
+          # Pin Syft by version *and* archive digest — no curl-pipe-to-sh and no
+          # mutable git tag in the trust path. Bump together; digests come from
+          # syft_<version>_checksums.txt on the corresponding Syft release.
+          SYFT_VERSION: 1.42.3
+          SYFT_SHA256_DARWIN_ARM64: d71ee7db2be0fe2e96f679fd9d69ef04274cc86c8604707797080a21070b3f32
+          SYFT_SHA256_DARWIN_AMD64: c00d01b7c43504708c8922d643d1cbaefa62ca8876baa4d2c2cf4c3be43707a9
         run: |
           set -euo pipefail
 
-          app="build/Export/${APP_NAME}"
-          test -d "$app"
+          case "$(uname -m)" in
+            arm64) syft_arch=arm64; syft_sha="$SYFT_SHA256_DARWIN_ARM64" ;;
+            x86_64) syft_arch=amd64; syft_sha="$SYFT_SHA256_DARWIN_AMD64" ;;
+            *) echo "Unsupported runner architecture: $(uname -m)"; exit 1 ;;
+          esac
 
           bin="$RUNNER_TEMP/syft-bin"
+          archive="$RUNNER_TEMP/syft.tar.gz"
           mkdir -p "$bin"
-          curl -sSfL "https://raw.githubusercontent.com/anchore/syft/${SYFT_VERSION}/install.sh" \
-            | sh -s -- -b "$bin" "$SYFT_VERSION"
+          curl -sSfL --retry 3 \
+            "https://github.com/anchore/syft/releases/download/v${SYFT_VERSION}/syft_${SYFT_VERSION}_darwin_${syft_arch}.tar.gz" \
+            -o "$archive"
+          echo "${syft_sha}  ${archive}" | shasum -a 256 -c -
+          tar -xzf "$archive" -C "$bin" syft
           export PATH="$bin:$PATH"
           syft version
 
+          # Scan the source tree, not the exported .app: SwiftPM dependencies are
+          # statically linked into the binary, so only Package.resolved records
+          # them. Build output and CI workflows are excluded so the SBOM lists
+          # shipped dependencies rather than release tooling.
           sbom_name="Thaw_${TAG}.cdx.json"
           sbom_path="build/${sbom_name}"
-          syft "$app" -o "cyclonedx-json=${sbom_path}"
+          syft scan dir:. \
+            --exclude './build/**' \
+            --exclude './.git/**' \
+            --exclude './.github/**' \
+            --source-name Thaw \
+            --source-version "$TAG" \
+            -o "cyclonedx-json=${sbom_path}"
           test -f "$sbom_path"
           ls -la "$sbom_path"
 
-          # Basename-only checksum so `shasum -c` works after downloading the release assets.
+          # Basename-only checksums so `shasum -c` works after downloading the release assets.
           (
             cd build
             shasum -a 256 "$sbom_name" | tee "${sbom_name}.sha256"
+            shasum -a 256 "$DMG_NAME" | tee "${DMG_NAME}.sha256"
           )
 
           echo "path=${sbom_path}" >> "$GITHUB_OUTPUT"
@@ -250,6 +272,7 @@ jobs:
           files: |
             build/${{ env.DMG_NAME }}
             build/${{ env.DMG_NAME }}.sigstore.json
+            build/${{ env.DMG_NAME }}.sha256
             ${{ steps.sbom-meta.outputs.path }}
             ${{ steps.sbom-meta.outputs.path }}.sigstore.json
             ${{ steps.sbom-meta.outputs.path }}.sha256
