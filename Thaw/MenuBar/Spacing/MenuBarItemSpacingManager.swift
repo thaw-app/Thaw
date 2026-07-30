@@ -96,7 +96,7 @@ final class MenuBarItemSpacingManager {
 
     /// Runs a command with the given arguments.
     private func runCommand(_ command: String, with arguments: [String]) async throws {
-        let result: ExecutionRecord<DiscardedOutput, StringOutput<UTF8>>
+        let result: ExecutionResult<Void, DiscardedOutput, StringOutput<UTF8>>
         do {
             result = try await Subprocess.run(
                 .path(FilePath(Constants.menuBarItemSpacingExecutableURL.path)),

@@ -76,7 +76,7 @@ enum HookRunner {
 
     /// Outcome of racing the subprocess against the timeout.
     private enum RaceOutcome {
-        case completed(ExecutionRecord<StringOutput<UTF8>, StringOutput<UTF8>>)
+        case completed(ExecutionResult<Void, StringOutput<UTF8>, StringOutput<UTF8>>)
         case failed(any Error)
         case timedOut
     }
