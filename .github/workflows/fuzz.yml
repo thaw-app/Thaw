@@ -37,6 +37,11 @@ jobs:
     timeout-minutes: 30
     container:
       image: swift@sha256:dd349c6dfc3cd3040910a84ab3e5bd5d08efdd547e5fb9f77b765abed16fe5ff # 6.2-noble
+    # Steps inside a container default to `sh -e {0}`, which rejects
+    # `set -o pipefail`. Ask for bash explicitly, as the rest of CI does.
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
