@@ -34,14 +34,18 @@ final class HotkeysSettings {
     @ObservationIgnored
     private(set) weak var appState: AppState?
 
+    /// Loads persisted bindings and begins observing subsequent edits.
+    init() {
+        loadInitialState()
+        configureObservers()
+    }
+
     /// Performs the initial setup of the model.
     func performSetup(with appState: AppState) {
         self.appState = appState
         for hotkey in hotkeys {
             hotkey.performSetup(with: appState)
         }
-        loadInitialState()
-        configureObservers()
     }
 
     /// Loads the model's initial state.
