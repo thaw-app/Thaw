@@ -183,15 +183,108 @@ extension CGImage {
 
     // MARK: Transparency Trimming
 
+    /// A bounds-validated, read-only view over the alpha channel of
+    /// row-major pixel data.
+    ///
+    /// Centralizes the buffer-length validation and index arithmetic that
+    /// the transparency scanning paths previously repeated by hand over raw
+    /// pointers: the failable initializer proves every alpha byte addressed
+    /// by the given geometry lies inside `bytes`, so the scanning methods
+    /// can't read out of bounds. The view holds an `UnsafeRawBufferPointer`
+    /// and must not outlive the memory it was created from; both call sites
+    /// scope it to the lifetime of the owning `CGContext` or `CFData`.
+    private nonisolated struct AlphaChannelView {
+        private let bytes: UnsafeRawBufferPointer
+        private let rowStride: Int
+        private let pixelStride: Int
+        private let alphaOffset: Int
+
+        /// The byte value above which a pixel counts as opaque.
+        private let threshold: UInt8
+
+        /// The image width, in pixels.
+        let width: Int
+
+        /// The image height, in pixels.
+        let height: Int
+
+        /// Creates a view if every alpha byte addressed by the given
+        /// geometry lies within `bytes`.
+        ///
+        /// - Parameters:
+        ///   - bytes: The pixel data.
+        ///   - width: The image width, in pixels.
+        ///   - height: The image height, in pixels.
+        ///   - rowStride: The number of bytes per row, including padding.
+        ///   - pixelStride: The number of bytes per pixel.
+        ///   - alphaOffset: The offset of the alpha byte within each pixel.
+        ///   - alphaThreshold: The maximum alpha value (0...1) to consider
+        ///     transparent.
+        init?(
+            bytes: UnsafeRawBufferPointer,
+            width: Int,
+            height: Int,
+            rowStride: Int,
+            pixelStride: Int,
+            alphaOffset: Int,
+            alphaThreshold: CGFloat
+        ) {
+            guard
+                width > 0,
+                height > 0,
+                pixelStride > 0,
+                (0 ..< pixelStride).contains(alphaOffset),
+                rowStride >= width * pixelStride,
+                bytes.count >= (height - 1) * rowStride + (width - 1) * pixelStride + alphaOffset + 1
+            else {
+                return nil
+            }
+            self.bytes = bytes
+            self.width = width
+            self.height = height
+            self.rowStride = rowStride
+            self.pixelStride = pixelStride
+            self.alphaOffset = alphaOffset
+            self.threshold = UInt8(min(max(alphaThreshold * 255, 0), 255))
+        }
+
+        func isPixelOpaque(row: Int, column: Int) -> Bool {
+            bytes[(row * rowStride) + (column * pixelStride) + alphaOffset] > threshold
+        }
+
+        func isRowTransparent(_ row: Int) -> Bool {
+            !(0 ..< width).contains { column in
+                isPixelOpaque(row: row, column: column)
+            }
+        }
+
+        func isTransparent() -> Bool {
+            (0 ..< height).allSatisfy { row in
+                isRowTransparent(row)
+            }
+        }
+
+        func firstOpaqueRow(in rows: some Sequence<Int>) -> Int? {
+            rows.first { row in
+                !isRowTransparent(row)
+            }
+        }
+
+        func firstOpaqueColumn(in columns: some Sequence<Int>) -> Int? {
+            columns.first { column in
+                (0 ..< height).contains { row in
+                    isPixelOpaque(row: row, column: column)
+                }
+            }
+        }
+    }
+
     /// A context for handling transparency data in an image.
-    private nonisolated struct TransparencyContext: ~Copyable {
+    private nonisolated struct TransparencyContext {
         private let image: CGImage
-        private let alphaThreshold: CGFloat
+        /// Retained to keep the memory backing `alphaView` alive.
         private let cgContext: CGContext
-        private let data: UnsafeMutableRawPointer
-        private let zeroByteBlock: UnsafeMutableRawPointer
-        private let rowRange: Range<Int>
-        private let columnRange: Range<Int>
+        private let alphaView: AlphaChannelView
 
         /// Creates a context with the given image and alpha threshold.
         ///
@@ -212,8 +305,7 @@ extension CGImage {
                     space: CGColorSpaceCreateDeviceGray(),
                     bitmapInfo: CGBitmapInfo(alpha: .alphaOnly)
                 ),
-                let data = cgContext.data,
-                let zeroByteBlock = calloc(image.width, MemoryLayout<UInt8>.size)
+                let data = cgContext.data
             else {
                 return nil
             }
@@ -221,17 +313,26 @@ extension CGImage {
             let size = CGSize(width: image.width, height: image.height)
             cgContext.draw(image, in: CGRect(origin: .zero, size: size))
 
-            self.image = image
-            self.alphaThreshold = alphaThreshold
-            self.cgContext = cgContext
-            self.data = data
-            self.zeroByteBlock = zeroByteBlock
-            self.rowRange = 0 ..< image.height
-            self.columnRange = 0 ..< image.width
-        }
+            // The context owns `data` for the lifetime of `cgContext`, which
+            // this struct retains, so the view can't outlive its memory.
+            guard let alphaView = AlphaChannelView(
+                bytes: UnsafeRawBufferPointer(
+                    start: data,
+                    count: cgContext.bytesPerRow * cgContext.height
+                ),
+                width: image.width,
+                height: image.height,
+                rowStride: cgContext.bytesPerRow,
+                pixelStride: 1,
+                alphaOffset: 0,
+                alphaThreshold: alphaThreshold
+            ) else {
+                return nil
+            }
 
-        deinit {
-            free(zeroByteBlock)
+            self.image = image
+            self.cgContext = cgContext
+            self.alphaView = alphaView
         }
 
         /// Returns an image derived from the context's image that has been
@@ -267,62 +368,24 @@ extension CGImage {
         /// Returns a Boolean value that indicates whether the context's
         /// image is transparent.
         func isTransparent() -> Bool {
-            rowRange.allSatisfy { row in
-                isRowTransparent(row: row)
-            }
+            alphaView.isTransparent()
         }
 
         private func inset(for edge: CGRectEdge, in edges: Set<CGRectEdge>) -> Int? {
             guard edges.contains(edge) else {
                 return 0
             }
+            let rowRange = 0 ..< image.height
+            let columnRange = 0 ..< image.width
             return switch edge {
             case .minXEdge:
-                firstOpaqueColumn(in: columnRange)
+                alphaView.firstOpaqueColumn(in: columnRange)
             case .minYEdge:
-                firstOpaqueRow(in: rowRange)
+                alphaView.firstOpaqueRow(in: rowRange)
             case .maxXEdge:
-                firstOpaqueColumn(in: columnRange.reversed()).map { (image.width - 1) - $0 }
+                alphaView.firstOpaqueColumn(in: columnRange.reversed()).map { (image.width - 1) - $0 }
             case .maxYEdge:
-                firstOpaqueRow(in: rowRange.reversed()).map { (image.height - 1) - $0 }
-            }
-        }
-
-        private func isPixelOpaque(row: Int, column: Int) -> Bool {
-            let rawAlpha = data.load(
-                fromByteOffset: (row * cgContext.bytesPerRow) + column,
-                as: UInt8.self
-            )
-            let convertedAlpha = CGFloat(rawAlpha) / 255
-            return convertedAlpha > alphaThreshold
-        }
-
-        private func isRowTransparent(row: Int) -> Bool {
-            // Use memcmp to efficiently check the entire row for zeroed out alpha.
-            if memcmp(data + (row * cgContext.bytesPerRow), zeroByteBlock, image.width) == 0 {
-                return true
-            }
-            // Avoid checking individual pixels if we can.
-            if alphaThreshold == 0 {
-                return false
-            }
-            // Check each pixel in the row until we find one that is opaque.
-            return !columnRange.contains { column in
-                isPixelOpaque(row: row, column: column)
-            }
-        }
-
-        private func firstOpaqueRow(in rowRange: some Sequence<Int>) -> Int? {
-            rowRange.first { row in
-                !isRowTransparent(row: row)
-            }
-        }
-
-        private func firstOpaqueColumn(in columnRange: some Sequence<Int>) -> Int? {
-            columnRange.first { column in
-                rowRange.contains { row in
-                    isPixelOpaque(row: row, column: column)
-                }
+                alphaView.firstOpaqueRow(in: rowRange.reversed()).map { (image.height - 1) - $0 }
             }
         }
     }
@@ -540,31 +603,27 @@ extension CGImage {
         // withExtendedLifetime ensures cfData (and thus the byte pointer) stays
         // alive for the entire scan, preventing ARC from releasing it early.
         guard let cfData = dataProvider?.data,
-              let bytes = CFDataGetBytePtr(cfData)
+              let dataPointer = CFDataGetBytePtr(cfData)
         else {
             return isTransparentSlow(alphaThreshold: alphaThreshold)
         }
 
-        // Validate buffer is large enough to prevent out-of-bounds reads.
-        let rowBytes = bytesPerRow
-        let dataLength = CFDataGetLength(cfData)
-        let requiredLength = (height - 1) * rowBytes + (width - 1) * bytesPerPixel + alphaOffset + 1
-        guard dataLength >= requiredLength else {
-            return isTransparentSlow(alphaThreshold: alphaThreshold)
-        }
-
-        let threshold = UInt8(min(max(alphaThreshold * 255, 0), 255))
-
         return withExtendedLifetime(cfData) {
-            for row in 0 ..< height {
-                let rowStart = row * rowBytes
-                if (0 ..< width).contains(where: { col in
-                    bytes[rowStart + col * bytesPerPixel + alphaOffset] > threshold
-                }) {
-                    return false
-                }
+            // The view's initializer validates that the buffer is large
+            // enough for the scan; a failure (e.g. a short buffer) falls
+            // back to the slow path.
+            guard let alphaView = AlphaChannelView(
+                bytes: UnsafeRawBufferPointer(start: dataPointer, count: CFDataGetLength(cfData)),
+                width: width,
+                height: height,
+                rowStride: bytesPerRow,
+                pixelStride: bytesPerPixel,
+                alphaOffset: alphaOffset,
+                alphaThreshold: alphaThreshold
+            ) else {
+                return isTransparentSlow(alphaThreshold: alphaThreshold)
             }
-            return true
+            return alphaView.isTransparent()
         }
     }
 
