@@ -288,29 +288,18 @@ final class AdvancedSettings {
     /// Combine pipelines. Only the Settings-URI notification subscription
     /// remains Combine-based here.
     private func configureObservers() {
-        var c = Set<AnyCancellable>()
-
-        // Observe external settings changes via Settings URI
-        NotificationCenter.default
-            .publisher(for: .settingsDidChangeViaURI)
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] notification in
-                self?.handleExternalSettingsChange(notification)
-            }
-            .store(in: &c)
-
-        cancellables = c
+        cancellables = [
+            NotificationCenter.observeSettingsChangesViaURI { [weak self] change in
+                self?.handleExternalSettingsChange(change)
+            },
+        ]
     }
 
     /// Handles settings changed externally via Settings URI scheme.
-    private func handleExternalSettingsChange(_ notification: Notification) {
-        guard let key = notification.userInfo?["key"] as? String else {
-            return
-        }
-
+    private func handleExternalSettingsChange(_ change: ExternalSettingsChange) {
         // Handle boolean values
-        if let boolValue = notification.userInfo?["value"] as? Bool {
-            switch key {
+        if let boolValue = change.boolValue {
+            switch change.key {
             case "enableAlwaysHiddenSection":
                 enableAlwaysHiddenSection = boolValue
             case "useOptionClickToShowAlwaysHiddenSection":
@@ -350,8 +339,8 @@ final class AdvancedSettings {
         }
 
         // Handle double values
-        if let doubleValue = notification.userInfo?["doubleValue"] as? Double {
-            switch key {
+        if let doubleValue = change.doubleValue {
+            switch change.key {
             case "showOnHoverDelay":
                 showOnHoverDelay = doubleValue
             case "tooltipDelay":

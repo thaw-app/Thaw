@@ -229,28 +229,19 @@ final class GeneralSettings {
     /// Combine pipelines. Only the Settings-URI notification subscription
     /// remains Combine-based here.
     private func configureObservers() {
-        var c = Set<AnyCancellable>()
-
-        // Observe external settings changes via Settings URI
-        NotificationCenter.default
-            .publisher(for: .settingsDidChangeViaURI)
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] notification in
-                self?.handleExternalSettingsChange(notification)
-            }
-            .store(in: &c)
-
-        cancellables = c
+        cancellables = [
+            NotificationCenter.observeSettingsChangesViaURI { [weak self] change in
+                self?.handleExternalSettingsChange(change)
+            },
+        ]
     }
 
     /// Handles settings changed externally via Settings URI scheme.
-    private func handleExternalSettingsChange(_ notification: Notification) {
-        guard let key = notification.userInfo?["key"] as? String else {
-            return
-        }
+    private func handleExternalSettingsChange(_ change: ExternalSettingsChange) {
+        let key = change.key
 
         // Handle boolean values
-        if let boolValue = notification.userInfo?["value"] as? Bool {
+        if let boolValue = change.boolValue {
             diagLog.debug("GeneralSettings: Received external change for \(key) = \(boolValue)")
 
             switch key {
@@ -281,7 +272,7 @@ final class GeneralSettings {
         }
 
         // Handle double values
-        if let doubleValue = notification.userInfo?["doubleValue"] as? Double {
+        if let doubleValue = change.doubleValue {
             diagLog.debug("GeneralSettings: Received external change for \(key) = \(doubleValue)")
 
             if key == "rehideInterval", rehideInterval != doubleValue {
@@ -290,7 +281,7 @@ final class GeneralSettings {
         }
 
         // Handle enum values (raw integers)
-        if let rawEnumValue = notification.userInfo?["rawEnumValue"] as? Int {
+        if let rawEnumValue = change.rawEnumValue {
             diagLog.debug("GeneralSettings: Received external change for \(key) = \(rawEnumValue)")
 
             if key == "rehideStrategy",

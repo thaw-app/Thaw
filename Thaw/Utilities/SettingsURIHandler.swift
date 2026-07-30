@@ -7,6 +7,7 @@
 //  Licensed under the GNU GPLv3
 
 import AppKit
+import Combine
 import Foundation
 import Security
 
@@ -1210,4 +1211,61 @@ extension Notification.Name {
 
     /// Posted when the Settings URI whitelist changes.
     static let settingsURIWhitelistDidChange = Notification.Name("com.stonerl.Thaw.settingsURIWhitelistDidChange")
+}
+
+// MARK: - ExternalSettingsChange
+
+/// A single setting changed externally via the Settings URI scheme.
+///
+/// The handler posts changes as loosely typed `userInfo`; this reads that
+/// payload back so the settings models don't each repeat the unwrapping. At
+/// most one of the value properties is non-`nil` for a given change.
+struct ExternalSettingsChange {
+    /// The name of the setting that changed.
+    let key: String
+
+    /// The new value, for a Boolean setting.
+    let boolValue: Bool?
+
+    /// The new value, for a floating-point setting.
+    let doubleValue: Double?
+
+    /// The new value, for an enumeration setting backed by an integer.
+    let rawEnumValue: Int?
+
+    /// Creates an instance from a ``Notification/Name/settingsDidChangeViaURI``
+    /// notification, or `nil` when the notification names no setting.
+    init?(_ notification: Notification) {
+        guard let key = notification.userInfo?["key"] as? String else {
+            return nil
+        }
+        self.key = key
+        boolValue = notification.userInfo?["value"] as? Bool
+        doubleValue = notification.userInfo?["doubleValue"] as? Double
+        rawEnumValue = notification.userInfo?["rawEnumValue"] as? Int
+    }
+}
+
+// MARK: - NotificationCenter
+
+@MainActor
+extension NotificationCenter {
+    /// Returns a subscription that delivers settings changes made externally
+    /// via the Settings URI scheme to `handler` on the main queue.
+    ///
+    /// Every settings model observes this notification the same way, so the
+    /// pipeline lives beside the code that posts it.
+    static func observeSettingsChangesViaURI(
+        _ handler: @escaping (ExternalSettingsChange) -> Void
+    ) -> AnyCancellable {
+        NotificationCenter.default
+            .publisher(for: .settingsDidChangeViaURI)
+            .receive(on: DispatchQueue.main)
+            .sink { notification in
+                guard let change = ExternalSettingsChange(notification) else {
+                    return
+                }
+                handler(change)
+            }
+    }
 }

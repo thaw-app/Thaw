@@ -988,15 +988,15 @@ final class MenuBarItemManager {
         itemIdentifiers: [String],
         walkLeftFirst: Bool
     ) -> Int? {
-        let leftward = {
-            profileOrder[..<anchorPos].reversed().firstNonNil { identifier in
-                itemIdentifiers.firstIndex(of: identifier).map { $0 + 1 }
-            }
+        func leftward() -> Int? {
+            profileOrder[..<anchorPos]
+                .reversed()
+                .firstNonNil { itemIdentifiers.firstIndex(of: $0) }
+                .map { $0 + 1 }
         }
-        let rightward = {
-            profileOrder[(anchorPos + 1)...].firstNonNil { identifier in
-                itemIdentifiers.firstIndex(of: identifier)
-            }
+        func rightward() -> Int? {
+            profileOrder[(anchorPos + 1)...]
+                .firstNonNil { itemIdentifiers.firstIndex(of: $0) }
         }
 
         return walkLeftFirst
