@@ -12,7 +12,6 @@ struct IceMenu<Title: View, Label: View, Content: View>: View {
     private let title: Title
     private let label: Label
     private let content: Content
-    private let primaryAction: (() -> Void)?
 
     /// Creates a menu with the given content, title, and label.
     ///
@@ -20,10 +19,7 @@ struct IceMenu<Title: View, Label: View, Content: View>: View {
     ///   - content: A group of menu items.
     ///   - title: A view to display inside the menu.
     ///   - label: A view to display as an external label for the menu.
-    ///   - primaryAction: An optional action invoked when the menu button is
-    ///     clicked (items still open via the menu indicator).
     init(
-        primaryAction: (() -> Void)? = nil,
         @ViewBuilder content: () -> Content,
         @ViewBuilder title: () -> Title,
         @ViewBuilder label: () -> Label
@@ -31,7 +27,6 @@ struct IceMenu<Title: View, Label: View, Content: View>: View {
         self.title = title()
         self.label = label()
         self.content = content()
-        self.primaryAction = primaryAction
     }
 
     /// Creates a menu with the given content, title, and label key.
@@ -54,64 +49,24 @@ struct IceMenu<Title: View, Label: View, Content: View>: View {
         }
     }
 
-    /// Creates a compact glass menu with no external leading label — for
-    /// inline row/toolbar actions such as "Update" or an ellipsis control.
-    init(
-        primaryAction: (() -> Void)? = nil,
-        @ViewBuilder content: () -> Content,
-        @ViewBuilder title: () -> Title
-    ) where Label == EmptyView {
-        self.init(primaryAction: primaryAction) {
-            content()
-        } title: {
-            title()
-        } label: {
-            EmptyView()
-        }
-    }
-
     var body: some View {
-        if Label.self == EmptyView.self {
-            menuButton
-        } else {
-            LabeledContent {
-                menuButton
+        LabeledContent {
+            Menu {
+                content
+                    .labelStyle(.titleAndIcon)
+                    .toggleStyle(.automatic)
             } label: {
-                label
+                title
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
             }
-        }
-    }
-
-    private var menuButton: some View {
-        menu
             .menuStyle(.button)
-            .buttonStyle(.glass)
+            .buttonStyle(.bordered)
             .labelsHidden()
             .fixedSize()
-    }
-
-    @ViewBuilder
-    private var menu: some View {
-        if let primaryAction {
-            Menu {
-                menuContent
-            } label: {
-                title
-            } primaryAction: {
-                primaryAction()
-            }
-        } else {
-            Menu {
-                menuContent
-            } label: {
-                title
-            }
+        } label: {
+            label
         }
-    }
-
-    private var menuContent: some View {
-        content
-            .labelStyle(.titleAndIcon)
-            .toggleStyle(.automatic)
     }
 }

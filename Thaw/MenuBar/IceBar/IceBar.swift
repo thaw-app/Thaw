@@ -6,7 +6,6 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import Algorithms
 import Combine
 import SwiftUI
 
@@ -354,11 +353,11 @@ private final class IceBarHostingView: NSHostingView<IceBarContentView> {
 // MARK: - IceBarContentView
 
 private struct IceBarContentView: View {
-    let appState: AppState
-    let colorManager: IceBarColorManager
-    let itemManager: MenuBarItemManager
-    let imageCache: MenuBarItemImageCache
-    let menuBarManager: MenuBarManager
+    @ObservedObject var appState: AppState
+    @ObservedObject var colorManager: IceBarColorManager
+    @ObservedObject var itemManager: MenuBarItemManager
+    @ObservedObject var imageCache: MenuBarItemImageCache
+    @ObservedObject var menuBarManager: MenuBarManager
     @State private var frame = CGRect.zero
     @State private var scrollIndicatorsFlashTrigger = 0
     @State private var cacheGracePeriodActive = true
@@ -416,16 +415,26 @@ private struct IceBarContentView: View {
         return menuBarHeight > 0 ? menuBarHeight : nil
     }
 
+    /// The maximum rendered width of any item in the current section.
+    private var maxItemWidth: CGFloat {
+        guard let maxHeight = itemMaxHeight, maxHeight > 0 else { return 0 }
+        let widths = items.compactMap { item -> CGFloat? in
+            guard let cachedImage = imageCache.images[item.tag] else { return nil }
+            let image = cachedImage.nsImage
+            guard image.size.height > 0 else { return image.size.width }
+            let scale = maxHeight / image.size.height
+            return image.size.width * scale
+        }
+        return widths.max() ?? maxHeight
+    }
+
     /// Per-column maximum widths for the grid layout.
     private var columnWidths: [CGFloat] {
-        // Zero-width placeholders (not []) during transient zero-height
-        // states: the grid body subscripts columnWidths[colIndex] whenever
-        // rows.count > 1, and an empty array would crash there.
-        guard let maxHeight = itemMaxHeight, maxHeight > 0 else {
-            return Array(repeating: 0, count: gridColumns)
-        }
+        guard let maxHeight = itemMaxHeight, maxHeight > 0 else { return [] }
         let allItems = items
-        let rows = allItems.chunks(ofCount: gridColumns).map(Array.init)
+        let rows = stride(from: 0, to: allItems.count, by: gridColumns).map { start in
+            Array(allItems[start ..< Swift.min(start + gridColumns, allItems.count)])
+        }
         return (0 ..< gridColumns).map { col in
             rows.compactMap { row in
                 guard col < row.count else { return nil }
@@ -670,7 +679,9 @@ private struct IceBarContentView: View {
             case .grid:
                 ScrollView(.vertical) {
                     VStack(spacing: 0) {
-                        let rows = items.chunks(ofCount: gridColumns).map(Array.init)
+                        let rows = stride(from: 0, to: items.count, by: gridColumns).map { start in
+                            Array(items[start ..< Swift.min(start + gridColumns, items.count)])
+                        }
                         ForEach(Array(rows.enumerated()), id: \.offset) { rowIndex, rowItems in
                             HStack(spacing: itemSpacing) {
                                 ForEach(Array(rowItems.enumerated()), id: \.element.windowID) { colIndex, item in
@@ -720,9 +731,9 @@ private struct IceBarContentView: View {
 private struct IceBarItemView: View {
     private static let diagLog = DiagLog(category: "IceBar.ItemView")
 
-    let imageCache: MenuBarItemImageCache
-    let itemManager: MenuBarItemManager
-    let menuBarManager: MenuBarManager
+    @ObservedObject var imageCache: MenuBarItemImageCache
+    @ObservedObject var itemManager: MenuBarItemManager
+    @ObservedObject var menuBarManager: MenuBarManager
 
     @State private var isHovered = false
 
@@ -754,15 +765,9 @@ private struct IceBarItemView: View {
                 // as the panel hides rather than busy-polling.
                 await panel.waitUntilClosed(timeout: .milliseconds(200))
                 if let liveItem = await liveOnScreenItem(matching: item, on: displayID) {
-                    do {
-                        try await itemManager.click(item: liveItem, with: .left)
-                        let duration = Date.now.timeIntervalSince(clickStartTime)
-                        IceBarItemView.diagLog.debug("leftClick: ✓ completed in \(Int(duration * 1000))ms (on-screen path)")
-                    } catch {
-                        // Surfacing this matters: a swallowed error here is a
-                        // user click that silently does nothing.
-                        IceBarItemView.diagLog.error("leftClick: failed for \(item.logString): \(error)")
-                    }
+                    try await itemManager.click(item: liveItem, with: .left)
+                    let duration = Date.now.timeIntervalSince(clickStartTime)
+                    IceBarItemView.diagLog.debug("leftClick: ✓ completed in \(Int(duration * 1000))ms (on-screen path)")
                 } else {
                     // temporarilyShow handles move, click, and fallback click
                     // internally so that shownInterfaceWindow is always captured
@@ -785,13 +790,7 @@ private struct IceBarItemView: View {
             Task {
                 await panel.waitUntilClosed(timeout: .milliseconds(200))
                 if let liveItem = await liveOnScreenItem(matching: item, on: displayID) {
-                    do {
-                        try await itemManager.click(item: liveItem, with: .right)
-                    } catch {
-                        // Surfacing this matters: a swallowed error here is a
-                        // user click that silently does nothing.
-                        IceBarItemView.diagLog.error("rightClick: failed for \(item.logString): \(error)")
-                    }
+                    try await itemManager.click(item: liveItem, with: .right)
                 } else {
                     let result = await itemManager.temporarilyShow(item: item, clickingWith: .right, on: displayID, fastPath: true)
                     IceBarItemView.diagLog.debug("rightClick: temp-show result=\(result)")

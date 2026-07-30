@@ -9,15 +9,10 @@
 /* Begin PBXBuildFile section */
 		170423D92B56DE78004A2549 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 170423D82B56DE78004A2549 /* Sparkle */; };
 		175061912B1543DD003144CD /* LaunchAtLogin in Frameworks */ = {isa = PBXBuildFile; productRef = 175061902B1543DD003144CD /* LaunchAtLogin */; };
-		1787C4272B16890B002F50DF /* AXSwift6 in Frameworks */ = {isa = PBXBuildFile; productRef = 1787C4262B16890B002F50DF /* AXSwift6 */; };
+		1787C4272B16890B002F50DF /* AXSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 1787C4262B16890B002F50DF /* AXSwift */; };
 		17F71BB52B880B4500905CBA /* CompactSlider in Frameworks */ = {isa = PBXBuildFile; productRef = 17F71BB42B880B4500905CBA /* CompactSlider */; };
 		7127A9FF2C4886D100D99DEF /* IfritStatic in Frameworks */ = {isa = PBXBuildFile; productRef = 7127A9FE2C4886D100D99DEF /* IfritStatic */; };
-		7168EE532E281CBC00FF9830 /* AXSwift6 in Frameworks */ = {isa = PBXBuildFile; productRef = 7168EE522E281CBC00FF9830 /* AXSwift6 */; };
-		9570E4A96CDEC0BEBAA5573F /* AsyncAlgorithms in Frameworks */ = {isa = PBXBuildFile; productRef = 43C5F05D006747974015EBD9 /* AsyncAlgorithms */; };
-		765B9E4A97DD40A18EE1F15D /* Collections in Frameworks */ = {isa = PBXBuildFile; productRef = 6937234B615A4E0BA19DFCF5 /* Collections */; };
-		A6DC49597D7F903C5E1B425F /* Algorithms in Frameworks */ = {isa = PBXBuildFile; productRef = 84489DC7DD2441B27C7B8E6C /* Algorithms */; };
-		29808AAF4CA568551CD0CC6B /* Algorithms in Frameworks */ = {isa = PBXBuildFile; productRef = 168E1527A0B9100E8E1DA1E2 /* Algorithms */; };
-		C9858DF951474BBA89EEC700 /* Subprocess in Frameworks */ = {isa = PBXBuildFile; productRef = F723B15E4E92458CA2A3A2D5 /* Subprocess */; };
+		7168EE532E281CBC00FF9830 /* AXSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 7168EE522E281CBC00FF9830 /* AXSwift */; };
 		7188A68C2E27F9ED008F131D /* MenuBarItemService.xpc in Embed XPC Services */ = {isa = PBXBuildFile; fileRef = 7188A6832E27F9ED008F131D /* MenuBarItemService.xpc */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
@@ -108,20 +103,15 @@
 			files = (
 				170423D92B56DE78004A2549 /* Sparkle in Frameworks */,
 				7127A9FF2C4886D100D99DEF /* IfritStatic in Frameworks */,
-				9570E4A96CDEC0BEBAA5573F /* AsyncAlgorithms in Frameworks */,
-				A6DC49597D7F903C5E1B425F /* Algorithms in Frameworks */,
-				765B9E4A97DD40A18EE1F15D /* Collections in Frameworks */,
-				C9858DF951474BBA89EEC700 /* Subprocess in Frameworks */,
 				175061912B1543DD003144CD /* LaunchAtLogin in Frameworks */,
-				1787C4272B16890B002F50DF /* AXSwift6 in Frameworks */,
+				1787C4272B16890B002F50DF /* AXSwift in Frameworks */,
 				17F71BB52B880B4500905CBA /* CompactSlider in Frameworks */,
 			);
 		};
 		7188A6802E27F9ED008F131D /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
-				7168EE532E281CBC00FF9830 /* AXSwift6 in Frameworks */,
-				29808AAF4CA568551CD0CC6B /* Algorithms in Frameworks */,
+				7168EE532E281CBC00FF9830 /* AXSwift in Frameworks */,
 			);
 		};
 		E2TESTS0012F2C000000004 /* Frameworks */ = {
@@ -179,13 +169,10 @@
 			name = Thaw;
 			packageProductDependencies = (
 				175061902B1543DD003144CD /* LaunchAtLogin */,
-				1787C4262B16890B002F50DF /* AXSwift6 */,
+				1787C4262B16890B002F50DF /* AXSwift */,
 				170423D82B56DE78004A2549 /* Sparkle */,
 				17F71BB42B880B4500905CBA /* CompactSlider */,
 				7127A9FE2C4886D100D99DEF /* IfritStatic */,
-				43C5F05D006747974015EBD9 /* AsyncAlgorithms */,
-				84489DC7DD2441B27C7B8E6C /* Algorithms */,
-				F723B15E4E92458CA2A3A2D5 /* Subprocess */,
 			);
 			productName = Ice;
 			productReference = 7166832A2A767E6A006ABF84 /* Thaw.app */;
@@ -208,8 +195,7 @@
 			);
 			name = MenuBarItemService;
 			packageProductDependencies = (
-				7168EE522E281CBC00FF9830 /* AXSwift6 */,
-				168E1527A0B9100E8E1DA1E2 /* Algorithms */,
+				7168EE522E281CBC00FF9830 /* AXSwift */,
 			);
 			productName = MenuBarItemService;
 			productReference = 7188A6832E27F9ED008F131D /* MenuBarItemService.xpc */;
@@ -287,14 +273,10 @@
 			mainGroup = 716683212A767E6A006ABF84;
 			packageReferences = (
 				1750618F2B1543DD003144CD /* XCRemoteSwiftPackageReference "LaunchAtLogin-Modern" */,
-				1787C4252B16890B002F50DF /* XCRemoteSwiftPackageReference "AXSwift6" */,
+				1787C4252B16890B002F50DF /* XCRemoteSwiftPackageReference "AXSwift" */,
 				170423D72B56DE78004A2549 /* XCRemoteSwiftPackageReference "Sparkle" */,
 				17F71BB32B880B4500905CBA /* XCRemoteSwiftPackageReference "CompactSlider" */,
 				7127A9FB2C4881BC00D99DEF /* XCRemoteSwiftPackageReference "Ifrit" */,
-				1ADDA61D49BE1BA7CA5EA059 /* XCRemoteSwiftPackageReference "swift-async-algorithms" */,
-				9DDA1A418DCA43C89DE5A80F /* XCRemoteSwiftPackageReference "swift-collections" */,
-				7A0DF10D46BE41C9B7301DBB /* XCRemoteSwiftPackageReference "swift-subprocess" */,
-				1FE809086FD6E22D3C218F67 /* XCRemoteSwiftPackageReference "swift-algorithms" */,
 			);
 			preferredProjectObjectVersion = 100;
 			productRefGroup = 7166832B2A767E6A006ABF84 /* Products */;
@@ -608,14 +590,13 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = "2.0.0-rc.2";
+				MARKETING_VERSION = "2.0.0-rc.1";
 				PRODUCT_BUNDLE_IDENTIFIER = com.stonerl.Thaw;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_OBJC_BRIDGING_HEADER = "Thaw/Thaw-Bridging-Header.h";
 				SWIFT_STRICT_CONCURRENCY = complete;
-				SWIFT_VERSION = 6.2;
+				SWIFT_VERSION = 6.0;
 			};
 			name = Debug;
 		};
@@ -649,14 +630,13 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = "2.0.0-rc.2";
+				MARKETING_VERSION = "2.0.0-rc.1";
 				PRODUCT_BUNDLE_IDENTIFIER = com.stonerl.Thaw;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_OBJC_BRIDGING_HEADER = "Thaw/Thaw-Bridging-Header.h";
 				SWIFT_STRICT_CONCURRENCY = complete;
-				SWIFT_VERSION = 6.2;
+				SWIFT_VERSION = 6.0;
 			};
 			name = Release;
 		};
@@ -676,7 +656,7 @@
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Toni Förster\nCopyright © 2023–2025 Jordan Baird (Ice) ";
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = "2.0.0-rc.2";
+				MARKETING_VERSION = "2.0.0-rc.1";
 				PRODUCT_BUNDLE_IDENTIFIER = com.stonerl.Thaw.MenuBarItemService;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -684,11 +664,9 @@
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_STRICT_CONCURRENCY = complete;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 6.2;
+				SWIFT_VERSION = 6.0;
 			};
 			name = Debug;
 		};
@@ -708,18 +686,16 @@
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Toni Förster\nCopyright © 2023–2025 Jordan Baird (Ice) ";
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = "2.0.0-rc.2";
+				MARKETING_VERSION = "2.0.0-rc.1";
 				PRODUCT_BUNDLE_IDENTIFIER = com.stonerl.Thaw.MenuBarItemService;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_STRICT_CONCURRENCY = complete;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 6.2;
+				SWIFT_VERSION = 6.0;
 			};
 			name = Release;
 		};
@@ -737,9 +713,8 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.stonerl.ThawTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_STRICT_CONCURRENCY = complete;
-				SWIFT_VERSION = 6.2;
+				SWIFT_VERSION = 6.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Thaw.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Thaw";
 			};
 			name = Debug;
@@ -758,9 +733,8 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.stonerl.ThawTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_STRICT_CONCURRENCY = complete;
-				SWIFT_VERSION = 6.2;
+				SWIFT_VERSION = 6.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Thaw.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Thaw";
 			};
 			name = Release;
@@ -808,7 +782,7 @@
 			repositoryURL = "https://github.com/sparkle-project/Sparkle";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 2.9.4;
+				minimumVersion = 2.8.1;
 			};
 		};
 		1750618F2B1543DD003144CD /* XCRemoteSwiftPackageReference "LaunchAtLogin-Modern" */ = {
@@ -816,15 +790,15 @@
 			repositoryURL = "https://github.com/sindresorhus/LaunchAtLogin-Modern";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 1.1.0;
+				minimumVersion = 1.0.0;
 			};
 		};
-		1787C4252B16890B002F50DF /* XCRemoteSwiftPackageReference "AXSwift6" */ = {
+		1787C4252B16890B002F50DF /* XCRemoteSwiftPackageReference "AXSwift" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/thaw-app/AXSwift6";
+			repositoryURL = "https://github.com/stonerl/AXSwift";
 			requirement = {
-				kind = upToNextMinorVersion;
-				minimumVersion = 0.5.0;
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.3.2;
 			};
 		};
 		17F71BB32B880B4500905CBA /* XCRemoteSwiftPackageReference "CompactSlider" */ = {
@@ -843,38 +817,6 @@
 				minimumVersion = 4.0.0;
 			};
 		};
-		1ADDA61D49BE1BA7CA5EA059 /* XCRemoteSwiftPackageReference "swift-async-algorithms" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/apple/swift-async-algorithms";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.0.0;
-			};
-		};
-		9DDA1A418DCA43C89DE5A80F /* XCRemoteSwiftPackageReference "swift-collections" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/apple/swift-collections";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.6.0;
-			};
-		};
-		7A0DF10D46BE41C9B7301DBB /* XCRemoteSwiftPackageReference "swift-subprocess" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/swiftlang/swift-subprocess";
-			requirement = {
-				kind = upToNextMinorVersion;
-				minimumVersion = 0.5.0;
-			};
-		};
-		1FE809086FD6E22D3C218F67 /* XCRemoteSwiftPackageReference "swift-algorithms" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/apple/swift-algorithms";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.2.0;
-			};
-		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -888,10 +830,10 @@
 			package = 1750618F2B1543DD003144CD /* XCRemoteSwiftPackageReference "LaunchAtLogin-Modern" */;
 			productName = LaunchAtLogin;
 		};
-		1787C4262B16890B002F50DF /* AXSwift6 */ = {
+		1787C4262B16890B002F50DF /* AXSwift */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 1787C4252B16890B002F50DF /* XCRemoteSwiftPackageReference "AXSwift6" */;
-			productName = AXSwift6;
+			package = 1787C4252B16890B002F50DF /* XCRemoteSwiftPackageReference "AXSwift" */;
+			productName = AXSwift;
 		};
 		17F71BB42B880B4500905CBA /* CompactSlider */ = {
 			isa = XCSwiftPackageProductDependency;
@@ -903,35 +845,10 @@
 			package = 7127A9FB2C4881BC00D99DEF /* XCRemoteSwiftPackageReference "Ifrit" */;
 			productName = IfritStatic;
 		};
-		7168EE522E281CBC00FF9830 /* AXSwift6 */ = {
+		7168EE522E281CBC00FF9830 /* AXSwift */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 1787C4252B16890B002F50DF /* XCRemoteSwiftPackageReference "AXSwift6" */;
-			productName = AXSwift6;
-		};
-		43C5F05D006747974015EBD9 /* AsyncAlgorithms */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 1ADDA61D49BE1BA7CA5EA059 /* XCRemoteSwiftPackageReference "swift-async-algorithms" */;
-			productName = AsyncAlgorithms;
-		};
-		6937234B615A4E0BA19DFCF5 /* Collections */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 9DDA1A418DCA43C89DE5A80F /* XCRemoteSwiftPackageReference "swift-collections" */;
-			productName = Collections;
-		};
-		F723B15E4E92458CA2A3A2D5 /* Subprocess */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 7A0DF10D46BE41C9B7301DBB /* XCRemoteSwiftPackageReference "swift-subprocess" */;
-			productName = Subprocess;
-		};
-		84489DC7DD2441B27C7B8E6C /* Algorithms */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 1FE809086FD6E22D3C218F67 /* XCRemoteSwiftPackageReference "swift-algorithms" */;
-			productName = Algorithms;
-		};
-		168E1527A0B9100E8E1DA1E2 /* Algorithms */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 1FE809086FD6E22D3C218F67 /* XCRemoteSwiftPackageReference "swift-algorithms" */;
-			productName = Algorithms;
+			package = 1787C4252B16890B002F50DF /* XCRemoteSwiftPackageReference "AXSwift" */;
+			productName = AXSwift;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -6,7 +6,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-nonisolated enum HotkeyAction: String, Codable, CaseIterable {
+enum HotkeyAction: String, Codable, CaseIterable {
     // Menu Bar Sections
     case toggleHiddenSection = "ToggleHiddenSection"
     case toggleAlwaysHiddenSection = "ToggleAlwaysHiddenSection"

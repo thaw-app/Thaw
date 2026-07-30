@@ -14,7 +14,7 @@ import OSLog
 /// debug logs for troubleshooting without requiring a debug build.
 ///
 /// Log files are written to `~/Library/Logs/Thaw/`.
-nonisolated final class DiagnosticLogger: @unchecked Sendable {
+final class DiagnosticLogger: @unchecked Sendable {
     /// The shared diagnostic logger instance.
     static let shared = DiagnosticLogger()
 
@@ -312,7 +312,7 @@ nonisolated final class DiagnosticLogger: @unchecked Sendable {
 /// private let log = DiagLog(category: "MenuBarItemManager")
 /// log.debug("something happened")
 /// ```
-nonisolated struct DiagLog {
+struct DiagLog {
     private let osLogger: Logger
     private let category: String
 

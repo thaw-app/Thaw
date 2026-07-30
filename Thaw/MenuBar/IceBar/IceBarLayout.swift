@@ -9,7 +9,7 @@
 import SwiftUI
 
 /// Layout modes for the Thaw Bar.
-nonisolated enum IceBarLayout: Int, CaseIterable, Codable, Identifiable {
+enum IceBarLayout: Int, CaseIterable, Codable, Identifiable {
     /// Items are arranged in a single horizontal row.
     case horizontal = 0
 

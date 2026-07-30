@@ -46,7 +46,7 @@ struct IcePicker<Label: View, SelectionValue: Hashable, Content: View>: View {
                 label
             }
             .pickerStyle(.menu)
-            .buttonStyle(.glass)
+            .buttonStyle(.bordered)
             .labelsHidden()
             .fixedSize()
         } label: {

@@ -13,7 +13,7 @@ import SwiftUI
 @MainActor
 final class MenuBarSection {
     /// The name of a menu bar section.
-    nonisolated enum Name: String, CaseIterable, Codable {
+    enum Name: String, CaseIterable, Codable {
         case visible
         case hidden
         case alwaysHidden
@@ -62,15 +62,6 @@ final class MenuBarSection {
     /// is outside of the menu bar.
     private var rehideMonitor: EventMonitor?
 
-    /// The timestamp of the last processed mouse-moved event in the timed
-    /// rehide monitor, used to throttle event handling to ~20 fps.
-    ///
-    /// Stored per-instance rather than as a `static let`: a process-global
-    /// slot would let two concurrently shown sections steal each other's
-    /// throttle window, so each would only see roughly half the events it
-    /// should have.
-    private let timedRehideThrottleClock = OSAllocatedUnfairLock(initialState: TimeInterval(0))
-
     /// The section's diagnostic logger.
     private nonisolated let diagLog = DiagLog(category: "MenuBarSection")
 
@@ -80,47 +71,14 @@ final class MenuBarSection {
         guard let appState else { return false }
         let screen = screenForIceBar
         let displayID = screen?.displayID ?? CGMainDisplayID()
-        if appState.settings.displaySettings.useIceBar(for: displayID) {
-            return true
-        }
-        return Self.forcesIceBarForNotchOverflow(
-            settings: appState.settings.advanced,
-            hasEjectedItems: appState.itemManager.hasNotchOverflowEjectedItems
-        )
-    }
-
-    /// Whether notch overflow forces the Thaw Bar even though the display's own
-    /// Thaw Bar setting is off.
-    ///
-    /// Split out as a pure function so the rule is testable without a live
-    /// menu bar. Requires overflow to be enabled, the "use the Thaw Bar while
-    /// items are overflowed" preference to be on, and items to actually be
-    /// ejected right now.
-    static nonisolated func forcesIceBarForNotchOverflow(
-        overflowEnabled: Bool,
-        useThawBarOnOverflow: Bool,
-        hasEjectedItems: Bool
-    ) -> Bool {
-        overflowEnabled && useThawBarOnOverflow && hasEjectedItems
-    }
-
-    @MainActor
-    private static func forcesIceBarForNotchOverflow(
-        settings: AdvancedSettings,
-        hasEjectedItems: Bool
-    ) -> Bool {
-        forcesIceBarForNotchOverflow(
-            overflowEnabled: settings.enableMenuBarItemOverflow,
-            useThawBarOnOverflow: settings.useThawBarOnNotchOverflow,
-            hasEjectedItems: hasEjectedItems
-        )
+        return appState.settings.displaySettings.useIceBar(for: displayID)
     }
 
     /// The gap that macOS leaves to the left and right of the notch (in points).
     static nonisolated let notchGap: CGFloat = 24
 
     /// The preferred way to present the section on the menu bar.
-    nonisolated enum PresentationMode: Equatable {
+    enum PresentationMode: Equatable {
         /// Show the items inline without modifying the application menus.
         case inline
         /// Show the items inline, but only after hiding the application menus.
@@ -334,10 +292,6 @@ final class MenuBarSection {
 
         let displaySettings = appState.settings.displaySettings
         let useIceBar = displaySettings.useIceBar(for: activeScreen.displayID)
-            || Self.forcesIceBarForNotchOverflow(
-                settings: appState.settings.advanced,
-                hasEjectedItems: appState.itemManager.hasNotchOverflowEjectedItems
-            )
 
         // only apply alwaysShowHiddenItems when mouse + active menu bar on same screen
         let alwaysShow: Bool = if let menuBarScreen = NSScreen.screenWithActiveMenuBar,
@@ -506,7 +460,6 @@ final class MenuBarSection {
     /// Starts running checks to determine when to rehide the section.
     private func startRehideChecks() {
         rehideTask?.cancel()
-        rehideTask = nil
         rehideMonitor?.stop()
 
         guard
@@ -539,17 +492,14 @@ final class MenuBarSection {
                 self.hide()
             }
         case .timed:
-            rehideMonitor = EventMonitor.universal(for: .mouseMoved) { [weak self, weak appState, timedRehideThrottleClock] event in
+            rehideMonitor = EventMonitor.universal(for: .mouseMoved) { [weak self, weak appState] event in
                 // Throttle: process at most ~20fps regardless of mouse polling rate.
-                let now = CACurrentMediaTime()
-                // Check and update the timestamp in a single critical section
-                // so concurrent deliveries cannot both pass the throttle.
-                let shouldProcess = timedRehideThrottleClock.withLock { last in
-                    guard now - last > 0.05 else { return false }
-                    last = now
-                    return true
+                enum Context {
+                    static let lastTime = OSAllocatedUnfairLock(initialState: TimeInterval(0))
                 }
-                guard shouldProcess else { return event }
+                let now = CACurrentMediaTime()
+                guard now - Context.lastTime.withLock({ $0 }) > 0.05 else { return event }
+                Context.lastTime.withLock { $0 = now }
 
                 guard
                     let self,
@@ -570,7 +520,7 @@ final class MenuBarSection {
                             guard !Task.isCancelled, let self, let appState else { return }
                             // Don't rehide while the mouse is inside the menu bar or IceBar.
                             if self.isMouseInsideActiveArea() {
-                                await self.restartTimedRehideTimer()
+                                self.startRehideChecks()
                                 return
                             }
                             // Check if any menu bar item has a menu open before hiding.

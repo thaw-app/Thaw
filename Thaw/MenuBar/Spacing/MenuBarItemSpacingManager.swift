@@ -7,12 +7,6 @@
 //  Licensed under the GNU GPLv3
 
 import Cocoa
-import Subprocess
-#if canImport(System)
-    import System
-#else
-    import SystemPackage
-#endif
 
 /// Manager for menu bar item spacing.
 @MainActor
@@ -72,10 +66,6 @@ final class MenuBarItemSpacingManager {
     /// Delay before force terminating an app.
     private let forceTerminateDelay = 5
 
-    /// Small cap on captured standard error from the spacing subprocess,
-    /// following the `HookRunner` output-limit pattern.
-    private static let errorByteLimit = 16 * 1024
-
     /// The offset to apply to the default spacing and padding.
     /// Does not take effect until ``applyOffset()`` is called.
     var offset = 0
@@ -96,36 +86,30 @@ final class MenuBarItemSpacingManager {
 
     /// Runs a command with the given arguments.
     private func runCommand(_ command: String, with arguments: [String]) async throws {
-        let result: ExecutionResult<Void, DiscardedOutput, StringOutput<UTF8>>
-        do {
-            result = try await Subprocess.run(
-                .path(FilePath(Constants.menuBarItemSpacingExecutableURL.path)),
-                arguments: Arguments([command] + arguments),
-                output: .discarded,
-                error: .string(limit: Self.errorByteLimit)
-            )
-        } catch {
-            throw MenuBarItemSpacingError(
-                kind: .processRun(error),
-                command: command,
-                arguments: arguments
-            )
-        }
-
-        guard result.terminationStatus.isSuccess else {
-            let exitStatus: Int32 = switch result.terminationStatus {
-            case let .exited(code): code
-            case let .signaled(code): code
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            let process = Process()
+            process.executableURL = Constants.menuBarItemSpacingExecutableURL
+            process.arguments = CollectionOfOne(command) + arguments
+            process.terminationHandler = { process in
+                if process.terminationStatus == 0 {
+                    continuation.resume()
+                } else {
+                    continuation.resume(throwing: MenuBarItemSpacingError(
+                        kind: .nonZeroExitStatus(process.terminationStatus),
+                        command: command,
+                        arguments: arguments
+                    ))
+                }
             }
-            let stderr = (result.standardError ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-            MenuBarItemSpacingManager.diagLog.error(
-                "\(command) \(arguments.joined(separator: " ")) exited with status \(exitStatus): \(stderr)"
-            )
-            throw MenuBarItemSpacingError(
-                kind: .nonZeroExitStatus(exitStatus),
-                command: command,
-                arguments: arguments
-            )
+            do {
+                try process.run()
+            } catch {
+                continuation.resume(throwing: MenuBarItemSpacingError(
+                    kind: .processRun(error),
+                    command: command,
+                    arguments: arguments
+                ))
+            }
         }
     }
 

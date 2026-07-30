@@ -8,20 +8,51 @@
 
 import SwiftUI
 
+struct SecondsLabel: View {
+    let value: Double
+
+    private var formatted: String {
+        let localized = String(localized: "\(value) seconds")
+        return localized
+            .replacingOccurrences(of: #"(\d+)\.0+(\s)"#, with: "$1$2", options: .regularExpression)
+            .replacingOccurrences(of: #"(\d+)\,0+(\s)"#, with: "$1$2", options: .regularExpression)
+            .replacingOccurrences(of: #"(\d+[\.,]\d*?)0+(\s)"#, with: "$1$2", options: .regularExpression)
+    }
+
+    var body: Text {
+        Text(formatted)
+    }
+}
+
 struct AdvancedSettingsPane: View {
-    @Environment(AppState.self) var appState: AppState
-    @Bindable var settings: AdvancedSettings
+    @EnvironmentObject var appState: AppState
+    @ObservedObject var settings: AdvancedSettings
     @State private var maxSliderLabelWidth: CGFloat = 0
     @State private var currentLogFileName: String?
     @State private var isConfirmingReset = false
 
+    private var menuBarManager: MenuBarManager {
+        appState.menuBarManager
+    }
+
     var body: some View {
         IceForm {
-            IceSection("Menu Bar Search") {
+            IceSection("Menu Bar Sections") {
+                enableAlwaysHiddenSection
+                if settings.enableAlwaysHiddenSection {
+                    useOptionClickToShowAlwaysHiddenSection
+                    if appState.settings.general.showIceIcon {
+                        useDoubleClickToShowAlwaysHiddenSection
+                    }
+                }
+                showAllSectionsOnUserDrag
+                sectionDividerStyle
+            }
+            IceSection("Search") {
                 searchSectionOrdering
             }
             IceSection("Tooltips") {
-                if appState.hasPermission(.screenRecording) {
+                if ScreenCapture.cachedCheckPermissions() {
                     showMenuBarTooltips
                     tooltipDelay
                 } else {
@@ -32,13 +63,17 @@ struct AdvancedSettingsPane: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
-            IceSection("Menu bar behavior") {
+            IceSection("Other") {
+                enableMenuBarItemOverflow
+                useLCSSortingOnNotchedDisplays
                 hideApplicationMenus
                 enableSecondaryContextMenu
                 if settings.enableSecondaryContextMenu {
                     enableSecondaryContextMenuQuit
                 }
-                useAXClickDelivery
+                showIceBarAtMouseLocationOnHotkey
+                showOnHoverDelay
+                iconRefreshInterval
             }
             IceSection("Permissions") {
                 allPermissions
@@ -49,9 +84,6 @@ struct AdvancedSettingsPane: View {
             IceSection("Reset") {
                 resetSettings
             }
-        }
-        .onAppear {
-            maxSliderLabelWidth = 0
         }
     }
 
@@ -84,44 +116,38 @@ struct AdvancedSettingsPane: View {
         }
     }
 
-    private var diagnosticLogging: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Toggle(
-                "Enable diagnostic logging",
-                isOn: $settings.enableDiagnosticLogging
-            )
-            .annotation {
-                Text(
-                    """
-                    Writes detailed debug logs to a file for troubleshooting. \
-                    Log files are saved to ~/Library/Logs/Thaw/. \
-                    Disable when not needed to avoid unnecessary disk writes.
-                    """
-                )
-                .padding(.trailing, 75)
-            }
+    private var enableAlwaysHiddenSection: some View {
+        Toggle(
+            "Enable the always-hidden section",
+            isOn: $settings.enableAlwaysHiddenSection
+        )
+    }
 
-            HStack(spacing: 12) {
-                if settings.enableDiagnosticLogging || DiagnosticLogger.shared.hasLogFiles {
-                    Button("Show Log Files in Finder") {
-                        let url = DiagnosticLogger.shared.logDirectory
-                        NSWorkspace.shared.open(url)
-                    }
-                }
+    private var useOptionClickToShowAlwaysHiddenSection: some View {
+        Toggle(
+            "Use Option-click to open always-hidden section",
+            isOn: $settings.useOptionClickToShowAlwaysHiddenSection
+        )
+    }
 
-                if let currentLogFileName {
-                    Text(currentLogFileName)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .task(id: settings.enableDiagnosticLogging) {
-                // Small yield to let the Combine sink create/close the log file first.
-                try? await Task.sleep(for: .milliseconds(50))
-                currentLogFileName = (
-                    DiagnosticLogger.shared.currentLogFile
-                        ?? DiagnosticLogger.shared.latestLogFile
-                )?.lastPathComponent
+    private var useDoubleClickToShowAlwaysHiddenSection: some View {
+        Toggle(
+            "Double-click \(Constants.displayName) icon to open always-hidden section",
+            isOn: $settings.useDoubleClickToShowAlwaysHiddenSection
+        )
+    }
+
+    private var showAllSectionsOnUserDrag: some View {
+        Toggle(
+            "Show all sections when ⌘ Command + dragging menu bar items",
+            isOn: $settings.showAllSectionsOnUserDrag
+        )
+    }
+
+    private var sectionDividerStyle: some View {
+        IcePicker("Section divider style", selection: $settings.sectionDividerStyle) {
+            ForEach(SectionDividerStyle.allCases) { style in
+                Text(style.localized).tag(style)
             }
         }
     }
@@ -213,6 +239,43 @@ struct AdvancedSettingsPane: View {
         settings.searchSectionOrder = order
     }
 
+    private var enableMenuBarItemOverflow: some View {
+        Toggle(
+            "Enable menu bar item overflow",
+            isOn: $settings.enableMenuBarItemOverflow
+        )
+        .annotation {
+            Text(
+                """
+                Move menu bar items from the visible section into the hidden \
+                section when they don't fit beside the notch on a notched \
+                display. Disable to keep the saved profile layout exactly as \
+                authored even when items would otherwise be pushed under the \
+                notch.
+                """
+            )
+            .padding(.trailing, 75)
+        }
+    }
+
+    private var useLCSSortingOnNotchedDisplays: some View {
+        Toggle(
+            "Use LCS sorting on notched displays",
+            isOn: $settings.useLCSSortingOnNotchedDisplays
+        )
+        .annotation {
+            Text(
+                """
+                Use the faster LCS (Longest Common Subsequence) algorithm for \
+                profile sorting on notched displays instead of the full sort. \
+                LCS minimises the number of moves but may be less reliable on \
+                notched displays with smaller resolutions.
+                """
+            )
+            .padding(.trailing, 75)
+        }
+    }
+
     private var hideApplicationMenus: some View {
         Toggle(
             "Hide app menus when showing menu bar items",
@@ -247,25 +310,6 @@ struct AdvancedSettingsPane: View {
         }
     }
 
-    private var useAXClickDelivery: some View {
-        Toggle(
-            "Use accessibility actions to activate menu bar items (Experimental)",
-            isOn: $settings.useAXClickDelivery
-        )
-        .annotation {
-            Text(
-                """
-                Activate items using an accessibility action instead of a simulated \
-                click. Falls back automatically to the simulated click if the \
-                accessibility action fails. Affects every left-click \
-                \(Constants.displayName) delivers on your behalf — from the IceBar, \
-                search, and other features; moves and right-clicks are unaffected.
-                """
-            )
-            .padding(.trailing, 75)
-        }
-    }
-
     private var enableSecondaryContextMenuQuit: some View {
         Toggle(
             "Enable secondary context menu quit",
@@ -279,6 +323,65 @@ struct AdvancedSettingsPane: View {
             )
             .padding(.trailing, 75)
         }
+    }
+
+    private var showIceBarAtMouseLocationOnHotkey: some View {
+        let binding = Binding<Bool>(
+            get: { appState.settings.general.iceBarLocationOnHotkey },
+            set: { appState.settings.general.iceBarLocationOnHotkey = $0 }
+        )
+        return Toggle(
+            "Show at mouse pointer on hotkey",
+            isOn: binding
+        )
+        .annotation("Always show the \(Constants.displayName) Bar at the mouse pointer's location when it is shown using a hotkey.")
+    }
+
+    private var showOnHoverDelay: some View {
+        LabeledContent {
+            IceSlider(
+                value: $settings.showOnHoverDelay,
+                in: 0 ... 1,
+                step: 0.1
+            ) {
+                SecondsLabel(value: settings.showOnHoverDelay)
+            }
+        } label: {
+            Text("Show on hover delay")
+                .frame(minWidth: maxSliderLabelWidth, alignment: .leading)
+                .onFrameChange { frame in
+                    maxSliderLabelWidth = max(maxSliderLabelWidth, frame.width)
+                }
+        }
+        .annotation("The amount of time to wait before showing on hover.")
+    }
+
+    private var iconRefreshInterval: some View {
+        let fpsBinding = Binding<Double>(
+            get: {
+                let interval = settings.iconRefreshInterval
+                return interval > 0 ? (1.0 / interval).rounded() : 0
+            },
+            set: { settings.iconRefreshInterval = $0 > 0 ? 1.0 / $0 : 0 }
+        )
+        return LabeledContent {
+            IceSlider(
+                value: fpsBinding,
+                in: 0 ... 30,
+                step: 1
+            ) {
+                Text(fpsBinding.wrappedValue > 0
+                    ? "\(Int(fpsBinding.wrappedValue)) fps"
+                    : "Off")
+            }
+        } label: {
+            Text("Icon refresh rate")
+                .frame(minWidth: maxSliderLabelWidth, alignment: .leading)
+                .onFrameChange { frame in
+                    maxSliderLabelWidth = max(maxSliderLabelWidth, frame.width)
+                }
+        }
+        .annotation("How often animated menu bar icons are refreshed in panels. Higher values are smoother but use more CPU.")
     }
 
     private var tooltipDelay: some View {
@@ -303,6 +406,48 @@ struct AdvancedSettingsPane: View {
     private var showMenuBarTooltips: some View {
         Toggle("Show tooltips in the menu bar", isOn: $settings.showMenuBarTooltips)
             .annotation("Show a tooltip when hovering over menu bar items in the actual menu bar.")
+    }
+
+    private var diagnosticLogging: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Toggle(
+                "Enable diagnostic logging",
+                isOn: $settings.enableDiagnosticLogging
+            )
+            .annotation {
+                Text(
+                    """
+                    Writes detailed debug logs to a file for troubleshooting. \
+                    Log files are saved to ~/Library/Logs/Thaw/. \
+                    Disable when not needed to avoid unnecessary disk writes.
+                    """
+                )
+                .padding(.trailing, 75)
+            }
+
+            HStack(spacing: 12) {
+                if settings.enableDiagnosticLogging || DiagnosticLogger.shared.hasLogFiles {
+                    Button("Show Log Files in Finder") {
+                        let url = DiagnosticLogger.shared.logDirectory
+                        NSWorkspace.shared.open(url)
+                    }
+                }
+
+                if let currentLogFileName {
+                    Text(currentLogFileName)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .task(id: settings.enableDiagnosticLogging) {
+                // Small yield to let the Combine sink create/close the log file first.
+                try? await Task.sleep(for: .milliseconds(50))
+                currentLogFileName = (
+                    DiagnosticLogger.shared.currentLogFile
+                        ?? DiagnosticLogger.shared.latestLogFile
+                )?.lastPathComponent
+            }
+        }
     }
 
     private var allPermissions: some View {

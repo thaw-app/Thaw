@@ -12,7 +12,7 @@ import SwiftUI
 
 // MARK: - Bundle
 
-nonisolated extension Bundle {
+extension Bundle {
     /// The bundle's copyright string.
     ///
     /// This accessor checks the bundle's `Info.plist` for a string value associated
@@ -71,7 +71,7 @@ extension CGColor {
 
 // MARK: - CGImage
 
-nonisolated extension CGImage {
+extension CGImage {
     // MARK: Color Averaging
 
     /// Options that effect how colors are processed when computing
@@ -445,52 +445,6 @@ nonisolated extension CGImage {
         }
         return context.isTransparent()
     }
-
-    // MARK: Detaching
-
-    /// Returns a copy that owns its own pixel buffer.
-    ///
-    /// `cropping(to:)` returns an image sharing the parent's data provider, so a
-    /// small cached crop pins the entire multi-MB composite it was cut from.
-    /// Redrawing into a fresh bitmap context detaches it.
-    func detachedCopy() -> CGImage {
-        guard width > 0, height > 0 else { return self }
-        let rect = CGRect(x: 0, y: 0, width: width, height: height)
-        // Prefer a context matching the source's color space, alpha/bitmap
-        // info, and bit depth so the copy doesn't silently convert pixel
-        // formats. Some source formats can't back a bitmap context, so fall
-        // back to the previous device-RGB path when creation fails (or the
-        // source has no color space, e.g. masks).
-        if let sourceColorSpace = colorSpace,
-           let context = CGContext(
-               data: nil,
-               width: width,
-               height: height,
-               bitsPerComponent: bitsPerComponent,
-               bytesPerRow: 0,
-               space: sourceColorSpace,
-               bitmapInfo: bitmapInfo.rawValue
-           )
-        {
-            context.draw(self, in: rect)
-            if let image = context.makeImage() {
-                return image
-            }
-        }
-        guard let context = CGContext(
-            data: nil,
-            width: width,
-            height: height,
-            bitsPerComponent: 8,
-            bytesPerRow: 0,
-            space: CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        ) else {
-            return self
-        }
-        context.draw(self, in: rect)
-        return context.makeImage() ?? self
-    }
 }
 
 // MARK: - Collection where Element == MenuBarItem
@@ -505,7 +459,7 @@ extension Collection<MenuBarItem> {
 
 // MARK: - Comparable
 
-nonisolated extension Comparable {
+extension Comparable {
     /// Returns a copy of this value, clamped to the given minimum
     /// and maximum limiting values.
     ///
@@ -546,7 +500,7 @@ extension DistributedNotificationCenter {
 
 // MARK: - EdgeInsets
 
-nonisolated extension EdgeInsets {
+extension EdgeInsets {
     /// A copy of this instance with only the leading and trailing
     /// edges set.
     var horizontal: EdgeInsets {
@@ -643,7 +597,7 @@ extension NSImage {
 // MARK: - NSScreen
 
 extension NSScreen {
-    private nonisolated static let diagLog = DiagLog(category: "NSScreen")
+    private static let diagLog = DiagLog(category: "NSScreen")
 
     /// The screen containing the mouse pointer.
     static var screenWithMouse: NSScreen? {
@@ -656,6 +610,21 @@ extension NSScreen {
             return nil
         }
         return screens.first { $0.displayID == displayID }
+    }
+
+    /// The connected screens excluding Thaw's transient resolver virtual
+    /// display.
+    ///
+    /// VirtualDisplayProvoker may briefly add a virtual display to provoke
+    /// marker-pair resolution on a single-display machine. Enumerating this
+    /// instead of screens keeps that phantom out of per-display state (Thaw's
+    /// Displays settings, overlay panels, average-color capture, screen-count
+    /// logic). Identical to screens whenever no virtual display is active.
+    static var managedScreens: [NSScreen] {
+        guard let excluded = Bridging.excludedDisplayID else {
+            return screens
+        }
+        return screens.filter { $0.displayID != excluded }
     }
 
     /// The display identifier of the screen.
@@ -692,7 +661,7 @@ extension NSScreen {
         var menuBarHeights = [CGDirectDisplayID: CGFloat]()
     }
 
-    private nonisolated static let displayCache = OSAllocatedUnfairLock(initialState: DisplayCache())
+    private static let displayCache = OSAllocatedUnfairLock(initialState: DisplayCache())
 
     /// Invalidates the cached application menu frame when the frontmost app changes.
     private static func invalidateApplicationMenuFrameCacheIfNeeded() {
@@ -713,7 +682,7 @@ extension NSScreen {
     /// Removes cache entries for displays that are no longer connected.
     /// This prevents memory growth when displays are reconnected (which assigns new display IDs).
     static func cleanupDisconnectedDisplayCaches() {
-        let connectedDisplayIDs = Set(NSScreen.screens.map(\.displayID))
+        let connectedDisplayIDs = Set(NSScreen.managedScreens.map(\.displayID))
         displayCache.withLock { cache in
             cache.menuBarHeights = cache.menuBarHeights.filter { connectedDisplayIDs.contains($0.key) }
             cache.menuFrames = cache.menuFrames.filter { connectedDisplayIDs.contains($0.key) }
@@ -722,7 +691,7 @@ extension NSScreen {
     }
 
     /// Tracks displays with a pending menu bar height retry.
-    private nonisolated static let pendingRetryDisplays = OSAllocatedUnfairLock(initialState: Set<CGDirectDisplayID>())
+    private static let pendingRetryDisplays = OSAllocatedUnfairLock(initialState: Set<CGDirectDisplayID>())
 
     /// Schedules a one-shot deferred retry to populate the menu bar height
     /// cache for a display after a transient unavailability (e.g. during
@@ -731,10 +700,7 @@ extension NSScreen {
     private static func scheduleMenuBarHeightRetry(for displayID: CGDirectDisplayID) {
         let shouldSchedule = pendingRetryDisplays.withLock { $0.insert(displayID).inserted }
         guard shouldSchedule else { return }
-        // Detached: this must run off the caller's actor (the CG window
-        // query is not main-actor work) after a fixed delay.
-        Task.detached(priority: .utility) {
-            try? await Task.sleep(for: .milliseconds(500))
+        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + .milliseconds(500)) {
             if let menuBarWindow = WindowInfo.menuBarWindow(for: displayID) {
                 let height = menuBarWindow.bounds.height
                 if height > 0 {
@@ -905,7 +871,7 @@ extension NSStatusItem {
 
 // MARK: - OSAllocatedUnfairLock
 
-nonisolated extension OSAllocatedUnfairLock where State == Bool {
+extension OSAllocatedUnfairLock where State == Bool {
     /// Atomically sets the value to `true` and returns whether this call
     /// was the first to do so. Useful for ensuring a continuation or
     /// callback is invoked exactly once across competing code paths.
@@ -975,6 +941,72 @@ extension Publisher {
         flatMap { sequence in
             Publishers.MergeMany(sequence.map(transform))
         }
+    }
+}
+
+// MARK: - Publisher (Defaults Persistence)
+
+extension Publisher where Output: Equatable, Failure == Never {
+    /// Binds publisher to UserDefaults, persisting each unique value.
+    ///
+    /// - Parameters:
+    ///   - key: The Defaults key to persist to.
+    ///   - cancellables: The set to store the subscription in.
+    func persistToDefaults(
+        key: Defaults.Key,
+        in cancellables: inout Set<AnyCancellable>
+    ) {
+        self.removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { Defaults.set($0, forKey: key) }
+            .store(in: &cancellables)
+    }
+
+    /// Binds publisher to UserDefaults with transform (e.g., for RawRepresentable enums).
+    ///
+    /// - Parameters:
+    ///   - key: The Defaults key to persist to.
+    ///   - transform: A closure that transforms the output before persisting.
+    ///   - cancellables: The set to store the subscription in.
+    func persistToDefaults(
+        key: Defaults.Key,
+        transform: @escaping (Output) -> some Any,
+        in cancellables: inout Set<AnyCancellable>
+    ) {
+        self.removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { Defaults.set(transform($0), forKey: key) }
+            .store(in: &cancellables)
+    }
+
+    /// Binds publisher to UserDefaults with an additional side effect.
+    ///
+    /// - Parameters:
+    ///   - key: The Defaults key to persist to.
+    ///   - sideEffect: A closure to execute after persisting.
+    ///   - cancellables: The set to store the subscription in.
+    func persistToDefaults(
+        key: Defaults.Key,
+        sideEffect: @escaping (Output) -> Void,
+        in cancellables: inout Set<AnyCancellable>
+    ) {
+        self.removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { value in
+                Defaults.set(value, forKey: key)
+                sideEffect(value)
+            }
+            .store(in: &cancellables)
+    }
+}
+
+// MARK: - RangeReplaceableCollection where Element: Hashable
+
+extension RangeReplaceableCollection where Element: Hashable {
+    /// Returns a copy of the collection with duplicate values removed.
+    func removingDuplicates() -> Self {
+        var seen = Set<Element>()
+        return filter { seen.insert($0).inserted }
     }
 }
 

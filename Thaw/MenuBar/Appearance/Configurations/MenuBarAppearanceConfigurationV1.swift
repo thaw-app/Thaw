@@ -9,12 +9,7 @@
 import CoreGraphics
 import Foundation
 
-/// Configuration for the menu bar's appearance, as Ice stored it before its
-/// `0.11.10` release.
-///
-/// Thaw never wrote this format. It exists to decode appearance data that
-/// ``IceSettingsImporter`` finds in an old Ice install, which it converts with
-/// ``MenuBarAppearanceConfigurationV2/init(migrating:)``.
+/// Configuration for the menu bar's appearance.
 struct MenuBarAppearanceConfigurationV1: Hashable {
     var hasShadow: Bool
     var hasBorder: Bool
@@ -36,6 +31,70 @@ struct MenuBarAppearanceConfigurationV1: Hashable {
         case .notch: false
         }
     }
+
+    /// Creates a configuration by migrating from the deprecated appearance-related
+    /// keys stored in `UserDefaults`, storing the new configuration and deleting
+    /// the deprecated keys.
+    static func migrate(encoder: JSONEncoder, decoder: JSONDecoder) throws -> Self {
+        // Try to load an already migrated configuration first. Otherwise, load each
+        // value from the deprecated keys.
+        if let data = Defaults.data(forKey: .menuBarAppearanceConfiguration) {
+            return try decoder.decode(Self.self, from: data)
+        } else {
+            var configuration = Self.defaultConfiguration
+
+            Defaults.ifPresent(key: .menuBarHasShadow, assign: &configuration.hasShadow)
+            Defaults.ifPresent(key: .menuBarHasBorder, assign: &configuration.hasBorder)
+            Defaults.ifPresent(key: .menuBarBorderWidth, assign: &configuration.borderWidth)
+            Defaults.ifPresent(key: .menuBarTintKind) { rawValue in
+                if let tintKind = MenuBarTintKind(rawValue: rawValue) {
+                    configuration.tintKind = tintKind
+                }
+            }
+
+            if let borderColorData = Defaults.data(forKey: .menuBarBorderColor) {
+                configuration.borderColor = try decoder.decode(IceColor.self, from: borderColorData).cgColor
+            }
+            if let tintColorData = Defaults.data(forKey: .menuBarTintColor) {
+                configuration.tintColor = try decoder.decode(IceColor.self, from: tintColorData).cgColor
+            }
+            if let tintGradientData = Defaults.data(forKey: .menuBarTintGradient) {
+                configuration.tintGradient = try decoder.decode(IceGradient.self, from: tintGradientData)
+            }
+            if let shapeKindData = Defaults.data(forKey: .menuBarShapeKind) {
+                configuration.shapeKind = try decoder.decode(MenuBarShapeKind.self, from: shapeKindData)
+            }
+            if let fullShapeData = Defaults.data(forKey: .menuBarFullShapeInfo) {
+                configuration.fullShapeInfo = try decoder.decode(MenuBarFullShapeInfo.self, from: fullShapeData)
+            }
+            if let splitShapeData = Defaults.data(forKey: .menuBarSplitShapeInfo) {
+                configuration.splitShapeInfo = try decoder.decode(MenuBarSplitShapeInfo.self, from: splitShapeData)
+            }
+
+            // Store the configuration to complete the migration.
+            let configurationData = try encoder.encode(configuration)
+            Defaults.set(configurationData, forKey: .menuBarAppearanceConfiguration)
+
+            // Remove the deprecated keys.
+            let keys: [Defaults.Key] = [
+                .menuBarHasShadow,
+                .menuBarHasBorder,
+                .menuBarBorderWidth,
+                .menuBarTintKind,
+                .menuBarBorderColor,
+                .menuBarTintColor,
+                .menuBarTintGradient,
+                .menuBarShapeKind,
+                .menuBarFullShapeInfo,
+                .menuBarSplitShapeInfo,
+            ]
+            for key in keys {
+                Defaults.removeObject(forKey: key)
+            }
+
+            return configuration
+        }
+    }
 }
 
 // MARK: Default Configuration
@@ -54,40 +113,6 @@ extension MenuBarAppearanceConfigurationV1 {
         tintColor: .black,
         tintGradient: .defaultMenuBarTint
     )
-}
-
-// MARK: - Conversion to the Current Configuration
-
-extension MenuBarAppearanceConfigurationV2 {
-    /// Creates a configuration from a V1 configuration, which is the format
-    /// Ice used before its `0.11.10` release.
-    ///
-    /// V1 had a single set of appearance values rather than one per system
-    /// appearance, so the old values are applied to all three of the current
-    /// configuration's slots. Values V1 had no equivalent for keep their
-    /// defaults.
-    init(migrating oldConfiguration: MenuBarAppearanceConfigurationV1) {
-        self = withMutableCopy(of: Self.defaultConfiguration) { configuration in
-            let partialConfiguration = withMutableCopy(
-                of: MenuBarAppearancePartialConfiguration.defaultConfiguration
-            ) { partial in
-                partial.hasShadow = oldConfiguration.hasShadow
-                partial.hasBorder = oldConfiguration.hasBorder
-                partial.borderColor = oldConfiguration.borderColor
-                partial.borderWidth = oldConfiguration.borderWidth
-                partial.tintKind = oldConfiguration.tintKind
-                partial.tintColor = oldConfiguration.tintColor
-                partial.tintGradient = oldConfiguration.tintGradient
-            }
-            configuration.lightModeConfiguration = partialConfiguration
-            configuration.darkModeConfiguration = partialConfiguration
-            configuration.staticConfiguration = partialConfiguration
-            configuration.shapeKind = oldConfiguration.shapeKind
-            configuration.fullShapeInfo = oldConfiguration.fullShapeInfo
-            configuration.splitShapeInfo = oldConfiguration.splitShapeInfo
-            configuration.isInset = oldConfiguration.isInset
-        }
-    }
 }
 
 // MARK: MenuBarAppearanceConfigurationV1: Codable

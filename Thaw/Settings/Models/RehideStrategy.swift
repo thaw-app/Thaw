@@ -9,7 +9,7 @@
 import SwiftUI
 
 /// A type that determines how the auto-rehide feature works.
-nonisolated enum RehideStrategy: Int, CaseIterable, Identifiable {
+enum RehideStrategy: Int, CaseIterable, Identifiable {
     /// Menu bar items are rehidden using a smart algorithm.
     case smart = 0
     /// Menu bar items are rehidden after a given time interval.

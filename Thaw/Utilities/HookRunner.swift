@@ -7,12 +7,6 @@
 //  Licensed under the GNU GPLv3
 
 import Foundation
-import Subprocess
-#if canImport(System)
-    import System
-#else
-    import SystemPackage
-#endif
 
 /// Executes user-supplied profile-apply hooks with a wall-clock timeout
 /// and pipes their output to DiagLog.
@@ -35,14 +29,10 @@ enum HookRunner {
         "scptd",
     ]
 
-    /// Maximum bytes collected from either stream before Subprocess aborts
-    /// the run. Generous enough that no reasonable hook trips it.
-    private static let outputByteLimit = 1 << 20
-
     enum HookError: Error, CustomStringConvertible {
         case fileMissing(path: String)
         case notExecutable(path: String)
-        case runFailed(path: String, error: Error)
+        case launchFailed(path: String, error: Error)
         case timedOut(after: Double)
         case nonZeroExit(Int32)
 
@@ -50,7 +40,7 @@ enum HookRunner {
             switch self {
             case let .fileMissing(p): return "hook file missing: \(p)"
             case let .notExecutable(p): return "hook file not executable (run chmod +x): \(p)"
-            case let .runFailed(p, e): return "hook failed to run for \(p): \(e)"
+            case let .launchFailed(p, e): return "hook launch failed for \(p): \(e)"
             case let .timedOut(s): return "hook timed out after \(s)s"
             case let .nonZeroExit(s): return "hook exited with status \(s)"
             }
@@ -128,107 +118,135 @@ enum HookRunner {
             throw HookError.notExecutable(path: hook.path)
         }
 
-        let executablePath: FilePath
-        let arguments: [String]
+        let process = Process()
         if useOSAScript {
-            executablePath = FilePath(osascriptPath)
-            arguments = [url.path]
+            process.executableURL = URL(fileURLWithPath: osascriptPath)
+            process.arguments = [url.path]
         } else {
-            executablePath = FilePath(url.path)
-            arguments = []
+            process.executableURL = url
+            process.arguments = []
         }
 
-        let environment = Environment.inherit.updating([
-            "THAW_HOOK_PHASE": context.phase.rawValue.capitalized,
-            "THAW_HOOK_SCOPE": context.scope.rawValue.capitalized,
-            "THAW_PROFILE_ID": context.profileID.uuidString,
-            "THAW_PROFILE_NAME": context.profileName,
-            "THAW_PREVIOUS_PROFILE_ID": context.previousProfileID?.uuidString ?? "",
-            "THAW_PREVIOUS_PROFILE_NAME": context.previousProfileName ?? "",
-        ])
+        // Merge our env vars on top of the process's inherited environment.
+        var env = ProcessInfo.processInfo.environment
+        env["THAW_HOOK_PHASE"] = context.phase.rawValue.capitalized
+        env["THAW_HOOK_SCOPE"] = context.scope.rawValue.capitalized
+        env["THAW_PROFILE_ID"] = context.profileID.uuidString
+        env["THAW_PROFILE_NAME"] = context.profileName
+        env["THAW_PREVIOUS_PROFILE_ID"] = context.previousProfileID?.uuidString ?? ""
+        env["THAW_PREVIOUS_PROFILE_NAME"] = context.previousProfileName ?? ""
+        process.environment = env
 
-        let clamped = hook.timeoutSeconds.clamped(to: 1.0 ... 300.0)
+        let stdoutPipe = Pipe()
+        let stderrPipe = Pipe()
+        process.standardOutput = stdoutPipe
+        process.standardError = stderrPipe
 
-        // Cancelling the subprocess runs this teardown sequence against the
-        // hook's whole process group, which is what bounds the run: a
-        // `#!/bin/sh` wrapper does not forward a signal to its own child and
-        // then wait for it, so signalling the wrapper alone left the real work
-        // running. Targeting the group reaches those descendants, and the
-        // implicit final kill that closes every sequence inherits the group
-        // from the last explicit step.
-        //
-        // `createSession` is not optional here. Without it the hook stays in
-        // Thaw's own process group, and a group-targeted signal would be
-        // delivered to Thaw as well.
-        //
-        // The signal is SIGTERM rather than SIGINT because a non-interactive
-        // `sh` starts background jobs with SIGINT ignored: `sleep 30 &`
-        // survived it while `sh` itself died, and Subprocess ends the sequence
-        // as soon as the process it launched exits, so the kill that closes
-        // the sequence never got the chance to run. A descendant that traps
-        // SIGTERM can still outlive the run for the same reason.
-        let platformOptions: PlatformOptions = {
-            var options = PlatformOptions()
-            options.createSession = true
-            options.teardownSequence = [
-                .send(signal: .terminate, toProcessGroup: true, allowedDurationToNextStep: .seconds(1)),
-            ]
-            return options
-        }()
+        let clamped = max(1.0, min(hook.timeoutSeconds, 300.0))
 
-        // The subprocess races a sleeping arm that throws at the budget, and
-        // whichever finishes first wins. This can be structured now: leaving
-        // the group cancels the subprocess, and cancellation tears down the
-        // hook's process group, so the child the group waits for is one that
-        // has just been killed rather than one running on its own schedule.
-        let result: ExecutionResult<Void, StringOutput<UTF8>, StringOutput<UTF8>>
         do {
-            result = try await withThrowingTaskGroup(
-                of: ExecutionResult<Void, StringOutput<UTF8>, StringOutput<UTF8>>.self
-            ) { group in
-                group.addTask {
-                    try await Subprocess.run(
-                        .path(executablePath),
-                        arguments: Arguments(arguments),
-                        environment: environment,
-                        platformOptions: platformOptions,
-                        output: .string(limit: outputByteLimit),
-                        error: .string(limit: outputByteLimit)
-                    )
-                }
-                group.addTask {
-                    try await Task.sleep(for: .seconds(clamped))
-                    throw HookError.timedOut(after: clamped)
-                }
-                defer { group.cancelAll() }
-                // Both arms are always added, so there is a first result to
-                // take; an empty group would mean the caller went away.
-                guard let first = try await group.next() else {
-                    throw CancellationError()
-                }
-                return first
-            }
-        } catch let error as HookError {
-            if case .timedOut = error {
-                diagLog.warning("hook exceeded its \(clamped)s budget; terminating it: \(hook.path)")
-            }
-            throw error
-        } catch is CancellationError {
-            // The caller went away rather than the hook overrunning.
-            throw CancellationError()
+            try process.run()
         } catch {
-            throw HookError.runFailed(path: hook.path, error: error)
+            throw HookError.launchFailed(path: hook.path, error: error)
         }
 
-        let stdout = (result.standardOutput ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        let stderr = (result.standardError ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        let exitStatus: Int32 = switch result.terminationStatus {
-        case let .exited(code): code
-        case let .signaled(code): code
+        // Race process termination against a sleep timeout. Whichever wins
+        // tears down the other. The whole race is wrapped in a
+        // withTaskCancellationHandler so external cancellation (typically
+        // a newer profile apply replacing the layoutTask) also reaps the
+        // subprocess instead of leaving it running orphaned. The task
+        // group is factored into raceProcessAgainstTimeout so the
+        // closure nesting at this call site stays within two levels.
+        let exitStatus: Int32
+        do {
+            exitStatus = try await withTaskCancellationHandler {
+                try await raceProcessAgainstTimeout(process: process, timeout: clamped)
+            } onCancel: {
+                // Synchronous: send SIGTERM so the polling task in the
+                // helper sees isRunning flip immediately and the group
+                // can unwind without waiting out the remainder of the
+                // timeout. Child tasks observe cancellation through the
+                // parent's propagated state, so an explicit
+                // group.cancelAll here is unnecessary. The matching
+                // async wait and SIGINT escalation run in the catch
+                // branch below, mirroring the timeout cleanup sequence
+                // inside the helper.
+                process.terminate()
+            }
+        } catch is CancellationError {
+            try? await Task.sleep(for: .seconds(1))
+            if process.isRunning {
+                process.interrupt()
+            }
+            throw CancellationError()
         }
-        guard result.terminationStatus.isSuccess else {
+
+        let stdout = readAvailable(stdoutPipe)
+        let stderr = readAvailable(stderrPipe)
+
+        if exitStatus != 0 {
             throw HookError.nonZeroExit(exitStatus)
         }
         return RunOutcome(exitStatus: exitStatus, stdout: stdout, stderr: stderr)
+    }
+
+    private static func readAvailable(_ pipe: Pipe) -> String {
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        guard !data.isEmpty else { return "" }
+        return String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    }
+
+    /// Awaits whichever wins first: the process exiting, or the timeout
+    /// elapsing. On exit, returns the terminationStatus. On timeout,
+    /// sends SIGTERM, waits a second, escalates to SIGINT if needed, and
+    /// throws HookError.timedOut.
+    private static func raceProcessAgainstTimeout(
+        process: Process,
+        timeout: Double
+    ) async throws -> Int32 {
+        try await withThrowingTaskGroup(of: Int32?.self) { group in
+            group.addTask { try await pollProcessExit(process) }
+            group.addTask { try await timeoutTick(seconds: timeout) }
+
+            guard let first = try await group.next() else {
+                group.cancelAll()
+                return -1
+            }
+            group.cancelAll()
+
+            if let status = first {
+                return status
+            }
+
+            // Timeout fired before the process exited.
+            process.terminate()
+            try? await Task.sleep(for: .seconds(1))
+            if process.isRunning {
+                process.interrupt()
+            }
+            throw HookError.timedOut(after: timeout)
+        }
+    }
+
+    /// Polls isRunning instead of registering a terminationHandler after
+    /// process.run(). Foundation only invokes the handler on the
+    /// running-to-exited transition, so a hook that exits in the window
+    /// between process.run() returning and the handler being assigned
+    /// would never fire it; the continuation would dangle and the
+    /// timeout would race in as a false positive. Polling reads live
+    /// state, so a process that already terminated returns its status
+    /// on the first probe.
+    private static func pollProcessExit(_ process: Process) async throws -> Int32 {
+        while process.isRunning {
+            try await Task.sleep(for: .milliseconds(50))
+        }
+        return process.terminationStatus
+    }
+
+    /// Sleeps for the given duration then returns nil to signal "timeout
+    /// won the race" inside the task group.
+    private static func timeoutTick(seconds: Double) async throws -> Int32? {
+        try await Task.sleep(for: .seconds(seconds))
+        return nil
     }
 }

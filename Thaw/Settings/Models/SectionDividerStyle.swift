@@ -9,7 +9,7 @@
 import SwiftUI
 
 /// The display style for section divider control items.
-nonisolated enum SectionDividerStyle: Int, CaseIterable, Identifiable {
+enum SectionDividerStyle: Int, CaseIterable, Identifiable {
     case noDivider = 0
     case chevron = 1
 

@@ -8,30 +8,52 @@
 
 import SwiftUI
 
+struct IceSectionOptions: OptionSet {
+    let rawValue: Int
+
+    static let isBordered = IceSectionOptions(rawValue: 1 << 0)
+    static let hasDividers = IceSectionOptions(rawValue: 1 << 1)
+
+    static let plain: IceSectionOptions = []
+    static let defaultValue: IceSectionOptions = [.isBordered, .hasDividers]
+}
+
 struct IceSection<Header: View, Content: View, Footer: View>: View {
     private let header: Header
     private let content: Content
     private let footer: Footer
-    private let isBordered: Bool
+    private let spacing: CGFloat
+    private let options: IceSectionOptions
+
+    private var isBordered: Bool {
+        options.contains(.isBordered)
+    }
+
+    private var hasDividers: Bool {
+        options.contains(.hasDividers)
+    }
 
     init(
-        isBordered: Bool = true,
+        spacing: CGFloat = .iceSectionDefaultSpacing,
+        options: IceSectionOptions = .defaultValue,
         @ViewBuilder header: () -> Header,
         @ViewBuilder content: () -> Content,
         @ViewBuilder footer: () -> Footer
     ) {
-        self.isBordered = isBordered
+        self.spacing = spacing
+        self.options = options
         self.header = header()
         self.content = content()
         self.footer = footer()
     }
 
     init(
-        isBordered: Bool = true,
+        spacing: CGFloat = .iceSectionDefaultSpacing,
+        options: IceSectionOptions = .defaultValue,
         @ViewBuilder content: () -> Content,
         @ViewBuilder footer: () -> Footer
     ) where Header == EmptyView {
-        self.init(isBordered: isBordered) {
+        self.init(spacing: spacing, options: options) {
             EmptyView()
         } content: {
             content()
@@ -41,11 +63,12 @@ struct IceSection<Header: View, Content: View, Footer: View>: View {
     }
 
     init(
-        isBordered: Bool = true,
+        spacing: CGFloat = .iceSectionDefaultSpacing,
+        options: IceSectionOptions = .defaultValue,
         @ViewBuilder header: () -> Header,
         @ViewBuilder content: () -> Content
     ) where Footer == EmptyView {
-        self.init(isBordered: isBordered) {
+        self.init(spacing: spacing, options: options) {
             header()
         } content: {
             content()
@@ -55,10 +78,11 @@ struct IceSection<Header: View, Content: View, Footer: View>: View {
     }
 
     init(
-        isBordered: Bool = true,
+        spacing: CGFloat = .iceSectionDefaultSpacing,
+        options: IceSectionOptions = .defaultValue,
         @ViewBuilder content: () -> Content
     ) where Header == EmptyView, Footer == EmptyView {
-        self.init(isBordered: isBordered) {
+        self.init(spacing: spacing, options: options) {
             EmptyView()
         } content: {
             content()
@@ -69,42 +93,52 @@ struct IceSection<Header: View, Content: View, Footer: View>: View {
 
     init(
         _ title: LocalizedStringKey,
-        isBordered: Bool = true,
+        spacing: CGFloat = .iceSectionDefaultSpacing,
+        options: IceSectionOptions = .defaultValue,
         @ViewBuilder content: () -> Content
     ) where Header == Text, Footer == EmptyView {
-        self.init(isBordered: isBordered) {
-            // No explicit font — the native grouped Section header styles it.
-            Text(title)
+        self.init(spacing: spacing, options: options) {
+            Text(title).font(.headline)
         } content: {
             content()
         }
     }
 
     var body: some View {
-        // Native grouped Section. The OS provides the glass card, row insets,
-        // and separators between rows. `isBordered == false` opts out of the
-        // card via a cleared row background.
-        //
-        // - Important: Because this wraps a native `Section`, an `IceSection`
-        //   must be a direct child of a `List`/`Form` (e.g. the `Form` inside
-        //   ``IceForm``). Wrapping it in an intermediate container such as a
-        //   `VStack` collapses it into a single plain row, losing the grouped
-        //   card, insets, and separators.
-        if isBordered {
-            nativeSection
-        } else {
-            nativeSection
-                .listRowBackground(Color.clear)
+        Section {
+            VStack(alignment: .leading, spacing: 0) {
+                headerView
+
+                if isBordered {
+                    IceGroupBox(padding: EdgeInsets(top: 6, leading: 12, bottom: 6, trailing: 12)) {
+                        contentLayout
+                    }
+                    .background(
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .fill(.quaternary)
+                    )
+                    .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .strokeBorder(.separator, lineWidth: 0.5)
+                    )
+                } else {
+                    contentLayout
+                }
+
+                footerView
+            }
         }
     }
 
-    private var nativeSection: some View {
-        Section {
-            content
-        } header: {
-            headerView
-        } footer: {
-            footerView
+    @ViewBuilder
+    private var contentLayout: some View {
+        if hasDividers {
+            _VariadicView.Tree(IceSectionLayout(spacing: spacing)) {
+                content.frame(maxWidth: .infinity)
+            }
+        } else {
+            content.frame(maxWidth: .infinity)
         }
     }
 
@@ -113,6 +147,8 @@ struct IceSection<Header: View, Content: View, Footer: View>: View {
         if Header.self != EmptyView.self {
             header
                 .accessibilityAddTraits(.isHeader)
+                .padding(.leading, 8)
+                .padding(.bottom, 6)
         }
     }
 
@@ -120,6 +156,44 @@ struct IceSection<Header: View, Content: View, Footer: View>: View {
     private var footerView: some View {
         if Footer.self != EmptyView.self {
             footer
+                .padding([.bottom, .leading], 8)
+                .padding(.top, 2)
         }
     }
+}
+
+// MARK: - IceSectionLayout
+
+private struct IceSectionLayout: _VariadicView_UnaryViewRoot {
+    let spacing: CGFloat
+
+    @ViewBuilder
+    func body(children: _VariadicView.Children) -> some View {
+        let last = children.last?.id
+        VStack(alignment: .leading, spacing: spacing) {
+            ForEach(children) { child in
+                child
+                    .transition(.opacity.combined(with: .scale(scale: 0.98))) // Smooth Tahoe-style transitions
+
+                if child.id != last {
+                    IceSectionDivider()
+                }
+            }
+        }
+        .padding(8)
+    }
+}
+
+// MARK: - IceSectionDivider
+
+private struct IceSectionDivider: View {
+    var body: some View {
+        Divider()
+            .padding(.horizontal, 4)
+    }
+}
+
+extension CGFloat {
+    /// The default spacing for an ``IceSection``.
+    static let iceSectionDefaultSpacing: CGFloat = 8
 }

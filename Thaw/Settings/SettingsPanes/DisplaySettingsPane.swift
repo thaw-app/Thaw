@@ -14,9 +14,10 @@ struct DisplaySettingsPane: View {
     /// per-display draftSpacing dictionary without colliding.
     private static let globalDraftKey = "__global__"
 
-    @Environment(AppState.self) var appState: AppState
-    @Bindable var displaySettings: DisplaySettingsManager
+    @EnvironmentObject var appState: AppState
+    @ObservedObject var displaySettings: DisplaySettingsManager
 
+    @State private var maxSliderLabelWidth: CGFloat = 0
     /// Per-display draft of the spacing slider, keyed by display UUID.
     /// Until the user clicks Apply, dragging the slider only updates this
     /// dictionary, it does not touch the saved configuration or trigger
@@ -52,25 +53,26 @@ struct DisplaySettingsPane: View {
 
     var body: some View {
         IceForm {
-            IceSection("Global") {
+            IceSection {
                 globalSection()
             }
             IceSection {
                 confirmSpacingRelaunchControls
             }
+            CalloutBox(systemImage: "exclamationmark.triangle.fill", font: .callout, foregroundStyle: Color.warning) {
+                Text("When a display transition requires Thaw to apply a different menu bar spacing, Thaw relaunches apps with menu bar items. Relaunching apps may cause unsaved input, progress, or transient app state to be lost.")
+            }
             ForEach(displaySettings.allDisplays()) { display in
-                displaySection(for: display)
+                IceSection {
+                    displayRow(for: display)
+                }
             }
         }
         .alert(
             String(localized: "Apply spacing change?"),
             isPresented: Binding(
                 get: { pendingSpacingApply != nil },
-                set: {
-                    if !$0 {
-                        pendingSpacingApply = nil
-                    }
-                }
+                set: { if !$0 { pendingSpacingApply = nil } }
             ),
             presenting: pendingSpacingApply,
             actions: { pending in spacingConfirmationButtons(for: pending) },
@@ -80,11 +82,7 @@ struct DisplaySettingsPane: View {
             String(localized: "Apply global settings to all displays?"),
             isPresented: Binding(
                 get: { pendingGlobalApply != nil },
-                set: {
-                    if !$0 {
-                        pendingGlobalApply = nil
-                    }
-                }
+                set: { if !$0 { pendingGlobalApply = nil } }
             ),
             presenting: pendingGlobalApply,
             actions: { pending in globalConfirmationButtons(for: pending) },
@@ -93,23 +91,14 @@ struct DisplaySettingsPane: View {
         .alert("Error", isPresented: $showingError) {
             Button("OK") { errorMessage = nil }
         } message: {
-            if let errorMessage {
-                Text(errorMessage)
-            }
+            if let errorMessage { Text(errorMessage) }
         }
     }
 
     @ViewBuilder
     private var confirmSpacingRelaunchControls: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Toggle("Confirm before relaunching apps", isOn: $displaySettings.confirmSpacingRelaunch)
-                .annotation("Before a display change or spacing edit relaunches your menu bar apps, Thaw asks you to confirm. Turn this off to apply spacing changes and relaunch apps without confirmation.")
-
-            SettingsWarningPill(
-                title: "Apps may relaunch",
-                message: "Changing menu bar spacing for a display can relaunch apps with menu bar items. Unsaved input, progress, or transient app state may be lost."
-            )
-        }
+        Toggle("Confirm before relaunching apps", isOn: $displaySettings.confirmSpacingRelaunch)
+            .annotation("Before a display change or spacing edit relaunches your menu bar apps, Thaw asks you to confirm. Turn this off to apply spacing changes and relaunch apps without confirmation.")
 
         if !displaySettings.confirmSpacingRelaunch {
             IcePicker(
@@ -120,35 +109,6 @@ struct DisplaySettingsPane: View {
                 Text("All profiles").tag(SpacingProfileSaveScope.allProfiles)
             }
             .annotation("When a profile is active, choose whether spacing changes save to just the active profile or to every profile.")
-        }
-    }
-
-    private func displaySection(for display: DisplaySettingsManager.DisplayInfo) -> some View {
-        IceSection {
-            displayHeader(for: display)
-        } content: {
-            displayRow(for: display)
-        }
-    }
-
-    private func displayHeader(for display: DisplaySettingsManager.DisplayInfo) -> some View {
-        HStack(spacing: 6) {
-            Text(display.name)
-            if display.hasNotch {
-                Text("Notch")
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(.quaternary)
-                    .clipShape(Capsule())
-            }
-            if !display.isConnected {
-                Text("Disconnected")
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(.quaternary)
-                    .clipShape(Capsule())
-                    .foregroundStyle(.secondary)
-            }
         }
     }
 
@@ -199,14 +159,103 @@ struct DisplaySettingsPane: View {
             }
         )
 
-        IceBarConfigurationControls(
-            alwaysShowHiddenItems: alwaysShowHiddenItems,
-            useIceBar: useIceBar,
-            location: location,
-            layout: layout,
-            gridColumns: gridColumns,
-            context: .display
-        )
+        HStack {
+            Spacer()
+            Text(display.name)
+                .font(.headline)
+            if display.hasNotch {
+                Text("Notch")
+                    .font(.caption)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(.quaternary)
+                    .clipShape(Capsule())
+            }
+            if !display.isConnected {
+                Text("Disconnected")
+                    .font(.caption)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(.quaternary)
+                    .clipShape(Capsule())
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+        }
+
+        Toggle("Always show hidden items", isOn: alwaysShowHiddenItems)
+            .disabled(useIceBar.wrappedValue)
+            .annotation {
+                if useIceBar.wrappedValue {
+                    Text("Not available because the \(Constants.displayName) Bar is enabled for this display.")
+                } else {
+                    Text("Always show hidden menu bar items in the menu bar on this display.")
+                }
+            }
+
+        Toggle("Use \(Constants.displayName) Bar", isOn: useIceBar)
+            .annotation("Show hidden menu bar items in a separate bar below the menu bar on this display.")
+
+        if useIceBar.wrappedValue {
+            IcePicker("Location", selection: location) {
+                ForEach(IceBarLocation.allCases) { loc in
+                    Text(loc.localized).tag(loc)
+                }
+            }
+            .annotation {
+                switch location.wrappedValue {
+                case .dynamic:
+                    Text("The \(Constants.displayName) Bar's location changes based on context.")
+                case .mousePointer:
+                    Text("The \(Constants.displayName) Bar is centered below the mouse pointer.")
+                case .iceIcon:
+                    Text("The \(Constants.displayName) Bar is centered below the \(Constants.displayName) icon.")
+                case .leftAligned:
+                    Text("The \(Constants.displayName) Bar is aligned to the left edge of the display.")
+                case .rightAligned:
+                    Text("The \(Constants.displayName) Bar is aligned to the right edge of the display.")
+                }
+            }
+
+            IcePicker("Layout", selection: layout) {
+                ForEach(IceBarLayout.allCases) { lay in
+                    Text(lay.localized).tag(lay)
+                }
+            }
+            .annotation {
+                switch layout.wrappedValue {
+                case .horizontal:
+                    Text("Items are arranged in a single horizontal row.")
+                case .vertical:
+                    Text("Items are stacked vertically in a single column.")
+                case .grid:
+                    Text("Items are arranged in a grid with multiple columns.")
+                }
+            }
+
+            if layout.wrappedValue == .grid {
+                let gridColumnsDouble = Binding<Double>(
+                    get: { Double(gridColumns.wrappedValue) },
+                    set: { gridColumns.wrappedValue = Int($0) }
+                )
+                LabeledContent {
+                    IceSlider(
+                        value: gridColumnsDouble,
+                        in: 2 ... 10,
+                        step: 1
+                    ) {
+                        Text(verbatim: "\(gridColumns.wrappedValue)")
+                    }
+                } label: {
+                    Text("Columns")
+                        .frame(minWidth: maxSliderLabelWidth, alignment: .leading)
+                        .onFrameChange { frame in
+                            maxSliderLabelWidth = max(maxSliderLabelWidth, frame.width)
+                        }
+                }
+                .annotation("Maximum number of items per row in the grid layout.")
+            }
+        }
 
         spacingRow(for: display)
     }
@@ -467,22 +516,85 @@ struct DisplaySettingsPane: View {
             set: { displaySettings.globalConfiguration = displaySettings.globalConfiguration.withGridColumns($0) }
         )
 
-        IceBarConfigurationControls(
-            alwaysShowHiddenItems: alwaysShowHiddenItems,
-            useIceBar: useIceBar,
-            location: location,
-            layout: layout,
-            gridColumns: gridColumns,
-            context: .globalTemplate
-        ) {
-            Toggle(
-                "Show at mouse pointer on hotkey",
-                isOn: Binding(
-                    get: { appState.settings.general.iceBarLocationOnHotkey },
-                    set: { appState.settings.general.iceBarLocationOnHotkey = $0 }
+        HStack {
+            Spacer()
+            Text("Global")
+                .font(.headline)
+            Spacer()
+        }
+
+        Toggle("Always show hidden items", isOn: alwaysShowHiddenItems)
+            .disabled(useIceBar.wrappedValue)
+            .annotation {
+                if useIceBar.wrappedValue {
+                    Text("Not available because the \(Constants.displayName) Bar is enabled in the global template.")
+                } else {
+                    Text("Always show hidden menu bar items in the menu bar.")
+                }
+            }
+
+        Toggle("Use \(Constants.displayName) Bar", isOn: useIceBar)
+            .annotation("Show hidden menu bar items in a separate bar below the menu bar.")
+
+        if useIceBar.wrappedValue {
+            IcePicker("Location", selection: location) {
+                ForEach(IceBarLocation.allCases) { loc in
+                    Text(loc.localized).tag(loc)
+                }
+            }
+            .annotation {
+                switch location.wrappedValue {
+                case .dynamic:
+                    Text("The \(Constants.displayName) Bar's location changes based on context.")
+                case .mousePointer:
+                    Text("The \(Constants.displayName) Bar is centered below the mouse pointer.")
+                case .iceIcon:
+                    Text("The \(Constants.displayName) Bar is centered below the \(Constants.displayName) icon.")
+                case .leftAligned:
+                    Text("The \(Constants.displayName) Bar is aligned to the left edge of the display.")
+                case .rightAligned:
+                    Text("The \(Constants.displayName) Bar is aligned to the right edge of the display.")
+                }
+            }
+
+            IcePicker("Layout", selection: layout) {
+                ForEach(IceBarLayout.allCases) { lay in
+                    Text(lay.localized).tag(lay)
+                }
+            }
+            .annotation {
+                switch layout.wrappedValue {
+                case .horizontal:
+                    Text("Items are arranged in a single horizontal row.")
+                case .vertical:
+                    Text("Items are stacked vertically in a single column.")
+                case .grid:
+                    Text("Items are arranged in a grid with multiple columns.")
+                }
+            }
+
+            if layout.wrappedValue == .grid {
+                let gridColumnsDouble = Binding<Double>(
+                    get: { Double(gridColumns.wrappedValue) },
+                    set: { gridColumns.wrappedValue = Int($0) }
                 )
-            )
-            .annotation("Always show the \(Constants.displayName) Bar at the mouse pointer's location when it is shown using a hotkey.")
+                LabeledContent {
+                    IceSlider(
+                        value: gridColumnsDouble,
+                        in: 2 ... 10,
+                        step: 1
+                    ) {
+                        Text(verbatim: "\(gridColumns.wrappedValue)")
+                    }
+                } label: {
+                    Text("Columns")
+                        .frame(minWidth: maxSliderLabelWidth, alignment: .leading)
+                        .onFrameChange { frame in
+                            maxSliderLabelWidth = max(maxSliderLabelWidth, frame.width)
+                        }
+                }
+                .annotation("Maximum number of items per row in the grid layout.")
+            }
         }
 
         globalSpacingRow()
@@ -599,48 +711,23 @@ struct DisplaySettingsPane: View {
     /// unconfirmedSpacingProfileScope. Used when confirmations are disabled;
     /// mirrors the globalConfirmationButtons actions including rollback.
     private func commitGlobalApplyWithoutConfirmation(activeProfileID: UUID?) {
-        guard let id = activeProfileID else {
-            commitGlobalApply()
-            return
-        }
-        switch displaySettings.unconfirmedSpacingProfileScope {
-        case .activeProfile:
-            updateActiveProfile(id: id)
-        case .allProfiles:
-            updateAllProfiles()
-        }
-    }
-
-    /// Broadcasts the global template, then persists it to `id`'s profile.
-    /// Snapshots the previous configurations first so a save failure can
-    /// roll the live state back rather than leaving the broadcast applied
-    /// without a matching profile entry, which the next reapply would revert.
-    private func updateActiveProfile(id: UUID) {
         let previousConfigurations = displaySettings.configurations
         commitGlobalApply()
+        guard let id = activeProfileID else { return }
         do {
-            try appState.profileManager.updateProfile(
-                id: id,
-                scope: .configurationOnly,
-                appState: appState
-            )
-        } catch {
-            displaySettings.configurations = previousConfigurations
-            errorMessage = error.localizedDescription
-            showingError = true
-        }
-    }
-
-    /// Broadcasts the global template, then persists it to every profile.
-    /// Mirrors ``updateActiveProfile(id:)``'s rollback-on-failure behavior.
-    private func updateAllProfiles() {
-        let previousConfigurations = displaySettings.configurations
-        commitGlobalApply()
-        do {
-            try appState.profileManager.updateAllProfilesGlobalConfiguration(
-                displaySettings.globalConfiguration,
-                propagateToDisplays: true
-            )
+            switch displaySettings.unconfirmedSpacingProfileScope {
+            case .activeProfile:
+                try appState.profileManager.updateProfile(
+                    id: id,
+                    scope: .configurationOnly,
+                    appState: appState
+                )
+            case .allProfiles:
+                try appState.profileManager.updateAllProfilesGlobalConfiguration(
+                    displaySettings.globalConfiguration,
+                    propagateToDisplays: true
+                )
+            }
         } catch {
             displaySettings.configurations = previousConfigurations
             errorMessage = error.localizedDescription
@@ -650,186 +737,61 @@ struct DisplaySettingsPane: View {
 
     @ViewBuilder
     private func globalConfirmationButtons(for pending: PendingGlobalApply) -> some View {
-        if let activeProfileID = pending.activeProfileID {
+        if pending.activeProfileID != nil {
             Button(String(localized: "Update Active Profile"), role: .destructive) {
-                updateActiveProfile(id: activeProfileID)
+                if let id = pending.activeProfileID {
+                    // Snapshot the previous configurations so a save failure
+                    // can roll the live state back rather than leaving the
+                    // broadcast applied without a matching profile entry,
+                    // which the next reapply would revert.
+                    let previousConfigurations = displaySettings.configurations
+                    commitGlobalApply()
+                    do {
+                        try appState.profileManager.updateProfile(
+                            id: id,
+                            scope: .configurationOnly,
+                            appState: appState
+                        )
+                    } catch {
+                        displaySettings.configurations = previousConfigurations
+                        errorMessage = error.localizedDescription
+                        showingError = true
+                    }
+                } else {
+                    commitGlobalApply()
+                }
             }
             Button(String(localized: "Update All Profiles"), role: .destructive) {
-                updateAllProfiles()
+                let previousConfigurations = displaySettings.configurations
+                commitGlobalApply()
+                do {
+                    try appState.profileManager.updateAllProfilesGlobalConfiguration(
+                        displaySettings.globalConfiguration,
+                        propagateToDisplays: true
+                    )
+                } catch {
+                    displaySettings.configurations = previousConfigurations
+                    errorMessage = error.localizedDescription
+                    showingError = true
+                }
             }
-            Button(String(localized: "Cancel"), role: .cancel) {
-                // Intentionally empty: dismisses the alert, no other action needed.
-            }
+            Button(String(localized: "Cancel"), role: .cancel) {}
         } else {
             Button(String(localized: "Apply"), role: .destructive) {
                 commitGlobalApply()
             }
-            Button(String(localized: "Cancel"), role: .cancel) {
-                // Intentionally empty: dismisses the alert, no other action needed.
-            }
+            Button(String(localized: "Cancel"), role: .cancel) {}
         }
     }
 
     private func globalConfirmationMessage(for pending: PendingGlobalApply) -> String {
         let profileName = pending.activeProfileName ?? ""
-        let displayMessage = String(localized: "This will overwrite the settings of \(pending.displayCount) displays with the global template. If the active display's spacing changes, Thaw will relaunch each app with a menu bar item. Relaunching apps may cause unsaved input, progress, or transient app state to be lost.")
+        let displayMessage = String(localized: "This will overwrite the settings of \(pending.displayCount) display with the global template. If the active display's spacing changes, Thaw will relaunch each app with a menu bar item. Relaunching apps may cause unsaved input, progress, or transient app state to be lost.")
         if pending.activeProfileID != nil {
             let profileInstruction = String(localized: "Save the global template to the active profile \"\(profileName)\", or save it to every profile.")
             return "\(displayMessage) \(profileInstruction)"
         } else {
             return displayMessage
-        }
-    }
-}
-
-private struct IceBarConfigurationControls<ExtraControls: View>: View {
-    enum Context {
-        case display
-        case globalTemplate
-    }
-
-    @Binding var alwaysShowHiddenItems: Bool
-    @Binding var useIceBar: Bool
-    @Binding var location: IceBarLocation
-    @Binding var layout: IceBarLayout
-    @Binding var gridColumns: Int
-
-    private let context: Context
-    private let extraControls: () -> ExtraControls
-    @State private var maxSliderLabelWidth: CGFloat = 0
-
-    init(
-        alwaysShowHiddenItems: Binding<Bool>,
-        useIceBar: Binding<Bool>,
-        location: Binding<IceBarLocation>,
-        layout: Binding<IceBarLayout>,
-        gridColumns: Binding<Int>,
-        context: Context,
-        @ViewBuilder extraControls: @escaping () -> ExtraControls
-    ) {
-        _alwaysShowHiddenItems = alwaysShowHiddenItems
-        _useIceBar = useIceBar
-        _location = location
-        _layout = layout
-        _gridColumns = gridColumns
-        self.context = context
-        self.extraControls = extraControls
-    }
-
-    var body: some View {
-        Toggle("Always show hidden items", isOn: $alwaysShowHiddenItems)
-            .disabled(useIceBar)
-            .annotation {
-                if useIceBar {
-                    switch context {
-                    case .display:
-                        Text("Not available because the \(Constants.displayName) Bar is enabled for this display.")
-                    case .globalTemplate:
-                        Text("Not available because the \(Constants.displayName) Bar is enabled in the global template.")
-                    }
-                } else {
-                    switch context {
-                    case .display:
-                        Text("Always show hidden menu bar items in the menu bar on this display.")
-                    case .globalTemplate:
-                        Text("Always show hidden menu bar items in the menu bar.")
-                    }
-                }
-            }
-
-        Toggle("Use \(Constants.displayName) Bar", isOn: $useIceBar)
-            .annotation("Show hidden menu bar items in a separate bar below the menu bar.")
-
-        extraControls()
-
-        if useIceBar {
-            IcePicker("Location", selection: $location) {
-                ForEach(IceBarLocation.allCases) { location in
-                    Text(location.localized).tag(location)
-                }
-            }
-            .annotation { locationAnnotation }
-
-            IcePicker("Arrangement", selection: $layout) {
-                ForEach(IceBarLayout.allCases) { layout in
-                    Text(layout.localized).tag(layout)
-                }
-            }
-            .annotation { layoutAnnotation }
-
-            if layout == .grid {
-                let gridColumnsDouble = Binding<Double>(
-                    get: { Double(gridColumns) },
-                    set: { gridColumns = Int($0) }
-                )
-                LabeledContent {
-                    IceSlider(value: gridColumnsDouble, in: 2 ... 10, step: 1) {
-                        Text(verbatim: "\(gridColumns)")
-                    }
-                } label: {
-                    Text("Columns")
-                        .frame(minWidth: maxSliderLabelWidth, alignment: .leading)
-                        .onAppear {
-                            // Clear any stale accumulated width before the
-                            // label is (re)measured below.
-                            maxSliderLabelWidth = 0
-                        }
-                        .onFrameChange { frame in
-                            maxSliderLabelWidth = max(maxSliderLabelWidth, frame.width)
-                        }
-                }
-                .annotation("Maximum number of items per row in the grid arrangement.")
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var locationAnnotation: some View {
-        switch location {
-        case .dynamic:
-            Text("The \(Constants.displayName) Bar's location changes based on context.")
-        case .mousePointer:
-            Text("The \(Constants.displayName) Bar is centered below the mouse pointer.")
-        case .iceIcon:
-            Text("The \(Constants.displayName) Bar is centered below the \(Constants.displayName) icon.")
-        case .leftAligned:
-            Text("The \(Constants.displayName) Bar is aligned to the left edge of the display.")
-        case .rightAligned:
-            Text("The \(Constants.displayName) Bar is aligned to the right edge of the display.")
-        }
-    }
-
-    @ViewBuilder
-    private var layoutAnnotation: some View {
-        switch layout {
-        case .horizontal:
-            Text("Items are arranged in a single horizontal row.")
-        case .vertical:
-            Text("Items are stacked vertically in a single column.")
-        case .grid:
-            Text("Items are arranged in a grid with multiple columns.")
-        }
-    }
-}
-
-private extension IceBarConfigurationControls where ExtraControls == EmptyView {
-    init(
-        alwaysShowHiddenItems: Binding<Bool>,
-        useIceBar: Binding<Bool>,
-        location: Binding<IceBarLocation>,
-        layout: Binding<IceBarLayout>,
-        gridColumns: Binding<Int>,
-        context: Context
-    ) {
-        self.init(
-            alwaysShowHiddenItems: alwaysShowHiddenItems,
-            useIceBar: useIceBar,
-            location: location,
-            layout: layout,
-            gridColumns: gridColumns,
-            context: context
-        ) {
-            EmptyView()
         }
     }
 }

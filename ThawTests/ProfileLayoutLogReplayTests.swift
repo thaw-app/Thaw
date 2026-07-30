@@ -59,57 +59,6 @@ final class ProfileLayoutLogReplayTests: XCTestCase {
         XCTAssertTrue(clean.currentVisible.contains("at.obdev.littlesnitch.agent:Item-0"))
     }
 
-    /// Fails with a clear message naming the specific log line if the parser
-    /// ever stops recognising a format it currently understands, rather than
-    /// surfacing a bare nil three layers away from the cause.
-    ///
-    /// LittleSnitchOrphanLog exercises 7 of the 9 format-contract patterns
-    /// (see parse(_:)'s doc comment): Missing sourcePID, the three
-    /// applyProfileLayout current-section lines, ahCtrlUID, desiredHidden, and
-    /// desiredAH, plus a planUnmanagedPlacement line. It does NOT cover
-    /// desiredVisible (older captures do not log it; see
-    /// testLoggedDesiredVisibleIsUsedInsteadOfInference) or the two
-    /// notch-overflow lines (see testDisplayReconnectNegativeBudgetYieldsNoOverflow).
-    func testParserRecognisesEveryFormatContractPatternInTheFixture() throws {
-        let parsed = ProfileLayoutLogReplay.parse(LittleSnitchOrphanLog.text)
-
-        XCTAssertTrue(
-            parsed.unresolvedSourcePIDBaseUIDs.contains(orphanUID),
-            "Parser did not extract an unresolved sourcePID. The 'Missing sourcePID for' log message in MenuBarItemManager.swift was probably reworded — see format-contract comments."
-        )
-
-        let cycle = try XCTUnwrap(parsed.cycles.first)
-
-        XCTAssertFalse(
-            cycle.currentVisible.isEmpty,
-            "Parser did not extract currentVisible. The 'applyProfileLayout: current visible section' log message in MenuBarItemManager.swift was probably reworded — see format-contract comments."
-        )
-        XCTAssertFalse(
-            cycle.currentHidden.isEmpty,
-            "Parser did not extract currentHidden. The 'applyProfileLayout: current hidden section' log message in MenuBarItemManager.swift was probably reworded — see format-contract comments."
-        )
-        XCTAssertFalse(
-            cycle.currentAlwaysHidden.isEmpty,
-            "Parser did not extract currentAlwaysHidden. The 'applyProfileLayout: current always-hidden section' log message in MenuBarItemManager.swift was probably reworded — see format-contract comments."
-        )
-        XCTAssertNotNil(
-            cycle.ahCtrlUID,
-            "Parser did not extract ahCtrlUID. The 'Profile layout Phase 1: ahCtrlUID=' log message in MenuBarItemManager.swift was probably reworded — see format-contract comments."
-        )
-        XCTAssertFalse(
-            cycle.desiredHidden.isEmpty,
-            "Parser did not extract desiredHidden. The 'Profile layout Phase 1: desiredHidden=' log message in MenuBarItemManager.swift was probably reworded — see format-contract comments."
-        )
-        XCTAssertFalse(
-            cycle.desiredAlwaysHidden.isEmpty,
-            "Parser did not extract desiredAH. The 'Profile layout Phase 1: desiredAH=' log message in MenuBarItemManager.swift was probably reworded — see format-contract comments."
-        )
-        XCTAssertFalse(
-            cycle.loggedUnmanagedUIDs.isEmpty,
-            "Parser did not extract loggedUnmanagedUIDs. The 'Profile layout: planUnmanagedPlacement' log message in MenuBarItemManager.swift was probably reworded — see format-contract comments."
-        )
-    }
-
     // MARK: Bug mechanism (documents what the exclusion is responsible for)
 
     /// With no orphan exclusion (unresolvedGenericCCUIDs empty), replaying the
@@ -444,17 +393,6 @@ enum ProfileLayoutLogReplay {
     private static let visibleCtrlUID = "com.stonerl.Thaw:Thaw.ControlItem.Visible"
     private static let hiddenCtrlUID = "com.stonerl.Thaw:Thaw.ControlItem.Hidden"
 
-    /// Parses a captured diagnostic log into replayable cycles.
-    ///
-    /// Each pattern below is a contract with a production `diagLog` call site.
-    /// The emitting sites are marked with a matching
-    /// `// Format contract: parsed by ProfileLayoutLogReplayTests.parse(_:)`
-    /// comment; find them with:
-    ///
-    ///     grep -rn 'Format contract: parsed by ProfileLayoutLogReplayTests' Thaw/
-    ///
-    /// The checked-in fixtures are real captured field logs that cannot be
-    /// regenerated, so the production messages must not be reworded.
     static func parse(_ text: String) -> Parsed {
         var cycles = [Cycle]()
         var unresolved = Set<String>()

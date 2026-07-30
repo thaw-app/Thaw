@@ -6,15 +6,23 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import Observation
+import Combine
 import SwiftUI
 
 private struct LocalEventMonitorModifier: ViewModifier {
     @MainActor
-    @Observable
-    final class Model {
-        var isEnabled = false {
-            didSet {
+    private final class Model: ObservableObject {
+        @Published var isEnabled = false
+
+        private let monitor: EventMonitor
+        private var cancellable: AnyCancellable?
+
+        init(mask: NSEvent.EventTypeMask, action: @escaping (NSEvent) -> NSEvent?) {
+            self.monitor = EventMonitor.local(for: mask, handler: action)
+            self.cancellable = $isEnabled.receive(on: DispatchQueue.main).sink { [weak self] isEnabled in
+                guard let self else {
+                    return
+                }
                 if isEnabled {
                     monitor.start()
                 } else {
@@ -22,20 +30,13 @@ private struct LocalEventMonitorModifier: ViewModifier {
                 }
             }
         }
-
-        @ObservationIgnored
-        private let monitor: EventMonitor
-
-        init(mask: NSEvent.EventTypeMask, action: @escaping (NSEvent) -> NSEvent?) {
-            self.monitor = EventMonitor.local(for: mask, handler: action)
-        }
     }
 
-    @State private var model: Model
+    @StateObject private var model: Model
     @Binding var isEnabled: Bool
 
     init(mask: NSEvent.EventTypeMask, isEnabled: Binding<Bool>, action: @escaping (NSEvent) -> NSEvent?) {
-        self._model = State(wrappedValue: Model(mask: mask, action: action))
+        self._model = StateObject(wrappedValue: Model(mask: mask, action: action))
         self._isEnabled = isEnabled
     }
 

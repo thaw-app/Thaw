@@ -11,7 +11,7 @@ import SwiftUI
 /// The window that hosts the permissions decision — either the first-launch
 /// onboarding tour or, on later launches, the standalone permissions view.
 struct PermissionsWindow: Scene {
-    let appState: AppState
+    @ObservedObject var appState: AppState
 
     var body: some Scene {
         IceWindow(id: .permissions) {
@@ -36,7 +36,8 @@ struct PermissionsWindow: Scene {
         }
         .windowResizability(.contentSize)
         .windowStyle(.hiddenTitleBar)
-        .environment(appState)
+        .environmentObject(appState)
+        .environmentObject(appState.permissions)
     }
 
     /// During first launch, permissions are requested as the final step of
@@ -46,14 +47,11 @@ struct PermissionsWindow: Scene {
     @ViewBuilder
     private var permissionsContent: some View {
         if Defaults.bool(forKey: .hasCompletedFirstLaunch) {
-            PermissionsView(manager: appState.permissions)
+            PermissionsView<AppPermissions>()
         } else {
-            ThawOnboardingView {
+            OnboardingSheet {
                 Defaults.set(true, forKey: .hasSeenOnboarding)
-                appState.completeFirstLaunchSetup()
             }
-            .frame(width: ThawOnboardingWindowMetrics.width, height: ThawOnboardingWindowMetrics.height)
-            .environment(appState.permissions)
         }
     }
 }

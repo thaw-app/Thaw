@@ -102,4 +102,4 @@ extension LayoutBarArrangedView: NSDraggingSource {
     }
 }
 
-extension LayoutBarArrangedView: @MainActor NSAccessibilityLayoutItem {}
+extension LayoutBarArrangedView: @preconcurrency NSAccessibilityLayoutItem {}

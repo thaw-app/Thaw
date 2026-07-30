@@ -11,7 +11,7 @@ import SwiftUI
 // MARK: - IceGradient
 
 /// A custom gradient.
-nonisolated struct IceGradient: Codable, Hashable {
+struct IceGradient: Codable, Hashable {
     /// The color stops in the gradient.
     var stops: [ColorStop]
 
@@ -32,7 +32,6 @@ nonisolated struct IceGradient: Codable, Hashable {
     /// given color space.
     ///
     /// - Parameter colorSpace: The color space to convert the gradient to.
-    @MainActor
     func nsGradient(using colorSpace: NSColorSpace) -> NSGradient? {
         guard !stops.isEmpty else {
             return nil
@@ -56,7 +55,6 @@ nonisolated struct IceGradient: Codable, Hashable {
     /// given color space.
     ///
     /// - Parameter colorSpace: The color space to convert the gradient to.
-    @MainActor
     func swiftUIView(using colorSpace: Color.RGBColorSpace) -> some View {
         GeometryReader { geometry in
             if stops.isEmpty {
@@ -83,7 +81,6 @@ nonisolated struct IceGradient: Codable, Hashable {
     ///     of the color to return.
     ///   - colorSpace: The color space used to process the colors in the
     ///     gradient. The returned color also uses this color space.
-    @MainActor
     func color(at location: CGFloat, using colorSpace: CGColorSpace) -> CGColor? {
         guard
             let space = NSColorSpace(cgColorSpace: colorSpace),
@@ -107,7 +104,6 @@ nonisolated struct IceGradient: Codable, Hashable {
     ///
     /// - Parameter location: A value between 0 and 1 representing the
     ///   location of the color to return.
-    @MainActor
     func color(at location: CGFloat) -> CGColor? {
         guard let space = Color.RGBColorSpace.displayP3.cgColorSpace else {
             return nil
@@ -123,7 +119,6 @@ nonisolated struct IceGradient: Codable, Hashable {
     ///     be an RGB color space, or this parameter is ignored. Pass `nil`
     ///     to let the method decide the color space.
     ///   - option: Options for computing the color.
-    @MainActor
     func averageColor(using colorSpace: CGColorSpace? = nil, option: CGImage.ColorAveragingOption = []) -> CGColor? {
         guard !stops.isEmpty else {
             return nil
@@ -170,7 +165,7 @@ nonisolated struct IceGradient: Codable, Hashable {
 
 // MARK: IceGradient Static Members
 
-nonisolated extension IceGradient {
+extension IceGradient {
     /// The default menu bar tint gradient.
     static let defaultMenuBarTint = IceGradient(stops: [
         ColorStop.white(location: 0),
@@ -180,9 +175,9 @@ nonisolated extension IceGradient {
 
 // MARK: - IceGradient.ColorStop
 
-nonisolated extension IceGradient {
+extension IceGradient {
     /// A color stop in a gradient.
-    nonisolated struct ColorStop: Hashable {
+    struct ColorStop: Hashable {
         /// The stop's color.
         var color: CGColor
         /// The stop's relative location in a gradient.
@@ -220,7 +215,7 @@ nonisolated extension IceGradient {
 
 // MARK: IceGradient.ColorStop: Codable
 
-nonisolated extension IceGradient.ColorStop: Codable {
+extension IceGradient.ColorStop: Codable {
     private enum CodingKeys: CodingKey {
         case color
         case location

@@ -9,7 +9,7 @@
 import SwiftUI
 
 /// The navigation identifier type for the "Settings" interface.
-nonisolated enum SettingsNavigationIdentifier: String, NavigationIdentifier {
+enum SettingsNavigationIdentifier: String, NavigationIdentifier {
     case general = "General"
     case displays = "Displays"
     case menuBarLayout = "Menu Bar Layout"

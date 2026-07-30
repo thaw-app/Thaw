@@ -112,9 +112,9 @@ extension MenuBarItemService {
 
 extension MenuBarItemService {
     /// A wrapper around an XPC session.
-    private nonisolated final class Session: Sendable {
+    private final class Session: Sendable {
         /// A session's underlying storage.
-        private nonisolated final class Storage: @unchecked Sendable {
+        private final class Storage: @unchecked Sendable {
             private let name = MenuBarItemService.name
             private var session: XPCSession?
             private let queue: DispatchQueue
@@ -137,15 +137,7 @@ extension MenuBarItemService {
                     diagLog.warning("Session was cancelled with error \(error.localizedDescription)")
                     self.session = nil
                 }
-                // Same-team peer validation can never pass in a build signed
-                // without a team identifier (ad-hoc/personal builds) — every
-                // send would fail with "Peer forbidden (code signing)".
-                // Mirrors the teamless fallback in the service's Listener.
-                if CodeSigningInfo.processTeamIdentifier != nil {
-                    session.setPeerRequirement(.isFromSameTeam())
-                } else {
-                    diagLog.notice("getOrCreateSession: no team identifier (ad-hoc build), skipping peer requirement")
-                }
+                session.setPeerRequirement(.isFromSameTeam())
                 session.setTargetQueue(queue)
                 try session.activate()
                 diagLog.debug("getOrCreateSession: XPC session activated successfully")

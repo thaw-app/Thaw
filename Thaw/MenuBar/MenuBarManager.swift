@@ -6,116 +6,73 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import AsyncAlgorithms
 import Combine
-import Observation
 import SwiftUI
 
 /// Manager for the state of the menu bar.
 @MainActor
-@Observable
-final class MenuBarManager {
+final class MenuBarManager: ObservableObject {
     /// Information for the menu bar's average color on the active screen.
-    private(set) var averageColorInfo: MenuBarAverageColorInfo?
+    @Published private(set) var averageColorInfo: MenuBarAverageColorInfo?
 
     /// Per-screen average colors for multi-monitor adaptive backgrounds.
-    private(set) var averageColors: [CGDirectDisplayID: MenuBarAverageColorInfo] = [:]
+    @Published private(set) var averageColors: [CGDirectDisplayID: MenuBarAverageColorInfo] = [:]
 
     /// A Boolean value that indicates whether the menu bar is either always hidden
     /// by the system, or automatically hidden and shown by the system based on the
     /// location of the mouse.
-    private(set) var isMenuBarHiddenBySystem = false
+    @Published private(set) var isMenuBarHiddenBySystem = false
 
     /// A Boolean value that indicates whether the menu bar is hidden by the system
     /// according to a value stored in UserDefaults.
-    private(set) var isMenuBarHiddenBySystemUserDefaults = false
+    @Published private(set) var isMenuBarHiddenBySystemUserDefaults = false
 
     /// A Boolean value that indicates whether the "ShowOnHover" feature is allowed.
-    var showOnHoverAllowed = true
+    @Published var showOnHoverAllowed = true
 
     /// Timestamp of the last time a section was shown.
     private(set) var lastShowTimestamp: ContinuousClock.Instant?
 
     /// Reference to the settings window.
-    private var settingsWindow: NSWindow?
+    @Published private var settingsWindow: NSWindow?
 
     /// Diagnostic logger for the menu bar manager.
-    @ObservationIgnored
     private let diagLog = DiagLog(category: "MenuBarManager")
 
     /// The shared app state.
-    @ObservationIgnored
     private weak var appState: AppState?
 
     /// Storage for internal observers.
-    @ObservationIgnored
     private var cancellables = Set<AnyCancellable>()
-
-    /// Task observing `DisplaySettingsManager.configurations`, which is
-    /// `@Observable` rather than a Combine `ObservableObject`.
-    @ObservationIgnored private var displayConfigurationsObservationTask: Task<Void, Never>?
-
-    /// Task observing `settingsWindow`'s `isVisible` KVO stream (wave 3),
-    /// replacing the old `$settingsWindow.removeNil().map { $0.publisher(for:
-    /// \.isVisible) }.switchToLatest()` pipeline. `settingsWindow` is now a
-    /// plain `@Observable` property rather than a Combine `@Published` one,
-    /// so it no longer has a `$settingsWindow` publisher; the inner KVO
-    /// publisher on the resolved `NSWindow` is unrelated to Observation and
-    /// stays Combine, manually re-subscribed on each new non-nil window
-    /// value (mirroring `switchToLatest`'s behavior).
-    @ObservationIgnored private var settingsWindowObservationTask: Task<Void, Never>?
-
-    /// Task observing `appearanceManager.configuration` for adaptive-color
-    /// refresh start/stop (wave 3), replacing the old `$configuration.map {
-    /// ... }.removeDuplicates().sink` pipeline.
-    @ObservationIgnored private var appearanceConfigurationObservationTask: Task<Void, Never>?
-
-    /// Task observing `itemManager.itemCache` (wave 4), which is
-    /// `@Observable` rather than a Combine `ObservableObject`, replacing the
-    /// old `$itemCache.debounce(for: .seconds(0.5), scheduler:
-    /// DispatchQueue.main).sink` pipeline. `Observations { }` is an
-    /// `AsyncSequence`, so the debounce is reproduced with AsyncAlgorithms'
-    /// `.debounce(for:)` instead.
-    @ObservationIgnored private var itemCacheHotkeyObservationTask: Task<Void, Never>?
-
-    @MainActor
-    deinit {
-        displayConfigurationsObservationTask?.cancel()
-        settingsWindowObservationTask?.cancel()
-        settingsWindowVisibilityCancellable?.cancel()
-        appearanceConfigurationObservationTask?.cancel()
-        itemCacheHotkeyObservationTask?.cancel()
-    }
 
     /// Per-item hotkeys, keyed by MenuBarItem.uniqueIdentifier. Each opens the
     /// item's menu when its key combination fires. Mirrors the per-profile
     /// hotkeys on ProfileManager.
-    private(set) var itemHotkeys: [String: Hotkey] = [:]
+    @Published private(set) var itemHotkeys: [String: Hotkey] = [:]
 
     /// Reverse map from a hotkey instance to the item identifier it opens.
     /// Read by Hotkey.Listener when an openMenuBarItem hotkey fires.
     var hotkeyItemMap: [ObjectIdentifier: String] = [:]
 
-    /// Cancellable for the periodic average-color refresh, active only while settings is visible.
-    @ObservationIgnored private var averageColorRefreshCancellable: AnyCancellable?
+    /// Per-item hotkey persistence observers, keyed by item identifier so a
+    /// single binding can be torn down without disturbing the others.
+    private var itemHotkeyCancellables = [String: AnyCancellable]()
 
-    /// Cancellable for `settingsWindow`'s `isVisible` KVO stream, resubscribed
-    /// on each new non-nil `settingsWindow` value by `settingsWindowObservationTask`.
-    @ObservationIgnored
-    private var settingsWindowVisibilityCancellable: AnyCancellable?
+    /// Cancellable for the periodic average-color refresh, active only while settings is visible.
+    private var averageColorRefreshCancellable: AnyCancellable?
 
     /// Cancellable for the periodic average-color refresh when adaptive background is active.
-    @ObservationIgnored private var adaptiveColorRefreshCancellable: AnyCancellable?
+    private var adaptiveColorRefreshCancellable: AnyCancellable?
 
     /// Per-screen colors cached before sleep, restored on wake to avoid stale/white flash.
-    @ObservationIgnored private var sleepColorCache: [CGDirectDisplayID: MenuBarAverageColorInfo]?
+    private var sleepColorCache: [CGDirectDisplayID: MenuBarAverageColorInfo]?
 
     /// Polling state for adaptive wake stabilization.
-    @ObservationIgnored private var wakePollTimer: AnyCancellable?
-    @ObservationIgnored private var wakePollPrevColors: [CGDirectDisplayID: MenuBarAverageColorInfo]?
-    @ObservationIgnored private var wakePollStableCount = 0
-    @ObservationIgnored private var wakePollDidChange = false
-    @ObservationIgnored private var wakePollStartTime: Date?
+    private var wakePollTimer: AnyCancellable?
+    private var wakePollPrevColors: [CGDirectDisplayID: MenuBarAverageColorInfo]?
+    private var wakePollStableCount = 0
+    private var wakePollDidChange = false
+    private var wakePollStartTime: Date?
 
     /// A Boolean value that indicates whether the application menus are hidden.
     private var isHidingApplicationMenus = false
@@ -219,10 +176,9 @@ final class MenuBarManager {
                     switch appState.settings.general.rehideStrategy {
                     case .focusedApp, .smart:
                         Task {
-                            // Add delay for smart strategy to allow app focus to settle.
-                            // A cancelled sleep aborts the rehide instead of firing early.
+                            // Add delay for smart strategy to allow app focus to settle
                             let delay: TimeInterval = appState.settings.general.rehideStrategy == .smart ? 0.25 : 0.1
-                            guard (try? await Task.sleep(for: .seconds(delay))) != nil else { return }
+                            try await Task.sleep(for: .seconds(delay))
 
                             // Ignore rehide requests for a short grace period after showing.
                             if let lastShow = self.lastShowTimestamp,
@@ -255,66 +211,48 @@ final class MenuBarManager {
             .store(in: &c)
 
         if let appState {
-            let displaySettings = appState.settings.displaySettings
-            displayConfigurationsObservationTask?.cancel()
-            displayConfigurationsObservationTask = Task { [weak self] in
-                let changes = Observations { displaySettings.configurations }
-                for await _ in changes {
-                    guard let self else { return }
-                    updateControlItemStates()
+            appState.settings.displaySettings.$configurations
+                .receive(on: DispatchQueue.main)
+                .sink { [weak self] _ in
+                    self?.updateControlItemStates()
                 }
-            }
+                .store(in: &c)
 
             // Refresh per-item hotkeys when the set of menu bar items changes,
             // so newly-arrived items become assignable. Debounced because the
             // item cache ticks frequently and rebuilding on every tick would
             // churn hotkey registrations.
-            let itemManager = appState.itemManager
-            itemCacheHotkeyObservationTask?.cancel()
-            itemCacheHotkeyObservationTask = Task { [weak self] in
-                let changes = Observations { itemManager.itemCache }
-                for await _ in changes.debounce(for: .seconds(0.5)) {
-                    guard let self else { return }
-                    rebuildItemHotkeys()
+            appState.itemManager.$itemCache
+                .debounce(for: .seconds(0.5), scheduler: DispatchQueue.main)
+                .sink { [weak self] _ in
+                    self?.rebuildItemHotkeys()
                 }
-            }
+                .store(in: &c)
         }
 
-        settingsWindowObservationTask?.cancel()
-        settingsWindowObservationTask = Task { [weak self] in
-            let changes = Observations { self?.settingsWindow }
-            for await window in changes {
+        $settingsWindow
+            .removeNil()
+            .map { $0.publisher(for: \.isVisible) }
+            .switchToLatest()
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] isVisible in
                 guard let self else { return }
-                guard let window else {
-                    // A closed (nil) window must not leave its visibility
-                    // sink or the periodic refresh timer active.
-                    settingsWindowVisibilityCancellable?.cancel()
-                    settingsWindowVisibilityCancellable = nil
+                if isVisible {
+                    updateAverageColorInfo()
+                    // Start a visibility-gated 60s refresh to catch wallpaper changes
+                    // (macOS no longer posts a wallpaper change notification).
+                    averageColorRefreshCancellable = Timer.publish(every: 60, tolerance: 10, on: .main, in: .default)
+                        .autoconnect()
+                        .sink { [weak self] _ in
+                            self?.updateAverageColorInfo()
+                        }
+                } else {
                     averageColorRefreshCancellable?.cancel()
                     averageColorRefreshCancellable = nil
-                    continue
                 }
-                settingsWindowVisibilityCancellable = window.publisher(for: \.isVisible)
-                    .removeDuplicates()
-                    .receive(on: DispatchQueue.main)
-                    .sink { [weak self] isVisible in
-                        guard let self else { return }
-                        if isVisible {
-                            updateAverageColorInfo()
-                            // Start a visibility-gated 60s refresh to catch wallpaper changes
-                            // (macOS no longer posts a wallpaper change notification).
-                            averageColorRefreshCancellable = Timer.publish(every: 60, tolerance: 10, on: .main, in: .default)
-                                .autoconnect()
-                                .sink { [weak self] _ in
-                                    self?.updateAverageColorInfo()
-                                }
-                        } else {
-                            averageColorRefreshCancellable?.cancel()
-                            averageColorRefreshCancellable = nil
-                        }
-                    }
             }
-        }
+            .store(in: &c)
 
         // Refresh average color when space or screen changes while settings or adaptive is active.
         Publishers.Merge(
@@ -429,17 +367,14 @@ final class MenuBarManager {
 
         // Start/stop adaptive color refresh when background or tint uses adaptive mode.
         if let appState {
-            appearanceConfigurationObservationTask?.cancel()
-            appearanceConfigurationObservationTask = Task { [weak self, weak appState] in
-                var previousIsAdaptive: Bool?
-                let changes = Observations { appState?.appearanceManager.configuration }
-                for await config in changes {
-                    guard let self else { return }
-                    guard let config else { continue }
+            appState.appearanceManager.$configuration
+                .map { config in
                     let current = config.current
-                    let isAdaptive = current.backgroundKind == .adaptive || current.tintKind == .adaptive
-                    guard isAdaptive != previousIsAdaptive else { continue }
-                    previousIsAdaptive = isAdaptive
+                    return current.backgroundKind == .adaptive || current.tintKind == .adaptive
+                }
+                .removeDuplicates()
+                .sink { [weak self] isAdaptive in
+                    guard let self else { return }
                     if isAdaptive {
                         captureAdaptiveColorWithRetry()
                         adaptiveColorRefreshCancellable = Timer.publish(every: 30, tolerance: 5, on: .main, in: .default)
@@ -452,7 +387,7 @@ final class MenuBarManager {
                         adaptiveColorRefreshCancellable = nil
                     }
                 }
-            }
+                .store(in: &c)
         }
 
         // Hide application menus when a section is shown (if applicable).
@@ -603,7 +538,7 @@ final class MenuBarManager {
 
         let targetScreens: [NSScreen]
         if isAdaptiveActive {
-            targetScreens = NSScreen.screens
+            targetScreens = NSScreen.managedScreens
         } else if isSettingsVisible {
             targetScreens = [settingsWindow?.screen].compactMap(\.self)
         } else {
@@ -677,18 +612,8 @@ final class MenuBarManager {
                     try? await Task.sleep(for: .seconds(1))
                 }
                 await self.updateAverageColorInfoAsync()
-                // Only wait on screens updateAverageColorInfoAsync can actually
-                // capture: displays without a resolvable menu bar or wallpaper
-                // window are skipped there, so treat them as satisfied instead
-                // of burning every retry on them.
-                let windows = WindowInfo.createWindows(option: .onScreen)
-                let allCaptured = NSScreen.screens.allSatisfy { screen in
-                    let displayID = screen.displayID
-                    if self.averageColors.keys.contains(displayID) {
-                        return true
-                    }
-                    return WindowInfo.menuBarWindow(from: windows, for: displayID) == nil
-                        || WindowInfo.wallpaperWindow(from: windows, for: displayID) == nil
+                let allCaptured = NSScreen.managedScreens.allSatisfy {
+                    self.averageColors.keys.contains($0.displayID)
                 }
                 if allCaptured { return }
             }
@@ -977,6 +902,7 @@ final class MenuBarManager {
         for (identifier, hotkey) in itemHotkeys where !wantedIdentifiers.contains(identifier) {
             hotkey.disable()
             hotkeyItemMap[ObjectIdentifier(hotkey)] = nil
+            itemHotkeyCancellables[identifier] = nil
             newHotkeys[identifier] = nil
         }
 
@@ -1001,20 +927,20 @@ final class MenuBarManager {
             hotkeyItemMap[ObjectIdentifier(hotkey)] = identifier
 
             // Observe future changes from HotkeyRecorder and persist them.
-            // Assigned after the initial keyCombination is set above, so —
-            // like the previous dropFirst() Combine pipeline — the initial
-            // value is never redundantly persisted.
-            hotkey.keyCombinationDidChange = { [weak self, weak hotkey] in
-                guard let self, let hotkey else { return }
-                var dict = Defaults.dictionary(forKey: .menuBarItemHotkeys) as? [String: Data] ?? [:]
-                if let combo = hotkey.keyCombination, let data = try? enc.encode(combo) {
-                    dict[identifier] = data
-                } else {
-                    dict.removeValue(forKey: identifier)
+            itemHotkeyCancellables[identifier] = hotkey.$keyCombination
+                .dropFirst() // Skip the initial value we just set.
+                .receive(on: DispatchQueue.main)
+                .sink { [weak self, weak hotkey] newCombo in
+                    guard let self, let hotkey else { return }
+                    var dict = Defaults.dictionary(forKey: .menuBarItemHotkeys) as? [String: Data] ?? [:]
+                    if let combo = newCombo, let data = try? enc.encode(combo) {
+                        dict[identifier] = data
+                    } else {
+                        dict.removeValue(forKey: identifier)
+                    }
+                    Defaults.set(dict, forKey: .menuBarItemHotkeys)
+                    self.hotkeyItemMap[ObjectIdentifier(hotkey)] = newCombo != nil ? identifier : nil
                 }
-                Defaults.set(dict, forKey: .menuBarItemHotkeys)
-                self.hotkeyItemMap[ObjectIdentifier(hotkey)] = hotkey.keyCombination != nil ? identifier : nil
-            }
 
             newHotkeys[identifier] = hotkey
         }

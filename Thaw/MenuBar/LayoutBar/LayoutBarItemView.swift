@@ -7,6 +7,7 @@
 //  Licensed under the GNU GPLv3
 
 import Cocoa
+import Combine
 
 // MARK: - LayoutBarItemView
 
@@ -26,18 +27,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
 
     private weak var appState: AppState?
 
-    /// Observes `appState.imageCache.images` (wave 3: `MenuBarItemImageCache`
-    /// is @Observable rather than a Combine `ObservableObject`, so its old
-    /// `$images` projection is gone). This is an AppKit view (not a SwiftUI
-    /// body), so the Observations-async-sequence pattern is used instead of
-    /// `withObservationTracking`'s recursive-registration form, matching
-    /// this class's existing Combine-`sink`-based subscription style.
-    private var imageObservationTask: Task<Void, Never>?
-
-    @MainActor
-    deinit {
-        imageObservationTask?.cancel()
-    }
+    private var cancellables = Set<AnyCancellable>()
 
     /// The item that the view represents.
     let item: MenuBarItem
@@ -77,7 +67,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
 
         isEnabled = item.isMovable
 
-        configureObservation()
+        configureCancellables()
     }
 
     @available(*, unavailable)
@@ -118,20 +108,28 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         tooltipController.cancel()
     }
 
-    private func configureObservation() {
+    private func configureCancellables() {
+        var c = Set<AnyCancellable>()
+
         if let appState {
             let tag = item.tag
-            imageObservationTask = Task { @MainActor [weak self, weak appState] in
-                var previous: MenuBarItemImageCache.CapturedImage?
-                let changes = Observations { appState?.imageCache.images[tag] ?? nil }
-                for await image in changes {
-                    guard let self else { return }
-                    guard !MenuBarItemImageCache.CapturedImage.isVisuallyEqual(previous, image) else { continue }
-                    previous = image
+            let imageForTag = appState.imageCache.$images
+                .map { [weak appState] _ -> MenuBarItemImageCache.CapturedImage? in
+                    appState?.imageCache.image(for: tag)
+                }
+
+            imageForTag
+                .removeDuplicates(by: MenuBarItemImageCache.CapturedImage.isVisuallyEqual)
+                .sink { [weak self] image in
+                    guard let self else {
+                        return
+                    }
                     self.cachedImage = image
                 }
-            }
+                .store(in: &c)
         }
+
+        cancellables = c
     }
 
     /// Provides an alert to display when the item view is disabled.

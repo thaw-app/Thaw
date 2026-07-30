@@ -9,7 +9,7 @@
 import SwiftUI
 
 struct MenuBarAppearanceSettingsPane: View {
-    let appearanceManager: MenuBarAppearanceManager
+    @ObservedObject var appearanceManager: MenuBarAppearanceManager
 
     var body: some View {
         MenuBarAppearanceEditor(

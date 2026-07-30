@@ -10,7 +10,7 @@ import Carbon.HIToolbox
 import Cocoa
 
 /// A bit mask containing the modifier keys for a hotkey.
-nonisolated struct Modifiers: OptionSet, Codable, Hashable {
+struct Modifiers: OptionSet, Codable, Hashable {
     let rawValue: Int
 
     static let control = Modifiers(rawValue: 1 << 0)
@@ -19,7 +19,7 @@ nonisolated struct Modifiers: OptionSet, Codable, Hashable {
     static let command = Modifiers(rawValue: 1 << 3)
 }
 
-nonisolated extension Modifiers {
+extension Modifiers {
     /// All modifiers in the order displayed by the system,
     /// according to Apple's style guide.
     static let canonicalOrder = [control, option, shift, command]

@@ -7,9 +7,9 @@
 //  Licensed under the GNU GPLv3
 
 import Cocoa
-import Combine
+@preconcurrency import Combine
 
-nonisolated final class RunLoopLocalEventMonitor {
+final class RunLoopLocalEventMonitor {
     private let runLoop = CFRunLoopGetCurrent()
     private let mask: NSEvent.EventTypeMask
     private let mode: RunLoop.Mode
@@ -101,7 +101,7 @@ nonisolated final class RunLoopLocalEventMonitor {
     }
 }
 
-nonisolated extension RunLoopLocalEventMonitor {
+extension RunLoopLocalEventMonitor {
     struct RunLoopLocalEventPublisher: Publisher {
         typealias Output = NSEvent
         typealias Failure = Never
@@ -120,7 +120,7 @@ nonisolated extension RunLoopLocalEventMonitor {
     }
 }
 
-nonisolated extension RunLoopLocalEventMonitor.RunLoopLocalEventPublisher {
+extension RunLoopLocalEventMonitor.RunLoopLocalEventPublisher {
     private final class RunLoopLocalEventSubscription<S: Subscriber<Output, Failure> & Sendable>: Subscription, @unchecked Sendable {
         let mask: NSEvent.EventTypeMask
         let mode: RunLoop.Mode

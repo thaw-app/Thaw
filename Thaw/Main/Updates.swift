@@ -6,37 +6,32 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import Combine
-import Observation
-import Sparkle
+@preconcurrency import Sparkle
 import SwiftUI
 
 /// Manager for app updates.
 @MainActor
-@Observable
-final class UpdatesManager: NSObject {
+final class UpdatesManager: NSObject, ObservableObject {
     /// A Boolean value that indicates whether the user can check for updates.
-    var canCheckForUpdates = false
+    @Published var canCheckForUpdates = false
 
     /// The date of the last update check.
-    var lastUpdateCheckDate: Date?
+    @Published var lastUpdateCheckDate: Date?
 
     /// The shared app state.
     private(set) weak var appState: AppState?
 
+    /// Whether the user has already handled the permission prompt.
+    private var hasHandledPermission = Defaults.bool(forKey: .hasSeenUpdateConsent)
+
     /// Tracks whether the updater has been started.
     private var hasStartedUpdater = false
-
-    /// Storage for internal observers.
-    @ObservationIgnored
-    private var cancellables = Set<AnyCancellable>()
 
     private var debugUpdateMessage: String {
         String(localized: "Checking for updates is not supported in debug mode.")
     }
 
     /// The underlying updater controller.
-    @ObservationIgnored
     private(set) lazy var updaterController = SPUStandardUpdaterController(
         startingUpdater: false,
         updaterDelegate: self,
@@ -51,16 +46,10 @@ final class UpdatesManager: NSObject {
     /// A Boolean value that indicates whether the user wants to receive beta updates.
     var allowsBetaUpdates: Bool {
         get {
-            // Computed over UserDefaults, so the @Observable macro cannot
-            // track it automatically; register/notify Observation manually
-            // (same pattern as the Sparkle-backed properties below).
-            access(keyPath: \.allowsBetaUpdates)
-            return UserDefaults.standard.bool(forKey: "AllowsBetaUpdates")
+            UserDefaults.standard.bool(forKey: "AllowsBetaUpdates")
         }
         set {
-            withMutation(keyPath: \.allowsBetaUpdates) {
-                UserDefaults.standard.set(newValue, forKey: "AllowsBetaUpdates")
-            }
+            UserDefaults.standard.set(newValue, forKey: "AllowsBetaUpdates")
             Task {
                 guard hasStartedUpdater else { return }
                 updater.checkForUpdatesInBackground()
@@ -68,25 +57,16 @@ final class UpdatesManager: NSObject {
         }
     }
 
-    // `automaticallyChecksForUpdates`/`automaticallyDownloadsUpdates` are
-    // computed properties backed by Sparkle's `updater`, not by a stored
-    // property the @Observable macro can track automatically. The old
-    // Combine `objectWillChange.send()` poke is replaced with the macro-
-    // synthesized `access(keyPath:)`/`withMutation(keyPath:)` calls, which
-    // register/notify Observation access for a specific property exactly
-    // like a stored property would.
     /// A Boolean value that indicates whether to automatically check for updates.
     var automaticallyChecksForUpdates: Bool {
         get {
-            access(keyPath: \.automaticallyChecksForUpdates)
-            return updater.automaticallyChecksForUpdates
+            updater.automaticallyChecksForUpdates
         }
         set {
-            withMutation(keyPath: \.automaticallyChecksForUpdates) {
-                updater.automaticallyChecksForUpdates = newValue
-                if newValue {
-                    Defaults.set(true, forKey: .hasSeenUpdateConsent)
-                }
+            objectWillChange.send()
+            updater.automaticallyChecksForUpdates = newValue
+            if newValue {
+                Defaults.set(true, forKey: .hasSeenUpdateConsent)
             }
         }
     }
@@ -94,15 +74,13 @@ final class UpdatesManager: NSObject {
     /// A Boolean value that indicates whether to automatically download updates.
     var automaticallyDownloadsUpdates: Bool {
         get {
-            access(keyPath: \.automaticallyDownloadsUpdates)
-            return updater.automaticallyDownloadsUpdates
+            updater.automaticallyDownloadsUpdates
         }
         set {
-            withMutation(keyPath: \.automaticallyDownloadsUpdates) {
-                updater.automaticallyDownloadsUpdates = newValue
-                if newValue {
-                    Defaults.set(true, forKey: .hasSeenUpdateConsent)
-                }
+            objectWillChange.send()
+            updater.automaticallyDownloadsUpdates = newValue
+            if newValue {
+                Defaults.set(true, forKey: .hasSeenUpdateConsent)
             }
         }
     }
@@ -125,22 +103,10 @@ final class UpdatesManager: NSObject {
 
     /// Configures the internal observers for the manager.
     private func configureCancellables() {
-        var c = Set<AnyCancellable>()
-        // `assign(to: &$property)` relied on the Combine `@Published`
-        // projection, which no longer exists now that this class is
-        // @Observable. Replaced with an explicit `.sink` that writes the
-        // plain property (weak self, since KVO publishers can outlive us).
         updater.publisher(for: \.canCheckForUpdates)
-            .sink { [weak self] value in
-                self?.canCheckForUpdates = value
-            }
-            .store(in: &c)
+            .assign(to: &$canCheckForUpdates)
         updater.publisher(for: \.lastUpdateCheckDate)
-            .sink { [weak self] value in
-                self?.lastUpdateCheckDate = value
-            }
-            .store(in: &c)
-        cancellables = c
+            .assign(to: &$lastUpdateCheckDate)
     }
 
     /// Checks for app updates.
@@ -193,7 +159,7 @@ extension UpdatesManager: SPUUpdaterDelegate {
 
 // MARK: UpdatesManager: SPUStandardUserDriverDelegate
 
-extension UpdatesManager: @MainActor SPUStandardUserDriverDelegate {
+extension UpdatesManager: @preconcurrency SPUStandardUserDriverDelegate {
     var supportsGentleScheduledUpdateReminders: Bool {
         true
     }

@@ -6,21 +6,19 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import LaunchAtLogin
+@preconcurrency import LaunchAtLogin
 import SwiftUI
 
 struct GeneralSettingsPane: View {
-    @Environment(AppState.self) var appState: AppState
-    @Bindable var settings: GeneralSettings
-    @Bindable var advancedSettings: AdvancedSettings
+    @EnvironmentObject var appState: AppState
+    @ObservedObject var settings: GeneralSettings
     @State private var isImportingCustomIceIcon = false
     @State private var isPresentingError = false
     @State private var presentedError: LocalizedErrorWrapper?
-    @State private var maxSliderLabelWidth: CGFloat = 0
 
     private var rehideIntervalKey: LocalizedStringKey {
-        let number = settings.rehideInterval.formatted(.number.precision(.fractionLength(0 ... 1)))
-        return LocalizedStringKey(String(localized: "\(number) seconds"))
+        let count = Int(settings.rehideInterval)
+        return LocalizedStringKey(String(localized: "\(count) seconds"))
     }
 
     var body: some View {
@@ -28,21 +26,15 @@ struct GeneralSettingsPane: View {
             IceSection {
                 appOptions
             }
-            IceSection("\(Constants.displayName) icon") {
+            IceSection {
                 iceIconOptions
             }
-            IceSection("Empty menu bar area") {
-                emptyAreaOptions
+            IceSection {
+                showOptions
             }
-            IceSection("While rearranging") {
-                showAllSectionsOnUserDrag
-            }
-            IceSection("After revealing") {
+            IceSection {
                 rehideOptions
             }
-        }
-        .onAppear {
-            maxSliderLabelWidth = 0
         }
     }
 
@@ -62,7 +54,6 @@ struct GeneralSettingsPane: View {
         if settings.showIceIcon {
             iceIconPicker
         }
-        alwaysHiddenIconGestures
     }
 
     private var showIceIcon: some View {
@@ -75,20 +66,26 @@ struct GeneralSettingsPane: View {
         let labelKey: LocalizedStringKey = "\(Constants.displayName) icon"
 
         IceMenu(labelKey) {
-            ForEach(ControlItemImageSet.userSelectableIceIcons) { imageSet in
-                Button {
-                    settings.iceIcon = imageSet
-                } label: {
-                    iceIconMenuItem(for: imageSet)
+            Picker(labelKey, selection: $settings.iceIcon) {
+                ForEach(ControlItemImageSet.userSelectableIceIcons) { imageSet in
+                    Button {
+                        settings.iceIcon = imageSet
+                    } label: {
+                        iceIconMenuItem(for: imageSet)
+                    }
+                    .tag(imageSet)
+                }
+                if let lastCustomIceIcon = settings.lastCustomIceIcon {
+                    Button {
+                        settings.iceIcon = lastCustomIceIcon
+                    } label: {
+                        iceIconMenuItem(for: lastCustomIceIcon)
+                    }
+                    .tag(lastCustomIceIcon)
                 }
             }
-            if let lastCustomIceIcon = settings.lastCustomIceIcon {
-                Button {
-                    settings.iceIcon = lastCustomIceIcon
-                } label: {
-                    iceIconMenuItem(for: lastCustomIceIcon)
-                }
-            }
+            .pickerStyle(.inline)
+            .labelsHidden()
 
             Divider()
 
@@ -137,27 +134,6 @@ struct GeneralSettingsPane: View {
         }
     }
 
-    @ViewBuilder
-    private var alwaysHiddenIconGestures: some View {
-        if advancedSettings.enableAlwaysHiddenSection {
-            Toggle(
-                "Use Option-click to open always-hidden section",
-                isOn: $advancedSettings.useOptionClickToShowAlwaysHiddenSection
-            )
-            if settings.showIceIcon {
-                Toggle(
-                    "Double-click \(Constants.displayName) icon to open always-hidden section",
-                    isOn: $advancedSettings.useDoubleClickToShowAlwaysHiddenSection
-                )
-            }
-        } else {
-            Text("Enable the always-hidden section in Layout to configure icon gestures for that section.")
-                .foregroundStyle(.secondary)
-                .font(.callout)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
-    }
-
     private func iceIconMenuItem(for imageSet: ControlItemImageSet) -> some View {
         Label {
             Text(imageSet.name.localized)
@@ -174,64 +150,37 @@ struct GeneralSettingsPane: View {
         }
     }
 
-    // MARK: Empty Menu Bar Area
+    // MARK: Show Options
 
     @ViewBuilder
-    private var emptyAreaOptions: some View {
+    private var showOptions: some View {
         VStack(alignment: .leading, spacing: 8) {
             Toggle("Show on click", isOn: $settings.showOnClick)
                 .annotation("Click an empty area of the menu bar to show hidden menu bar items.")
 
-            if settings.showOnClick, advancedSettings.enableAlwaysHiddenSection {
+            if settings.showOnClick, appState.settings.advanced.enableAlwaysHiddenSection {
                 Toggle("Double-click for always-hidden", isOn: $settings.showOnDoubleClick)
                     .annotation("Double-click an empty area of the menu bar to show always-hidden menu bar items.")
             }
         }
         Toggle("Show on hover", isOn: $settings.showOnHover)
             .annotation("Hover over an empty area of the menu bar to show hidden menu bar items.")
-        if settings.showOnHover {
-            showOnHoverDelay
-        }
         Toggle("Show on scroll", isOn: $settings.showOnScroll)
             .annotation("Scroll or swipe in the menu bar to show hidden menu bar items.")
     }
 
-    private var showOnHoverDelay: some View {
-        LabeledContent {
-            IceSlider(
-                value: $advancedSettings.showOnHoverDelay,
-                in: 0 ... 1,
-                step: 0.1
-            ) {
-                SecondsLabel(value: advancedSettings.showOnHoverDelay)
-            }
-        } label: {
-            Text("Show on hover delay")
-                .frame(minWidth: maxSliderLabelWidth, alignment: .leading)
-                .onFrameChange { frame in
-                    maxSliderLabelWidth = max(maxSliderLabelWidth, frame.width)
-                }
-        }
-        .annotation("The amount of time to wait before showing on hover.")
-    }
-
-    // MARK: While Rearranging
-
-    private var showAllSectionsOnUserDrag: some View {
-        Toggle(
-            "Show all sections when ⌘ Command + dragging menu bar items",
-            isOn: $advancedSettings.showAllSectionsOnUserDrag
-        )
-    }
-
-    // MARK: After Revealing
+    // MARK: Rehide Options
 
     @ViewBuilder
     private var rehideOptions: some View {
-        Toggle("Automatically rehide", isOn: $settings.autoRehide)
+        autoRehide
         if settings.autoRehide {
             rehideStrategyPicker
         }
+    }
+
+    private var autoRehide: some View {
+        Toggle("Automatically rehide", isOn: $settings.autoRehide)
     }
 
     private var rehideStrategyPicker: some View {

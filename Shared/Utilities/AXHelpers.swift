@@ -6,33 +6,39 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import AXSwift6
+@preconcurrency import AXSwift
 import Cocoa
 
-nonisolated enum AXHelpers {
+enum AXHelpers {
+    private static let queue = DispatchQueue.targetingGlobal(
+        label: "AXHelpers.queue",
+        qos: .userInteractive,
+        attributes: .concurrent
+    )
+
     @discardableResult
     static func isProcessTrusted(prompt: Bool = false) -> Bool {
-        checkIsProcessTrusted(prompt: prompt)
+        queue.sync { checkIsProcessTrusted(prompt: prompt) }
     }
 
     static func element(at point: CGPoint) -> UIElement? {
-        try? systemWideElement.elementAtPosition(Float(point.x), Float(point.y))
+        queue.sync { try? systemWideElement.elementAtPosition(Float(point.x), Float(point.y)) }
     }
 
     static func application(for runningApp: NSRunningApplication) -> Application? {
-        Application(runningApp)
+        queue.sync { Application(runningApp) }
     }
 
     static func extrasMenuBar(for app: Application) -> UIElement? {
-        try? app.attribute(.extrasMenuBar)
+        queue.sync { try? app.attribute(.extrasMenuBar) }
     }
 
     static func children(for element: UIElement) -> [UIElement] {
-        (try? element.arrayAttribute(.children)) ?? []
+        queue.sync { try? element.arrayAttribute(.children) } ?? []
     }
 
     static func isEnabled(_ element: UIElement) -> Bool {
-        (try? element.attribute(.enabled)) ?? false
+        queue.sync { try? element.attribute(.enabled) } ?? false
     }
 
     /// The raw AXEnabled attribute, or nil when the element does not expose it.
@@ -42,35 +48,23 @@ nonisolated enum AXHelpers {
     /// matching treats absent as enabled, and the unresolved-item diagnostics
     /// report it verbatim.
     static func enabledAttribute(_ element: UIElement) -> Bool? {
-        try? element.attribute(.enabled)
+        queue.sync { try? element.attribute(.enabled) }
     }
 
     static func frame(for element: UIElement) -> CGRect? {
-        try? element.attribute(.frame)
-    }
-
-    /// The element's `AXIdentifier` attribute (e.g. `com.apple.menuextra.wifi`
-    /// for a Control Center-hosted module), when the element publishes one.
-    static func identifier(for element: UIElement) -> String? {
-        try? element.attribute(.identifier)
-    }
-
-    /// The element's `AXHelp` attribute (tooltip/description string).
-    static func help(for element: UIElement) -> String? {
-        try? element.attribute(.help)
-    }
-
-    /// The element's `AXTitle` attribute.
-    static func title(for element: UIElement) -> String? {
-        try? element.attribute(.title)
+        queue.sync { try? element.attribute(.frame) }
     }
 
     static func role(for element: UIElement) -> Role? {
-        try? element.role()
+        queue.sync { try? element.role() }
     }
 
     static func pid(for element: UIElement) -> pid_t? {
-        try? element.pid()
+        queue.sync {
+            var pid: pid_t = 0
+            let result = AXUIElementGetPid(element.element, &pid)
+            return result == .success ? pid : nil
+        }
     }
 
     /// Performs the press action on the given element, returning whether it
@@ -78,11 +72,13 @@ nonisolated enum AXHelpers {
     /// ignore synthetic mouse clicks.
     @discardableResult
     static func press(_ element: UIElement) -> Bool {
-        do {
-            try element.performAction(.press)
-            return true
-        } catch {
-            return false
+        queue.sync {
+            do {
+                try element.performAction(.press)
+                return true
+            } catch {
+                return false
+            }
         }
     }
 }

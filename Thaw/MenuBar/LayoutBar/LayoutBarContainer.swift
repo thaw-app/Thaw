@@ -8,7 +8,6 @@
 
 import Cocoa
 import Combine
-import Observation
 
 /// A container for the items in the menu bar layout interface.
 final class LayoutBarContainer: NSView {
@@ -75,28 +74,6 @@ final class LayoutBarContainer: NSView {
 
     private var cancellables = Set<AnyCancellable>()
 
-    /// Task observing `AdvancedSettings.enableAlwaysHiddenSection`, which is
-    /// `@Observable` rather than a Combine `ObservableObject`, so it can no
-    /// longer take part in the `Publishers.CombineLatest3` below.
-    private var enableAlwaysHiddenSectionObservationTask: Task<Void, Never>?
-
-    /// Task observing `menuBarManager.averageColorInfo` (wave 3), replacing
-    /// the old `$averageColorInfo` sink.
-    private var averageColorInfoObservationTask: Task<Void, Never>?
-
-    /// Task observing `itemManager.itemCache` and `itemManager.newItemsPlacement`
-    /// (wave 4), which are `@Observable` rather than Combine `@Published`
-    /// properties, so they can no longer take part in `Publishers.CombineLatest`.
-    /// Replaces the old `CombineLatest($itemCache, $newItemsPlacement).sink`.
-    private var itemCacheObservationTask: Task<Void, Never>?
-
-    @MainActor
-    deinit {
-        enableAlwaysHiddenSectionObservationTask?.cancel()
-        averageColorInfoObservationTask?.cancel()
-        itemCacheObservationTask?.cancel()
-    }
-
     /// Creates a container view with the given app state, section, and spacing.
     ///
     /// - Parameters:
@@ -123,48 +100,32 @@ final class LayoutBarContainer: NSView {
         var c = Set<AnyCancellable>()
 
         if let appState {
-            let itemManager = appState.itemManager
-            itemCacheObservationTask = Task { [weak self] in
-                let changes = Observations {
-                    (itemManager.itemCache, itemManager.newItemsPlacement)
+            Publishers.CombineLatest3(
+                appState.itemManager.$itemCache,
+                appState.itemManager.$newItemsPlacement,
+                appState.settings.advanced.$enableAlwaysHiddenSection
+            )
+            .sink { [weak self] cache, _, _ in
+                guard let self else {
+                    return
                 }
-                for await (cache, _) in changes {
+                setArrangedViews(items: cache.managedItems(for: section))
+            }
+            .store(in: &c)
+
+            // Observe average color changes to update badge appearance
+            appState.menuBarManager.$averageColorInfo
+                .removeDuplicates()
+                .sink { [weak self] colorInfo in
                     guard let self else {
                         return
                     }
-                    setArrangedViews(items: cache.managedItems(for: section))
-                }
-            }
-
-            // `AdvancedSettings.enableAlwaysHiddenSection` is `@Observable`
-            // rather than a Combine `ObservableObject`, so it can no longer
-            // take part in the `CombineLatest` above — observed separately,
-            // re-running the same re-arrangement using the current item cache.
-            let advancedSettings = appState.settings.advanced
-            enableAlwaysHiddenSectionObservationTask = Task { [weak self] in
-                let changes = Observations { advancedSettings.enableAlwaysHiddenSection }
-                for await _ in changes {
-                    guard let self else { return }
-                    setArrangedViews(items: itemManager.itemCache.managedItems(for: section))
-                }
-            }
-
-            // Observe average color changes to update badge appearance.
-            // `menuBarManager` is now `@Observable` (wave 3), so it no
-            // longer has an `$averageColorInfo` publisher.
-            averageColorInfoObservationTask = Task { [weak self, weak appState] in
-                var previous: MenuBarAverageColorInfo?
-                let changes = Observations { appState?.menuBarManager.averageColorInfo }
-                for await colorInfo in changes {
-                    guard let self else { return }
-                    guard colorInfo != previous else { continue }
-                    previous = colorInfo
                     // Update the color info on the badge view
-                    if let badgeView = self.arrangedViews.first(where: { $0.isNewItemsBadge }) {
+                    if let badgeView = arrangedViews.first(where: { $0.isNewItemsBadge }) {
                         badgeView.averageColorInfo = colorInfo
                     }
                 }
-            }
+                .store(in: &c)
 
             // Observe screen parameter changes (moving between displays) to update badge
             NotificationCenter.default

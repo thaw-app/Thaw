@@ -6,30 +6,21 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import Observation
+import Combine
 
 // MARK: - Hotkey
 
 /// A combination of a key and modifiers that can be used to
 /// trigger actions on system-wide key-up or key-down events.
 @MainActor
-@Observable
-final class Hotkey {
+final class Hotkey: ObservableObject {
     fileprivate static nonisolated let diagLog = DiagLog(category: "Hotkey")
     /// The hotkey's key combination.
-    var keyCombination: KeyCombination? {
+    @Published var keyCombination: KeyCombination? {
         didSet {
             enable()
-            keyCombinationDidChange?()
         }
     }
-
-    /// Callback invoked after ``keyCombination`` changes, with the new
-    /// value already stored and ``enable()``/``disable()`` already applied.
-    /// Set by owners that need to persist or react to changes (e.g.
-    /// HotkeysSettings, MenuBarManager, ProfileManager).
-    @ObservationIgnored
-    var keyCombinationDidChange: (() -> Void)?
 
     /// The shared app state.
     private weak var appState: AppState?
@@ -74,7 +65,7 @@ final class Hotkey {
 
 extension Hotkey {
     /// An object that manages the lifetime of a hotkey observation.
-    private nonisolated final class Listener {
+    private final class Listener {
         private weak var registry: HotkeyRegistry?
         private var id: UInt32?
 

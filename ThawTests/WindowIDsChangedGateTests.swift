@@ -77,34 +77,6 @@ final class WindowIDsChangedGateTests: XCTestCase {
         )
     }
 
-    /// Control-Center-generic (`Item-N`) windows churn windowIDs while the
-    /// bar is otherwise stable (Live Activities, transient CC widgets). The
-    /// applySavedLayout call site subtracts the previous frame's CC-generic
-    /// windowIDs before diffing so their disappearance can't dispatch a
-    /// cursor-hijacking bulk apply (#736). This characterizes that call-site
-    /// composition: with the churned window excluded the gate stays quiet,
-    /// and a real item disappearing alongside the churn still fires.
-    func testCCGenericChurnExcludedFromGate() {
-        let previous: Set<CGWindowID> = [10, 11, 42]
-        let ccGeneric: Set<CGWindowID> = [42]
-        XCTAssertFalse(
-            MenuBarItemManager.windowIDsChanged(
-                previous: previous.subtracting(ccGeneric),
-                current: [10, 11, 43], // 42 churned into 43
-                previousDisplayID: d1,
-                currentDisplayID: d1
-            )
-        )
-        XCTAssertTrue(
-            MenuBarItemManager.windowIDsChanged(
-                previous: previous.subtracting(ccGeneric),
-                current: [10, 43], // 11 (a real item) also disappeared
-                previousDisplayID: d1,
-                currentDisplayID: d1
-            )
-        )
-    }
-
     /// Unknown display on either side (nil): fall back to the plain
     /// windowID-disappearance signal rather than suppressing a real change.
     func testNilDisplayFallsBackToWindowIDSignal() {

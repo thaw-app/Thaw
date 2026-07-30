@@ -16,10 +16,6 @@ extension AppSettings {
         resetHotkeys()
         resetDisplay()
         resetAppearance()
-        // Not a setting, but a learned verdict about the user's other apps.
-        // A reset is the one moment they explicitly ask for a clean slate,
-        // and it is the only way to clear a record from the UI.
-        appState?.itemManager.failureLedger.removeAll()
     }
 
     /// Resets Appearance settings to their default values.

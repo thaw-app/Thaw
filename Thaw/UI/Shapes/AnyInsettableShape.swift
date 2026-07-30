@@ -9,7 +9,7 @@
 import SwiftUI
 
 /// A type-erased insettable shape.
-nonisolated struct AnyInsettableShape: InsettableShape {
+struct AnyInsettableShape: InsettableShape {
     private let base: any InsettableShape
 
     /// Creates a type-erased insettable shape.

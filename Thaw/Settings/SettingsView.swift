@@ -12,8 +12,7 @@ import SwiftUI
 
 struct SettingsView: View {
     let appState: AppState
-    let navigationState: AppNavigationState
-    @State private var searchModel = SearchModel()
+    @ObservedObject var navigationState: AppNavigationState
 
     private var allSections: [SettingsNavigationIdentifier] {
         SettingsNavigationIdentifier.allCases
@@ -65,44 +64,25 @@ struct SettingsView: View {
             set: { newValue in
                 if navigationState.settingsNavigationIdentifier != newValue {
                     Task { @MainActor in
-                        SettingsSearchNavigation.selectSidebarPane(
-                            newValue,
-                            navigationState: navigationState
-                        )
+                        navigationState.settingsNavigationIdentifier = newValue
                     }
                 }
             }
         )
 
-        return VStack(spacing: 0) {
-            SearchField(text: $searchModel.searchText)
-
-            if searchModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                List(selection: selection) {
-                    Section {
-                        ForEach(SettingsNavigationIdentifier.allCases) { identifier in
-                            Label {
-                                Text(identifier.localized)
-                            } icon: {
-                                identifier.iconResource.view
-                            }
-                            .tag(identifier)
-                        }
+        return List(selection: selection) {
+            Section {
+                ForEach(SettingsNavigationIdentifier.allCases) { identifier in
+                    Label {
+                        Text(identifier.localized)
+                    } icon: {
+                        identifier.iconResource.view
                     }
-                }
-                .listStyle(.sidebar)
-            } else if searchModel.displayedGroups.isEmpty {
-                SearchEmptyView()
-            } else {
-                SearchResultsList(groups: searchModel.displayedGroups) { entry in
-                    SettingsSearchNavigation.selectSearchResult(
-                        entry,
-                        navigationState: navigationState,
-                        query: &searchModel.searchText
-                    )
+                    .tag(identifier)
                 }
             }
         }
+        .listStyle(.sidebar)
         .navigationSplitViewColumnWidth(ideal: 180, max: 220)
     }
 
@@ -110,17 +90,11 @@ struct SettingsView: View {
     private var settingsPane: some View {
         switch navigationState.settingsNavigationIdentifier {
         case .general:
-            GeneralSettingsPane(
-                settings: appState.settings.general,
-                advancedSettings: appState.settings.advanced
-            )
-        case .menuBarLayout:
-            MenuBarLayoutSettingsPane(
-                itemManager: appState.itemManager,
-                advancedSettings: appState.settings.advanced
-            )
+            GeneralSettingsPane(settings: appState.settings.general)
         case .displays:
             DisplaySettingsPane(displaySettings: appState.settings.displaySettings)
+        case .menuBarLayout:
+            MenuBarLayoutSettingsPane(itemManager: appState.itemManager)
         case .menuBarAppearance:
             MenuBarAppearanceSettingsPane(appearanceManager: appState.appearanceManager)
         case .hotkeys:

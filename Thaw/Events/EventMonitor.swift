@@ -10,7 +10,7 @@ import Cocoa
 import Combine
 import os.lock
 
-nonisolated struct EventMonitor {
+struct EventMonitor {
     private static let diagLog = DiagLog(category: "EventMonitor")
     private final class LocalMonitorState: @unchecked Sendable {
         private let mask: NSEvent.EventTypeMask
@@ -329,7 +329,7 @@ nonisolated struct EventMonitor {
     }
 }
 
-nonisolated extension EventMonitor {
+extension EventMonitor {
     static func local(
         for mask: NSEvent.EventTypeMask,
         handler: @escaping (NSEvent) -> NSEvent?
@@ -376,7 +376,7 @@ nonisolated extension EventMonitor {
     }
 }
 
-nonisolated extension EventMonitor {
+extension EventMonitor {
     @discardableResult
     static func startLocal(
         for mask: NSEvent.EventTypeMask,
@@ -430,7 +430,7 @@ nonisolated extension EventMonitor {
     }
 }
 
-nonisolated extension EventMonitor {
+extension EventMonitor {
     /// A publisher that emits events received within a defined scope.
     struct EventPublisher: Publisher {
         typealias Output = NSEvent
@@ -458,7 +458,7 @@ nonisolated extension EventMonitor {
     }
 }
 
-nonisolated extension EventMonitor.EventPublisher {
+extension EventMonitor.EventPublisher {
     private final class EventSubscription<S: Subscriber>: Subscription where S.Input == Output, S.Failure == Failure {
         private final class SubscriberBox {
             private let subscriber: S

@@ -6,7 +6,6 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import AXSwift6
 import SwiftUI
 
 @MainActor
@@ -41,27 +40,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         #endif
 
-        // Bound accessibility messaging before anything can create an element.
-        // Every AX call is synchronous IPC tied to the target's event loop, so an
-        // app that stops pumping it blocks us for the system default of six
-        // seconds — the delay behind #767. Healthy calls return in well under
-        // 100 ms, so a one second ceiling costs nothing and lets the fallback
-        // paths run while the user is still watching. Override with:
-        //   defaults write com.stonerl.Thaw axMessagingTimeout -float <seconds>
-        UIElement.defaultMessagingTimeout = Float(
-            max(0, (Defaults.object(forKey: .axMessagingTimeout) as? Double) ?? Defaults.DefaultValue.axMessagingTimeout)
-        )
-
-        // A direct launch (for example from Xcode) can bypass the usual
-        // single-instance behavior. Two live Thaw instances each register
-        // control items and then fight to restore their own saved layouts.
-        // Let the newly launched instance win so restart and update flows
-        // remain reliable.
-        terminateOtherInstances()
-
         // Initial chore work.
         NSSplitViewItem.swizzle()
-        MigrationManager().migrateAll()
+        MigrationManager(appState: appState).migrateAll()
 
         // Register thaw:// URL events early so external tools (e.g. Raycast)
         // can trigger actions even when Thaw is not currently in the foreground;
@@ -183,36 +164,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     // MARK: Other Methods
-
-    /// Asks any other live copy of this bundle to terminate, escalating after
-    /// a short grace period if it does not respond. XCTest hosts are exempt so
-    /// parallel test processes never terminate one another.
-    private func terminateOtherInstances() {
-        guard NSClassFromString("XCTestCase") == nil else { return }
-        guard let bundleID = Bundle.main.bundleIdentifier else { return }
-        let currentPID = ProcessInfo.processInfo.processIdentifier
-
-        for other in NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
-            where other.processIdentifier != currentPID
-        {
-            appState.diagLog.warning(
-                "Another instance is already running (PID \(other.processIdentifier)); terminating it"
-            )
-            if !other.terminate() {
-                other.forceTerminate()
-                continue
-            }
-            Task { @MainActor in
-                try? await Task.sleep(for: .seconds(3))
-                if !other.isTerminated {
-                    self.appState.diagLog.warning(
-                        "Other instance (PID \(other.processIdentifier)) did not terminate; force-terminating"
-                    )
-                    other.forceTerminate()
-                }
-            }
-        }
-    }
 
     /// Handles `kAEGetURL` Apple Events and forwards `thaw://` URLs to `handleURL(_:senderBundleId:)`.
     @objc private func handleURLAppleEvent(

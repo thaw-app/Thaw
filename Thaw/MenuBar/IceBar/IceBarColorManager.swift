@@ -7,32 +7,25 @@
 //  Licensed under the GNU GPLv3
 
 import Combine
-import Observation
 import SwiftUI
 
 @MainActor
-@Observable
-final class IceBarColorManager {
-    private(set) var colorInfo: MenuBarAverageColorInfo?
+final class IceBarColorManager: ObservableObject {
+    @Published private(set) var colorInfo: MenuBarAverageColorInfo?
 
-    @ObservationIgnored
     private weak var iceBarPanel: IceBarPanel?
 
-    @ObservationIgnored
     private var windowImage: CGImage?
 
     /// Monotonically incremented by updateWindowImage and clearWindowImage.
     /// A capture in flight stamps the value it observed; on completion it only
     /// writes windowImage if the value still matches, so a late completion
     /// can't undo a freshly cleared image or overwrite a newer capture.
-    @ObservationIgnored
     private var windowImageGeneration: Int = 0
 
-    @ObservationIgnored
     private var cancellables = Set<AnyCancellable>()
 
     /// Cancellable for the periodic refresh timer, active only while the Thaw Bar is visible.
-    @ObservationIgnored
     private var periodicRefreshCancellable: AnyCancellable?
 
     func performSetup(with iceBarPanel: IceBarPanel) {

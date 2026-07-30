@@ -9,7 +9,7 @@
 import AppKit
 
 /// Per-display configuration for the Thaw Bar.
-nonisolated struct DisplayIceBarConfiguration: Codable, Equatable {
+struct DisplayIceBarConfiguration: Codable, Equatable {
     /// Whether the Thaw Bar is enabled on this display.
     let useIceBar: Bool
 
@@ -129,7 +129,7 @@ nonisolated struct DisplayIceBarConfiguration: Codable, Equatable {
         location: IceBarLocation
     ) -> [String: DisplayIceBarConfiguration] {
         var configs = [String: DisplayIceBarConfiguration]()
-        for screen in NSScreen.screens {
+        for screen in NSScreen.managedScreens {
             guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else {
                 continue
             }
@@ -149,7 +149,7 @@ nonisolated struct DisplayIceBarConfiguration: Codable, Equatable {
 
 // MARK: - Backward-compatible decoding
 
-nonisolated extension DisplayIceBarConfiguration {
+extension DisplayIceBarConfiguration {
     enum CodingKeys: String, CodingKey {
         case useIceBar
         case iceBarLocation

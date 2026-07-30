@@ -1,13 +1,13 @@
 {
-  "originHash" : "2be03aa64a68214218a6f26290b37e200daf9b9ab868ac9aa05de6127169b03c",
+  "originHash" : "7fcd5a61e81c66f8a0dbb9e99dba2fb00fa3b8a737fdf1503d3b580118ff3e1e",
   "pins" : [
     {
-      "identity" : "axswift6",
+      "identity" : "axswift",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/thaw-app/AXSwift6",
+      "location" : "https://github.com/stonerl/AXSwift",
       "state" : {
-        "revision" : "2fd7ecaedc4ded69c0129b416ce19b5509d79d61",
-        "version" : "0.5.0"
+        "revision" : "467ccb39efa69b6d9e49c9f3dc4482da65194781",
+        "version" : "0.3.2"
       }
     },
     {
@@ -42,62 +42,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/sparkle-project/Sparkle",
       "state" : {
-        "revision" : "b6496a74a087257ef5e6da1c5b29a447a60f5bd7",
-        "version" : "2.9.4"
-      }
-    },
-    {
-      "identity" : "swift-algorithms",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-algorithms",
-      "state" : {
-        "revision" : "87e50f483c54e6efd60e885f7f5aa946cee68023",
-        "version" : "1.2.1"
-      }
-    },
-    {
-      "identity" : "swift-async-algorithms",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-async-algorithms",
-      "state" : {
-        "revision" : "3da39bbc4e687d4192af7c9cf4eab805745a0b9c",
-        "version" : "1.1.5"
-      }
-    },
-    {
-      "identity" : "swift-collections",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-collections",
-      "state" : {
-        "revision" : "a0cb0954ecb21e4e31b0070e6ed5674e8556685a",
-        "version" : "1.6.0"
-      }
-    },
-    {
-      "identity" : "swift-numerics",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-numerics.git",
-      "state" : {
-        "revision" : "0c0290ff6b24942dadb83a929ffaaa1481df04a2",
-        "version" : "1.1.1"
-      }
-    },
-    {
-      "identity" : "swift-subprocess",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/swiftlang/swift-subprocess",
-      "state" : {
-        "revision" : "11633673a41f509f8945f23c96c7acd4adafd679",
-        "version" : "0.5.0"
-      }
-    },
-    {
-      "identity" : "swift-system",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-system",
-      "state" : {
-        "revision" : "50688cacbd41d547e9eb9f7a213542340b7c442b",
-        "version" : "1.7.5"
+        "revision" : "d46d456107feacc80711b21847b82b07bd9fb46e",
+        "version" : "2.9.3"
       }
     }
   ],

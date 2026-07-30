@@ -22,11 +22,6 @@ final class LayoutResetErrorTests: XCTestCase {
         XCTAssertNotNil(error)
     }
 
-    func testAlreadyInProgressError() {
-        let error = MenuBarItemManager.LayoutResetError.alreadyInProgress
-        XCTAssertNotNil(error)
-    }
-
     // MARK: - Error Description
 
     func testMissingAppStateErrorDescription() {
@@ -37,11 +32,6 @@ final class LayoutResetErrorTests: XCTestCase {
     func testMissingControlItemsErrorDescription() {
         let error = MenuBarItemManager.LayoutResetError.missingControlItems
         XCTAssertEqual(error.errorDescription, "Couldn't find section dividers in the menu bar")
-    }
-
-    func testAlreadyInProgressErrorDescription() {
-        let error = MenuBarItemManager.LayoutResetError.alreadyInProgress
-        XCTAssertEqual(error.errorDescription, "A layout reset is already in progress")
     }
 
     // MARK: - Recovery Suggestion
@@ -96,27 +86,12 @@ final class LayoutResetErrorTests: XCTestCase {
         XCTAssertFalse(errorsAreEqual(error1, error2))
     }
 
-    func testAlreadyInProgressErrorsAreEqual() {
-        let error1 = MenuBarItemManager.LayoutResetError.alreadyInProgress
-        let error2 = MenuBarItemManager.LayoutResetError.alreadyInProgress
-
-        XCTAssertTrue(errorsAreEqual(error1, error2))
-    }
-
-    func testAlreadyInProgressIsNotEqualToOtherErrors() {
-        let error1 = MenuBarItemManager.LayoutResetError.alreadyInProgress
-        let error2 = MenuBarItemManager.LayoutResetError.missingAppState
-
-        XCTAssertFalse(errorsAreEqual(error1, error2))
-    }
-
     // MARK: - All Cases
 
     func testAllCasesHaveDescriptions() throws {
         let allCases: [MenuBarItemManager.LayoutResetError] = [
             .missingAppState,
             .missingControlItems,
-            .alreadyInProgress,
         ]
 
         for error in allCases {
@@ -129,7 +104,6 @@ final class LayoutResetErrorTests: XCTestCase {
         let allCases: [MenuBarItemManager.LayoutResetError] = [
             .missingAppState,
             .missingControlItems,
-            .alreadyInProgress,
         ]
 
         for error in allCases {
@@ -145,8 +119,6 @@ final class LayoutResetErrorTests: XCTestCase {
         case (.missingAppState, .missingAppState):
             return true
         case (.missingControlItems, .missingControlItems):
-            return true
-        case (.alreadyInProgress, .alreadyInProgress):
             return true
         default:
             return false

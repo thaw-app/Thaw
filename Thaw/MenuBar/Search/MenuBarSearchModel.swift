@@ -9,25 +9,22 @@
 import Cocoa
 import Combine
 import Ifrit
-import Observation
 
 @MainActor
-@Observable
-final class MenuBarSearchModel {
+final class MenuBarSearchModel: ObservableObject {
     enum ItemID: Hashable {
         case header(MenuBarSection.Name)
         case item(MenuBarItemTag, windowID: CGWindowID?)
     }
 
-    var searchText = ""
-    var displayedItems = [SectionedListItem<ItemID>]()
-    var selection: ItemID?
-    private(set) var averageColorInfo: MenuBarAverageColorInfo?
-    var editingItemTag: MenuBarItemTag?
-    var editingItemWindowID: CGWindowID?
-    var editingName: String = ""
+    @Published var searchText = ""
+    @Published var displayedItems = [SectionedListItem<ItemID>]()
+    @Published var selection: ItemID?
+    @Published private(set) var averageColorInfo: MenuBarAverageColorInfo?
+    @Published var editingItemTag: MenuBarItemTag?
+    @Published var editingItemWindowID: CGWindowID?
+    @Published var editingName: String = ""
 
-    @ObservationIgnored
     private var cancellables = Set<AnyCancellable>()
 
     /// Monotonically incremented by updateAverageColorInfo and

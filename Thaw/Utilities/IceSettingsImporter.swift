@@ -17,29 +17,11 @@ struct IceSettingsImporter {
     /// The bundle identifier for Ice.
     private static let iceBundleIdentifier = "com.jordanbaird.Ice"
 
-    /// Source preferences and the appearance destination are injectable so V1
-    /// conversion can be verified without mutating real Ice or Thaw settings.
-    private let iceUserDefaults: UserDefaults?
-    private let iceDomainName: String
-    private let saveAppearanceConfiguration: (Data) -> Void
-
-    init(
-        iceUserDefaults: UserDefaults? = UserDefaults(suiteName: Self.iceBundleIdentifier),
-        iceDomainName: String = Self.iceBundleIdentifier,
-        saveAppearanceConfiguration: @escaping (Data) -> Void = {
-            Defaults.set($0, forKey: .menuBarAppearanceConfigurationV2)
-        }
-    ) {
-        self.iceUserDefaults = iceUserDefaults
-        self.iceDomainName = iceDomainName
-        self.saveAppearanceConfiguration = saveAppearanceConfiguration
-    }
-
     /// Checks if Ice settings are available for import.
     func hasIceSettings() -> Bool {
         guard
-            let iceUserDefaults,
-            let domain = iceUserDefaults.persistentDomain(forName: iceDomainName)
+            let iceUserDefaults = UserDefaults(suiteName: Self.iceBundleIdentifier),
+            let domain = iceUserDefaults.persistentDomain(forName: Self.iceBundleIdentifier)
         else {
             return false
         }
@@ -50,7 +32,7 @@ struct IceSettingsImporter {
     /// Imports settings from Ice if available.
     /// - Returns: A tuple indicating success and the number of settings imported.
     func importIceSettings() -> (success: Bool, settingsImported: Int) {
-        guard let iceUserDefaults else {
+        guard let iceUserDefaults = UserDefaults(suiteName: Self.iceBundleIdentifier) else {
             diagLog.warning("Could not access Ice user defaults")
             return (false, 0)
         }
@@ -192,35 +174,27 @@ struct IceSettingsImporter {
 
         // Import V2 appearance configuration if available
         if let appearanceData = iceSettings["MenuBarAppearanceConfigurationV2"] as? Data {
-            saveAppearanceConfiguration(appearanceData)
+            Defaults.set(appearanceData, forKey: .menuBarAppearanceConfigurationV2)
             imported += 1
             diagLog.debug("Imported appearance configuration V2")
         }
-        // Fall back to V1, converting it here rather than leaving it for
-        // `MigrationManager`: migrations run at launch, before this import,
-        // so by the time the old data arrives their work is already done.
+        // Fallback to V1 if V2 not available
         else if let appearanceData = iceSettings["MenuBarAppearanceConfiguration"] as? Data {
-            imported += importAppearanceConfigurationV1(appearanceData)
+            // This will be handled by the existing migration system
+            Defaults.set(appearanceData, forKey: .menuBarAppearanceConfiguration)
+            imported += 1
+            diagLog.debug("Imported appearance configuration V1")
         }
 
         return imported
     }
 
-    /// Converts a V1 appearance configuration from Ice to the current format
-    /// and stores it.
+    /// Imports control item positions and visibility flags from Ice.
     ///
-    /// - Returns: The number of settings imported.
-    private func importAppearanceConfigurationV1(_ data: Data) -> Int {
-        do {
-            let oldConfiguration = try JSONDecoder().decode(MenuBarAppearanceConfigurationV1.self, from: data)
-            let configuration = MenuBarAppearanceConfigurationV2(migrating: oldConfiguration)
-            let newData = try JSONEncoder().encode(configuration)
-            saveAppearanceConfiguration(newData)
-            diagLog.debug("Imported appearance configuration V1")
-            return 1
-        } catch {
-            diagLog.error("Failed to convert Ice's appearance configuration: \(error)")
-            return 0
-        }
+    /// NOTE: We no longer migrate control item autosave data to avoid
+    /// collapsing sections when macOS repositions status items. Users
+    /// will need to re-place section dividers manually after import.
+    private func importControlItemSettings(from _: UserDefaults) -> Int {
+        return 0
     }
 }

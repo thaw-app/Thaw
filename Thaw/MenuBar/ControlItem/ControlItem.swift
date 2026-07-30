@@ -8,7 +8,6 @@
 
 import Cocoa
 import Combine
-import Observation
 
 // MARK: - ControlItem
 
@@ -16,7 +15,7 @@ import Observation
 @MainActor
 final class ControlItem {
     /// An identifier for a control item.
-    nonisolated enum Identifier: String, CaseIterable {
+    enum Identifier: String, CaseIterable {
         /// The identifier for the control item for the visible section.
         case visible = "Thaw.ControlItem.Visible"
         /// The identifier for the control item for the hidden section.
@@ -55,7 +54,7 @@ final class ControlItem {
     }
 
     /// A namespace for control item lengths.
-    private nonisolated enum Lengths {
+    private enum Lengths {
         static let standard: CGFloat = NSStatusItem.variableLength
         static let expanded: CGFloat = 10000
     }
@@ -64,10 +63,6 @@ final class ControlItem {
     private final class StatusItemStorage {
         let statusItem: NSStatusItem
         let constraint: NSLayoutConstraint?
-
-        /// Set once `dispose()` has run, so `deinit` doesn't remove the
-        /// status item a second time.
-        private var isDisposed = false
 
         /// Creates a new storage instance.
         @MainActor
@@ -102,30 +97,7 @@ final class ControlItem {
             }
         }
 
-        @MainActor
         deinit {
-            guard !isDisposed else {
-                return
-            }
-            removeStatusItem()
-        }
-
-        /// Explicitly tears down the status item, ahead of (and instead of)
-        /// relying on `deinit`. Used by `ControlItem.recreateStatusItem()`
-        /// so the old status item is fully removed — and its position
-        /// cached to the shared `autosaveName` slot — before a new
-        /// `StatusItemStorage` is constructed at that same autosave name.
-        /// Without this, the new `NSStatusItem` would briefly exist
-        /// alongside the old one under the same autosaveName, and the old
-        /// one's later, deinit-driven removal would overwrite the autosave
-        /// slot with its own (possibly stale/garbage, in the #754 failure
-        /// state) position, clobbering what the new item just restored.
-        @MainActor
-        func dispose() {
-            guard !isDisposed else {
-                return
-            }
-            isDisposed = true
             removeStatusItem()
         }
 
@@ -159,15 +131,6 @@ final class ControlItem {
     /// The control item's frame, if it is onscreen (`@Published`).
     @Published private(set) var onScreenFrame: CGRect?
 
-    /// Whether the menu bar accepted this control item but is not rendering
-    /// it — most often because macOS parked it in the notch dead zone
-    /// (`@Published`).
-    ///
-    /// Derived from `NSWindow.occlusionState`, so unlike the image cache it
-    /// needs no Screen Recording grant. See ``ControlItemOcclusion`` for why
-    /// the underlying signal is debounced before it reaches this property.
-    @Published private(set) var isOccluded = false
-
     /// The control item's identifier.
     let identifier: Identifier
 
@@ -182,48 +145,6 @@ final class ControlItem {
 
     /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
-
-    /// The control item's diagnostic logger.
-    private nonisolated let diagLog = DiagLog(category: "ControlItem")
-
-    /// Debounces the raw `occlusionState` readings behind ``isOccluded``.
-    private var occlusionEvaluator = ControlItemOcclusion.Evaluator()
-
-    /// When the displays were last reconfigured, used to discard the occlusion
-    /// readings taken while the new layout is still settling.
-    private var lastDisplayChange: Date?
-
-    /// Tasks backing settings-observation reactions in `configureCancellables()`
-    /// and `configureStatusItemCancellables()`. `GeneralSettings` and
-    /// `AdvancedSettings` are `@Observable` (not Combine `ObservableObject`s),
-    /// so their property changes are observed via the `Observations` async
-    /// sequence instead of `$property` publishers.
-    private var showIceIconObservationTask: Task<Void, Never>?
-    private var iceIconObservationTask: Task<Void, Never>?
-    private var sectionDividerStyleObservationTask: Task<Void, Never>?
-    private var alwaysHiddenSectionObservationTask: Task<Void, Never>?
-
-    /// Task observing `appState.isDraggingMenuBarItem` (wave 4), which is
-    /// `@Observable` rather than a Combine `ObservableObject`, replacing the
-    /// old `$isDraggingMenuBarItem.removeDuplicates().sink`.
-    private var isDraggingMenuBarItemObservationTask: Task<Void, Never>?
-
-    deinit {
-        showIceIconObservationTask?.cancel()
-        iceIconObservationTask?.cancel()
-        sectionDividerStyleObservationTask?.cancel()
-        alwaysHiddenSectionObservationTask?.cancel()
-        isDraggingMenuBarItemObservationTask?.cancel()
-    }
-
-    /// Storage for observers whose subscriptions are bound to the specific
-    /// `NSStatusItem` instance backing `storage`. Combine's KVO publishers
-    /// latch onto object identity at subscription time, so these must be
-    /// re-created (via `configureStatusItemCancellables()`) whenever
-    /// `storage` — and therefore `statusItem` — is replaced by
-    /// `recreateStatusItem()`. Kept separate from `cancellables` so a
-    /// rebuild only tears down and re-subscribes this subset.
-    private var statusItemCancellables = Set<AnyCancellable>()
 
     /// The control item's underlying status item.
     private var statusItem: NSStatusItem {
@@ -278,6 +199,33 @@ final class ControlItem {
             }
             .store(in: &c)
 
+        statusItem.publisher(for: \.isVisible)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] isVisible in
+                guard
+                    let self,
+                    let menuBarManager = appState?.menuBarManager,
+                    let section = menuBarManager.section(withName: sectionName),
+                    let hotkey = section.hotkey
+                else {
+                    return
+                }
+                if isVisible {
+                    hotkey.enable()
+                } else {
+                    hotkey.disable()
+                }
+            }
+            .store(in: &c)
+
+        statusItem.publisher(for: \.button).removeNil()
+            .flatMap { $0.publisher(for: \.window) }
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] window in
+                self?.window = window
+            }
+            .store(in: &c)
+
         $window.removeNil()
             .flatMap { $0.publisher(for: \.frame) }
             .removeDuplicates()
@@ -316,244 +264,71 @@ final class ControlItem {
             .store(in: &c)
 
         if let appState {
-            // `appState` is now `@Observable` (wave 4), so it no longer has
-            // an `$isDraggingMenuBarItem` publisher.
-            isDraggingMenuBarItemObservationTask?.cancel()
-            isDraggingMenuBarItemObservationTask = Task { [weak self, weak appState] in
-                var previous: Bool?
-                let changes = Observations { appState?.isDraggingMenuBarItem }
-                for await isDragging in changes {
-                    guard let self else { return }
-                    guard let isDragging, isDragging != previous else { continue }
-                    previous = isDragging
-                    updateStatusItem()
-                }
-            }
-
-            if identifier == .visible {
-                let generalSettings = appState.settings.general
-                showIceIconObservationTask = Task { [weak self] in
-                    let changes = Observations { generalSettings.showIceIcon }
-                    for await shouldShow in changes {
-                        guard let self else { return }
-                        setIceIconDisplayed(shouldShow)
+            appState.$isDraggingMenuBarItem
+                .removeDuplicates()
+                .receive(on: DispatchQueue.main)
+                .sink { [weak self] isDragging in
+                    guard let self else {
+                        return
                     }
-                }
-
-                iceIconObservationTask = Task { [weak self] in
-                    let changes = Observations { (generalSettings.iceIcon, generalSettings.customIceIconIsTemplate) }
-                    for await _ in changes {
-                        guard let self else { return }
+                    if isDragging {
                         updateStatusItem()
                     }
                 }
+                .store(in: &c)
+
+            if identifier == .visible {
+                appState.settings.general.$showIceIcon
+                    .removeDuplicates()
+                    .receive(on: DispatchQueue.main)
+                    .sink { [weak self] shouldShow in
+                        guard let self else {
+                            return
+                        }
+                        setIceIconDisplayed(shouldShow)
+                    }
+                    .store(in: &c)
+
+                appState.settings.general.$iceIcon
+                    .combineLatest(appState.settings.general.$customIceIconIsTemplate)
+                    .removeDuplicates()
+                    .receive(on: DispatchQueue.main)
+                    .sink { [weak self] _ in
+                        self?.updateStatusItem()
+                    }
+                    .store(in: &c)
+            }
+
+            if identifier == .alwaysHidden {
+                appState.settings.advanced.$enableAlwaysHiddenSection
+                    .combineLatest(statusItem.publisher(for: \.isVisible))
+                    .removeDuplicates()
+                    .receive(on: DispatchQueue.main)
+                    .sink { [weak self] shouldEnable, _ in
+                        guard let self else {
+                            return
+                        }
+                        if shouldEnable {
+                            addToMenuBar()
+                        } else {
+                            removeFromMenuBar()
+                        }
+                    }
+                    .store(in: &c)
             }
 
             if isSectionDivider {
-                let advancedSettings = appState.settings.advanced
-                sectionDividerStyleObservationTask = Task { [weak self] in
-                    let changes = Observations { advancedSettings.sectionDividerStyle }
-                    for await _ in changes {
-                        guard let self else { return }
-                        updateStatusItem()
+                appState.settings.advanced.$sectionDividerStyle
+                    .removeDuplicates()
+                    .receive(on: DispatchQueue.main)
+                    .sink { [weak self] _ in
+                        self?.updateStatusItem()
                     }
-                }
+                    .store(in: &c)
             }
         }
 
         cancellables = c
-
-        configureStatusItemCancellables()
-    }
-
-    /// Configures the observers whose subscriptions are bound to the
-    /// specific `NSStatusItem` instance currently backing `storage`. Called
-    /// once from `configureCancellables()` at setup, and again from
-    /// `recreateStatusItem()` after the underlying status item is rebuilt,
-    /// since Combine's KVO publishers latch onto the object identity of the
-    /// status item they were created from and would otherwise keep
-    /// observing the now-detached old one.
-    private func configureStatusItemCancellables() {
-        var c = Set<AnyCancellable>()
-
-        statusItem.publisher(for: \.isVisible)
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] isVisible in
-                guard
-                    let self,
-                    let menuBarManager = appState?.menuBarManager,
-                    let section = menuBarManager.section(withName: sectionName),
-                    let hotkey = section.hotkey
-                else {
-                    return
-                }
-                if isVisible {
-                    hotkey.enable()
-                } else {
-                    hotkey.disable()
-                }
-            }
-            .store(in: &c)
-
-        statusItem.publisher(for: \.button).removeNil()
-            .flatMap { $0.publisher(for: \.window) }
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] window in
-                self?.window = window
-            }
-            .store(in: &c)
-
-        if identifier == .alwaysHidden, let appState {
-            let advancedSettings = appState.settings.advanced
-            let reactToAlwaysHiddenSectionState: () -> Void = { [weak self] in
-                guard let self else { return }
-                if advancedSettings.enableAlwaysHiddenSection {
-                    addToMenuBar()
-                } else {
-                    removeFromMenuBar()
-                }
-            }
-
-            // Re-derive add/remove whenever isVisible changes (statusItem
-            // KVO, still Combine) — mirrors the previous combineLatest's
-            // re-trigger on the second element, even though only the first
-            // (shouldEnable) was ever read from the emitted pair.
-            statusItem.publisher(for: \.isVisible)
-                .removeDuplicates()
-                .receive(on: DispatchQueue.main)
-                .sink { _ in reactToAlwaysHiddenSectionState() }
-                .store(in: &c)
-
-            alwaysHiddenSectionObservationTask?.cancel()
-            alwaysHiddenSectionObservationTask = Task {
-                let changes = Observations { advancedSettings.enableAlwaysHiddenSection }
-                for await _ in changes {
-                    reactToAlwaysHiddenSectionState()
-                }
-            }
-        }
-
-        configureOcclusionObservers(storingIn: &c)
-
-        statusItemCancellables = c
-    }
-
-    /// Wires up the permission-free occlusion signal behind ``isOccluded``.
-    ///
-    /// Subscriptions live alongside the rest of `statusItemCancellables`
-    /// because they are bound to the current `NSStatusItem` — both the
-    /// visibility publisher and the window whose occlusion is sampled belong
-    /// to it, so `recreateStatusItem()` must re-subscribe them.
-    private func configureOcclusionObservers(storingIn c: inout Set<AnyCancellable>) {
-        let displayChanges = NotificationCenter.default
-            .publisher(for: NSApplication.didChangeScreenParametersNotification)
-            .replace(with: ())
-
-        // Record the reconfiguration first, so the samples that the same
-        // notification triggers below are already inside the grace window.
-        displayChanges
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] in
-                guard let self else {
-                    return
-                }
-                lastDisplayChange = .now
-                occlusionEvaluator.reset()
-            }
-            .store(in: &c)
-
-        // A window that is already occluded posts nothing further once the new
-        // layout settles, so the delayed leg re-samples after the grace window
-        // closes rather than waiting for an event that may never arrive.
-        let settledAfterDisplayChange = displayChanges
-            .delay(
-                for: .seconds(ControlItemOcclusion.displayChangeGrace + 0.1),
-                scheduler: DispatchQueue.main
-            )
-            .eraseToAnyPublisher()
-
-        let occlusionChanges = NotificationCenter.default
-            .publisher(for: NSWindow.didChangeOcclusionStateNotification)
-            .compactMap { $0.object as? NSWindow }
-            .filter { [weak self] window in
-                window === self?.window
-            }
-            .replace(with: ())
-            .eraseToAnyPublisher()
-
-        let visibilityChanges = statusItem.publisher(for: \.isVisible)
-            .removeDuplicates()
-            .replace(with: ())
-            .eraseToAnyPublisher()
-
-        Publishers.MergeMany(occlusionChanges, visibilityChanges, settledAfterDisplayChange)
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] in
-                self?.sampleOcclusion()
-            }
-            .store(in: &c)
-    }
-
-    /// Takes one occlusion reading and publishes the verdict if it changed.
-    private func sampleOcclusion() {
-        guard let window else {
-            // No window to read. Leave the last verdict alone unless it
-            // claimed occlusion, which can no longer be substantiated.
-            occlusionEvaluator.reset()
-            if isOccluded {
-                isOccluded = false
-            }
-            return
-        }
-
-        let sample = ControlItemOcclusion.Sample(
-            isOccluded: !window.occlusionState.contains(.visible),
-            isInMenuBar: statusItem.isVisible,
-            secondsSinceDisplayChange: lastDisplayChange
-                .map { Date.now.timeIntervalSince($0) } ?? .greatestFiniteMagnitude
-        )
-
-        guard let verdict = occlusionEvaluator.evaluate(sample) else {
-            return
-        }
-
-        isOccluded = verdict
-        if verdict {
-            diagLog.warning(
-                "\(identifier.rawValue) is occluded — the menu bar accepted the status item but is not rendering it"
-            )
-        } else {
-            diagLog.notice("\(identifier.rawValue) is no longer occluded")
-        }
-    }
-
-    /// Rebuilds the control item's underlying `NSStatusItem` from scratch.
-    ///
-    /// Used as a bounded recovery step (#754) when `ControlItemPair` lookup
-    /// keeps failing across multiple independently triggered cache cycles —
-    /// a state that means the existing status item's `windowNumber` no
-    /// longer matches any enumerated CG window ID, which is otherwise
-    /// terminal since `storage` is normally created once and never
-    /// recreated.
-    ///
-    /// `storage.dispose()` removes the old status item — and caches its
-    /// `autosaveName` position — *before* a fresh `StatusItemStorage` is
-    /// constructed at that same `autosaveName`, so AppKit restores the
-    /// position the old item cached. This ordering matters: if the new
-    /// storage were created first, the two `NSStatusItem`s would briefly
-    /// share one autosaveName, and the old item's removal (deferred to its
-    /// `deinit`) would run after the new item already restored its
-    /// position, overwriting the autosave slot with the old item's own
-    /// possibly-stale position and clobbering what the new item just set.
-    /// The `window`-chain and other status-item-bound observers are
-    /// re-subscribed against the new instance since Combine's KVO
-    /// publishers don't follow object identity changes on their own.
-    @MainActor
-    func recreateStatusItem() {
-        storage.dispose()
-        storage = StatusItemStorage(controlItem: self)
-        configureStatusItemCancellables()
-        updateStatusItem()
     }
 
     /// Updates the appearance of the status item using the current hiding state.
@@ -1065,7 +840,7 @@ final class ControlItem {
 
 /// Proxy getters and setters for a control item's stored
 /// UserDefaults values.
-nonisolated enum ControlItemDefaults {
+enum ControlItemDefaults {
     /// Accesses the value associated with the specified key
     /// and autosave name.
     static subscript<Value>(key: Key<Value>, autosaveName: String) -> Value? {
@@ -1151,7 +926,7 @@ nonisolated enum ControlItemDefaults {
 
 // MARK: - ControlItemDefaults.Key
 
-nonisolated extension ControlItemDefaults {
+extension ControlItemDefaults {
     /// Keys used to look up UserDefaults values for control items.
     struct Key<Value> {
         /// The raw value of the key.
@@ -1171,14 +946,14 @@ nonisolated extension ControlItemDefaults {
 
 // MARK: ControlItemDefaults.Key<CGFloat>
 
-nonisolated extension ControlItemDefaults.Key<CGFloat> {
+extension ControlItemDefaults.Key<CGFloat> {
     /// String key: "NSStatusItem Preferred Position autosaveName"
     static let preferredPosition = Self(rawValue: "Preferred Position")
 }
 
 // MARK: ControlItemDefaults.Key<Bool>
 
-nonisolated extension ControlItemDefaults.Key<Bool> {
+extension ControlItemDefaults.Key<Bool> {
     /// String key: "NSStatusItem Visible autosaveName"
     static let visible = Self(rawValue: "Visible")
 

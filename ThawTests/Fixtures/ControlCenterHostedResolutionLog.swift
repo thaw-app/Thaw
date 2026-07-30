@@ -25,7 +25,7 @@ enum ControlCenterHostedResolutionLog {
     /// Center's OWN (distance 0.0, AXEnabled absent); the next candidate is
     /// 74pt away. Little Snitch publishes no extras-bar child of its own, so
     /// accepting Control Center's self-match misattributes it to
-    /// com.apple.controlcenter and starves the marker-pair path.
+    /// com.apple.controlcenter and starves the marker-pair / provoke path.
     static let littleSnitch = """
     2026-06-08 20:57:54.289 [DEBUG] [SourcePIDCache] SourcePIDCache diag unresolved: windowID=355 title=Item-0 bounds=(889.0, 0.0, 116.0, 33.0) center=(947.0, 16.5) | cgOwner=com.apple.controlcenter:pid=648 ownerName=Control Center | closestAXFrame=(889.0, 0.0, 116.0, 33.0) in app=com.apple.controlcenter distance=0.0 closestAXEnabled=nil | nearest=[com.apple.controlcenter@0.0(enabled=nil), com.shortery-app.Shortery@74.0(enabled=true), org.languagetool.desktop@77.0(enabled=true)]
     """

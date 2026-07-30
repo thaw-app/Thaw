@@ -11,7 +11,7 @@ import SwiftUI
 /// A named set of images that are used by control items.
 ///
 /// An image set contains images for a control item in both the hidden and visible states.
-nonisolated struct ControlItemImageSet: Codable, Hashable, Identifiable {
+struct ControlItemImageSet: Codable, Hashable, Identifiable {
     enum Name: String, Codable, Hashable {
         case arrow = "Arrow"
         case chevron = "Chevron"
@@ -58,7 +58,7 @@ nonisolated struct ControlItemImageSet: Codable, Hashable, Identifiable {
     }
 }
 
-nonisolated extension ControlItemImageSet {
+extension ControlItemImageSet {
     /// The default image set for the Ice icon.
     static let defaultIceIcon = ControlItemImageSet(
         name: .iceCube,

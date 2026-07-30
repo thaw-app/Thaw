@@ -8,7 +8,7 @@
 
 import SwiftUI
 
-nonisolated struct MenuBarAppearanceConfigurationV2: Hashable {
+struct MenuBarAppearanceConfigurationV2: Hashable {
     var lightModeConfiguration: MenuBarAppearancePartialConfiguration
     var darkModeConfiguration: MenuBarAppearancePartialConfiguration
     var staticConfiguration: MenuBarAppearancePartialConfiguration
@@ -46,7 +46,7 @@ nonisolated struct MenuBarAppearanceConfigurationV2: Hashable {
 
 // MARK: Default Configuration
 
-nonisolated extension MenuBarAppearanceConfigurationV2 {
+extension MenuBarAppearanceConfigurationV2 {
     static let defaultConfiguration = MenuBarAppearanceConfigurationV2(
         lightModeConfiguration: .defaultConfiguration,
         darkModeConfiguration: .defaultConfiguration,
@@ -63,7 +63,7 @@ nonisolated extension MenuBarAppearanceConfigurationV2 {
     )
 }
 
-nonisolated extension MenuBarAppearanceConfigurationV2: Codable {
+extension MenuBarAppearanceConfigurationV2: Codable {
     private enum CodingKeys: CodingKey {
         case lightModeConfiguration
         case darkModeConfiguration
@@ -116,7 +116,7 @@ nonisolated extension MenuBarAppearanceConfigurationV2: Codable {
 
 // MARK: - MenuBarAppearancePartialConfiguration
 
-nonisolated struct MenuBarAppearancePartialConfiguration: Hashable {
+struct MenuBarAppearancePartialConfiguration: Hashable {
     var hasShadow: Bool
     var hasBorder: Bool
     var borderColor: CGColor
@@ -139,7 +139,7 @@ nonisolated struct MenuBarAppearancePartialConfiguration: Hashable {
 
 // MARK: Default Partial Configuration
 
-nonisolated extension MenuBarAppearancePartialConfiguration {
+extension MenuBarAppearancePartialConfiguration {
     static let defaultConfiguration = MenuBarAppearancePartialConfiguration(
         hasShadow: false,
         hasBorder: false,
@@ -164,7 +164,7 @@ nonisolated extension MenuBarAppearancePartialConfiguration {
 
 // MARK: MenuBarAppearancePartialConfiguration: Codable
 
-nonisolated extension MenuBarAppearancePartialConfiguration: Codable {
+extension MenuBarAppearancePartialConfiguration: Codable {
     private enum CodingKeys: CodingKey {
         case hasShadow
         case hasBorder

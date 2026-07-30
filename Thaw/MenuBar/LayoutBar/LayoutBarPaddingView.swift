@@ -8,7 +8,6 @@
 
 import Cocoa
 import Combine
-import Observation
 
 /// A Cocoa view that manages the menu bar layout interface.
 final class LayoutBarPaddingView: NSView {
@@ -25,12 +24,15 @@ final class LayoutBarPaddingView: NSView {
     private var containerLeadingInsetConstraint: NSLayoutConstraint?
     private var notchObservers = Set<AnyCancellable>()
 
-    /// Task observing `menuBarManager.averageColorInfo` (wave 3), replacing
-    /// the old `$averageColorInfo` sink.
-    private var averageColorInfoObservationTask: Task<Void, Never>?
-
-    deinit {
-        averageColorInfoObservationTask?.cancel()
+    private func layoutWatchdogDuration() -> Duration? {
+        switch MenuBarItemManager.layoutWatchdogTimeout {
+        case let .seconds(s):
+            return .seconds(s)
+        case let .milliseconds(ms):
+            return .milliseconds(ms)
+        default:
+            return nil
+        }
     }
 
     /// The layout view's arranged views.
@@ -205,24 +207,17 @@ final class LayoutBarPaddingView: NSView {
         guard let appState = container.appState else {
             return
         }
-        // Explicit strong captures: the move must complete even if the view
-        // is torn down mid-drag; only the longer-lived watchdog below holds
-        // weak references.
-        Task { [self, appState] in
+        Task {
             guard !isStabilizing else { return }
             isStabilizing = true
             await MainActor.run { self.showOverlay(true) }
             // Increased delay to allow macOS to settle after operations like Reset Layout.
             // Prevents transient errors when dragging items immediately after reset.
-            // A cancelled sleep must not leave the overlay up and isStabilizing
-            // stuck true (the watchdog that would reset them hasn't started yet).
-            guard (try? await Task.sleep(for: .milliseconds(150))) != nil else {
-                await resetStabilizingStateIfNeeded()
-                return
-            }
+            try await Task.sleep(for: .milliseconds(150))
 
             let watchdogTask = Task { [weak self, weak appState] in
-                try? await Task.sleep(for: MenuBarItemManager.layoutWatchdogTimeout + .seconds(1))
+                guard let duration = self?.layoutWatchdogDuration() else { return }
+                try? await Task.sleep(for: duration + .seconds(1))
                 guard let self, !Task.isCancelled else { return }
                 await self.resetStabilizingStateIfNeeded()
                 guard let appState else { return }
@@ -238,12 +233,6 @@ final class LayoutBarPaddingView: NSView {
                 )
                 appState.itemManager.removeTemporarilyShownItemFromCache(with: item.tag)
                 await stabilizePlacement(of: item, to: destination, expectedSection: container.section, appState: appState)
-            } catch MenuBarItemManager.EventError.menuTrackingActive {
-                // A menu bar item's menu (Wi-Fi picker, input method panel,
-                // etc.) was open and the move was deferred to avoid tearing
-                // down the user's interaction. This isn't a failure worth
-                // alerting on — log only.
-                Self.diagLog.info("Move deferred, a menu bar item menu was open")
             } catch {
                 Self.diagLog.error("Error moving menu bar item: \(error)")
                 // The system event-driven move sometimes throws cannotComplete
@@ -256,62 +245,14 @@ final class LayoutBarPaddingView: NSView {
                 // showing it for a move that visibly worked is a false alarm.
                 try? await Task.sleep(for: .milliseconds(250))
                 await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
-                let reachedPosition = didItemReachIntendedPosition(
+                if didItemReachIntendedPosition(
                     item: item,
                     destination: destination,
                     expectedSection: container.section,
                     cache: appState.itemManager.itemCache
-                )
-                let isBlocked = if reachedPosition {
-                    false
-                } else {
-                    await appState.itemManager.isItemCurrentlyBlocked(item)
-                }
-                let action = MenuBarItemManager.classifyHiddenDragFailure(
-                    reachedPosition: reachedPosition,
-                    isBlocked: isBlocked,
-                    controlItemsMissing: appState.itemManager.areControlItemsMissing
-                )
-                switch action {
-                case .suppress:
+                ) {
                     Self.diagLog.info("Move verification failed but \(item.logString) reached intended position in \(container.section.logString); suppressing alert")
-                case .rescueAndRetry:
-                    // The item is stuck at the x=-1 sentinel. Rescue it to
-                    // the visible section, let macOS settle, then retry the
-                    // original move exactly once (no loop). Only if that
-                    // retry also fails do we alert, and with a calm message
-                    // rather than the raw error, matching the safe-harbor
-                    // behavior of restoreBlockedItemsToVisible.
-                    Self.diagLog.warning("\(item.logString) is blocked (x=-1); attempting one rescue-and-retry before alerting")
-                    _ = await appState.itemManager.rescueBlockedItemToVisible(item)
-                    try? await Task.sleep(for: .milliseconds(250))
-                    await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
-                    do {
-                        try await appState.itemManager.move(
-                            item: item,
-                            to: destination,
-                            skipInputPause: true,
-                            watchdogTimeout: MenuBarItemManager.layoutWatchdogTimeout
-                        )
-                        appState.itemManager.removeTemporarilyShownItemFromCache(with: item.tag)
-                        await stabilizePlacement(of: item, to: destination, expectedSection: container.section, appState: appState)
-                    } catch {
-                        Self.diagLog.error("Rescue-and-retry failed for \(item.logString): \(error)")
-                        let alert = NSAlert()
-                        alert.alertStyle = .warning
-                        alert.messageText = container.section == .alwaysHidden
-                            ? String(localized: "Couldn't move \(item.displayName) to the always-hidden section.")
-                            : String(localized: "Couldn't move \(item.displayName) to the hidden section.")
-                        alert.informativeText = String(localized: "The item was left in the visible section so it isn't stuck offscreen. Try dragging it again in a moment.")
-                        alert.runModal()
-                    }
-                case .alertControlItemsMissing:
-                    let alert = NSAlert()
-                    alert.alertStyle = .warning
-                    alert.messageText = String(localized: "Couldn't move the item right now.")
-                    alert.informativeText = String(localized: "\(Constants.displayName) can't locate its hidden-section divider right now. It is attempting recovery in the background — try again in a few seconds.")
-                    alert.runModal()
-                case .alertGeneric:
+                } else {
                     let alert = NSAlert(error: error)
                     alert.runModal()
                 }
@@ -501,18 +442,13 @@ final class LayoutBarPaddingView: NSView {
             }
             .store(in: &notchObservers)
 
-        // `menuBarManager` is now `@Observable` (wave 3), so it no longer has
-        // an `$averageColorInfo` publisher.
-        averageColorInfoObservationTask = Task { [weak self, weak appState] in
-            var previous: MenuBarAverageColorInfo?
-            let changes = Observations { appState?.menuBarManager.averageColorInfo }
-            for await colorInfo in changes {
-                guard let self else { return }
-                guard colorInfo != previous else { continue }
-                previous = colorInfo
-                self.notchView?.averageColorInfo = colorInfo
+        appState.menuBarManager.$averageColorInfo
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] colorInfo in
+                self?.notchView?.averageColorInfo = colorInfo
             }
-        }
+            .store(in: &notchObservers)
     }
 
     private func updateNotchPresentation() {

@@ -6,22 +6,14 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import Observation
+import Combine
 
 /// The model for app-wide navigation.
 @MainActor
-@Observable
-final class AppNavigationState {
-    /// A specific control group within a settings pane that a search result
-    /// can request be revealed/expanded when navigating to that pane.
-    nonisolated enum SettingsDisclosure: Hashable {
-        case advancedLayoutControls
-    }
-
-    var isAppFrontmost = false
-    var isSettingsPresented = false
-    var isIceBarPresented = false
-    var isSearchPresented = false
-    var settingsNavigationIdentifier: SettingsNavigationIdentifier = .general
-    var requestedSettingsDisclosure: SettingsDisclosure?
+final class AppNavigationState: ObservableObject {
+    @Published var isAppFrontmost = false
+    @Published var isSettingsPresented = false
+    @Published var isIceBarPresented = false
+    @Published var isSearchPresented = false
+    @Published var settingsNavigationIdentifier: SettingsNavigationIdentifier = .general
 }

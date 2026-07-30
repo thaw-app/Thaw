@@ -86,63 +86,6 @@ final class PlanFullSortSequenceTests: XCTestCase {
         XCTAssertEqual(sequence, [ahCtrl, hiddenCtrl, "v1"])
     }
 
-    func testTrimsOrderedPrefixForSingleOutOfPlaceItem() {
-        let desired = ["v1", "v2", "v3", hiddenCtrl, "h1", "nowPlaying", ahCtrl, "ah1", "ah2"]
-        let sectionMap: [String: String] = [
-            "v1": "visible", "v2": "visible", "v3": "visible",
-            "h1": "hidden", "nowPlaying": "hidden",
-            "ah1": "alwaysHidden", "ah2": "alwaysHidden",
-        ]
-        let currentFlat = ["v1", "v2", "nowPlaying", "v3", hiddenCtrl, "h1", ahCtrl, "ah1", "ah2"]
-
-        let sequence = LayoutSolver.planFullSortSequence(
-            currentFlat: currentFlat,
-            desiredFiltered: desired,
-            sectionMap: sectionMap,
-            hiddenCtrlUID: hiddenCtrl,
-            ahCtrlUID: ahCtrl
-        )
-
-        XCTAssertEqual(sequence, [hiddenCtrl, "v1", "v2", "v3"])
-    }
-
-    func testLeftEdgeSwapReplaysFromFirstOutOfOrderItem() {
-        let desired = ["v1", hiddenCtrl, "h1", ahCtrl, "ah1", "ah2"]
-        let sectionMap: [String: String] = [
-            "v1": "visible", "h1": "hidden",
-            "ah1": "alwaysHidden", "ah2": "alwaysHidden",
-        ]
-        let currentFlat = ["v1", hiddenCtrl, "h1", ahCtrl, "ah2", "ah1"]
-
-        let sequence = LayoutSolver.planFullSortSequence(
-            currentFlat: currentFlat,
-            desiredFiltered: desired,
-            sectionMap: sectionMap,
-            hiddenCtrlUID: hiddenCtrl,
-            ahCtrlUID: ahCtrl
-        )
-
-        XCTAssertEqual(sequence, ["ah2", ahCtrl, "h1", hiddenCtrl, "v1"])
-    }
-
-    func testUnmanagedItemsDoNotBreakPrefixTrim() {
-        let desired = ["v1", "v2", hiddenCtrl, "h1"]
-        let sectionMap: [String: String] = [
-            "v1": "visible", "v2": "visible", "h1": "hidden",
-        ]
-        let currentFlat = ["v2", "v1", hiddenCtrl, "h1", "unmanaged"]
-
-        let sequence = LayoutSolver.planFullSortSequence(
-            currentFlat: currentFlat,
-            desiredFiltered: desired,
-            sectionMap: sectionMap,
-            hiddenCtrlUID: hiddenCtrl,
-            ahCtrlUID: nil
-        )
-
-        XCTAssertEqual(sequence, ["v2"])
-    }
-
     /// If currentFlat already filtered against desiredFiltered matches
     /// desiredFiltered exactly, the sequence is empty (no-op signal).
     func testNoOpWhenAlreadyMatches() {

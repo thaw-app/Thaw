@@ -14,8 +14,8 @@ struct MenuBarAppearanceEditor: View {
         case panel
     }
 
-    @Environment(AppState.self) var appState: AppState
-    @Bindable var appearanceManager: MenuBarAppearanceManager
+    @EnvironmentObject var appState: AppState
+    @ObservedObject var appearanceManager: MenuBarAppearanceManager
     @Environment(\.dismissWindow) private var dismissWindow
     @State private var isResetPromptPresented = false
 
@@ -67,9 +67,9 @@ struct MenuBarAppearanceEditor: View {
                 case .settings = location,
                 appState.settings.advanced.enableSecondaryContextMenu
             {
-                SettingsWarningPill(
-                    message: "Tip: You can also edit these settings by right-clicking in an empty area of the menu bar.",
-                    systemImage: "lightbulb.circle.fill"
+                CalloutBox(
+                    "Tip: You can also edit these settings by right-clicking in an empty area of the menu bar.",
+                    systemImage: "lightbulb"
                 )
             }
 
@@ -102,9 +102,9 @@ struct MenuBarAppearanceEditor: View {
                 || appearanceManager.configuration.shapeKind != .noShape
                 || appearanceManager.configuration.current.backgroundKind != .none
             {
-                SettingsWarningPill(
-                    message: "If effects are not visible, disable \"Show menu bar background\" in System Settings \(Constants.menuArrow) Menu Bar",
-                    systemImage: "info.circle.fill"
+                CalloutBox(
+                    "If effects are not visible, disable \"Show menu bar background\" in System Settings \(Constants.menuArrow) Menu Bar",
+                    systemImage: "info.circle"
                 )
             }
         }
@@ -199,23 +199,22 @@ private struct UnlabeledBackgroundEditor: View {
     }
 
     var body: some View {
-        // No wrapping VStack: `IceSection` is a native grouped `Section` and
-        // must remain a direct child of the enclosing `IceForm` list, which
-        // provides the inter-section spacing.
-        if showTitle {
-            IceSection("Background") {
-                styleSection
+        VStack(spacing: .iceFormDefaultSpacing) {
+            if showTitle {
+                IceSection("Background") {
+                    styleSection
+                }
+            } else {
+                IceSection {
+                    styleSection
+                }
             }
-        } else {
             IceSection {
-                styleSection
-            }
-        }
-        IceSection {
-            backgroundBorderToggle
-            if configuration.backgroundHasBorder {
-                backgroundBorderColor
-                backgroundBorderWidth
+                backgroundBorderToggle
+                if configuration.backgroundHasBorder {
+                    backgroundBorderColor
+                    backgroundBorderWidth
+                }
             }
         }
     }
@@ -312,7 +311,7 @@ private struct LabeledBackgroundEditor: View {
     let appearance: SystemAppearance
 
     var body: some View {
-        IceSection(isBordered: false) {
+        IceSection(options: .plain) {
             labelStack
         } content: {
             UnlabeledBackgroundEditor(configuration: binding, showTitle: false)
@@ -349,18 +348,17 @@ private struct UnlabeledShapeEditor: View {
     @Binding var configuration: MenuBarAppearancePartialConfiguration
 
     var body: some View {
-        // No wrapping VStack: `IceSection` is a native grouped `Section` and
-        // must remain a direct child of the enclosing `IceForm` list, which
-        // provides the inter-section spacing.
-        IceSection {
-            tintPicker
-            tintOpacity
-            shadowToggle
-        }
-        IceSection {
-            borderToggle
-            borderColor
-            borderWidth
+        VStack(spacing: .iceFormDefaultSpacing) {
+            IceSection {
+                tintPicker
+                tintOpacity
+                shadowToggle
+            }
+            IceSection {
+                borderToggle
+                borderColor
+                borderWidth
+            }
         }
     }
 
@@ -468,7 +466,7 @@ private struct LabeledShapeEditor: View {
     let appearance: SystemAppearance
 
     var body: some View {
-        IceSection(isBordered: false) {
+        IceSection(options: .plain) {
             labelStack
         } content: {
             partialEditor
@@ -513,7 +511,7 @@ private struct StaticShapeEditor: View {
 // MARK: - Preview Button
 
 private struct PreviewButton: View {
-    @Environment(AppState.self) private var appState: AppState
+    @EnvironmentObject private var appState: AppState
     @State private var isPressed = false
 
     let appearance: SystemAppearance

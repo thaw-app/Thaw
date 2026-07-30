@@ -11,9 +11,9 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct AutomationSettingsPane: View {
-    @Environment(AppState.self) var appState: AppState
-    @State private var settings = AutomationSettings()
-    @State private var hookSettings = AutomationHookSettings()
+    @EnvironmentObject var appState: AppState
+    @StateObject private var settings = AutomationSettings()
+    @StateObject private var hookSettings = AutomationHookSettings()
     @State private var newBundleId: String = ""
     @State private var isShowingAddError = false
     @State private var addErrorMessage = ""
@@ -31,13 +31,10 @@ struct AutomationSettingsPane: View {
 
             if settings.isSettingsURIEnabled {
                 whitelistSection
-                addAppSection
                 aboutSection
             }
 
-            globalHooksSection
             profileHooksSection
-            envVarsSection
         }
         .onAppear {
             if selectedHookProfileID == nil {
@@ -66,89 +63,131 @@ struct AutomationSettingsPane: View {
     // MARK: - Enable Section
 
     private var enableSection: some View {
-        IceSection {
-            Toggle("Enable Settings URI Scheme", isOn: $settings.isSettingsURIEnabled)
-                .annotation("Allow external applications to read and modify \(Constants.displayName) settings via thaw:// URLs.")
+        IceSection(options: [.isBordered]) {
+            VStack(alignment: .leading, spacing: 12) {
+                Toggle("Enable Settings URI Scheme", isOn: $settings.isSettingsURIEnabled)
+                    .annotation("Allow external applications to read and modify \(Constants.displayName) settings via thaw:// URLs.")
 
-            if !settings.isSettingsURIEnabled {
-                SettingsWarningPill(
-                    title: "Settings URI disabled",
-                    message: "External apps cannot read or modify \(Constants.displayName) settings.",
-                    systemImage: "lock.circle.fill"
-                )
+                if !settings.isSettingsURIEnabled {
+                    securityNote
+                }
             }
+            .padding(8)
+        }
+    }
+
+    private var securityNote: some View {
+        CalloutBox("Settings URI is disabled. External apps cannot read or modify \(Constants.displayName) settings.") {
+            Image(systemName: "lock.fill")
+                .foregroundStyle(.green)
         }
     }
 
     // MARK: - Whitelist Section
 
     private var whitelistSection: some View {
-        IceSection {
-            let count = String(localized: "apps \(settings.whitelistedApps.count)", comment: "Shows the number of whitelisted apps")
-            HStack(spacing: 6) {
-                Text("Whitelisted Applications")
-                Text(verbatim: "(\(count))")
-                    .foregroundStyle(.secondary)
-            }
+        IceSection(spacing: .iceSectionDefaultSpacing, options: [.isBordered]) {
+            whitelistHeader
         } content: {
-            if settings.whitelistedApps.isEmpty {
-                emptyWhitelistView
-            } else {
-                ForEach(settings.whitelistedApps) { app in
-                    whitelistedAppRow(app)
+            VStack(alignment: .leading, spacing: 16) {
+                if settings.whitelistedApps.isEmpty {
+                    emptyWhitelistView
+                } else {
+                    whitelistList
                 }
+
+                Divider()
+
+                addAppSection
             }
+            .padding(8)
+        }
+    }
+
+    private var whitelistHeader: some View {
+        HStack(spacing: 0) {
+            Text("Whitelisted Applications")
+                .font(.headline)
+
+            Spacer().frame(width: 6)
+
+            Text(verbatim: "(")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text(String(localized: "apps \(settings.whitelistedApps.count)", comment: "Shows the number of whitelisted apps"))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text(verbatim: ")")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Spacer()
         }
     }
 
     private var emptyWhitelistView: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(spacing: 8) {
+            Image(systemName: "app.badge.checkmark")
+                .font(.system(size: 40))
+                .foregroundStyle(.secondary)
+
             Text("No whitelisted apps")
-                .font(.body.weight(.medium))
+                .font(.headline)
+
             Text("Apps that request settings access will appear here after you approve them.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+                .multilineTextAlignment(.center)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, 4)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 20)
+    }
+
+    private var whitelistList: some View {
+        VStack(spacing: 8) {
+            ForEach(settings.whitelistedApps) { app in
+                whitelistedAppRow(app)
+            }
+        }
     }
 
     private func whitelistedAppRow(_ app: AutomationSettings.WhitelistedApp) -> some View {
         HStack(spacing: 12) {
+            // App Icon
             if let icon = app.icon {
                 Image(nsImage: icon)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: 28, height: 28)
+                    .frame(width: 32, height: 32)
             } else {
                 Image(systemName: "app.fill")
-                    .font(.title3)
-                    .frame(width: 28, height: 28)
+                    .font(.system(size: 24))
+                    .frame(width: 32, height: 32)
                     .foregroundStyle(.secondary)
             }
 
+            // App Info
             VStack(alignment: .leading, spacing: 2) {
                 Text(app.displayName)
-                    .font(.body.weight(.medium))
+                    .font(.system(size: 13, weight: .medium))
+
                 Text(app.bundleId)
-                    .font(.caption)
+                    .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
 
             Spacer()
 
-            Label {
-                Text("Can modify settings")
-            } icon: {
+            // Permissions Info
+            HStack(spacing: 4) {
                 Image(systemName: "checkmark.shield.fill")
                     .foregroundStyle(.green)
+                Text("Can modify settings")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
-            .labelStyle(.titleAndIcon)
-            .font(.caption)
-            .foregroundStyle(.secondary)
 
+            // Remove Button
             Button {
                 settings.removeFromWhitelist(bundleId: app.bundleId)
             } label: {
@@ -159,10 +198,15 @@ struct AutomationSettingsPane: View {
             .help("Remove from whitelist")
             .accessibilityLabel("Remove \(app.displayName) from whitelist")
         }
+        .padding(.vertical, 4)
     }
 
     private var addAppSection: some View {
-        IceSection("Add Application") {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Add Application Manually")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+
             HStack(spacing: 8) {
                 TextField("Bundle Identifier (e.g., iordv.Droppy)", text: $newBundleId)
                     .textFieldStyle(.roundedBorder)
@@ -170,7 +214,6 @@ struct AutomationSettingsPane: View {
                 Button("Add") {
                     addBundleId()
                 }
-                .buttonStyle(.settingsGlass)
                 .disabled({
                     let trimmed = newBundleId.trimmingCharacters(in: .whitespacesAndNewlines)
                     return trimmed.isEmpty || !AutomationSettings.isValidBundleId(trimmed)
@@ -180,7 +223,6 @@ struct AutomationSettingsPane: View {
                     Button("Add \(Constants.displayName) (Test)") {
                         settings.addCurrentApp()
                     }
-                    .buttonStyle(.settingsGlass)
                     .help("Add \(Constants.displayName) itself for testing")
                 #endif
             }
@@ -196,27 +238,45 @@ struct AutomationSettingsPane: View {
     // MARK: - About Section
 
     private var aboutSection: some View {
-        IceSection("How It Works") {
-            VStack(alignment: .leading, spacing: 8) {
-                numberedStep(1, "When an app sends a thaw:// URL to change settings, Thaw checks if that app is whitelisted.")
-                numberedStep(2, "If not whitelisted, you'll see a confirmation dialog showing the app name and what it wants to do.")
-                numberedStep(3, "If you approve, the app is permanently whitelisted and can modify settings anytime without asking again.")
-                numberedStep(4, "You can remove apps from this list at any time to revoke their access.")
-            }
-            .font(.caption)
-            .foregroundStyle(.secondary)
+        IceSection {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("How It Works")
+                    .font(.headline)
 
-            Text("Whitelisted apps can read settings, toggle boolean options, set numeric values (timers, delays), change enum settings (rehide strategy, \(Constants.displayName) Bar location), and modify per-display configurations. This includes auto-rehide, show on click/hover/scroll/double-click, \(Constants.displayName) Bar, hide application menus, enable always-hidden section, show tooltips, and diagnostic logging.")
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(alignment: .top, spacing: 8) {
+                        Text(verbatim: "1.")
+                        Text("When an app sends a thaw:// URL to change settings, Thaw checks if that app is whitelisted.")
+                    }
+
+                    HStack(alignment: .top, spacing: 8) {
+                        Text(verbatim: "2.")
+                        Text("If not whitelisted, you'll see a confirmation dialog showing the app name and what it wants to do.")
+                    }
+
+                    HStack(alignment: .top, spacing: 8) {
+                        Text(verbatim: "3.")
+                        Text("If you approve, the app is permanently whitelisted and can modify settings anytime without asking again.")
+                    }
+
+                    HStack(alignment: .top, spacing: 8) {
+                        Text(verbatim: "4.")
+                        Text("You can remove apps from this list at any time to revoke their access.")
+                    }
+                }
                 .font(.caption)
                 .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
 
-    private func numberedStep(_ number: Int, _ text: LocalizedStringKey) -> some View {
-        HStack(alignment: .top, spacing: 8) {
-            Text(verbatim: "\(number).")
-            Text(text)
+                Divider()
+
+                Text("Supported Settings")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+
+                Text("Whitelisted apps can read settings, toggle boolean options, set numeric values (timers, delays), change enum settings (rehide strategy, \(Constants.displayName) Bar location), and modify per-display configurations. This includes auto-rehide, show on click/hover/scroll/double-click, \(Constants.displayName) Bar, hide application menus, enable always-hidden section, show tooltips, and diagnostic logging.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 
@@ -251,14 +311,42 @@ struct AutomationSettingsPane: View {
         isShowingAddError = true
     }
 
-    // MARK: - Hooks
+    // MARK: - Profile Hooks Section
 
-    private var globalHooksSection: some View {
-        IceSection("Global Hooks") {
-            Text("Run a shell or AppleScript file before or after a profile switch. Hooks fire on every apply path: manual button, hotkey, display auto-switch, and Focus Filter.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+    private var profileHooksSection: some View {
+        IceSection(spacing: .iceSectionDefaultSpacing, options: [.isBordered]) {
+            HStack(spacing: 0) {
+                Text("Hooks").font(.headline)
+                Spacer()
+            }
+        } content: {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Run a shell or AppleScript file before or after a profile switch. Hooks fire on every apply path: manual button, hotkey, display auto-switch, and Focus Filter.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Divider()
+
+                globalHooksGroup
+
+                Divider()
+
+                profileHooksGroup
+
+                Divider()
+
+                envVarsHelp
+            }
+            .padding(8)
+        }
+    }
+
+    private var globalHooksGroup: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Global Hooks").font(.headline)
+
+            Divider()
 
             HookRow(
                 label: "Pre-apply",
@@ -274,47 +362,57 @@ struct AutomationSettingsPane: View {
         }
     }
 
-    private var profileHooksSection: some View {
-        IceSection("Per-Profile Hooks") {
+    private var profileHooksGroup: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Per-Profile Hooks").font(.headline)
+                Spacer()
+                if !appState.profileManager.profiles.isEmpty {
+                    Picker(selection: $selectedHookProfileID) {
+                        ForEach(appState.profileManager.profiles) { meta in
+                            Text(meta.name).tag(Optional(meta.id))
+                        }
+                    } label: {
+                        EmptyView()
+                    }
+                    .pickerStyle(.menu)
+                    .labelsHidden()
+                    .fixedSize()
+                }
+            }
+
+            Divider()
+
             if appState.profileManager.profiles.isEmpty {
                 Text("No profiles saved yet. Create one in the Profiles tab to attach per-profile hooks.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-            } else {
-                IcePicker("Profile", selection: $selectedHookProfileID) {
-                    ForEach(appState.profileManager.profiles) { meta in
-                        Text(meta.name).tag(Optional(meta.id))
-                    }
-                }
+            } else if let profileID = selectedHookProfileID {
+                HookRow(
+                    label: "Pre-apply",
+                    hook: bindingForProfileHook(profileID: profileID, phase: .pre),
+                    labelWidth: hookLabelWidth
+                )
 
-                if let profileID = selectedHookProfileID {
-                    HookRow(
-                        label: "Pre-apply",
-                        hook: bindingForProfileHook(profileID: profileID, phase: .pre),
-                        labelWidth: hookLabelWidth
-                    )
+                HookRow(
+                    label: "Post-apply",
+                    hook: bindingForProfileHook(profileID: profileID, phase: .post),
+                    labelWidth: hookLabelWidth
+                )
 
-                    HookRow(
-                        label: "Post-apply",
-                        hook: bindingForProfileHook(profileID: profileID, phase: .post),
-                        labelWidth: hookLabelWidth
-                    )
+                Divider()
 
-                    Text("These hooks run only when this profile is applied, after the global pre-hook and before the global post-hook.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+                Text("These hooks run only when this profile is applied, after the global pre-hook and before the global post-hook.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
         .id(profileHookRevision)
     }
 
-    private var envVarsSection: some View {
-        IceSection("Script Environment") {
-            Text("Environment variables passed to scripts")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
+    private var envVarsHelp: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Environment variables passed to scripts").font(.subheadline).foregroundStyle(.secondary)
             Text(verbatim: "THAW_HOOK_PHASE, THAW_HOOK_SCOPE, THAW_PROFILE_ID, THAW_PROFILE_NAME, THAW_PREVIOUS_PROFILE_ID, THAW_PREVIOUS_PROFILE_NAME")
                 .font(.caption.monospaced())
                 .foregroundStyle(.secondary)
@@ -326,6 +424,7 @@ struct AutomationSettingsPane: View {
                 .foregroundStyle(.secondary)
                 .textSelection(.enabled)
                 .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 4)
         }
     }
 
@@ -382,14 +481,14 @@ private struct HookRow: View {
                     .frame(minWidth: labelWidth, alignment: .leading)
 
                 Text(displayPath)
-                    .font(.caption.monospaced())
+                    .font(.system(size: 12).monospaced())
                     .foregroundStyle(hook == nil ? .secondary : .primary)
                     .lineLimit(1)
                     .truncationMode(.middle)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 Button("Choose Script…") { chooseScript() }
-                    .buttonStyle(.settingsGlass)
+                    .buttonStyle(.bordered)
 
                 Button(role: .destructive) {
                     hook = nil
@@ -413,7 +512,7 @@ private struct HookRow: View {
 
                     HStack(spacing: 4) {
                         Text("Timeout")
-                        TextField(value: timeoutBinding, formatter: Self.timeoutFormatter) {
+                        TextField(value: timeoutBinding, formatter: timeoutFormatter) {
                             EmptyView()
                         }
                         .textFieldStyle(.roundedBorder)
@@ -486,7 +585,7 @@ private struct HookRow: View {
         return nil
     }
 
-    private static let timeoutFormatter: NumberFormatter = {
+    private var timeoutFormatter: NumberFormatter {
         let f = NumberFormatter()
         f.numberStyle = .decimal
         let suffix = " " + String(localized: "s", comment: "Seconds unit suffix for timeout field")
@@ -495,7 +594,7 @@ private struct HookRow: View {
         f.minimumFractionDigits = 0
         f.maximumFractionDigits = 0
         return f
-    }()
+    }
 
     private func chooseScript() {
         let panel = NSOpenPanel()

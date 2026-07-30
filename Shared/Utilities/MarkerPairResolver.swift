@@ -30,7 +30,7 @@ import Foundation
 /// resolver pairs icons with markers by width and synthesizes the
 /// sourcePID via injected lookups so the algorithm stays pure and
 /// testable.
-nonisolated enum MarkerPairResolver {
+enum MarkerPairResolver {
     /// A marker window candidate distilled from the items-only list.
     /// Markers carry bundle-ID-shaped titles (titles containing a ".")
     /// and serve as the recovery handle for paired on-screen icons.
@@ -179,14 +179,9 @@ nonisolated enum MarkerPairResolver {
     /// matched app IS Control Center and the window carries a generic Item-N
     /// title, writing Control Center's PID would tag the item as a transient
     /// CC widget (isTransientControlCenterItem true, canBeHidden false), hiding
-    /// it from profile management. The window is left unresolved so marker-pair
-    /// can supply the real owner PID.
-    ///
-    /// On a single display macOS 26 does not publish the bundle-ID marker
-    /// windows marker-pair needs, so these items can stay unresolved for the
-    /// session. That is accepted: attributing them to Control Center would
-    /// mislabel them permanently, which is worse than leaving them unowned.
-    /// Named CC items (BentoBox-0, Clock, WiFi, NowPlaying, ...)
+    /// it from profile management and the virtual-display provoke's orphan
+    /// scan. The window must be left unresolved so marker-pair can supply the
+    /// real owner PID. Named CC items (BentoBox-0, Clock, WiFi, NowPlaying, ...)
     /// carry non-generic titles and are unaffected; a widget that publishes its
     /// own extras-bar child (The Clock, com.fabriceleyne.theclock) matches via
     /// that app, not Control Center, so it is never flagged here.
@@ -211,7 +206,7 @@ nonisolated enum MarkerPairResolver {
 /// candidate app's bundle identifier corroborates a loose spatial match,
 /// so a nearby unrelated neighbor can never be mis-attributed the way a
 /// bare distance threshold would allow.
-nonisolated enum HostedItemOwnership {
+enum HostedItemOwnership {
     /// Returns true when title and bundleID, treated as reverse-DNS
     /// strings, are in an owner relationship: they agree on at least two
     /// leading components, and either one is a full component-prefix of

@@ -10,14 +10,14 @@ import CoreGraphics
 import Foundation
 
 /// A custom color.
-nonisolated struct IceColor: Hashable {
+struct IceColor: Hashable {
     /// The color, represented as a `CGColor`.
     var cgColor: CGColor
 }
 
 // MARK: IceColor: Codable
 
-nonisolated extension IceColor: Codable {
+extension IceColor: Codable {
     private enum CodingKeys: CodingKey {
         case components
         case colorSpace

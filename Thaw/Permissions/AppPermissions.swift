@@ -6,14 +6,14 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Combine
 import Foundation
-import Observation
 
 /// An abstraction over ``AppPermissions`` that lets views depend on just the
 /// pieces they read, so previews can supply lightweight stand-ins instead of
 /// the real manager and its associated app machinery.
 @MainActor
-protocol PermissionsManaging: AnyObject, Observable {
+protocol PermissionsManaging: ObservableObject {
     /// The state of the app's granted permissions.
     var permissionsState: AppPermissions.PermissionsState { get }
 
@@ -23,8 +23,7 @@ protocol PermissionsManaging: AnyObject, Observable {
 
 /// A type that manages the permissions of the app.
 @MainActor
-@Observable
-final class AppPermissions: PermissionsManaging {
+final class AppPermissions: ObservableObject, PermissionsManaging {
     /// Keys to access individual permissions.
     enum PermissionKey {
         /// Identifies ``AppPermissions/accessibility``.
@@ -54,7 +53,10 @@ final class AppPermissions: PermissionsManaging {
     let screenRecording = ScreenRecordingPermission()
 
     /// The state of the app's granted permissions.
-    private(set) var permissionsState: PermissionsState = .missing
+    @Published private(set) var permissionsState: PermissionsState = .missing
+
+    /// Storage for internal observers.
+    private var cancellable: AnyCancellable?
 
     /// The permissions required for full app functionality.
     var allPermissions: [Permission] {
@@ -69,11 +71,11 @@ final class AppPermissions: PermissionsManaging {
     /// Creates a new permissions manager.
     init() {
         self.updatePermissionsState()
-        for permission in allPermissions {
-            permission.onChange = { [weak self] in
+        self.cancellable = Publishers.MergeMany(allPermissions.map(\.$hasPermission))
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
                 self?.updatePermissionsState()
             }
-        }
     }
 
     /// Updates the current permissions state.

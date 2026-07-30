@@ -25,7 +25,7 @@ import CoreGraphics
 /// decides over the current snapshot; PendingLedger decides over the
 /// per-entry retry state. Cooldown semantics, return-destination
 /// preservation, and sentinel parsing all live here.
-nonisolated enum PendingLedger {
+enum PendingLedger {
     // MARK: - Result types
 
     /// A pending-relocation entry, parsed into a typed shape so the
