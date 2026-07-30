@@ -845,6 +845,13 @@ final class MenuBarItemManager: ObservableObject {
 
         var allCurrentIdentifiers = Set<String>()
         var allCurrentBaseIdentifiers = Set<String>()
+        // Namespaces (app bundle ids / reserved keywords) of every currently
+        // cached item, so planSectionOrder can drop stale title-variant saved
+        // entries for apps that are still running (title-churning items like
+        // MeetingBar / Granola countdowns would otherwise bloat savedSectionOrder
+        // without bound and make the O(n²) merge pin a core — the macOS 27
+        // reorder "storm").
+        var allCurrentNamespaces = Set<String>()
         for section in MenuBarSection.Name.allCases {
             for item in cache[section] where isPersistable(item) {
                 guard !pendingRehideTagIDs.contains(item.tag.tagIdentifier) else { continue }
@@ -853,6 +860,7 @@ final class MenuBarItemManager: ObservableObject {
                 // isStaleInstanceIndex guard below and not re-injected.
                 let baseID = "\(item.tag.namespace):\(item.tag.canonicalTitle)"
                 allCurrentBaseIdentifiers.insert(baseID)
+                allCurrentNamespaces.insert("\(item.tag.namespace)")
                 // Exclude transient Control Center items (Live Activities,
                 // iPhone Mirroring icons) from the identifier set so their
                 // ephemeral UIDs are never written to savedSectionOrder.
@@ -882,7 +890,8 @@ final class MenuBarItemManager: ObservableObject {
                 currentInSection: currentInSection,
                 oldSavedForSection: oldSavedForSection,
                 allCurrentIdentifiers: allCurrentIdentifiers,
-                allCurrentBaseIdentifiers: allCurrentBaseIdentifiers
+                allCurrentBaseIdentifiers: allCurrentBaseIdentifiers,
+                allCurrentNamespaces: allCurrentNamespaces
             )
 
             if !identifiers.isEmpty {

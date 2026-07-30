@@ -887,7 +887,8 @@ nonisolated enum LayoutSolver {
         currentInSection: [String],
         oldSavedForSection: [String],
         allCurrentIdentifiers: Set<String>,
-        allCurrentBaseIdentifiers: Set<String>
+        allCurrentBaseIdentifiers: Set<String>,
+        allCurrentNamespaces: Set<String> = []
     ) -> [String] {
         var identifiers = currentInSection
 
@@ -909,6 +910,22 @@ nonisolated enum LayoutSolver {
                 .prefix(2).joined(separator: ":")
             if allCurrentBaseIdentifiers.contains(base) {
                 continue
+            }
+            // Stale title-variant of a still-running app: the app (namespace)
+            // is present in the cache but this exact identifier is not. Items
+            // that vary their title (MeetingBar / Granola countdowns, live
+            // metrics, etc.) mint a fresh identifier whenever the title changes;
+            // without this, every past title is preserved as a "closed app" and
+            // oldSavedForSection grows without bound, making this O(n²) merge
+            // pathologically slow (the macOS 27 reorder "storm"). The app's live
+            // item(s) are already carried by currentInSection, so drop the stale
+            // variant. Namespace is the identifier prefix up to the first ':'
+            // (a namespace — a bundle id or reserved keyword — never contains one).
+            if !allCurrentNamespaces.isEmpty {
+                let namespace = savedUID.prefix { $0 != ":" }
+                if !namespace.isEmpty, allCurrentNamespaces.contains(String(namespace)) {
+                    continue
+                }
             }
 
             // Find an anchor in oldSavedForSection that's also in the
