@@ -36,9 +36,15 @@ on:
         required: false
         type: boolean
         default: true
+      dry_run:
+        description: "Dry run: build and report only. Publishes nothing, signs nothing."
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
-  group: sparkle-appcast
+  # Dry runs publish nothing, so they must not queue behind — or block — a real release.
+  group: sparkle-appcast${{ inputs.dry_run && '-dry-run' || '' }}
   cancel-in-progress: false
 
 permissions:
@@ -234,6 +240,7 @@ jobs:
           cat "$list"
 
       - name: Create updates GitHub Release (ZIP + deltas)
+        if: ${{ !inputs.dry_run }}
         uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3
         with:
           repository: ${{ env.UPDATES_REPOSITORY }}
@@ -250,10 +257,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.UPDATES_GITHUB_TOKEN }}
 
+      # Skipped on a dry run: keyless signing writes a permanent, public entry to
+      # the Sigstore transparency log, which cannot be retracted afterwards.
       - name: Install cosign
+        if: ${{ !inputs.dry_run }}
         uses: sigstore/cosign-installer@d7543c93d881b35a8faa02e8e3605f69b7a1ce62 # v3.10.0
 
       - name: Sign installer DMG and SBOM (Sigstore)
+        if: ${{ !inputs.dry_run }}
         env:
           COSIGN_YES: "true"
           DMG_PATH: build/${{ env.DMG_NAME }}
@@ -266,6 +277,7 @@ jobs:
           ls -la "${DMG_PATH}.sigstore.json" "${SBOM_PATH}.sigstore.json"
 
       - name: Create Thaw GitHub Release (DMG + SBOM)
+        if: ${{ !inputs.dry_run }}
         uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3
         with:
           tag_name: ${{ steps.meta.outputs.tag }}
@@ -284,7 +296,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish appcast to updates gh-pages
-        if: inputs.publish_appcast && inputs.publish_release
+        if: ${{ inputs.publish_appcast && inputs.publish_release && !inputs.dry_run }}
         env:
           TAG: ${{ steps.meta.outputs.tag }}
           CHANNEL: ${{ steps.meta.outputs.channel }}
@@ -343,7 +355,7 @@ jobs:
 
 
       - name: Mirror appcast to legacy stonerl Pages
-        if: inputs.publish_appcast && inputs.publish_release
+        if: ${{ inputs.publish_appcast && inputs.publish_release && !inputs.dry_run }}
         env:
           TAG: ${{ steps.meta.outputs.tag }}
           CHANNEL: ${{ steps.meta.outputs.channel }}
@@ -388,6 +400,143 @@ jobs:
             attempt=$((attempt + 1))
             sleep $((attempt * 2))
           done
+
+      - name: Dry run report
+        if: ${{ inputs.dry_run }}
+        env:
+          TAG: ${{ steps.meta.outputs.tag }}
+          CHANNEL: ${{ steps.meta.outputs.channel }}
+          PRERELEASE: ${{ steps.meta.outputs.prerelease }}
+          DMG_NAME: ${{ env.DMG_NAME }}
+          SBOM_NAME: ${{ steps.sbom-meta.outputs.name }}
+          SBOM_PATH: ${{ steps.sbom-meta.outputs.path }}
+          APPCAST_PATH: ${{ steps.sparkle.outputs.appcast-path }}
+          UPDATE_FILES: ${{ steps.update-assets.outputs.files }}
+          UPDATES_REPO: ${{ env.UPDATES_REPOSITORY }}
+          LEGACY_REPO: ${{ env.LEGACY_APPCAST_REPOSITORY }}
+          WOULD_PUBLISH_APPCAST: ${{ inputs.publish_appcast && inputs.publish_release }}
+          WOULD_DRAFT: ${{ !inputs.publish_release }}
+        run: |
+          set -euo pipefail
+
+          s() { printf '%s\n' "$*" >> "$GITHUB_STEP_SUMMARY"; }
+
+          # Exact byte count, humanised — `du` rounds a 75-byte file up to a 4K block.
+          human() {
+            stat -f%z "$1" | awk '
+              $1 >= 1048576 { printf "%.1f MB\n", $1/1048576; next }
+              $1 >= 1024    { printf "%.1f KB\n", $1/1024; next }
+                            { printf "%d B\n", $1 }'
+          }
+
+          s "# Dry run — nothing was published"
+          s ""
+          s "No GitHub Release was created, no blob was signed, and no appcast was"
+          s "pushed. Re-run with **Dry run** unchecked to publish."
+          s ""
+          s "| Setting | Value |"
+          s "| --- | --- |"
+          s "| Tag | \`${TAG}\` |"
+          s "| Channel | \`${CHANNEL}\` |"
+          s "| Prerelease | \`${PRERELEASE}\` |"
+          s "| Release would be created as | $([[ "$WOULD_DRAFT" == "true" ]] && echo 'draft' || echo '**published**') |"
+          s "| Appcast would be pushed | \`${WOULD_PUBLISH_APPCAST}\` |"
+
+          # --- Assets that a real run would upload -------------------------------
+          s ""
+          s "## Would upload to \`${GITHUB_REPOSITORY}\` (release \`${TAG}\`)"
+          s ""
+          s "| Asset | Size | SHA-256 |"
+          s "| --- | ---: | --- |"
+          for f in "build/${DMG_NAME}" "build/${DMG_NAME}.sha256" "$SBOM_PATH" "${SBOM_PATH}.sha256"; do
+            [[ -f "$f" ]] || { s "| \`$(basename "$f")\` | _missing_ | — |"; continue; }
+            s "| \`$(basename "$f")\` | $(human "$f") | \`$(shasum -a 256 "$f" | cut -c1-16)…\` |"
+          done
+          s "| \`${DMG_NAME}.sigstore.json\` | — | _skipped: signing is disabled on dry runs_ |"
+          s "| \`${SBOM_NAME}.sigstore.json\` | — | _skipped: signing is disabled on dry runs_ |"
+
+          s ""
+          s "## Would upload to \`${UPDATES_REPO}\` (release \`${TAG}\`)"
+          s ""
+          s "| Asset | Size |"
+          s "| --- | ---: |"
+          while IFS= read -r f; do
+            [[ -n "$f" ]] || continue
+            if [[ -f "$f" ]]; then
+              s "| \`$(basename "$f")\` | $(human "$f") |"
+            else
+              s "| \`$(basename "$f")\` | _missing_ |"
+            fi
+          done <<< "$UPDATE_FILES"
+
+          # --- SBOM contents -----------------------------------------------------
+          s ""
+          s "## SBOM contents (\`${SBOM_NAME}\`)"
+          s ""
+          if [[ -f "$SBOM_PATH" ]]; then
+            s "| Component | Version |"
+            s "| --- | --- |"
+            python3 -c '
+          import json, os, sys
+          d = json.load(open(os.environ["SBOM_PATH"]))
+          comps = [c for c in d.get("components", []) if c.get("purl")]
+          out = open(os.environ["GITHUB_STEP_SUMMARY"], "a")
+          for c in sorted(comps, key=lambda c: c["name"].lower()):
+              out.write("| `%s` | `%s` |\n" % (c["name"], c.get("version", "?")))
+          if not comps:
+              out.write("| _no packaged components found_ | — |\n")
+          print("SBOM lists %d component(s)" % len(comps))
+          '
+          else
+            s "_SBOM not generated._"
+          fi
+
+          # --- What the appcast push would change --------------------------------
+          appcast_diff() {
+            local label="$1" url="$2" repo="$3"
+            s ""
+            s "## Appcast diff vs live \`${repo}\`"
+            s ""
+            s "Source: ${url}"
+            s ""
+            if [[ ! -f "$APPCAST_PATH" ]]; then
+              s "_No appcast was generated._"
+              return
+            fi
+            local live="$RUNNER_TEMP/live-${label}.xml"
+            if ! curl -sSfL --retry 2 "$url" -o "$live"; then
+              s "_Could not fetch the live appcast (first publish, or Pages unavailable)._"
+              s "The generated appcast would be published as-is."
+              return
+            fi
+            if diff -q "$live" "$APPCAST_PATH" >/dev/null 2>&1; then
+              s "No change — the live appcast already matches what this run generated."
+              return
+            fi
+            s '```diff'
+            diff -u -L "live (${repo})" -L "generated (${TAG})" \
+              "$live" "$APPCAST_PATH" | head -200 >> "$GITHUB_STEP_SUMMARY" || true
+            s '```'
+          }
+
+          appcast_diff updates "https://thaw-app.github.io/updates/appcast.xml" "$UPDATES_REPO"
+          appcast_diff legacy "https://stonerl.github.io/Thaw/appcast.xml" "$LEGACY_REPO"
+
+          s ""
+          s "Full artifacts are attached to this run as \`dry-run-${TAG}\`."
+
+      - name: Upload dry run artifacts
+        if: ${{ inputs.dry_run }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dry-run-${{ steps.meta.outputs.tag }}
+          if-no-files-found: warn
+          retention-days: 7
+          path: |
+            build/${{ env.DMG_NAME }}.sha256
+            ${{ steps.sbom-meta.outputs.path }}
+            ${{ steps.sbom-meta.outputs.path }}.sha256
+            ${{ steps.sparkle.outputs.appcast-path }}
 
       - name: Cleanup keychain
         if: always()

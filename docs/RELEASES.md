@@ -74,6 +74,33 @@ Shared Sparkle action: [`thaw-app/org-ci` `sparkle-release`](https://github.com/
 Required secret on Thaw: `UPDATES_GITHUB_TOKEN` (`contents: write` on
 `thaw-app/updates`).
 
+## Dry runs
+
+Check **Dry run** when dispatching the workflow to build and report without
+publishing anything. Steps 1–3 run normally; steps 4–6 are skipped, so no
+GitHub Release is created (not even a draft), nothing is cosign-signed, and no
+appcast is pushed to either `thaw-app/updates` or the legacy mirror.
+
+Signing is skipped deliberately: cosign keyless signing writes a permanent,
+public entry to the Sigstore transparency log that cannot be retracted, so a
+rehearsal must not produce one.
+
+The run's job summary then reports:
+
+- every asset that *would* be uploaded, to which repository, with size and
+  SHA-256, and whether the release would be a draft or published;
+- the SBOM component inventory;
+- a unified diff of the generated `appcast.xml` against the currently live feeds
+  at `thaw-app.github.io/updates` and `stonerl.github.io/Thaw`, so you can see
+  exactly what an update push would change.
+
+The DMG checksum, SBOM (+ checksum), and generated appcast are attached to the
+run as a `dry-run-<tag>` artifact for local inspection. The DMG itself is not
+attached — it is large and is rebuilt by the real release run.
+
+Dry runs use a separate concurrency group, so they never queue behind or block a
+real release.
+
 ## Channels
 
 Stable, beta, and alpha all use the same feed host and updates releases. The
