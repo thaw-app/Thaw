@@ -142,7 +142,8 @@ struct SectionGeometryGateTests {
             isApplyingProfileLayout: false,
             temporarilyShownItemContextsIsEmpty: true,
             alwaysHiddenSectionResolved: true,
-            hiddenSectionHasRoom: false
+            hiddenSectionHasRoom: false,
+            hasPendingDivergence: false
         ))
     }
 
@@ -155,7 +156,8 @@ struct SectionGeometryGateTests {
             isApplyingProfileLayout: false,
             temporarilyShownItemContextsIsEmpty: true,
             alwaysHiddenSectionResolved: true,
-            hiddenSectionHasRoom: true
+            hiddenSectionHasRoom: true,
+            hasPendingDivergence: false
         ))
     }
 }

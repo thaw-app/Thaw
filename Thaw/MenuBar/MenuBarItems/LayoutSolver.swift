@@ -1167,6 +1167,17 @@ nonisolated enum LayoutSolver {
     /// to a class-level flag whose individual semantics are documented
     /// in MenuBarItemManager's coordination block.
     ///
+    /// `hasPendingDivergence` blocks the save when `applySavedLayout`
+    /// has observed a layout divergence on the current cycle but is
+    /// still awaiting confirmation on a second consecutive cycle before
+    /// correcting it (#736). During that one-cycle window the live cache
+    /// reflects a transient macOS rebuild (e.g. a space switch that
+    /// re-exposed hidden items as visible) that has not yet been
+    /// restored; persisting it bakes the transient state into the saved
+    /// layout. Once `applySavedLayout` confirms and runs its correction
+    /// the pending-divergence arm is cleared and the next cache cycle
+    /// sees a settled layout safe to persist.
+    ///
     /// Pure over its inputs so the gate can be characterized without
     /// instantiating MenuBarItemManager. Any future addition to the
     /// gate (new in-flight signal) should extend both this function
@@ -1178,7 +1189,8 @@ nonisolated enum LayoutSolver {
         isApplyingProfileLayout: Bool,
         temporarilyShownItemContextsIsEmpty: Bool,
         alwaysHiddenSectionResolved: Bool,
-        hiddenSectionHasRoom: Bool
+        hiddenSectionHasRoom: Bool,
+        hasPendingDivergence: Bool
     ) -> Bool {
         !isRestoringItemOrder &&
             !isResettingLayout &&
@@ -1186,7 +1198,8 @@ nonisolated enum LayoutSolver {
             !isApplyingProfileLayout &&
             temporarilyShownItemContextsIsEmpty &&
             alwaysHiddenSectionResolved &&
-            hiddenSectionHasRoom
+            hiddenSectionHasRoom &&
+            !hasPendingDivergence
     }
 
     /// Whether the always-hidden section is resolved well enough for the

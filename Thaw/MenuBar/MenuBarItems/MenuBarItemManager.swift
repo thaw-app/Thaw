@@ -2335,6 +2335,8 @@ extension MenuBarItemManager {
             savedHiddenItemCount: savedSectionOrder[sectionKey(for: .hidden)]?.count ?? 0
         )
 
+        let hasPendingDivergence = pendingDivergenceObservedAt != nil
+
         if LayoutSolver.shouldPersistSavedOrder(
             isRestoringItemOrder: isRestoringItemOrder,
             isResettingLayout: isResettingLayout,
@@ -2342,7 +2344,8 @@ extension MenuBarItemManager {
             isApplyingProfileLayout: isApplyingProfileLayout,
             temporarilyShownItemContextsIsEmpty: temporarilyShownItemContexts.isEmpty,
             alwaysHiddenSectionResolved: alwaysHiddenSectionResolved,
-            hiddenSectionHasRoom: hiddenSectionHasRoom
+            hiddenSectionHasRoom: hiddenSectionHasRoom,
+            hasPendingDivergence: hasPendingDivergence
         ) {
             // Don't persist if any items are in a transient blocked state (x=-1).
             // Wait for the next cache cycle when bounds are reliable.
@@ -2393,6 +2396,18 @@ extension MenuBarItemManager {
             // merely at risk of a bad save.
             MenuBarItemManager.diagLog.warning(
                 "Skipping saveSectionOrder; hidden section has zero width between the dividers (hidden.minX=\(context.hiddenControlItemBounds.minX), alwaysHidden.maxX=\(context.alwaysHiddenControlItemBounds.first?.maxX.description ?? "nil"))"
+            )
+        } else if hasPendingDivergence {
+            // applySavedLayout observed a layout divergence on this cycle
+            // but is waiting for a second consecutive observation before
+            // correcting it. The current cache reflects a transient state
+            // (e.g. macOS rebuilding the bar after a space switch and
+            // re-exposing hidden items as visible); persisting it now
+            // would bake that transient state into the saved layout (#736).
+            // The arm clears once applySavedLayout confirms and runs its
+            // correction, after which the next cycle sees a settled layout.
+            MenuBarItemManager.diagLog.warning(
+                "Skipping saveSectionOrder; layout divergence pending confirmation (applySavedLayout has not yet restored the cached layout)"
             )
         }
         MenuBarItemManager.diagLog.debug("Updated menu bar item cache: visible=\(context.cache[.visible].count), hidden=\(context.cache[.hidden].count), alwaysHidden=\(context.cache[.alwaysHidden].count)")
