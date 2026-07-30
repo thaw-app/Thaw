@@ -453,11 +453,12 @@ final class ProfileManager {
             }
         }
 
-        // Apply display configurations
-        appState.settings.displaySettings.configurations = profile.displayConfigurations
-
-        // Apply global display configuration template
+        // configurations.didSet derives active-display spacing synchronously,
+        // so install its global fallback before the per-display overrides.
         appState.settings.displaySettings.globalConfiguration = profile.globalDisplayConfiguration
+
+        // Apply display configurations.
+        appState.settings.displaySettings.configurations = profile.displayConfigurations
 
         // Apply the spacing-relaunch confirmation preferences
         appState.settings.displaySettings.confirmSpacingRelaunch = profile.confirmSpacingRelaunch

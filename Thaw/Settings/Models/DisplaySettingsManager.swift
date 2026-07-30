@@ -13,8 +13,7 @@ import Combine
 /// Manages per-display Thaw Bar configuration.
 ///
 /// Configurations are keyed by display UUID string (via `Bridging.getDisplayUUIDString(for:)`).
-/// When a display has no explicit configuration, `DisplayIceBarConfiguration.defaultConfiguration`
-/// is returned.
+/// Displays without an explicit configuration inherit ``globalConfiguration``.
 @MainActor
 @Observable
 final class DisplaySettingsManager {
@@ -755,17 +754,21 @@ final class DisplaySettingsManager {
     // MARK: - Lookup
 
     /// Returns the configuration for a given display ID.
+    ///
+    /// Uses the global template if the display has no override or its UUID
+    /// cannot be resolved, preventing transient display changes from resetting
+    /// spacing to the system default.
     func configuration(for displayID: CGDirectDisplayID) -> DisplayIceBarConfiguration {
         guard let uuid = Bridging.getDisplayUUIDString(for: displayID) else {
-            return .defaultConfiguration
+            return globalConfiguration
         }
-        return configurations[uuid] ?? .defaultConfiguration
+        return configurations[uuid] ?? globalConfiguration
     }
 
     /// Returns the configuration for the display with the active menu bar.
     func configurationForActiveDisplay() -> DisplayIceBarConfiguration {
         guard let displayID = Bridging.getActiveMenuBarDisplayID() else {
-            return .defaultConfiguration
+            return globalConfiguration
         }
         return configuration(for: displayID)
     }
@@ -919,10 +922,10 @@ final class DisplaySettingsManager {
             + disconnected.sorted { $0.name < $1.name }
     }
 
-    /// Returns the configuration for a given display UUID, falling back to
-    /// the default when no explicit configuration exists.
+    /// Returns the configuration for a display UUID, inheriting the global
+    /// template when no override exists.
     func configuration(forUUID uuid: String) -> DisplayIceBarConfiguration {
-        configurations[uuid] ?? .defaultConfiguration
+        configurations[uuid] ?? globalConfiguration
     }
 }
 
