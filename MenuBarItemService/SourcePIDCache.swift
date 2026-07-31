@@ -159,6 +159,14 @@ actor SourcePIDCache {
         /// discovered immediately.
         var negativeUntil = [CGWindowID: ContinuousClock.Instant]()
 
+        /// Consecutive full scans that have left each window unresolved.
+        /// Drives the negative-cache TTL ladder: early failures get short
+        /// deadlines so the app's startup settling window can retry while
+        /// AX trees are still warming up, repeat failures back off to the
+        /// steady-state TTL. Reset when a window resolves; pruned alongside
+        /// `negativeUntil` so it stays bounded.
+        var negativeFailures = [CGWindowID: Int]()
+
         /// Reorders the cached apps so that those that are confirmed
         /// to have an extras menu bar are first in the array.
         mutating func partitionApps() {
@@ -180,8 +188,9 @@ actor SourcePIDCache {
     /// The shared cache.
     static let shared = SourcePIDCache()
 
-    /// How long an unresolved window is barred from initiating a new scan.
-    private static let negativeCacheTTL: Duration = .seconds(60)
+    // The per-failure negative-cache deadline lives in
+    // SourcePIDNegativeCachePolicy (Shared/), so the ladder is unit-testable
+    // from ThawTests.
 
     /// Minimum interval between unresolved-diagnostic dumps for an unchanged
     /// unresolved set. The dump re-walks every app's AX tree, so repeating it
@@ -275,6 +284,7 @@ actor SourcePIDCache {
             // immediately after every application-list update.
             let now = ContinuousClock.now
             let carriedNegativeUntil = state.negativeUntil.filter { $0.value > now }
+            let carriedNegativeFailures = state.negativeFailures
 
             // Create a new state that matches the current running apps.
             state = runningApps.reduce(into: State()) { result, app in
@@ -296,7 +306,15 @@ actor SourcePIDCache {
                     }
                 }
             }
-            state.negativeUntil = carriedNegativeUntil
+            // Carry negative state only for windows that are still unresolved.
+            // A scan driven by any one window resolves every window it can, so
+            // a previously negative-cached window may now hold a PID; keeping
+            // its failure count would start its next miss partway up the
+            // ladder instead of at the first rung.
+            state.negativeUntil = carriedNegativeUntil.filter { state.pids[$0.key] == nil }
+            state.negativeFailures = carriedNegativeFailures.filter {
+                state.negativeUntil[$0.key] != nil
+            }
 
             // Log cleanup activity
             if !terminatedPids.isEmpty {
@@ -658,17 +676,35 @@ actor SourcePIDCache {
         let finalPID = state.withLock { $0.pids[window.windowID] }
         SourcePIDCache.diagLog.debug("SourcePIDCache.pid: batch resolution finished. Found \(totalMatchesFound) matches. Requested windowID \(window.windowID) -> PID \(finalPID.map { "\($0)" } ?? "nil") (checked \(appsChecked) apps, \(appsWithBar) with extras bar, \(totalChildrenChecked) children)")
 
-        // Negative-cache every window that survived the full scan unresolved.
-        // Expired entries are pruned on the same write to bound the dictionary.
-        if !unresolvedWindows.isEmpty {
-            let now = ContinuousClock.now
-            let deadline = now + Self.negativeCacheTTL
-            let unresolvedSnapshot = unresolvedWindows
-            state.withLock { state in
-                state.negativeUntil = state.negativeUntil.filter { $0.value > now }
-                for windowID in unresolvedSnapshot {
-                    state.negativeUntil[windowID] = deadline
-                }
+        // Negative-cache every window that survived the full scan unresolved,
+        // with a deadline that backs off as consecutive failures accumulate:
+        // short at first so the app's startup settling window can retry while
+        // AX trees are still warming up, then the steady-state TTL. A flat
+        // TTL here wedged resolution permanently — the first cold scan
+        // under-resolves, its deadline outlasts every retry the app makes,
+        // and no scan runs again (the app stops requesting once settled).
+        // Entries that expired, and entries whose window this scan resolved,
+        // are dropped on the same write, so both dictionaries stay bounded and
+        // a resolved window's next miss starts at the first rung. This runs
+        // unconditionally: a scan that resolves everything leaves
+        // unresolvedWindows empty, and that is exactly when the stale entries
+        // need clearing.
+        let now = ContinuousClock.now
+        let unresolvedSnapshot = unresolvedWindows
+        state.withLock { state in
+            var negativeUntil = state.negativeUntil.filter { entry in
+                entry.value > now && state.pids[entry.key] == nil
+            }
+            for windowID in unresolvedSnapshot {
+                let failures = (state.negativeFailures[windowID] ?? 0) + 1
+                state.negativeFailures[windowID] = failures
+                negativeUntil[windowID] = now + SourcePIDNegativeCachePolicy.ttl(
+                    afterConsecutiveFailures: failures
+                )
+            }
+            state.negativeUntil = negativeUntil
+            state.negativeFailures = state.negativeFailures.filter {
+                negativeUntil[$0.key] != nil
             }
         }
 

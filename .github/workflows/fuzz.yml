@@ -37,6 +37,11 @@ jobs:
     timeout-minutes: 30
     container:
       image: swift@sha256:dd349c6dfc3cd3040910a84ab3e5bd5d08efdd547e5fb9f77b765abed16fe5ff # 6.2-noble
+    # Steps inside a container default to `sh -e {0}`, which rejects
+    # `set -o pipefail`. Ask for bash explicitly, as the rest of CI does.
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -55,9 +60,17 @@ jobs:
       - name: Build fuzzer
         run: |
           set -euo pipefail
-          swift build --package-path Fuzzing -c release \
-            -Xswiftc -sanitize=fuzzer,address \
-            -Xswiftc -parse-as-library
+          # SwiftPM links ELF executables with `--defsym main=<Module>_main` so
+          # testable executables can rename their entry point. That symbol is
+          # never emitted under `-parse-as-library`, which libFuzzer needs so
+          # its own `main` wins — linking then fails with an undefined
+          # `FuzzSettingsURI_main`. Drive `swiftc` directly instead; same flags
+          # the Swift libFuzzer docs use. Keep `swift build -DFUZZ_REPLAY` for
+          # the macOS corpus replayer in Package.swift.
+          mkdir -p Fuzzing/.build/release
+          swiftc -parse-as-library -O -sanitize=fuzzer,address \
+            -o Fuzzing/.build/release/FuzzSettingsURI \
+            Fuzzing/Sources/FuzzSettingsURI/*.swift
 
       - name: Fuzz
         env:

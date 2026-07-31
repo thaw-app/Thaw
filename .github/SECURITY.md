@@ -15,6 +15,17 @@ Homebrew, or in-app Sparkle updates.
 | Latest  | :white_check_mark: |
 | Older   | :x:                |
 
+## Support window (EOL)
+
+Only the **latest stable** Thaw release is supported for security fixes and
+compatibility work. Older releases are end-of-life when a newer stable ships:
+we do not backport security patches to abandoned versions. Beta / alpha /
+experimental (for example macOS 27 preview) channels are best-effort and may
+lag or diverge from stable.
+
+Users should upgrade via [GitHub Releases](https://github.com/thaw-app/Thaw/releases),
+Homebrew (`thaw` / `thaw@beta`), or in-app Sparkle updates.
+
 ## Security requirements (what users can and cannot expect)
 
 This section is the project’s security requirements statement for the software

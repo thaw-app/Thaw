@@ -5157,30 +5157,75 @@ extension MenuBarItemManager {
     /// Gets the destination to return the given item to after it is
     /// temporarily shown, along with the tag and PID of the neighbor on the
     /// opposite side (if any) for fallback ordering.
+    ///
+    /// Only neighbors that share `section` are considered. An item from
+    /// another section is not a usable anchor: moving next to it returns the
+    /// item into *that* section, and once macOS persists the position the
+    /// item stays there across relaunches. Items that can never be hidden are
+    /// the common case — Control Center modules such as `AudioVideoModule`
+    /// come and go as the mic or camera is used, and since the item list is
+    /// in Window Server order rather than left-to-right order, a freshly
+    /// created window can land next to one from anywhere in the bar.
     private func getReturnDestination(
         for item: MenuBarItem,
-        in items: [MenuBarItem]
+        in items: [MenuBarItem],
+        section: MenuBarSection.Name
     ) -> (destination: MoveDestination, fallbackNeighbor: (tag: MenuBarItemTag, pid: pid_t)?)? {
         guard let index = items.firstIndex(matching: item.tag) else {
             return nil
         }
-        // Prefer anchoring to the item on the right (lower index = further
-        // right in macOS menu bar coordinates). The fallback is the item on
-        // the opposite side.
-        if items.indices.contains(index + 1) {
-            let neighbor = items[index + 1]
-            let fallback: (MenuBarItemTag, pid_t)? = if items.indices.contains(index - 1) {
-                (items[index - 1].tag, items[index - 1].sourcePID ?? items[index - 1].ownerPID)
-            } else {
-                nil
+
+        let eligibleIndices = Set(items.indices.filter { candidateIndex in
+            let candidate = items[candidateIndex]
+            guard candidate.canBeHidden else {
+                return false
             }
-            return (.leftOfItem(neighbor), fallback)
+            return itemCache.address(for: candidate.tag)?.section == section
+        })
+
+        let anchors = LayoutSolver.returnAnchors(
+            forIndex: index,
+            itemCount: items.count,
+            eligibleIndices: eligibleIndices
+        )
+
+        // Prefer anchoring to the neighbor on the right. The fallback is the
+        // nearest eligible neighbor on the opposite side.
+        if let successor = anchors.successor {
+            let fallback: (MenuBarItemTag, pid_t)? = anchors.predecessor.map { predecessor in
+                let neighbor = items[predecessor]
+                return (neighbor.tag, neighbor.sourcePID ?? neighbor.ownerPID)
+            }
+            return (.leftOfItem(items[successor]), fallback)
         }
-        if items.indices.contains(index - 1) {
-            let neighbor = items[index - 1]
-            return (.rightOfItem(neighbor), nil)
+        if let predecessor = anchors.predecessor {
+            return (.rightOfItem(items[predecessor]), nil)
         }
-        return nil
+
+        // The section holds no other item to anchor against, so aim at the
+        // section itself. Ordering within the section is not preserved, but
+        // the item lands in the correct section.
+        return sectionDestination(for: section, in: items).map { ($0, nil) }
+    }
+
+    /// Gets the destination that returns an item to the given section's
+    /// boundary, used when no neighbor is available to preserve ordering.
+    private func sectionDestination(
+        for section: MenuBarSection.Name,
+        in items: [MenuBarItem]
+    ) -> MoveDestination? {
+        switch section {
+        case .hidden:
+            items.first(matching: .hiddenControlItem).map { .leftOfItem($0) }
+        case .alwaysHidden:
+            // If the always-hidden section was disabled, fall back to hidden.
+            (items.first(matching: .alwaysHiddenControlItem) ?? items.first(matching: .hiddenControlItem))
+                .map { .leftOfItem($0) }
+        case .visible:
+            // Should not happen (we don't temporarily show items that are
+            // already visible), but handle it gracefully.
+            nil
+        }
     }
 
     /// Waits for a menu bar item's position to stabilize after a move.
@@ -5356,7 +5401,7 @@ extension MenuBarItemManager {
         // Fetch items specifically for the display where the item lives.
         let items = await MenuBarItem.getMenuBarItems(on: resolvedDisplayID, option: .activeSpace)
 
-        guard let returnInfo = getReturnDestination(for: item, in: items) else {
+        guard let returnInfo = getReturnDestination(for: item, in: items, section: originalSection) else {
             MenuBarItemManager.diagLog.error("No return destination for \(item.logString) on display \(resolvedDisplayID)")
             return .showFailed
         }
@@ -5632,27 +5677,16 @@ extension MenuBarItemManager {
             falling back to section-level destination for \(context.originalSection.logString)
             """
         )
-        switch context.originalSection {
-        case .hidden:
-            if let controlItem = items.first(matching: .hiddenControlItem) {
-                return .leftOfItem(controlItem)
-            }
-        case .alwaysHidden:
-            if let controlItem = items.first(matching: .alwaysHiddenControlItem) {
-                return .leftOfItem(controlItem)
-            }
-            // If the always-hidden section was disabled, fall back to hidden.
-            if let controlItem = items.first(matching: .hiddenControlItem) {
-                return .leftOfItem(controlItem)
-            }
-        case .visible:
-            // Should not happen (we don't temporarily show items that are
-            // already visible), but handle it gracefully.
+        guard let destination = sectionDestination(for: context.originalSection, in: items) else {
+            MenuBarItemManager.diagLog.error(
+                """
+                No section destination to resolve return destination for \
+                \(context.tag) in \(context.originalSection.logString)
+                """
+            )
             return nil
         }
-
-        MenuBarItemManager.diagLog.error("No control items found to resolve return destination for \(context.tag)")
-        return nil
+        return destination
     }
 
     /// Rehides all temporarily shown items.

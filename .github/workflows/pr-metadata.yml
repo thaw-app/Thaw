@@ -1,8 +1,11 @@
 name: "PR Metadata"
 
-# Labels (type/area) + shape checks (base/title/Closes; size warn-only).
+# Labels (type/area) + shape checks (base/title/Closes/DCO; size warn-only).
 # Uses pull_request_target so fork PRs can still receive labels.
+# DCO is verified via the Pulls commits API only (no checkout of PR code).
 # Crowdin sync PRs are skipped — they are translation-only and often huge.
+# They are matched on head branch + same-repo + maintainer association, never on
+# PR title, so an untrusted fork cannot title its way past the checks.
 #
 # Spam guard: do not run on `edited` (title/body tweaks). Size heads-ups go to
 # the job summary only — never PR comments — so pushes don't bump the timeline.
@@ -15,6 +18,9 @@ concurrency:
   group: pr-metadata-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   metadata:
     runs-on: ubuntu-slim
@@ -23,18 +29,37 @@ jobs:
       pull-requests: write
       issues: write
     steps:
+      # Crowdin sync PRs are trusted translation dumps; skip labeling/shape checks.
+      # Identified by head branch + same-repo + maintainer association — never by
+      # PR title, which any untrusted fork author can set to bypass checks.
+      - name: Detect Crowdin sync PR
+        id: crowdin
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            if (!pr) {
+              core.setOutput('is_crowdin_sync', 'false');
+              return;
+            }
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const isCrowdinSync =
+              pr.head?.ref === 'l10n_development' &&
+              pr.head?.repo?.full_name === `${owner}/${repo}` &&
+              ['OWNER', 'MEMBER', 'COLLABORATOR'].includes(pr.author_association || '');
+            core.setOutput('is_crowdin_sync', isCrowdinSync ? 'true' : 'false');
+            if (isCrowdinSync) {
+              core.info('Skipping PR metadata for Crowdin sync PR.');
+            }
+
       - name: Apply labels from PR template and changed paths
-        uses: actions/github-script@v9
+        if: steps.crowdin.outputs.is_crowdin_sync != 'true'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const pr = context.payload.pull_request;
             if (!pr) return;
-
-            // Crowdin sync PRs are trusted translation dumps; skip labeling/shape checks.
-            if ((pr.title || '').toLowerCase().includes('crowdin')) {
-              core.info('Skipping PR metadata for Crowdin sync PR.');
-              return;
-            }
 
             const body = pr.body || '';
             const owner = context.repo.owner;
@@ -216,18 +241,13 @@ jobs:
               }
             }
 
-      - name: Check PR conventions
-        uses: actions/github-script@v9
+      - name: Check PR conventions and post summary comment
+        if: steps.crowdin.outputs.is_crowdin_sync != 'true'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const pr = context.payload.pull_request;
             if (!pr) return;
-
-            // Crowdin sync PRs are trusted translation dumps; skip title/size/Closes checks.
-            if ((pr.title || '').toLowerCase().includes('crowdin')) {
-              core.info('Skipping PR conventions for Crowdin sync PR.');
-              return;
-            }
 
             const owner = context.repo.owner;
             const repo = context.repo.repo;
@@ -235,19 +255,18 @@ jobs:
             const body = pr.body || '';
             const base = pr.base?.ref || '';
             const association = pr.author_association || '';
+            const author = pr.user?.login || '';
             const maintainerAssociations = new Set(['OWNER', 'MEMBER', 'COLLABORATOR']);
 
             const failures = [];
             const warnings = [];
 
-            // External contributors must not target main.
             if (base === 'main' && !maintainerAssociations.has(association)) {
               failures.push(
                 `Base branch is \`main\`. External PRs must target \`development\` (see CONTRIBUTING).`,
               );
             }
 
-            // Conventional commit title (type optional scope).
             const titleRe = /^(feat|fix|chore|docs|ci|test|refactor|perf|build|style|revert)(\(.+\))?!?: .+/;
             if (!titleRe.test(title)) {
               failures.push(
@@ -255,10 +274,72 @@ jobs:
               );
             }
 
-            // Template requires a Closes: line (issue number or N/A).
             if (!/\bCloses:\s*(?:#\d+|N\/A)\b/i.test(body)) {
               failures.push(
                 `PR body must include a \`Closes:\` line (e.g. \`Closes: #123\` or \`Closes: N/A\`).`,
+              );
+            }
+
+            // DCO: every non-merge, non-bot commit needs Signed-off-by matching the author email.
+            // Exemptions are an exact allowlist of verified bot identities; substring
+            // matching on the login would let any account named `…crowdin…` skip DCO.
+            // Crowdin sync PRs are skipped above. Keep crowdin[bot] for the GitHub
+            // App identity if it ever commits outside that path; crowdin-bot is not
+            // a verified commit login on this repository.
+            const dcoBotLogins = new Set([
+              'dependabot[bot]',
+              'renovate[bot]',
+              'github-actions[bot]',
+              'crowdin[bot]',
+            ]);
+
+            // Sign-off must live in the trailing trailer block (as `git commit -s`
+            // writes it), so a `Signed-off-by:` line quoted in the body does not count.
+            const trailerBlock = (message) => {
+              const lines = message.replace(/\s+$/, '').split('\n');
+              let start = lines.length;
+              for (let i = lines.length - 1; i >= 0; i--) {
+                const line = lines[i];
+                if (line.trim() === '') break;
+                // A trailer is `Key: value`, or a folded continuation line.
+                if (!/^[A-Za-z][A-Za-z0-9-]*:\s/.test(line) && !/^\s+\S/.test(line)) break;
+                start = i;
+              }
+              return lines.slice(start);
+            };
+
+            const commits = await github.paginate(github.rest.pulls.listCommits, {
+              owner,
+              repo,
+              pull_number: pr.number,
+              per_page: 100,
+            });
+            const dcoMissing = [];
+            for (const entry of commits) {
+              if (dcoBotLogins.has(entry.author?.login || '')) {
+                continue;
+              }
+              if ((entry.parents || []).length > 1) {
+                continue; // merge commit
+              }
+              const authorEmail = (entry.commit?.author?.email || '').trim().toLowerCase();
+              const message = entry.commit?.message || '';
+              if (!authorEmail) {
+                dcoMissing.push(entry.sha.slice(0, 8));
+                continue;
+              }
+              const signoffEmails = [];
+              for (const line of trailerBlock(message)) {
+                const match = line.match(/^Signed-off-by:\s*.+<([^>]+)>\s*$/i);
+                if (match) signoffEmails.push(match[1].trim().toLowerCase());
+              }
+              if (!signoffEmails.includes(authorEmail)) {
+                dcoMissing.push(entry.sha.slice(0, 8));
+              }
+            }
+            if (dcoMissing.length > 0) {
+              failures.push(
+                `DCO: commit(s) missing a \`Signed-off-by\` trailer matching the author email: \`${dcoMissing.join('`, `')}\`. Use \`git commit -s\` (or \`git rebase --signoff\` then force-push). See CONTRIBUTING.`,
               );
             }
 
@@ -270,34 +351,84 @@ jobs:
               );
             }
 
-            // Size heads-up: Actions job summary only (no PR comments / timeline spam).
-            if (warnings.length > 0) {
-              core.summary
-                .addHeading('PR size heads-up')
-                .addList(warnings)
-                .addRaw('_Informational only — does not block merge._')
-                .write();
-              for (const warning of warnings) {
-                core.warning(warning);
+            // Build the PR comment body.
+            const marker = '<!-- thaw-pr-conventions -->';
+            const lines = [marker];
+
+            // Collect labels that were applied (set by the previous step via env).
+            const currentLabels = (await github.paginate(github.rest.issues.listLabelsOnIssue, {
+              owner,
+              repo,
+              issue_number: pr.number,
+            })).map(l => l.name);
+
+            if (currentLabels.length > 0) {
+              lines.push(`**Labels:** ${currentLabels.map(l => '`' + l + '`').join(', ')}`);
+            }
+
+            if (failures.length > 0) {
+              lines.push('');
+              lines.push(`> [!CAUTION]`);
+              lines.push(`> **Convention issues found** — please fix before merge.`);
+              for (const f of failures) {
+                lines.push(`> - ${f}`);
               }
             }
 
-            // Best-effort cleanup of legacy size-warning comments from older workflow runs.
-            const marker = '<!-- thaw-pr-conventions -->';
+            if (warnings.length > 0) {
+              lines.push('');
+              lines.push(`> [!WARNING]`);
+              for (const w of warnings) {
+                lines.push(`> ${w}`);
+              }
+            }
+
+            if (failures.length === 0 && warnings.length === 0) {
+              lines.push('');
+              lines.push('All convention checks passed. :white_check_mark:');
+            }
+
+            if (author) {
+              lines.push('');
+              lines.push(`cc @${author}`);
+            }
+
+            const commentBody = lines.join('\n');
+
+            // Upsert: find existing bot comment with our marker, update or create.
             const existing = await github.paginate(github.rest.issues.listComments, {
               owner,
               repo,
               issue_number: pr.number,
               per_page: 100,
             });
-            for (const comment of existing) {
-              if (comment.user?.type === 'Bot' && (comment.body || '').includes(marker)) {
-                await github.rest.issues.deleteComment({
-                  owner,
-                  repo,
-                  comment_id: comment.id,
-                });
-              }
+            const botComment = existing.find(
+              (c) => c.user?.type === 'Bot' && (c.body || '').includes(marker),
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: botComment.id,
+                body: commentBody,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: pr.number,
+                body: commentBody,
+              });
+            }
+
+            // Also write to job summary for the Actions UI.
+            if (warnings.length > 0) {
+              core.summary
+                .addHeading('PR size heads-up')
+                .addList(warnings)
+                .addRaw('_Informational only — does not block merge._')
+                .write();
             }
 
             if (failures.length > 0) {

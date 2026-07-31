@@ -10,6 +10,7 @@ $(SRCROOT)/Shared/Utilities/DiagnosticLogger.swift
 $(SRCROOT)/Shared/Utilities/MarkerPairResolver.swift
 $(SRCROOT)/Shared/Utilities/SharedConstants.swift
 $(SRCROOT)/Shared/Utilities/SharedExtensions.swift
+$(SRCROOT)/Shared/Utilities/SourcePIDNegativeCachePolicy.swift
 $(SRCROOT)/Shared/Utilities/WindowInfo.swift
 $(SRCROOT)/Thaw/Events/EventMonitor.swift
 $(SRCROOT)/Thaw/Events/EventTap.swift
