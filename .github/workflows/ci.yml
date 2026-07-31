@@ -168,6 +168,14 @@ jobs:
           unzip -oq xcresultparser.zip
           NEWEST_BUNDLE=$(ls -td Build/Logs/Test/*.xcresult 2>/dev/null | head -n1)
           ./product/xcresultparser -c -o xml "$NEWEST_BUNDLE" > coverage.xml
+          # xcresultparser emits absolute paths from this macOS runner
+          # (/Users/runner/work/Thaw/Thaw/...). The Sonar scan runs on a
+          # separate Linux runner and matches coverage entries to sources by
+          # path, so without this every entry fails to resolve and the analysis
+          # reports 0% coverage. The script also drops DerivedData and
+          # SourcePackages entries, and exits non-zero if nothing resolves
+          # rather than shipping an empty report.
+          python3 scripts/normalize-coverage.py coverage.xml
 
       - name: Upload Coverage XML
         if: needs.changes.outputs.code == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
