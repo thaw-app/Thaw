@@ -70,8 +70,7 @@ jobs:
           mkdir -p Fuzzing/.build/release
           swiftc -parse-as-library -O -sanitize=fuzzer,address \
             -o Fuzzing/.build/release/FuzzSettingsURI \
-            Fuzzing/Sources/FuzzSettingsURI/FuzzSettingsURI.swift \
-            Fuzzing/Sources/FuzzSettingsURI/SettingsURIParser.swift
+            Fuzzing/Sources/FuzzSettingsURI/*.swift
 
       - name: Fuzz
         env:
