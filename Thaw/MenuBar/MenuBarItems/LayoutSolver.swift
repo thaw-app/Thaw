@@ -117,6 +117,15 @@ nonisolated enum LayoutSolver {
         )
     }
 
+    /// The nearest eligible neighbors on either side of an item, as
+    /// indices into the item list the search ran over.
+    struct ReturnAnchors: Equatable {
+        /// The neighbor to the right, preferred as the anchor.
+        let successor: Int?
+        /// The neighbor to the left, used when there is no successor.
+        let predecessor: Int?
+    }
+
     /// A position within the saved section order: a section and the
     /// zero-based index of the item within that section's saved array.
     struct SavedPosition: Equatable {
@@ -1004,6 +1013,35 @@ nonisolated enum LayoutSolver {
         }
         // No anchors → section boundary.
         return .sectionBoundary(section)
+    }
+
+    /// Finds the nearest eligible neighbors on either side of the item at
+    /// `index`.
+    ///
+    /// Used to anchor a temporarily shown item when it is returned to its
+    /// section. Callers decide eligibility; only neighbors that share the
+    /// item's section qualify, because anchoring against an item from
+    /// another section returns the item into *that* section instead.
+    ///
+    /// Forward-first for the same reason as
+    /// ``anchorDestination(forSavedIndex:inSection:savedSequence:currentUIDsInSection:)``:
+    /// the successor's position is the more reliable signal of where the
+    /// item belongs.
+    ///
+    /// Pure over its inputs.
+    static nonisolated func returnAnchors(
+        forIndex index: Int,
+        itemCount: Int,
+        eligibleIndices: Set<Int>
+    ) -> ReturnAnchors {
+        guard index >= 0, index < itemCount else {
+            return ReturnAnchors(successor: nil, predecessor: nil)
+        }
+        let successor = ((index + 1) ..< itemCount).first { eligibleIndices.contains($0) }
+        let predecessor = index > 0
+            ? stride(from: index - 1, through: 0, by: -1).first { eligibleIndices.contains($0) }
+            : nil
+        return ReturnAnchors(successor: successor, predecessor: predecessor)
     }
 
     // MARK: - Saved-section rebuild
