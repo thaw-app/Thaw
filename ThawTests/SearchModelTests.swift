@@ -5,7 +5,6 @@
 //  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
-//
 
 import Foundation
 import Testing
@@ -26,7 +25,7 @@ struct SearchModelTests {
         #expect(!groups.isEmpty)
         #expect(entries.count > groups.count, "Expected more than one result in at least one pane")
         #expect(Set(groups.map(\.pane)).count == groups.count)
-        #expect(groups.map(\.id) == groups.map { $0.pane.rawValue })
+        #expect(groups.map(\.id) == groups.map(\.pane.rawValue))
         #expect(groups.allSatisfy { group in
             !group.entries.isEmpty && group.entries.allSatisfy { $0.pane == group.pane }
         })

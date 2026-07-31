@@ -222,7 +222,7 @@ final class MenuBarManager {
                             // Add delay for smart strategy to allow app focus to settle.
                             // A cancelled sleep aborts the rehide instead of firing early.
                             let delay: TimeInterval = appState.settings.general.rehideStrategy == .smart ? 0.25 : 0.1
-                            guard (try? await Task.sleep(for: .seconds(delay))) != nil else { return }
+                            guard await (try? Task.sleep(for: .seconds(delay))) != nil else { return }
 
                             // Ignore rehide requests for a short grace period after showing.
                             if let lastShow = self.lastShowTimestamp,
@@ -669,7 +669,9 @@ final class MenuBarManager {
                 let allCaptured = NSScreen.screens.allSatisfy {
                     self.averageColors.keys.contains($0.displayID)
                 }
-                if allCaptured { return }
+                if allCaptured {
+                    return
+                }
             }
         }
     }

@@ -95,7 +95,9 @@ nonisolated enum MarkerPairResolver {
     ) -> [Resolution] {
         var result = [Resolution]()
         for icon in unresolvedIcons {
-            if let title = icon.title, title.contains(".") { continue }
+            if let title = icon.title, title.contains(".") {
+                continue
+            }
 
             // Match by width only, not exact size. The on-screen icon
             // and its off-screen marker share width (the widget's
@@ -152,8 +154,12 @@ nonisolated enum MarkerPairResolver {
     ) -> [Marker] {
         windows.compactMap { window in
             guard let title = window.title, title.contains(".") else { return nil }
-            if title.hasPrefix(thawControlItemPrefix) { return nil }
-            if title == thawBundleID { return nil }
+            if title.hasPrefix(thawControlItemPrefix) {
+                return nil
+            }
+            if title == thawBundleID {
+                return nil
+            }
             return Marker(
                 windowID: window.windowID,
                 size: window.size,
@@ -238,7 +244,9 @@ nonisolated enum HostedItemOwnership {
         // bare vendor prefix (com.apple, pl.maketheweb) is never enough.
         guard shared >= 2 else { return false }
         // One component array is a full prefix of the other.
-        if shared == titleParts.count || shared == bundleParts.count { return true }
+        if shared == titleParts.count || shared == bundleParts.count {
+            return true
+        }
         // Otherwise the first differing component must be a prefix of its
         // counterpart (airbuddy vs airbuddyhelper), which is what separates
         // AirBuddy from same-vendor different-app pairs.

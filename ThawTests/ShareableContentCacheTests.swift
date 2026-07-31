@@ -49,8 +49,7 @@ struct ShareableContentCacheTests {
         let invocationCount = Counter()
 
         @Sendable func fetch() async throws -> Int {
-            let n = await invocationCount.increment()
-            return n
+            return await invocationCount.increment()
         }
 
         let first = try await cache.content(maxAge: .milliseconds(100), fetch: fetch)

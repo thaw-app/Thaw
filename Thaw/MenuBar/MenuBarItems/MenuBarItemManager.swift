@@ -11,6 +11,7 @@ import AXSwift6
 import Cocoa
 import Collections
 import Combine
+
 // @preconcurrency retained: CoreGraphics event types (CGEventSource/CGEvent) are
 // still not Sendable-annotated in the macOS 26/27 SDK, yet are used off the main
 // actor under OSAllocatedUnfairLock for menu-bar event posting. Removing the shim
@@ -118,7 +119,7 @@ actor SimpleSemaphore {
                 // Acquired. Drain the cancelled timeout-sleep child and
                 // ignore its error (CancellationError); this preserves
                 // invariant 2.
-                while (try? await group.next()) != nil {
+                while await (try? group.next()) != nil {
                     // Intentionally empty: draining the cancelled child, result discarded.
                 }
             }
@@ -186,7 +187,7 @@ final class MenuBarItemManager {
 
     /// Number of consecutive `ControlItemPair` lookup failures required
     /// before the control items' status items are rebuilt.
-    nonisolated static let controlItemRebuildThreshold = 3
+    static nonisolated let controlItemRebuildThreshold = 3
 
     /// Supplementary AX-derived identity for items whose CG-side identity is
     /// degraded (a Control-Center generic `Item-N` placeholder title, or a
@@ -202,7 +203,7 @@ final class MenuBarItemManager {
     /// `degradedItemAXIdentities` exists yet (see its declaration), so the
     /// per-cycle `AXIdentityCatalog.snapshot` and per-item window bounds
     /// lookups run only when explicitly enabled for diagnostics.
-    nonisolated static let isDegradedIdentityEnrichmentEnabled =
+    static nonisolated let isDegradedIdentityEnrichmentEnabled =
         Defaults.store.bool(forKey: "EnableDegradedItemAXEnrichment")
 
     /// Widest a control item can be while still counting as a marker rather
@@ -500,13 +501,13 @@ final class MenuBarItemManager {
     /// Kept as a forwarding shim so callers and tests do not have to reach
     /// through to the ledger for a value that reads as a property of the
     /// manager's retry policy.
-    nonisolated static func moveFailureBackoffInterval(failureCount: Int) -> Duration {
+    static nonisolated func moveFailureBackoffInterval(failureCount: Int) -> Duration {
         MenuBarItemFailureLedger.backoffInterval(failureCount: failureCount)
     }
 
     /// How the failure ledger should file an arbitrary error thrown by a
     /// move. Only `EventError` carries enough detail to blame the owner.
-    nonisolated static func failureKind(of error: any Error) -> MenuBarItemFailureLedger.FailureKind {
+    static nonisolated func failureKind(of error: any Error) -> MenuBarItemFailureLedger.FailureKind {
         (error as? EventError)?.failureKind ?? .other
     }
 
@@ -839,7 +840,7 @@ final class MenuBarItemManager {
     }
 
     /// Returns the section name for the given persisted key, if valid.
-    private nonisolated static func persistedSectionName(for key: String) -> MenuBarSection.Name? {
+    private static nonisolated func persistedSectionName(for key: String) -> MenuBarSection.Name? {
         switch key {
         case "visible": .visible
         case "hidden": .hidden
@@ -1020,7 +1021,9 @@ final class MenuBarItemManager {
         if let badgeIndex = arrangedViews.firstIndex(where: { $0.isNewItemsBadge }) {
             let rightNeighbor = arrangedViews[(badgeIndex + 1) ..< arrangedViews.count]
                 .compactMap { view -> MenuBarItem? in
-                    if case let .item(item) = view.kind { return item }
+                    if case let .item(item) = view.kind {
+                        return item
+                    }
                     return nil
                 }
                 .first
@@ -1028,7 +1031,9 @@ final class MenuBarItemManager {
             let leftNeighbor = arrangedViews[..<badgeIndex]
                 .reversed()
                 .compactMap { view -> MenuBarItem? in
-                    if case let .item(item) = view.kind { return item }
+                    if case let .item(item) = view.kind {
+                        return item
+                    }
                     return nil
                 }
                 .first
@@ -1554,9 +1559,9 @@ final class MenuBarItemManager {
                 // bails when window IDs are unchanged, so this is cheap when
                 // the item already showed up on the first pass. A cancelled
                 // sleep skips the remaining re-checks.
-                guard (try? await Task.sleep(for: .seconds(2.5))) != nil else { return }
+                guard await (try? Task.sleep(for: .seconds(2.5))) != nil else { return }
                 await self?.cacheItemsIfNeeded()
-                guard (try? await Task.sleep(for: .seconds(2.5))) != nil else { return }
+                guard await (try? Task.sleep(for: .seconds(2.5))) != nil else { return }
                 await self?.cacheItemsIfNeeded()
             }
         }
@@ -2031,7 +2036,7 @@ extension MenuBarItemManager {
         /// Returns the matched candidate indices (1 or 2 of them, in
         /// hidden/always-hidden order), or `nil` when no own-process
         /// candidate correlates confidently with any AX frame.
-        nonisolated static func selectViaAXFrame(
+        static nonisolated func selectViaAXFrame(
             candidates: [CandidateFrame],
             axFrames: [CGRect]
         ) -> [Int]? {
@@ -2046,7 +2051,9 @@ extension MenuBarItemManager {
                     })
                 else { continue }
                 matchedIndices.append(candidate.index)
-                if matchedIndices.count == 2 { break }
+                if matchedIndices.count == 2 {
+                    break
+                }
             }
             return matchedIndices.isEmpty ? nil : matchedIndices
         }
@@ -2796,7 +2803,7 @@ extension MenuBarItemManager {
         cacheActor.updateCachedItemWindowIDs(itemWindowIDs)
         cacheActor.updateCachedCloneWindowIDs(cloneWindowIDs.union(ghostControlWindowIDs))
         cacheActor.updateCachedControlCenterGenericWindowIDs(
-            Set(items.filter { $0.tag.isControlCenterGenericItem }.map(\.windowID))
+            Set(items.filter(\.tag.isControlCenterGenericItem).map(\.windowID))
         )
 
         await MainActor.run {
@@ -3173,7 +3180,9 @@ extension MenuBarItemManager {
         }
 
         var recoverySuggestion: String? {
-            if case .itemNotMovable = self { return nil }
+            if case .itemNotMovable = self {
+                return nil
+            }
             return "Please try again. If the error persists, please file a bug report."
         }
 
@@ -3733,7 +3742,9 @@ extension MenuBarItemManager {
                 firstLocation: context.firstLocation
             )
             storeInnerTask(innerTask, in: state.innerTaskHolder)
-            if Task.isCancelled { innerTask.cancel() }
+            if Task.isCancelled {
+                innerTask.cancel()
+            }
         }
     }
 
@@ -4420,7 +4431,7 @@ extension MenuBarItemManager {
     /// whether to suppress, rescue-and-retry, or alert (and with which
     /// message). Precedence: reaching the position beats being blocked;
     /// being blocked beats missing control items.
-    nonisolated static func classifyHiddenDragFailure(
+    static nonisolated func classifyHiddenDragFailure(
         reachedPosition: Bool,
         isBlocked: Bool,
         controlItemsMissing: Bool
@@ -4627,7 +4638,8 @@ extension MenuBarItemManager {
                 // could never earn the success that clears its record.
                 if let error = error as? EventError,
                    error.indicatesUnresponsiveOwner,
-                   failureLedger.isUnresponsive(item) {
+                   failureLedger.isUnresponsive(item)
+                {
                     MenuBarItemManager.diagLog.warning(
                         "Attempt \(n): \(item.logString) failed the way it always does, aborting move"
                     )
@@ -6105,8 +6117,12 @@ extension MenuBarItemManager {
             switch decision {
             case let .move(item, destination):
                 let targetSection: MenuBarSection.Name = {
-                    if case let .section(section) = entry.kind { return section }
-                    if case let .waitForRelaunch(_, section) = entry.kind { return section }
+                    if case let .section(section) = entry.kind {
+                        return section
+                    }
+                    if case let .waitForRelaunch(_, section) = entry.kind {
+                        return section
+                    }
                     return .hidden
                 }()
                 MenuBarItemManager.diagLog.info(
@@ -6996,7 +7012,9 @@ extension MenuBarItemManager {
         // Bail before arming any profile state if cancellation arrived
         // during the settling wait (a newer apply has replaced us via
         // applyProfile's layoutTask?.cancel()).
-        if Task.isCancelled { return }
+        if Task.isCancelled {
+            return
+        }
 
         // MARK: Phase 1: persist state and arm in-flight flags
 
@@ -7323,8 +7341,8 @@ extension MenuBarItemManager {
             activeHasNotch: activeMenuBarScreen?.hasNotch ?? false,
             activeIsMainDisplay: activeIsMainDisplay
         ),
-           let screen = activeMenuBarScreen,
-           let notch = screen.frameOfNotch
+            let screen = activeMenuBarScreen,
+            let notch = screen.frameOfNotch
         {
             let budget = Self.computeNotchOverflowBudget(
                 items: items,
@@ -7491,7 +7509,9 @@ extension MenuBarItemManager {
 
                 let isControlUID = uid == hiddenCtrlUID || uid == ahCtrlUID
                 guard let item = freshItems.first(where: {
-                    if isControlUID { return $0.uniqueIdentifier == uid }
+                    if isControlUID {
+                        return $0.uniqueIdentifier == uid
+                    }
                     return $0.uniqueIdentifier == uid && isProfileItem($0)
                 }) else {
                     MenuBarItemManager.diagLog.debug("Profile layout (full sort): \(uid) not found, skipping")
@@ -7987,20 +8007,20 @@ extension MenuBarItemManager {
     /// live `NSStatusItem`. The counter resets to zero both on the first
     /// successful lookup and immediately after a rebuild is triggered, so
     /// this fires at most once per failure streak.
-    nonisolated static func shouldRebuildControlItems(
+    static nonisolated func shouldRebuildControlItems(
         consecutiveFailures: Int,
         threshold: Int = MenuBarItemManager.controlItemRebuildThreshold
     ) -> Bool {
         consecutiveFailures >= threshold
     }
 
-    nonisolated static func baseIdentifier(forSavedIdentifier identifier: String) -> String {
+    static nonisolated func baseIdentifier(forSavedIdentifier identifier: String) -> String {
         let parts = identifier.split(separator: ":", maxSplits: 2, omittingEmptySubsequences: false)
         guard parts.count >= 2 else { return identifier }
         return "\(parts[0]):\(parts[1])"
     }
 
-    nonisolated static func savedLayoutSectionLookup(
+    static nonisolated func savedLayoutSectionLookup(
         savedSectionOrder: [String: [String]]
     ) -> (
         exact: [String: MenuBarSection.Name],
@@ -8097,7 +8117,7 @@ extension MenuBarItemManager {
     /// which on a notched display drifts items into always-hidden. A display
     /// switch is not a layout edit, so it must not advance the gate; the
     /// divergence check still runs and catches genuine section drift.
-    nonisolated static func windowIDsChanged(
+    static nonisolated func windowIDsChanged(
         previous: Set<CGWindowID>,
         current: Set<CGWindowID>,
         previousDisplayID: CGDirectDisplayID?,
@@ -8128,7 +8148,7 @@ extension MenuBarItemManager {
     /// notch-hidden stragglers legitimately resolve to nil, so a minority
     /// share is normal; only a majority signals a resolution failure. The
     /// item-count floor keeps degenerate tiny sets from tripping the gate.
-    nonisolated static func majorityOfSourcePIDsUnresolved(unresolvedCount: Int, itemCount: Int) -> Bool {
+    static nonisolated func majorityOfSourcePIDsUnresolved(unresolvedCount: Int, itemCount: Int) -> Bool {
         itemCount >= 4 && unresolvedCount * 2 > itemCount
     }
 
@@ -8156,7 +8176,7 @@ extension MenuBarItemManager {
     /// - Returns: Whether this observation confirms the divergence (i.e.
     ///   should trigger the apply), and the pending-observation state to
     ///   carry forward to the next cycle.
-    nonisolated static func confirmedDivergence(
+    static nonisolated func confirmedDivergence(
         divergedNow: Bool,
         pendingSince: ContinuousClock.Instant?,
         now: ContinuousClock.Instant,

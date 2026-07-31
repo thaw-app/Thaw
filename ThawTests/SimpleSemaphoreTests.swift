@@ -65,9 +65,9 @@ struct SimpleSemaphoreTests {
         // timeout.
         try await semaphore.wait(timeout: .milliseconds(50))
 
-        for _ in 0..<500 {
+        for _ in 0 ..< 500 {
             async let releaseTask: Void = {
-                let delay = Duration.nanoseconds(Int.random(in: 0...2_000_000)) // 0-2 ms
+                let delay = Duration.nanoseconds(Int.random(in: 0 ... 2_000_000)) // 0-2 ms
                 try? await Task.sleep(for: delay)
                 await semaphore.signal()
             }()

@@ -82,65 +82,63 @@ private struct DemoMenuBar: View {
     }
 
     var body: some View {
-        Group {
-            if style == .pills {
-                HStack(spacing: 14) {
-                    HStack(spacing: 7) {
-                        Image(systemName: "apple.logo").font(.system(size: 12, weight: .medium))
-                        Text(verbatim: "Finder").font(.system(size: 12, weight: .semibold))
-                    }
-                    .foregroundStyle(Color.white.opacity(0.9))
-                    .padding(.horizontal, 14)
-                    .frame(height: 38)
-                    .background(LinearGradient(colors: [.indigo, .blue], startPoint: .leading, endPoint: .trailing), in: Capsule())
-                    .shadow(color: .black.opacity(0.25), radius: 10, y: 3)
-
-                    Spacer(minLength: 8)
-
-                    HStack(spacing: 8) {
-                        hiddenItemsCluster
-                        dividerButton
-                        trailingCluster
-                    }
-                    .padding(.horizontal, 14)
-                    .frame(height: 38)
-                    .background(LinearGradient(colors: [.orange, .pink], startPoint: .leading, endPoint: .trailing), in: Capsule())
-                    .shadow(color: .black.opacity(0.25), radius: 10, y: 3)
+        if style == .pills {
+            HStack(spacing: 14) {
+                HStack(spacing: 7) {
+                    Image(systemName: "apple.logo").font(.system(size: 12, weight: .medium))
+                    Text(verbatim: "Finder").font(.system(size: 12, weight: .semibold))
                 }
-                .padding(.horizontal, 30)
-                .animation(.spring(duration: 0.4), value: hiddenSymbols)
-            } else {
-                HStack(spacing: 0) {
-                    HStack(spacing: 7) {
-                        Image(systemName: "apple.logo").font(.system(size: 12, weight: .medium))
-                        Text(verbatim: "Finder").font(.system(size: 12, weight: .semibold))
-                    }
-                    .foregroundStyle(style.labelTint.opacity(0.85))
-                    .padding(.leading, 16)
+                .foregroundStyle(Color.white.opacity(0.9))
+                .padding(.horizontal, 14)
+                .frame(height: 38)
+                .background(LinearGradient(colors: [.indigo, .blue], startPoint: .leading, endPoint: .trailing), in: Capsule())
+                .shadow(color: .black.opacity(0.25), radius: 10, y: 3)
 
-                    Spacer(minLength: 12)
+                Spacer(minLength: 8)
 
+                HStack(spacing: 8) {
                     hiddenItemsCluster
                     dividerButton
                     trailingCluster
-                        .padding(.trailing, 16)
                 }
+                .padding(.horizontal, 14)
                 .frame(height: 38)
-                .frame(maxWidth: .infinity)
-                .background {
-                    switch style {
-                    case .regular:
-                        Capsule().fill(.regularMaterial)
-                    case .gradient:
-                        Capsule().fill(LinearGradient(colors: [.blue, .purple], startPoint: .leading, endPoint: .trailing))
-                    case .pills:
-                        EmptyView()
-                    }
-                }
+                .background(LinearGradient(colors: [.orange, .pink], startPoint: .leading, endPoint: .trailing), in: Capsule())
                 .shadow(color: .black.opacity(0.25), radius: 10, y: 3)
-                .padding(.horizontal, 30)
-                .animation(.spring(duration: 0.4), value: hiddenSymbols)
             }
+            .padding(.horizontal, 30)
+            .animation(.spring(duration: 0.4), value: hiddenSymbols)
+        } else {
+            HStack(spacing: 0) {
+                HStack(spacing: 7) {
+                    Image(systemName: "apple.logo").font(.system(size: 12, weight: .medium))
+                    Text(verbatim: "Finder").font(.system(size: 12, weight: .semibold))
+                }
+                .foregroundStyle(style.labelTint.opacity(0.85))
+                .padding(.leading, 16)
+
+                Spacer(minLength: 12)
+
+                hiddenItemsCluster
+                dividerButton
+                trailingCluster
+                    .padding(.trailing, 16)
+            }
+            .frame(height: 38)
+            .frame(maxWidth: .infinity)
+            .background {
+                switch style {
+                case .regular:
+                    Capsule().fill(.regularMaterial)
+                case .gradient:
+                    Capsule().fill(LinearGradient(colors: [.blue, .purple], startPoint: .leading, endPoint: .trailing))
+                case .pills:
+                    EmptyView()
+                }
+            }
+            .shadow(color: .black.opacity(0.25), radius: 10, y: 3)
+            .padding(.horizontal, 30)
+            .animation(.spring(duration: 0.4), value: hiddenSymbols)
         }
     }
 }

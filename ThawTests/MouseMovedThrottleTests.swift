@@ -76,7 +76,7 @@ struct MouseMovedThrottleTests {
         let interval = HIDEventManager.mouseMovedThrottleInterval
 
         var processedCount = 0
-        for tick in 0..<1000 {
+        for tick in 0 ..< 1000 {
             let now = TimeInterval(tick) / 1000
             if HIDEventManager.shouldProcessMouseMoved(now: now, lastProcessTime: lastProcessTime) {
                 processedCount += 1

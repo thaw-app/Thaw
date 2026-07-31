@@ -651,7 +651,7 @@ extension NSImage {
 // MARK: - NSScreen
 
 extension NSScreen {
-    private nonisolated static let diagLog = DiagLog(category: "NSScreen")
+    private static nonisolated let diagLog = DiagLog(category: "NSScreen")
 
     /// The screen containing the mouse pointer.
     static var screenWithMouse: NSScreen? {
@@ -700,7 +700,7 @@ extension NSScreen {
         var menuBarHeights = [CGDirectDisplayID: CGFloat]()
     }
 
-    private nonisolated static let displayCache = OSAllocatedUnfairLock(initialState: DisplayCache())
+    private static nonisolated let displayCache = OSAllocatedUnfairLock(initialState: DisplayCache())
 
     /// Invalidates the cached application menu frame when the frontmost app changes.
     private static func invalidateApplicationMenuFrameCacheIfNeeded() {
@@ -730,7 +730,7 @@ extension NSScreen {
     }
 
     /// Tracks displays with a pending menu bar height retry.
-    private nonisolated static let pendingRetryDisplays = OSAllocatedUnfairLock(initialState: Set<CGDirectDisplayID>())
+    private static nonisolated let pendingRetryDisplays = OSAllocatedUnfairLock(initialState: Set<CGDirectDisplayID>())
 
     /// Schedules a one-shot deferred retry to populate the menu bar height
     /// cache for a display after a transient unavailability (e.g. during

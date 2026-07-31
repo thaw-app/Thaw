@@ -74,7 +74,7 @@ final class MenuBarItemFailureLedger {
 
     /// How long a failed item stays excluded from bulk-apply moves.
     /// Grows linearly with consecutive failures, capped at 5 minutes.
-    nonisolated static func backoffInterval(failureCount: Int) -> Duration {
+    static nonisolated func backoffInterval(failureCount: Int) -> Duration {
         .seconds(min(30 * max(failureCount, 1), 300))
     }
 

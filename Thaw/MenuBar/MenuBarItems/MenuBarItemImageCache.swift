@@ -106,7 +106,9 @@ final class MenuBarItemImageCache: @unchecked Sendable {
         /// dimension and pixel-data comparison when instances differ.
         static func isVisuallyEqual(_ old: CapturedImage?, _ new: CapturedImage?) -> Bool {
             guard let old, let new else { return old == nil && new == nil }
-            if old.cgImage === new.cgImage { return true }
+            if old.cgImage === new.cgImage {
+                return true
+            }
             guard old.scale == new.scale,
                   old.cgImage.width == new.cgImage.width,
                   old.cgImage.height == new.cgImage.height
@@ -168,8 +170,8 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     private let failedCapturesLock = OSAllocatedUnfairLock<[MenuBarItemTag: FailedCapture]>(initialState: [:])
 
     /// Configuration for failed capture handling
-    private nonisolated static let maxFailuresBeforeBlacklist = 3
-    private nonisolated static let blacklistCooldownSeconds: TimeInterval = 30 // 30 seconds
+    private static nonisolated let maxFailuresBeforeBlacklist = 3
+    private static nonisolated let blacklistCooldownSeconds: TimeInterval = 30 // 30 seconds
 
     /// Queue to run cache operations.
     private let queue = DispatchQueue(
@@ -336,7 +338,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     }
 
     /// Maximum age of disk cache before it's considered stale (30 seconds).
-    private nonisolated static let maxCacheAgeSeconds: TimeInterval = 30
+    private static nonisolated let maxCacheAgeSeconds: TimeInterval = 30
 
     /// Saves the image cache to disk for faster restart.
     func saveToDisk() {
@@ -623,7 +625,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     /// cycle should proceed: either a visible consumer needs it, or the caller
     /// explicitly requested a background capture while the layout settings pane
     /// is currently open. Extracted for unit testing (#759).
-    nonisolated static func shouldAllowBackgroundCapture(
+    static nonisolated func shouldAllowBackgroundCapture(
         hasVisibleConsumer: Bool,
         allowBackgroundCapture: Bool,
         isSettingsPaneOpen: Bool
@@ -1027,7 +1029,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     ///   - imagePixelWidth: Width of the captured image, in pixels.
     ///   - boundsWidth: Width of the item's window, in points.
     ///   - expected: The scale of the display resolved for the menu bar.
-    nonisolated static func resolvedScale(
+    static nonisolated func resolvedScale(
         imagePixelWidth: Int,
         boundsWidth: CGFloat,
         expected: CGFloat
@@ -1050,11 +1052,11 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     }
 
     /// Backing scale factors macOS actually reports for a display.
-    private nonisolated static let plausibleBackingScales: [CGFloat] = [1, 2, 3]
+    private static nonisolated let plausibleBackingScales: [CGFloat] = [1, 2, 3]
 
     /// How far a derived scale may sit from a candidate before it stops
     /// counting as that scale.
-    private nonisolated static let scaleTolerance: CGFloat = 0.05
+    private static nonisolated let scaleTolerance: CGFloat = 0.05
 
     private nonisolated func individualCapture(
         _ items: [MenuBarItem],

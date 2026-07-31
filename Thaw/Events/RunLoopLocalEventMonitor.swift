@@ -9,7 +9,7 @@
 import Cocoa
 import Combine
 
-nonisolated final class RunLoopLocalEventMonitor {
+final nonisolated class RunLoopLocalEventMonitor {
     private let runLoop = CFRunLoopGetCurrent()
     private let mask: NSEvent.EventTypeMask
     private let mode: RunLoop.Mode

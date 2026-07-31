@@ -74,7 +74,7 @@ final class Hotkey {
 
 extension Hotkey {
     /// An object that manages the lifetime of a hotkey observation.
-    private nonisolated final class Listener {
+    private final nonisolated class Listener {
         private weak var registry: HotkeyRegistry?
         private var id: UInt32?
 

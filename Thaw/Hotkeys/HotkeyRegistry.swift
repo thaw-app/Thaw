@@ -12,7 +12,7 @@ import Combine
 import os.lock
 
 /// An object that manages the registration, storage, and unregistration of hotkeys.
-nonisolated final class HotkeyRegistry {
+final nonisolated class HotkeyRegistry {
     private let diagLog = DiagLog(category: "HotkeyRegistry")
     /// The event kinds that a hotkey can be registered for.
     enum EventKind {

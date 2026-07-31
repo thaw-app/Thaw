@@ -5,7 +5,6 @@
 //  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
-//
 
 import Foundation
 import Testing
@@ -173,7 +172,7 @@ struct SettingsURIParserTests {
         "thaw://%20",
         "thaw://get?key=a#fragment",
     ])
-    func parsingIsTotal(uri: String) throws {
+    func parsingIsTotal(uri: String) {
         guard let url = URL(string: uri) else { return }
         _ = SettingsURIParser.parse(url)
     }

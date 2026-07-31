@@ -5,20 +5,13 @@
 //  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
-//
-//  Wire-format contract for the `thaw://` URLs that shipped third-party
-//  integrations actually send. These are not hypothetical inputs: each one is
-//  transcribed from the integration's own source or binary, cited below. A
-//  failure here means a parser change has broken a real integration, not that
-//  a test needs updating — fix the parser, or coordinate a release with the
-//  integration first.
-//
 
 import Foundation
 import Testing
 @testable import Thaw
 
 // MARK: - Raycast
+
 //
 // Source: github.com/thaw-app/raycast-extension
 //   - src/data/index.ts — DIRECT_ACTIONS (6) and SETTINGS_ACTIONS (4)
@@ -43,6 +36,7 @@ private let raycastURIs: [String] = [
 ]
 
 // MARK: - Droppy
+
 //
 // Source: /Applications/Droppy.app — literals recovered from the shipped
 // binary, since Droppy is closed source:

@@ -297,7 +297,9 @@ final class DisplaySettingsManager {
             guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else {
                 continue
             }
-            if seeded[uuid] != nil { continue }
+            if seeded[uuid] != nil {
+                continue
+            }
             seeded[uuid] = globalConfiguration.withItemSpacingOffset(offset)
         }
         guard seeded != configurations else { return }

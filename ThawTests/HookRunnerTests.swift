@@ -352,7 +352,7 @@ final class HookRunnerTests {
         // Why the above matters: runIfEnabled is awaited inside the
         // profile-apply path, so a hook that shells out to anything slow
         // used to hold the whole apply for the child's lifetime.
-        let hook = HookScript(path: try writeScript("#!/bin/sh\nsleep 30\n"), timeoutSeconds: 0.1)
+        let hook = try HookScript(path: writeScript("#!/bin/sh\nsleep 30\n"), timeoutSeconds: 0.1)
 
         let start = ContinuousClock.now
         await HookRunner.runIfEnabled(hook, context: context())

@@ -117,13 +117,13 @@ enum AXItemActivator {
     /// Pure candidate-selection helper: given candidate frames (parallel to
     /// an AX children array) and a target point, returns the index of the
     /// first frame containing the point, or `nil` when none does.
-    nonisolated static func candidateIndex(inFrames frames: [CGRect], containing point: CGPoint) -> Int? {
+    static nonisolated func candidateIndex(inFrames frames: [CGRect], containing point: CGPoint) -> Int? {
         frames.firstIndex { $0.contains(point) }
     }
 
     /// Pure frame-verification helper: whether `candidate`, expanded by
     /// `tolerance` points in every direction, intersects `target`.
-    nonisolated static func framesMatch(_ candidate: CGRect, _ target: CGRect, tolerance: CGFloat) -> Bool {
+    static nonisolated func framesMatch(_ candidate: CGRect, _ target: CGRect, tolerance: CGFloat) -> Bool {
         candidate.insetBy(dx: -tolerance, dy: -tolerance).intersects(target)
     }
 }

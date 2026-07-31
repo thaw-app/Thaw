@@ -138,7 +138,11 @@ struct ThawOnboardingTour: View {
 
             Button {
                 guard beginNavigation() else { return }
-                if isWelcome { advanceOrLoop() } else { onFinish() }
+                if isWelcome {
+                    advanceOrLoop()
+                } else {
+                    onFinish()
+                }
             } label: {
                 Text(isWelcome ? "Continue" : "Get Started")
                     .font(.subheadline.weight(.semibold))

@@ -5,7 +5,6 @@
 //  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
-//
 
 import Foundation
 import Testing
@@ -22,8 +21,8 @@ struct HotkeysSettingsPersistenceTests {
         let action = HotkeyAction.searchMenuBarItems
         let initial = KeyCombination(key: .f19, modifiers: [.command, .shift])
         let updated = KeyCombination(key: .f20, modifiers: [.control, .option])
-        Defaults.set(
-            [action.rawValue: try JSONEncoder().encode(initial)],
+        try Defaults.set(
+            [action.rawValue: JSONEncoder().encode(initial)],
             forKey: .hotkeys
         )
 

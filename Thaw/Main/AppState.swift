@@ -303,7 +303,7 @@ final class AppState {
                 (navigationState.isAppFrontmost, navigationState.isSettingsPresented)
             }
             for await (isAppFrontmost, isSettingsPresented) in changes {
-                guard isAppFrontmost && isSettingsPresented else { continue }
+                guard isAppFrontmost, isSettingsPresented else { continue }
                 await self.imageCache.updateCacheWithoutChecks(sections: MenuBarSection.Name.allCases)
                 // Log cache status periodically (only if cache is getting full)
                 if self.imageCache.cacheSize > 15 {

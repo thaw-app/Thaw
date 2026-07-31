@@ -31,6 +31,7 @@ UIElement.defaultMessagingTimeout = Float(SharedConstants.axMessagingTimeout)
 Task {
     await SourcePIDCache.shared.start()
 }
+
 Listener.shared.activate()
 
 // Run the RunLoop in a loop that drains an autoreleasepool every

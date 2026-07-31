@@ -14,7 +14,7 @@ import XPC
 ///
 /// Explicitly nonisolated: XPC callbacks arrive on arbitrary threads, and the
 /// target's default actor isolation is MainActor.
-nonisolated final class Listener: @unchecked Sendable {
+final nonisolated class Listener: @unchecked Sendable {
     private let diagLog = DiagLog(category: "Listener")
     /// The shared listener.
     static let shared = Listener()

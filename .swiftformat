@@ -28,6 +28,14 @@
 --disable redundantSelf
 --disable redundantReturn
 
+# --disable redundantRawValues: raw values here are a stored format, not a
+# spelling. Defaults.Key's raw values are the literal UserDefaults key names on
+# disk, and the appearance enums' raw values sit inside every persisted profile.
+# Dropping a "redundant" one makes the stored name follow the Swift case name,
+# so a later rename would silently orphan every user's setting with no
+# compile-time complaint. DefaultsKeyTests pins those values for the same reason.
+--disable redundantRawValues
+
 # Explicitly disable specific wrapping behaviors to prevent alignment issues.
 --wrap-arguments disabled
 --wrap-collections disabled

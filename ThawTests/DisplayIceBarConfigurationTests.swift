@@ -418,7 +418,7 @@ struct DisplayIceBarConfigurationTests {
         let decoder = JSONDecoder()
         let decoded = try decoder.decode(DisplayIceBarConfiguration.self, from: json)
 
-        #expect(abs(decoded.itemSpacingOffset - (-7.5)) < 0.001)
+        #expect(abs(decoded.itemSpacingOffset - -7.5) < 0.001)
     }
 
     @Test("An out-of-range stored spacing offset is clamped on decode")

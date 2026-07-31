@@ -216,7 +216,7 @@ final class LayoutBarPaddingView: NSView {
             // Prevents transient errors when dragging items immediately after reset.
             // A cancelled sleep must not leave the overlay up and isStabilizing
             // stuck true (the watchdog that would reset them hasn't started yet).
-            guard (try? await Task.sleep(for: .milliseconds(150))) != nil else {
+            guard await (try? Task.sleep(for: .milliseconds(150))) != nil else {
                 await resetStabilizingStateIfNeeded()
                 return
             }

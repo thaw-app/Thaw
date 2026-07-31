@@ -156,7 +156,7 @@ private struct OrbitRing: View {
                     let index = symbols.firstIndex(of: symbol) ?? 0
                     let phase = Double(index) / Double(symbols.count) * 360 + phaseShift
                     let springDuration = reduceMotion ? 0.2 : 0.5
-                    let bounce: Double = if reduceMotion {
+                    let bounce = if reduceMotion {
                         0.0
                     } else if visible {
                         0.4

@@ -146,7 +146,7 @@ final class CustomTooltipPanel: NSPanel {
     ///
     /// `preferred` is used only to break ties between overlapping screen
     /// frames that both contain `point`; it has no effect otherwise.
-    nonisolated static func placementOrigin(
+    static nonisolated func placementOrigin(
         for panelSize: NSSize,
         near point: NSPoint,
         screens: [(frame: NSRect, visibleFrame: NSRect)],
@@ -157,11 +157,10 @@ final class CustomTooltipPanel: NSPanel {
             return nil
         }
 
-        let match: (frame: NSRect, visibleFrame: NSRect)
-        if let preferred, let preferredMatch = candidates.first(where: { $0.frame == preferred }) {
-            match = preferredMatch
+        let match: (frame: NSRect, visibleFrame: NSRect) = if let preferred, let preferredMatch = candidates.first(where: { $0.frame == preferred }) {
+            preferredMatch
         } else {
-            match = candidates[0]
+            candidates[0]
         }
 
         let screenFrame = match.visibleFrame

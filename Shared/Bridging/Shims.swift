@@ -180,7 +180,7 @@ private nonisolated func dlerrorMessage() -> String {
 /// Dynamic loader for SkyLight private APIs.
 /// Uses dlsym to avoid link-time dependencies on private symbols.
 nonisolated enum SkyLightAPI {
-    private nonisolated static let diagLog = DiagLog(category: "SkyLightAPI")
+    private static nonisolated let diagLog = DiagLog(category: "SkyLightAPI")
 
     private static nonisolated(unsafe) let handle: UnsafeMutableRawPointer? = {
         let handle = dlopen(SharedConstants.skyLightFrameworkPath, RTLD_NOW)

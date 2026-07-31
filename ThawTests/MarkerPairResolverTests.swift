@@ -79,8 +79,12 @@ struct MarkerPairResolverTests {
             thawBundleID: thawBundleID,
             ccBundleID: ccBundleID,
             pidToBundleID: { pid in
-                if pid == 39187 { return self.ccBundleID }
-                if pid == 13496 { return "at.obdev.littlesnitch.agent" }
+                if pid == 39187 {
+                    return self.ccBundleID
+                }
+                if pid == 13496 {
+                    return "at.obdev.littlesnitch.agent"
+                }
                 return nil
             },
             bundleIDToPID: { bundleID in
@@ -134,8 +138,12 @@ struct MarkerPairResolverTests {
             thawBundleID: thawBundleID,
             ccBundleID: ccBundleID,
             pidToBundleID: { pid in
-                if pid == 200 { return self.ccBundleID }
-                if pid == 777 { return "com.example.widget" }
+                if pid == 200 {
+                    return self.ccBundleID
+                }
+                if pid == 777 {
+                    return "com.example.widget"
+                }
                 return nil
             },
             bundleIDToPID: { bundleID in
@@ -159,8 +167,12 @@ struct MarkerPairResolverTests {
             thawBundleID: thawBundleID,
             ccBundleID: ccBundleID,
             pidToBundleID: { pid in
-                if pid == 100 { return self.thawBundleID }
-                if pid == 777 { return "com.example.widget" }
+                if pid == 100 {
+                    return self.thawBundleID
+                }
+                if pid == 777 {
+                    return "com.example.widget"
+                }
                 return nil
             },
             bundleIDToPID: { bundleID in
@@ -210,8 +222,12 @@ struct MarkerPairResolverTests {
             thawBundleID: thawBundleID,
             ccBundleID: ccBundleID,
             pidToBundleID: { pid in
-                if pid == 100 { return "com.a.app" }
-                if pid == 200 { return "com.b.app" }
+                if pid == 100 {
+                    return "com.a.app"
+                }
+                if pid == 200 {
+                    return "com.b.app"
+                }
                 return nil
             },
             bundleIDToPID: { _ in nil }
@@ -265,13 +281,21 @@ struct MarkerPairResolverTests {
             thawBundleID: thawBundleID,
             ccBundleID: ccBundleID,
             pidToBundleID: { pid in
-                if pid == 100 { return "com.example.widget" }
-                if pid == 200 { return "com.another.widget" }
+                if pid == 100 {
+                    return "com.example.widget"
+                }
+                if pid == 200 {
+                    return "com.another.widget"
+                }
                 return nil
             },
             bundleIDToPID: { bundleID in
-                if bundleID == "com.example.widget" { return 100 }
-                if bundleID == "com.another.widget" { return 200 }
+                if bundleID == "com.example.widget" {
+                    return 100
+                }
+                if bundleID == "com.another.widget" {
+                    return 200
+                }
                 return nil
             }
         )

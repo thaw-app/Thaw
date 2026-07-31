@@ -290,7 +290,7 @@ struct AXIdentityCatalogTests {
 
         @Test("The walk stops at the global element cap")
         func walkHonorsElementCap() {
-            let children = (1...600).map { id in
+            let children = (1 ... 600).map { id in
                 Node(id: id, frame: unitFrame(at: id), children: [])
             }
             let root = Node(id: 0, frame: unitFrame(at: 0), children: children)

@@ -514,7 +514,9 @@ actor SourcePIDCache {
         // a neighbor's slot. The owner check is the real guard.
         let hostedExtrasMatchRadius: CGFloat = 20
         for app in apps {
-            if unresolvedWindows.isEmpty { break }
+            if unresolvedWindows.isEmpty {
+                break
+            }
             guard let appBundleID = app.bundleIdentifier else { continue }
             let candidateWindows = allWindows.filter {
                 unresolvedWindows.contains($0.windowID)
@@ -641,9 +643,9 @@ actor SourcePIDCache {
             guard let title = window.title,
                   title.split(separator: ".").count >= 3,
                   let pid = NSRunningApplication
-                      .runningApplications(withBundleIdentifier: title)
-                      .first?
-                      .processIdentifier
+                  .runningApplications(withBundleIdentifier: title)
+                  .first?
+                  .processIdentifier
             else { continue }
             SourcePIDCache.diagLog.info(
                 "SourcePIDCache title-identity resolution: windowID=\(window.windowID) → PID \(pid) (title=\(title))"

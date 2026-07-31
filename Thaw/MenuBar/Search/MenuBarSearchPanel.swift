@@ -327,7 +327,11 @@ final class MenuBarSearchPanel: NSPanel {
 
     /// Toggles the panel's visibility.
     func toggle() {
-        if isVisible { close() } else { show() }
+        if isVisible {
+            close()
+        } else {
+            show()
+        }
     }
 
     /// Dismisses the search panel.

@@ -22,7 +22,7 @@ nonisolated enum Defaults {
     ///
     /// `UserDefaults` is itself thread-safe, so the unchecked annotation
     /// covers only the reassignment, which is confined to test setup.
-    nonisolated(unsafe) static var store: UserDefaults = .standard
+    static nonisolated(unsafe) var store: UserDefaults = .standard
 
     /// Returns a dictionary containing the keys and values for
     /// the defaults meant to be seen by all applications.

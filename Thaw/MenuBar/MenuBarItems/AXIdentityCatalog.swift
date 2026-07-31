@@ -53,7 +53,7 @@ enum AXIdentityCatalog {
     /// Minimum fraction of the smaller rect's area that must be covered by
     /// the intersection for a correlation to be considered confident.
     /// Correlations below this threshold return `nil` rather than guessing.
-    private nonisolated static let minOverlapFraction: CGFloat = 0.5
+    private static nonisolated let minOverlapFraction: CGFloat = 0.5
 
     /// Takes a snapshot of menu-bar-item AX identities from the given host
     /// applications (e.g. Control Center, SystemUIServer, or Thaw itself).
@@ -154,7 +154,7 @@ enum AXIdentityCatalog {
     /// intersection area to exceed `minOverlapFraction` of the smaller of
     /// the two rects' areas. A tie between the top two candidates is treated
     /// as ambiguous and returns `nil` rather than guessing.
-    nonisolated static func identity(
+    static nonisolated func identity(
         for windowBounds: CGRect,
         in snapshot: [AXItemIdentity]
     ) -> AXItemIdentity? {

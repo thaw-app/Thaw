@@ -64,7 +64,7 @@ nonisolated enum ClickReactionVerifier {
 
         /// The window the click opened, if one was seen.
         var openedWindowID: CGWindowID? {
-            if case .openedInterface(let windowID) = self {
+            if case let .openedInterface(windowID) = self {
                 return windowID
             }
             return nil
@@ -117,7 +117,7 @@ nonisolated enum ClickReactionVerifier {
     /// Must be called before the click is posted.
     static func snapshot(for item: MenuBarItem) -> Snapshot {
         Snapshot(
-            pids: Set([item.ownerPID, item.sourcePID].compactMap { $0 }),
+            pids: Set([item.ownerPID, item.sourcePID].compactMap(\.self)),
             itemWindowID: item.windowID,
             itemBounds: item.bounds,
             onScreenWindowIDs: Set(Bridging.getWindowList(option: .onScreen))

@@ -273,7 +273,7 @@ nonisolated enum ScreenCapture {
 
 // MARK: - Helper Types
 
-private nonisolated final class FrameCaptor: NSObject, SCStreamOutput, SCStreamDelegate, @unchecked Sendable {
+private final nonisolated class FrameCaptor: NSObject, SCStreamOutput, SCStreamDelegate, @unchecked Sendable {
     /// Shared serial queue for all SCStream sample buffer handlers.
     static let sampleHandlerQueue = DispatchQueue(label: "com.stonerl.Thaw.screencapture")
 

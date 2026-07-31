@@ -33,7 +33,7 @@ final class HIDEventManager {
     /// work rate with the input device's polling rate, so a 1000 Hz mouse
     /// would do 8x the work of a 125 Hz mouse for identical physical
     /// motion. A wall-clock gate keeps the cost independent of the device.
-    nonisolated static let mouseMovedThrottleInterval: TimeInterval = 1.0 / 30.0
+    static nonisolated let mouseMovedThrottleInterval: TimeInterval = 1.0 / 30.0
 
     /// Timestamp of the last processed mouse-moved event, used to rate
     /// limit the mouse-moved tap on wall-clock time.
@@ -362,7 +362,7 @@ final class HIDEventManager {
     /// pass the gate. Extracted as a pure function of `now` (rather than
     /// reading `CACurrentMediaTime()` internally) so it's directly testable
     /// without a real event tap.
-    nonisolated static func shouldProcessMouseMoved(
+    static nonisolated func shouldProcessMouseMoved(
         now: TimeInterval,
         lastProcessTime: OSAllocatedUnfairLock<TimeInterval>
     ) -> Bool {
@@ -1087,7 +1087,7 @@ extension HIDEventManager {
         Task {
             // Give the window under the mouse a chance to focus. A cancelled
             // sleep aborts the check instead of running it early.
-            guard (try? await Task.sleep(for: .milliseconds(250))) != nil else { return }
+            guard await (try? Task.sleep(for: .milliseconds(250))) != nil else { return }
 
             // Don't bother checking the window if the click caused
             // a space change.

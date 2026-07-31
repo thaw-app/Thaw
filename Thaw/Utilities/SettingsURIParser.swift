@@ -92,25 +92,24 @@ nonisolated enum SettingsURIParser {
         let bundleIdOverride = query("bundleId").flatMap { $0.isEmpty ? nil : $0 }
         let displayUUID = query("display")
 
-        let route: SettingsURIRoute
-        switch host {
+        let route: SettingsURIRoute = switch host {
         case "set":
             if let key = query("key"), let value = query("value") {
-                route = .set(key: key, value: value, displayUUID: displayUUID)
+                .set(key: key, value: value, displayUUID: displayUUID)
             } else {
-                route = .malformed(host: host)
+                .malformed(host: host)
             }
         case "toggle":
             if let key = query("key") {
-                route = .toggle(key: key, displayUUID: displayUUID)
+                .toggle(key: key, displayUUID: displayUUID)
             } else {
-                route = .malformed(host: host)
+                .malformed(host: host)
             }
         case "get":
             if components == nil {
-                route = .malformed(host: host)
+                .malformed(host: host)
             } else {
-                route = .get(
+                .get(
                     key: query("key"),
                     displayUUID: displayUUID,
                     callback: query("callback"),
@@ -119,12 +118,12 @@ nonisolated enum SettingsURIParser {
                 )
             }
         case "authorize":
-            route = .authorize
+            .authorize
         default:
             if let action = SettingsURIAction(rawValue: host) {
-                route = .action(action)
+                .action(action)
             } else {
-                route = .unrecognized(host: host)
+                .unrecognized(host: host)
             }
         }
 

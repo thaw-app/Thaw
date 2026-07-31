@@ -68,13 +68,13 @@ final class UpdatesManager: NSObject {
         }
     }
 
-    // `automaticallyChecksForUpdates`/`automaticallyDownloadsUpdates` are
-    // computed properties backed by Sparkle's `updater`, not by a stored
-    // property the @Observable macro can track automatically. The old
-    // Combine `objectWillChange.send()` poke is replaced with the macro-
-    // synthesized `access(keyPath:)`/`withMutation(keyPath:)` calls, which
-    // register/notify Observation access for a specific property exactly
-    // like a stored property would.
+    /// `automaticallyChecksForUpdates`/`automaticallyDownloadsUpdates` are
+    /// computed properties backed by Sparkle's `updater`, not by a stored
+    /// property the @Observable macro can track automatically. The old
+    /// Combine `objectWillChange.send()` poke is replaced with the macro-
+    /// synthesized `access(keyPath:)`/`withMutation(keyPath:)` calls, which
+    /// register/notify Observation access for a specific property exactly
+    /// like a stored property would.
     /// A Boolean value that indicates whether to automatically check for updates.
     var automaticallyChecksForUpdates: Bool {
         get {
