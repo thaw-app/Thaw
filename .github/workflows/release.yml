@@ -53,6 +53,9 @@ permissions:
 jobs:
   release:
     runs-on: xcode-27
+    # Trust boundary: required reviewers on the `release` Environment
+    # (stonerl, diazdesandi). Secrets are not consumed until approval.
+    environment: release
     permissions:
       contents: write
       id-token: write
@@ -62,24 +65,6 @@ jobs:
       UPDATES_REPOSITORY: thaw-app/updates
       LEGACY_APPCAST_REPOSITORY: stonerl/Thaw
     steps:
-      # Matches GOVERNANCE: only org owners may dispatch release.yml. Without a
-      # `release` Environment yet, this actor check is what keeps write
-      # collaborators from consuming signing / Sparkle / updates secrets.
-      - name: Authorize release dispatcher
-        env:
-          ACTOR: ${{ github.actor }}
-        run: |
-          set -euo pipefail
-          case "$ACTOR" in
-            stonerl|nightah|diazdesandi)
-              echo "Authorized release actor: $ACTOR"
-              ;;
-            *)
-              echo "::error::release.yml may only be dispatched by org owners (stonerl, nightah, diazdesandi). Got: $ACTOR"
-              exit 1
-              ;;
-          esac
-
       - name: Checkout code
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
