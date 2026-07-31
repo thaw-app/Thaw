@@ -6,6 +6,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Algorithms
 import Combine
 import SwiftUI
 
@@ -271,19 +272,10 @@ final class AdvancedSettings {
     /// and filling any missing cases at the end. Returns the default order if
     /// the input is unusable.
     static func sanitizedSearchSectionOrder(from rawValues: [String]) -> [MenuBarSection.Name] {
-        var seen = Set<MenuBarSection.Name>()
-        var ordered: [MenuBarSection.Name] = []
-        for raw in rawValues {
-            guard let name = MenuBarSection.Name(rawValue: raw), !seen.contains(name) else {
-                continue
-            }
-            ordered.append(name)
-            seen.insert(name)
-        }
-        for name in MenuBarSection.Name.allCases where !seen.contains(name) {
-            ordered.append(name)
-        }
-        return ordered
+        let preferred = Array(
+            rawValues.compactMap(MenuBarSection.Name.init(rawValue:)).uniqued()
+        )
+        return preferred + MenuBarSection.Name.allCases.filter { !preferred.contains($0) }
     }
 
     /// Configures the internal observers for the model.

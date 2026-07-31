@@ -6,6 +6,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Algorithms
 import CoreGraphics
 import Foundation
 
@@ -244,14 +245,7 @@ nonisolated struct MenuBarItemTag: Hashable, CustomStringConvertible {
     /// Canonicalizes a list of identifiers, dropping duplicates that only
     /// differed by their volatile portion and preserving first-seen order.
     static func canonicalPersistentIdentifiers(_ identifiers: [String]) -> [String] {
-        var seen = Set<String>()
-        return identifiers.compactMap { identifier in
-            let canonical = canonicalPersistentIdentifier(identifier)
-            guard seen.insert(canonical).inserted else {
-                return nil
-            }
-            return canonical
-        }
+        Array(identifiers.map(canonicalPersistentIdentifier).uniqued())
     }
 
     /// Creates a tag with the given namespace, title, window identifier,
