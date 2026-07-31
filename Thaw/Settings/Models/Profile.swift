@@ -66,9 +66,14 @@ nonisolated struct GeneralSettingsSnapshot: Codable {
     @MainActor
     func apply(to settings: GeneralSettings) {
         settings.showIceIcon = showIceIcon
-        settings.lastCustomIceIcon = lastCustomIceIcon
         settings.customIceIconIsTemplate = customIceIconIsTemplate
         settings.iceIcon = iceIcon
+        // Assigned after `iceIcon`, not before. Setting a `.custom` icon makes
+        // that property's `didSet` mirror the new value into
+        // `lastCustomIceIcon`, so assigning first meant the snapshot's own
+        // value was immediately overwritten and every profile carrying a custom
+        // icon came back with the two fields identical.
+        settings.lastCustomIceIcon = lastCustomIceIcon
         settings.useIceBar = useIceBar
         settings.useIceBarOnlyOnNotchedDisplay = useIceBarOnlyOnNotchedDisplay
         settings.iceBarLocation = iceBarLocation
@@ -326,8 +331,19 @@ nonisolated struct MenuBarLayoutSnapshot: Codable {
     /// Resolves the ordering representation used by the layout apply path.
     /// Profiles written before `itemOrder` was added contain the equivalent
     /// `savedSectionOrder` representation, so preserve their layout intent.
+    ///
+    /// An *empty* `itemOrder` falls back too, not just a missing one.
+    /// `captureCurrentLayout` derives `itemOrder` from the item manager's
+    /// cache, which is empty while the menu bar is still settling, so a
+    /// capture taken at the wrong moment writes `[:]` rather than `nil`. Under
+    /// a plain `??` that empty dictionary shadows a perfectly good
+    /// `savedSectionOrder`, and the next apply sees no layout at all. Treating
+    /// it as absent also repairs profiles already written that way.
     var resolvedItemOrder: [String: [String]] {
-        itemOrder ?? savedSectionOrder
+        guard let itemOrder, !itemOrder.isEmpty else {
+            return savedSectionOrder
+        }
+        return itemOrder
     }
 
     /// Resolves per-item section assignments for both current and legacy

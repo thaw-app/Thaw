@@ -199,13 +199,14 @@ struct ProfileSnapshotLiveSettingsTests {
         }
     }
 
-    /// `apply(to:)` assigns `lastCustomIceIcon` before `iceIcon`, and
-    /// `iceIcon`'s `didSet` mirrors a `.custom` icon back into
-    /// `lastCustomIceIcon`. A profile carrying a custom icon therefore ends up
-    /// with both fields equal, whatever the snapshot said. Pinned because it is
-    /// the ordering, not the data, that decides the outcome.
-    @Test("Applying a custom Ice icon overwrites the snapshot's last-custom icon")
-    func applyGeneralSettingsCustomIconOverwritesLastCustom() throws {
+    /// `iceIcon`'s `didSet` mirrors a `.custom` icon into `lastCustomIceIcon`,
+    /// so the assignment order in `apply(to:)` decides whether the snapshot's
+    /// own `lastCustomIceIcon` survives. It used to assign that field first and
+    /// have the mirror immediately overwrite it; this test previously pinned
+    /// that as expected. `apply(to:)` now assigns it last, so the two fields
+    /// stay distinct and a profile keeps the custom icon it remembered.
+    @Test("Applying a custom Ice icon keeps the snapshot's last-custom icon")
+    func applyGeneralSettingsCustomIconKeepsLastCustom() throws {
         try withScratchDefaults { _ in
             let settings = GeneralSettings()
             let snapshot = GeneralSettingsSnapshot(
@@ -229,8 +230,8 @@ struct ProfileSnapshotLiveSettingsTests {
             snapshot.apply(to: settings)
 
             #expect(settings.iceIcon == customIcon)
-            #expect(settings.lastCustomIceIcon == customIcon)
-            #expect(settings.lastCustomIceIcon != snapshot.lastCustomIceIcon)
+            #expect(settings.lastCustomIceIcon == snapshot.lastCustomIceIcon)
+            #expect(settings.lastCustomIceIcon != customIcon)
         }
     }
 
@@ -667,5 +668,83 @@ struct ProfilePartialSettingsDecodingTests {
             profile.generalSettings.rehideStrategyRawValue
                 == Defaults.DefaultValue.rehideStrategy.rawValue
         )
+    }
+}
+
+// MARK: - Regressions
+
+/// Pins two bugs where a profile silently lost information it had stored.
+@MainActor
+@Suite("Profile snapshot regressions", .serialized)
+struct ProfileSnapshotRegressionTests {
+    /// `captureCurrentLayout` derives `itemOrder` from the item manager's
+    /// cache, which is empty while the menu bar is still settling. That writes
+    /// `[:]`, not `nil` — and an empty dictionary is still non-nil, so a plain
+    /// `itemOrder ?? savedSectionOrder` handed the apply path an empty layout
+    /// while a perfectly good `savedSectionOrder` sat right beside it.
+    @Test("An empty item order falls back to the saved section order")
+    func emptyItemOrderFallsBackToSavedSectionOrder() {
+        let saved = ["visible": ["com.example.A"], "hidden": ["com.example.B"]]
+        let layout = MenuBarLayoutSnapshot(
+            savedSectionOrder: saved,
+            pinnedHiddenBundleIDs: [],
+            pinnedAlwaysHiddenBundleIDs: [],
+            customNames: [:],
+            itemOrder: [:]
+        )
+
+        #expect(layout.resolvedItemOrder == saved)
+        #expect(layout.resolvedItemSectionMap["com.example.A"] == "visible")
+        #expect(layout.resolvedItemSectionMap["com.example.B"] == "hidden")
+    }
+
+    /// A populated `itemOrder` must still win, or the fallback would override
+    /// every layout written by a current build.
+    @Test("A populated item order still takes precedence")
+    func populatedItemOrderStillWins() {
+        let layout = MenuBarLayoutSnapshot(
+            savedSectionOrder: ["visible": ["com.example.Legacy"]],
+            pinnedHiddenBundleIDs: [],
+            pinnedAlwaysHiddenBundleIDs: [],
+            customNames: [:],
+            itemOrder: ["hidden": ["com.example.Current"]]
+        )
+
+        #expect(layout.resolvedItemOrder == ["hidden": ["com.example.Current"]])
+    }
+
+    /// With both empty there is nothing to prefer, and the result must stay
+    /// empty rather than becoming nil-shaped in some other way.
+    @Test("Both empty resolves to empty")
+    func bothEmptyResolvesToEmpty() {
+        let layout = MenuBarLayoutSnapshot(
+            savedSectionOrder: [:],
+            pinnedHiddenBundleIDs: [],
+            pinnedAlwaysHiddenBundleIDs: [],
+            customNames: [:],
+            itemOrder: [:]
+        )
+
+        #expect(layout.resolvedItemOrder.isEmpty)
+        #expect(layout.resolvedItemSectionMap.isEmpty)
+    }
+
+    /// `iceIcon`'s `didSet` mirrors a `.custom` icon into `lastCustomIceIcon`.
+    /// `apply(to:)` used to assign `lastCustomIceIcon` first, so that mirror
+    /// immediately overwrote it and a profile carrying a custom icon always
+    /// came back with the two fields equal — losing whichever custom icon the
+    /// profile had remembered separately.
+    @Test("Applying a snapshot keeps its own lastCustomIceIcon")
+    func applyPreservesLastCustomIceIcon() throws {
+        try withScratchDefaults { _ in
+            let settings = GeneralSettings()
+            let remembered = ControlItemImageSet.defaultIceIcon
+            var snapshot = GeneralSettingsSnapshot.capture(from: settings)
+            snapshot.lastCustomIceIcon = remembered
+
+            snapshot.apply(to: settings)
+
+            #expect(settings.lastCustomIceIcon == remembered)
+        }
     }
 }
