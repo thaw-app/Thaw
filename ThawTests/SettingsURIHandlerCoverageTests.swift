@@ -279,7 +279,11 @@ struct SettingsURIHandlerCoverageTests {
         )
         func namedDisplayToggleWorksForBothBooleanKeys(_ key: String) throws {
             try withScratchDefaults { _ in
+                // The toggle path now requires the display to be known, the
+                // same as the set path, so persist a configuration for it.
                 let uuid = UUID().uuidString
+                let seeded = try JSONEncoder().encode([uuid: DisplayIceBarConfiguration.defaultConfiguration])
+                Defaults.set(seeded, forKey: .displayIceBarConfigurations)
                 var accepted = false
 
                 let posted = notifications(named: .perDisplaySettingsDidChangeViaURI) {
@@ -297,18 +301,19 @@ struct SettingsURIHandlerCoverageTests {
             }
         }
 
-        /// The identifier is only checked for shape here, not for existence —
-        /// unlike the `set` path, which insists the display is known. That is
-        /// worth pinning for both keys, because it is the difference a caller
-        /// sees between the two actions.
+        /// Toggle and set now validate a named display identically: it must
+        /// parse as a UUID *and* be connected or have a persisted
+        /// configuration. This used to differ — toggle checked only that the
+        /// string contained a hyphen, so it accepted a display that does not
+        /// exist and reported success for a toggle that never happened.
         @Test(
-            "A named-display toggle checks the identifier's shape, not the display's existence",
+            "A named-display toggle refuses an unknown display, like the set path",
             arguments: ["useIceBar", "alwaysShowHiddenItems"]
         )
-        func namedDisplayToggleOnlyChecksTheShape(_ key: String) throws {
+        func namedDisplayToggleRefusesAnUnknownDisplay(_ key: String) throws {
             try withScratchDefaults { _ in
-                // Never persisted, never attached — and still accepted.
-                #expect(SettingsURIHandler.handleToggle(key: key, sender: "test", displayUUID: UUID().uuidString), "\(key)")
+                // Never persisted, never attached — and now refused.
+                #expect(!SettingsURIHandler.handleToggle(key: key, sender: "test", displayUUID: UUID().uuidString), "\(key)")
                 #expect(!SettingsURIHandler.handleToggle(key: key, sender: "test", displayUUID: "nodashes"), "\(key)")
 
                 // The set path is the stricter one, for the same identifier.

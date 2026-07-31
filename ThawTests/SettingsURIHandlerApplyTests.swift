@@ -359,8 +359,11 @@ final class SettingsURIHandlerApplyTests {
     }
 
     @Test("A per-display toggle targeting a display announces that scope")
-    func perDisplayToggleTargetsTheDisplay() {
+    func perDisplayToggleTargetsTheDisplay() throws {
+        // The toggle path requires the display to be known, so persist one.
         let uuid = UUID().uuidString
+        let seeded = try JSONEncoder().encode([uuid: DisplayIceBarConfiguration.defaultConfiguration])
+        Defaults.set(seeded, forKey: .displayIceBarConfigurations)
         let posted = notifications(named: .perDisplaySettingsDidChangeViaURI) {
             _ = SettingsURIHandler.handleToggle(key: "useIceBar", sender: "test", displayUUID: uuid)
         }

@@ -684,9 +684,21 @@ enum SettingsURIHandler {
     private static func handlePerDisplayToggle(key: String, displayUUID: String?) -> Bool {
         // If specific display UUID provided, use that
         if let uuid = displayUUID, !uuid.isEmpty {
-            // Validate UUID format
-            guard uuid.contains("-"), !uuid.isEmpty else {
+            // Validated exactly as `handlePerDisplaySetForSpecificDisplay`
+            // does. This used to accept anything containing a hyphen, so
+            // `toggle?key=useIceBar&display=a-b` posted a notification for a
+            // display that does not exist and reported success, while the
+            // equivalent `set` refused it. DisplaySettingsManager discards the
+            // notification either way, so the only effect was telling the
+            // caller a toggle had happened when none had.
+            guard UUID(uuidString: uuid) != nil else {
                 diagLog.warning("Settings URI: Invalid display UUID format '\(uuid)'")
+                return false
+            }
+
+            // Validate display exists (connected or has persisted config)
+            guard getDisplayConfiguration(forUUID: uuid) != nil else {
+                diagLog.warning("Settings URI: Unknown display UUID '\(uuid)'")
                 return false
             }
 
