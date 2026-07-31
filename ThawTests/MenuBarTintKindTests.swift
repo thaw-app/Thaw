@@ -53,7 +53,7 @@ struct MenuBarTintKindTests {
 
     @Test("Identifiers are unique across the cases")
     func identifiersAreUnique() {
-        let identifiers = MenuBarTintKind.allCases.map { $0.id }
+        let identifiers = MenuBarTintKind.allCases.map(\.id)
 
         #expect(Set(identifiers).count == MenuBarTintKind.allCases.count)
     }
@@ -81,7 +81,7 @@ struct MenuBarTintKindTests {
     func localizedKeysAreDistinct() {
         // `LocalizedStringKey` is Equatable but not Hashable, so this compares
         // pairwise rather than going through a Set.
-        let keys = MenuBarTintKind.allCases.map { $0.localized }
+        let keys = MenuBarTintKind.allCases.map(\.localized)
 
         for (offset, key) in keys.enumerated() {
             let collides = keys.enumerated().contains { other in

@@ -148,13 +148,13 @@ struct SettingsURIHandlerTailTests {
             arguments: ["useIceBar", "alwaysShowHiddenItems", "iceBarLocation", "iceBarLayout", "gridColumns"]
         )
         func emptyDisplayIdentifierFallsBackToTheDefaultScopeOnSet(_ key: String) {
-            let value: String = switch key {
+            let value = switch key {
             case "iceBarLocation": "dynamic"
             case "iceBarLayout": "grid"
             case "gridColumns": "4"
             default: "true"
             }
-            let expectedScope: String = switch key {
+            let expectedScope = switch key {
             case "useIceBar": "active"
             case "alwaysShowHiddenItems": "allNonIceBar"
             default: "allEnabled"
@@ -271,8 +271,9 @@ struct SettingsURIHandlerTailTests {
             }
             let userInfo = try #require(posted.first?.userInfo)
 
+            let stringValue = try #require(userInfo["stringValue"] as? String)
             #expect(userInfo["key"] as? String == "iceBarLocation")
-            #expect(userInfo["stringValue"] as? String != nil)
+            #expect(!stringValue.isEmpty)
             #expect(userInfo["value"] == nil)
             #expect(userInfo["toggle"] == nil)
         }
@@ -294,7 +295,7 @@ struct SettingsURIHandlerTailTests {
         /// The scope is the only routing information a reader gets, so it is
         /// always present, whichever arm built the payload.
         @Test("Every per-display announcement names a scope and a key")
-        func everyAnnouncementNamesAScopeAndAKey() {
+        func everyAnnouncementNamesAScopeAndAKey() throws {
             let posted = notifications(named: .perDisplaySettingsDidChangeViaURI) {
                 _ = SettingsURIHandler.handleSet(key: "useIceBar", value: "false", sender: "test")
                 _ = SettingsURIHandler.handleSet(key: "gridColumns", value: "6", sender: "test")
@@ -303,8 +304,9 @@ struct SettingsURIHandlerTailTests {
 
             #expect(posted.count == 3)
             for notification in posted {
-                #expect(notification.userInfo?["scope"] as? String != nil)
-                #expect(notification.userInfo?["key"] as? String != nil)
+                let userInfo = try #require(notification.userInfo)
+                _ = try #require(userInfo["scope"] as? String)
+                _ = try #require(userInfo["key"] as? String)
             }
         }
     }
@@ -366,57 +368,53 @@ struct SettingsURIHandlerTailTests {
 
     // MARK: - Parameters the handler ignores or refuses
 
-    @MainActor
-    @Suite("Parameters the handler ignores or refuses")
-    struct StrayParameters {
-        /// The sender is only ever logged. A URL that arrived without an
-        /// identifiable sender has already passed, or failed, the whitelist
-        /// check by this point, so it must not fail a second time here.
-        @Test("A request with no sender is still applied")
-        func requestWithoutASenderIsApplied() throws {
-            try withScratchDefaults { _ in
-                #expect(SettingsURIHandler.handleSet(key: "showOnHover", value: "true", sender: nil))
-                #expect(Defaults.bool(forKey: .showOnHover))
+    /// The sender is only ever logged. A URL that arrived without an
+    /// identifiable sender has already passed, or failed, the whitelist check
+    /// by this point, so it must not fail a second time here.
+    @Test("A request with no sender is still applied")
+    func requestWithoutASenderIsApplied() throws {
+        try withScratchDefaults { _ in
+            #expect(SettingsURIHandler.handleSet(key: "showOnHover", value: "true", sender: nil))
+            #expect(Defaults.bool(forKey: .showOnHover))
 
-                #expect(SettingsURIHandler.handleToggle(key: "showOnHover", sender: nil))
-                #expect(!Defaults.bool(forKey: .showOnHover))
-            }
+            #expect(SettingsURIHandler.handleToggle(key: "showOnHover", sender: nil))
+            #expect(!Defaults.bool(forKey: .showOnHover))
         }
+    }
 
-        /// A display identifier on a global setting is meaningless rather than
-        /// wrong: the setting has one value for the whole app, so the parameter
-        /// is dropped instead of turning the request into a failure.
-        @Test("A display identifier on a global setting is ignored, not refused")
-        func displayIdentifierOnAGlobalSettingIsIgnored() throws {
-            try withScratchDefaults { _ in
-                #expect(
-                    SettingsURIHandler.handleSet(
-                        key: "showOnHover",
-                        value: "true",
-                        sender: "test",
-                        displayUUID: UUID().uuidString
-                    )
+    /// A display identifier on a global setting is meaningless rather than
+    /// wrong: the setting has one value for the whole app, so the parameter is
+    /// dropped instead of turning the request into a failure.
+    @Test("A display identifier on a global setting is ignored, not refused")
+    func displayIdentifierOnAGlobalSettingIsIgnored() throws {
+        try withScratchDefaults { _ in
+            #expect(
+                SettingsURIHandler.handleSet(
+                    key: "showOnHover",
+                    value: "true",
+                    sender: "test",
+                    displayUUID: UUID().uuidString
                 )
-                #expect(Defaults.bool(forKey: .showOnHover))
-            }
+            )
+            #expect(Defaults.bool(forKey: .showOnHover))
         }
+    }
 
-        /// `display=` with nothing after it names no display, and no attached
-        /// screen can answer to it, so the request has to fail rather than fall
-        /// back to the active display.
-        @Test("A display get with an empty display identifier is refused")
-        func displayGetWithAnEmptyIdentifierIsRefused() throws {
-            try withScratchDefaults { _ in
-                #expect(
-                    !SettingsURIHandler.handleGet(
-                        key: "display",
-                        displayUUID: "",
-                        callback: nil,
-                        broadcast: true,
-                        requestId: "req-empty-display"
-                    )
+    /// `display=` with nothing after it names no display, and no attached
+    /// screen can answer to it, so the request has to fail rather than fall
+    /// back to the active display.
+    @Test("A display get with an empty display identifier is refused")
+    func displayGetWithAnEmptyIdentifierIsRefused() throws {
+        try withScratchDefaults { _ in
+            #expect(
+                !SettingsURIHandler.handleGet(
+                    key: "display",
+                    displayUUID: "",
+                    callback: nil,
+                    broadcast: true,
+                    requestId: "req-empty-display"
                 )
-            }
+            )
         }
     }
 }

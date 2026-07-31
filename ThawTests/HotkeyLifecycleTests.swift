@@ -61,7 +61,9 @@ struct HotkeyLifecycleTests {
     private final class ChangeRecorder {
         private(set) var observed: [KeyCombination?] = []
 
-        var count: Int { observed.count }
+        var count: Int {
+            observed.count
+        }
 
         func record(_ keyCombination: KeyCombination?) {
             observed.append(keyCombination)
@@ -172,7 +174,7 @@ struct HotkeyLifecycleTests {
         let hotkey = Hotkey(action: .toggleHiddenSection, keyCombination: Self.commandF19)
         let recorder = recordChanges(of: hotkey)
 
-        #expect(recorder.count == 0)
+        #expect(recorder.observed.isEmpty)
         #expect(hotkey.keyCombination == Self.commandF19)
     }
 

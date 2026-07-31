@@ -92,7 +92,7 @@ struct HookScriptTests {
 
         let decoded = try JSONDecoder().decode(
             HookScript.self,
-            from: try JSONEncoder().encode(hook)
+            from: JSONEncoder().encode(hook)
         )
 
         #expect(decoded == hook)
@@ -105,7 +105,7 @@ struct HookScriptTests {
         let data = try JSONEncoder().encode(HookScript(path: "/tmp/hook.sh"))
         let object = try JSONSerialization.jsonObject(with: data) as? [String: Any]
 
-        #expect(Set(try #require(object).keys) == ["path", "timeoutSeconds", "isEnabled"])
+        #expect(try Set(#require(object).keys) == ["path", "timeoutSeconds", "isEnabled"])
     }
 
     @Test("A payload missing a field is rejected")
@@ -146,7 +146,7 @@ struct HookScriptTests {
 
         let decoded = try JSONDecoder().decode(
             ProfileAutomation.self,
-            from: try JSONEncoder().encode(automation)
+            from: JSONEncoder().encode(automation)
         )
 
         #expect(decoded == automation)

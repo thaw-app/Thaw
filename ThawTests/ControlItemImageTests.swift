@@ -26,8 +26,13 @@ import Testing
 /// and `DisplaySettingsManagerMutationTests`.
 @Suite("Control item image")
 struct ControlItemImageTests {
-    private var encoder: JSONEncoder { JSONEncoder() }
-    private var decoder: JSONDecoder { JSONDecoder() }
+    private var encoder: JSONEncoder {
+        JSONEncoder()
+    }
+
+    private var decoder: JSONDecoder {
+        JSONDecoder()
+    }
 
     /// Every case, so the round-trip tests cannot silently skip one.
     private static let allCases: [ControlItemImage] = [
@@ -54,7 +59,7 @@ struct ControlItemImageTests {
     func caseNamesAreTheStoredDiscriminators() throws {
         let payloads = try Self.allCases.map { image in
             let object = try JSONSerialization.jsonObject(
-                with: try encoder.encode(image)
+                with: encoder.encode(image)
             ) as? [String: Any]
             return object?.keys.first
         }
@@ -68,7 +73,7 @@ struct ControlItemImageTests {
 
         let keys = try names.map { name in
             let object = try JSONSerialization.jsonObject(
-                with: try encoder.encode(name)
+                with: encoder.encode(name)
             ) as? [String: Any]
             return object?.keys.first
         }
@@ -82,7 +87,7 @@ struct ControlItemImageTests {
 
         let decoded = try decoder.decode(
             ControlItemImage.self,
-            from: try encoder.encode(image)
+            from: encoder.encode(image)
         )
 
         guard case let .symbol(name) = decoded else {
@@ -99,7 +104,7 @@ struct ControlItemImageTests {
 
         let decoded = try decoder.decode(
             ControlItemImage.self,
-            from: try encoder.encode(image)
+            from: encoder.encode(image)
         )
 
         guard case let .data(decodedPayload) = decoded else {
@@ -116,7 +121,7 @@ struct ControlItemImageTests {
     func builtinNameRoundTrips(_ name: ControlItemImage.ImageBuiltinName) throws {
         let decoded = try decoder.decode(
             ControlItemImage.self,
-            from: try encoder.encode(ControlItemImage.builtin(name))
+            from: encoder.encode(ControlItemImage.builtin(name))
         )
 
         guard case let .builtin(decodedName) = decoded else {

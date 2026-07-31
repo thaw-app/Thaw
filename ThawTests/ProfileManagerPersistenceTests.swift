@@ -328,8 +328,8 @@ struct ProfileManagerPersistenceTests {
     func layoutUpdateCapturesTheStoredDefaults() throws {
         let uid = "com.example.one:Item-0"
         let savedSectionOrder: [String: [String]] = ["hidden": [uid]]
-        let pinnedHidden: [String] = ["com.example.pinned"]
-        let pinnedAlwaysHidden: [String] = ["com.example.buried"]
+        let pinnedHidden = ["com.example.pinned"]
+        let pinnedAlwaysHidden = ["com.example.buried"]
         let customNames: [String: String] = [uid: "Renamed"]
         let itemHotkeys: [String: Data] = [uid: Data([0x01, 0x02])]
 

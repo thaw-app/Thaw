@@ -203,7 +203,7 @@ struct ExtensionsCoverageTests {
             let removed = try #require(removedItem)
 
             #expect(removed.windowID == 1)
-            #expect(collection.map { $0.windowID } == [2, 3])
+            #expect(collection.map(\.windowID) == [2, 3])
         }
 
         @Test("removeFirst leaves the collection alone when nothing matches")
@@ -213,7 +213,7 @@ struct ExtensionsCoverageTests {
             let removed = collection.removeFirst(matching: fixtureTag("Gamma"))
 
             #expect(removed == nil)
-            #expect(collection.map { $0.windowID } == [1, 2, 3])
+            #expect(collection.map(\.windowID) == [1, 2, 3])
         }
 
         @Test("removeFirst on an empty collection returns nil")
@@ -363,8 +363,9 @@ struct ExtensionsCoverageTests {
             subject.send((1, "a"))
             cancellable.cancel()
 
-            #expect(received.map { $0.0 } == [1, 2, 2, 1])
-            #expect(received.map { $0.1 } == ["a", "a", "b", "a"])
+            // Rendered as strings so the comparison covers both elements of
+            // each pair at once.
+            #expect(received.map { "\($0.0)\($0.1)" } == ["1a", "2a", "2b", "1a"])
         }
 
         @Test("A difference in any element of the tuple counts as a change")

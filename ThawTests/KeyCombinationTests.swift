@@ -169,7 +169,7 @@ struct KeyCombinationTests {
 
         let decoded = try JSONDecoder().decode(
             KeyCombination.self,
-            from: try JSONEncoder().encode(combination)
+            from: JSONEncoder().encode(combination)
         )
 
         #expect(decoded == combination)

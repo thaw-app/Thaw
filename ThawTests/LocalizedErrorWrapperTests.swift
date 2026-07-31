@@ -25,10 +25,21 @@ import Testing
 struct LocalizedErrorWrapperTests {
     /// An error that fills in every `LocalizedError` field.
     private struct FullyDescribedError: LocalizedError {
-        var errorDescription: String? { "description" }
-        var failureReason: String? { "reason" }
-        var helpAnchor: String? { "anchor" }
-        var recoverySuggestion: String? { "suggestion" }
+        var errorDescription: String? {
+            "description"
+        }
+
+        var failureReason: String? {
+            "reason"
+        }
+
+        var helpAnchor: String? {
+            "anchor"
+        }
+
+        var recoverySuggestion: String? {
+            "suggestion"
+        }
     }
 
     /// A `LocalizedError` that supplies nothing, which is the default

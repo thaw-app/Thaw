@@ -167,7 +167,9 @@ struct MigrationTests {
     @Test("A migration error describes the underlying failure")
     func migrationErrorDescribesTheUnderlyingFailure() {
         struct Underlying: Error, CustomStringConvertible {
-            var description: String { "the underlying failure" }
+            var description: String {
+                "the underlying failure"
+            }
         }
 
         let error = MigrationManager.MigrationError.perDisplayIceBarMigrationError(Underlying())

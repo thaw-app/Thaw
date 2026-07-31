@@ -59,15 +59,17 @@ struct WindowInfoDecodingTests {
     /// Computed rather than stored: `[String: Any]` is not `Sendable`, so a
     /// `static let` is rejected under strict concurrency. Recomputing also
     /// means a test that mutates its copy cannot leak into the next one.
-    private static var wellFormedPayload: [String: Any] {[
-        "windowID": 12_345,
-        "ownerPID": 501,
-        "bounds": [[12.0, 34.0], [200.0, 24.0]],
-        "layer": 25,
-        "title": "Menubar",
-        "ownerName": "Window Server",
-        "isOnScreen": true,
-    ]}
+    private static var wellFormedPayload: [String: Any] {
+        [
+            "windowID": 12345,
+            "ownerPID": 501,
+            "bounds": [[12.0, 34.0], [200.0, 24.0]],
+            "layer": 25,
+            "title": "Menubar",
+            "ownerName": "Window Server",
+            "isOnScreen": true,
+        ]
+    }
 
     private func decodeWindow(from payload: [String: Any]) throws -> WindowInfo {
         let data = try JSONSerialization.data(withJSONObject: payload)
@@ -91,7 +93,7 @@ struct WindowInfoDecodingTests {
         func everyPropertyIsKept() {
             let window = WindowInfo(
                 windowID: 77,
-                ownerPID: 4_242,
+                ownerPID: 4242,
                 bounds: CGRect(x: 5, y: 6, width: 7, height: 8),
                 layer: 3,
                 title: "Some Title",
@@ -100,7 +102,7 @@ struct WindowInfoDecodingTests {
             )
 
             #expect(window.windowID == 77)
-            #expect(window.ownerPID == 4_242)
+            #expect(window.ownerPID == 4242)
             #expect(window.bounds == CGRect(x: 5, y: 6, width: 7, height: 8))
             #expect(window.layer == 3)
             #expect(window.title == "Some Title")
@@ -128,7 +130,7 @@ struct WindowInfoDecodingTests {
     func memberwiseInitMatchesDecoding() throws {
         let decoded = try decodeWindow(from: Self.wellFormedPayload)
         let built = WindowInfo(
-            windowID: 12_345,
+            windowID: 12345,
             ownerPID: 501,
             bounds: CGRect(x: 12, y: 34, width: 200, height: 24),
             layer: 25,
@@ -177,7 +179,7 @@ struct WindowInfoDecodingTests {
 
         #expect(window.title == nil)
         #expect(window.ownerName == nil)
-        #expect(window.windowID == 12_345)
+        #expect(window.windowID == 12345)
     }
 
     @Test(
@@ -258,7 +260,7 @@ struct WindowInfoDecodingTests {
 
         let window = try decodeWindow(from: payload)
 
-        #expect(window.windowID == 12_345)
+        #expect(window.windowID == 12345)
         #expect(window.bounds == CGRect(x: 12, y: 34, width: 200, height: 24))
     }
 
