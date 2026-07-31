@@ -297,7 +297,7 @@ final nonisolated class DiagnosticLogger: @unchecked Sendable {
     // MARK: - Logging
 
     /// Log levels matching OSLog conventions.
-    enum Level: String {
+    enum Level: String, CaseIterable {
         case debug = "DEBUG"
         case info = "INFO"
         case notice = "NOTICE"

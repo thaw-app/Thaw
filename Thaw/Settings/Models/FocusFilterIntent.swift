@@ -85,7 +85,7 @@ struct ThawFocusFilter: SetFocusFilterIntent {
               UUID(uuidString: profile.id) != nil
         else {
             // Focus deactivated — clear the stored profile and notify.
-            Defaults.store.removeObject(forKey: "FocusFilterRequestedProfileID")
+            Defaults.removeObject(forKey: .focusFilterRequestedProfileID)
             DistributedNotificationCenter.default().postNotificationName(
                 Notification.Name("com.stonerl.Thaw.focusFilterDeactivated"),
                 object: nil,
@@ -94,10 +94,7 @@ struct ThawFocusFilter: SetFocusFilterIntent {
             return .result()
         }
 
-        Defaults.store.set(
-            profile.id,
-            forKey: "FocusFilterRequestedProfileID"
-        )
+        Defaults.set(profile.id, forKey: .focusFilterRequestedProfileID)
         DistributedNotificationCenter.default().postNotificationName(
             Notification.Name("com.stonerl.Thaw.focusFilterActivated"),
             object: nil,

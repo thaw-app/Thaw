@@ -73,6 +73,8 @@ nonisolated extension MenuBarItem {
         static let activeSpace = ListOption(rawValue: 1 << 1)
     }
 
+    private static let diagLog = DiagLog(category: "MenuBarItem")
+
     /// Creates and returns a list of menu bar items windows for the given display.
     ///
     /// - Parameters:
@@ -80,8 +82,6 @@ nonisolated extension MenuBarItem {
     ///     item windows across all available displays.
     ///   - option: Options that filter the returned list. Pass an empty option set
     ///     to return all available menu bar item windows.
-    private static let diagLog = DiagLog(category: "MenuBarItem")
-
     static func getMenuBarItemWindows(on display: CGDirectDisplayID? = nil, option: ListOption) -> [WindowInfo] {
         var bridgingOption: Bridging.MenuBarWindowListOption = .itemsOnly
 
@@ -114,13 +114,6 @@ nonisolated extension MenuBarItem {
         return windows
     }
 
-    /// Creates and returns a list of menu bar items for the given display.
-    ///
-    /// - Parameters:
-    ///   - display: An identifier for a display. Pass `nil` to return the menu bar
-    ///     items across all available displays.
-    ///   - option: Options that filter the returned list. Pass an empty option set
-    ///     to return all available menu bar items.
     @MainActor
     private static func assignStableInstanceIndices(
         to items: inout [MenuBarItem],

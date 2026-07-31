@@ -575,17 +575,29 @@ enum SettingsURIHandler {
         }
     }
 
-    /// Handles setting a per-display configuration value for a specific display UUID.
-    private static func handlePerDisplaySetForSpecificDisplay(key: String, value: String, displayUUID: String) -> Bool {
+    /// Validates a caller-supplied display UUID: checks the UUID format,
+    /// then that the display exists (connected or has persisted config).
+    /// Logs a diagnostic and returns nil on either failure; returns the
+    /// display's configuration on success.
+    private static func validatedDisplayConfiguration(forUUID uuid: String) -> DisplayIceBarConfiguration? {
         // Validate UUID format
-        guard UUID(uuidString: displayUUID) != nil else {
-            diagLog.warning("Settings URI: Invalid display UUID format '\(displayUUID)'")
-            return false
+        guard UUID(uuidString: uuid) != nil else {
+            diagLog.warning("Settings URI: Invalid display UUID format '\(uuid)'")
+            return nil
         }
 
         // Validate display exists (connected or has persisted config)
-        guard getDisplayConfiguration(forUUID: displayUUID) != nil else {
-            diagLog.warning("Settings URI: Unknown display UUID '\(displayUUID)'")
+        guard let configuration = getDisplayConfiguration(forUUID: uuid) else {
+            diagLog.warning("Settings URI: Unknown display UUID '\(uuid)'")
+            return nil
+        }
+
+        return configuration
+    }
+
+    /// Handles setting a per-display configuration value for a specific display UUID.
+    private static func handlePerDisplaySetForSpecificDisplay(key: String, value: String, displayUUID: String) -> Bool {
+        guard validatedDisplayConfiguration(forUUID: displayUUID) != nil else {
             return false
         }
 
@@ -700,14 +712,7 @@ enum SettingsURIHandler {
             // equivalent `set` refused it. DisplaySettingsManager discards the
             // notification either way, so the only effect was telling the
             // caller a toggle had happened when none had.
-            guard UUID(uuidString: uuid) != nil else {
-                diagLog.warning("Settings URI: Invalid display UUID format '\(uuid)'")
-                return false
-            }
-
-            // Validate display exists (connected or has persisted config)
-            guard getDisplayConfiguration(forUUID: uuid) != nil else {
-                diagLog.warning("Settings URI: Unknown display UUID '\(uuid)'")
+            guard validatedDisplayConfiguration(forUUID: uuid) != nil else {
                 return false
             }
 

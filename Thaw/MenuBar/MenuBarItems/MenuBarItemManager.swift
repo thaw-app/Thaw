@@ -484,6 +484,39 @@ final class MenuBarItemManager {
     /// false re-sort triggers during an in-flight sort.
     private(set) var isApplyingProfileLayout = false
 
+    /// Monotonically increasing token identifying the most recent
+    /// profile-state arm. Each `.profile` armProfileState call takes a
+    /// new token; a cancelled apply may only roll back state it still
+    /// owns (its token is still current), so a late-arriving
+    /// cancellation cannot clobber the state armed by the newer apply
+    /// that displaced it.
+    private var profileApplyToken = 0
+
+    /// Pre-arm snapshot of the in-memory profile state, tagged with the
+    /// token of the apply that captured it. Restored when that apply is
+    /// cancelled mid-flight so memory reverts to what disk still holds
+    /// (persistence is deferred to persistProfileStateOnSuccess) and the
+    /// late-arrival re-sort path stops targeting a profile that never
+    /// committed.
+    private struct ProfileApplySnapshot {
+        var token: Int
+        var pinnedHidden: Set<String>
+        var pinnedAlwaysHidden: Set<String>
+        var sectionOrder: [String: [String]]
+        var profileLayout: (
+            pinnedHidden: Set<String>,
+            pinnedAlwaysHidden: Set<String>,
+            sectionOrder: [String: [String]],
+            itemSectionMap: [String: String],
+            itemOrder: [String: [String]]
+        )?
+        var profileItemIdentifiers: Set<String>
+    }
+
+    /// The snapshot captured by the most recent `.profile` arm, if that
+    /// apply has neither committed nor rolled back yet.
+    private var priorProfileApplySnapshot: ProfileApplySnapshot?
+
     /// True while `applyProfileLayout` is actively issuing the move
     /// sequence (Phase 6). Lets `postMoveEvents` skip redundant
     /// per-item cursor hide/show churn — the cursor is already held
@@ -6889,6 +6922,22 @@ extension MenuBarItemManager {
         itemOrder: [String: [String]]
     ) {
         guard case .profile = source else { return }
+
+        // Snapshot the displaced state before overwriting so a cancelled
+        // apply can roll back to what disk still holds (persistence is
+        // deferred to persistProfileStateOnSuccess). The token pins the
+        // snapshot to this apply: once a newer apply re-arms, the
+        // displaced apply no longer owns the state and must not restore.
+        profileApplyToken &+= 1
+        priorProfileApplySnapshot = ProfileApplySnapshot(
+            token: profileApplyToken,
+            pinnedHidden: pinnedHiddenBundleIDs,
+            pinnedAlwaysHidden: pinnedAlwaysHiddenBundleIDs,
+            sectionOrder: savedSectionOrder,
+            profileLayout: activeProfileLayout,
+            profileItemIdentifiers: activeProfileItemIdentifiers
+        )
+
         pinnedHiddenBundleIDs = pinnedHidden
         pinnedAlwaysHiddenBundleIDs = pinnedAlwaysHidden
         savedSectionOrder = sectionOrder
@@ -6904,6 +6953,34 @@ extension MenuBarItemManager {
             itemOrder: itemOrder
         )
         activeProfileItemIdentifiers = Set(itemOrder.values.flatMap(\.self))
+    }
+
+    /// Rolls back the in-memory profile state after a cancelled apply,
+    /// but only when the cancelled apply still owns it (no newer apply
+    /// has re-armed since). Ownership is checked via the apply token: a
+    /// newer arm bumps the token, so the late-arriving cancellation of
+    /// the displaced apply leaves the newer apply's state — including
+    /// its in-flight flag — untouched.
+    private func restoreProfileStateAfterCancelledApply(token: Int) {
+        guard token == profileApplyToken,
+              let snapshot = priorProfileApplySnapshot,
+              snapshot.token == token
+        else {
+            MenuBarItemManager.diagLog.debug(
+                "applyProfileLayout: cancelled apply no longer owns the armed profile state, skipping rollback"
+            )
+            return
+        }
+        pinnedHiddenBundleIDs = snapshot.pinnedHidden
+        pinnedAlwaysHiddenBundleIDs = snapshot.pinnedAlwaysHidden
+        savedSectionOrder = snapshot.sectionOrder
+        activeProfileLayout = snapshot.profileLayout
+        activeProfileItemIdentifiers = snapshot.profileItemIdentifiers
+        priorProfileApplySnapshot = nil
+        isApplyingProfileLayout = false
+        MenuBarItemManager.diagLog.info(
+            "applyProfileLayout: cancelled mid-apply, rolled back in-memory profile state to the last committed profile"
+        )
     }
 
     /// Refreshes the cached active-profile spec to match a freshly saved
@@ -6948,6 +7025,8 @@ extension MenuBarItemManager {
         guard case .profile = source else { return }
         persistPinnedBundleIDs()
         persistSavedSectionOrder()
+        // Committed: the pre-arm snapshot can no longer be rolled back to.
+        priorProfileApplySnapshot = nil
     }
 
     /// Refreshes profileSortedItemIdentifiers from the supplied item
@@ -7066,6 +7145,12 @@ extension MenuBarItemManager {
             itemSectionMap: itemSectionMap,
             itemOrder: itemOrder
         )
+
+        // Token identifying this apply's ownership of the armed profile
+        // state. Captured immediately after arming, before any await can
+        // let a newer apply re-arm. Only meaningful for the .profile
+        // source (the cancellation rollback below is gated on it).
+        let applyToken = profileApplyToken
 
         // Prevent the cache cycle from saving intermediate positions.
         // Shared across both sources: the apply moves items in flight
@@ -7985,6 +8070,18 @@ extension MenuBarItemManager {
         // isApplyingProfileLayout flag are only meaningful when a
         // profile is active; the savedOrder source leaves them alone.
         items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+        // A cancelled profile apply (a newer apply replaced us via
+        // applyProfile's layoutTask?.cancel()) must not commit anything:
+        // roll back the in-memory profile state to the last committed
+        // profile so the late-arrival re-sort path doesn't keep sorting
+        // toward the cancelled spec, and skip the deferred cache refresh
+        // (the apply that replaced us schedules its own at exit). The
+        // rollback is token-guarded: if the newer apply has already
+        // re-armed the state, it is left untouched.
+        if Task.isCancelled, case .profile = source {
+            restoreProfileStateAfterCancelledApply(token: applyToken)
+            return
+        }
         // Commit profile state to disk only if we weren't cancelled
         // mid-Phase-6. The in-loop cancellation guards break out of the
         // move loop but execution still flows into Phase 7; without

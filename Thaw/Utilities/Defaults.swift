@@ -343,6 +343,13 @@ nonisolated extension Defaults {
         case globalPreProfileHook = "GlobalPreProfileHook"
         case globalPostProfileHook = "GlobalPostProfileHook"
 
+        // MARK: Focus Filter
+
+        /// Profile ID requested by the most recent Focus Filter
+        /// activation. Written by ``ThawFocusFilter`` and consumed by
+        /// ``ProfileManager/applyFocusFilterProfile()``.
+        case focusFilterRequestedProfileID = "FocusFilterRequestedProfileID"
+
         // MARK: Hidden Diagnostic Flags
 
         /// Milliseconds of input inactivity required before a menu-bar item

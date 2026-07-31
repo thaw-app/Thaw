@@ -1060,10 +1060,8 @@ final class ProfileManager {
 
     /// Applies the profile requested by a Focus Filter activation.
     func applyFocusFilterProfile() async {
-        guard let idString = Defaults.store.string(
-            forKey: "FocusFilterRequestedProfileID"
-        ),
-            let profileID = UUID(uuidString: idString)
+        guard let idString = Defaults.string(forKey: .focusFilterRequestedProfileID),
+              let profileID = UUID(uuidString: idString)
         else { return }
 
         guard profileID != activeProfileID else {
