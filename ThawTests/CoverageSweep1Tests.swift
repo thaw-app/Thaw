@@ -118,7 +118,7 @@ struct CoverageSweep1Tests {
         /// every existing install.
         @Test("The app-level default background is none")
         func defaultKindIsNone() {
-            #expect(MenuBarBackgroundKind.defaultKind == .none)
+            #expect(MenuBarBackgroundKind.defaultKind == MenuBarBackgroundKind.none)
         }
     }
 

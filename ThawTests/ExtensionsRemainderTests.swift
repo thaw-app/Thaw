@@ -423,8 +423,9 @@ struct ExtensionsRemainderTests {
             #expect(mask.colorSpace == nil, "the fixture only means anything while the mask has no color space")
 
             let average = try #require(mask.averageColor())
+            let name = try #require(average.colorSpace?.name)
 
-            #expect((average.colorSpace?.name as String?) == (CGColorSpace.displayP3 as String))
+            #expect((name as String) == (CGColorSpace.displayP3 as String))
 
             let components = try #require(average.components)
             #expect(components.count == 4)
@@ -440,8 +441,9 @@ struct ExtensionsRemainderTests {
             let sRGB = try #require(CGColorSpace(name: CGColorSpace.sRGB))
 
             let average = try #require(mask.averageColor(using: sRGB))
+            let name = try #require(average.colorSpace?.name)
 
-            #expect((average.colorSpace?.name as String?) == (CGColorSpace.sRGB as String))
+            #expect((name as String) == (CGColorSpace.sRGB as String))
         }
 
         /// `extendedSRGB` passes the RGB-model test the resolution step
