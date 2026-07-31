@@ -12,40 +12,6 @@ import SwiftUI
 /// A representation of a section in a menu bar.
 @MainActor
 final class MenuBarSection {
-    /// The name of a menu bar section.
-    nonisolated enum Name: String, CaseIterable, Codable {
-        case visible
-        case hidden
-        case alwaysHidden
-
-        /// A string to show in the interface.
-        var displayString: String {
-            switch self {
-            case .visible: "Visible"
-            case .hidden: "Hidden"
-            case .alwaysHidden: "Always-Hidden"
-            }
-        }
-
-        /// A string to use for logging purposes.
-        var logString: String {
-            switch self {
-            case .visible: "visible section"
-            case .hidden: "hidden section"
-            case .alwaysHidden: "always-hidden section"
-            }
-        }
-
-        /// Localized string key representation.
-        var localized: LocalizedStringKey {
-            switch self {
-            case .visible: LocalizedStringKey("Visible")
-            case .hidden: LocalizedStringKey("Hidden")
-            case .alwaysHidden: LocalizedStringKey("Always-Hidden")
-            }
-        }
-    }
-
     /// The name of the section.
     let name: Name
 
@@ -89,21 +55,6 @@ final class MenuBarSection {
         )
     }
 
-    /// Whether notch overflow forces the Thaw Bar even though the display's own
-    /// Thaw Bar setting is off.
-    ///
-    /// Split out as a pure function so the rule is testable without a live
-    /// menu bar. Requires overflow to be enabled, the "use the Thaw Bar while
-    /// items are overflowed" preference to be on, and items to actually be
-    /// ejected right now.
-    static nonisolated func forcesIceBarForNotchOverflow(
-        overflowEnabled: Bool,
-        useThawBarOnOverflow: Bool,
-        hasEjectedItems: Bool
-    ) -> Bool {
-        overflowEnabled && useThawBarOnOverflow && hasEjectedItems
-    }
-
     @MainActor
     private static func forcesIceBarForNotchOverflow(
         settings: AdvancedSettings,
@@ -114,76 +65,6 @@ final class MenuBarSection {
             useThawBarOnOverflow: settings.useThawBarOnNotchOverflow,
             hasEjectedItems: hasEjectedItems
         )
-    }
-
-    /// The gap that macOS leaves to the left and right of the notch (in points).
-    static nonisolated let notchGap: CGFloat = 24
-
-    /// The preferred way to present the section on the menu bar.
-    nonisolated enum PresentationMode: Equatable {
-        /// Show the items inline without modifying the application menus.
-        case inline
-        /// Show the items inline, but only after hiding the application menus.
-        case inlineHidingApplicationMenus
-        /// Fall back to the Thaw Bar.
-        case iceBar
-    }
-
-    /// Calculates the usable inline width for menu bar items on a screen.
-    static nonisolated func usableInlineWidth(
-        from appMenuRightEdge: CGFloat?,
-        screenFrameMinX: CGFloat,
-        screenVisibleMaxX: CGFloat,
-        notchFrame: CGRect?
-    ) -> CGFloat {
-        let clampedAppMenuRightEdge = max(screenFrameMinX, appMenuRightEdge ?? screenFrameMinX)
-
-        if let notchFrame {
-            let usableLeftOfNotch = notchFrame.minX - notchGap
-            let usableRightOfNotchStart = notchFrame.maxX + notchGap
-            let leftWidth = max(0, usableLeftOfNotch - clampedAppMenuRightEdge)
-            let rightWidth = max(0, screenVisibleMaxX - usableRightOfNotchStart)
-            return leftWidth + rightWidth
-        }
-
-        return max(0, screenVisibleMaxX - clampedAppMenuRightEdge)
-    }
-
-    /// Decides whether inline presentation fits, optionally allowing the app
-    /// menus to be hidden to recover more space.
-    static nonisolated func presentationMode(
-        totalItemsWidth: CGFloat,
-        appMenuRightEdge: CGFloat?,
-        screenFrameMinX: CGFloat,
-        screenVisibleMaxX: CGFloat,
-        notchFrame: CGRect?,
-        allowHidingApplicationMenus: Bool
-    ) -> PresentationMode {
-        let inlineWidth = usableInlineWidth(
-            from: appMenuRightEdge,
-            screenFrameMinX: screenFrameMinX,
-            screenVisibleMaxX: screenVisibleMaxX,
-            notchFrame: notchFrame
-        )
-        if totalItemsWidth <= inlineWidth {
-            return .inline
-        }
-
-        guard allowHidingApplicationMenus else {
-            return .iceBar
-        }
-
-        let inlineWidthWithoutAppMenus = usableInlineWidth(
-            from: screenFrameMinX,
-            screenFrameMinX: screenFrameMinX,
-            screenVisibleMaxX: screenVisibleMaxX,
-            notchFrame: notchFrame
-        )
-        if totalItemsWidth <= inlineWidthWithoutAppMenus {
-            return .inlineHidingApplicationMenus
-        }
-
-        return .iceBar
     }
 
     /// Calculates the total width of the items that must be shown when the
