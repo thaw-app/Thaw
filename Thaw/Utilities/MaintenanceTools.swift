@@ -7,6 +7,7 @@
 //  Licensed under the GNU GPLv3
 
 import Foundation
+import MenuBarModel
 import Subprocess
 #if canImport(System)
     import System
@@ -64,6 +65,121 @@ nonisolated enum MaintenanceTools {
         for fileURL in byHostFiles where fileURL.lastPathComponent.hasPrefix("com.apple.controlcenter") {
             try fileManager.removeItem(at: fileURL)
         }
+    }
+
+    /// Directory holding timestamped menu bar layout backups.
+    static func menuBarLayoutBackupDirectory(
+        fileManager: FileManager = .default
+    ) -> URL {
+        let base = (
+            try? fileManager.url(
+                for: .applicationSupportDirectory,
+                in: .userDomainMask,
+                appropriateFor: nil,
+                create: false
+            )
+        ) ?? fileManager.homeDirectoryForCurrentUser
+            .appending(path: "Library/Application Support", directoryHint: .isDirectory)
+
+        return base
+            .appending(path: Constants.bundleIdentifier, directoryHint: .isDirectory)
+            .appending(path: "MenuBarLayoutBackups", directoryHint: .isDirectory)
+    }
+
+    /// Filename for a layout backup taken at `date`.
+    static func menuBarLayoutBackupName(for date: Date) -> String {
+        let stamp = date.formatted(
+            .verbatim(
+                "\(year: .defaultDigits)-\(month: .twoDigits)-\(day: .twoDigits)_\(hour: .twoDigits(clock: .twentyFourHour, hourCycle: .zeroBased)).\(minute: .twoDigits).\(second: .twoDigits)",
+                timeZone: .current,
+                calendar: .current
+            )
+        )
+        return "MenuBarLayout_\(stamp).plist"
+    }
+
+    /// Copies the menu bar hosting process's preference plist — the store that
+    /// holds every status item's saved position — into
+    /// ``menuBarLayoutBackupDirectory()``.
+    ///
+    /// Returns `nil` when there is nothing to back up.
+    @discardableResult
+    static func backUpMenuBarLayout(
+        now: Date = .now,
+        fileManager: FileManager = .default
+    ) throws -> URL? {
+        let source = menuBarHostingPreferencesURL(fileManager: fileManager)
+        guard fileManager.fileExists(atPath: source.path(percentEncoded: false)) else {
+            return nil
+        }
+
+        let directory = menuBarLayoutBackupDirectory(fileManager: fileManager)
+        try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
+
+        let destination = directory.appending(path: menuBarLayoutBackupName(for: now))
+        try removeItemIfExists(at: destination, using: fileManager)
+        try fileManager.copyItem(at: source, to: destination)
+        return destination
+    }
+
+    /// Quits the menu bar hosting process and deletes its preference plist, so
+    /// every saved status-item position is rebuilt from scratch.
+    ///
+    /// A backup is written first and its URL returned, because this discards
+    /// the user's entire menu bar arrangement. `cfprefsd` is restarted *before*
+    /// the delete: it caches other processes' domains, and would otherwise
+    /// flush its stale copy back over the removal.
+    ///
+    /// Returns the backup URL, or `nil` when there was nothing to back up.
+    @concurrent
+    @discardableResult
+    static func resetMenuBarLayoutPositions() async throws -> URL? {
+        let fileManager = FileManager.default
+        let backup = try backUpMenuBarLayout(fileManager: fileManager)
+
+        // Best-effort: neither process is guaranteed to be running.
+        try? await run(path: "/usr/bin/killall", arguments: [menuBarHostingProcessName])
+        try? await run(path: "/usr/bin/killall", arguments: ["cfprefsd"])
+
+        let preferences = preferencesDirectory(fileManager: fileManager)
+        let hostingBundleID = SharedConstants.menuBarHostingBundleID
+        try removeItemIfExists(
+            at: preferences.appending(path: "\(hostingBundleID).plist"),
+            using: fileManager
+        )
+
+        let byHost = preferences.appending(path: "ByHost", directoryHint: .isDirectory)
+        guard fileManager.fileExists(atPath: byHost.path(percentEncoded: false)) else {
+            return backup
+        }
+        let byHostFiles = try fileManager.contentsOfDirectory(
+            at: byHost,
+            includingPropertiesForKeys: nil,
+            options: [.skipsHiddenFiles]
+        )
+        for fileURL in byHostFiles where fileURL.lastPathComponent.hasPrefix(hostingBundleID) {
+            try fileManager.removeItem(at: fileURL)
+        }
+        return backup
+    }
+
+    /// Process name to `killall` for the current platform's menu bar host.
+    private static var menuBarHostingProcessName: String {
+        if #available(macOS 27, *) {
+            "MenuBarAgent"
+        } else {
+            "ControlCenter"
+        }
+    }
+
+    private static func preferencesDirectory(fileManager: FileManager) -> URL {
+        fileManager.homeDirectoryForCurrentUser
+            .appending(path: "Library/Preferences", directoryHint: .isDirectory)
+    }
+
+    private static func menuBarHostingPreferencesURL(fileManager: FileManager) -> URL {
+        preferencesDirectory(fileManager: fileManager)
+            .appending(path: "\(SharedConstants.menuBarHostingBundleID).plist")
     }
 
     /// Deletes Thaw's user cache directory (`~/Library/Caches/<bundle id>`).

@@ -1681,13 +1681,41 @@ final class MenuBarSectionController: ObservableObject {
         // Move the identifier to its new section in the order dict so assignment
         // and order stay consistent in a single write (no separate assignment key).
         removeFromOrder(identifier: identifier)
-        if section != .visible {
+        if section == .visible {
+            appendToVisibleOrder(identifier: identifier)
+        } else {
             sectionItemOrder[section, default: []].append(identifier)
         }
         rebuildSectionAssignmentFromOrder()
         persistOrder()
         diagLog.info("setSection(\(section.rawValue)) \(identifier); \(sectionAssignment.count) assigned item(s)")
         refresh()
+    }
+
+    /// Re-records an identifier in the visible order after a move back to Visible.
+    ///
+    /// `sectionItemOrder[.visible]` is the authority `LayoutSolver` consults to
+    /// separate profile-saved visible items from unmanaged ones. An identifier
+    /// that `removeFromOrder` strips but nothing re-adds stays unmanaged
+    /// forever, and `planNotchOverflow` overflows unmanaged items first — so a
+    /// Hidden → Visible round trip would conceal the item again the moment the
+    /// bar got tight.
+    ///
+    /// Seeds from the mirrored saved order when no visible order has been
+    /// recorded yet: writing a single-entry list into a key that was previously
+    /// absent would shadow the fuller `savedSectionOrder` fallback and mark
+    /// every *other* visible item unmanaged instead.
+    private func appendToVisibleOrder(identifier: String) {
+        let seed = sectionItemOrder[.visible]
+            ?? appState?.itemManager.savedSectionOrder[MenuBarSection.Name.visible.rawValue]
+            ?? []
+        var order = MenuBarItemTag.canonicalPersistentIdentifiers(seed)
+        let identifier = MenuBarItemTag.canonicalPersistentIdentifier(identifier)
+        guard !order.contains(identifier) else { return }
+        // Trailing end == nearest Control Center, matching the established
+        // "new and unsaved items appear to the right of the visible control".
+        order.append(identifier)
+        sectionItemOrder[.visible] = order
     }
 
     /// Removes an identifier from every section in `sectionItemOrder`.
@@ -1738,7 +1766,9 @@ final class MenuBarSectionController: ObservableObject {
             let identifier = MenuBarItemTag.canonicalPersistentIdentifier(item.uniqueIdentifier)
             overflowHiddenIdentifiers.remove(identifier)
             removeFromOrder(identifier: identifier)
-            if section != .visible {
+            if section == .visible {
+                appendToVisibleOrder(identifier: identifier)
+            } else {
                 sectionItemOrder[section, default: []].append(identifier)
             }
             moved.append(identifier)
@@ -1812,6 +1842,36 @@ final class MenuBarSectionController: ObservableObject {
             if !ordered.isEmpty {
                 newOrder[section] = ordered
             }
+        }
+        // Carry the visible order across the wholesale replace. Dropping it
+        // here (the loop above only rebuilds non-visible sections) left
+        // `sectionItemOrder[.visible]` absent *and* persisted it away, so
+        // `LayoutSolver` saw an empty saved-visible set and treated every
+        // visible item as unmanaged — exactly what automatic overflow
+        // conceals first. Items reset *into* Visible are appended so a reset
+        // never silently drops them from the lane's recorded order.
+        let previousVisibleOrder = sectionItemOrder[.visible]
+            ?? appState?.itemManager.savedSectionOrder[MenuBarSection.Name.visible.rawValue]
+            ?? []
+        let nonVisibleIDs = Set(newOrder.values.joined())
+        var visibleOrder = MenuBarItemTag
+            .canonicalPersistentIdentifiers(previousVisibleOrder)
+            .filter { !nonVisibleIDs.contains($0) }
+        // Items the reset moved *out* of Hidden / Always Hidden are now visible
+        // but have no visible-order entry yet. `sanitized` only ever holds
+        // non-visible assignments, so the newly-visible set is what the old
+        // non-visible lists held minus what the new ones still hold.
+        let visibleSet = Set(visibleOrder)
+        let previousNonVisibleIDs = MenuBarSection.Name.allCases
+            .filter { $0 != .visible }
+            .flatMap { sectionItemOrder[$0] ?? [] }
+        for id in MenuBarItemTag.canonicalPersistentIdentifiers(previousNonVisibleIDs)
+            where !nonVisibleIDs.contains(id) && !visibleSet.contains(id)
+        {
+            visibleOrder.append(id)
+        }
+        if !visibleOrder.isEmpty {
+            newOrder[.visible] = visibleOrder
         }
         sectionItemOrder = newOrder
         rebuildSectionAssignmentFromOrder()

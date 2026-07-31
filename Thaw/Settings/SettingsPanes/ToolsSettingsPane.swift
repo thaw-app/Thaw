@@ -18,6 +18,7 @@ struct ToolsSettingsPane: View {
     @State private var isBusy = false
     @State private var statusMessage: String?
     @State private var errorMessage: String?
+    @State private var lastLayoutBackup: URL?
 
     var body: some View {
         IceForm {
@@ -57,6 +58,27 @@ struct ToolsSettingsPane: View {
                     buttonTitle: "Reset Control Center"
                 ) {
                     pendingAction = .resetControlCenter
+                }
+
+                // macOS 26 keeps saved positions in Control Center's domain, which
+                // the row above already resets. Only 27+ has a separate menu bar
+                // host worth resetting on its own.
+                if #available(macOS 27, *) {
+                    toolRow(
+                        title: "Reset menu bar layout positions",
+                        detail: "Delete every saved status item position from the system's menu bar host and restart it, so the layout rebuilds from scratch. A backup is saved first. Use this when items refuse to return to the menu bar after rearranging.",
+                        buttonTitle: "Reset Layout Positions",
+                        role: .destructive
+                    ) {
+                        pendingAction = .resetMenuBarLayoutPositions
+                    }
+
+                    if lastLayoutBackup != nil {
+                        Button("Show Layout Backups in Finder") {
+                            NSWorkspace.shared.open(MaintenanceTools.menuBarLayoutBackupDirectory())
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
                 }
 
                 toolRow(
@@ -202,6 +224,18 @@ struct ToolsSettingsPane: View {
             case .resetControlCenter:
                 try await MaintenanceTools.resetControlCenterPreferences()
                 reportSuccess(String(localized: "Control Center preferences were reset."))
+            case .resetMenuBarLayoutPositions:
+                let backup = try await MaintenanceTools.resetMenuBarLayoutPositions()
+                lastLayoutBackup = backup
+                if let backup {
+                    reportSuccess(
+                        String(
+                            localized: "Menu bar layout positions were reset. Backup saved as \(backup.lastPathComponent)."
+                        )
+                    )
+                } else {
+                    reportSuccess(String(localized: "Menu bar layout positions were reset."))
+                }
             case .quitAndClearCache:
                 await appState.imageCache.suspendDiskPersistenceForReset()
                 do {
@@ -231,6 +265,7 @@ struct ToolsSettingsPane: View {
 private enum MaintenanceToolAction: Identifiable {
     case resetSettings
     case resetControlCenter
+    case resetMenuBarLayoutPositions
     case quitAndClearCache
     case resetPermissions
 
@@ -242,6 +277,7 @@ private enum MaintenanceToolAction: Identifiable {
         switch self {
         case .resetSettings: String(localized: "Reset all settings?")
         case .resetControlCenter: String(localized: "Reset Control Center preferences?")
+        case .resetMenuBarLayoutPositions: String(localized: "Reset menu bar layout positions?")
         case .quitAndClearCache: String(localized: "Quit and clear cache?")
         case .resetPermissions: String(localized: "Reset permissions?")
         }
@@ -251,6 +287,7 @@ private enum MaintenanceToolAction: Identifiable {
         switch self {
         case .resetSettings: "Reset"
         case .resetControlCenter: "Reset Control Center"
+        case .resetMenuBarLayoutPositions: "Reset Layout Positions"
         case .quitAndClearCache: "Quit & Clear Cache"
         case .resetPermissions: "Reset Permissions"
         }
@@ -262,6 +299,8 @@ private enum MaintenanceToolAction: Identifiable {
             "This will reset app preferences to their default values. Saved profiles, automation whitelists, and user data will not be deleted. This action cannot be undone."
         case .resetControlCenter:
             "Control Center will quit and its preference files will be deleted. macOS usually relaunches it automatically."
+        case .resetMenuBarLayoutPositions:
+            "Every status item's saved position will be deleted and the system's menu bar host will restart, so your whole menu bar arrangement is rebuilt from scratch. A timestamped backup is saved first, and you can reveal it in Finder afterward."
         case .quitAndClearCache:
             "\(Constants.displayName) will delete its cache folder and quit. Launch the app again afterward."
         case .resetPermissions:
