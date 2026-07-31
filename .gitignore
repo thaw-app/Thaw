@@ -4,6 +4,7 @@
 .DS_Store
 .idea/
 .lefthook.yml
+.swiftpm-overrides/**
 .vscode/
 *.dSYM
 *.ipa
