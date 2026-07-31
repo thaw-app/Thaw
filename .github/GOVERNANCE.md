@@ -109,17 +109,18 @@ Secrets / Environments — never committed to git.
 | --- | --- | --- |
 | **View / edit release secrets** | Organization owners (`stonerl`, `nightah`, `diazdesandi`), scoped to the repo or org secret store that holds them | Continuity: any one owner unavailable must not block a hotfix |
 | **Dispatch `release.yml`** | Anyone with permission to run `workflow_dispatch` on this repo. Policy: Project Lead by default; Platform Lead for platform/update-path releases or when delegated; other org owners when delegated for a specific release | Start a release or dry-run workflow run |
-| **Approve / consume release secrets in CI** | Required reviewers on the GitHub **`release` Environment** (`stonerl`, `diazdesandi`). The release job sets `environment: release`, so signing and publication steps do not run — and secrets are not injected into that job — until a designated reviewer approves | Cut signed/notarized builds and publish update assets |
+| **Approve / consume release secrets in CI** | Required reviewer on the GitHub **`release` Environment**: `diazdesandi`. The release job sets `environment: release`, so signing and publication steps do not run — and secrets are not injected into that job — until that reviewer approves. Other org owners (`stonerl`, `nightah`) are not listed as reviewers (avoids approval spam) but may still unblock via Environment **admin bypass** when needed | Cut signed/notarized builds and publish update assets |
 | **Write collaborators / contributors** | Everyone else with repo write | Code and docs only — no secret read; cannot approve the `release` Environment |
 
 Prefer **org-owned** secrets under [`thaw-app`](https://github.com/thaw-app) so admin
-is not tied to one personal account.
+is not tied to one personal account. Add a second Environment reviewer only when
+you intentionally want two-person approval (and accept the extra notifications).
 
 ### Approval path
 
 1. Routine application releases: Project Lead (or Platform Lead / delegated org
    owner) starts the release workflow; the `release` Environment requires
-   approval from a designated reviewer before the job runs.
+   approval from the designated reviewer before the job runs.
 2. Secret create / rotate / delete: proposed by an org owner; a **second** org
    owner confirms out-of-band (Discord or GitHub) before the change is applied,
    except true emergencies (compromised key) where one owner may rotate

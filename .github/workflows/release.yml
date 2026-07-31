@@ -54,7 +54,8 @@ jobs:
   release:
     runs-on: xcode-27
     # Trust boundary: required reviewers on the `release` Environment
-    # (stonerl, diazdesandi). Secrets are not consumed until approval.
+    # (diazdesandi). Other org owners can still unblock via admin bypass.
+    # Secrets are not consumed until approval.
     environment: release
     permissions:
       contents: write
