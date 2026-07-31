@@ -623,13 +623,13 @@ final class ProfileManager {
     /// (and UserDefaults), not the full app state, so the capture and re-arm
     /// paths can be exercised in tests without standing up an AppState.
     private func captureCurrentLayout(from itemManager: MenuBarItemManager) -> MenuBarLayoutSnapshot {
-        let savedSectionOrder = UserDefaults.standard.dictionary(
+        let savedSectionOrder = Defaults.store.dictionary(
             forKey: "MenuBarItemManager.savedSectionOrder"
         ) as? [String: [String]] ?? [:]
-        let pinnedHiddenBundleIDs = UserDefaults.standard.array(
+        let pinnedHiddenBundleIDs = Defaults.store.array(
             forKey: "MenuBarItemManager.pinnedHiddenBundleIDs"
         ) as? [String] ?? []
-        let pinnedAlwaysHiddenBundleIDs = UserDefaults.standard.array(
+        let pinnedAlwaysHiddenBundleIDs = Defaults.store.array(
             forKey: "MenuBarItemManager.pinnedAlwaysHiddenBundleIDs"
         ) as? [String] ?? []
         let customNames = Defaults.dictionary(
@@ -1019,7 +1019,7 @@ final class ProfileManager {
 
     /// Applies the profile requested by a Focus Filter activation.
     func applyFocusFilterProfile() async {
-        guard let idString = UserDefaults.standard.string(
+        guard let idString = Defaults.store.string(
             forKey: "FocusFilterRequestedProfileID"
         ),
             let profileID = UUID(uuidString: idString)

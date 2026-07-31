@@ -203,7 +203,7 @@ final class MenuBarItemManager {
     /// per-cycle `AXIdentityCatalog.snapshot` and per-item window bounds
     /// lookups run only when explicitly enabled for diagnostics.
     nonisolated static let isDegradedIdentityEnrichmentEnabled =
-        UserDefaults.standard.bool(forKey: "EnableDegradedItemAXEnrichment")
+        Defaults.store.bool(forKey: "EnableDegradedItemAXEnrichment")
 
     /// Widest a control item can be while still counting as a marker rather
     /// than a collapsed section's stretched divider.
@@ -551,7 +551,7 @@ final class MenuBarItemManager {
     /// Loads persisted known item identifiers.
     private func loadKnownItemIdentifiers() {
         let key = "MenuBarItemManager.knownItemIdentifiers"
-        let defaults = UserDefaults.standard
+        let defaults = Defaults.store
         if let stored = defaults.array(forKey: key) as? [String] {
             knownItemIdentifiers = Set(stored)
         }
@@ -560,13 +560,13 @@ final class MenuBarItemManager {
     /// Persists known item identifiers.
     private func persistKnownItemIdentifiers() {
         let key = "MenuBarItemManager.knownItemIdentifiers"
-        let defaults = UserDefaults.standard
+        let defaults = Defaults.store
         defaults.set(Array(knownItemIdentifiers), forKey: key)
     }
 
     /// Loads persisted pinned bundle identifiers.
     private func loadPinnedBundleIDs() {
-        let defaults = UserDefaults.standard
+        let defaults = Defaults.store
         if let hidden = defaults.array(forKey: "MenuBarItemManager.pinnedHiddenBundleIDs") as? [String] {
             pinnedHiddenBundleIDs = Set(hidden)
         }
@@ -577,7 +577,7 @@ final class MenuBarItemManager {
 
     /// Persists pinned bundle identifiers.
     private func persistPinnedBundleIDs() {
-        let defaults = UserDefaults.standard
+        let defaults = Defaults.store
         defaults.set(Array(pinnedHiddenBundleIDs), forKey: "MenuBarItemManager.pinnedHiddenBundleIDs")
         defaults.set(Array(pinnedAlwaysHiddenBundleIDs), forKey: "MenuBarItemManager.pinnedAlwaysHiddenBundleIDs")
     }
@@ -586,11 +586,11 @@ final class MenuBarItemManager {
     /// whose apps quit before they could be rehidden.
     private func loadPendingRelocations() {
         let key = "MenuBarItemManager.pendingRelocations"
-        if let stored = UserDefaults.standard.dictionary(forKey: key) as? [String: String] {
+        if let stored = Defaults.store.dictionary(forKey: key) as? [String: String] {
             pendingRelocations = stored
         }
         let destKey = "MenuBarItemManager.pendingReturnDestinations"
-        if let stored = UserDefaults.standard.dictionary(forKey: destKey) as? [String: [String: String]] {
+        if let stored = Defaults.store.dictionary(forKey: destKey) as? [String: [String: String]] {
             pendingReturnDestinations = stored
         }
     }
@@ -598,15 +598,15 @@ final class MenuBarItemManager {
     /// Persists pending relocations.
     private func persistPendingRelocations() {
         let key = "MenuBarItemManager.pendingRelocations"
-        UserDefaults.standard.set(pendingRelocations, forKey: key)
+        Defaults.store.set(pendingRelocations, forKey: key)
         let destKey = "MenuBarItemManager.pendingReturnDestinations"
-        UserDefaults.standard.set(pendingReturnDestinations, forKey: destKey)
+        Defaults.store.set(pendingReturnDestinations, forKey: destKey)
     }
 
     /// Loads persisted section order.
     private func loadSavedSectionOrder() {
         let key = "MenuBarItemManager.savedSectionOrder"
-        if let stored = UserDefaults.standard.dictionary(forKey: key) as? [String: [String]] {
+        if let stored = Defaults.store.dictionary(forKey: key) as? [String: [String]] {
             savedSectionOrder = stored
         }
     }
@@ -660,7 +660,7 @@ final class MenuBarItemManager {
     /// Persists the current saved section order.
     private func persistSavedSectionOrder() {
         let key = "MenuBarItemManager.savedSectionOrder"
-        UserDefaults.standard.set(savedSectionOrder, forKey: key)
+        Defaults.store.set(savedSectionOrder, forKey: key)
     }
 
     /// Extracts the current per-section item order from the given cache and

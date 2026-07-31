@@ -7,8 +7,22 @@
 //  Licensed under the GNU GPLv3
 
 import Foundation
+import os.lock
 import Testing
 @testable import Thaw
+
+/// Serializes installation of a scratch store across the whole process.
+///
+/// `Defaults.store` is a single global. `.serialized` orders tests *within* a
+/// suite, not across suites, so without this two suites could install scratch
+/// stores concurrently and each would read the other's. The lock makes the
+/// swap window mutually exclusive.
+///
+/// - Note: this protects suites that go through `withScratchDefaults`. A suite
+///   that reads the real `Defaults` domain without taking the lock can still
+///   observe someone else's scratch store. The end state is for every
+///   `Defaults`-touching suite to route through here.
+private let scratchDefaultsLock = OSAllocatedUnfairLock()
 
 /// Points ``Defaults`` at a throwaway suite for the duration of `body`, then
 /// restores the previous store and deletes the suite.
@@ -39,20 +53,25 @@ func withScratchDefaults<Result>(
         "could not open a scratch defaults suite",
         sourceLocation: sourceLocation
     )
+    scratchDefaultsLock.lock()
     let previous = Defaults.store
     Defaults.store = suite
     defer {
         Defaults.store = previous
         suite.removePersistentDomain(forName: suiteName)
+        scratchDefaultsLock.unlock()
     }
     return try body(suite)
 }
 
 /// Async counterpart to ``withScratchDefaults(sourceLocation:_:)``.
 ///
-/// The same `.serialized` requirement applies, and more sharply: an `await`
-/// inside `body` suspends while the global store still points at the scratch
-/// suite.
+/// - Warning: this variant deliberately does **not** take
+///   ``scratchDefaultsLock``. Holding an unfair lock across a suspension point
+///   risks deadlock, since the continuation may resume on a different thread.
+///   An async body therefore has no cross-suite protection: use it only from a
+///   suite that owns the store for its whole duration, and prefer the
+///   synchronous variant wherever the body does not actually need to await.
 @discardableResult
 func withScratchDefaults<Result>(
     sourceLocation: SourceLocation = #_sourceLocation,

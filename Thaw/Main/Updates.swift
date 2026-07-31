@@ -55,11 +55,11 @@ final class UpdatesManager: NSObject {
             // track it automatically; register/notify Observation manually
             // (same pattern as the Sparkle-backed properties below).
             access(keyPath: \.allowsBetaUpdates)
-            return UserDefaults.standard.bool(forKey: "AllowsBetaUpdates")
+            return Defaults.store.bool(forKey: "AllowsBetaUpdates")
         }
         set {
             withMutation(keyPath: \.allowsBetaUpdates) {
-                UserDefaults.standard.set(newValue, forKey: "AllowsBetaUpdates")
+                Defaults.store.set(newValue, forKey: "AllowsBetaUpdates")
             }
             Task {
                 guard hasStartedUpdater else { return }
@@ -177,7 +177,7 @@ extension UpdatesManager: SPUUpdaterDelegate {
 
     /// Determines which update channels are allowed.
     func allowedChannels(for _: SPUUpdater) -> Set<String> {
-        if UserDefaults.standard.bool(forKey: "AllowsBetaUpdates") {
+        if Defaults.store.bool(forKey: "AllowsBetaUpdates") {
             return ["beta"]
         }
         return []

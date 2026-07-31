@@ -1076,7 +1076,7 @@ nonisolated enum ControlItemDefaults {
     static subscript<Value>(key: Key<Value>, autosaveName: String) -> Value? {
         get {
             let stringKey = key.stringKey(for: autosaveName)
-            return UserDefaults.standard.object(forKey: stringKey) as? Value
+            return Defaults.store.object(forKey: stringKey) as? Value
         }
         set {
             // Prevent saving preferred position for section divider chevrons
@@ -1084,7 +1084,7 @@ nonisolated enum ControlItemDefaults {
                 return
             }
             let stringKey = key.stringKey(for: autosaveName)
-            return UserDefaults.standard.set(newValue, forKey: stringKey)
+            return Defaults.store.set(newValue, forKey: stringKey)
         }
     }
 

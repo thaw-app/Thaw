@@ -509,7 +509,13 @@ final class DisplaySettingsManager {
     }
 
     /// Handles per-display settings changed externally via Settings URI scheme.
-    private func handleExternalPerDisplaySettingsChange(_ notification: Notification) {
+    ///
+    /// Internal rather than private so tests can drive it with a hand-built
+    /// `Notification` instead of going through `performSetup(with:)`, which
+    /// needs a live `AppState` and installs a one-second debounced observer.
+    /// The `specific:UUID` scope reaches every setter below without touching
+    /// `NSScreen`, provided `configurations` already holds the UUID.
+    func handleExternalPerDisplaySettingsChange(_ notification: Notification) {
         guard let key = notification.userInfo?["key"] as? String,
               let scopeRaw = notification.userInfo?["scope"] as? String
         else {
@@ -517,7 +523,7 @@ final class DisplaySettingsManager {
         }
 
         // Parse scope - it might be a simple scope or "specific:UUID"
-        let (scope, specificUUID) = parseScope(from: scopeRaw)
+        let (scope, specificUUID) = Self.parseScope(from: scopeRaw)
 
         // Validate specific UUID if provided (defense-in-depth)
         if let uuid = specificUUID {
@@ -606,7 +612,10 @@ final class DisplaySettingsManager {
 
     /// Parses scope string into scope enum and optional specific UUID.
     /// Format: "active", "allEnabled", "allNonIceBar", or "specific:UUID"
-    private func parseScope(from scopeRaw: String) -> (SettingsURIHandler.PerDisplayScope, String?) {
+    ///
+    /// Static and internal because it depends on nothing but its argument,
+    /// which makes the parse rules directly testable.
+    static func parseScope(from scopeRaw: String) -> (SettingsURIHandler.PerDisplayScope, String?) {
         if scopeRaw.hasPrefix("specific:") {
             let uuid = String(scopeRaw.dropFirst("specific:".count))
             return (.activeDisplay, uuid) // Use activeDisplay as placeholder, UUID determines actual target
