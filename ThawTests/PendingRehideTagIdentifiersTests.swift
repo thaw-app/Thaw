@@ -6,8 +6,8 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Testing
 @testable import Thaw
-import XCTest
 
 /// Characterization tests for LayoutSolver.pendingRehideTagIdentifiers,
 /// the helper saveSectionOrder uses to identify items whose true
@@ -19,23 +19,26 @@ import XCTest
 /// populated. Both signals must be treated as "this item belongs
 /// elsewhere" so planSectionOrder preserves the item's original
 /// saved-section slot instead of capturing its live visible position.
-final class PendingRehideTagIdentifiersTests: XCTestCase {
+@Suite("Pending rehide tag identifiers")
+struct PendingRehideTagIdentifiersTests {
     private let waitForRelaunchPrefix = "waitForRelaunch:"
 
     /// Empty inputs produce an empty set.
-    func testEmptyInputsReturnsEmpty() {
+    @Test("Empty inputs produce an empty set")
+    func emptyInputsReturnsEmpty() {
         let result = LayoutSolver.pendingRehideTagIdentifiers(
             pendingReturnDestinations: [:],
             pendingRelocations: [:],
             waitForRelaunchPrefix: waitForRelaunchPrefix
         )
-        XCTAssertEqual(result, [])
+        #expect(result == [])
     }
 
     /// Active return destination only: in-flight context has been
     /// dropped but the return-destination metadata survives until the
     /// app relaunches. The tag is in the result set.
-    func testActiveReturnDestinationIncludesTag() {
+    @Test("An active return destination contributes its tag")
+    func activeReturnDestinationIncludesTag() {
         let result = LayoutSolver.pendingRehideTagIdentifiers(
             pendingReturnDestinations: [
                 "com.example.app:Status": ["neighbor": "com.other.app:Status", "position": "left"],
@@ -43,13 +46,14 @@ final class PendingRehideTagIdentifiersTests: XCTestCase {
             pendingRelocations: [:],
             waitForRelaunchPrefix: waitForRelaunchPrefix
         )
-        XCTAssertEqual(result, ["com.example.app:Status"])
+        #expect(result == ["com.example.app:Status"])
     }
 
     /// waitForRelaunch sentinel only: the rehide hit the per-session
     /// retry cap and was suspended. pendingRelocations carries the
     /// sentinel-prefixed value; the tag is in the result set.
-    func testWaitForRelaunchSentinelIncludesTag() {
+    @Test("A waitForRelaunch sentinel contributes its tag")
+    func waitForRelaunchSentinelIncludesTag() {
         let result = LayoutSolver.pendingRehideTagIdentifiers(
             pendingReturnDestinations: [:],
             pendingRelocations: [
@@ -57,7 +61,7 @@ final class PendingRehideTagIdentifiersTests: XCTestCase {
             ],
             waitForRelaunchPrefix: waitForRelaunchPrefix
         )
-        XCTAssertEqual(result, ["com.example.app:Status"])
+        #expect(result == ["com.example.app:Status"])
     }
 
     /// Non-sentinel pendingRelocations value: this is the ordinary
@@ -66,7 +70,8 @@ final class PendingRehideTagIdentifiersTests: XCTestCase {
     /// or "alwaysHidden", not the sentinel). It must NOT be treated
     /// as a rehide signal — the in-flight context handles the
     /// suppression while the rehide is still attempted.
-    func testNonSentinelPendingRelocationExcluded() {
+    @Test("A non-sentinel pending relocation is excluded")
+    func nonSentinelPendingRelocationExcluded() {
         let result = LayoutSolver.pendingRehideTagIdentifiers(
             pendingReturnDestinations: [:],
             pendingRelocations: [
@@ -74,11 +79,12 @@ final class PendingRehideTagIdentifiersTests: XCTestCase {
             ],
             waitForRelaunchPrefix: waitForRelaunchPrefix
         )
-        XCTAssertEqual(result, [])
+        #expect(result == [])
     }
 
     /// Both sources contribute disjoint tags: the union is the result.
-    func testDisjointSourcesProduceUnion() {
+    @Test("Disjoint sources produce the union of their tags")
+    func disjointSourcesProduceUnion() {
         let result = LayoutSolver.pendingRehideTagIdentifiers(
             pendingReturnDestinations: [
                 "com.a.app:Status": ["neighbor": "com.x.app:Status", "position": "left"],
@@ -89,11 +95,12 @@ final class PendingRehideTagIdentifiersTests: XCTestCase {
             ],
             waitForRelaunchPrefix: waitForRelaunchPrefix
         )
-        XCTAssertEqual(result, ["com.a.app:Status", "com.b.app:Status"])
+        #expect(result == ["com.a.app:Status", "com.b.app:Status"])
     }
 
     /// Same tag appears in both sources: the set deduplicates.
-    func testOverlappingSourcesDeduplicate() {
+    @Test("A tag present in both sources is reported once")
+    func overlappingSourcesDeduplicate() {
         let result = LayoutSolver.pendingRehideTagIdentifiers(
             pendingReturnDestinations: [
                 "com.example.app:Status": ["neighbor": "com.other.app:Status", "position": "left"],
@@ -103,13 +110,14 @@ final class PendingRehideTagIdentifiersTests: XCTestCase {
             ],
             waitForRelaunchPrefix: waitForRelaunchPrefix
         )
-        XCTAssertEqual(result, ["com.example.app:Status"])
+        #expect(result == ["com.example.app:Status"])
     }
 
     /// Prefix matching is strict: a value whose content happens to
     /// contain the prefix substring later in the string is not a
     /// sentinel. Only true `hasPrefix` matches count.
-    func testPrefixMatchIsAnchored() {
+    @Test("Sentinel matching is anchored to the start of the value")
+    func prefixMatchIsAnchored() {
         let result = LayoutSolver.pendingRehideTagIdentifiers(
             pendingReturnDestinations: [:],
             pendingRelocations: [
@@ -117,6 +125,6 @@ final class PendingRehideTagIdentifiersTests: XCTestCase {
             ],
             waitForRelaunchPrefix: waitForRelaunchPrefix
         )
-        XCTAssertEqual(result, [])
+        #expect(result == [])
     }
 }

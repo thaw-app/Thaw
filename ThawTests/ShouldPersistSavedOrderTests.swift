@@ -6,8 +6,8 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Testing
 @testable import Thaw
-import XCTest
 
 /// Characterization tests for LayoutSolver.shouldPersistSavedOrder, the
 /// pure truth-table gate consumed by uncheckedCacheItems to decide
@@ -16,19 +16,22 @@ import XCTest
 /// Pins down which in-flight orchestrator signals block a save. A
 /// regression where any of these flags is dropped from the gate is
 /// caught by the corresponding test below.
-final class ShouldPersistSavedOrderTests: XCTestCase {
+@Suite("Should persist saved order")
+struct ShouldPersistSavedOrderTests {
     /// All clear: every gate flag is false and no temporary contexts.
     /// The expected state for ordinary cache cycles between user
     /// actions.
-    func testAllFalseAndContextsEmptyPersists() {
-        XCTAssertTrue(LayoutSolver.shouldPersistSavedOrder(.init()))
+    @Test("All flags clear and no temporary contexts persists")
+    func allFalseAndContextsEmptyPersists() {
+        #expect(LayoutSolver.shouldPersistSavedOrder(.init()))
     }
 
     /// Restore in flight: the cross-section / within-section restore
     /// loop is currently moving items; intermediate cache states must
     /// not be persisted.
-    func testRestoringItemOrderBlocks() {
-        XCTAssertFalse(LayoutSolver.shouldPersistSavedOrder(
+    @Test("A restore in flight blocks the save")
+    func restoringItemOrderBlocks() {
+        #expect(!LayoutSolver.shouldPersistSavedOrder(
             .init(
                 isRestoringItemOrder: true
             )
@@ -37,8 +40,9 @@ final class ShouldPersistSavedOrderTests: XCTestCase {
 
     /// Layout reset in flight (the user-triggered "Reset Layout" pass);
     /// transient mid-reset state is not the user's intent.
-    func testResettingLayoutBlocks() {
-        XCTAssertFalse(LayoutSolver.shouldPersistSavedOrder(
+    @Test("A layout reset in flight blocks the save")
+    func resettingLayoutBlocks() {
+        #expect(!LayoutSolver.shouldPersistSavedOrder(
             .init(
                 isResettingLayout: true
             )
@@ -48,8 +52,9 @@ final class ShouldPersistSavedOrderTests: XCTestCase {
     /// Cold-boot settling window: many apps register their NSStatusItems
     /// in quick succession; capturing a snapshot mid-settling can
     /// persist sourcePID-unresolved placeholder identifiers.
-    func testInStartupSettlingBlocks() {
-        XCTAssertFalse(LayoutSolver.shouldPersistSavedOrder(
+    @Test("The cold-boot settling window blocks the save")
+    func inStartupSettlingBlocks() {
+        #expect(!LayoutSolver.shouldPersistSavedOrder(
             .init(
                 isInStartupSettling: true
             )
@@ -60,8 +65,9 @@ final class ShouldPersistSavedOrderTests: XCTestCase {
     /// and is moving items to match the profile spec. A nested cache
     /// cycle that clobbers isRestoringItemOrder (e.g. a failed restore
     /// returning false) must not let the partial layout reach disk.
-    func testApplyingProfileLayoutBlocks() {
-        XCTAssertFalse(LayoutSolver.shouldPersistSavedOrder(
+    @Test("A profile apply in flight blocks the save")
+    func applyingProfileLayoutBlocks() {
+        #expect(!LayoutSolver.shouldPersistSavedOrder(
             .init(
                 isApplyingProfileLayout: true
             )
@@ -74,8 +80,9 @@ final class ShouldPersistSavedOrderTests: XCTestCase {
     /// until the rehide completes (or fails into pendingRelocations
     /// where the separate pendingRehideTagIdentifiers filter takes
     /// over).
-    func testTemporarilyShownContextsNonEmptyBlocks() {
-        XCTAssertFalse(LayoutSolver.shouldPersistSavedOrder(
+    @Test("A temporarily-shown item in flight blocks the save")
+    func temporarilyShownContextsNonEmptyBlocks() {
+        #expect(!LayoutSolver.shouldPersistSavedOrder(
             .init(
                 temporarilyShownItemContextsIsEmpty: false
             )
@@ -88,8 +95,9 @@ final class ShouldPersistSavedOrderTests: XCTestCase {
     /// reflects a transient macOS rebuild (e.g. a space switch
     /// re-exposing hidden items as visible); persisting it now would
     /// bake that transient state into the saved layout (#736).
-    func testPendingDivergenceBlocks() {
-        XCTAssertFalse(LayoutSolver.shouldPersistSavedOrder(
+    @Test("A pending layout divergence blocks the save")
+    func pendingDivergenceBlocks() {
+        #expect(!LayoutSolver.shouldPersistSavedOrder(
             .init(
                 hasPendingDivergence: true
             )
@@ -99,14 +107,15 @@ final class ShouldPersistSavedOrderTests: XCTestCase {
     /// Two flags simultaneously: any blocking flag is sufficient to
     /// block the save. Sanity-check that the gate is the AND of all
     /// per-flag predicates rather than counting.
-    func testMultipleBlockingFlagsAllBlock() {
-        XCTAssertFalse(LayoutSolver.shouldPersistSavedOrder(
+    @Test("Any one of several blocking flags is enough to block")
+    func multipleBlockingFlagsAllBlock() {
+        #expect(!LayoutSolver.shouldPersistSavedOrder(
             .init(
                 isRestoringItemOrder: true,
                 isResettingLayout: true
             )
         ))
-        XCTAssertFalse(LayoutSolver.shouldPersistSavedOrder(
+        #expect(!LayoutSolver.shouldPersistSavedOrder(
             .init(
                 isInStartupSettling: true,
                 isApplyingProfileLayout: true

@@ -6,113 +6,131 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Foundation
+import Testing
 @testable import Thaw
-import XCTest
 
-final class LayoutResetErrorTests: XCTestCase {
+@Suite("Layout reset errors")
+struct LayoutResetErrorTests {
     // MARK: - Error Cases
 
-    func testMissingAppStateError() {
-        let error = MenuBarItemManager.LayoutResetError.missingAppState
-        XCTAssertNotNil(error)
+    @Test("The missing-app-state case exists")
+    func missingAppStateError() {
+        let error: MenuBarItemManager.LayoutResetError? = .missingAppState
+        #expect(error != nil)
     }
 
-    func testMissingControlItemsError() {
-        let error = MenuBarItemManager.LayoutResetError.missingControlItems
-        XCTAssertNotNil(error)
+    @Test("The missing-control-items case exists")
+    func missingControlItemsError() {
+        let error: MenuBarItemManager.LayoutResetError? = .missingControlItems
+        #expect(error != nil)
     }
 
-    func testAlreadyInProgressError() {
-        let error = MenuBarItemManager.LayoutResetError.alreadyInProgress
-        XCTAssertNotNil(error)
+    @Test("The already-in-progress case exists")
+    func alreadyInProgressError() {
+        let error: MenuBarItemManager.LayoutResetError? = .alreadyInProgress
+        #expect(error != nil)
     }
 
     // MARK: - Error Description
 
-    func testMissingAppStateErrorDescription() {
+    @Test("Missing app state describes itself as an app state failure")
+    func missingAppStateErrorDescription() {
         let error = MenuBarItemManager.LayoutResetError.missingAppState
-        XCTAssertEqual(error.errorDescription, "Unable to access app state")
+        #expect(error.errorDescription == "Unable to access app state")
     }
 
-    func testMissingControlItemsErrorDescription() {
+    @Test("Missing control items describes itself as missing section dividers")
+    func missingControlItemsErrorDescription() {
         let error = MenuBarItemManager.LayoutResetError.missingControlItems
-        XCTAssertEqual(error.errorDescription, "Couldn't find section dividers in the menu bar")
+        #expect(error.errorDescription == "Couldn't find section dividers in the menu bar")
     }
 
-    func testAlreadyInProgressErrorDescription() {
+    @Test("Already in progress describes itself as a reset already running")
+    func alreadyInProgressErrorDescription() {
         let error = MenuBarItemManager.LayoutResetError.alreadyInProgress
-        XCTAssertEqual(error.errorDescription, "A layout reset is already in progress")
+        #expect(error.errorDescription == "A layout reset is already in progress")
     }
 
     // MARK: - Recovery Suggestion
 
-    func testMissingAppStateRecoverySuggestion() {
+    @Test("Missing app state suggests making sure the app is running")
+    func missingAppStateRecoverySuggestion() {
         let error = MenuBarItemManager.LayoutResetError.missingAppState
-        XCTAssertEqual(error.recoverySuggestion, "Make sure \(Constants.displayName) is running and try again.")
+        #expect(error.recoverySuggestion == "Make sure \(Constants.displayName) is running and try again.")
     }
 
-    func testMissingControlItemsRecoverySuggestion() {
+    @Test("Missing control items suggests making sure the app is running")
+    func missingControlItemsRecoverySuggestion() {
         let error = MenuBarItemManager.LayoutResetError.missingControlItems
-        XCTAssertEqual(error.recoverySuggestion, "Make sure \(Constants.displayName) is running and try again.")
+        #expect(error.recoverySuggestion == "Make sure \(Constants.displayName) is running and try again.")
     }
 
-    func testRecoverySuggestionContainsAppName() {
+    @Test("A recovery suggestion names the app")
+    func recoverySuggestionContainsAppName() {
         let error = MenuBarItemManager.LayoutResetError.missingAppState
         let suggestion = error.recoverySuggestion ?? ""
 
-        XCTAssertTrue(suggestion.contains(Constants.displayName))
+        #expect(suggestion.contains(Constants.displayName))
     }
 
     // MARK: - LocalizedError Conformance
 
-    func testConformsToLocalizedError() {
+    @Test("The error conforms to LocalizedError with both strings populated")
+    func conformsToLocalizedError() {
         let error: LocalizedError = MenuBarItemManager.LayoutResetError.missingAppState
-        XCTAssertNotNil(error.errorDescription)
-        XCTAssertNotNil(error.recoverySuggestion)
+        #expect(error.errorDescription != nil)
+        #expect(error.recoverySuggestion != nil)
     }
 
-    func testLocalizedDescriptionMatchesErrorDescription() {
+    @Test("localizedDescription matches errorDescription")
+    func localizedDescriptionMatchesErrorDescription() {
         let error = MenuBarItemManager.LayoutResetError.missingAppState
         let localizedError = error as LocalizedError
 
         // localizedDescription should use errorDescription for LocalizedError
-        XCTAssertEqual(error.localizedDescription, localizedError.errorDescription)
+        #expect(error.localizedDescription == localizedError.errorDescription)
     }
 
     // MARK: - Equality
 
-    func testSameErrorsAreEqual() {
+    @Test("Two missing-app-state errors are equal")
+    func sameErrorsAreEqual() {
         let error1 = MenuBarItemManager.LayoutResetError.missingAppState
         let error2 = MenuBarItemManager.LayoutResetError.missingAppState
 
         // Enums without associated values should be equatable
-        XCTAssertTrue(errorsAreEqual(error1, error2))
+        #expect(errorsAreEqual(error1, error2))
     }
 
-    func testDifferentErrorsAreNotEqual() {
+    @Test("Different error cases are not equal")
+    func differentErrorsAreNotEqual() {
         let error1 = MenuBarItemManager.LayoutResetError.missingAppState
         let error2 = MenuBarItemManager.LayoutResetError.missingControlItems
 
-        XCTAssertFalse(errorsAreEqual(error1, error2))
+        #expect(!errorsAreEqual(error1, error2))
     }
 
-    func testAlreadyInProgressErrorsAreEqual() {
+    @Test("Two already-in-progress errors are equal")
+    func alreadyInProgressErrorsAreEqual() {
         let error1 = MenuBarItemManager.LayoutResetError.alreadyInProgress
         let error2 = MenuBarItemManager.LayoutResetError.alreadyInProgress
 
-        XCTAssertTrue(errorsAreEqual(error1, error2))
+        #expect(errorsAreEqual(error1, error2))
     }
 
-    func testAlreadyInProgressIsNotEqualToOtherErrors() {
+    @Test("Already in progress is not equal to the other cases")
+    func alreadyInProgressIsNotEqualToOtherErrors() {
         let error1 = MenuBarItemManager.LayoutResetError.alreadyInProgress
         let error2 = MenuBarItemManager.LayoutResetError.missingAppState
 
-        XCTAssertFalse(errorsAreEqual(error1, error2))
+        #expect(!errorsAreEqual(error1, error2))
     }
 
     // MARK: - All Cases
 
-    func testAllCasesHaveDescriptions() throws {
+    @Test("Every case carries a non-empty description")
+    func allCasesHaveDescriptions() throws {
         let allCases: [MenuBarItemManager.LayoutResetError] = [
             .missingAppState,
             .missingControlItems,
@@ -120,12 +138,14 @@ final class LayoutResetErrorTests: XCTestCase {
         ]
 
         for error in allCases {
-            XCTAssertNotNil(error.errorDescription, "Error \(error) should have a description")
-            XCTAssertFalse(try XCTUnwrap(error.errorDescription?.isEmpty), "Error \(error) description should not be empty")
+            #expect(error.errorDescription != nil, "Error \(error) should have a description")
+            let isEmpty = try #require(error.errorDescription?.isEmpty)
+            #expect(!isEmpty, "Error \(error) description should not be empty")
         }
     }
 
-    func testAllCasesHaveRecoverySuggestions() throws {
+    @Test("Every case carries a non-empty recovery suggestion")
+    func allCasesHaveRecoverySuggestions() throws {
         let allCases: [MenuBarItemManager.LayoutResetError] = [
             .missingAppState,
             .missingControlItems,
@@ -133,8 +153,9 @@ final class LayoutResetErrorTests: XCTestCase {
         ]
 
         for error in allCases {
-            XCTAssertNotNil(error.recoverySuggestion, "Error \(error) should have a recovery suggestion")
-            XCTAssertFalse(try XCTUnwrap(error.recoverySuggestion?.isEmpty), "Error \(error) recovery suggestion should not be empty")
+            #expect(error.recoverySuggestion != nil, "Error \(error) should have a recovery suggestion")
+            let isEmpty = try #require(error.recoverySuggestion?.isEmpty)
+            #expect(!isEmpty, "Error \(error) recovery suggestion should not be empty")
         }
     }
 

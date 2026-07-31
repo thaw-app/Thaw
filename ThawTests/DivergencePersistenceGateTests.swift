@@ -6,8 +6,8 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Testing
 @testable import Thaw
-import XCTest
 
 /// Characterizes the divergence-persistence gate that decides whether a
 /// divergence observation should trigger a saved-layout re-apply.
@@ -20,25 +20,28 @@ import XCTest
 /// layout and yanks the cursor around for geometry that resolves itself once
 /// the menu closes. The fix requires the same divergence to be observed on
 /// two consecutive cache cycles before it is treated as confirmed.
-final class DivergencePersistenceGateTests: XCTestCase {
+@Suite("Divergence persistence gate")
+struct DivergencePersistenceGateTests {
     private let clock = ContinuousClock()
 
     /// First observation of a divergence: must defer (not confirmed yet) and
     /// arm the pending state to the observation time.
-    func testFirstObservationDefersAndArms() {
+    @Test("A first divergent observation defers and arms the pending state")
+    func firstObservationDefersAndArms() {
         let now = clock.now
         let result = MenuBarItemManager.confirmedDivergence(
             divergedNow: true,
             pendingSince: nil,
             now: now
         )
-        XCTAssertFalse(result.confirmed)
-        XCTAssertEqual(result.newPendingSince, now)
+        #expect(!result.confirmed)
+        #expect(result.newPendingSince == now)
     }
 
     /// A second divergent observation within the staleness window confirms
     /// and resets the pending state.
-    func testSecondObservationWithinWindowConfirmsAndResets() {
+    @Test("A second divergent observation inside the window confirms and resets")
+    func secondObservationWithinWindowConfirmsAndResets() {
         let armedAt = clock.now
         let now = armedAt.advanced(by: .seconds(5))
         let result = MenuBarItemManager.confirmedDivergence(
@@ -47,14 +50,15 @@ final class DivergencePersistenceGateTests: XCTestCase {
             now: now,
             staleness: .seconds(30)
         )
-        XCTAssertTrue(result.confirmed)
-        XCTAssertNil(result.newPendingSince)
+        #expect(result.confirmed)
+        #expect(result.newPendingSince == nil)
     }
 
     /// true -> false -> true: the false observation resets any pending arm,
     /// so the later true is treated as a fresh first observation (defer,
     /// re-arm), not a confirmation of the earlier one.
-    func testFalseObservationResetsThenLaterTrueReArms() {
+    @Test("A non-divergent observation resets the arm so a later divergence starts over")
+    func falseObservationResetsThenLaterTrueReArms() {
         let firstArm = clock.now
         // Intervening false observation resets the pending state.
         let afterFalse = MenuBarItemManager.confirmedDivergence(
@@ -62,8 +66,8 @@ final class DivergencePersistenceGateTests: XCTestCase {
             pendingSince: firstArm,
             now: firstArm.advanced(by: .seconds(1))
         )
-        XCTAssertFalse(afterFalse.confirmed)
-        XCTAssertNil(afterFalse.newPendingSince)
+        #expect(!afterFalse.confirmed)
+        #expect(afterFalse.newPendingSince == nil)
 
         // The next true observation is a fresh first observation.
         let laterNow = firstArm.advanced(by: .seconds(2))
@@ -72,14 +76,15 @@ final class DivergencePersistenceGateTests: XCTestCase {
             pendingSince: afterFalse.newPendingSince,
             now: laterNow
         )
-        XCTAssertFalse(result.confirmed)
-        XCTAssertEqual(result.newPendingSince, laterNow)
+        #expect(!result.confirmed)
+        #expect(result.newPendingSince == laterNow)
     }
 
     /// Two divergent observations separated beyond the staleness window: the
     /// stale arm is discarded and the later observation defers and re-arms
     /// rather than confirming against the too-old arm.
-    func testObservationsSeparatedBeyondStalenessReArm() {
+    @Test("A divergence beyond the staleness window re-arms instead of confirming")
+    func observationsSeparatedBeyondStalenessReArm() {
         let armedAt = clock.now
         let now = armedAt.advanced(by: .seconds(31))
         let result = MenuBarItemManager.confirmedDivergence(
@@ -88,14 +93,15 @@ final class DivergencePersistenceGateTests: XCTestCase {
             now: now,
             staleness: .seconds(30)
         )
-        XCTAssertFalse(result.confirmed)
-        XCTAssertEqual(result.newPendingSince, now)
+        #expect(!result.confirmed)
+        #expect(result.newPendingSince == now)
     }
 
     /// A second divergent observation at exactly the staleness boundary is
     /// still within the window (the comparison is inclusive), so it confirms
     /// rather than re-arming.
-    func testObservationAtExactStalenessBoundaryConfirms() {
+    @Test("A divergence exactly at the staleness boundary still confirms")
+    func observationAtExactStalenessBoundaryConfirms() {
         let armedAt = clock.now
         let now = armedAt.advanced(by: .seconds(30))
         let result = MenuBarItemManager.confirmedDivergence(
@@ -104,13 +110,14 @@ final class DivergencePersistenceGateTests: XCTestCase {
             now: now,
             staleness: .seconds(30)
         )
-        XCTAssertTrue(result.confirmed)
-        XCTAssertNil(result.newPendingSince)
+        #expect(result.confirmed)
+        #expect(result.newPendingSince == nil)
     }
 
     /// No divergence observed: never confirms, and any pending arm is
     /// cleared regardless of what was previously armed.
-    func testNoDivergenceAlwaysReturnsFalseNil() {
+    @Test("No divergence never confirms and always clears the pending arm")
+    func noDivergenceAlwaysReturnsFalseNil() {
         let now = clock.now
 
         let withNoPriorArm = MenuBarItemManager.confirmedDivergence(
@@ -118,15 +125,15 @@ final class DivergencePersistenceGateTests: XCTestCase {
             pendingSince: nil,
             now: now
         )
-        XCTAssertFalse(withNoPriorArm.confirmed)
-        XCTAssertNil(withNoPriorArm.newPendingSince)
+        #expect(!withNoPriorArm.confirmed)
+        #expect(withNoPriorArm.newPendingSince == nil)
 
         let withPriorArm = MenuBarItemManager.confirmedDivergence(
             divergedNow: false,
             pendingSince: now.advanced(by: .seconds(-1)),
             now: now
         )
-        XCTAssertFalse(withPriorArm.confirmed)
-        XCTAssertNil(withPriorArm.newPendingSince)
+        #expect(!withPriorArm.confirmed)
+        #expect(withPriorArm.newPendingSince == nil)
     }
 }

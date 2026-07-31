@@ -8,10 +8,11 @@
 
 import CoreGraphics
 import Foundation
+import Testing
 @testable import Thaw
-import XCTest
 
-final class CGImageDetachedCopyTests: XCTestCase {
+@Suite("CGImage detached copy")
+struct CGImageDetachedCopyTests {
     // MARK: - Helpers
 
     /// Creates an `width` x `height` bitmap where every pixel is `color`.
@@ -59,24 +60,26 @@ final class CGImageDetachedCopyTests: XCTestCase {
 
     // MARK: - Tests
 
-    func testDetachedCopyPreservesDimensionsAndPixels() {
+    @Test("A detached copy preserves dimensions and pixels")
+    func detachedCopyPreservesDimensionsAndPixels() {
         let parent = makeSolidImage(width: 20, height: 20, color: (255, 0, 0, 255))
         guard let cropped = parent.cropping(to: CGRect(x: 5, y: 5, width: 8, height: 8)) else {
-            XCTFail("Failed to crop parent image")
+            Issue.record("Failed to crop parent image")
             return
         }
 
         let detached = cropped.detachedCopy()
 
-        XCTAssertEqual(detached.width, cropped.width)
-        XCTAssertEqual(detached.height, cropped.height)
-        XCTAssertEqual(pixelData(of: detached), pixelData(of: cropped))
+        #expect(detached.width == cropped.width)
+        #expect(detached.height == cropped.height)
+        #expect(pixelData(of: detached) == pixelData(of: cropped))
     }
 
-    func testDetachedCopyOwnsItsOwnBuffer() {
+    @Test("A detached copy owns its own buffer")
+    func detachedCopyOwnsItsOwnBuffer() {
         let parent = makeSolidImage(width: 40, height: 40, color: (0, 255, 0, 255))
         guard let cropped = parent.cropping(to: CGRect(x: 10, y: 10, width: 6, height: 6)) else {
-            XCTFail("Failed to crop parent image")
+            Issue.record("Failed to crop parent image")
             return
         }
 
@@ -85,8 +88,8 @@ final class CGImageDetachedCopyTests: XCTestCase {
         // A crop shares its parent's data provider, and the parent is far larger
         // than the crop. A detached copy must be redrawn into a buffer sized to
         // its own dimensions, not the parent's.
-        XCTAssertNotEqual(cropped.dataProvider, detached.dataProvider)
-        XCTAssertEqual(detached.bytesPerRow * detached.height, detached.dataProvider?.data.map(CFDataGetLength) ?? -1)
+        #expect(cropped.dataProvider != detached.dataProvider)
+        #expect(detached.bytesPerRow * detached.height == detached.dataProvider?.data.map(CFDataGetLength) ?? -1)
     }
 
     /// Creates a `width` x `height` 8-bit mask. A mask has no color space,
@@ -108,30 +111,32 @@ final class CGImageDetachedCopyTests: XCTestCase {
         )
     }
 
-    func testDetachedCopyFallsBackToDeviceRGBForAColorSpacelessImage() throws {
+    @Test("A color-spaceless image falls back to device RGB")
+    func detachedCopyFallsBackToDeviceRGBForAColorSpacelessImage() throws {
         // Every other case here is device-RGB, so it is served by the
         // preserve-the-source-color-space path and never reaches the
         // fallback. A mask reports a nil color space, so there is nothing
         // to preserve and the device-RGB path is the only way to produce a
         // detached buffer at all.
-        let mask = try XCTUnwrap(makeMaskImage(width: 12, height: 9))
-        XCTAssertNil(mask.colorSpace, "a mask is only a valid fixture here while it has no color space")
+        let mask = try #require(makeMaskImage(width: 12, height: 9))
+        #expect(mask.colorSpace == nil, "a mask is only a valid fixture here while it has no color space")
 
         let detached = mask.detachedCopy()
 
-        XCTAssertEqual(detached.width, 12)
-        XCTAssertEqual(detached.height, 9)
-        XCTAssertEqual(detached.colorSpace?.model, .rgb, "the fallback redraws into device RGB")
-        XCTAssertNotEqual(mask.dataProvider, detached.dataProvider, "the copy must own its buffer")
+        #expect(detached.width == 12)
+        #expect(detached.height == 9)
+        #expect(detached.colorSpace?.model == .rgb, "the fallback redraws into device RGB")
+        #expect(mask.dataProvider != detached.dataProvider, "the copy must own its buffer")
     }
 
-    func testDetachedCopyHandlesDegenerateOnePixelImage() {
+    @Test("A one-pixel image detaches cleanly")
+    func detachedCopyHandlesDegenerateOnePixelImage() {
         let image = makeSolidImage(width: 1, height: 1, color: (10, 20, 30, 255))
 
         let detached = image.detachedCopy()
 
-        XCTAssertEqual(detached.width, 1)
-        XCTAssertEqual(detached.height, 1)
-        XCTAssertEqual(pixelData(of: detached), pixelData(of: image))
+        #expect(detached.width == 1)
+        #expect(detached.height == 1)
+        #expect(pixelData(of: detached) == pixelData(of: image))
     }
 }

@@ -6,8 +6,8 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Testing
 @testable import Thaw
-import XCTest
 
 /// Characterization tests for LayoutSolver.planLCSMoveSequence.
 ///
@@ -15,7 +15,8 @@ import XCTest
 /// Phase 2: identify items that must move, then for each select a stable
 /// anchor (LCS item or already-moved item) in the same section, scanning
 /// forward then backward, falling back to the section boundary.
-final class PlanLCSMoveSequenceTests: XCTestCase {
+@Suite("Plan LCS move sequence")
+struct PlanLCSMoveSequenceTests {
     // MARK: - Scenarios
 
     /// When currentNoControls is empty, every entry in desiredNoControls
@@ -23,31 +24,34 @@ final class PlanLCSMoveSequenceTests: XCTestCase {
     /// LayoutSolver.planLCSMoveSequence only considers items present in
     /// both inputs, so the planner returns zero moves rather than
     /// attempting to place items it has not observed.
-    func testEmptyCurrentProducesNoMovesDueToFilter() {
+    @Test("An empty current layout produces no moves")
+    func emptyCurrentProducesNoMovesDueToFilter() {
         let result = LayoutSolver.planLCSMoveSequence(
             currentNoControls: [],
             desiredNoControls: ["a", "b", "c"],
             sectionMap: ["a": "visible", "b": "visible", "c": "visible"]
         )
 
-        XCTAssertEqual(result.count, 0,
-                       "items missing from currentNoControls are filtered out before LCS work, so no moves are produced")
+        #expect(result.isEmpty,
+                "items missing from currentNoControls are filtered out before LCS work, so no moves are produced")
     }
 
     /// Identical current and desired produce zero planned moves.
-    func testIdenticalCurrentAndDesiredNoMoves() {
+    @Test("An already-matching layout produces no moves")
+    func identicalCurrentAndDesiredNoMoves() {
         let result = LayoutSolver.planLCSMoveSequence(
             currentNoControls: ["a", "b", "c"],
             desiredNoControls: ["a", "b", "c"],
             sectionMap: ["a": "visible", "b": "visible", "c": "visible"]
         )
 
-        XCTAssertEqual(result, [])
+        #expect(result == [])
     }
 
     /// One item swapped: only that item needs to move. The planner
     /// chooses an anchor among the LCS-stable items.
-    func testSingleSwapPlansOneMove() {
+    @Test("A single swap plans exactly one move against an LCS-stable anchor")
+    func singleSwapPlansOneMove() {
         // current: [a, b, c]  → desired: [b, a, c]
         // Common subsequences:
         //   {a,c} (length 2) — keeps a and c in place.
@@ -62,11 +66,11 @@ final class PlanLCSMoveSequenceTests: XCTestCase {
             sectionMap: ["a": "visible", "b": "visible", "c": "visible"]
         )
 
-        XCTAssertEqual(result.count, 1)
-        XCTAssertEqual(result.first?.uid, "a")
+        #expect(result.count == 1)
+        #expect(result.first?.uid == "a")
         // Anchor scan forward from position 1: c at position 2 is in
         // LCS and same section → leftOfUID("c").
-        XCTAssertEqual(result.first?.destination, .leftOfUID("c"))
+        #expect(result.first?.destination == .leftOfUID("c"))
     }
 
     /// LCS items are preserved across sections; an anchor must be in
@@ -76,16 +80,17 @@ final class PlanLCSMoveSequenceTests: XCTestCase {
     /// (h1 is in desired but not current). The LCS tie-break returns {x},
     /// so v1 is the item to move; the only same-section anchor (x) sits
     /// to its left, producing .rightOfUID(x).
-    func testAnchorScanRespectsSectionBoundary() {
+    @Test("The anchor scan stays inside the moving item's section")
+    func anchorScanRespectsSectionBoundary() {
         let result = LayoutSolver.planLCSMoveSequence(
             currentNoControls: ["v1", "x"],
             desiredNoControls: ["x", "v1", "h1"],
             sectionMap: ["v1": "visible", "x": "visible", "h1": "hidden"]
         )
 
-        XCTAssertEqual(result.count, 1)
-        XCTAssertEqual(result.first?.uid, "v1")
-        XCTAssertEqual(result.first?.destination, .rightOfUID("x"))
+        #expect(result.count == 1)
+        #expect(result.first?.uid == "v1")
+        #expect(result.first?.destination == .rightOfUID("x"))
     }
 
     /// Forward scan is preferred over backward scan; the planner picks
@@ -94,16 +99,17 @@ final class PlanLCSMoveSequenceTests: XCTestCase {
     /// current=[b, a, c], desired=[a, b, c]. LCS={a,c}, so b moves.
     /// Position of b in desired is 1; forward scan finds c at 2 (LCS,
     /// same section) → .leftOfUID(c).
-    func testForwardScanPreferredOverBackward() {
+    @Test("The forward anchor scan is preferred over the backward one")
+    func forwardScanPreferredOverBackward() {
         let result = LayoutSolver.planLCSMoveSequence(
             currentNoControls: ["b", "a", "c"],
             desiredNoControls: ["a", "b", "c"],
             sectionMap: ["a": "visible", "b": "visible", "c": "visible"]
         )
 
-        XCTAssertEqual(result.count, 1)
-        XCTAssertEqual(result.first?.uid, "b")
-        XCTAssertEqual(result.first?.destination, .leftOfUID("c"))
+        #expect(result.count == 1)
+        #expect(result.first?.uid == "b")
+        #expect(result.first?.destination == .leftOfUID("c"))
     }
 
     /// When no forward or backward anchor exists in the same section,
@@ -113,19 +119,20 @@ final class PlanLCSMoveSequenceTests: XCTestCase {
     /// section is "hidden"; x's section is "visible". The backward scan
     /// stops immediately at the section boundary and no forward anchor
     /// exists. Result: .sectionBoundary(.hidden).
-    func testSectionBoundaryFallbackWhenNoAnchorInSection() {
+    @Test("With no same-section anchor the planner falls back to the section boundary")
+    func sectionBoundaryFallbackWhenNoAnchorInSection() {
         let result = LayoutSolver.planLCSMoveSequence(
             currentNoControls: ["h1", "x"],
             desiredNoControls: ["x", "h1"],
             sectionMap: ["h1": "hidden", "x": "visible"]
         )
 
-        XCTAssertEqual(result.count, 1)
-        XCTAssertEqual(result.first?.uid, "h1")
+        #expect(result.count == 1)
+        #expect(result.first?.uid == "h1")
         if case let .sectionBoundary(section) = result.first?.destination {
-            XCTAssertEqual(section, .hidden)
+            #expect(section == .hidden)
         } else {
-            XCTFail("expected .sectionBoundary(.hidden), got \(String(describing: result.first?.destination))")
+            Issue.record("expected .sectionBoundary(.hidden), got \(String(describing: result.first?.destination))")
         }
     }
 
@@ -138,17 +145,18 @@ final class PlanLCSMoveSequenceTests: XCTestCase {
     ///   Backward scan finds c at idx 0 (in LCS, same section) → .rightOfUID(c).
     /// - a at desired idx 2: backward scan finds b at idx 1 (now in
     ///   movedItems, same section) → .rightOfUID(b).
-    func testAlreadyMovedItemBecomesStableAnchor() {
+    @Test("An already-moved item becomes a stable anchor for later moves")
+    func alreadyMovedItemBecomesStableAnchor() {
         let result = LayoutSolver.planLCSMoveSequence(
             currentNoControls: ["a", "b", "c"],
             desiredNoControls: ["c", "b", "a"],
             sectionMap: ["a": "visible", "b": "visible", "c": "visible"]
         )
 
-        XCTAssertEqual(result.count, 2)
-        XCTAssertEqual(result[0].uid, "b")
-        XCTAssertEqual(result[0].destination, .rightOfUID("c"))
-        XCTAssertEqual(result[1].uid, "a")
-        XCTAssertEqual(result[1].destination, .rightOfUID("b"))
+        #expect(result.count == 2)
+        #expect(result[0].uid == "b")
+        #expect(result[0].destination == .rightOfUID("c"))
+        #expect(result[1].uid == "a")
+        #expect(result[1].destination == .rightOfUID("b"))
     }
 }

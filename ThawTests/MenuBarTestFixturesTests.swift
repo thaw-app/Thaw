@@ -6,78 +6,87 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import CoreGraphics
+import Testing
 @testable import Thaw
-import XCTest
 
 /// Sanity tests for the synthetic fixture builders in
 /// MenuBarTestFixtures.swift. These pin down that the fixtures produce values
 /// with the documented defaults so the planner tests built on top of them stay
 /// stable.
-final class MenuBarTestFixturesTests: XCTestCase {
-    func testAppItemTagBuildsExpectedNamespaceAndTitle() {
+@Suite("Menu bar test fixtures")
+struct MenuBarTestFixturesTests {
+    @Test("An app item tag carries its bundle identifier and title")
+    func appItemTagBuildsExpectedNamespaceAndTitle() {
         let tag = MenuBarItemTag.appItem(bundleID: "com.example.app", title: "Status")
-        XCTAssertEqual(String(describing: tag.namespace), "com.example.app")
-        XCTAssertEqual(tag.title, "Status")
-        XCTAssertEqual(tag.instanceIndex, 0)
-        XCTAssertNil(tag.windowID)
+        #expect(String(describing: tag.namespace) == "com.example.app")
+        #expect(tag.title == "Status")
+        #expect(tag.instanceIndex == 0)
+        #expect(tag.windowID == nil)
     }
 
-    func testAppItemTagSupportsInstanceIndex() {
+    @Test("An app item tag keeps an explicit instance index")
+    func appItemTagSupportsInstanceIndex() {
         let tag = MenuBarItemTag.appItem(bundleID: "com.example.app", title: "Status", instanceIndex: 2)
-        XCTAssertEqual(tag.instanceIndex, 2)
+        #expect(tag.instanceIndex == 2)
     }
 
-    func testMenuBarItemFixtureDefaultsToMovableHideableItem() {
+    @Test("A menu bar item fixture defaults to a movable, hideable, on-screen item")
+    func menuBarItemFixtureDefaultsToMovableHideableItem() {
         let tag = MenuBarItemTag.appItem(bundleID: "com.example.app", title: "Status")
         let item = MenuBarItem.fixture(tag: tag, windowID: 42)
 
-        XCTAssertEqual(item.windowID, 42)
-        XCTAssertEqual(item.tag, tag)
-        XCTAssertEqual(item.sourcePID, 1234)
-        XCTAssertEqual(item.ownerPID, 1234)
-        XCTAssertEqual(item.bounds, CGRect(x: 0, y: 0, width: 24, height: 22))
-        XCTAssertTrue(item.isMovable)
-        XCTAssertTrue(item.canBeHidden)
-        XCTAssertFalse(item.isControlItem)
-        XCTAssertTrue(item.isOnScreen)
+        #expect(item.windowID == 42)
+        #expect(item.tag == tag)
+        #expect(item.sourcePID == 1234)
+        #expect(item.ownerPID == 1234)
+        #expect(item.bounds == CGRect(x: 0, y: 0, width: 24, height: 22))
+        #expect(item.isMovable)
+        #expect(item.canBeHidden)
+        #expect(!item.isControlItem)
+        #expect(item.isOnScreen)
     }
 
-    func testMenuBarItemFixtureRespectsExplicitBounds() {
+    @Test("A menu bar item fixture keeps explicitly supplied bounds")
+    func menuBarItemFixtureRespectsExplicitBounds() {
         let bounds = CGRect(x: 100, y: 0, width: 30, height: 22)
         let item = MenuBarItem.fixture(
             tag: .appItem(bundleID: "com.example.app", title: "Status"),
             windowID: 1,
             bounds: bounds
         )
-        XCTAssertEqual(item.bounds, bounds)
+        #expect(item.bounds == bounds)
     }
 
-    func testControlItemPairFixtureWithoutAlwaysHidden() {
+    @Test("A control item pair without an always-hidden control has only the hidden one")
+    func controlItemPairFixtureWithoutAlwaysHidden() {
         let pair = MenuBarItemManager.ControlItemPair.fixture(
             hiddenAt: CGRect(x: 500, y: 0, width: 24, height: 22)
         )
 
-        XCTAssertEqual(pair.hidden.tag, .hiddenControlItem)
-        XCTAssertEqual(pair.hidden.bounds.minX, 500)
-        XCTAssertNil(pair.alwaysHidden)
+        #expect(pair.hidden.tag == .hiddenControlItem)
+        #expect(pair.hidden.bounds.minX == 500)
+        #expect(pair.alwaysHidden == nil)
     }
 
-    func testControlItemPairFixtureWithAlwaysHidden() {
+    @Test("A control item pair with an always-hidden control tags and places both")
+    func controlItemPairFixtureWithAlwaysHidden() {
         let pair = MenuBarItemManager.ControlItemPair.fixture(
             hiddenAt: CGRect(x: 500, y: 0, width: 24, height: 22),
             alwaysHiddenAt: CGRect(x: 200, y: 0, width: 24, height: 22)
         )
 
-        XCTAssertEqual(pair.hidden.tag, .hiddenControlItem)
-        XCTAssertEqual(pair.alwaysHidden?.tag, .alwaysHiddenControlItem)
-        XCTAssertEqual(pair.alwaysHidden?.bounds.minX, 200)
+        #expect(pair.hidden.tag == .hiddenControlItem)
+        #expect(pair.alwaysHidden?.tag == .alwaysHiddenControlItem)
+        #expect(pair.alwaysHidden?.bounds.minX == 200)
     }
 
-    func testControlItemPairFixtureWindowIDsAreDistinct() {
+    @Test("A control item pair gives its two items distinct window identifiers")
+    func controlItemPairFixtureWindowIDsAreDistinct() {
         let pair = MenuBarItemManager.ControlItemPair.fixture(
             hiddenAt: CGRect(x: 500, y: 0, width: 24, height: 22),
             alwaysHiddenAt: CGRect(x: 200, y: 0, width: 24, height: 22)
         )
-        XCTAssertNotEqual(pair.hidden.windowID, pair.alwaysHidden?.windowID)
+        #expect(pair.hidden.windowID != pair.alwaysHidden?.windowID)
     }
 }

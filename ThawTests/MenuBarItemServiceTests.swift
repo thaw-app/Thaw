@@ -6,171 +6,182 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Foundation
+import Testing
 @testable import Thaw
-import XCTest
 
 // MARK: - MenuBarItemService Tests
 
-final class MenuBarItemServiceTests: XCTestCase {
+@Suite("Menu bar item service")
+struct MenuBarItemServiceTests {
     // MARK: - Service Name
 
-    func testServiceName() {
-        XCTAssertEqual(MenuBarItemService.name, "com.stonerl.Thaw.MenuBarItemService")
-    }
-}
-
-// MARK: - Request Tests
-
-final class MenuBarItemServiceRequestTests: XCTestCase {
-    // MARK: - Start Request
-
-    func testStartRequestEncode() throws {
-        let request = MenuBarItemService.Request.start
-        let encoder = JSONEncoder()
-        let data = try encoder.encode(request)
-        let json = try XCTUnwrap(String(data: data, encoding: .utf8))
-
-        XCTAssertTrue(json.contains("start"))
+    @Test("The service name is the reverse-DNS Mach service identifier")
+    func serviceName() {
+        #expect(MenuBarItemService.name == "com.stonerl.Thaw.MenuBarItemService")
     }
 
-    func testStartRequestDecode() throws {
-        let json = #"{"start":{}}"#
-        let data = try XCTUnwrap(json.data(using: .utf8))
-        let decoder = JSONDecoder()
+    // MARK: - Request Tests
 
-        let request = try decoder.decode(MenuBarItemService.Request.self, from: data)
+    @Suite("Request")
+    struct MenuBarItemServiceRequestTests {
+        // MARK: - Start Request
 
-        if case .start = request {
-            // Success
-        } else {
-            XCTFail("Expected .start request")
+        @Test("A start request encodes to JSON naming the case")
+        func startRequestEncode() throws {
+            let request = MenuBarItemService.Request.start
+            let encoder = JSONEncoder()
+            let data = try encoder.encode(request)
+            let json = try #require(String(data: data, encoding: .utf8))
+
+            #expect(json.contains("start"))
+        }
+
+        @Test("A start request decodes from its JSON form")
+        func startRequestDecode() throws {
+            let json = #"{"start":{}}"#
+            let data = try #require(json.data(using: .utf8))
+            let decoder = JSONDecoder()
+
+            let request = try decoder.decode(MenuBarItemService.Request.self, from: data)
+
+            guard case .start = request else {
+                Issue.record("Expected .start request")
+                return
+            }
+        }
+
+        @Test("A start request survives a round trip")
+        func startRequestRoundTrip() throws {
+            let original = MenuBarItemService.Request.start
+            let encoder = JSONEncoder()
+            let decoder = JSONDecoder()
+
+            let data = try encoder.encode(original)
+            let decoded = try decoder.decode(MenuBarItemService.Request.self, from: data)
+
+            guard case .start = decoded else {
+                Issue.record("Expected .start request after round trip")
+                return
+            }
+        }
+
+        // MARK: - SourcePID Request
+
+        @Test("A sourcePID request keeps its window info across a round trip")
+        func sourcePIDRequestRoundTrip() throws {
+            // Create a WindowInfo manually for testing
+            let windowInfo = try createTestWindowInfo()
+            let original = MenuBarItemService.Request.sourcePID(windowInfo)
+
+            let encoder = JSONEncoder()
+            let decoder = JSONDecoder()
+
+            let data = try encoder.encode(original)
+            let decoded = try decoder.decode(MenuBarItemService.Request.self, from: data)
+
+            guard case let .sourcePID(decodedWindow) = decoded else {
+                Issue.record("Expected .sourcePID request after round trip")
+                return
+            }
+            #expect(decodedWindow.windowID == windowInfo.windowID)
+            #expect(decodedWindow.ownerPID == windowInfo.ownerPID)
+        }
+
+        // MARK: - Helper
+
+        private func createTestWindowInfo() throws -> WindowInfo {
+            // CGRect encodes as nested arrays: [[x,y],[width,height]]
+            let json = """
+            {
+                "windowID": 12345,
+                "ownerPID": 1000,
+                "bounds": [[0, 0], [100, 22]],
+                "layer": 25,
+                "title": "TestItem",
+                "ownerName": "TestApp",
+                "isOnScreen": true
+            }
+            """
+            let data = try #require(json.data(using: .utf8))
+            return try JSONDecoder().decode(WindowInfo.self, from: data)
         }
     }
 
-    func testStartRequestRoundTrip() throws {
-        let original = MenuBarItemService.Request.start
-        let encoder = JSONEncoder()
-        let decoder = JSONDecoder()
+    // MARK: - Response Tests
 
-        let data = try encoder.encode(original)
-        let decoded = try decoder.decode(MenuBarItemService.Request.self, from: data)
+    @Suite("Response")
+    struct MenuBarItemServiceResponseTests {
+        // MARK: - Start Response
 
-        if case .start = decoded {
-            // Success
-        } else {
-            XCTFail("Expected .start request after round trip")
+        @Test("A start response encodes to JSON naming the case")
+        func startResponseEncode() throws {
+            let response = MenuBarItemService.Response.start
+            let encoder = JSONEncoder()
+            let data = try encoder.encode(response)
+            let json = try #require(String(data: data, encoding: .utf8))
+
+            #expect(json.contains("start"))
         }
-    }
 
-    // MARK: - SourcePID Request
+        @Test("A start response survives a round trip")
+        func startResponseRoundTrip() throws {
+            let original = MenuBarItemService.Response.start
+            let encoder = JSONEncoder()
+            let decoder = JSONDecoder()
 
-    func testSourcePIDRequestRoundTrip() throws {
-        // Create a WindowInfo manually for testing
-        let windowInfo = createTestWindowInfo()
-        let original = MenuBarItemService.Request.sourcePID(windowInfo)
+            let data = try encoder.encode(original)
+            let decoded = try decoder.decode(MenuBarItemService.Response.self, from: data)
 
-        let encoder = JSONEncoder()
-        let decoder = JSONDecoder()
-
-        let data = try encoder.encode(original)
-        let decoded = try decoder.decode(MenuBarItemService.Request.self, from: data)
-
-        if case let .sourcePID(decodedWindow) = decoded {
-            XCTAssertEqual(decodedWindow.windowID, windowInfo.windowID)
-            XCTAssertEqual(decodedWindow.ownerPID, windowInfo.ownerPID)
-        } else {
-            XCTFail("Expected .sourcePID request after round trip")
+            guard case .start = decoded else {
+                Issue.record("Expected .start response after round trip")
+                return
+            }
         }
-    }
 
-    // MARK: - Helper
+        // MARK: - SourcePID Response
 
-    private func createTestWindowInfo() -> WindowInfo {
-        // CGRect encodes as nested arrays: [[x,y],[width,height]]
-        let json = """
-        {
-            "windowID": 12345,
-            "ownerPID": 1000,
-            "bounds": [[0, 0], [100, 22]],
-            "layer": 25,
-            "title": "TestItem",
-            "ownerName": "TestApp",
-            "isOnScreen": true
+        @Test("A sourcePID response keeps its pid across a round trip")
+        func sourcePIDResponseWithPID() throws {
+            let original = MenuBarItemService.Response.sourcePID(1234)
+            let encoder = JSONEncoder()
+            let decoder = JSONDecoder()
+
+            let data = try encoder.encode(original)
+            let decoded = try decoder.decode(MenuBarItemService.Response.self, from: data)
+
+            guard case let .sourcePID(pid) = decoded else {
+                Issue.record("Expected .sourcePID response")
+                return
+            }
+            #expect(pid == 1234)
         }
-        """
-        let data = json.data(using: .utf8)!
-        return try! JSONDecoder().decode(WindowInfo.self, from: data)
-    }
-}
 
-// MARK: - Response Tests
+        @Test("A sourcePID response keeps a nil pid across a round trip")
+        func sourcePIDResponseWithNil() throws {
+            let original = MenuBarItemService.Response.sourcePID(nil)
+            let encoder = JSONEncoder()
+            let decoder = JSONDecoder()
 
-final class MenuBarItemServiceResponseTests: XCTestCase {
-    // MARK: - Start Response
+            let data = try encoder.encode(original)
+            let decoded = try decoder.decode(MenuBarItemService.Response.self, from: data)
 
-    func testStartResponseEncode() throws {
-        let response = MenuBarItemService.Response.start
-        let encoder = JSONEncoder()
-        let data = try encoder.encode(response)
-        let json = try XCTUnwrap(String(data: data, encoding: .utf8))
-
-        XCTAssertTrue(json.contains("start"))
-    }
-
-    func testStartResponseRoundTrip() throws {
-        let original = MenuBarItemService.Response.start
-        let encoder = JSONEncoder()
-        let decoder = JSONDecoder()
-
-        let data = try encoder.encode(original)
-        let decoded = try decoder.decode(MenuBarItemService.Response.self, from: data)
-
-        if case .start = decoded {
-            // Success
-        } else {
-            XCTFail("Expected .start response after round trip")
+            guard case let .sourcePID(pid) = decoded else {
+                Issue.record("Expected .sourcePID response with nil")
+                return
+            }
+            #expect(pid == nil)
         }
-    }
 
-    // MARK: - SourcePID Response
+        @Test("A sourcePID response encodes both the case name and the pid")
+        func sourcePIDResponseEncodesCorrectly() throws {
+            let response = MenuBarItemService.Response.sourcePID(5678)
+            let encoder = JSONEncoder()
+            let data = try encoder.encode(response)
+            let json = try #require(String(data: data, encoding: .utf8))
 
-    func testSourcePIDResponseWithPID() throws {
-        let original = MenuBarItemService.Response.sourcePID(1234)
-        let encoder = JSONEncoder()
-        let decoder = JSONDecoder()
-
-        let data = try encoder.encode(original)
-        let decoded = try decoder.decode(MenuBarItemService.Response.self, from: data)
-
-        if case let .sourcePID(pid) = decoded {
-            XCTAssertEqual(pid, 1234)
-        } else {
-            XCTFail("Expected .sourcePID response")
+            #expect(json.contains("sourcePID"))
+            #expect(json.contains("5678"))
         }
-    }
-
-    func testSourcePIDResponseWithNil() throws {
-        let original = MenuBarItemService.Response.sourcePID(nil)
-        let encoder = JSONEncoder()
-        let decoder = JSONDecoder()
-
-        let data = try encoder.encode(original)
-        let decoded = try decoder.decode(MenuBarItemService.Response.self, from: data)
-
-        if case let .sourcePID(pid) = decoded {
-            XCTAssertNil(pid)
-        } else {
-            XCTFail("Expected .sourcePID response with nil")
-        }
-    }
-
-    func testSourcePIDResponseEncodesCorrectly() throws {
-        let response = MenuBarItemService.Response.sourcePID(5678)
-        let encoder = JSONEncoder()
-        let data = try encoder.encode(response)
-        let json = try XCTUnwrap(String(data: data, encoding: .utf8))
-
-        XCTAssertTrue(json.contains("sourcePID"))
-        XCTAssertTrue(json.contains("5678"))
     }
 }

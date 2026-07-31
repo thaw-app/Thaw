@@ -5,10 +5,10 @@
 //  Copyright (Ice) © 2023–2025 Jordan Baird
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
-//
 
+import Foundation
+import Testing
 @testable import Thaw
-import XCTest
 
 /// Characterizes the in-flight profile flag teardown on the no-moves exit of a
 /// profile apply.
@@ -22,15 +22,21 @@ import XCTest
 /// apply in flight", so the saved layout can never be restored for the rest of
 /// the session. The field log showed this stick at a display reconnect and
 /// disable re-hide while the menu bar churned across three displays.
+///
+/// Serialized because each case drives a `MenuBarItemManager` through a real
+/// profile apply, which reaches process-wide menu bar state that the other
+/// item-manager suites also touch.
 @MainActor
-final class ProfileApplyInFlightFlagTests: XCTestCase {
+@Suite("Profile apply in-flight flag", .serialized)
+struct ProfileApplyInFlightFlagTests {
     private func makeOrder() -> [String: [String]] {
         ["visible": [], "hidden": [], "alwaysHidden": []]
     }
 
     /// A profile apply that needs no moves must leave the in-flight flag clear.
     /// Red against the pre-fix no-moves exit, which never cleared it.
-    func testNoMovesProfileApplyClearsInFlightFlag() {
+    @Test("A no-moves profile apply clears the in-flight flag")
+    func noMovesProfileApplyClearsInFlightFlag() {
         let manager = MenuBarItemManager()
         manager.armProfileState(
             source: .profile,
@@ -40,30 +46,32 @@ final class ProfileApplyInFlightFlagTests: XCTestCase {
             itemSectionMap: [:],
             itemOrder: makeOrder()
         )
-        XCTAssertTrue(manager.isApplyingProfileLayout, "Arming a profile apply must set the in-flight flag")
+        #expect(manager.isApplyingProfileLayout, "Arming a profile apply must set the in-flight flag")
 
         manager.concludeProfileApplyWithoutMoves(source: .profile, items: [])
 
-        XCTAssertFalse(
-            manager.isApplyingProfileLayout,
+        #expect(
+            !manager.isApplyingProfileLayout,
             "A profile apply that needs no item moves must clear the in-flight flag"
         )
     }
 
     /// A .savedOrder apply never arms the profile flag, and the no-moves
     /// conclusion must not toggle it on.
-    func testNoMovesSavedOrderApplyLeavesFlagUntouched() {
+    @Test("A no-moves saved-order apply leaves the flag untouched")
+    func noMovesSavedOrderApplyLeavesFlagUntouched() {
         let manager = MenuBarItemManager()
-        XCTAssertFalse(manager.isApplyingProfileLayout)
+        #expect(!manager.isApplyingProfileLayout)
 
         manager.concludeProfileApplyWithoutMoves(source: .savedOrder, items: [])
 
-        XCTAssertFalse(manager.isApplyingProfileLayout)
+        #expect(!manager.isApplyingProfileLayout)
     }
 
     /// An empty profile layout has no moves to run, but it still must release
     /// the profile-apply gate so a later saved-layout restore can proceed.
-    func testEmptyProfileApplyClearsInFlightFlag() async {
+    @Test("An empty profile apply clears the in-flight flag")
+    func emptyProfileApplyClearsInFlightFlag() async {
         let manager = MenuBarItemManager()
 
         await manager.applyProfileLayout(
@@ -74,6 +82,6 @@ final class ProfileApplyInFlightFlagTests: XCTestCase {
             itemOrder: [:]
         )
 
-        XCTAssertFalse(manager.isApplyingProfileLayout)
+        #expect(!manager.isApplyingProfileLayout)
     }
 }

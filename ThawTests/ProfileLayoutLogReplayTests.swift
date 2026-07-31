@@ -7,8 +7,9 @@
 //  Licensed under the GNU GPLv3
 
 import CoreGraphics
+import Foundation
+import Testing
 @testable import Thaw
-import XCTest
 
 /// Log-replay harness for the profile-layout decision path.
 ///
@@ -33,7 +34,8 @@ import XCTest
 /// (with no exclusion the orphan is classified unmanaged, matching the field
 /// log), and testBuggyCycleDoesNotPlanMoveForUnresolvedOrphan is the regression
 /// lock that fails before the fix and passes after it.
-final class ProfileLayoutLogReplayTests: XCTestCase {
+@Suite("Profile layout log replay")
+struct ProfileLayoutLogReplayTests {
     private let orphanUID = "com.apple.controlcenter:Item-0"
 
     // MARK: Parser characterization
@@ -41,22 +43,23 @@ final class ProfileLayoutLogReplayTests: XCTestCase {
     /// The parser recovers both applyProfileLayout cycles and the field
     /// verdict each one logged: one unmanaged item in the buggy cycle, none
     /// in the post-resolution clean cycle.
-    func testParserRecoversBothCyclesAndLoggedVerdicts() throws {
+    @Test("The parser recovers both cycles and the verdict each one logged")
+    func parserRecoversBothCyclesAndLoggedVerdicts() throws {
         let parsed = ProfileLayoutLogReplay.parse(LittleSnitchOrphanLog.text)
 
-        XCTAssertEqual(parsed.cycles.count, 2)
-        XCTAssertTrue(
+        #expect(parsed.cycles.count == 2)
+        #expect(
             parsed.unresolvedSourcePIDBaseUIDs.contains(orphanUID),
             "Missing sourcePID line should mark the orphan as unresolved"
         )
 
-        let buggy = try XCTUnwrap(parsed.cycles.first)
-        XCTAssertEqual(buggy.loggedUnmanagedUIDs, [orphanUID])
-        XCTAssertTrue(buggy.currentVisible.contains(orphanUID))
+        let buggy = try #require(parsed.cycles.first)
+        #expect(buggy.loggedUnmanagedUIDs == [orphanUID])
+        #expect(buggy.currentVisible.contains(orphanUID))
 
-        let clean = try XCTUnwrap(parsed.cycles.last)
-        XCTAssertEqual(clean.loggedUnmanagedUIDs, [])
-        XCTAssertTrue(clean.currentVisible.contains("at.obdev.littlesnitch.agent:Item-0"))
+        let clean = try #require(parsed.cycles.last)
+        #expect(clean.loggedUnmanagedUIDs == [])
+        #expect(clean.currentVisible.contains("at.obdev.littlesnitch.agent:Item-0"))
     }
 
     /// Fails with a clear message naming the specific log line if the parser
@@ -70,42 +73,43 @@ final class ProfileLayoutLogReplayTests: XCTestCase {
     /// desiredVisible (older captures do not log it; see
     /// testLoggedDesiredVisibleIsUsedInsteadOfInference) or the two
     /// notch-overflow lines (see testDisplayReconnectNegativeBudgetYieldsNoOverflow).
-    func testParserRecognisesEveryFormatContractPatternInTheFixture() throws {
+    @Test("The parser recognises every format-contract pattern in the fixture")
+    func parserRecognisesEveryFormatContractPatternInTheFixture() throws {
         let parsed = ProfileLayoutLogReplay.parse(LittleSnitchOrphanLog.text)
 
-        XCTAssertTrue(
+        #expect(
             parsed.unresolvedSourcePIDBaseUIDs.contains(orphanUID),
             "Parser did not extract an unresolved sourcePID. The 'Missing sourcePID for' log message in MenuBarItemManager.swift was probably reworded — see format-contract comments."
         )
 
-        let cycle = try XCTUnwrap(parsed.cycles.first)
+        let cycle = try #require(parsed.cycles.first)
 
-        XCTAssertFalse(
-            cycle.currentVisible.isEmpty,
+        #expect(
+            !cycle.currentVisible.isEmpty,
             "Parser did not extract currentVisible. The 'applyProfileLayout: current visible section' log message in MenuBarItemManager.swift was probably reworded — see format-contract comments."
         )
-        XCTAssertFalse(
-            cycle.currentHidden.isEmpty,
+        #expect(
+            !cycle.currentHidden.isEmpty,
             "Parser did not extract currentHidden. The 'applyProfileLayout: current hidden section' log message in MenuBarItemManager.swift was probably reworded — see format-contract comments."
         )
-        XCTAssertFalse(
-            cycle.currentAlwaysHidden.isEmpty,
+        #expect(
+            !cycle.currentAlwaysHidden.isEmpty,
             "Parser did not extract currentAlwaysHidden. The 'applyProfileLayout: current always-hidden section' log message in MenuBarItemManager.swift was probably reworded — see format-contract comments."
         )
-        XCTAssertNotNil(
-            cycle.ahCtrlUID,
+        #expect(
+            cycle.ahCtrlUID != nil,
             "Parser did not extract ahCtrlUID. The 'Profile layout Phase 1: ahCtrlUID=' log message in MenuBarItemManager.swift was probably reworded — see format-contract comments."
         )
-        XCTAssertFalse(
-            cycle.desiredHidden.isEmpty,
+        #expect(
+            !cycle.desiredHidden.isEmpty,
             "Parser did not extract desiredHidden. The 'Profile layout Phase 1: desiredHidden=' log message in MenuBarItemManager.swift was probably reworded — see format-contract comments."
         )
-        XCTAssertFalse(
-            cycle.desiredAlwaysHidden.isEmpty,
+        #expect(
+            !cycle.desiredAlwaysHidden.isEmpty,
             "Parser did not extract desiredAH. The 'Profile layout Phase 1: desiredAH=' log message in MenuBarItemManager.swift was probably reworded — see format-contract comments."
         )
-        XCTAssertFalse(
-            cycle.loggedUnmanagedUIDs.isEmpty,
+        #expect(
+            !cycle.loggedUnmanagedUIDs.isEmpty,
             "Parser did not extract loggedUnmanagedUIDs. The 'Profile layout: planUnmanagedPlacement' log message in MenuBarItemManager.swift was probably reworded — see format-contract comments."
         )
     }
@@ -119,12 +123,13 @@ final class ProfileLayoutLogReplayTests: XCTestCase {
     /// unmanaged set is reconstructed independently of the planUnmanagedPlace-
     /// ment log lines (the orphan is identified via the Missing sourcePID
     /// signal), so matching them is a genuine characterization, not a tautology.
-    func testWithoutExclusionTheOrphanWouldBeUnmanaged() throws {
+    @Test("Without the exclusion the orphan is classified unmanaged")
+    func withoutExclusionTheOrphanWouldBeUnmanaged() throws {
         let parsed = ProfileLayoutLogReplay.parse(LittleSnitchOrphanLog.text)
-        let buggy = try XCTUnwrap(parsed.cycles.first)
+        let buggy = try #require(parsed.cycles.first)
         let inputs = buggy.partitionInputs(unresolvedSourcePIDBaseUIDs: parsed.unresolvedSourcePIDBaseUIDs)
 
-        XCTAssertEqual(inputs.unresolvedGenericCCOrphans, [orphanUID])
+        #expect(inputs.unresolvedGenericCCOrphans == [orphanUID])
 
         let result = LayoutSolver.partitionUnmanagedUIDs(
             currentFlat: inputs.currentFlat,
@@ -135,8 +140,8 @@ final class ProfileLayoutLogReplayTests: XCTestCase {
             unresolvedGenericCCUIDs: []
         )
 
-        XCTAssertEqual(result, buggy.loggedUnmanagedUIDs)
-        XCTAssertEqual(result, [orphanUID])
+        #expect(result == buggy.loggedUnmanagedUIDs)
+        #expect(result == [orphanUID])
     }
 
     // MARK: Regression lock for Layer 1 (red before the fix, green after)
@@ -146,14 +151,15 @@ final class ProfileLayoutLogReplayTests: XCTestCase {
     /// orphan is no longer classified unmanaged, so no unmanaged placement (and
     /// therefore no move) is planned for it. This fails before Layer 1 applies
     /// unresolvedGenericCCUIDs and passes once it does.
-    func testBuggyCycleDoesNotPlanMoveForUnresolvedOrphan() throws {
+    @Test("The buggy cycle plans no move for the unresolved orphan")
+    func buggyCycleDoesNotPlanMoveForUnresolvedOrphan() throws {
         let parsed = ProfileLayoutLogReplay.parse(LittleSnitchOrphanLog.text)
-        let buggy = try XCTUnwrap(parsed.cycles.first)
+        let buggy = try #require(parsed.cycles.first)
         let inputs = buggy.partitionInputs(unresolvedSourcePIDBaseUIDs: parsed.unresolvedSourcePIDBaseUIDs)
 
         // The field log confirms this orphan WAS classified unmanaged and moved.
-        XCTAssertTrue(buggy.loggedUnmanagedUIDs.contains(orphanUID))
-        XCTAssertEqual(inputs.unresolvedGenericCCOrphans, [orphanUID])
+        #expect(buggy.loggedUnmanagedUIDs.contains(orphanUID))
+        #expect(inputs.unresolvedGenericCCOrphans == [orphanUID])
 
         let result = LayoutSolver.partitionUnmanagedUIDs(
             currentFlat: inputs.currentFlat,
@@ -164,11 +170,11 @@ final class ProfileLayoutLogReplayTests: XCTestCase {
             unresolvedGenericCCUIDs: inputs.unresolvedGenericCCOrphans
         )
 
-        XCTAssertFalse(
-            result.contains(orphanUID),
+        #expect(
+            !result.contains(orphanUID),
             "Unresolved Little Snitch orphan must not be classified unmanaged"
         )
-        XCTAssertTrue(result.isEmpty)
+        #expect(result.isEmpty)
     }
 
     // MARK: Baseline: the clean cycle stays clean
@@ -177,12 +183,13 @@ final class ProfileLayoutLogReplayTests: XCTestCase {
     /// at.obdev.littlesnitch.agent:Item-0, which the profile knows, so the
     /// unchanged partitioner already deems nothing unmanaged. This guards
     /// against a fix that over-suppresses correctly-identified items.
-    func testCleanCycleHasNoUnmanagedUnderCurrentPartition() throws {
+    @Test("The clean cycle has nothing unmanaged under the current partition")
+    func cleanCycleHasNoUnmanagedUnderCurrentPartition() throws {
         let parsed = ProfileLayoutLogReplay.parse(LittleSnitchOrphanLog.text)
-        let clean = try XCTUnwrap(parsed.cycles.last)
+        let clean = try #require(parsed.cycles.last)
         let inputs = clean.partitionInputs(unresolvedSourcePIDBaseUIDs: parsed.unresolvedSourcePIDBaseUIDs)
 
-        XCTAssertTrue(inputs.unresolvedGenericCCOrphans.isEmpty)
+        #expect(inputs.unresolvedGenericCCOrphans.isEmpty)
 
         let result = LayoutSolver.partitionUnmanagedUIDs(
             currentFlat: inputs.currentFlat,
@@ -193,8 +200,8 @@ final class ProfileLayoutLogReplayTests: XCTestCase {
             unresolvedGenericCCUIDs: inputs.unresolvedGenericCCOrphans
         )
 
-        XCTAssertEqual(result, clean.loggedUnmanagedUIDs)
-        XCTAssertTrue(result.isEmpty)
+        #expect(result == clean.loggedUnmanagedUIDs)
+        #expect(result.isEmpty)
     }
 
     // MARK: Live wiring: control identifiers come from live tags
@@ -203,16 +210,16 @@ final class ProfileLayoutLogReplayTests: XCTestCase {
     /// from the live control-item tags, and they match what the field log
     /// recorded. If a control item's namespace or title changes in the Thaw
     /// codebase, this fails rather than silently diverging from real logs.
-    func testLiveControlItemUIDsMatchTheFieldLog() throws {
+    @Test("The live control item UIDs match the field log")
+    func liveControlItemUIDsMatchTheFieldLog() throws {
         let parsed = ProfileLayoutLogReplay.parse(LittleSnitchOrphanLog.text)
-        let buggy = try XCTUnwrap(parsed.cycles.first)
+        let buggy = try #require(parsed.cycles.first)
 
-        XCTAssertEqual(
-            MenuBarItemTag.alwaysHiddenControlItem.tagIdentifier,
-            buggy.ahCtrlUID,
+        #expect(
+            MenuBarItemTag.alwaysHiddenControlItem.tagIdentifier == buggy.ahCtrlUID,
             "Live always-hidden control tag should equal the logged ahCtrlUID"
         )
-        XCTAssertTrue(
+        #expect(
             buggy.currentVisible.contains(MenuBarItemTag.visibleControlItem.tagIdentifier),
             "Live visible control tag should appear in the logged visible section"
         )
@@ -227,7 +234,8 @@ final class ProfileLayoutLogReplayTests: XCTestCase {
     /// keeps every non-orphan visible item) would wrongly treat it as desired
     /// and never flag it, whereas the logged desiredVisible omits it and the
     /// partitioner correctly classifies it unmanaged, matching the log.
-    func testLoggedDesiredVisibleIsUsedInsteadOfInference() throws {
+    @Test("The logged desiredVisible is used instead of inference")
+    func loggedDesiredVisibleIsUsedInsteadOfInference() throws {
         let log = """
         2026-05-30 09:00:00.000 [DEBUG] [MenuBarItemManager] applyProfileLayout: current visible section has 3 items: ["com.stonerl.Thaw:Thaw.ControlItem.Visible", "com.example.extra:Item-0", "com.rogueamoeba.soundsource:SSMainAppMenuIcon"]
         2026-05-30 09:00:00.001 [DEBUG] [MenuBarItemManager] applyProfileLayout: current hidden section has 0 items: []
@@ -240,11 +248,11 @@ final class ProfileLayoutLogReplayTests: XCTestCase {
         """
 
         let parsed = ProfileLayoutLogReplay.parse(log)
-        let cycle = try XCTUnwrap(parsed.cycles.first)
-        XCTAssertEqual(cycle.desiredVisible, ["com.rogueamoeba.soundsource:SSMainAppMenuIcon"])
+        let cycle = try #require(parsed.cycles.first)
+        #expect(cycle.desiredVisible == ["com.rogueamoeba.soundsource:SSMainAppMenuIcon"])
 
         let inputs = cycle.partitionInputs(unresolvedSourcePIDBaseUIDs: parsed.unresolvedSourcePIDBaseUIDs)
-        XCTAssertTrue(inputs.unresolvedGenericCCOrphans.isEmpty)
+        #expect(inputs.unresolvedGenericCCOrphans.isEmpty)
 
         let result = LayoutSolver.partitionUnmanagedUIDs(
             currentFlat: inputs.currentFlat,
@@ -255,8 +263,8 @@ final class ProfileLayoutLogReplayTests: XCTestCase {
             unresolvedGenericCCUIDs: inputs.unresolvedGenericCCOrphans
         )
 
-        XCTAssertEqual(result, ["com.example.extra:Item-0"])
-        XCTAssertEqual(result, cycle.loggedUnmanagedUIDs)
+        #expect(result == ["com.example.extra:Item-0"])
+        #expect(result == cycle.loggedUnmanagedUIDs)
     }
 
     // MARK: Regression lock for the display-reconnect overflow corruption (#666)
@@ -269,7 +277,8 @@ final class ProfileLayoutLogReplayTests: XCTestCase {
     /// section into visible. Driving the live planNotchOverflow with that exact
     /// budget must yield no overflow once the invalid-budget guard is in place.
     /// Red before the guard (every visible item ejected), green after.
-    func testDisplayReconnectNegativeBudgetYieldsNoOverflow() throws {
+    @Test("A negative field budget from a display reconnect yields no overflow")
+    func displayReconnectNegativeBudgetYieldsNoOverflow() throws {
         let log = """
         2026-06-07 11:44:42.027 [DEBUG] [MenuBarItemManager] applyProfileLayout: current visible section has 4 items: ["leits.MeetingBar:Item-0", "eu.exelban.Stats:CPU_bar_chart", "com.stonerl.Thaw:Thaw.ControlItem.Visible", "com.apple.TextInputMenuAgent:Item-0"]
         2026-06-07 11:44:42.027 [DEBUG] [MenuBarItemManager] applyProfileLayout: current hidden section has 3 items: ["com.electron.dockerdesktop:Item-0", "com.apple.controlcenter:WiFi", "com.kaspersky.kav_agent:Item-0"]
@@ -279,12 +288,12 @@ final class ProfileLayoutLogReplayTests: XCTestCase {
         """
 
         let parsed = ProfileLayoutLogReplay.parse(log)
-        let cycle = try XCTUnwrap(parsed.cycles.first)
+        let cycle = try #require(parsed.cycles.first)
 
         // Field characterization: the reconnect produced an invalid (negative)
         // budget, and the buggy build ejected 13 items from visible.
-        XCTAssertEqual(cycle.notchAvailableWidth, -1202)
-        XCTAssertEqual(cycle.loggedOverflowCount, 13)
+        #expect(cycle.notchAvailableWidth == -1202)
+        #expect(cycle.loggedOverflowCount == 13)
 
         // Reconstruct a desiredFiltered flat order from the cycle and drive the
         // live planner with the real (negative) budget. Widths are any positive
@@ -304,20 +313,21 @@ final class ProfileLayoutLogReplayTests: XCTestCase {
             uidWidths[uid] = 24
         }
 
+        let availableWidth = try #require(cycle.notchAvailableWidth)
         let result = try LayoutSolver.planNotchOverflow(
             desiredFiltered: desiredFiltered,
             unmanagedUIDs: [],
             controlUIDs: ControlUIDs(visible: visibleCtrl, hidden: hiddenCtrl, alwaysHidden: ahCtrl),
             sectionMap: [:],
             uidWidths: uidWidths,
-            availableWidth: XCTUnwrap(cycle.notchAvailableWidth)
+            availableWidth: availableWidth
         )
 
-        XCTAssertTrue(
+        #expect(
             result.overflowUIDs.isEmpty,
             "Negative field budget (-1202) must not eject any item once guarded; the buggy build ejected \(cycle.loggedOverflowCount ?? -1)"
         )
-        XCTAssertEqual(result.updatedDesiredFiltered, desiredFiltered)
+        #expect(result.updatedDesiredFiltered == desiredFiltered)
     }
 
     // MARK: Regression lock for the unsettled-geometry layout pass
@@ -330,7 +340,8 @@ final class ProfileLayoutLogReplayTests: XCTestCase {
     /// that stale geometry and moved the Thaw visible icon to the far left. The
     /// geometry-readiness gate must report this cycle as not ready so the whole
     /// pass is deferred. Red before the gate (the stub reports ready).
-    func testUnsettledGeometryFieldCycleIsNotReady() throws {
+    @Test("An unsettled-geometry field cycle is not ready")
+    func unsettledGeometryFieldCycleIsNotReady() throws {
         let log = """
         2026-06-11 11:31:05.750 [DEBUG] [MenuBarItemManager] applyProfileLayout: current visible section has 1 items: ["leits.MeetingBar:Item-0"]
         2026-06-11 11:31:05.750 [DEBUG] [MenuBarItemManager] applyProfileLayout: current hidden section has 0 items: []
@@ -338,16 +349,16 @@ final class ProfileLayoutLogReplayTests: XCTestCase {
         2026-06-11 11:31:05.751 [DEBUG] [MenuBarItemManager] Notch overflow budget: screen.maxX=1728.0 notch=[771.0…956.0] rightBoundary=672.0 availableWidth=-308.0 userSpacing=0.0 visibleUIDs.count=14 nonProfileCount=0 nonProfileFootprint=0.0 chevronFootprint=0.0 nonProfileBreakdown=[]
         """
         let parsed = ProfileLayoutLogReplay.parse(log)
-        let cycle = try XCTUnwrap(parsed.cycles.first)
+        let cycle = try #require(parsed.cycles.first)
 
-        XCTAssertEqual(cycle.notchRightBoundary, 672)
-        XCTAssertEqual(cycle.notchMaxX, 956)
+        #expect(cycle.notchRightBoundary == 672)
+        #expect(cycle.notchMaxX == 956)
 
-        XCTAssertFalse(
-            LayoutSolver.isMenuBarGeometryReady(
-                rightBoundary: try XCTUnwrap(cycle.notchRightBoundary),
-                notchMaxX: try XCTUnwrap(cycle.notchMaxX)
-            ),
+        let rightBoundary = try #require(cycle.notchRightBoundary)
+        let notchMaxX = try #require(cycle.notchMaxX)
+
+        #expect(
+            !LayoutSolver.isMenuBarGeometryReady(rightBoundary: rightBoundary, notchMaxX: notchMaxX),
             "Control Center reported left of the notch (672 <= 956) is unsettled geometry; the pass must defer"
         )
     }
@@ -355,7 +366,8 @@ final class ProfileLayoutLogReplayTests: XCTestCase {
     /// A settled field cycle (rightBoundary 1562, right of the notch 956) is
     /// ready and must not be deferred. Guards against a gate that blocks valid
     /// layouts.
-    func testSettledGeometryFieldCycleIsReady() throws {
+    @Test("A settled-geometry field cycle is ready")
+    func settledGeometryFieldCycleIsReady() throws {
         let log = """
         2026-06-11 13:13:58.558 [DEBUG] [MenuBarItemManager] applyProfileLayout: current visible section has 1 items: ["leits.MeetingBar:Item-0"]
         2026-06-11 13:13:58.558 [DEBUG] [MenuBarItemManager] applyProfileLayout: current hidden section has 0 items: []
@@ -363,27 +375,26 @@ final class ProfileLayoutLogReplayTests: XCTestCase {
         2026-06-11 13:13:58.559 [DEBUG] [MenuBarItemManager] Notch overflow budget: screen.maxX=1728.0 notch=[771.0…956.0] rightBoundary=1562.0 availableWidth=565.0 userSpacing=0.0 visibleUIDs.count=14 nonProfileCount=0 nonProfileFootprint=0.0 chevronFootprint=17.0 nonProfileBreakdown=[]
         """
         let parsed = ProfileLayoutLogReplay.parse(log)
-        let cycle = try XCTUnwrap(parsed.cycles.first)
+        let cycle = try #require(parsed.cycles.first)
 
-        XCTAssertEqual(cycle.notchRightBoundary, 1562)
-        XCTAssertEqual(cycle.notchMaxX, 956)
+        #expect(cycle.notchRightBoundary == 1562)
+        #expect(cycle.notchMaxX == 956)
 
-        XCTAssertTrue(
-            LayoutSolver.isMenuBarGeometryReady(
-                rightBoundary: try XCTUnwrap(cycle.notchRightBoundary),
-                notchMaxX: try XCTUnwrap(cycle.notchMaxX)
-            )
-        )
+        let rightBoundary = try #require(cycle.notchRightBoundary)
+        let notchMaxX = try #require(cycle.notchMaxX)
+
+        #expect(LayoutSolver.isMenuBarGeometryReady(rightBoundary: rightBoundary, notchMaxX: notchMaxX))
     }
 
     /// Boundary cases for the pure gate: strictly right of the notch is ready;
     /// at the edge, left of it, or non-finite is not.
-    func testGeometryReadyBoundaries() {
-        XCTAssertTrue(LayoutSolver.isMenuBarGeometryReady(rightBoundary: 957, notchMaxX: 956))
-        XCTAssertFalse(LayoutSolver.isMenuBarGeometryReady(rightBoundary: 956, notchMaxX: 956))
-        XCTAssertFalse(LayoutSolver.isMenuBarGeometryReady(rightBoundary: -222, notchMaxX: 956))
-        XCTAssertFalse(LayoutSolver.isMenuBarGeometryReady(rightBoundary: .infinity, notchMaxX: 956))
-        XCTAssertFalse(LayoutSolver.isMenuBarGeometryReady(rightBoundary: .nan, notchMaxX: 956))
+    @Test("Only a boundary strictly right of the notch reads as ready")
+    func geometryReadyBoundaries() {
+        #expect(LayoutSolver.isMenuBarGeometryReady(rightBoundary: 957, notchMaxX: 956))
+        #expect(!LayoutSolver.isMenuBarGeometryReady(rightBoundary: 956, notchMaxX: 956))
+        #expect(!LayoutSolver.isMenuBarGeometryReady(rightBoundary: -222, notchMaxX: 956))
+        #expect(!LayoutSolver.isMenuBarGeometryReady(rightBoundary: .infinity, notchMaxX: 956))
+        #expect(!LayoutSolver.isMenuBarGeometryReady(rightBoundary: .nan, notchMaxX: 956))
     }
 }
 
@@ -671,53 +682,60 @@ extension ProfileLayoutLogReplay.Cycle {
 /// Manager update unhide). Equally it must NOT arm for ordinary launches, so
 /// users don't pay a deferral on every app start, and one bundle ID must not
 /// loosely prefix-match another app.
-final class RelaunchSettlingGateTests: XCTestCase {
+@Suite("Relaunch settling gate")
+struct RelaunchSettlingGateTests {
     private let tracked: Set<String> = [
         "org.freedownloadmanager.fdm6:Item-0",
         "codes.rambo.AirBuddyHelper:codes.rambo.AirBuddy.Menu",
         "com.apple.controlcenter:WiFi",
     ]
 
-    func testTrackedAppRelaunchArmsSettling() {
-        XCTAssertTrue(
+    @Test("A tracked app relaunch arms the settling period")
+    func trackedAppRelaunchArmsSettling() {
+        #expect(
             MenuBarItemManager.tracksMenuBarItem(bundleID: "org.freedownloadmanager.fdm6", in: tracked)
         )
     }
 
-    func testUntrackedAppLaunchDoesNotArmSettling() {
-        XCTAssertFalse(
-            MenuBarItemManager.tracksMenuBarItem(bundleID: "com.apple.Safari", in: tracked)
+    @Test("An untracked app launch does not arm the settling period")
+    func untrackedAppLaunchDoesNotArmSettling() {
+        #expect(
+            !MenuBarItemManager.tracksMenuBarItem(bundleID: "com.apple.Safari", in: tracked)
         )
     }
 
-    func testBundleIDPrefixBoundaryDoesNotFalseMatch() {
+    @Test("A bundle ID that merely prefixes another does not match")
+    func bundleIDPrefixBoundaryDoesNotFalseMatch() {
         // org.freedownloadmanager.fdm6 must not match a different app whose
         // bundle id merely extends it; the ":" separator anchors the match.
         let other: Set = ["org.freedownloadmanager.fdm6x:Item-0"]
-        XCTAssertFalse(
-            MenuBarItemManager.tracksMenuBarItem(bundleID: "org.freedownloadmanager.fdm6", in: other)
+        #expect(
+            !MenuBarItemManager.tracksMenuBarItem(bundleID: "org.freedownloadmanager.fdm6", in: other)
         )
     }
 
-    func testEmptyKnownSetNeverArms() {
-        XCTAssertFalse(
-            MenuBarItemManager.tracksMenuBarItem(bundleID: "org.freedownloadmanager.fdm6", in: [])
+    @Test("An empty known set never arms the settling period")
+    func emptyKnownSetNeverArms() {
+        #expect(
+            !MenuBarItemManager.tracksMenuBarItem(bundleID: "org.freedownloadmanager.fdm6", in: [])
         )
     }
 
-    func testControlCenterSingletonItemMatches() {
+    @Test("A Control Center singleton item matches on its namespace")
+    func controlCenterSingletonItemMatches() {
         // A simple "namespace:title" entry (title has no dots) still matches
         // on the namespace.
-        XCTAssertTrue(
+        #expect(
             MenuBarItemManager.tracksMenuBarItem(bundleID: "com.apple.controlcenter", in: tracked)
         )
     }
 
-    func testAirBuddyWithMultiComponentTitleMatches() {
+    @Test("A multi-component title still matches on the namespace")
+    func airBuddyWithMultiComponentTitleMatches() {
         // The title here is itself reverse-DNS shaped
         // (codes.rambo.AirBuddy.Menu); the ":" anchor must match on the
         // namespace and not be confused by the dots in the title.
-        XCTAssertTrue(
+        #expect(
             MenuBarItemManager.tracksMenuBarItem(bundleID: "codes.rambo.AirBuddyHelper", in: tracked)
         )
     }

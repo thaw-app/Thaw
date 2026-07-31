@@ -8,302 +8,352 @@
 
 import Carbon.HIToolbox
 import Cocoa
+import Testing
 @testable import Thaw
-import XCTest
 
 // MARK: - Modifiers Tests
 
-final class ModifiersTests: XCTestCase {
+@Suite("Modifiers")
+struct ModifiersTests {
     // MARK: - Raw Values
 
-    func testControlRawValue() {
-        XCTAssertEqual(Modifiers.control.rawValue, 1 << 0)
+    @Test("Control is bit 0")
+    func controlRawValue() {
+        #expect(Modifiers.control.rawValue == 1 << 0)
     }
 
-    func testOptionRawValue() {
-        XCTAssertEqual(Modifiers.option.rawValue, 1 << 1)
+    @Test("Option is bit 1")
+    func optionRawValue() {
+        #expect(Modifiers.option.rawValue == 1 << 1)
     }
 
-    func testShiftRawValue() {
-        XCTAssertEqual(Modifiers.shift.rawValue, 1 << 2)
+    @Test("Shift is bit 2")
+    func shiftRawValue() {
+        #expect(Modifiers.shift.rawValue == 1 << 2)
     }
 
-    func testCommandRawValue() {
-        XCTAssertEqual(Modifiers.command.rawValue, 1 << 3)
+    @Test("Command is bit 3")
+    func commandRawValue() {
+        #expect(Modifiers.command.rawValue == 1 << 3)
     }
 
     // MARK: - Canonical Order
 
-    func testCanonicalOrderCount() {
-        XCTAssertEqual(Modifiers.canonicalOrder.count, 4)
+    @Test("The canonical order holds four modifiers")
+    func canonicalOrderCount() {
+        #expect(Modifiers.canonicalOrder.count == 4)
     }
 
-    func testCanonicalOrderSequence() {
-        XCTAssertEqual(Modifiers.canonicalOrder[0], .control)
-        XCTAssertEqual(Modifiers.canonicalOrder[1], .option)
-        XCTAssertEqual(Modifiers.canonicalOrder[2], .shift)
-        XCTAssertEqual(Modifiers.canonicalOrder[3], .command)
+    @Test("The canonical order is control, option, shift, command")
+    func canonicalOrderSequence() {
+        #expect(Modifiers.canonicalOrder[0] == .control)
+        #expect(Modifiers.canonicalOrder[1] == .option)
+        #expect(Modifiers.canonicalOrder[2] == .shift)
+        #expect(Modifiers.canonicalOrder[3] == .command)
     }
 
     // MARK: - Symbolic Value
 
-    func testSymbolicValueControl() {
+    @Test("Control renders as ⌃")
+    func symbolicValueControl() {
         let modifiers: Modifiers = [.control]
-        XCTAssertEqual(modifiers.symbolicValue, "⌃")
+        #expect(modifiers.symbolicValue == "⌃")
     }
 
-    func testSymbolicValueOption() {
+    @Test("Option renders as ⌥")
+    func symbolicValueOption() {
         let modifiers: Modifiers = [.option]
-        XCTAssertEqual(modifiers.symbolicValue, "⌥")
+        #expect(modifiers.symbolicValue == "⌥")
     }
 
-    func testSymbolicValueShift() {
+    @Test("Shift renders as ⇧")
+    func symbolicValueShift() {
         let modifiers: Modifiers = [.shift]
-        XCTAssertEqual(modifiers.symbolicValue, "⇧")
+        #expect(modifiers.symbolicValue == "⇧")
     }
 
-    func testSymbolicValueCommand() {
+    @Test("Command renders as ⌘")
+    func symbolicValueCommand() {
         let modifiers: Modifiers = [.command]
-        XCTAssertEqual(modifiers.symbolicValue, "⌘")
+        #expect(modifiers.symbolicValue == "⌘")
     }
 
-    func testSymbolicValueEmpty() {
+    @Test("An empty set renders as an empty string")
+    func symbolicValueEmpty() {
         let modifiers: Modifiers = []
-        XCTAssertEqual(modifiers.symbolicValue, "")
+        #expect(modifiers.symbolicValue == "")
     }
 
-    func testSymbolicValueAllModifiers() {
+    @Test("All four modifiers render in canonical order")
+    func symbolicValueAllModifiers() {
         let modifiers: Modifiers = [.control, .option, .shift, .command]
-        XCTAssertEqual(modifiers.symbolicValue, "⌃⌥⇧⌘")
+        #expect(modifiers.symbolicValue == "⌃⌥⇧⌘")
     }
 
-    func testSymbolicValueCommandShift() {
+    @Test("Command and shift render in canonical order")
+    func symbolicValueCommandShift() {
         let modifiers: Modifiers = [.command, .shift]
-        XCTAssertEqual(modifiers.symbolicValue, "⇧⌘")
+        #expect(modifiers.symbolicValue == "⇧⌘")
     }
 
-    func testSymbolicValueControlOption() {
+    @Test("Control and option render in canonical order")
+    func symbolicValueControlOption() {
         let modifiers: Modifiers = [.control, .option]
-        XCTAssertEqual(modifiers.symbolicValue, "⌃⌥")
+        #expect(modifiers.symbolicValue == "⌃⌥")
     }
 
     // MARK: - NSEvent.ModifierFlags Conversion
 
-    func testNSEventFlagsControl() {
+    @Test("Control converts to the control event flag alone")
+    func nsEventFlagsControl() {
         let modifiers: Modifiers = [.control]
-        XCTAssertTrue(modifiers.nsEventFlags.contains(.control))
-        XCTAssertFalse(modifiers.nsEventFlags.contains(.option))
+        #expect(modifiers.nsEventFlags.contains(.control))
+        #expect(!modifiers.nsEventFlags.contains(.option))
     }
 
-    func testNSEventFlagsOption() {
+    @Test("Option converts to the option event flag")
+    func nsEventFlagsOption() {
         let modifiers: Modifiers = [.option]
-        XCTAssertTrue(modifiers.nsEventFlags.contains(.option))
+        #expect(modifiers.nsEventFlags.contains(.option))
     }
 
-    func testNSEventFlagsShift() {
+    @Test("Shift converts to the shift event flag")
+    func nsEventFlagsShift() {
         let modifiers: Modifiers = [.shift]
-        XCTAssertTrue(modifiers.nsEventFlags.contains(.shift))
+        #expect(modifiers.nsEventFlags.contains(.shift))
     }
 
-    func testNSEventFlagsCommand() {
+    @Test("Command converts to the command event flag")
+    func nsEventFlagsCommand() {
         let modifiers: Modifiers = [.command]
-        XCTAssertTrue(modifiers.nsEventFlags.contains(.command))
+        #expect(modifiers.nsEventFlags.contains(.command))
     }
 
-    func testNSEventFlagsAll() {
+    @Test("All four modifiers convert to all four event flags")
+    func nsEventFlagsAll() {
         let modifiers: Modifiers = [.control, .option, .shift, .command]
         let flags = modifiers.nsEventFlags
 
-        XCTAssertTrue(flags.contains(.control))
-        XCTAssertTrue(flags.contains(.option))
-        XCTAssertTrue(flags.contains(.shift))
-        XCTAssertTrue(flags.contains(.command))
+        #expect(flags.contains(.control))
+        #expect(flags.contains(.option))
+        #expect(flags.contains(.shift))
+        #expect(flags.contains(.command))
     }
 
-    func testNSEventFlagsEmpty() {
+    @Test("An empty set converts to no event flags")
+    func nsEventFlagsEmpty() {
         let modifiers: Modifiers = []
-        XCTAssertTrue(modifiers.nsEventFlags.isEmpty)
+        #expect(modifiers.nsEventFlags.isEmpty)
     }
 
     // MARK: - CGEventFlags Conversion
 
-    func testCGEventFlagsControl() {
+    @Test("Control converts to the control CG mask")
+    func cgEventFlagsControl() {
         let modifiers: Modifiers = [.control]
-        XCTAssertTrue(modifiers.cgEventFlags.contains(.maskControl))
+        #expect(modifiers.cgEventFlags.contains(.maskControl))
     }
 
-    func testCGEventFlagsOption() {
+    @Test("Option converts to the alternate CG mask")
+    func cgEventFlagsOption() {
         let modifiers: Modifiers = [.option]
-        XCTAssertTrue(modifiers.cgEventFlags.contains(.maskAlternate))
+        #expect(modifiers.cgEventFlags.contains(.maskAlternate))
     }
 
-    func testCGEventFlagsShift() {
+    @Test("Shift converts to the shift CG mask")
+    func cgEventFlagsShift() {
         let modifiers: Modifiers = [.shift]
-        XCTAssertTrue(modifiers.cgEventFlags.contains(.maskShift))
+        #expect(modifiers.cgEventFlags.contains(.maskShift))
     }
 
-    func testCGEventFlagsCommand() {
+    @Test("Command converts to the command CG mask")
+    func cgEventFlagsCommand() {
         let modifiers: Modifiers = [.command]
-        XCTAssertTrue(modifiers.cgEventFlags.contains(.maskCommand))
+        #expect(modifiers.cgEventFlags.contains(.maskCommand))
     }
 
-    func testCGEventFlagsAll() {
+    @Test("All four modifiers convert to all four CG masks")
+    func cgEventFlagsAll() {
         let modifiers: Modifiers = [.control, .option, .shift, .command]
         let flags = modifiers.cgEventFlags
 
-        XCTAssertTrue(flags.contains(.maskControl))
-        XCTAssertTrue(flags.contains(.maskAlternate))
-        XCTAssertTrue(flags.contains(.maskShift))
-        XCTAssertTrue(flags.contains(.maskCommand))
+        #expect(flags.contains(.maskControl))
+        #expect(flags.contains(.maskAlternate))
+        #expect(flags.contains(.maskShift))
+        #expect(flags.contains(.maskCommand))
     }
 
     // MARK: - Carbon Flags Conversion
 
-    func testCarbonFlagsControl() {
+    @Test("Control converts to the Carbon control key")
+    func carbonFlagsControl() {
         let modifiers: Modifiers = [.control]
-        XCTAssertEqual(modifiers.carbonFlags & controlKey, controlKey)
+        #expect(modifiers.carbonFlags & controlKey == controlKey)
     }
 
-    func testCarbonFlagsOption() {
+    @Test("Option converts to the Carbon option key")
+    func carbonFlagsOption() {
         let modifiers: Modifiers = [.option]
-        XCTAssertEqual(modifiers.carbonFlags & optionKey, optionKey)
+        #expect(modifiers.carbonFlags & optionKey == optionKey)
     }
 
-    func testCarbonFlagsShift() {
+    @Test("Shift converts to the Carbon shift key")
+    func carbonFlagsShift() {
         let modifiers: Modifiers = [.shift]
-        XCTAssertEqual(modifiers.carbonFlags & shiftKey, shiftKey)
+        #expect(modifiers.carbonFlags & shiftKey == shiftKey)
     }
 
-    func testCarbonFlagsCommand() {
+    @Test("Command converts to the Carbon command key")
+    func carbonFlagsCommand() {
         let modifiers: Modifiers = [.command]
-        XCTAssertEqual(modifiers.carbonFlags & cmdKey, cmdKey)
+        #expect(modifiers.carbonFlags & cmdKey == cmdKey)
     }
 
-    func testCarbonFlagsEmpty() {
+    @Test("An empty set converts to no Carbon flags")
+    func carbonFlagsEmpty() {
         let modifiers: Modifiers = []
-        XCTAssertEqual(modifiers.carbonFlags, 0)
+        #expect(modifiers.carbonFlags == 0)
     }
 
     // MARK: - Init from NSEvent.ModifierFlags
 
-    func testInitFromNSEventFlagsControl() {
+    @Test("The control event flag initializes control alone")
+    func initFromNSEventFlagsControl() {
         let modifiers = Modifiers(nsEventFlags: .control)
-        XCTAssertTrue(modifiers.contains(.control))
-        XCTAssertFalse(modifiers.contains(.option))
+        #expect(modifiers.contains(.control))
+        #expect(!modifiers.contains(.option))
     }
 
-    func testInitFromNSEventFlagsOption() {
+    @Test("The option event flag initializes option")
+    func initFromNSEventFlagsOption() {
         let modifiers = Modifiers(nsEventFlags: .option)
-        XCTAssertTrue(modifiers.contains(.option))
+        #expect(modifiers.contains(.option))
     }
 
-    func testInitFromNSEventFlagsShift() {
+    @Test("The shift event flag initializes shift")
+    func initFromNSEventFlagsShift() {
         let modifiers = Modifiers(nsEventFlags: .shift)
-        XCTAssertTrue(modifiers.contains(.shift))
+        #expect(modifiers.contains(.shift))
     }
 
-    func testInitFromNSEventFlagsCommand() {
+    @Test("The command event flag initializes command")
+    func initFromNSEventFlagsCommand() {
         let modifiers = Modifiers(nsEventFlags: .command)
-        XCTAssertTrue(modifiers.contains(.command))
+        #expect(modifiers.contains(.command))
     }
 
-    func testInitFromNSEventFlagsMultiple() {
+    @Test("Multiple event flags initialize exactly those modifiers")
+    func initFromNSEventFlagsMultiple() {
         let modifiers = Modifiers(nsEventFlags: [.control, .command])
-        XCTAssertTrue(modifiers.contains(.control))
-        XCTAssertTrue(modifiers.contains(.command))
-        XCTAssertFalse(modifiers.contains(.option))
-        XCTAssertFalse(modifiers.contains(.shift))
+        #expect(modifiers.contains(.control))
+        #expect(modifiers.contains(.command))
+        #expect(!modifiers.contains(.option))
+        #expect(!modifiers.contains(.shift))
     }
 
     // MARK: - Init from CGEventFlags
 
-    func testInitFromCGEventFlagsControl() {
+    @Test("The control CG mask initializes control")
+    func initFromCGEventFlagsControl() {
         let modifiers = Modifiers(cgEventFlags: .maskControl)
-        XCTAssertTrue(modifiers.contains(.control))
+        #expect(modifiers.contains(.control))
     }
 
-    func testInitFromCGEventFlagsOption() {
+    @Test("The alternate CG mask initializes option")
+    func initFromCGEventFlagsOption() {
         let modifiers = Modifiers(cgEventFlags: .maskAlternate)
-        XCTAssertTrue(modifiers.contains(.option))
+        #expect(modifiers.contains(.option))
     }
 
-    func testInitFromCGEventFlagsShift() {
+    @Test("The shift CG mask initializes shift")
+    func initFromCGEventFlagsShift() {
         let modifiers = Modifiers(cgEventFlags: .maskShift)
-        XCTAssertTrue(modifiers.contains(.shift))
+        #expect(modifiers.contains(.shift))
     }
 
-    func testInitFromCGEventFlagsCommand() {
+    @Test("The command CG mask initializes command")
+    func initFromCGEventFlagsCommand() {
         let modifiers = Modifiers(cgEventFlags: .maskCommand)
-        XCTAssertTrue(modifiers.contains(.command))
+        #expect(modifiers.contains(.command))
     }
 
-    func testInitFromCGEventFlagsMultiple() {
+    @Test("Multiple CG masks initialize exactly those modifiers")
+    func initFromCGEventFlagsMultiple() {
         let modifiers = Modifiers(cgEventFlags: [.maskShift, .maskCommand])
-        XCTAssertTrue(modifiers.contains(.shift))
-        XCTAssertTrue(modifiers.contains(.command))
-        XCTAssertFalse(modifiers.contains(.control))
-        XCTAssertFalse(modifiers.contains(.option))
+        #expect(modifiers.contains(.shift))
+        #expect(modifiers.contains(.command))
+        #expect(!modifiers.contains(.control))
+        #expect(!modifiers.contains(.option))
     }
 
     // MARK: - Init from Carbon Flags
 
-    func testInitFromCarbonFlagsControl() {
+    @Test("The Carbon control key initializes control")
+    func initFromCarbonFlagsControl() {
         let modifiers = Modifiers(carbonFlags: controlKey)
-        XCTAssertTrue(modifiers.contains(.control))
+        #expect(modifiers.contains(.control))
     }
 
-    func testInitFromCarbonFlagsOption() {
+    @Test("The Carbon option key initializes option")
+    func initFromCarbonFlagsOption() {
         let modifiers = Modifiers(carbonFlags: optionKey)
-        XCTAssertTrue(modifiers.contains(.option))
+        #expect(modifiers.contains(.option))
     }
 
-    func testInitFromCarbonFlagsShift() {
+    @Test("The Carbon shift key initializes shift")
+    func initFromCarbonFlagsShift() {
         let modifiers = Modifiers(carbonFlags: shiftKey)
-        XCTAssertTrue(modifiers.contains(.shift))
+        #expect(modifiers.contains(.shift))
     }
 
-    func testInitFromCarbonFlagsCommand() {
+    @Test("The Carbon command key initializes command")
+    func initFromCarbonFlagsCommand() {
         let modifiers = Modifiers(carbonFlags: cmdKey)
-        XCTAssertTrue(modifiers.contains(.command))
+        #expect(modifiers.contains(.command))
     }
 
-    func testInitFromCarbonFlagsMultiple() {
+    @Test("Multiple Carbon keys initialize exactly those modifiers")
+    func initFromCarbonFlagsMultiple() {
         let modifiers = Modifiers(carbonFlags: optionKey | cmdKey)
-        XCTAssertTrue(modifiers.contains(.option))
-        XCTAssertTrue(modifiers.contains(.command))
-        XCTAssertFalse(modifiers.contains(.control))
-        XCTAssertFalse(modifiers.contains(.shift))
+        #expect(modifiers.contains(.option))
+        #expect(modifiers.contains(.command))
+        #expect(!modifiers.contains(.control))
+        #expect(!modifiers.contains(.shift))
     }
 
     // MARK: - Round Trip Conversions
 
-    func testNSEventFlagsRoundTrip() {
+    @Test("Event flags survive a round trip")
+    func nsEventFlagsRoundTrip() {
         let original: Modifiers = [.control, .shift, .command]
         let flags = original.nsEventFlags
         let roundTrip = Modifiers(nsEventFlags: flags)
 
-        XCTAssertEqual(original, roundTrip)
+        #expect(original == roundTrip)
     }
 
-    func testCGEventFlagsRoundTrip() {
+    @Test("CG masks survive a round trip")
+    func cgEventFlagsRoundTrip() {
         let original: Modifiers = [.option, .command]
         let flags = original.cgEventFlags
         let roundTrip = Modifiers(cgEventFlags: flags)
 
-        XCTAssertEqual(original, roundTrip)
+        #expect(original == roundTrip)
     }
 
-    func testCarbonFlagsRoundTrip() {
+    @Test("Carbon flags survive a round trip")
+    func carbonFlagsRoundTrip() {
         let original: Modifiers = [.control, .option, .shift, .command]
         let flags = original.carbonFlags
         let roundTrip = Modifiers(carbonFlags: flags)
 
-        XCTAssertEqual(original, roundTrip)
+        #expect(original == roundTrip)
     }
 
     // MARK: - Codable
 
-    func testEncodeDecode() throws {
+    @Test("A pair of modifiers survives an encode/decode round trip")
+    func encodeDecode() throws {
         let original: Modifiers = [.control, .command]
 
         let encoder = JSONEncoder()
@@ -312,10 +362,11 @@ final class ModifiersTests: XCTestCase {
         let data = try encoder.encode(original)
         let decoded = try decoder.decode(Modifiers.self, from: data)
 
-        XCTAssertEqual(original, decoded)
+        #expect(original == decoded)
     }
 
-    func testEncodeDecodeEmpty() throws {
+    @Test("An empty set survives an encode/decode round trip")
+    func encodeDecodeEmpty() throws {
         let original: Modifiers = []
 
         let encoder = JSONEncoder()
@@ -324,10 +375,11 @@ final class ModifiersTests: XCTestCase {
         let data = try encoder.encode(original)
         let decoded = try decoder.decode(Modifiers.self, from: data)
 
-        XCTAssertEqual(original, decoded)
+        #expect(original == decoded)
     }
 
-    func testEncodeDecodeAllModifiers() throws {
+    @Test("All four modifiers survive an encode/decode round trip")
+    func encodeDecodeAllModifiers() throws {
         let original: Modifiers = [.control, .option, .shift, .command]
 
         let encoder = JSONEncoder()
@@ -336,24 +388,26 @@ final class ModifiersTests: XCTestCase {
         let data = try encoder.encode(original)
         let decoded = try decoder.decode(Modifiers.self, from: data)
 
-        XCTAssertEqual(original, decoded)
+        #expect(original == decoded)
     }
 
     // MARK: - Hashable
 
-    func testHashableConsistency() {
+    @Test("Order of insertion does not change the hash")
+    func hashableConsistency() {
         let modifiers1: Modifiers = [.command, .shift]
         let modifiers2: Modifiers = [.shift, .command]
 
-        XCTAssertEqual(modifiers1.hashValue, modifiers2.hashValue)
+        #expect(modifiers1.hashValue == modifiers2.hashValue)
     }
 
-    func testHashableInSet() {
+    @Test("A set deduplicates equal modifier sets")
+    func hashableInSet() {
         var set = Set<Modifiers>()
         set.insert([.command])
         set.insert([.command, .shift])
         set.insert([.command]) // duplicate
 
-        XCTAssertEqual(set.count, 2)
+        #expect(set.count == 2)
     }
 }

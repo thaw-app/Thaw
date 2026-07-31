@@ -6,12 +6,13 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Testing
 @testable import Thaw
-import XCTest
 
 // MARK: - ThawTourSlide Tests
 
-final class ThawTourSlideTests: XCTestCase {
+@Suite("Thaw tour slides")
+struct ThawTourSlideTests {
     // MARK: - Ordering invariant
 
     // The tour relies on a fixed slide order: `welcome` must be first, and
@@ -19,40 +20,46 @@ final class ThawTourSlideTests: XCTestCase {
     // one finishes. Reordering the enum would silently break that loop, so
     // lock the endpoints here.
 
-    func testWelcomeIsFirst() {
-        XCTAssertEqual(ThawTourSlide.allCases.first, .welcome)
+    @Test("Welcome is the first slide")
+    func welcomeIsFirst() {
+        #expect(ThawTourSlide.allCases.first == .welcome)
     }
 
-    func testProfilesIsLast() {
-        XCTAssertEqual(ThawTourSlide.allCases.last, .profiles)
+    @Test("Profiles is the last slide")
+    func profilesIsLast() {
+        #expect(ThawTourSlide.allCases.last == .profiles)
     }
 
     // MARK: - id
 
-    func testIdMatchesRawValue() {
+    @Test("Each slide's identifier matches its raw value")
+    func idMatchesRawValue() {
         for slide in ThawTourSlide.allCases {
-            XCTAssertEqual(slide.id, slide.rawValue)
+            #expect(slide.id == slide.rawValue)
         }
     }
 
     // MARK: - Content
 
-    func testEveryCaseHasNonEmptyTitleAndDescription() {
+    @Test("Every case has a non-empty title and description")
+    func everyCaseHasNonEmptyTitleAndDescription() {
         for slide in ThawTourSlide.allCases {
-            XCTAssertFalse(slide.title.isEmpty, "title for \(slide) should not be empty")
-            XCTAssertFalse(slide.description.isEmpty, "description for \(slide) should not be empty")
+            #expect(!slide.title.isEmpty, "title for \(slide) should not be empty")
+            #expect(!slide.description.isEmpty, "description for \(slide) should not be empty")
         }
     }
 
     // MARK: - autoAdvanceDelay
 
-    func testWelcomeHasNoAutoAdvanceDelay() {
-        XCTAssertEqual(ThawTourSlide.welcome.autoAdvanceDelay, 0)
+    @Test("Welcome has no auto-advance delay")
+    func welcomeHasNoAutoAdvanceDelay() {
+        #expect(ThawTourSlide.welcome.autoAdvanceDelay == 0)
     }
 
-    func testLoopingSlidesHavePositiveAutoAdvanceDelay() {
+    @Test("Looping slides have a positive auto-advance delay")
+    func loopingSlidesHavePositiveAutoAdvanceDelay() {
         for slide in ThawTourSlide.allCases where slide != .welcome {
-            XCTAssertGreaterThan(slide.autoAdvanceDelay, 0, "\(slide) should auto-advance")
+            #expect(slide.autoAdvanceDelay > 0, "\(slide) should auto-advance")
         }
     }
 }

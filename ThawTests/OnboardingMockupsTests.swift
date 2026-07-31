@@ -6,143 +6,164 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Foundation
 import SwiftUI
+import Testing
 @testable import Thaw
-import XCTest
 
-// MARK: - ThawManagementMockupModel
+@Suite("Onboarding mockups")
+struct OnboardingMockupsTests {
+    // MARK: - ThawManagementMockupModel
 
-@MainActor
-final class ThawManagementMockupModelTests: XCTestCase {
-    func testRestartResetsToHidden() {
-        let model = ThawManagementMockupModel()
-        model.itemsHidden = false
+    @MainActor
+    @Suite("Management mockup model")
+    struct ThawManagementMockupModelTests {
+        @Test("Restarting resets the items to hidden")
+        func restartResetsToHidden() {
+            let model = ThawManagementMockupModel()
+            model.itemsHidden = false
 
-        model.restart()
+            model.restart()
 
-        XCTAssertTrue(model.itemsHidden)
-    }
+            #expect(model.itemsHidden)
+        }
 
-    func testToggleFlipsHiddenState() {
-        let model = ThawManagementMockupModel()
-        let initial = model.itemsHidden
+        @Test("Toggling flips the hidden state")
+        func toggleFlipsHiddenState() {
+            let model = ThawManagementMockupModel()
+            let initial = model.itemsHidden
 
-        model.toggle()
-        XCTAssertEqual(model.itemsHidden, !initial)
+            model.toggle()
+            #expect(model.itemsHidden == !initial)
 
-        model.toggle()
-        XCTAssertEqual(model.itemsHidden, initial)
-    }
-}
-
-// MARK: - ThawAppearanceMockupModel
-
-@MainActor
-final class ThawAppearanceMockupModelTests: XCTestCase {
-    func testStyleLabelsHasOneEntryPerStyle() {
-        XCTAssertEqual(ThawAppearanceMockupModel.styleLabels.count, 3)
-        for label in ThawAppearanceMockupModel.styleLabels {
-            XCTAssertFalse(label.isEmpty)
+            model.toggle()
+            #expect(model.itemsHidden == initial)
         }
     }
 
-    func testRestartResetsStyleIndexToZero() {
-        let model = ThawAppearanceMockupModel()
-        model.select(2)
+    // MARK: - ThawAppearanceMockupModel
 
-        model.restart()
+    @MainActor
+    @Suite("Appearance mockup model")
+    struct ThawAppearanceMockupModelTests {
+        @Test("There is one style label per style")
+        func styleLabelsHasOneEntryPerStyle() {
+            #expect(ThawAppearanceMockupModel.styleLabels.count == 3)
+            for label in ThawAppearanceMockupModel.styleLabels {
+                #expect(!label.isEmpty)
+            }
+        }
 
-        XCTAssertEqual(model.styleIndex, 0)
-    }
+        @Test("Restarting resets the style index to zero")
+        func restartResetsStyleIndexToZero() {
+            let model = ThawAppearanceMockupModel()
+            model.select(2)
 
-    func testSelectUpdatesIndex() {
-        let model = ThawAppearanceMockupModel()
+            model.restart()
 
-        model.select(1)
-        XCTAssertEqual(model.styleIndex, 1)
+            #expect(model.styleIndex == 0)
+        }
 
-        model.select(2)
-        XCTAssertEqual(model.styleIndex, 2)
-    }
+        @Test("Selecting updates the style index")
+        func selectUpdatesIndex() {
+            let model = ThawAppearanceMockupModel()
 
-    func testSelectCurrentIndexIsNoOp() {
-        let model = ThawAppearanceMockupModel()
-        model.select(1)
-        XCTAssertEqual(model.styleIndex, 1)
+            model.select(1)
+            #expect(model.styleIndex == 1)
 
-        model.select(1)
-        XCTAssertEqual(model.styleIndex, 1)
-    }
-}
+            model.select(2)
+            #expect(model.styleIndex == 2)
+        }
 
-// MARK: - ThawHotkeysMockupModel
+        @Test("Selecting the current style index is a no-op")
+        func selectCurrentIndexIsNoOp() {
+            let model = ThawAppearanceMockupModel()
+            model.select(1)
+            #expect(model.styleIndex == 1)
 
-@MainActor
-final class ThawHotkeysMockupModelTests: XCTestCase {
-    func testRestartResetsToNotVisible() {
-        let model = ThawHotkeysMockupModel()
-        model.itemsVisible = true
-
-        model.restart()
-
-        XCTAssertFalse(model.itemsVisible)
-    }
-
-    func testTriggerTogglesVisibility() {
-        let model = ThawHotkeysMockupModel()
-        let initial = model.itemsVisible
-
-        model.trigger()
-        XCTAssertEqual(model.itemsVisible, !initial)
-
-        model.trigger()
-        XCTAssertEqual(model.itemsVisible, initial)
-    }
-}
-
-// MARK: - ThawProfilesMockupModel
-
-@MainActor
-final class ThawProfilesMockupModelTests: XCTestCase {
-    func testFocusModesHasOneEntryPerProfile() {
-        XCTAssertEqual(ThawProfilesMockupModel.focusModes.count, 3)
-        for mode in ThawProfilesMockupModel.focusModes {
-            XCTAssertFalse(mode.name.isEmpty)
-            XCTAssertFalse(mode.symbol.isEmpty)
-            XCTAssertFalse(mode.items.isEmpty)
+            model.select(1)
+            #expect(model.styleIndex == 1)
         }
     }
 
-    func testActiveReflectsFocusIndex() {
-        let model = ThawProfilesMockupModel()
-        XCTAssertEqual(model.active.symbol, ThawProfilesMockupModel.focusModes[0].symbol)
+    // MARK: - ThawHotkeysMockupModel
 
-        model.select(1)
-        XCTAssertEqual(model.active.symbol, ThawProfilesMockupModel.focusModes[1].symbol)
+    @MainActor
+    @Suite("Hotkeys mockup model")
+    struct ThawHotkeysMockupModelTests {
+        @Test("Restarting resets the items to not visible")
+        func restartResetsToNotVisible() {
+            let model = ThawHotkeysMockupModel()
+            model.itemsVisible = true
+
+            model.restart()
+
+            #expect(!model.itemsVisible)
+        }
+
+        @Test("Triggering toggles visibility")
+        func triggerTogglesVisibility() {
+            let model = ThawHotkeysMockupModel()
+            let initial = model.itemsVisible
+
+            model.trigger()
+            #expect(model.itemsVisible == !initial)
+
+            model.trigger()
+            #expect(model.itemsVisible == initial)
+        }
     }
 
-    func testSelectUpdatesIndex() {
-        let model = ThawProfilesMockupModel()
+    // MARK: - ThawProfilesMockupModel
 
-        model.select(2)
-        XCTAssertEqual(model.focusIndex, 2)
-    }
+    @MainActor
+    @Suite("Profiles mockup model")
+    struct ThawProfilesMockupModelTests {
+        @Test("There is one focus mode per profile")
+        func focusModesHasOneEntryPerProfile() {
+            #expect(ThawProfilesMockupModel.focusModes.count == 3)
+            for mode in ThawProfilesMockupModel.focusModes {
+                #expect(!mode.name.isEmpty)
+                #expect(!mode.symbol.isEmpty)
+                #expect(!mode.items.isEmpty)
+            }
+        }
 
-    func testSelectCurrentIndexIsNoOp() {
-        let model = ThawProfilesMockupModel()
-        model.select(1)
-        XCTAssertEqual(model.focusIndex, 1)
+        @Test("The active focus mode reflects the focus index")
+        func activeReflectsFocusIndex() {
+            let model = ThawProfilesMockupModel()
+            #expect(model.active.symbol == ThawProfilesMockupModel.focusModes[0].symbol)
 
-        model.select(1)
-        XCTAssertEqual(model.focusIndex, 1)
-    }
+            model.select(1)
+            #expect(model.active.symbol == ThawProfilesMockupModel.focusModes[1].symbol)
+        }
 
-    func testRestartResetsFocusIndexToZero() {
-        let model = ThawProfilesMockupModel()
-        model.select(2)
+        @Test("Selecting updates the focus index")
+        func selectUpdatesIndex() {
+            let model = ThawProfilesMockupModel()
 
-        model.restart()
+            model.select(2)
+            #expect(model.focusIndex == 2)
+        }
 
-        XCTAssertEqual(model.focusIndex, 0)
+        @Test("Selecting the current focus index is a no-op")
+        func selectCurrentIndexIsNoOp() {
+            let model = ThawProfilesMockupModel()
+            model.select(1)
+            #expect(model.focusIndex == 1)
+
+            model.select(1)
+            #expect(model.focusIndex == 1)
+        }
+
+        @Test("Restarting resets the focus index to zero")
+        func restartResetsFocusIndexToZero() {
+            let model = ThawProfilesMockupModel()
+            model.select(2)
+
+            model.restart()
+
+            #expect(model.focusIndex == 0)
+        }
     }
 }

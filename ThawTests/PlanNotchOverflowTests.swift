@@ -7,8 +7,8 @@
 //  Licensed under the GNU GPLv3
 
 import CoreGraphics
+import Testing
 @testable import Thaw
-import XCTest
 
 /// Characterization tests for LayoutSolver.planNotchOverflow.
 ///
@@ -20,7 +20,8 @@ import XCTest
 ///
 /// The planner is pure arithmetic over its inputs (no Bridging or
 /// NSScreen access). Tests construct synthetic input directly.
-final class PlanNotchOverflowTests: XCTestCase {
+@Suite("Plan notch overflow")
+struct PlanNotchOverflowTests {
     // MARK: - Helpers
 
     /// Build a desiredFiltered sequence for: chevron + visible profile
@@ -56,7 +57,8 @@ final class PlanNotchOverflowTests: XCTestCase {
 
     /// When the profile fits and there are no unmanaged items, overflow
     /// is empty and inputs pass through unchanged.
-    func testProfileFitsNoUnmanagedNoOverflow() {
+    @Test("A fitting profile with no unmanaged items overflows nothing")
+    func profileFitsNoUnmanagedNoOverflow() {
         let desired = makeSequence(
             chevron: chevron,
             visible: ["a", "b", "c"],
@@ -79,13 +81,14 @@ final class PlanNotchOverflowTests: XCTestCase {
             availableWidth: 200 // plenty of room
         )
 
-        XCTAssertEqual(result.overflowUIDs, [])
-        XCTAssertEqual(result.updatedDesiredFiltered, desired)
-        XCTAssertEqual(result.updatedSectionMap, sectionMap)
+        #expect(result.overflowUIDs == [])
+        #expect(result.updatedDesiredFiltered == desired)
+        #expect(result.updatedSectionMap == sectionMap)
     }
 
     /// Profile fits, unmanaged also fits — no overflow.
-    func testProfileFitsUnmanagedFitsNoOverflow() {
+    @Test("Nothing overflows when the profile and the unmanaged items both fit")
+    func profileFitsUnmanagedFitsNoOverflow() {
         // chevron(24) + a(24) + b(24) + u1(24) + u2(24) = 120
         let desired = makeSequence(
             chevron: chevron,
@@ -109,12 +112,13 @@ final class PlanNotchOverflowTests: XCTestCase {
             availableWidth: 130 // fits 120
         )
 
-        XCTAssertEqual(result.overflowUIDs, [])
+        #expect(result.overflowUIDs == [])
     }
 
     /// Profile fits, but unmanaged doesn't — overflow only unmanaged,
     /// leftmost-first (chevron-side first).
-    func testProfileFitsUnmanagedOverflowsLeftmostFirst() {
+    @Test("Unmanaged items overflow leftmost-first when the profile fits")
+    func profileFitsUnmanagedOverflowsLeftmostFirst() {
         // chevron(24) + a(24) + u1(24) + u2(24) = 96
         // Available 90: u1 overflows (leftmost of unmanaged), u2 stays.
         let desired = makeSequence(
@@ -139,15 +143,16 @@ final class PlanNotchOverflowTests: XCTestCase {
             availableWidth: 90
         )
 
-        XCTAssertEqual(result.overflowUIDs, ["u1"])
-        XCTAssertEqual(result.updatedSectionMap["u1"], "hidden")
-        XCTAssertEqual(result.updatedSectionMap["u2"], "visible")
-        XCTAssertEqual(result.updatedSectionMap["a"], "visible")
+        #expect(result.overflowUIDs == ["u1"])
+        #expect(result.updatedSectionMap["u1"] == "hidden")
+        #expect(result.updatedSectionMap["u2"] == "visible")
+        #expect(result.updatedSectionMap["a"] == "visible")
     }
 
     /// Profile baseline exceeds the budget: all unmanaged overflow,
     /// then profile leftmost overflows until the remainder fits.
-    func testProfileBaselineExceedsBudgetOverflowsAllUnmanagedThenLeftmostProfile() {
+    @Test("A profile over budget overflows every unmanaged item, then the leftmost profile items")
+    func profileBaselineExceedsBudgetOverflowsAllUnmanagedThenLeftmostProfile() {
         // chevron(24) + p1(24) + p2(24) + p3(24) + u1(24) = 120
         // Available 70: profileBaseline = 24 + 24 + 24 + 24 = 96 > 70.
         // All unmanaged overflow (u1).
@@ -178,16 +183,17 @@ final class PlanNotchOverflowTests: XCTestCase {
             availableWidth: 70
         )
 
-        XCTAssertEqual(Set(result.overflowUIDs), Set(["u1", "p1", "p2"]))
-        XCTAssertEqual(result.updatedSectionMap["u1"], "hidden")
-        XCTAssertEqual(result.updatedSectionMap["p1"], "hidden")
-        XCTAssertEqual(result.updatedSectionMap["p2"], "hidden")
-        XCTAssertEqual(result.updatedSectionMap["p3"], "visible")
+        #expect(Set(result.overflowUIDs) == Set(["u1", "p1", "p2"]))
+        #expect(result.updatedSectionMap["u1"] == "hidden")
+        #expect(result.updatedSectionMap["p1"] == "hidden")
+        #expect(result.updatedSectionMap["p2"] == "hidden")
+        #expect(result.updatedSectionMap["p3"] == "visible")
     }
 
     /// When chevron width alone equals the budget, all other items
     /// overflow (regardless of tier).
-    func testChevronEqualsBudgetEverythingOverflows() {
+    @Test("Everything overflows when the chevron alone equals the budget")
+    func chevronEqualsBudgetEverythingOverflows() {
         let desired = makeSequence(
             chevron: chevron,
             visible: ["p1", "u1"],
@@ -210,12 +216,13 @@ final class PlanNotchOverflowTests: XCTestCase {
             availableWidth: 24
         )
 
-        XCTAssertEqual(Set(result.overflowUIDs), Set(["p1", "u1"]))
+        #expect(Set(result.overflowUIDs) == Set(["p1", "u1"]))
     }
 
     /// When the always-hidden control item is absent, overflowed items
     /// append into the hidden section only — no AH section to consider.
-    func testAlwaysHiddenAbsentOverflowGoesToHidden() {
+    @Test("Overflow lands in the hidden section when the always-hidden control is absent")
+    func alwaysHiddenAbsentOverflowGoesToHidden() {
         let desired = makeSequence(
             chevron: chevron,
             visible: ["u1"],
@@ -238,16 +245,17 @@ final class PlanNotchOverflowTests: XCTestCase {
             availableWidth: 24 // only chevron fits
         )
 
-        XCTAssertEqual(result.overflowUIDs, ["u1"])
-        XCTAssertEqual(result.updatedSectionMap["u1"], "hidden")
+        #expect(result.overflowUIDs == ["u1"])
+        #expect(result.updatedSectionMap["u1"] == "hidden")
         // The rebuilt sequence must NOT contain ahCtrl.
-        XCTAssertFalse(result.updatedDesiredFiltered.contains(ahCtrl))
+        #expect(!result.updatedDesiredFiltered.contains(ahCtrl))
     }
 
     /// Tiered priority: an unmanaged item to the RIGHT of profile items
     /// still overflows before any profile item, because the tier check
     /// runs before the leftmost-first ordering.
-    func testTieredPriorityUnmanagedOverflowsBeforeProfile() {
+    @Test("An unmanaged item overflows before a profile item sitting to its left")
+    func tieredPriorityUnmanagedOverflowsBeforeProfile() {
         // chevron(24) + p1(24) + p2(24) + u1(24) = 96
         // Available 80: profileBaseline = 24 + 24 + 24 = 72 <= 80. Profile fits.
         // Try fitting unmanaged: usedWidth=72 + u1=24 = 96 > 80 — u1 doesn't fit.
@@ -274,8 +282,8 @@ final class PlanNotchOverflowTests: XCTestCase {
             availableWidth: 80
         )
 
-        XCTAssertEqual(result.overflowUIDs, ["u1"],
-                       "u1 should overflow before p1/p2 even though it sits to their right")
+        #expect(result.overflowUIDs == ["u1"],
+                "u1 should overflow before p1/p2 even though it sits to their right")
     }
 
     /// Regression lock: at default macOS spacing (16) the planner must
@@ -287,7 +295,8 @@ final class PlanNotchOverflowTests: XCTestCase {
     /// nothing should overflow. Pre-fix code would have subtracted
     /// (count - 1) * 16 = 32 somewhere, making 124 appear too big
     /// against the budget.
-    func testNoDoubleCountedSpacingRegressionLock() {
+    @Test("Per-item spacing is not double-counted against the budget")
+    func noDoubleCountedSpacingRegressionLock() {
         let desired = makeSequence(
             chevron: chevron,
             visible: ["p1", "p2"],
@@ -311,8 +320,8 @@ final class PlanNotchOverflowTests: XCTestCase {
             availableWidth: 124 // exactly chevron + p1 + p2, no spacing subtraction
         )
 
-        XCTAssertEqual(result.overflowUIDs, [],
-                       "no item should overflow when widths sum to exactly the budget — spacing must not be double-counted")
+        #expect(result.overflowUIDs == [],
+                "no item should overflow when widths sum to exactly the budget — spacing must not be double-counted")
     }
 
     // MARK: - Invalid / unsettled geometry guard (issue #666, display reconnect)
@@ -325,7 +334,8 @@ final class PlanNotchOverflowTests: XCTestCase {
     /// "profile alone exceeds budget" branch ejects every visible item, which
     /// is the exact corruption observed (availableWidth=-1202 -> 13 items
     /// ejected from visible, collapsing the hidden section into visible).
-    func testNegativeAvailableWidthYieldsNoOverflow() {
+    @Test("A negative budget yields no overflow")
+    func negativeAvailableWidthYieldsNoOverflow() {
         let desired = makeSequence(
             chevron: chevron,
             visible: ["a", "b", "c", "d"],
@@ -344,14 +354,15 @@ final class PlanNotchOverflowTests: XCTestCase {
             availableWidth: -1202 // exact value from the field log (display reconnect)
         )
 
-        XCTAssertEqual(result.overflowUIDs, [], "must not eject items on a negative (invalid) budget")
-        XCTAssertEqual(result.updatedDesiredFiltered, desired)
-        XCTAssertEqual(result.updatedSectionMap, sectionMap)
+        #expect(result.overflowUIDs == [], "must not eject items on a negative (invalid) budget")
+        #expect(result.updatedDesiredFiltered == desired)
+        #expect(result.updatedSectionMap == sectionMap)
     }
 
     /// A zero budget is equally untrustworthy (Control Center left edge at or
     /// inside the notch boundary) and must not trigger overflow.
-    func testZeroAvailableWidthYieldsNoOverflow() {
+    @Test("A zero budget yields no overflow")
+    func zeroAvailableWidthYieldsNoOverflow() {
         let desired = makeSequence(
             chevron: chevron,
             visible: ["a", "b"],
@@ -370,12 +381,13 @@ final class PlanNotchOverflowTests: XCTestCase {
             availableWidth: 0
         )
 
-        XCTAssertEqual(result.overflowUIDs, [], "must not eject items on a zero budget")
+        #expect(result.overflowUIDs == [], "must not eject items on a zero budget")
     }
 
     /// A non-finite budget (degenerate screen frame / missing geometry) must
     /// not eject either.
-    func testNonFiniteAvailableWidthYieldsNoOverflow() {
+    @Test("A non-finite budget yields no overflow")
+    func nonFiniteAvailableWidthYieldsNoOverflow() {
         let desired = makeSequence(
             chevron: chevron,
             visible: ["a", "b"],
@@ -394,14 +406,15 @@ final class PlanNotchOverflowTests: XCTestCase {
                 uidWidths: widths,
                 availableWidth: badBudget
             )
-            XCTAssertEqual(result.overflowUIDs, [], "must not eject items on a non-finite budget (\(badBudget))")
+            #expect(result.overflowUIDs == [], "must not eject items on a non-finite budget (\(badBudget))")
         }
     }
 
     /// Guard rail: a small but POSITIVE budget still overflows legitimately, so
     /// the invalid-budget guard does not suppress real overflow on a genuinely
     /// full bar.
-    func testSmallPositiveBudgetStillOverflows() {
+    @Test("A small but positive budget still overflows")
+    func smallPositiveBudgetStillOverflows() {
         // chevron(24) + a + b + c + d (24 each) = 120; budget 60 fits chevron + 1.
         let desired = makeSequence(
             chevron: chevron,
@@ -421,7 +434,7 @@ final class PlanNotchOverflowTests: XCTestCase {
             availableWidth: 60
         )
 
-        XCTAssertFalse(result.overflowUIDs.isEmpty, "a genuinely full bar (positive budget) must still overflow")
+        #expect(!result.overflowUIDs.isEmpty, "a genuinely full bar (positive budget) must still overflow")
     }
 
     /// The visible control item is never ejected, but it must also keep its
@@ -430,7 +443,8 @@ final class PlanNotchOverflowTests: XCTestCase {
     /// the front. Here the chevron sits mid-section; when a profile item
     /// overflows, the chevron must stay between its neighbours rather than jump
     /// to index 0. Red before the fix, which prepended the chevron.
-    func testChevronKeepsSavedPositionAcrossOverflow() {
+    @Test("The chevron keeps its saved position across an overflow rebuild")
+    func chevronKeepsSavedPositionAcrossOverflow() {
         // visible order left-to-right: a, b, chevron, c (chevron mid-list).
         let desired = makeSequence(
             chevron: nil,
@@ -451,21 +465,21 @@ final class PlanNotchOverflowTests: XCTestCase {
             availableWidth: 80
         )
 
-        XCTAssertEqual(result.overflowUIDs, ["a"], "leftmost profile item overflows first")
-        XCTAssertEqual(
-            result.updatedDesiredFiltered,
-            ["b", chevron, "c", hiddenCtrl, "a", ahCtrl],
+        #expect(result.overflowUIDs == ["a"], "leftmost profile item overflows first")
+        #expect(
+            result.updatedDesiredFiltered == ["b", chevron, "c", hiddenCtrl, "a", ahCtrl],
             "the chevron must stay between b and c, not be relocated to the front"
         )
-        XCTAssertEqual(result.updatedSectionMap["a"], "hidden")
+        #expect(result.updatedSectionMap["a"] == "hidden")
     }
 
     // MARK: - Display gate (shouldManageNotchOverflow)
 
     /// A notched display that is the main menu bar display runs overflow —
     /// e.g. a MacBook used on its own, or with the built-in set as main.
-    func testOverflowRunsOnNotchedMainDisplay() {
-        XCTAssertTrue(LayoutSolver.shouldManageNotchOverflow(
+    @Test("Overflow runs on a notched main display")
+    func overflowRunsOnNotchedMainDisplay() {
+        #expect(LayoutSolver.shouldManageNotchOverflow(
             overflowEnabled: true,
             activeScreenKnown: true,
             activeHasNotch: true,
@@ -479,8 +493,9 @@ final class PlanNotchOverflowTests: XCTestCase {
     /// beside-notch budget ejects two profile items, and they stay stranded in
     /// hidden once focus returns to the external. Gating on the main display
     /// keeps the saved layout intact.
-    func testOverflowSkippedOnNotchedSecondaryDisplay() {
-        XCTAssertFalse(LayoutSolver.shouldManageNotchOverflow(
+    @Test("Overflow is skipped on a notched secondary display")
+    func overflowSkippedOnNotchedSecondaryDisplay() {
+        #expect(!LayoutSolver.shouldManageNotchOverflow(
             overflowEnabled: true,
             activeScreenKnown: true,
             activeHasNotch: true,
@@ -490,8 +505,9 @@ final class PlanNotchOverflowTests: XCTestCase {
 
     /// A non-notched main display (e.g. an external as the only/primary screen)
     /// has no notch to overflow around.
-    func testOverflowSkippedOnNonNotchedMainDisplay() {
-        XCTAssertFalse(LayoutSolver.shouldManageNotchOverflow(
+    @Test("Overflow is skipped on a non-notched main display")
+    func overflowSkippedOnNonNotchedMainDisplay() {
+        #expect(!LayoutSolver.shouldManageNotchOverflow(
             overflowEnabled: true,
             activeScreenKnown: true,
             activeHasNotch: false,
@@ -502,8 +518,9 @@ final class PlanNotchOverflowTests: XCTestCase {
     /// While the active menu bar display is unknown (e.g. mid
     /// display-reconfiguration), overflow must not run against a guessed
     /// screen — even one that would qualify (notched + main).
-    func testOverflowSkippedWhileActiveDisplayUnknown() {
-        XCTAssertFalse(LayoutSolver.shouldManageNotchOverflow(
+    @Test("Overflow is skipped while the active display is unknown")
+    func overflowSkippedWhileActiveDisplayUnknown() {
+        #expect(!LayoutSolver.shouldManageNotchOverflow(
             overflowEnabled: true,
             activeScreenKnown: false,
             activeHasNotch: true,
@@ -512,8 +529,9 @@ final class PlanNotchOverflowTests: XCTestCase {
     }
 
     /// The user toggle wins regardless of geometry.
-    func testOverflowSkippedWhenDisabled() {
-        XCTAssertFalse(LayoutSolver.shouldManageNotchOverflow(
+    @Test("Overflow is skipped when the user toggle is off")
+    func overflowSkippedWhenDisabled() {
+        #expect(!LayoutSolver.shouldManageNotchOverflow(
             overflowEnabled: false,
             activeScreenKnown: true,
             activeHasNotch: true,
@@ -528,7 +546,8 @@ final class PlanNotchOverflowTests: XCTestCase {
     /// BEFORE the hidden control in desiredFiltered, hiddenEnd < hiddenStart and
     /// the rebuild slice would trap. The planner must bail with inputs unchanged
     /// instead of crashing.
-    func testInvertedControlOrderYieldsNoOverflowInsteadOfTrapping() {
+    @Test("Inverted control-item order yields no overflow instead of trapping")
+    func invertedControlOrderYieldsNoOverflowInsteadOfTrapping() {
         // ahCtrl appears before hiddenCtrl — inverted from the expected order.
         let desired = [chevron, "a", "b", ahCtrl, hiddenCtrl]
         let widths: [String: CGFloat] = [chevron: 24, "a": 24, "b": 24]
@@ -543,16 +562,17 @@ final class PlanNotchOverflowTests: XCTestCase {
             availableWidth: 24 // only chevron fits — overflow would otherwise be computed
         )
 
-        XCTAssertEqual(result.overflowUIDs, [], "must not eject items when control order is inverted")
-        XCTAssertEqual(result.updatedDesiredFiltered, desired)
-        XCTAssertEqual(result.updatedSectionMap, sectionMap)
+        #expect(result.overflowUIDs == [], "must not eject items when control order is inverted")
+        #expect(result.updatedDesiredFiltered == desired)
+        #expect(result.updatedSectionMap == sectionMap)
     }
 
     /// The hidden control can be missing entirely (e.g. during a display
     /// reconnect) while the always-hidden control is still present. That makes
     /// hiddenStart fall back to endIndex, which can land after hiddenEnd — the
     /// same trap shape as inverted order. Must bail, not crash.
-    func testHiddenControlAbsentAlwaysHiddenPresentYieldsNoOverflow() {
+    @Test("A missing hidden control with the always-hidden control present yields no overflow")
+    func hiddenControlAbsentAlwaysHiddenPresentYieldsNoOverflow() {
         // hiddenCtrl is absent from desiredFiltered entirely.
         let desired = [chevron, "a", "b", ahCtrl]
         let widths: [String: CGFloat] = [chevron: 24, "a": 24, "b": 24]
@@ -567,9 +587,9 @@ final class PlanNotchOverflowTests: XCTestCase {
             availableWidth: 24 // only chevron fits — overflow would otherwise be computed
         )
 
-        XCTAssertEqual(result.overflowUIDs, [], "must not eject items when the hidden control is missing")
-        XCTAssertEqual(result.updatedDesiredFiltered, desired)
-        XCTAssertEqual(result.updatedSectionMap, sectionMap)
+        #expect(result.overflowUIDs == [], "must not eject items when the hidden control is missing")
+        #expect(result.updatedDesiredFiltered == desired)
+        #expect(result.updatedSectionMap == sectionMap)
     }
 
     /// Guard rail on the guard itself: when hiddenCtrl and ahCtrl are adjacent
@@ -577,7 +597,8 @@ final class PlanNotchOverflowTests: XCTestCase {
     /// hidden section). An over-eager `<` instead of `<=` would silently disable
     /// overflow for every user with an empty hidden section, so this must still
     /// compute overflow normally.
-    func testEmptyHiddenSectionInCorrectOrderStillOverflowsNormally() {
+    @Test("An empty but correctly ordered hidden section still overflows normally")
+    func emptyHiddenSectionInCorrectOrderStillOverflowsNormally() {
         // Same shape as testProfileFitsUnmanagedOverflowsLeftmostFirst: hiddenCtrl
         // and ahCtrl are adjacent (no items between them) via the default empty
         // hidden/alwaysHidden lists in makeSequence.
@@ -599,10 +620,9 @@ final class PlanNotchOverflowTests: XCTestCase {
             availableWidth: 90
         )
 
-        XCTAssertEqual(result.overflowUIDs, ["u1"], "empty-but-correctly-ordered hidden section must not suppress overflow")
-        XCTAssertEqual(
-            result.updatedDesiredFiltered,
-            [chevron, "a", "u2", hiddenCtrl, "u1", ahCtrl],
+        #expect(result.overflowUIDs == ["u1"], "empty-but-correctly-ordered hidden section must not suppress overflow")
+        #expect(
+            result.updatedDesiredFiltered == [chevron, "a", "u2", hiddenCtrl, "u1", ahCtrl],
             "overflowed item must land between hiddenCtrl and ahCtrl"
         )
     }
@@ -618,7 +638,8 @@ final class PlanNotchOverflowTests: XCTestCase {
     /// passes and the function proceeds to a normal rebuild rather than taking
     /// the early-return path. Asserting the actual rebuilt output is correct;
     /// do not "fix" this back to an unchanged-inputs assertion.
-    func testBothControlsAbsentYieldsNoTrap() {
+    @Test("Both controls absent rebuilds without trapping")
+    func bothControlsAbsentYieldsNoTrap() {
         let desired = [chevron, "a", "b"]
         let widths: [String: CGFloat] = [chevron: 24, "a": 24, "b": 24]
         let sectionMap = ["a": "visible", "b": "visible"]
@@ -632,10 +653,9 @@ final class PlanNotchOverflowTests: XCTestCase {
             availableWidth: 24 // only chevron fits — forces the profile-exceeds-budget branch
         )
 
-        XCTAssertEqual(Set(result.overflowUIDs), Set(["a", "b"]), "overflow still computed when both controls are absent")
-        XCTAssertEqual(
-            result.updatedDesiredFiltered,
-            [chevron, hiddenCtrl, "a", "b", ahCtrl],
+        #expect(Set(result.overflowUIDs) == Set(["a", "b"]), "overflow still computed when both controls are absent")
+        #expect(
+            result.updatedDesiredFiltered == [chevron, hiddenCtrl, "a", "b", ahCtrl],
             "rebuild must not trap and control items are reinserted even though absent from input"
         )
     }

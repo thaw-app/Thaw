@@ -7,8 +7,9 @@
 //  Licensed under the GNU GPLv3
 
 import CoreGraphics
+import Foundation
+import Testing
 @testable import Thaw
-import XCTest
 
 /// Characterization tests for PendingLedger.planPendingMove.
 ///
@@ -19,7 +20,8 @@ import XCTest
 ///
 /// Coordinate convention: hidden divider at x=400, width=10. Items in
 /// "visible" sit at x >= 410. Items in "hidden" sit at x < 400.
-final class PlanPendingMoveTests: XCTestCase {
+@Suite("Plan pending move")
+struct PlanPendingMoveTests {
     // MARK: - Helpers
 
     private let hiddenBounds = CGRect(x: 400, y: 0, width: 10, height: 22)
@@ -65,7 +67,8 @@ final class PlanPendingMoveTests: XCTestCase {
 
     /// A standard pending entry for a visible item produces a move to the
     /// section boundary (no stored neighbor, no fallback).
-    func testStandardEntryVisibleItemFallsBackToSectionBoundary() {
+    @Test("A standard entry for a visible item falls back to the section boundary")
+    func standardEntryVisibleItemFallsBackToSectionBoundary() {
         let item = visibleItem(bundleID: "com.example.app", title: "Status", windowID: 800)
         let entry = PendingLedger.PendingEntry(
             tagIdentifier: item.tag.tagIdentifier,
@@ -86,21 +89,22 @@ final class PlanPendingMoveTests: XCTestCase {
         )
 
         if case let .move(movedItem, destination) = decision {
-            XCTAssertEqual(movedItem.windowID, 800)
+            #expect(movedItem.windowID == 800)
             if case let .leftOfItem(neighbor) = destination {
-                XCTAssertEqual(neighbor.tag, .hiddenControlItem,
-                               "section-boundary fallback should target the hidden control item")
+                #expect(neighbor.tag == .hiddenControlItem,
+                        "section-boundary fallback should target the hidden control item")
             } else {
-                XCTFail("expected .leftOfItem, got \(destination)")
+                Issue.record("expected .leftOfItem, got \(destination)")
             }
         } else {
-            XCTFail("expected .move, got \(decision)")
+            Issue.record("expected .move, got \(decision)")
         }
     }
 
     /// A pending entry whose item is already in the hidden section
     /// produces .clearEntry — no move needed.
-    func testStandardEntryAlreadyHiddenClearsEntry() {
+    @Test("A standard entry whose item is already hidden clears the entry")
+    func standardEntryAlreadyHiddenClearsEntry() {
         let item = hiddenItem(bundleID: "com.example.app", title: "Status", windowID: 801)
         let entry = PendingLedger.PendingEntry(
             tagIdentifier: item.tag.tagIdentifier,
@@ -123,14 +127,15 @@ final class PlanPendingMoveTests: XCTestCase {
         if case .clearEntry = decision {
             // expected
         } else {
-            XCTFail("expected .clearEntry, got \(decision)")
+            Issue.record("expected .clearEntry, got \(decision)")
         }
     }
 
     /// When the item referenced by the pending entry is not in the current
     /// items list, the planner emits .skip(.itemNotPresent) — the entry
     /// stays in the dict for the next launch.
-    func testItemNotPresentSkips() {
+    @Test("An entry whose item is not present skips")
+    func itemNotPresentSkips() {
         let entry = PendingLedger.PendingEntry(
             tagIdentifier: "com.gone.app:Status",
             kind: .section(.hidden)
@@ -149,12 +154,13 @@ final class PlanPendingMoveTests: XCTestCase {
             )
         )
 
-        XCTAssertEqual(decision, .skip(reason: .itemNotPresent))
+        #expect(decision == .skip(reason: .itemNotPresent))
     }
 
     /// waitForRelaunch sentinel with the same windowID skips with
     /// .waitForRelaunchActive.
-    func testWaitForRelaunchSameWindowIDSkips() {
+    @Test("A waitForRelaunch sentinel with the same windowID skips")
+    func waitForRelaunchSameWindowIDSkips() {
         let item = visibleItem(bundleID: "com.example.app", title: "Status", windowID: 802)
         let entry = PendingLedger.PendingEntry(
             tagIdentifier: item.tag.tagIdentifier,
@@ -174,13 +180,14 @@ final class PlanPendingMoveTests: XCTestCase {
             )
         )
 
-        XCTAssertEqual(decision, .skip(reason: .waitForRelaunchActive))
+        #expect(decision == .skip(reason: .waitForRelaunchActive))
     }
 
     /// waitForRelaunch sentinel with a new windowID (app relaunched)
     /// promotes the entry. The orchestrator persists the change and
     /// re-runs the planner.
-    func testWaitForRelaunchNewWindowIDPromotes() {
+    @Test("A waitForRelaunch sentinel with a new windowID promotes the entry")
+    func waitForRelaunchNewWindowIDPromotes() {
         let item = visibleItem(bundleID: "com.example.app", title: "Status", windowID: 803)
         let entry = PendingLedger.PendingEntry(
             tagIdentifier: item.tag.tagIdentifier,
@@ -201,15 +208,16 @@ final class PlanPendingMoveTests: XCTestCase {
         )
 
         if case let .promoteWaitForRelaunch(section) = decision {
-            XCTAssertEqual(section, .hidden)
+            #expect(section == .hidden)
         } else {
-            XCTFail("expected .promoteWaitForRelaunch, got \(decision)")
+            Issue.record("expected .promoteWaitForRelaunch, got \(decision)")
         }
     }
 
     /// An entry whose tag is currently in activelyShownTags skips with
     /// .activelyShown — the rehide flow owns this item.
-    func testActivelyShownExclusion() {
+    @Test("An actively shown entry is excluded")
+    func activelyShownExclusion() {
         let item = visibleItem(bundleID: "com.example.app", title: "Status", windowID: 804)
         let entry = PendingLedger.PendingEntry(
             tagIdentifier: item.tag.tagIdentifier,
@@ -229,12 +237,13 @@ final class PlanPendingMoveTests: XCTestCase {
             )
         )
 
-        XCTAssertEqual(decision, .skip(reason: .activelyShown))
+        #expect(decision == .skip(reason: .activelyShown))
     }
 
     /// An entry whose recorded section is .visible produces .clearEntry —
     /// there's no hidden destination to restore to.
-    func testVisibleSectionShortCircuitsToClear() {
+    @Test("An entry recorded for the visible section short-circuits to clear")
+    func visibleSectionShortCircuitsToClear() {
         let item = visibleItem(bundleID: "com.example.app", title: "Status", windowID: 805)
         let entry = PendingLedger.PendingEntry(
             tagIdentifier: item.tag.tagIdentifier,
@@ -257,13 +266,14 @@ final class PlanPendingMoveTests: XCTestCase {
         if case .clearEntry = decision {
             // expected
         } else {
-            XCTFail("expected .clearEntry, got \(decision)")
+            Issue.record("expected .clearEntry, got \(decision)")
         }
     }
 
     /// A stored neighbor destination takes precedence over the fallback
     /// neighbor and the section boundary.
-    func testStoredNeighborTakesPrecedence() {
+    @Test("A stored neighbor takes precedence over the fallbacks")
+    func storedNeighborTakesPrecedence() {
         let item = visibleItem(bundleID: "com.example.app", title: "Status", windowID: 806, x: 500)
         let neighbor = visibleItem(bundleID: "com.example.app", title: "Other", windowID: 807, x: 600)
         let entry = PendingLedger.PendingEntry(
@@ -292,10 +302,10 @@ final class PlanPendingMoveTests: XCTestCase {
         if case let .move(_, destination) = decision,
            case let .leftOfItem(target) = destination
         {
-            XCTAssertEqual(target.windowID, 807,
-                           "stored neighbor should win over the section-boundary fallback")
+            #expect(target.windowID == 807,
+                    "stored neighbor should win over the section-boundary fallback")
         } else {
-            XCTFail("expected .move(.leftOfItem(neighbor)), got \(decision)")
+            Issue.record("expected .move(.leftOfItem(neighbor)), got \(decision)")
         }
     }
 }

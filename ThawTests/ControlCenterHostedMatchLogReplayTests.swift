@@ -7,8 +7,9 @@
 //  Licensed under the GNU GPLv3
 
 import CoreGraphics
+import Foundation
+import Testing
 @testable import Thaw
-import XCTest
 
 /// Log-replay harness for the SourcePIDCache strict 1pt spatial pass, focused
 /// on the macOS 26 Control-Center-hosted resolution case that this area keeps
@@ -30,39 +31,48 @@ import XCTest
 /// ControlCenterHostedMatch gate, so a future change that re-breaks one is
 /// caught here. The named-module and Live-Activity gate guards keep the rest of
 /// the Control Center family from collateral damage.
-final class ControlCenterHostedMatchLogReplayTests: XCTestCase {
+@Suite("Control Center hosted match log replay")
+struct ControlCenterHostedMatchLogReplayTests {
     private let cc = "com.apple.controlcenter"
 
     // MARK: - Parser characterization
 
-    func testParserRecoversLittleSnitchScenario() throws {
-        let scenario = try XCTUnwrap(
+    @Test("The parser recovers the Little Snitch scenario")
+    func parserRecoversLittleSnitchScenario() throws {
+        let scenario = try #require(
             ControlCenterHostedResolutionReplay.parse(ControlCenterHostedResolutionLog.littleSnitch)
         )
-        XCTAssertEqual(scenario.windowID, 355)
-        XCTAssertEqual(scenario.title, "Item-0")
-        XCTAssertEqual(scenario.cgOwnerBundleID, cc)
-        XCTAssertEqual(scenario.candidates.count, 3)
-        XCTAssertEqual(
-            scenario.candidates.first,
-            .init(appBundleID: cc, distance: 0, enabled: nil),
+        #expect(scenario.windowID == 355)
+        #expect(scenario.title == "Item-0")
+        #expect(scenario.cgOwnerBundleID == cc)
+        #expect(scenario.candidates.count == 3)
+        #expect(
+            scenario.candidates.first == ControlCenterHostedResolutionReplay.CandidateChild(
+                appBundleID: cc,
+                distance: 0,
+                enabled: nil
+            ),
             "the only child within 1pt is Control Center's own, at distance 0 with AXEnabled absent"
         )
     }
 
-    func testParserRecoversTheClockScenario() throws {
-        let scenario = try XCTUnwrap(
+    @Test("The parser recovers The Clock scenario")
+    func parserRecoversTheClockScenario() throws {
+        let scenario = try #require(
             ControlCenterHostedResolutionReplay.parse(ControlCenterHostedResolutionLog.theClock)
         )
-        XCTAssertEqual(scenario.windowID, 6475)
-        XCTAssertEqual(scenario.title, "Item-0")
-        XCTAssertEqual(scenario.cgOwnerBundleID, cc)
-        XCTAssertEqual(
-            scenario.candidates.first,
-            .init(appBundleID: "com.fabriceleyne.theclock", distance: 0, enabled: nil)
+        #expect(scenario.windowID == 6475)
+        #expect(scenario.title == "Item-0")
+        #expect(scenario.cgOwnerBundleID == cc)
+        #expect(
+            scenario.candidates.first == ControlCenterHostedResolutionReplay.CandidateChild(
+                appBundleID: "com.fabriceleyne.theclock",
+                distance: 0,
+                enabled: nil
+            )
         )
-        XCTAssertFalse(
-            scenario.candidates.contains { $0.appBundleID == cc },
+        #expect(
+            !scenario.candidates.contains { $0.appBundleID == cc },
             "Control Center must not be a candidate for The Clock — its child is published by its own app"
         )
     }
@@ -72,12 +82,13 @@ final class ControlCenterHostedMatchLogReplayTests: XCTestCase {
     /// RED before the gate, GREEN after. Little Snitch's icon must NOT bind to
     /// Control Center; it has to stay unresolved so it remains an orphan that
     /// reaches marker-pair resolution.
-    func testLittleSnitchIconDoesNotBindToControlCenter() throws {
-        let scenario = try XCTUnwrap(
+    @Test("The Little Snitch icon does not bind to Control Center")
+    func littleSnitchIconDoesNotBindToControlCenter() throws {
+        let scenario = try #require(
             ControlCenterHostedResolutionReplay.parse(ControlCenterHostedResolutionLog.littleSnitch)
         )
-        XCTAssertNil(
-            ControlCenterHostedResolutionReplay.resolve(scenario),
+        #expect(
+            ControlCenterHostedResolutionReplay.resolve(scenario) == nil,
             "windowID 355 must stay unresolved, not bind to com.apple.controlcenter"
         )
     }
@@ -86,13 +97,13 @@ final class ControlCenterHostedMatchLogReplayTests: XCTestCase {
     /// own app: the gate refuses only Control Center's self-match, never a
     /// widget's own extras-bar child. This is the regression lock that protects
     /// The Clock from a future Little Snitch fix.
-    func testTheClockResolvesToItsOwnApp() throws {
-        let scenario = try XCTUnwrap(
+    @Test("The Clock resolves to its own app")
+    func theClockResolvesToItsOwnApp() throws {
+        let scenario = try #require(
             ControlCenterHostedResolutionReplay.parse(ControlCenterHostedResolutionLog.theClock)
         )
-        XCTAssertEqual(
-            ControlCenterHostedResolutionReplay.resolve(scenario),
-            "com.fabriceleyne.theclock"
+        #expect(
+            ControlCenterHostedResolutionReplay.resolve(scenario) == "com.fabriceleyne.theclock"
         )
     }
 
@@ -103,26 +114,28 @@ final class ControlCenterHostedMatchLogReplayTests: XCTestCase {
     /// resolving to Control Center. System titles (TimeMachine) and nil/empty
     /// likewise never count as generic slots. Confirmed present as managed
     /// com.apple.controlcenter:<title> items in field logs.
-    func testNamedControlCenterTitlesAreNotGenericSlots() {
+    @Test("Named Control Center titles are not generic slots")
+    func namedControlCenterTitlesAreNotGenericSlots() {
         for title in [
             "WiFi", "Battery", "Bluetooth", "NowPlaying", "Clock", "BentoBox-0",
             "AudioVideoModule", "com.apple.menuextra.TimeMachine",
         ] {
-            XCTAssertFalse(
-                MarkerPairResolver.isCCHostedGenericSlot(appBundleID: cc, windowTitle: title, ccBundleID: cc),
+            #expect(
+                !MarkerPairResolver.isCCHostedGenericSlot(appBundleID: cc, windowTitle: title, ccBundleID: cc),
                 "named Control Center module \(title) must keep resolving to Control Center"
             )
         }
-        XCTAssertFalse(MarkerPairResolver.isCCHostedGenericSlot(appBundleID: cc, windowTitle: nil, ccBundleID: cc))
-        XCTAssertFalse(MarkerPairResolver.isCCHostedGenericSlot(appBundleID: cc, windowTitle: "", ccBundleID: cc))
+        #expect(!MarkerPairResolver.isCCHostedGenericSlot(appBundleID: cc, windowTitle: nil, ccBundleID: cc))
+        #expect(!MarkerPairResolver.isCCHostedGenericSlot(appBundleID: cc, windowTitle: "", ccBundleID: cc))
     }
 
     /// A generic Item-N icon matched by Control Center itself (Little Snitch, or
     /// a transient Live Activity) is a bare CC-hosted slot: it must be left
     /// unresolved so it stays an orphan for marker-pair resolution.
-    func testGenericControlCenterHostedSlotDetected() {
+    @Test("A generic Control-Center-hosted slot is detected")
+    func genericControlCenterHostedSlotDetected() {
         for title in ["Item-0", "Item-5", "Item-38"] {
-            XCTAssertTrue(
+            #expect(
                 MarkerPairResolver.isCCHostedGenericSlot(appBundleID: cc, windowTitle: title, ccBundleID: cc),
                 "generic Control-Center-hosted icon \(title) must not bind to Control Center"
             )
@@ -133,32 +146,38 @@ final class ControlCenterHostedMatchLogReplayTests: XCTestCase {
     /// title attributed to any other app (a widget's own extras child like The
     /// Clock, or Thaw's own items) — or to no known app at all — is never a bare
     /// CC slot.
-    func testNonControlCenterMatcherIsNeverASlot() {
+    @Test("A non-Control-Center matcher is never a slot")
+    func nonControlCenterMatcherIsNeverASlot() {
         for matcher in ["com.fabriceleyne.theclock", "com.stonerl.Thaw"] {
-            XCTAssertFalse(
-                MarkerPairResolver.isCCHostedGenericSlot(appBundleID: matcher, windowTitle: "Item-0", ccBundleID: cc),
+            #expect(
+                !MarkerPairResolver.isCCHostedGenericSlot(
+                    appBundleID: matcher,
+                    windowTitle: "Item-0",
+                    ccBundleID: cc
+                ),
                 "\(matcher) matched its own child — must resolve to it, not be treated as a CC slot"
             )
         }
-        XCTAssertFalse(
-            MarkerPairResolver.isCCHostedGenericSlot(appBundleID: nil, windowTitle: "Item-0", ccBundleID: cc),
+        #expect(
+            !MarkerPairResolver.isCCHostedGenericSlot(appBundleID: nil, windowTitle: "Item-0", ccBundleID: cc),
             "a nil matched bundle ID cannot be Control Center"
         )
     }
 
     /// The shared generic-title predicate, the single source of truth reused by
     /// both isCCHostedGenericSlot and MenuBarItemTag.isControlCenterGenericItem.
-    func testGenericControlCenterTitlePredicate() {
-        XCTAssertTrue(MarkerPairResolver.isGenericControlCenterTitle("Item-0"))
-        XCTAssertTrue(MarkerPairResolver.isGenericControlCenterTitle("Item-1"))
-        XCTAssertTrue(MarkerPairResolver.isGenericControlCenterTitle("Item-38"))
-        XCTAssertFalse(MarkerPairResolver.isGenericControlCenterTitle("WiFi"))
-        XCTAssertFalse(MarkerPairResolver.isGenericControlCenterTitle("BentoBox-0"))
-        XCTAssertFalse(MarkerPairResolver.isGenericControlCenterTitle("com.apple.menuextra.TimeMachine"))
+    @Test("The generic Control Center title predicate matches only Item-N titles")
+    func genericControlCenterTitlePredicate() {
+        #expect(MarkerPairResolver.isGenericControlCenterTitle("Item-0"))
+        #expect(MarkerPairResolver.isGenericControlCenterTitle("Item-1"))
+        #expect(MarkerPairResolver.isGenericControlCenterTitle("Item-38"))
+        #expect(!MarkerPairResolver.isGenericControlCenterTitle("WiFi"))
+        #expect(!MarkerPairResolver.isGenericControlCenterTitle("BentoBox-0"))
+        #expect(!MarkerPairResolver.isGenericControlCenterTitle("com.apple.menuextra.TimeMachine"))
         // Regex boundary: "Item-" without a trailing index must not match.
-        XCTAssertFalse(MarkerPairResolver.isGenericControlCenterTitle("Item-"))
-        XCTAssertFalse(MarkerPairResolver.isGenericControlCenterTitle(nil))
-        XCTAssertFalse(MarkerPairResolver.isGenericControlCenterTitle(""))
+        #expect(!MarkerPairResolver.isGenericControlCenterTitle("Item-"))
+        #expect(!MarkerPairResolver.isGenericControlCenterTitle(nil))
+        #expect(!MarkerPairResolver.isGenericControlCenterTitle(""))
     }
 }
 

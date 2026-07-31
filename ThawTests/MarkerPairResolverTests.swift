@@ -7,8 +7,9 @@
 //  Licensed under the GNU GPLv3
 
 import CoreGraphics
+import Foundation
+import Testing
 @testable import Thaw
-import XCTest
 
 /// Characterization tests for MarkerPairResolver, the helper that
 /// pairs unresolved on-screen icons with bundle-ID-titled marker
@@ -17,7 +18,8 @@ import XCTest
 /// Covers the macOS 26 marker-pair workflow used by SourcePIDCache
 /// when the spatial AX pass cannot reach a widget's own
 /// AXExtrasMenuBar.
-final class MarkerPairResolverTests: XCTestCase {
+@Suite("Marker pair resolver")
+struct MarkerPairResolverTests {
     // MARK: - Constants
 
     private let thawBundleID = "com.stonerl.Thaw"
@@ -61,7 +63,8 @@ final class MarkerPairResolverTests: XCTestCase {
     /// returning the agent's PID. The icon resolves via the title-
     /// lookup path because the marker's CG owner is Control Center
     /// (the macOS 26 reparenting case).
-    func testAgentSceneResolvesViaTitleLookup() {
+    @Test("An agent scene resolves through the title lookup")
+    func agentSceneResolvesViaTitleLookup() {
         let icons = [icon(windowID: 11379, title: "Item-0")]
         let markers = [
             marker(
@@ -84,18 +87,19 @@ final class MarkerPairResolverTests: XCTestCase {
                 bundleID == "at.obdev.littlesnitch.agent" ? 13496 : nil
             }
         )
-        XCTAssertEqual(result.count, 1)
-        XCTAssertEqual(result.first?.iconWindowID, 11379)
-        XCTAssertEqual(result.first?.resolvedPID, 13496)
-        XCTAssertEqual(result.first?.markerWindowID, 61456)
-        XCTAssertEqual(result.first?.markerTitle, "at.obdev.littlesnitch.agent")
+        #expect(result.count == 1)
+        #expect(result.first?.iconWindowID == 11379)
+        #expect(result.first?.resolvedPID == 13496)
+        #expect(result.first?.markerWindowID == 61456)
+        #expect(result.first?.markerTitle == "at.obdev.littlesnitch.agent")
     }
 
     /// Marker's CG owner is the widget's real app (not CC, not Thaw):
     /// the owning-PID path resolves directly without falling through
     /// to the title lookup. The bundleIDToPID closure must NOT be
     /// invoked in this case.
-    func testOwningPIDPathPreferredOverTitleLookup() {
+    @Test("The owning-PID path is preferred over the title lookup")
+    func owningPIDPathPreferredOverTitleLookup() {
         var bundleLookupCalled = false
         let icons = [icon(windowID: 1, title: "Item-0")]
         let markers = [marker(windowID: 2, title: "com.example.widget", owningPID: 555)]
@@ -112,15 +116,16 @@ final class MarkerPairResolverTests: XCTestCase {
                 return nil
             }
         )
-        XCTAssertEqual(result.count, 1)
-        XCTAssertEqual(result.first?.resolvedPID, 555)
-        XCTAssertFalse(bundleLookupCalled,
-                       "title-lookup path must not run when owning-PID path succeeds")
+        #expect(result.count == 1)
+        #expect(result.first?.resolvedPID == 555)
+        #expect(!bundleLookupCalled,
+                "title-lookup path must not run when owning-PID path succeeds")
     }
 
     /// Marker's CG owner resolves to Control Center: the owning-PID
     /// path is rejected and the title lookup runs.
-    func testCCOwnerFallsThroughToTitleLookup() {
+    @Test("A Control Center owner falls through to the title lookup")
+    func ccOwnerFallsThroughToTitleLookup() {
         let icons = [icon(windowID: 1, title: "Item-0")]
         let markers = [marker(windowID: 2, title: "com.example.widget", owningPID: 200)]
         let result = MarkerPairResolver.resolve(
@@ -137,14 +142,15 @@ final class MarkerPairResolverTests: XCTestCase {
                 bundleID == "com.example.widget" ? 777 : nil
             }
         )
-        XCTAssertEqual(result.count, 1)
-        XCTAssertEqual(result.first?.resolvedPID, 777)
+        #expect(result.count == 1)
+        #expect(result.first?.resolvedPID == 777)
     }
 
     /// Marker's CG owner resolves to Thaw itself: rejected, falls
     /// through to title lookup. The title-lookup result must also
     /// be checked for Thaw self-attribution (see the next test).
-    func testThawOwnerFallsThroughToTitleLookup() {
+    @Test("A Thaw owner falls through to the title lookup")
+    func thawOwnerFallsThroughToTitleLookup() {
         let icons = [icon(windowID: 1, title: "Item-0")]
         let markers = [marker(windowID: 2, title: "com.example.widget", owningPID: 100)]
         let result = MarkerPairResolver.resolve(
@@ -161,15 +167,16 @@ final class MarkerPairResolverTests: XCTestCase {
                 bundleID == "com.example.widget" ? 777 : nil
             }
         )
-        XCTAssertEqual(result.count, 1)
-        XCTAssertEqual(result.first?.resolvedPID, 777)
+        #expect(result.count == 1)
+        #expect(result.first?.resolvedPID == 777)
     }
 
     /// Both paths resolve to Thaw: no resolution emitted. Defensive
     /// guarantee that Thaw's own PID is never attributed to a
     /// third-party widget regardless of where the lookup happens to
     /// land.
-    func testBothPathsResolveToThawProducesNoResult() {
+    @Test("Both paths resolving to Thaw produces no result")
+    func bothPathsResolveToThawProducesNoResult() {
         let icons = [icon(windowID: 1, title: "Item-0")]
         let markers = [marker(windowID: 2, title: "com.example.widget", owningPID: 100)]
         let result = MarkerPairResolver.resolve(
@@ -180,14 +187,15 @@ final class MarkerPairResolverTests: XCTestCase {
             pidToBundleID: { _ in self.thawBundleID },
             bundleIDToPID: { _ in 100 }
         )
-        XCTAssertEqual(result, [])
+        #expect(result == [])
     }
 
     /// Two unresolved icons share the same size and there are two
     /// markers of that size: the ambiguity is unresolvable, so no
     /// pairings emit. Prevents the cross-attribution where an icon
     /// gets paired with the wrong marker.
-    func testMultiMatchSkipped() {
+    @Test("An ambiguous multi-match is skipped")
+    func multiMatchSkipped() {
         let icons = [
             icon(windowID: 1, title: "Item-0"),
             icon(windowID: 2, title: "Item-0"),
@@ -208,14 +216,15 @@ final class MarkerPairResolverTests: XCTestCase {
             },
             bundleIDToPID: { _ in nil }
         )
-        XCTAssertEqual(result, [])
+        #expect(result == [])
     }
 
     /// Icon whose own title is bundle-ID-shaped is not a candidate:
     /// it's a marker, not an icon. This prevents two markers from
     /// pairing with each other. The generic-titled icon resolves
     /// normally; the bundle-ID-titled "icon" is silently skipped.
-    func testBundleIDShapedIconTitleIsSkipped() {
+    @Test("A bundle-ID-shaped icon title is skipped")
+    func bundleIDShapedIconTitleIsSkipped() {
         // Two unrelated widgets at different sizes so neither
         // multi-matches; both have a generic-titled candidate icon
         // in the unresolved set, plus the bundle-ID-shaped "icon"
@@ -266,15 +275,16 @@ final class MarkerPairResolverTests: XCTestCase {
                 return nil
             }
         )
-        XCTAssertEqual(result.count, 1)
-        XCTAssertEqual(result.first?.iconWindowID, 2,
-                       "only the generic-titled icon should resolve; bundle-ID-titled icons are markers, not candidates")
+        #expect(result.count == 1)
+        #expect(result.first?.iconWindowID == 2,
+                "only the generic-titled icon should resolve; bundle-ID-titled icons are markers, not candidates")
     }
 
     /// Marker's windowID equals the icon's windowID (self-pair): the
     /// `windowID != icon.windowID` filter rejects self-pairings even
     /// though the size matches.
-    func testSelfPairingRejected() {
+    @Test("A self-pairing is rejected")
+    func selfPairingRejected() {
         // Same windowID for icon and marker — pathological input that
         // shouldn't occur, but the filter must hold.
         let icons = [icon(windowID: 1, title: "Item-0")]
@@ -287,13 +297,14 @@ final class MarkerPairResolverTests: XCTestCase {
             pidToBundleID: { _ in "com.example.widget" },
             bundleIDToPID: { _ in 100 }
         )
-        XCTAssertEqual(result, [])
+        #expect(result == [])
     }
 
     /// Size mismatch: no pairing. The marker's width differs from the
     /// icon's by 1 point, so they should not be considered the same
     /// widget.
-    func testSizeMismatchProducesNoResult() {
+    @Test("A size mismatch produces no result")
+    func sizeMismatchProducesNoResult() {
         let icons = [icon(windowID: 1, title: "Item-0", size: CGSize(width: 116, height: 33))]
         let markers = [marker(
             windowID: 2,
@@ -309,12 +320,13 @@ final class MarkerPairResolverTests: XCTestCase {
             pidToBundleID: { _ in "com.example.widget" },
             bundleIDToPID: { _ in 100 }
         )
-        XCTAssertEqual(result, [])
+        #expect(result == [])
     }
 
     /// Neither owning-PID nor title-lookup resolves: no result. The
     /// algorithm bails cleanly when no resolution path succeeds.
-    func testNeitherPathResolvesProducesNoResult() {
+    @Test("Neither path resolving produces no result")
+    func neitherPathResolvesProducesNoResult() {
         let icons = [icon(windowID: 1, title: "Item-0")]
         let markers = [marker(windowID: 2, title: "com.example.widget", owningPID: nil)]
         let result = MarkerPairResolver.resolve(
@@ -325,11 +337,12 @@ final class MarkerPairResolverTests: XCTestCase {
             pidToBundleID: neverResolve,
             bundleIDToPID: neverResolveByBundle
         )
-        XCTAssertEqual(result, [])
+        #expect(result == [])
     }
 
     /// Empty inputs: empty output. Trivial guard.
-    func testEmptyInputsProduceEmptyOutput() {
+    @Test("Empty inputs produce empty output")
+    func emptyInputsProduceEmptyOutput() {
         let result = MarkerPairResolver.resolve(
             unresolvedIcons: [],
             markers: [],
@@ -338,13 +351,14 @@ final class MarkerPairResolverTests: XCTestCase {
             pidToBundleID: neverResolve,
             bundleIDToPID: neverResolveByBundle
         )
-        XCTAssertEqual(result, [])
+        #expect(result == [])
     }
 
     // MARK: - extractMarkers
 
     /// Non-dot titles are filtered out as non-markers.
-    func testExtractMarkersExcludesGenericTitles() {
+    @Test("extractMarkers excludes generic titles")
+    func extractMarkersExcludesGenericTitles() {
         let windows: [(windowID: CGWindowID, title: String?, size: CGSize, owningPID: pid_t?)] = [
             (1, "Item-0", CGSize(width: 116, height: 33), nil), // generic title
             (2, "", CGSize(width: 42, height: 33), nil), // empty
@@ -356,12 +370,13 @@ final class MarkerPairResolverTests: XCTestCase {
             thawControlItemPrefix: thawControlItemPrefix,
             thawBundleID: thawBundleID
         )
-        XCTAssertEqual(markers.map(\.windowID), [4])
+        #expect(markers.map(\.windowID) == [4])
     }
 
     /// Thaw control items are excluded by the Thaw.ControlItem.
     /// prefix even though their titles contain dots.
-    func testExtractMarkersExcludesThawControlItems() {
+    @Test("extractMarkers excludes Thaw control items")
+    func extractMarkersExcludesThawControlItems() {
         let windows: [(windowID: CGWindowID, title: String?, size: CGSize, owningPID: pid_t?)] = [
             (1, "Thaw.ControlItem.Hidden", CGSize(width: 5016, height: 33), nil),
             (2, "Thaw.ControlItem.AlwaysHidden", CGSize(width: 5016, height: 33), nil),
@@ -372,13 +387,14 @@ final class MarkerPairResolverTests: XCTestCase {
             thawControlItemPrefix: thawControlItemPrefix,
             thawBundleID: thawBundleID
         )
-        XCTAssertEqual(markers.map(\.windowID), [3])
+        #expect(markers.map(\.windowID) == [3])
     }
 
     /// The Thaw self-registration window (title equals the Thaw bundle
     /// identifier) is excluded so Thaw's own PID can never be
     /// attributed to a third-party widget via the title-lookup path.
-    func testExtractMarkersExcludesThawSelfRegistration() {
+    @Test("extractMarkers excludes the Thaw self-registration window")
+    func extractMarkersExcludesThawSelfRegistration() {
         let windows: [(windowID: CGWindowID, title: String?, size: CGSize, owningPID: pid_t?)] = [
             (1, "com.stonerl.Thaw", CGSize(width: 33, height: 33), nil), // Thaw self
             (2, "com.example.widget", CGSize(width: 24, height: 24), nil),
@@ -388,7 +404,7 @@ final class MarkerPairResolverTests: XCTestCase {
             thawControlItemPrefix: thawControlItemPrefix,
             thawBundleID: thawBundleID
         )
-        XCTAssertEqual(markers.map(\.windowID), [2])
+        #expect(markers.map(\.windowID) == [2])
     }
 }
 
@@ -398,13 +414,15 @@ final class MarkerPairResolverTests: XCTestCase {
 /// motivated the rule stays locked in: every accepted pair is a real
 /// owner match seen unresolved, every rejected pair is a wrong neighbor or
 /// same-vendor different-app collision seen in the same logs.
-final class HostedItemOwnershipTests: XCTestCase {
+@Suite("Hosted item ownership")
+struct HostedItemOwnershipTests {
     // MARK: - Accept: genuine owner matches observed unresolved in logs
 
-    func testAirBuddyMenuMatchesAirBuddyHelper() {
+    @Test("AirBuddy's menu matches the AirBuddy helper")
+    func airBuddyMenuMatchesAirBuddyHelper() {
         // codes.rambo.AirBuddy.Menu hosted by Control Center, owned by the
         // helper whose bundle id extends the icon's distinctive component.
-        XCTAssertTrue(
+        #expect(
             HostedItemOwnership.titleIndicatesOwner(
                 "codes.rambo.AirBuddy.Menu",
                 bundleID: "codes.rambo.AirBuddyHelper"
@@ -412,8 +430,9 @@ final class HostedItemOwnershipTests: XCTestCase {
         )
     }
 
-    func testSpamSieveMatchesCaseInsensitively() {
-        XCTAssertTrue(
+    @Test("SpamSieve matches case-insensitively")
+    func spamSieveMatchesCaseInsensitively() {
+        #expect(
             HostedItemOwnership.titleIndicatesOwner(
                 "com.c-command.spamsieve",
                 bundleID: "com.c-command.SpamSieve"
@@ -421,8 +440,9 @@ final class HostedItemOwnershipTests: XCTestCase {
         )
     }
 
-    func testCotypistSubItemMatchesParentBundle() {
-        XCTAssertTrue(
+    @Test("A Cotypist sub-item matches its parent bundle")
+    func cotypistSubItemMatchesParentBundle() {
+        #expect(
             HostedItemOwnership.titleIndicatesOwner(
                 "app.cotypist.Cotypist.ModelRepository",
                 bundleID: "app.cotypist.Cotypist"
@@ -432,17 +452,18 @@ final class HostedItemOwnershipTests: XCTestCase {
 
     // MARK: - Reject: same-vendor different-app collisions
 
-    func testPixelSnapDoesNotMatchCleanShot() {
+    @Test("PixelSnap does not match CleanShot")
+    func pixelSnapDoesNotMatchCleanShot() {
         // Both pl.maketheweb, but pixelsnap2 and cleanshotx are distinct
         // apps; a vendor-only prefix must never be enough.
-        XCTAssertFalse(
-            HostedItemOwnership.titleIndicatesOwner(
+        #expect(
+            !HostedItemOwnership.titleIndicatesOwner(
                 "pl.maketheweb.pixelsnap2",
                 bundleID: "pl.maketheweb.cleanshotx"
             )
         )
-        XCTAssertFalse(
-            HostedItemOwnership.titleIndicatesOwner(
+        #expect(
+            !HostedItemOwnership.titleIndicatesOwner(
                 "pl.maketheweb.cleanshotx",
                 bundleID: "pl.maketheweb.pixelsnap2"
             )
@@ -451,20 +472,22 @@ final class HostedItemOwnershipTests: XCTestCase {
 
     // MARK: - Reject: unrelated neighbors that sat within the radius
 
-    func testWireGuardDoesNotMatchUpdatest() {
-        XCTAssertFalse(
-            HostedItemOwnership.titleIndicatesOwner(
+    @Test("WireGuard does not match Updatest")
+    func wireGuardDoesNotMatchUpdatest() {
+        #expect(
+            !HostedItemOwnership.titleIndicatesOwner(
                 "com.wireguard.macos",
                 bundleID: "app.updatest.Updatest"
             )
         )
     }
 
-    func testSpamSieveDoesNotMatchAusweisApp() {
+    @Test("SpamSieve does not match AusweisApp")
+    func spamSieveDoesNotMatchAusweisApp() {
         // Same first component (com) but different vendor; one shared
         // component is not enough.
-        XCTAssertFalse(
-            HostedItemOwnership.titleIndicatesOwner(
+        #expect(
+            !HostedItemOwnership.titleIndicatesOwner(
                 "com.c-command.spamsieve",
                 bundleID: "com.governikus.ausweisapp2"
             )
@@ -473,16 +496,19 @@ final class HostedItemOwnershipTests: XCTestCase {
 
     // MARK: - Reject: non-reverse-DNS and empty titles
 
-    func testGenericTitleNeverMatches() {
-        XCTAssertFalse(HostedItemOwnership.titleIndicatesOwner("Item-0", bundleID: "de.fauler-apfel.CMD-Z"))
+    @Test("A generic title never matches")
+    func genericTitleNeverMatches() {
+        #expect(!HostedItemOwnership.titleIndicatesOwner("Item-0", bundleID: "de.fauler-apfel.CMD-Z"))
     }
 
-    func testTwoComponentTitleNeverMatches() {
-        XCTAssertFalse(HostedItemOwnership.titleIndicatesOwner("mega.mac", bundleID: "mega.mac"))
+    @Test("A two-component title never matches")
+    func twoComponentTitleNeverMatches() {
+        #expect(!HostedItemOwnership.titleIndicatesOwner("mega.mac", bundleID: "mega.mac"))
     }
 
-    func testNilAndEmptyTitleNeverMatch() {
-        XCTAssertFalse(HostedItemOwnership.titleIndicatesOwner(nil, bundleID: "codes.rambo.AirBuddyHelper"))
-        XCTAssertFalse(HostedItemOwnership.titleIndicatesOwner("", bundleID: "codes.rambo.AirBuddyHelper"))
+    @Test("A nil or empty title never matches")
+    func nilAndEmptyTitleNeverMatch() {
+        #expect(!HostedItemOwnership.titleIndicatesOwner(nil, bundleID: "codes.rambo.AirBuddyHelper"))
+        #expect(!HostedItemOwnership.titleIndicatesOwner("", bundleID: "codes.rambo.AirBuddyHelper"))
     }
 }

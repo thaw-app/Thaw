@@ -7,8 +7,8 @@
 //  Licensed under the GNU GPLv3
 
 import CoreGraphics
+import Testing
 @testable import Thaw
-import XCTest
 
 /// Tests for the rule that spots a cache pass taken part-way through a
 /// section expand or collapse.
@@ -18,7 +18,8 @@ import XCTest
 /// resize are separate steps, so a pass can observe revealed items behind a
 /// still-stretched divider — and classifying against that mixture moves an
 /// entire section into `visible`.
-final class MidSectionTransitionTests: XCTestCase {
+@Suite("Mid-section transition")
+struct MidSectionTransitionTests {
     /// Width the window server reports for a collapsed section's divider. The
     /// requested 10000 pt is clamped to roughly the span of the displays; this
     /// is a real value from the #851 log.
@@ -28,18 +29,20 @@ final class MidSectionTransitionTests: XCTestCase {
     /// single digits once laid out, and the #851 log also shows exactly 0.
     private let markerWidth: CGFloat = 0
 
-    func testCollapsedSectionWithStretchedDividerIsConsistent() {
-        XCTAssertFalse(
-            MenuBarItemManager.isMidSectionTransition(
+    @Test("A collapsed section with a stretched divider is consistent")
+    func collapsedSectionWithStretchedDividerIsConsistent() {
+        #expect(
+            !MenuBarItemManager.isMidSectionTransition(
                 dividerWidth: stretchedWidth,
                 isSectionCollapsed: true
             )
         )
     }
 
-    func testExpandedSectionWithMarkerDividerIsConsistent() {
-        XCTAssertFalse(
-            MenuBarItemManager.isMidSectionTransition(
+    @Test("An expanded section with a marker divider is consistent")
+    func expandedSectionWithMarkerDividerIsConsistent() {
+        #expect(
+            !MenuBarItemManager.isMidSectionTransition(
                 dividerWidth: markerWidth,
                 isSectionCollapsed: false
             )
@@ -49,8 +52,9 @@ final class MidSectionTransitionTests: XCTestCase {
     /// The #851 pass: the section had been expanded and its items were already
     /// at revealed coordinates, but the divider still carried the stretched
     /// width of the collapsed layout.
-    func testExpandedSectionWithStretchedDividerIsMidTransition() {
-        XCTAssertTrue(
+    @Test("An expanded section with a stretched divider is mid-transition")
+    func expandedSectionWithStretchedDividerIsMidTransition() {
+        #expect(
             MenuBarItemManager.isMidSectionTransition(
                 dividerWidth: stretchedWidth,
                 isSectionCollapsed: false
@@ -60,8 +64,9 @@ final class MidSectionTransitionTests: XCTestCase {
 
     /// The reverse straddle, seen while a section collapses: the divider has
     /// already shrunk but the items have not been parked yet.
-    func testCollapsedSectionWithMarkerDividerIsMidTransition() {
-        XCTAssertTrue(
+    @Test("A collapsed section with a marker divider is mid-transition")
+    func collapsedSectionWithMarkerDividerIsMidTransition() {
+        #expect(
             MenuBarItemManager.isMidSectionTransition(
                 dividerWidth: markerWidth,
                 isSectionCollapsed: true
@@ -71,15 +76,16 @@ final class MidSectionTransitionTests: XCTestCase {
 
     /// A laid-out `variableLength` divider is a few points wide, not zero, and
     /// must still read as a marker.
-    func testSmallNonZeroWidthCountsAsMarker() {
-        XCTAssertTrue(
+    @Test("A small non-zero width still counts as a marker")
+    func smallNonZeroWidthCountsAsMarker() {
+        #expect(
             MenuBarItemManager.isMidSectionTransition(
                 dividerWidth: 8,
                 isSectionCollapsed: true
             )
         )
-        XCTAssertFalse(
-            MenuBarItemManager.isMidSectionTransition(
+        #expect(
+            !MenuBarItemManager.isMidSectionTransition(
                 dividerWidth: 8,
                 isSectionCollapsed: false
             )
@@ -88,10 +94,11 @@ final class MidSectionTransitionTests: XCTestCase {
 
     /// Widths from the #851 log, which range from 4656 to 5002 depending on the
     /// display arrangement, all have to read as stretched.
-    func testObservedStretchedWidthsAllReadAsCollapsed() {
+    @Test("Every observed stretched width reads as a stretched divider")
+    func observedStretchedWidthsAllReadAsCollapsed() {
         for width in [4656, 5000, 5002, 3068] as [CGFloat] {
-            XCTAssertFalse(
-                MenuBarItemManager.isMidSectionTransition(
+            #expect(
+                !MenuBarItemManager.isMidSectionTransition(
                     dividerWidth: width,
                     isSectionCollapsed: true
                 ),

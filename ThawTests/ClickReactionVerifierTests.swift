@@ -6,8 +6,10 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import CoreGraphics
+import Foundation
+import Testing
 @testable import Thaw
-import XCTest
 
 /// Covers the two rules that decide whether an owner reacted to a click.
 ///
@@ -15,7 +17,15 @@ import XCTest
 /// here, but the rules themselves are where the mistakes live: crediting
 /// an unrelated app's window, or reading an item's ordinary reflow as a
 /// reaction.
-final class ClickReactionVerifierTests: XCTestCase {
+///
+/// Serialized because the snapshot and verification cases reach the live
+/// window server through `Bridging`'s process-wide CGS main connection and
+/// its shared diagnostic logger. XCTest ran this class's tests one at a
+/// time; swift-testing parallelizes in-process regardless of the scheme's
+/// own setting, and overlapping CGS window-list calls on that one
+/// connection are not safe.
+@Suite("Click reaction verifier", .serialized)
+struct ClickReactionVerifierTests {
     private let ownerPID: pid_t = 501
     private let helperPID: pid_t = 502
     private let strangerPID: pid_t = 999
@@ -34,126 +44,141 @@ final class ClickReactionVerifierTests: XCTestCase {
 
     // MARK: Interface window
 
-    func testNoNewWindowsMeansNoInterface() {
-        XCTAssertNil(ClickReactionVerifier.interfaceWindow(among: [], ownedBy: [ownerPID]))
+    @Test("No new windows means no interface opened")
+    func noNewWindowsMeansNoInterface() {
+        #expect(ClickReactionVerifier.interfaceWindow(among: [], ownedBy: [ownerPID]) == nil)
     }
 
-    func testAnotherAppsWindowIsNotAReaction() {
+    @Test("Another app's window is not a reaction")
+    func anotherAppsWindowIsNotAReaction() {
         // The user's mail client opening a notification while we clicked
         // says nothing about the item we clicked.
         let candidates = [window(1, pid: strangerPID, layer: menuLayer)]
 
-        XCTAssertNil(ClickReactionVerifier.interfaceWindow(among: candidates, ownedBy: [ownerPID]))
+        #expect(ClickReactionVerifier.interfaceWindow(among: candidates, ownedBy: [ownerPID]) == nil)
     }
 
-    func testTheOwnersWindowIsAReaction() {
+    @Test("The owner's own window is a reaction")
+    func theOwnersWindowIsAReaction() {
         let candidates = [window(1, pid: ownerPID, layer: menuLayer)]
 
-        XCTAssertEqual(
-            ClickReactionVerifier.interfaceWindow(among: candidates, ownedBy: [ownerPID])?.windowID,
-            1
+        #expect(
+            ClickReactionVerifier.interfaceWindow(among: candidates, ownedBy: [ownerPID])?.windowID
+                == 1
         )
     }
 
-    func testAHelperHostedItemCountsThroughItsSourcePID() {
+    @Test("A helper-hosted item counts through its source PID")
+    func aHelperHostedItemCountsThroughItsSourcePID() {
         // An item's window and the process that reacts to it are not
         // always the same, which is why the snapshot carries both.
         let candidates = [window(1, pid: helperPID, layer: menuLayer)]
 
-        XCTAssertEqual(
-            ClickReactionVerifier.interfaceWindow(among: candidates, ownedBy: [ownerPID, helperPID])?.windowID,
-            1
+        #expect(
+            ClickReactionVerifier.interfaceWindow(among: candidates, ownedBy: [ownerPID, helperPID])?.windowID
+                == 1
         )
     }
 
-    func testAMenuWindowIsPreferredOverTheOwnersOtherWindows() {
+    @Test("A menu window is preferred over the owner's other windows")
+    func aMenuWindowIsPreferredOverTheOwnersOtherWindows() {
         let candidates = [
             window(1, pid: ownerPID, layer: 0),
             window(2, pid: ownerPID, layer: menuLayer),
         ]
 
-        XCTAssertEqual(
-            ClickReactionVerifier.interfaceWindow(among: candidates, ownedBy: [ownerPID])?.windowID,
-            2
+        #expect(
+            ClickReactionVerifier.interfaceWindow(among: candidates, ownedBy: [ownerPID])?.windowID
+                == 2
         )
     }
 
-    func testANonMenuWindowStillCountsWhenItIsAllTheOwnerOpened() {
+    @Test("A non-menu window still counts when it is all the owner opened")
+    func aNonMenuWindowStillCountsWhenItIsAllTheOwnerOpened() {
         // A popover or panel is weaker evidence than a menu, but it is
         // still the owner doing something in response to the click.
         let candidates = [window(7, pid: ownerPID, layer: 0)]
 
-        XCTAssertEqual(
-            ClickReactionVerifier.interfaceWindow(among: candidates, ownedBy: [ownerPID])?.windowID,
-            7
+        #expect(
+            ClickReactionVerifier.interfaceWindow(among: candidates, ownedBy: [ownerPID])?.windowID
+                == 7
         )
     }
 
-    func testTheOwnersWindowWinsOverAStrangersMenu() {
+    @Test("The owner's window wins over a stranger's menu")
+    func theOwnersWindowWinsOverAStrangersMenu() {
         let candidates = [
             window(1, pid: strangerPID, layer: menuLayer),
             window(2, pid: ownerPID, layer: 0),
         ]
 
-        XCTAssertEqual(
-            ClickReactionVerifier.interfaceWindow(among: candidates, ownedBy: [ownerPID])?.windowID,
-            2
+        #expect(
+            ClickReactionVerifier.interfaceWindow(among: candidates, ownedBy: [ownerPID])?.windowID
+                == 2
         )
     }
 
     // MARK: Item change
 
-    func testAVanishedItemWindowIsAReaction() {
-        XCTAssertTrue(ClickReactionVerifier.itemChanged(from: CGRect(x: 100, y: 0, width: 24, height: 24), to: nil))
+    @Test("An item window that vanished is a reaction")
+    func aVanishedItemWindowIsAReaction() {
+        #expect(ClickReactionVerifier.itemChanged(from: CGRect(x: 100, y: 0, width: 24, height: 24), to: nil))
     }
 
-    func testAnUnchangedItemIsNotAReaction() {
+    @Test("An unchanged item is not a reaction")
+    func anUnchangedItemIsNotAReaction() {
         let bounds = CGRect(x: 100, y: 0, width: 24, height: 24)
 
-        XCTAssertFalse(ClickReactionVerifier.itemChanged(from: bounds, to: bounds))
+        #expect(!ClickReactionVerifier.itemChanged(from: bounds, to: bounds))
     }
 
-    func testAnItemThatOnlyMovedIsNotAReaction() {
+    @Test("An item that only moved is not a reaction")
+    func anItemThatOnlyMovedIsNotAReaction() {
         // Items slide sideways whenever a neighbor appears or the menu bar
         // reflows. Treating that as a reaction would credit every click
         // made while anything else on the menu bar changed.
         let before = CGRect(x: 100, y: 0, width: 24, height: 24)
         let after = CGRect(x: 340, y: 0, width: 24, height: 24)
 
-        XCTAssertFalse(ClickReactionVerifier.itemChanged(from: before, to: after))
+        #expect(!ClickReactionVerifier.itemChanged(from: before, to: after))
     }
 
-    func testAWiderItemIsAReaction() {
+    @Test("An item that grew wider is a reaction")
+    func aWiderItemIsAReaction() {
         let before = CGRect(x: 100, y: 0, width: 24, height: 24)
         let after = CGRect(x: 100, y: 0, width: 48, height: 24)
 
-        XCTAssertTrue(ClickReactionVerifier.itemChanged(from: before, to: after))
+        #expect(ClickReactionVerifier.itemChanged(from: before, to: after))
     }
 
-    func testSubPointDifferencesAreRoundingNotReactions() {
+    @Test("Sub-point differences are rounding, not reactions")
+    func subPointDifferencesAreRoundingNotReactions() {
         let before = CGRect(x: 100, y: 0, width: 24, height: 24)
         let after = CGRect(x: 100, y: 0, width: 24.5, height: 24.5)
 
-        XCTAssertFalse(ClickReactionVerifier.itemChanged(from: before, to: after))
+        #expect(!ClickReactionVerifier.itemChanged(from: before, to: after))
     }
 
     // MARK: Reaction
 
-    func testOnlyUnobservedMeansNoReaction() {
-        XCTAssertFalse(ClickReactionVerifier.Reaction.unobserved.didReact)
-        XCTAssertTrue(ClickReactionVerifier.Reaction.itemChanged.didReact)
-        XCTAssertTrue(ClickReactionVerifier.Reaction.openedInterface(1).didReact)
+    @Test("Only an unobserved reaction means nothing happened")
+    func onlyUnobservedMeansNoReaction() {
+        #expect(!ClickReactionVerifier.Reaction.unobserved.didReact)
+        #expect(ClickReactionVerifier.Reaction.itemChanged.didReact)
+        #expect(ClickReactionVerifier.Reaction.openedInterface(1).didReact)
     }
 
-    func testOnlyAnOpenedInterfaceCarriesAWindow() {
-        XCTAssertEqual(ClickReactionVerifier.Reaction.openedInterface(42).openedWindowID, 42)
-        XCTAssertNil(ClickReactionVerifier.Reaction.itemChanged.openedWindowID)
-        XCTAssertNil(ClickReactionVerifier.Reaction.unobserved.openedWindowID)
+    @Test("Only an opened interface carries a window identifier")
+    func onlyAnOpenedInterfaceCarriesAWindow() {
+        #expect(ClickReactionVerifier.Reaction.openedInterface(42).openedWindowID == 42)
+        #expect(ClickReactionVerifier.Reaction.itemChanged.openedWindowID == nil)
+        #expect(ClickReactionVerifier.Reaction.unobserved.openedWindowID == nil)
     }
 
     // MARK: Snapshot
 
-    func testSnapshotCarriesBothProcessesThatCouldReact() {
+    @Test("A snapshot carries both processes that could react")
+    func snapshotCarriesBothProcessesThatCouldReact() {
         // Helper-hosted items are common: the window belongs to one process
         // and the app that reacts is another, so a reaction from either
         // counts.
@@ -167,12 +192,13 @@ final class ClickReactionVerifierTests: XCTestCase {
 
         let snapshot = ClickReactionVerifier.snapshot(for: item)
 
-        XCTAssertEqual(snapshot.pids, [ownerPID, helperPID])
-        XCTAssertEqual(snapshot.itemWindowID, 77)
-        XCTAssertEqual(snapshot.itemBounds, item.bounds)
+        #expect(snapshot.pids == [ownerPID, helperPID])
+        #expect(snapshot.itemWindowID == 77)
+        #expect(snapshot.itemBounds == item.bounds)
     }
 
-    func testSnapshotOfAnItemWithNoSourceKeepsOnlyItsOwner() {
+    @Test("A snapshot of an item with no source keeps only its owner")
+    func snapshotOfAnItemWithNoSourceKeepsOnlyItsOwner() {
         // Control items have no source PID. The compactMap must drop it
         // rather than admitting a bogus entry that could credit a stranger.
         let item = MenuBarItem.fixture(
@@ -184,10 +210,11 @@ final class ClickReactionVerifierTests: XCTestCase {
 
         let snapshot = ClickReactionVerifier.snapshot(for: item)
 
-        XCTAssertEqual(snapshot.pids, [ownerPID])
+        #expect(snapshot.pids == [ownerPID])
     }
 
-    func testSnapshotRecordsTheWindowsAlreadyOnScreen() {
+    @Test("A snapshot records the windows already on screen")
+    func snapshotRecordsTheWindowsAlreadyOnScreen() {
         // Windows open at snapshot time must not later be mistaken for
         // ones the click opened. The test host itself is running, so the
         // window server always has something to report here.
@@ -198,12 +225,13 @@ final class ClickReactionVerifierTests: XCTestCase {
 
         let snapshot = ClickReactionVerifier.snapshot(for: item)
 
-        XCTAssertFalse(snapshot.onScreenWindowIDs.isEmpty)
+        #expect(!snapshot.onScreenWindowIDs.isEmpty)
     }
 
     // MARK: Verification
 
-    func testAnItemWindowThatWasNeverOnScreenIsNotAReaction() async {
+    @Test("An item window that was never on screen is not a reaction")
+    func anItemWindowThatWasNeverOnScreenIsNotAReaction() async {
         // The verifier is asked about a window ID the window server does
         // not know, and which is absent from the snapshot's own on-screen
         // set. That is a stale ID, not an item that removed itself in
@@ -218,7 +246,7 @@ final class ClickReactionVerifierTests: XCTestCase {
 
         let reaction = await ClickReactionVerifier.verify(against: snapshot)
 
-        XCTAssertEqual(reaction, .unobserved)
-        XCTAssertFalse(reaction.didReact)
+        #expect(reaction == .unobserved)
+        #expect(!reaction.didReact)
     }
 }

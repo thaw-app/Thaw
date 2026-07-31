@@ -8,8 +8,8 @@
 //
 
 import CoreGraphics
+import Testing
 @testable import Thaw
-import XCTest
 
 /// Characterizes the display-spread predicate that both the saved-layout apply
 /// and the section-order persist consult before acting.
@@ -27,15 +27,17 @@ import XCTest
 /// Frames are expressed in the global CoreGraphics coordinate space
 /// (top-left origin), the same space the menu bar item bounds use, so a
 /// secondary display positioned above the main one has a negative y origin.
-final class DisplaySpreadGateTests: XCTestCase {
+@Suite("Display spread gate")
+struct DisplaySpreadGateTests {
     private let main = CGRect(x: 0, y: 0, width: 1728, height: 1117)
     private let above = CGRect(x: 0, y: -1440, width: 2560, height: 1440)
 
     /// A single connected display can never spread; the predicate must short
     /// circuit so single-display users never defer.
-    func testSingleScreenNeverSpreads() {
-        XCTAssertFalse(
-            LayoutSolver.itemsSpanMultipleDisplays(
+    @Test("A single connected screen never reads as a spread")
+    func singleScreenNeverSpreads() {
+        #expect(
+            !LayoutSolver.itemsSpanMultipleDisplays(
                 itemCenters: [CGPoint(x: 800, y: 10), CGPoint(x: 1200, y: 10)],
                 screenFrames: [main]
             )
@@ -44,9 +46,10 @@ final class DisplaySpreadGateTests: XCTestCase {
 
     /// Two displays connected, but every item resolves to the same screen: a
     /// settled layout. Must not defer.
-    func testAllItemsOnOneOfTwoScreensDoesNotSpread() {
-        XCTAssertFalse(
-            LayoutSolver.itemsSpanMultipleDisplays(
+    @Test("Every item on one of two screens is a settled layout")
+    func allItemsOnOneOfTwoScreensDoesNotSpread() {
+        #expect(
+            !LayoutSolver.itemsSpanMultipleDisplays(
                 itemCenters: [CGPoint(x: 800, y: 10), CGPoint(x: 1200, y: 10)],
                 screenFrames: [main, above]
             )
@@ -56,8 +59,9 @@ final class DisplaySpreadGateTests: XCTestCase {
     /// Items straddle both displays: the relocation-in-progress state from the
     /// field log. This is the condition both gates must catch. Red against the
     /// missing predicate.
-    func testItemsSplitAcrossTwoScreensSpreads() {
-        XCTAssertTrue(
+    @Test("Items split across two screens read as a spread")
+    func itemsSplitAcrossTwoScreensSpreads() {
+        #expect(
             LayoutSolver.itemsSpanMultipleDisplays(
                 itemCenters: [CGPoint(x: 800, y: 10), CGPoint(x: 1000, y: -1065)],
                 screenFrames: [main, above]
@@ -69,9 +73,10 @@ final class DisplaySpreadGateTests: XCTestCase {
     /// (the control item shoves them ~10000px left, onto no display). The
     /// parked points must be ignored so a normal hidden layout does not read
     /// as spread.
-    func testOffScreenParkedItemsAreIgnored() {
-        XCTAssertFalse(
-            LayoutSolver.itemsSpanMultipleDisplays(
+    @Test("Parked off-screen items are ignored")
+    func offScreenParkedItemsAreIgnored() {
+        #expect(
+            !LayoutSolver.itemsSpanMultipleDisplays(
                 itemCenters: [
                     CGPoint(x: 800, y: 10),
                     CGPoint(x: 1200, y: 10),
@@ -84,9 +89,10 @@ final class DisplaySpreadGateTests: XCTestCase {
     }
 
     /// Only parked off-screen items resolve to no display at all: not a spread.
-    func testOnlyOffScreenItemsDoesNotSpread() {
-        XCTAssertFalse(
-            LayoutSolver.itemsSpanMultipleDisplays(
+    @Test("Only parked off-screen items is not a spread")
+    func onlyOffScreenItemsDoesNotSpread() {
+        #expect(
+            !LayoutSolver.itemsSpanMultipleDisplays(
                 itemCenters: [CGPoint(x: -7535, y: -1065), CGPoint(x: -10071, y: -1065)],
                 screenFrames: [main, above]
             )
@@ -95,8 +101,9 @@ final class DisplaySpreadGateTests: XCTestCase {
 
     /// Two real on-screen items, one per display, mixed with parked items:
     /// still a spread (the parked items neither add nor mask the split).
-    func testSplitWithParkedItemsStillSpreads() {
-        XCTAssertTrue(
+    @Test("A split mixed with parked items is still a spread")
+    func splitWithParkedItemsStillSpreads() {
+        #expect(
             LayoutSolver.itemsSpanMultipleDisplays(
                 itemCenters: [
                     CGPoint(x: 800, y: 10), // display 1
@@ -109,9 +116,10 @@ final class DisplaySpreadGateTests: XCTestCase {
     }
 
     /// No items at all: nothing to spread.
-    func testEmptyItemsDoesNotSpread() {
-        XCTAssertFalse(
-            LayoutSolver.itemsSpanMultipleDisplays(itemCenters: [], screenFrames: [main, above])
+    @Test("No items at all is not a spread")
+    func emptyItemsDoesNotSpread() {
+        #expect(
+            !LayoutSolver.itemsSpanMultipleDisplays(itemCenters: [], screenFrames: [main, above])
         )
     }
 }

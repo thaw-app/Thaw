@@ -6,8 +6,8 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Testing
 @testable import Thaw
-import XCTest
 
 /// Characterization tests for LayoutSolver.partitionUnmanagedUIDs, the
 /// pure filter Phase 3 of applyProfileLayout uses to decide which UIDs
@@ -26,12 +26,14 @@ import XCTest
 ///    the filtered sequence as iteration order for placement
 ///    application, so reordering here would silently change placement
 ///    outcomes.
-final class PartitionUnmanagedUIDsTests: XCTestCase {
+@Suite("Partition unmanaged UIDs")
+struct PartitionUnmanagedUIDsTests {
     /// All three control items are present in current and excluded by
     /// the filter, even when none of them appear in desiredUIDs. This
     /// is the case the original bug missed (visibleCtrlUID exclusion
     /// was absent from the inline filter).
-    func testAllThreeControlItemsExcluded() {
+    @Test("All three control items are excluded")
+    func allThreeControlItemsExcluded() {
         let hidden = "com.stonerl.Thaw:Thaw.ControlItem.Hidden"
         let ah = "com.stonerl.Thaw:Thaw.ControlItem.AlwaysHidden"
         let visible = "com.stonerl.Thaw:Thaw.ControlItem.Visible"
@@ -47,13 +49,14 @@ final class PartitionUnmanagedUIDsTests: XCTestCase {
             unresolvedGenericCCUIDs: []
         )
 
-        XCTAssertEqual(result, [app])
+        #expect(result == [app])
     }
 
     /// `nil` control UIDs are tolerated (the alwaysHidden control item
     /// is absent on configurations where the user disabled that
     /// section). Other exclusions still apply.
-    func testNilControlUIDsToleratedAndOtherExclusionsHold() {
+    @Test("Nil control UIDs are tolerated and other exclusions still hold")
+    func nilControlUIDsToleratedAndOtherExclusionsHold() {
         let hidden = "com.stonerl.Thaw:Thaw.ControlItem.Hidden"
         let visible = "com.stonerl.Thaw:Thaw.ControlItem.Visible"
         let saved = "com.example.saved:Item-0"
@@ -69,14 +72,15 @@ final class PartitionUnmanagedUIDsTests: XCTestCase {
             unresolvedGenericCCUIDs: []
         )
 
-        XCTAssertEqual(result, [unsaved])
+        #expect(result == [unsaved])
     }
 
     /// Items present in desiredUIDs (i.e., already covered by
     /// savedSectionOrder or the profile spec) are excluded. Only items
     /// the desired sequence doesn't know about should reach
     /// planUnmanagedPlacement.
-    func testItemsInDesiredUIDsAreExcluded() {
+    @Test("Items already in desiredUIDs are excluded")
+    func itemsInDesiredUIDsAreExcluded() {
         let saved = "com.example.saved:Item-0"
         let unsaved = "com.example.fresh:Item-0"
 
@@ -89,7 +93,7 @@ final class PartitionUnmanagedUIDsTests: XCTestCase {
             unresolvedGenericCCUIDs: []
         )
 
-        XCTAssertEqual(result, [unsaved])
+        #expect(result == [unsaved])
     }
 
     /// Items passed in unresolvedGenericCCUIDs are excluded even though they
@@ -97,7 +101,8 @@ final class PartitionUnmanagedUIDsTests: XCTestCase {
     /// Little Snitch orphan case: a Control-Center-hosted widget with no
     /// resolved source PID must not be treated as an unmanaged arrival and
     /// relocated.
-    func testUnresolvedGenericCCUIDsAreExcluded() {
+    @Test("Unresolved generic Control Center UIDs are excluded")
+    func unresolvedGenericCCUIDsAreExcluded() {
         let orphan = "com.apple.controlcenter:Item-0"
         let app = "com.example.app:Item-0"
 
@@ -110,13 +115,14 @@ final class PartitionUnmanagedUIDsTests: XCTestCase {
             unresolvedGenericCCUIDs: [orphan]
         )
 
-        XCTAssertEqual(result, [app])
+        #expect(result == [app])
     }
 
     /// Input order is preserved. The LCS planner iterates the result in
     /// order to decide insertion positions, so reordering here would
     /// silently change placement outcomes for the user.
-    func testInputOrderIsPreserved() {
+    @Test("Input order is preserved")
+    func inputOrderIsPreserved() {
         let a = "com.example.a:Item-0"
         let b = "com.example.b:Item-0"
         let c = "com.example.c:Item-0"
@@ -131,12 +137,13 @@ final class PartitionUnmanagedUIDsTests: XCTestCase {
             unresolvedGenericCCUIDs: []
         )
 
-        XCTAssertEqual(result, [c, a, b])
+        #expect(result == [c, a, b])
     }
 
     /// Empty currentFlat returns an empty result without crashing on
     /// any nil/non-nil control UID combination.
-    func testEmptyCurrentFlatReturnsEmpty() {
+    @Test("An empty current layout returns an empty result")
+    func emptyCurrentFlatReturnsEmpty() {
         let result = LayoutSolver.partitionUnmanagedUIDs(
             currentFlat: [],
             desiredUIDs: ["com.example.app:Item-0"],
@@ -146,6 +153,6 @@ final class PartitionUnmanagedUIDsTests: XCTestCase {
             unresolvedGenericCCUIDs: []
         )
 
-        XCTAssertTrue(result.isEmpty)
+        #expect(result.isEmpty)
     }
 }

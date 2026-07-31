@@ -6,25 +6,22 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Foundation
+import Testing
 @testable import Thaw
-import XCTest
 
-final class ProfileExportBundleTests: XCTestCase {
-    private var encoder: JSONEncoder!
-    private var decoder: JSONDecoder!
+@Suite("Profile export bundle")
+struct ProfileExportBundleTests {
+    /// Swift Testing builds a fresh suite instance per test, so these stand in
+    /// for the XCTest `setUp` that rebuilt them before every case.
+    private let encoder: JSONEncoder
+    private let decoder: JSONDecoder
 
-    override func setUp() {
-        super.setUp()
+    init() {
         encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-    }
-
-    override func tearDown() {
-        encoder = nil
-        decoder = nil
-        super.tearDown()
     }
 
     // MARK: - Helper Methods
@@ -84,22 +81,26 @@ final class ProfileExportBundleTests: XCTestCase {
 
     // MARK: - ProfileExportBundle Tests
 
-    func testEmptyBundleEncodeDecode() throws {
+    @Test("An empty bundle round-trips with its version intact")
+    func emptyBundleEncodeDecode() throws {
         let bundle = ProfileExportBundle(entries: [])
 
         let data = try encoder.encode(bundle)
         let decoded = try decoder.decode(ProfileExportBundle.self, from: data)
 
-        XCTAssertEqual(decoded.version, 1)
-        XCTAssertTrue(decoded.entries.isEmpty)
+        #expect(decoded.version == 1)
+        #expect(decoded.entries.isEmpty)
     }
 
-    func testVersionFieldDefaultsToOne() {
+    @Test("A new bundle is stamped version 1")
+    func versionFieldDefaultsToOne() {
         let bundle = ProfileExportBundle(entries: [])
-        XCTAssertEqual(bundle.version, 1)
+
+        #expect(bundle.version == 1)
     }
 
-    func testSingleEntryEncodeDecode() throws {
+    @Test("A single-entry bundle round-trips its profile")
+    func singleEntryEncodeDecode() throws {
         let profile = makeTestProfile(name: "Single Profile")
         let entry = ProfileExportEntry(
             profile: profile,
@@ -111,13 +112,14 @@ final class ProfileExportBundleTests: XCTestCase {
         let data = try encoder.encode(bundle)
         let decoded = try decoder.decode(ProfileExportBundle.self, from: data)
 
-        XCTAssertEqual(decoded.entries.count, 1)
-        XCTAssertEqual(decoded.entries[0].profile.name, "Single Profile")
-        XCTAssertNil(decoded.entries[0].associatedDisplayUUID)
-        XCTAssertNil(decoded.entries[0].associatedDisplayName)
+        #expect(decoded.entries.count == 1)
+        #expect(decoded.entries[0].profile.name == "Single Profile")
+        #expect(decoded.entries[0].associatedDisplayUUID == nil)
+        #expect(decoded.entries[0].associatedDisplayName == nil)
     }
 
-    func testMultipleEntriesEncodeDecode() throws {
+    @Test("A multi-entry bundle round-trips every profile in order")
+    func multipleEntriesEncodeDecode() throws {
         let profile1 = makeTestProfile(name: "Profile One")
         let profile2 = makeTestProfile(name: "Profile Two")
         let profile3 = makeTestProfile(name: "Profile Three")
@@ -132,13 +134,14 @@ final class ProfileExportBundleTests: XCTestCase {
         let data = try encoder.encode(bundle)
         let decoded = try decoder.decode(ProfileExportBundle.self, from: data)
 
-        XCTAssertEqual(decoded.entries.count, 3)
-        XCTAssertEqual(decoded.entries[0].profile.name, "Profile One")
-        XCTAssertEqual(decoded.entries[1].profile.name, "Profile Two")
-        XCTAssertEqual(decoded.entries[2].profile.name, "Profile Three")
+        #expect(decoded.entries.count == 3)
+        #expect(decoded.entries[0].profile.name == "Profile One")
+        #expect(decoded.entries[1].profile.name == "Profile Two")
+        #expect(decoded.entries[2].profile.name == "Profile Three")
     }
 
-    func testEntryWithDisplayAssociation() throws {
+    @Test("An entry's display association survives the round trip")
+    func entryWithDisplayAssociation() throws {
         let profile = makeTestProfile()
         let entry = ProfileExportEntry(
             profile: profile,
@@ -150,11 +153,12 @@ final class ProfileExportBundleTests: XCTestCase {
         let data = try encoder.encode(bundle)
         let decoded = try decoder.decode(ProfileExportBundle.self, from: data)
 
-        XCTAssertEqual(decoded.entries[0].associatedDisplayUUID, "12345-ABCDE-67890")
-        XCTAssertEqual(decoded.entries[0].associatedDisplayName, "Built-in Retina Display")
+        #expect(decoded.entries[0].associatedDisplayUUID == "12345-ABCDE-67890")
+        #expect(decoded.entries[0].associatedDisplayName == "Built-in Retina Display")
     }
 
-    func testEntryWithoutDisplayAssociation() throws {
+    @Test("An entry with no display association decodes back to nil")
+    func entryWithoutDisplayAssociation() throws {
         let profile = makeTestProfile()
         let entry = ProfileExportEntry(
             profile: profile,
@@ -166,11 +170,12 @@ final class ProfileExportBundleTests: XCTestCase {
         let data = try encoder.encode(bundle)
         let decoded = try decoder.decode(ProfileExportBundle.self, from: data)
 
-        XCTAssertNil(decoded.entries[0].associatedDisplayUUID)
-        XCTAssertNil(decoded.entries[0].associatedDisplayName)
+        #expect(decoded.entries[0].associatedDisplayUUID == nil)
+        #expect(decoded.entries[0].associatedDisplayName == nil)
     }
 
-    func testEntryWithUUIDButNoName() throws {
+    @Test("An entry can carry a display UUID with no display name")
+    func entryWithUUIDButNoName() throws {
         let profile = makeTestProfile()
         let entry = ProfileExportEntry(
             profile: profile,
@@ -182,13 +187,14 @@ final class ProfileExportBundleTests: XCTestCase {
         let data = try encoder.encode(bundle)
         let decoded = try decoder.decode(ProfileExportBundle.self, from: data)
 
-        XCTAssertEqual(decoded.entries[0].associatedDisplayUUID, "some-uuid")
-        XCTAssertNil(decoded.entries[0].associatedDisplayName)
+        #expect(decoded.entries[0].associatedDisplayUUID == "some-uuid")
+        #expect(decoded.entries[0].associatedDisplayName == nil)
     }
 
     // MARK: - ProfileExportEntry Tests
 
-    func testExportEntryPreservesProfileId() throws {
+    @Test("An entry preserves its profile's identifier")
+    func exportEntryPreservesProfileId() throws {
         let profile = makeTestProfile()
         let originalId = profile.id
         let entry = ProfileExportEntry(
@@ -200,10 +206,11 @@ final class ProfileExportBundleTests: XCTestCase {
         let data = try encoder.encode(entry)
         let decoded = try decoder.decode(ProfileExportEntry.self, from: data)
 
-        XCTAssertEqual(decoded.profile.id, originalId)
+        #expect(decoded.profile.id == originalId)
     }
 
-    func testExportEntryPreservesProfileDates() throws {
+    @Test("An entry preserves its profile's dates")
+    func exportEntryPreservesProfileDates() throws {
         let profile = makeTestProfile()
         let entry = ProfileExportEntry(
             profile: profile,
@@ -215,19 +222,16 @@ final class ProfileExportBundleTests: XCTestCase {
         let decoded = try decoder.decode(ProfileExportEntry.self, from: data)
 
         // Dates should be equal within a second (ISO8601 encoding)
-        XCTAssertEqual(
-            decoded.profile.createdAt.timeIntervalSince1970,
-            profile.createdAt.timeIntervalSince1970,
-            accuracy: 1.0
+        #expect(
+            abs(decoded.profile.createdAt.timeIntervalSince1970 - profile.createdAt.timeIntervalSince1970) < 1.0
         )
-        XCTAssertEqual(
-            decoded.profile.modifiedAt.timeIntervalSince1970,
-            profile.modifiedAt.timeIntervalSince1970,
-            accuracy: 1.0
+        #expect(
+            abs(decoded.profile.modifiedAt.timeIntervalSince1970 - profile.modifiedAt.timeIntervalSince1970) < 1.0
         )
     }
 
-    func testExportEntryPreservesGeneralSettings() throws {
+    @Test("An entry preserves its profile's general settings")
+    func exportEntryPreservesGeneralSettings() throws {
         let profile = makeTestProfile()
         let entry = ProfileExportEntry(
             profile: profile,
@@ -238,12 +242,13 @@ final class ProfileExportBundleTests: XCTestCase {
         let data = try encoder.encode(entry)
         let decoded = try decoder.decode(ProfileExportEntry.self, from: data)
 
-        XCTAssertEqual(decoded.profile.generalSettings.showIceIcon, true)
-        XCTAssertEqual(decoded.profile.generalSettings.autoRehide, true)
-        XCTAssertEqual(decoded.profile.generalSettings.rehideInterval, 15)
+        #expect(decoded.profile.generalSettings.showIceIcon)
+        #expect(decoded.profile.generalSettings.autoRehide)
+        #expect(decoded.profile.generalSettings.rehideInterval == 15)
     }
 
-    func testExportEntryPreservesAdvancedSettings() throws {
+    @Test("An entry preserves its profile's advanced settings")
+    func exportEntryPreservesAdvancedSettings() throws {
         let profile = makeTestProfile()
         let entry = ProfileExportEntry(
             profile: profile,
@@ -254,28 +259,30 @@ final class ProfileExportBundleTests: XCTestCase {
         let data = try encoder.encode(entry)
         let decoded = try decoder.decode(ProfileExportEntry.self, from: data)
 
-        XCTAssertEqual(decoded.profile.advancedSettings.enableAlwaysHiddenSection, true)
-        XCTAssertEqual(decoded.profile.advancedSettings.showOnHoverDelay, 0.2)
-        XCTAssertEqual(decoded.profile.advancedSettings.tooltipDelay, 1.0)
+        #expect(decoded.profile.advancedSettings.enableAlwaysHiddenSection)
+        #expect(decoded.profile.advancedSettings.showOnHoverDelay == 0.2)
+        #expect(decoded.profile.advancedSettings.tooltipDelay == 1.0)
     }
 
     // MARK: - JSON Structure Tests
 
-    func testBundleJSONContainsVersionField() throws {
+    @Test("The encoded bundle carries a version field set to 1")
+    func bundleJSONContainsVersionField() throws {
         let bundle = ProfileExportBundle(entries: [])
         let data = try encoder.encode(bundle)
         let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
 
-        XCTAssertNotNil(json?["version"])
-        XCTAssertEqual(json?["version"] as? Int, 1)
+        #expect(json?["version"] != nil)
+        #expect(json?["version"] as? Int == 1)
     }
 
-    func testBundleJSONContainsEntriesArray() throws {
+    @Test("The encoded bundle carries an entries array")
+    func bundleJSONContainsEntriesArray() throws {
         let bundle = ProfileExportBundle(entries: [])
         let data = try encoder.encode(bundle)
         let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
 
-        XCTAssertNotNil(json?["entries"])
-        XCTAssertTrue(json?["entries"] is [Any])
+        #expect(json?["entries"] != nil)
+        #expect(json?["entries"] is [Any])
     }
 }

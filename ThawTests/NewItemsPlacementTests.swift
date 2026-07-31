@@ -6,154 +6,195 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Foundation
+import Testing
 @testable import Thaw
-import XCTest
 
 // MARK: - NewItemsPlacement.Relation Tests
 
-final class NewItemsPlacementRelationTests: XCTestCase {
+/// Pins the wire format of `MenuBarItemManager.NewItemsPlacement.Relation`.
+///
+/// The relation is persisted inside `newItemsPlacementData`, so its raw
+/// values are a stored format: renaming a case is safe, but changing the
+/// raw value silently discards an existing user's placement preference and
+/// falls back to the section default. These cases fail loudly if that ever
+/// happens.
+///
+/// Reads only; nothing here touches the defaults domain, so the suite is
+/// safe to run in parallel with the rest.
+@Suite("New items placement relation")
+struct NewItemsPlacementRelationTests {
     // MARK: - Raw Values
 
-    func testLeftOfAnchorRawValue() {
+    @Test("leftOfAnchor keeps its raw value")
+    func leftOfAnchorRawValue() {
         let relation = MenuBarItemManager.NewItemsPlacement.Relation.leftOfAnchor
-        XCTAssertEqual(relation.rawValue, "leftOfAnchor")
+        #expect(relation.rawValue == "leftOfAnchor")
     }
 
-    func testRightOfAnchorRawValue() {
+    @Test("rightOfAnchor keeps its raw value")
+    func rightOfAnchorRawValue() {
         let relation = MenuBarItemManager.NewItemsPlacement.Relation.rightOfAnchor
-        XCTAssertEqual(relation.rawValue, "rightOfAnchor")
+        #expect(relation.rawValue == "rightOfAnchor")
     }
 
-    func testSectionDefaultRawValue() {
+    @Test("sectionDefault keeps its raw value")
+    func sectionDefaultRawValue() {
         let relation = MenuBarItemManager.NewItemsPlacement.Relation.sectionDefault
-        XCTAssertEqual(relation.rawValue, "sectionDefault")
+        #expect(relation.rawValue == "sectionDefault")
     }
 
     // MARK: - Init from Raw Value
 
-    func testInitFromLeftOfAnchorRawValue() {
+    @Test("leftOfAnchor round-trips through its raw value")
+    func initFromLeftOfAnchorRawValue() {
         let relation = MenuBarItemManager.NewItemsPlacement.Relation(rawValue: "leftOfAnchor")
-        XCTAssertEqual(relation, .leftOfAnchor)
+        #expect(relation == .leftOfAnchor)
     }
 
-    func testInitFromRightOfAnchorRawValue() {
+    @Test("rightOfAnchor round-trips through its raw value")
+    func initFromRightOfAnchorRawValue() {
         let relation = MenuBarItemManager.NewItemsPlacement.Relation(rawValue: "rightOfAnchor")
-        XCTAssertEqual(relation, .rightOfAnchor)
+        #expect(relation == .rightOfAnchor)
     }
 
-    func testInitFromSectionDefaultRawValue() {
+    @Test("sectionDefault round-trips through its raw value")
+    func initFromSectionDefaultRawValue() {
         let relation = MenuBarItemManager.NewItemsPlacement.Relation(rawValue: "sectionDefault")
-        XCTAssertEqual(relation, .sectionDefault)
+        #expect(relation == .sectionDefault)
     }
 
-    func testInitFromInvalidRawValue() {
+    @Test("An unrecognized raw value produces nil")
+    func initFromInvalidRawValue() {
         let relation = MenuBarItemManager.NewItemsPlacement.Relation(rawValue: "invalid")
-        XCTAssertNil(relation)
+        #expect(relation == nil)
     }
 
     // MARK: - Codable
 
-    func testRelationEncode() throws {
+    @Test("A relation encodes as its bare raw value")
+    func relationEncode() throws {
         let relation = MenuBarItemManager.NewItemsPlacement.Relation.leftOfAnchor
         let encoder = JSONEncoder()
         let data = try encoder.encode(relation)
         let json = String(data: data, encoding: .utf8)
 
-        XCTAssertEqual(json, "\"leftOfAnchor\"")
+        #expect(json == "\"leftOfAnchor\"")
     }
 
-    func testRelationDecode() throws {
+    @Test("A relation decodes from its bare raw value")
+    func relationDecode() throws {
         let json = "\"rightOfAnchor\""
-        let data = try XCTUnwrap(json.data(using: .utf8))
+        let data = try #require(json.data(using: .utf8))
         let decoder = JSONDecoder()
         let relation = try decoder.decode(MenuBarItemManager.NewItemsPlacement.Relation.self, from: data)
 
-        XCTAssertEqual(relation, .rightOfAnchor)
+        #expect(relation == .rightOfAnchor)
     }
 
-    func testRelationDecodeInvalid() throws {
+    @Test("Decoding an unrecognized relation throws")
+    func relationDecodeInvalid() throws {
         let json = "\"invalidValue\""
-        let data = try XCTUnwrap(json.data(using: .utf8))
+        let data = try #require(json.data(using: .utf8))
         let decoder = JSONDecoder()
 
-        XCTAssertThrowsError(try decoder.decode(MenuBarItemManager.NewItemsPlacement.Relation.self, from: data))
+        #expect(throws: (any Error).self) {
+            try decoder.decode(MenuBarItemManager.NewItemsPlacement.Relation.self, from: data)
+        }
     }
 
     // MARK: - Equality
 
-    func testRelationEquality() {
-        XCTAssertEqual(
-            MenuBarItemManager.NewItemsPlacement.Relation.leftOfAnchor,
+    @Test("Relations compare equal only to themselves")
+    func relationEquality() {
+        #expect(
             MenuBarItemManager.NewItemsPlacement.Relation.leftOfAnchor
+                == MenuBarItemManager.NewItemsPlacement.Relation.leftOfAnchor
         )
-        XCTAssertNotEqual(
-            MenuBarItemManager.NewItemsPlacement.Relation.leftOfAnchor,
-            MenuBarItemManager.NewItemsPlacement.Relation.rightOfAnchor
+        #expect(
+            MenuBarItemManager.NewItemsPlacement.Relation.leftOfAnchor
+                != MenuBarItemManager.NewItemsPlacement.Relation.rightOfAnchor
         )
     }
 }
 
 // MARK: - NewItemsPlacement Tests
 
-final class NewItemsPlacementTests: XCTestCase {
+/// Covers `MenuBarItemManager.NewItemsPlacement` construction, equality, and
+/// its `Codable` conformance.
+///
+/// The placement is persisted as JSON under `newItemsPlacementData` and
+/// compared against the stored value to decide whether a newly detected menu
+/// bar item needs to be moved. That makes both the encoded shape and the
+/// synthesized `Equatable` conformance load-bearing.
+///
+/// Reads only; nothing here touches the defaults domain, so the suite is
+/// safe to run in parallel with the rest.
+@Suite("New items placement")
+struct NewItemsPlacementTests {
     // MARK: - Initialization
 
-    func testBasicInit() {
+    @Test("A section-default placement stores its section and no anchor")
+    func basicInit() {
         let placement = MenuBarItemManager.NewItemsPlacement(
             sectionKey: "hidden",
             anchorIdentifier: nil,
             relation: .sectionDefault
         )
 
-        XCTAssertEqual(placement.sectionKey, "hidden")
-        XCTAssertNil(placement.anchorIdentifier)
-        XCTAssertEqual(placement.relation, .sectionDefault)
+        #expect(placement.sectionKey == "hidden")
+        #expect(placement.anchorIdentifier == nil)
+        #expect(placement.relation == .sectionDefault)
     }
 
-    func testInitWithAnchor() {
+    @Test("A left-of-anchor placement stores its anchor")
+    func initWithAnchor() {
         let placement = MenuBarItemManager.NewItemsPlacement(
             sectionKey: "visible",
             anchorIdentifier: "com.example.app:Item",
             relation: .leftOfAnchor
         )
 
-        XCTAssertEqual(placement.sectionKey, "visible")
-        XCTAssertEqual(placement.anchorIdentifier, "com.example.app:Item")
-        XCTAssertEqual(placement.relation, .leftOfAnchor)
+        #expect(placement.sectionKey == "visible")
+        #expect(placement.anchorIdentifier == "com.example.app:Item")
+        #expect(placement.relation == .leftOfAnchor)
     }
 
-    func testInitWithRightOfAnchor() {
+    @Test("A right-of-anchor placement stores its anchor")
+    func initWithRightOfAnchor() {
         let placement = MenuBarItemManager.NewItemsPlacement(
             sectionKey: "alwaysHidden",
             anchorIdentifier: "com.other.app:OtherItem",
             relation: .rightOfAnchor
         )
 
-        XCTAssertEqual(placement.sectionKey, "alwaysHidden")
-        XCTAssertEqual(placement.anchorIdentifier, "com.other.app:OtherItem")
-        XCTAssertEqual(placement.relation, .rightOfAnchor)
+        #expect(placement.sectionKey == "alwaysHidden")
+        #expect(placement.anchorIdentifier == "com.other.app:OtherItem")
+        #expect(placement.relation == .rightOfAnchor)
     }
 
     // MARK: - Default Value
 
-    func testDefaultValueExists() {
+    @Test("The default value carries no anchor and the section default relation")
+    func defaultValueShape() {
         let defaultValue = MenuBarItemManager.NewItemsPlacement.defaultValue
 
-        XCTAssertNotNil(defaultValue)
-        XCTAssertNil(defaultValue.anchorIdentifier)
-        XCTAssertEqual(defaultValue.relation, .sectionDefault)
+        #expect(defaultValue.anchorIdentifier == nil)
+        #expect(defaultValue.relation == .sectionDefault)
     }
 
-    func testDefaultValueSectionKey() {
+    @Test("The default value's section matches the defaults domain")
+    func defaultValueSectionKey() {
         let defaultValue = MenuBarItemManager.NewItemsPlacement.defaultValue
 
         // Default section should be "hidden" per Defaults.DefaultValue.newItemsSection
-        XCTAssertEqual(defaultValue.sectionKey, Defaults.DefaultValue.newItemsSection)
+        #expect(defaultValue.sectionKey == Defaults.DefaultValue.newItemsSection)
     }
 
     // MARK: - Equality
 
-    func testEqualityIdentical() {
+    @Test("Identical placements compare equal")
+    func equalityIdentical() {
         let placement1 = MenuBarItemManager.NewItemsPlacement(
             sectionKey: "hidden",
             anchorIdentifier: "com.app:Item",
@@ -165,10 +206,11 @@ final class NewItemsPlacementTests: XCTestCase {
             relation: .leftOfAnchor
         )
 
-        XCTAssertEqual(placement1, placement2)
+        #expect(placement1 == placement2)
     }
 
-    func testEqualityDifferentSection() {
+    @Test("A different section breaks equality")
+    func equalityDifferentSection() {
         let placement1 = MenuBarItemManager.NewItemsPlacement(
             sectionKey: "hidden",
             anchorIdentifier: nil,
@@ -180,10 +222,11 @@ final class NewItemsPlacementTests: XCTestCase {
             relation: .sectionDefault
         )
 
-        XCTAssertNotEqual(placement1, placement2)
+        #expect(placement1 != placement2)
     }
 
-    func testEqualityDifferentAnchor() {
+    @Test("A different anchor breaks equality")
+    func equalityDifferentAnchor() {
         let placement1 = MenuBarItemManager.NewItemsPlacement(
             sectionKey: "hidden",
             anchorIdentifier: "anchor1",
@@ -195,10 +238,11 @@ final class NewItemsPlacementTests: XCTestCase {
             relation: .leftOfAnchor
         )
 
-        XCTAssertNotEqual(placement1, placement2)
+        #expect(placement1 != placement2)
     }
 
-    func testEqualityDifferentRelation() {
+    @Test("A different relation breaks equality")
+    func equalityDifferentRelation() {
         let placement1 = MenuBarItemManager.NewItemsPlacement(
             sectionKey: "hidden",
             anchorIdentifier: "anchor",
@@ -210,10 +254,11 @@ final class NewItemsPlacementTests: XCTestCase {
             relation: .rightOfAnchor
         )
 
-        XCTAssertNotEqual(placement1, placement2)
+        #expect(placement1 != placement2)
     }
 
-    func testEqualityNilVsNonNilAnchor() {
+    @Test("A nil anchor never equals a set anchor")
+    func equalityNilVsNonNilAnchor() {
         let placement1 = MenuBarItemManager.NewItemsPlacement(
             sectionKey: "hidden",
             anchorIdentifier: nil,
@@ -225,12 +270,13 @@ final class NewItemsPlacementTests: XCTestCase {
             relation: .sectionDefault
         )
 
-        XCTAssertNotEqual(placement1, placement2)
+        #expect(placement1 != placement2)
     }
 
     // MARK: - Codable
 
-    func testEncodeBasic() throws {
+    @Test("An anchorless placement encodes its section and relation")
+    func encodeBasic() throws {
         let placement = MenuBarItemManager.NewItemsPlacement(
             sectionKey: "hidden",
             anchorIdentifier: nil,
@@ -240,13 +286,14 @@ final class NewItemsPlacementTests: XCTestCase {
         let encoder = JSONEncoder()
         encoder.outputFormatting = .sortedKeys
         let data = try encoder.encode(placement)
-        let json = try XCTUnwrap(String(data: data, encoding: .utf8))
+        let json = try #require(String(data: data, encoding: .utf8))
 
-        XCTAssertTrue(json.contains("\"sectionKey\":\"hidden\""))
-        XCTAssertTrue(json.contains("\"relation\":\"sectionDefault\""))
+        #expect(json.contains("\"sectionKey\":\"hidden\""))
+        #expect(json.contains("\"relation\":\"sectionDefault\""))
     }
 
-    func testEncodeWithAnchor() throws {
+    @Test("An anchored placement encodes its anchor and relation")
+    func encodeWithAnchor() throws {
         let placement = MenuBarItemManager.NewItemsPlacement(
             sectionKey: "visible",
             anchorIdentifier: "com.example.app:StatusItem",
@@ -255,13 +302,14 @@ final class NewItemsPlacementTests: XCTestCase {
 
         let encoder = JSONEncoder()
         let data = try encoder.encode(placement)
-        let json = try XCTUnwrap(String(data: data, encoding: .utf8))
+        let json = try #require(String(data: data, encoding: .utf8))
 
-        XCTAssertTrue(json.contains("\"anchorIdentifier\":\"com.example.app:StatusItem\""))
-        XCTAssertTrue(json.contains("\"relation\":\"leftOfAnchor\""))
+        #expect(json.contains("\"anchorIdentifier\":\"com.example.app:StatusItem\""))
+        #expect(json.contains("\"relation\":\"leftOfAnchor\""))
     }
 
-    func testDecodeBasic() throws {
+    @Test("An explicit null anchor decodes as nil")
+    func decodeBasic() throws {
         let json = """
         {
             "sectionKey": "hidden",
@@ -269,17 +317,18 @@ final class NewItemsPlacementTests: XCTestCase {
             "relation": "sectionDefault"
         }
         """
-        let data = try XCTUnwrap(json.data(using: .utf8))
+        let data = try #require(json.data(using: .utf8))
         let decoder = JSONDecoder()
 
         let placement = try decoder.decode(MenuBarItemManager.NewItemsPlacement.self, from: data)
 
-        XCTAssertEqual(placement.sectionKey, "hidden")
-        XCTAssertNil(placement.anchorIdentifier)
-        XCTAssertEqual(placement.relation, .sectionDefault)
+        #expect(placement.sectionKey == "hidden")
+        #expect(placement.anchorIdentifier == nil)
+        #expect(placement.relation == .sectionDefault)
     }
 
-    func testDecodeWithAnchor() throws {
+    @Test("An anchored placement decodes every field")
+    func decodeWithAnchor() throws {
         let json = """
         {
             "sectionKey": "alwaysHidden",
@@ -287,17 +336,18 @@ final class NewItemsPlacementTests: XCTestCase {
             "relation": "rightOfAnchor"
         }
         """
-        let data = try XCTUnwrap(json.data(using: .utf8))
+        let data = try #require(json.data(using: .utf8))
         let decoder = JSONDecoder()
 
         let placement = try decoder.decode(MenuBarItemManager.NewItemsPlacement.self, from: data)
 
-        XCTAssertEqual(placement.sectionKey, "alwaysHidden")
-        XCTAssertEqual(placement.anchorIdentifier, "com.test.app:Item")
-        XCTAssertEqual(placement.relation, .rightOfAnchor)
+        #expect(placement.sectionKey == "alwaysHidden")
+        #expect(placement.anchorIdentifier == "com.test.app:Item")
+        #expect(placement.relation == .rightOfAnchor)
     }
 
-    func testDecodeInvalidRelation() throws {
+    @Test("Decoding an unrecognized relation throws")
+    func decodeInvalidRelation() throws {
         let json = """
         {
             "sectionKey": "hidden",
@@ -305,33 +355,37 @@ final class NewItemsPlacementTests: XCTestCase {
             "relation": "invalidRelation"
         }
         """
-        let data = try XCTUnwrap(json.data(using: .utf8))
+        let data = try #require(json.data(using: .utf8))
         let decoder = JSONDecoder()
 
-        XCTAssertThrowsError(try decoder.decode(MenuBarItemManager.NewItemsPlacement.self, from: data))
+        #expect(throws: (any Error).self) {
+            try decoder.decode(MenuBarItemManager.NewItemsPlacement.self, from: data)
+        }
     }
 
-    func testDecodeMissingOptionalField() throws {
+    @Test("A missing anchor key decodes as nil")
+    func decodeMissingOptionalField() throws {
         let json = """
         {
             "sectionKey": "hidden",
             "relation": "sectionDefault"
         }
         """
-        let data = try XCTUnwrap(json.data(using: .utf8))
+        let data = try #require(json.data(using: .utf8))
         let decoder = JSONDecoder()
 
         // anchorIdentifier is Optional<String>, so missing key decodes as nil
         let placement = try decoder.decode(MenuBarItemManager.NewItemsPlacement.self, from: data)
 
-        XCTAssertEqual(placement.sectionKey, "hidden")
-        XCTAssertNil(placement.anchorIdentifier)
-        XCTAssertEqual(placement.relation, .sectionDefault)
+        #expect(placement.sectionKey == "hidden")
+        #expect(placement.anchorIdentifier == nil)
+        #expect(placement.relation == .sectionDefault)
     }
 
     // MARK: - Round Trip
 
-    func testRoundTripBasic() throws {
+    @Test("An anchorless placement survives a round trip")
+    func roundTripBasic() throws {
         let original = MenuBarItemManager.NewItemsPlacement(
             sectionKey: "visible",
             anchorIdentifier: nil,
@@ -344,10 +398,11 @@ final class NewItemsPlacementTests: XCTestCase {
         let data = try encoder.encode(original)
         let decoded = try decoder.decode(MenuBarItemManager.NewItemsPlacement.self, from: data)
 
-        XCTAssertEqual(original, decoded)
+        #expect(original == decoded)
     }
 
-    func testRoundTripWithAnchor() throws {
+    @Test("An anchor with spaces and dots survives a round trip")
+    func roundTripWithAnchor() throws {
         let original = MenuBarItemManager.NewItemsPlacement(
             sectionKey: "hidden",
             anchorIdentifier: "com.complexapp.identifier:Very Long Item Name With Spaces",
@@ -360,10 +415,11 @@ final class NewItemsPlacementTests: XCTestCase {
         let data = try encoder.encode(original)
         let decoded = try decoder.decode(MenuBarItemManager.NewItemsPlacement.self, from: data)
 
-        XCTAssertEqual(original, decoded)
+        #expect(original == decoded)
     }
 
-    func testRoundTripDefaultValue() throws {
+    @Test("The default value survives a round trip")
+    func roundTripDefaultValue() throws {
         let original = MenuBarItemManager.NewItemsPlacement.defaultValue
 
         let encoder = JSONEncoder()
@@ -372,12 +428,13 @@ final class NewItemsPlacementTests: XCTestCase {
         let data = try encoder.encode(original)
         let decoded = try decoder.decode(MenuBarItemManager.NewItemsPlacement.self, from: data)
 
-        XCTAssertEqual(original, decoded)
+        #expect(original == decoded)
     }
 
     // MARK: - All Relations
 
-    func testAllRelationsCovered() {
+    @Test("Every relation can be carried by a placement")
+    func allRelationsCovered() {
         // Ensure all three relations can be used in placements
         let leftPlacement = MenuBarItemManager.NewItemsPlacement(
             sectionKey: "test",
@@ -395,8 +452,8 @@ final class NewItemsPlacementTests: XCTestCase {
             relation: .sectionDefault
         )
 
-        XCTAssertEqual(leftPlacement.relation, .leftOfAnchor)
-        XCTAssertEqual(rightPlacement.relation, .rightOfAnchor)
-        XCTAssertEqual(defaultPlacement.relation, .sectionDefault)
+        #expect(leftPlacement.relation == .leftOfAnchor)
+        #expect(rightPlacement.relation == .rightOfAnchor)
+        #expect(defaultPlacement.relation == .sectionDefault)
     }
 }

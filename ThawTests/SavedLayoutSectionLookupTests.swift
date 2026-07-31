@@ -5,8 +5,8 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Testing
 @testable import Thaw
-import XCTest
 
 /// Characterizes the saved-layout lookup used by the saved-order restore gate.
 ///
@@ -16,19 +16,22 @@ import XCTest
 /// not collapse those to one base section, otherwise unrelated app-launch
 /// cache churn can falsely dispatch a bulk layout apply and visually expand the
 /// hidden section before restoring it.
-final class SavedLayoutSectionLookupTests: XCTestCase {
-    func testExactInstanceSectionsRemainAvailableWhenBaseIsAmbiguous() {
+@Suite("Saved layout section lookup")
+struct SavedLayoutSectionLookupTests {
+    @Test("Exact instance sections remain available when the base is ambiguous")
+    func exactInstanceSectionsRemainAvailableWhenBaseIsAmbiguous() {
         let lookup = MenuBarItemManager.savedLayoutSectionLookup(savedSectionOrder: [
             "visible": ["Control Center:Item-0:1"],
             "hidden": ["Control Center:Item-0:2"],
         ])
 
-        XCTAssertEqual(lookup.exact["Control Center:Item-0:1"], .visible)
-        XCTAssertEqual(lookup.exact["Control Center:Item-0:2"], .hidden)
-        XCTAssertNil(lookup.unambiguousBase["Control Center:Item-0"])
+        #expect(lookup.exact["Control Center:Item-0:1"] == .visible)
+        #expect(lookup.exact["Control Center:Item-0:2"] == .hidden)
+        #expect(lookup.unambiguousBase["Control Center:Item-0"] == nil)
     }
 
-    func testBaseFallbackIsAllowedWhenAllSavedInstancesShareOneSection() {
+    @Test("The base fallback is allowed when all saved instances share one section")
+    func baseFallbackIsAllowedWhenAllSavedInstancesShareOneSection() {
         let lookup = MenuBarItemManager.savedLayoutSectionLookup(savedSectionOrder: [
             "hidden": [
                 "com.example.StatusApp:Item-0:1",
@@ -36,23 +39,25 @@ final class SavedLayoutSectionLookupTests: XCTestCase {
             ],
         ])
 
-        XCTAssertEqual(lookup.unambiguousBase["com.example.StatusApp:Item-0"], .hidden)
+        #expect(lookup.unambiguousBase["com.example.StatusApp:Item-0"] == .hidden)
     }
 
-    func testDuplicateExactIdentifierAcrossSectionsIsIgnoredAsAmbiguous() {
+    @Test("A duplicate exact identifier across sections is ignored as ambiguous")
+    func duplicateExactIdentifierAcrossSectionsIsIgnoredAsAmbiguous() {
         let lookup = MenuBarItemManager.savedLayoutSectionLookup(savedSectionOrder: [
             "visible": ["com.example.StatusApp:Item-0"],
             "hidden": ["com.example.StatusApp:Item-0"],
         ])
 
-        XCTAssertNil(lookup.exact["com.example.StatusApp:Item-0"])
-        XCTAssertNil(lookup.unambiguousBase["com.example.StatusApp:Item-0"])
+        #expect(lookup.exact["com.example.StatusApp:Item-0"] == nil)
+        #expect(lookup.unambiguousBase["com.example.StatusApp:Item-0"] == nil)
     }
 
-    func testBaseIdentifierPreservesEmptyTitles() {
-        XCTAssertEqual(
-            MenuBarItemManager.baseIdentifier(forSavedIdentifier: "com.apple.controlcenter::3"),
-            "com.apple.controlcenter:"
+    @Test("The base identifier preserves empty titles")
+    func baseIdentifierPreservesEmptyTitles() {
+        #expect(
+            MenuBarItemManager.baseIdentifier(forSavedIdentifier: "com.apple.controlcenter::3")
+                == "com.apple.controlcenter:"
         )
     }
 }

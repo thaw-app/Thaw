@@ -6,51 +6,58 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Testing
 @testable import Thaw
-import XCTest
 
 @MainActor
-final class DisplaySettingsManagerSpacingGateTests: XCTestCase {
+@Suite("Display settings manager spacing gate", .serialized)
+struct DisplaySettingsManagerSpacingGateTests {
     // MARK: - Predicate
 
-    func testPredicateSkipsWhenUUIDsMatch() {
-        XCTAssertTrue(DisplaySettingsManager.shouldSkipSpacingApply(
+    @Test("Matching display UUIDs skip the spacing apply")
+    func predicateSkipsWhenUUIDsMatch() {
+        #expect(DisplaySettingsManager.shouldSkipSpacingApply(
             currentActiveDisplayUUID: "UUID-A",
             lastAppliedActiveDisplayUUID: "UUID-A"
         ))
     }
 
-    func testPredicateDoesNotSkipWhenUUIDsDiffer() {
-        XCTAssertFalse(DisplaySettingsManager.shouldSkipSpacingApply(
+    @Test("Differing display UUIDs do not skip the spacing apply")
+    func predicateDoesNotSkipWhenUUIDsDiffer() {
+        #expect(!DisplaySettingsManager.shouldSkipSpacingApply(
             currentActiveDisplayUUID: "UUID-B",
             lastAppliedActiveDisplayUUID: "UUID-A"
         ))
     }
 
-    func testPredicateDoesNotSkipOnFirstApply() {
-        XCTAssertFalse(DisplaySettingsManager.shouldSkipSpacingApply(
+    @Test("The first apply is never skipped")
+    func predicateDoesNotSkipOnFirstApply() {
+        #expect(!DisplaySettingsManager.shouldSkipSpacingApply(
             currentActiveDisplayUUID: "UUID-A",
             lastAppliedActiveDisplayUUID: nil
         ))
     }
 
-    func testPredicateDoesNotSkipWhenCurrentBecomesNil() {
-        XCTAssertFalse(DisplaySettingsManager.shouldSkipSpacingApply(
+    @Test("An apply is not skipped once the current UUID becomes nil")
+    func predicateDoesNotSkipWhenCurrentBecomesNil() {
+        #expect(!DisplaySettingsManager.shouldSkipSpacingApply(
             currentActiveDisplayUUID: nil,
             lastAppliedActiveDisplayUUID: "UUID-A"
         ))
     }
 
-    func testPredicateSkipsWhenBothNil() {
-        XCTAssertTrue(DisplaySettingsManager.shouldSkipSpacingApply(
+    @Test("Two nil UUIDs skip the spacing apply")
+    func predicateSkipsWhenBothNil() {
+        #expect(DisplaySettingsManager.shouldSkipSpacingApply(
             currentActiveDisplayUUID: nil,
             lastAppliedActiveDisplayUUID: nil
         ))
     }
 
-    func testPredicateIsStableAcrossRepeatedCalls() {
+    @Test("The predicate answers the same way on repeated calls")
+    func predicateIsStableAcrossRepeatedCalls() {
         for _ in 0 ..< 10 {
-            XCTAssertTrue(DisplaySettingsManager.shouldSkipSpacingApply(
+            #expect(DisplaySettingsManager.shouldSkipSpacingApply(
                 currentActiveDisplayUUID: "UUID-A",
                 lastAppliedActiveDisplayUUID: "UUID-A"
             ))
@@ -59,20 +66,22 @@ final class DisplaySettingsManagerSpacingGateTests: XCTestCase {
 
     // MARK: - Field semantics
 
-    func testFreshManagerHasNilLastAppliedUUID() {
+    @Test("A fresh manager has no last-applied display UUID")
+    func freshManagerHasNilLastAppliedUUID() {
         let manager = DisplaySettingsManager()
-        XCTAssertNil(manager.lastAppliedActiveDisplayUUID)
+        #expect(manager.lastAppliedActiveDisplayUUID == nil)
     }
 
-    func testSeededFieldDrivesPredicate() {
+    @Test("The seeded field drives the predicate")
+    func seededFieldDrivesPredicate() {
         let manager = DisplaySettingsManager()
         manager.lastAppliedActiveDisplayUUID = "UUID-A"
 
-        XCTAssertTrue(DisplaySettingsManager.shouldSkipSpacingApply(
+        #expect(DisplaySettingsManager.shouldSkipSpacingApply(
             currentActiveDisplayUUID: "UUID-A",
             lastAppliedActiveDisplayUUID: manager.lastAppliedActiveDisplayUUID
         ))
-        XCTAssertFalse(DisplaySettingsManager.shouldSkipSpacingApply(
+        #expect(!DisplaySettingsManager.shouldSkipSpacingApply(
             currentActiveDisplayUUID: "UUID-B",
             lastAppliedActiveDisplayUUID: manager.lastAppliedActiveDisplayUUID
         ))

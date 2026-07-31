@@ -7,8 +7,9 @@
 //  Licensed under the GNU GPLv3
 
 import CoreGraphics
+import Foundation
+import Testing
 @testable import Thaw
-import XCTest
 
 /// Characterization tests for LayoutSolver.planLeftmostMove.
 ///
@@ -20,7 +21,8 @@ import XCTest
 /// Coordinate convention: hidden divider at x=400, width=10. Items with
 /// maxX <= 400 are "leftmost" (left of divider). Items further right are
 /// either at the divider or beyond.
-final class PlanLeftmostMoveTests: XCTestCase {
+@Suite("Plan leftmost move")
+struct PlanLeftmostMoveTests {
     // MARK: - Helpers
 
     private let hiddenBounds = CGRect(x: 400, y: 0, width: 10, height: 22)
@@ -47,7 +49,8 @@ final class PlanLeftmostMoveTests: XCTestCase {
 
     /// The Thaw visible-control icon left of the divider triggers the
     /// Thaw-icon recovery branch.
-    func testThawIconLeftOfDividerTriggersThawIconBranch() {
+    @Test("The Thaw icon left of the divider takes the Thaw-icon branch")
+    func thawIconLeftOfDividerTriggersThawIconBranch() {
         let thaw = leftmostItem(
             tag: .visibleControlItem,
             x: 100,
@@ -69,15 +72,16 @@ final class PlanLeftmostMoveTests: XCTestCase {
         )
 
         if case let .thawIcon(item) = decision {
-            XCTAssertEqual(item.windowID, 700)
+            #expect(item.windowID == 700)
         } else {
-            XCTFail("expected .thawIcon, got \(decision)")
+            Issue.record("expected .thawIcon, got \(decision)")
         }
     }
 
     /// A non-hideable system indicator (camera / mic / screen recording)
     /// left of the divider triggers the system-item recovery branch.
-    func testNonHideableSystemItemTriggersSystemItemBranch() {
+    @Test("A non-hideable system item takes the system-item branch")
+    func nonHideableSystemItemTriggersSystemItemBranch() {
         let screenCap = leftmostItem(
             tag: .screenCaptureUI,
             x: 150,
@@ -99,16 +103,17 @@ final class PlanLeftmostMoveTests: XCTestCase {
         )
 
         if case let .systemItem(item) = decision {
-            XCTAssertEqual(item.windowID, 701)
+            #expect(item.windowID == 701)
         } else {
-            XCTFail("expected .systemItem, got \(decision)")
+            Issue.record("expected .systemItem, got \(decision)")
         }
     }
 
     /// A hideable app item that already has an entry in savedSectionOrder
     /// belongs to the restoreItemsToSavedSections path, not the new-item
     /// relocation path. The planner emits .noop(.noNewCandidate).
-    func testHideableItemWithSavedSectionIsDeferred() {
+    @Test("A hideable item with a saved section is deferred")
+    func hideableItemWithSavedSectionIsDeferred() {
         let app = leftmostItem(
             tag: appTag("com.example.app", "Status"),
             x: 200,
@@ -129,13 +134,14 @@ final class PlanLeftmostMoveTests: XCTestCase {
             effectiveNewItemsSection: .hidden
         )
 
-        XCTAssertEqual(decision, .noop(reason: .noNewCandidate))
+        #expect(decision == .noop(reason: .noNewCandidate))
     }
 
     /// A hideable item with unresolved sourcePID short-circuits the
     /// candidate-selection cascade. The planner returns .noop with the
     /// unresolvedSourcePID reason.
-    func testHideableItemWithUnresolvedSourcePIDIsDeferred() {
+    @Test("A hideable item with an unresolved source PID is deferred")
+    func hideableItemWithUnresolvedSourcePIDIsDeferred() {
         let app = leftmostItem(
             tag: appTag("com.example.app", "Status"),
             x: 200,
@@ -157,13 +163,14 @@ final class PlanLeftmostMoveTests: XCTestCase {
             effectiveNewItemsSection: .hidden
         )
 
-        XCTAssertEqual(decision, .noop(reason: .unresolvedSourcePID))
+        #expect(decision == .noop(reason: .unresolvedSourcePID))
     }
 
     /// A genuinely new hideable item — identifier not in knownItem-
     /// Identifiers, not in any saved section, not already placed in a
     /// hidden tag set — triggers the new-hideable-item relocation.
-    func testGenuinelyNewHideableItemTriggersRelocation() {
+    @Test("A genuinely new hideable item is relocated")
+    func genuinelyNewHideableItemTriggersRelocation() {
         let app = leftmostItem(
             tag: appTag("com.newapp", "Status"),
             x: 200,
@@ -185,10 +192,10 @@ final class PlanLeftmostMoveTests: XCTestCase {
         )
 
         if case let .newHideableItem(item, identifierToMark) = decision {
-            XCTAssertEqual(item.windowID, 704)
-            XCTAssertEqual(identifierToMark, "com.newapp:Status")
+            #expect(item.windowID == 704)
+            #expect(identifierToMark == "com.newapp:Status")
         } else {
-            XCTFail("expected .newHideableItem, got \(decision)")
+            Issue.record("expected .newHideableItem, got \(decision)")
         }
     }
 
@@ -196,7 +203,8 @@ final class PlanLeftmostMoveTests: XCTestCase {
     /// but its windowID was previously seen, the planner treats this as an
     /// identifier migration (e.g. sourcePID resolution succeeded mid-cycle)
     /// rather than a brand new item. Result: .noop(.noNewCandidate).
-    func testIdentifierMigrationIsNotTreatedAsNew() {
+    @Test("An identifier migration is not treated as a new item")
+    func identifierMigrationIsNotTreatedAsNew() {
         let app = leftmostItem(
             tag: appTag("com.example.app", "Status"),
             x: 200,
@@ -217,13 +225,14 @@ final class PlanLeftmostMoveTests: XCTestCase {
             effectiveNewItemsSection: .hidden
         )
 
-        XCTAssertEqual(decision, .noop(reason: .noNewCandidate),
-                       "isNewIdentity && !isNewID should be treated as identifier migration, not new item")
+        #expect(decision == .noop(reason: .noNewCandidate),
+                "isNewIdentity && !isNewID should be treated as identifier migration, not new item")
     }
 
     /// A candidate that is already in the target section produces a
     /// .noop(.alreadyInTarget) decision, avoiding the wasteful move.
-    func testCandidateAlreadyInTargetSectionIsNoop() {
+    @Test("A candidate already in the target section is a no-op")
+    func candidateAlreadyInTargetSectionIsNoop() {
         let app = leftmostItem(
             tag: appTag("com.newapp", "Status"),
             x: 200,
@@ -247,7 +256,7 @@ final class PlanLeftmostMoveTests: XCTestCase {
             effectiveNewItemsSection: .hidden
         )
 
-        XCTAssertEqual(decision, .noop(reason: .alreadyInTarget))
+        #expect(decision == .noop(reason: .alreadyInTarget))
     }
 
     /// A brand-new mid-session app arrival (windowID not in
@@ -259,7 +268,8 @@ final class PlanLeftmostMoveTests: XCTestCase {
     /// unstable. Any future loosening (e.g. tracking by windowID
     /// instead of identifier) must replace this assertion
     /// deliberately so the regression risk is explicit.
-    func testNewWindowIDWithUnresolvedSourcePIDStillShortCircuits() {
+    @Test("A new windowID with an unresolved source PID still short-circuits")
+    func newWindowIDWithUnresolvedSourcePIDStillShortCircuits() {
         let newApp = leftmostItem(
             // Identifier collapses to com.apple.controlcenter:Item-0:N
             // when sourcePID resolution fails on macOS 26; the test
@@ -289,13 +299,14 @@ final class PlanLeftmostMoveTests: XCTestCase {
             effectiveNewItemsSection: .hidden
         )
 
-        XCTAssertEqual(decision, .noop(reason: .unresolvedSourcePID),
-                       "nil-sourcePID hideable items must short-circuit even when their windowID is unambiguously new")
+        #expect(decision == .noop(reason: .unresolvedSourcePID),
+                "nil-sourcePID hideable items must short-circuit even when their windowID is unambiguously new")
     }
 
     /// With no items left of the divider, the planner emits
     /// .noop(.noLeftmostItems).
-    func testEmptyLeftmostListReturnsNoLeftmostItems() {
+    @Test("No items left of the divider yields no leftmost items")
+    func emptyLeftmostListReturnsNoLeftmostItems() {
         // All items sit to the right of the hidden divider (minX >= 500).
         let visibleApp = MenuBarItem.fixture(
             tag: appTag("com.example.app", "Status"),
@@ -317,7 +328,7 @@ final class PlanLeftmostMoveTests: XCTestCase {
             effectiveNewItemsSection: .hidden
         )
 
-        XCTAssertEqual(decision, .noop(reason: .noLeftmostItems))
+        #expect(decision == .noop(reason: .noLeftmostItems))
     }
 
     // MARK: - Unstable owner titles (#849)
@@ -328,7 +339,8 @@ final class PlanLeftmostMoveTests: XCTestCase {
     /// `com.shortcutlabs.FlicMac:com.shortcutlabs.FlicMac` and so matched no
     /// saved entry. Flic owns exactly one status item, so the namespace
     /// identifies it unambiguously and its saved section must still apply.
-    func testTitleChangeUnderASoleOwnerKeepsTheSavedSection() {
+    @Test("A title change under a sole owner keeps the saved section")
+    func titleChangeUnderASoleOwnerKeepsTheSavedSection() {
         let flic = leftmostItem(
             tag: appTag("com.shortcutlabs.FlicMac", "com.shortcutlabs.FlicMac"),
             x: 200,
@@ -349,14 +361,15 @@ final class PlanLeftmostMoveTests: XCTestCase {
             effectiveNewItemsSection: .hidden
         )
 
-        XCTAssertEqual(decision, .noop(reason: .noNewCandidate))
+        #expect(decision == .noop(reason: .noNewCandidate))
     }
 
     /// The fallback is deliberately limited to owners with a single live item.
     /// With two items under one namespace the saved entry no longer says which
     /// one it meant, so the planner falls back to treating the unmatched item
     /// as new.
-    func testTitleChangeIsNotForgivenWhenTheOwnerHasTwoLiveItems() {
+    @Test("A title change is not forgiven when the owner has two live items")
+    func titleChangeIsNotForgivenWhenTheOwnerHasTwoLiveItems() {
         let renamed = leftmostItem(
             tag: appTag("com.example.app", "Renamed"),
             x: 200,
@@ -383,15 +396,16 @@ final class PlanLeftmostMoveTests: XCTestCase {
         )
 
         if case let .newHideableItem(item, _) = decision {
-            XCTAssertEqual(item.windowID, 710)
+            #expect(item.windowID == 710)
         } else {
-            XCTFail("expected .newHideableItem, got \(decision)")
+            Issue.record("expected .newHideableItem, got \(decision)")
         }
     }
 
     /// Same limit from the other side: an owner with two saved entries has no
     /// single entry the live item can be matched to.
-    func testTitleChangeIsNotForgivenWhenTheOwnerHasTwoSavedEntries() {
+    @Test("A title change is not forgiven when the owner has two saved entries")
+    func titleChangeIsNotForgivenWhenTheOwnerHasTwoSavedEntries() {
         let renamed = leftmostItem(
             tag: appTag("com.example.app", "Renamed"),
             x: 200,
@@ -416,9 +430,9 @@ final class PlanLeftmostMoveTests: XCTestCase {
         )
 
         if case let .newHideableItem(item, _) = decision {
-            XCTAssertEqual(item.windowID, 712)
+            #expect(item.windowID == 712)
         } else {
-            XCTFail("expected .newHideableItem, got \(decision)")
+            Issue.record("expected .newHideableItem, got \(decision)")
         }
     }
 
@@ -429,7 +443,8 @@ final class PlanLeftmostMoveTests: XCTestCase {
     /// identifier changed as well. Judged on the previous cycle alone the item
     /// looks brand new; the several-cycle history remembers the windowID and
     /// keeps it out of the relocation path.
-    func testWindowIDSeenSeveralCyclesAgoIsNotNew() {
+    @Test("A windowID seen several cycles ago is not new")
+    func windowIDSeenSeveralCyclesAgoIsNotNew() {
         let app = leftmostItem(
             tag: appTag("com.example.app", "Renamed"),
             x: 200,
@@ -451,16 +466,16 @@ final class PlanLeftmostMoveTests: XCTestCase {
             effectiveNewItemsSection: .hidden
         )
 
-        XCTAssertEqual(
-            decision,
-            .noop(reason: .noNewCandidate),
+        #expect(
+            decision == .noop(reason: .noNewCandidate),
             "a windowID in the recent history should not be treated as new"
         )
     }
 
     /// The history must not swallow genuinely new items: a windowID absent from
     /// both the previous cycle and the recent history still relocates.
-    func testWindowIDAbsentFromRecentHistoryIsStillNew() {
+    @Test("A windowID absent from the recent history is still new")
+    func windowIDAbsentFromRecentHistoryIsStillNew() {
         let app = leftmostItem(
             tag: appTag("com.newapp", "Status"),
             x: 200,
@@ -483,9 +498,9 @@ final class PlanLeftmostMoveTests: XCTestCase {
         )
 
         if case let .newHideableItem(item, _) = decision {
-            XCTAssertEqual(item.windowID, 721)
+            #expect(item.windowID == 721)
         } else {
-            XCTFail("expected .newHideableItem, got \(decision)")
+            Issue.record("expected .newHideableItem, got \(decision)")
         }
     }
 
@@ -493,7 +508,8 @@ final class PlanLeftmostMoveTests: XCTestCase {
     /// macOS hosts but Thaw cannot yet attribute, so a saved entry under it
     /// says nothing about which item is which. It is excluded from the
     /// namespace fallback even when the counts happen to line up.
-    func testControlCenterNamespaceIsExcludedFromTheNamespaceFallback() {
+    @Test("The Control Center namespace is excluded from the namespace fallback")
+    func controlCenterNamespaceIsExcludedFromTheNamespaceFallback() {
         let hosted = leftmostItem(
             tag: appTag("com.apple.controlcenter", "SomeWidget"),
             x: 200,
@@ -515,9 +531,9 @@ final class PlanLeftmostMoveTests: XCTestCase {
         )
 
         if case let .newHideableItem(item, _) = decision {
-            XCTAssertEqual(item.windowID, 713)
+            #expect(item.windowID == 713)
         } else {
-            XCTFail("expected .newHideableItem, got \(decision)")
+            Issue.record("expected .newHideableItem, got \(decision)")
         }
     }
 }

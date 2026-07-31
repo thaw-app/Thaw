@@ -5,8 +5,9 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Foundation
+import Testing
 @testable import Thaw
-import XCTest
 
 /// Covers `MissionControlDetector.nextInterval(isActive:lastStepUpSignal:now:)`,
 /// the pure rate-selection function behind the detector's adaptive poll rate
@@ -14,18 +15,21 @@ import XCTest
 /// window displacement and isn't practically unit-testable; this is the one
 /// piece of its logic that is.
 @MainActor
-final class MissionControlDetectorTests: XCTestCase {
-    func testIdleWithNoSignalUsesIdleRate() {
+@Suite("Mission control detector")
+struct MissionControlDetectorTests {
+    @Test("Idle with no signal uses the idle rate")
+    func idleWithNoSignalUsesIdleRate() {
         let now = Date()
         let interval = MissionControlDetector.nextInterval(
             isActive: false,
             lastStepUpSignal: nil,
             now: now
         )
-        XCTAssertEqual(interval, MissionControlDetector.idleInterval)
+        #expect(interval == MissionControlDetector.idleInterval)
     }
 
-    func testIdleWithStaleSignalUsesIdleRate() {
+    @Test("Idle with a stale signal uses the idle rate")
+    func idleWithStaleSignalUsesIdleRate() {
         let now = Date()
         let staleSignal = now.addingTimeInterval(-(MissionControlDetector.activeSignalWindow + 1))
         let interval = MissionControlDetector.nextInterval(
@@ -33,10 +37,11 @@ final class MissionControlDetectorTests: XCTestCase {
             lastStepUpSignal: staleSignal,
             now: now
         )
-        XCTAssertEqual(interval, MissionControlDetector.idleInterval)
+        #expect(interval == MissionControlDetector.idleInterval)
     }
 
-    func testRecentStepUpSignalUsesActiveRate() {
+    @Test("A recent step-up signal uses the active rate")
+    func recentStepUpSignalUsesActiveRate() {
         let now = Date()
         let recentSignal = now.addingTimeInterval(-(MissionControlDetector.activeSignalWindow / 2))
         let interval = MissionControlDetector.nextInterval(
@@ -44,10 +49,11 @@ final class MissionControlDetectorTests: XCTestCase {
             lastStepUpSignal: recentSignal,
             now: now
         )
-        XCTAssertEqual(interval, MissionControlDetector.activeInterval)
+        #expect(interval == MissionControlDetector.activeInterval)
     }
 
-    func testSignalExactlyAtWindowBoundaryUsesIdleRate() {
+    @Test("A signal exactly at the window boundary uses the idle rate")
+    func signalExactlyAtWindowBoundaryUsesIdleRate() {
         let now = Date()
         let boundarySignal = now.addingTimeInterval(-MissionControlDetector.activeSignalWindow)
         let interval = MissionControlDetector.nextInterval(
@@ -55,20 +61,21 @@ final class MissionControlDetectorTests: XCTestCase {
             lastStepUpSignal: boundarySignal,
             now: now
         )
-        XCTAssertEqual(interval, MissionControlDetector.idleInterval)
+        #expect(interval == MissionControlDetector.idleInterval)
     }
 
-    func testActiveAlwaysUsesActiveRateRegardlessOfSignal() {
+    @Test("Active always uses the active rate regardless of the signal")
+    func activeAlwaysUsesActiveRateRegardlessOfSignal() {
         let now = Date()
-        XCTAssertEqual(
-            MissionControlDetector.nextInterval(isActive: true, lastStepUpSignal: nil, now: now),
-            MissionControlDetector.activeInterval
+        #expect(
+            MissionControlDetector.nextInterval(isActive: true, lastStepUpSignal: nil, now: now)
+                == MissionControlDetector.activeInterval
         )
 
         let staleSignal = now.addingTimeInterval(-(MissionControlDetector.activeSignalWindow + 100))
-        XCTAssertEqual(
-            MissionControlDetector.nextInterval(isActive: true, lastStepUpSignal: staleSignal, now: now),
-            MissionControlDetector.activeInterval
+        #expect(
+            MissionControlDetector.nextInterval(isActive: true, lastStepUpSignal: staleSignal, now: now)
+                == MissionControlDetector.activeInterval
         )
     }
 }

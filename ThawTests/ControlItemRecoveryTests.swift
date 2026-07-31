@@ -5,8 +5,8 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Testing
 @testable import Thaw
-import XCTest
 
 /// Characterizes the bounded control-item recovery path for issue #754:
 /// on macOS 26 with multiple displays, after long uptime `ControlItemPair`
@@ -25,41 +25,47 @@ import XCTest
 /// `cacheActor.updateCachedItemWindowIDs`/`updateCachedCloneWindowIDs` in
 /// `cacheItemsRegardless`, which now runs only after the `ControlItemPair`
 /// guard succeeds, never inside the failure branch.
-final class ControlItemRecoveryTests: XCTestCase {
-    func testBelowThresholdDoesNotRebuild() {
+@Suite("Control item recovery")
+struct ControlItemRecoveryTests {
+    @Test("Below the threshold, no rebuild is requested")
+    func belowThresholdDoesNotRebuild() {
         for count in 0 ..< MenuBarItemManager.controlItemRebuildThreshold {
-            XCTAssertFalse(
-                MenuBarItemManager.shouldRebuildControlItems(consecutiveFailures: count),
+            #expect(
+                !MenuBarItemManager.shouldRebuildControlItems(consecutiveFailures: count),
                 "consecutiveFailures=\(count) should not yet trigger a rebuild"
             )
         }
     }
 
-    func testThresholdTriggersRebuild() {
-        XCTAssertTrue(
+    @Test("Reaching the threshold triggers a rebuild")
+    func thresholdTriggersRebuild() {
+        #expect(
             MenuBarItemManager.shouldRebuildControlItems(
                 consecutiveFailures: MenuBarItemManager.controlItemRebuildThreshold
             )
         )
     }
 
-    func testBeyondThresholdStillTriggersRebuild() {
-        XCTAssertTrue(
+    @Test("Beyond the threshold a rebuild is still triggered")
+    func beyondThresholdStillTriggersRebuild() {
+        #expect(
             MenuBarItemManager.shouldRebuildControlItems(
                 consecutiveFailures: MenuBarItemManager.controlItemRebuildThreshold + 5
             )
         )
     }
 
-    func testCustomThresholdIsRespected() {
-        XCTAssertFalse(MenuBarItemManager.shouldRebuildControlItems(consecutiveFailures: 1, threshold: 2))
-        XCTAssertTrue(MenuBarItemManager.shouldRebuildControlItems(consecutiveFailures: 2, threshold: 2))
+    @Test("A custom threshold is respected")
+    func customThresholdIsRespected() {
+        #expect(!MenuBarItemManager.shouldRebuildControlItems(consecutiveFailures: 1, threshold: 2))
+        #expect(MenuBarItemManager.shouldRebuildControlItems(consecutiveFailures: 2, threshold: 2))
     }
 
     /// Models the manager's own counter usage: increments on failure, reset
     /// to zero on success and immediately after a rebuild fires, so a
     /// rebuild happens at most once per failure streak.
-    func testCounterResetPreventsRepeatRebuildsWithinAStreak() {
+    @Test("A counter reset prevents repeat rebuilds within one failure streak")
+    func counterResetPreventsRepeatRebuildsWithinAStreak() {
         var consecutiveFailures = 0
         var rebuildCount = 0
 
@@ -75,6 +81,6 @@ final class ControlItemRecoveryTests: XCTestCase {
             recordFailure()
         }
 
-        XCTAssertEqual(rebuildCount, 3)
+        #expect(rebuildCount == 3)
     }
 }

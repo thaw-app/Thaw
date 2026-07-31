@@ -6,24 +6,25 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Foundation
+import Testing
 @testable import Thaw
-import XCTest
 
-final class AdvancedSettingsSnapshotTests: XCTestCase {
-    private var encoder: JSONEncoder!
-    private var decoder: JSONDecoder!
-
-    override func setUp() {
-        super.setUp()
-        encoder = JSONEncoder()
-        decoder = JSONDecoder()
-    }
-
-    override func tearDown() {
-        encoder = nil
-        decoder = nil
-        super.tearDown()
-    }
+/// Covers ``AdvancedSettingsSnapshot``'s value semantics and its `Codable`
+/// conformance.
+///
+/// The snapshot is the on-disk shape of a profile's Advanced pane, so a
+/// profile written by an older build can be missing any key the current build
+/// knows about. Decoding therefore has to fall back to
+/// `Defaults.DefaultValue` rather than throwing, which is what the
+/// forward-compatibility cases below pin.
+///
+/// Reads only; nothing here writes to the defaults domain, so the suite is
+/// safe to run in parallel with the rest.
+@Suite("Advanced settings snapshot")
+struct AdvancedSettingsSnapshotTests {
+    private let encoder = JSONEncoder()
+    private let decoder = JSONDecoder()
 
     // MARK: - Helper Methods
 
@@ -77,81 +78,86 @@ final class AdvancedSettingsSnapshotTests: XCTestCase {
 
     // MARK: - Initialization Tests
 
-    func testDefaultSnapshotValues() {
+    @Test("A snapshot keeps the default values it was built with")
+    func defaultSnapshotValues() {
         let snapshot = makeDefaultSnapshot()
 
-        XCTAssertTrue(snapshot.enableAlwaysHiddenSection)
-        XCTAssertTrue(snapshot.showAllSectionsOnUserDrag)
-        XCTAssertEqual(snapshot.sectionDividerStyle, 0)
-        XCTAssertFalse(snapshot.hideApplicationMenus)
-        XCTAssertTrue(snapshot.enableSecondaryContextMenu)
-        XCTAssertEqual(snapshot.showOnHoverDelay, 0.2)
-        XCTAssertEqual(snapshot.tooltipDelay, 1.0)
-        XCTAssertTrue(snapshot.showMenuBarTooltips)
-        XCTAssertEqual(snapshot.iconRefreshInterval, 3.0)
-        XCTAssertFalse(snapshot.enableDiagnosticLogging)
-        XCTAssertFalse(snapshot.useDoubleClickToShowAlwaysHiddenSection)
+        #expect(snapshot.enableAlwaysHiddenSection)
+        #expect(snapshot.showAllSectionsOnUserDrag)
+        #expect(snapshot.sectionDividerStyle == 0)
+        #expect(!snapshot.hideApplicationMenus)
+        #expect(snapshot.enableSecondaryContextMenu)
+        #expect(snapshot.showOnHoverDelay == 0.2)
+        #expect(snapshot.tooltipDelay == 1.0)
+        #expect(snapshot.showMenuBarTooltips)
+        #expect(snapshot.iconRefreshInterval == 3.0)
+        #expect(!snapshot.enableDiagnosticLogging)
+        #expect(!snapshot.useDoubleClickToShowAlwaysHiddenSection)
     }
 
-    func testCustomSnapshotValues() {
+    @Test("A snapshot keeps the custom values it was built with")
+    func customSnapshotValues() {
         let snapshot = makeCustomSnapshot()
 
-        XCTAssertFalse(snapshot.enableAlwaysHiddenSection)
-        XCTAssertFalse(snapshot.showAllSectionsOnUserDrag)
-        XCTAssertEqual(snapshot.sectionDividerStyle, 1)
-        XCTAssertTrue(snapshot.hideApplicationMenus)
-        XCTAssertFalse(snapshot.enableSecondaryContextMenu)
-        XCTAssertEqual(snapshot.showOnHoverDelay, 0.5)
-        XCTAssertEqual(snapshot.tooltipDelay, 2.0)
-        XCTAssertFalse(snapshot.showMenuBarTooltips)
-        XCTAssertEqual(snapshot.iconRefreshInterval, 5.0)
-        XCTAssertTrue(snapshot.enableDiagnosticLogging)
-        XCTAssertTrue(snapshot.useDoubleClickToShowAlwaysHiddenSection)
+        #expect(!snapshot.enableAlwaysHiddenSection)
+        #expect(!snapshot.showAllSectionsOnUserDrag)
+        #expect(snapshot.sectionDividerStyle == 1)
+        #expect(snapshot.hideApplicationMenus)
+        #expect(!snapshot.enableSecondaryContextMenu)
+        #expect(snapshot.showOnHoverDelay == 0.5)
+        #expect(snapshot.tooltipDelay == 2.0)
+        #expect(!snapshot.showMenuBarTooltips)
+        #expect(snapshot.iconRefreshInterval == 5.0)
+        #expect(snapshot.enableDiagnosticLogging)
+        #expect(snapshot.useDoubleClickToShowAlwaysHiddenSection)
     }
 
     // MARK: - Encode/Decode Tests
 
-    func testEncodeDecodeDefaultSnapshot() throws {
+    @Test("A default snapshot survives a round trip unchanged")
+    func encodeDecodeDefaultSnapshot() throws {
         let original = makeDefaultSnapshot()
 
         let data = try encoder.encode(original)
         let decoded = try decoder.decode(AdvancedSettingsSnapshot.self, from: data)
 
-        XCTAssertEqual(decoded.enableAlwaysHiddenSection, original.enableAlwaysHiddenSection)
-        XCTAssertEqual(decoded.showAllSectionsOnUserDrag, original.showAllSectionsOnUserDrag)
-        XCTAssertEqual(decoded.sectionDividerStyle, original.sectionDividerStyle)
-        XCTAssertEqual(decoded.hideApplicationMenus, original.hideApplicationMenus)
-        XCTAssertEqual(decoded.enableSecondaryContextMenu, original.enableSecondaryContextMenu)
-        XCTAssertEqual(decoded.showOnHoverDelay, original.showOnHoverDelay)
-        XCTAssertEqual(decoded.tooltipDelay, original.tooltipDelay)
-        XCTAssertEqual(decoded.showMenuBarTooltips, original.showMenuBarTooltips)
-        XCTAssertEqual(decoded.iconRefreshInterval, original.iconRefreshInterval)
-        XCTAssertEqual(decoded.enableDiagnosticLogging, original.enableDiagnosticLogging)
-        XCTAssertEqual(decoded.useDoubleClickToShowAlwaysHiddenSection, original.useDoubleClickToShowAlwaysHiddenSection)
+        #expect(decoded.enableAlwaysHiddenSection == original.enableAlwaysHiddenSection)
+        #expect(decoded.showAllSectionsOnUserDrag == original.showAllSectionsOnUserDrag)
+        #expect(decoded.sectionDividerStyle == original.sectionDividerStyle)
+        #expect(decoded.hideApplicationMenus == original.hideApplicationMenus)
+        #expect(decoded.enableSecondaryContextMenu == original.enableSecondaryContextMenu)
+        #expect(decoded.showOnHoverDelay == original.showOnHoverDelay)
+        #expect(decoded.tooltipDelay == original.tooltipDelay)
+        #expect(decoded.showMenuBarTooltips == original.showMenuBarTooltips)
+        #expect(decoded.iconRefreshInterval == original.iconRefreshInterval)
+        #expect(decoded.enableDiagnosticLogging == original.enableDiagnosticLogging)
+        #expect(decoded.useDoubleClickToShowAlwaysHiddenSection == original.useDoubleClickToShowAlwaysHiddenSection)
     }
 
-    func testEncodeDecodeCustomSnapshot() throws {
+    @Test("A custom snapshot survives a round trip unchanged")
+    func encodeDecodeCustomSnapshot() throws {
         let original = makeCustomSnapshot()
 
         let data = try encoder.encode(original)
         let decoded = try decoder.decode(AdvancedSettingsSnapshot.self, from: data)
 
-        XCTAssertEqual(decoded.enableAlwaysHiddenSection, false)
-        XCTAssertEqual(decoded.showAllSectionsOnUserDrag, false)
-        XCTAssertEqual(decoded.sectionDividerStyle, 1)
-        XCTAssertEqual(decoded.hideApplicationMenus, true)
-        XCTAssertEqual(decoded.enableSecondaryContextMenu, false)
-        XCTAssertEqual(decoded.showOnHoverDelay, 0.5)
-        XCTAssertEqual(decoded.tooltipDelay, 2.0)
-        XCTAssertEqual(decoded.showMenuBarTooltips, false)
-        XCTAssertEqual(decoded.iconRefreshInterval, 5.0)
-        XCTAssertEqual(decoded.enableDiagnosticLogging, true)
-        XCTAssertEqual(decoded.useDoubleClickToShowAlwaysHiddenSection, true)
+        #expect(decoded.enableAlwaysHiddenSection == false)
+        #expect(decoded.showAllSectionsOnUserDrag == false)
+        #expect(decoded.sectionDividerStyle == 1)
+        #expect(decoded.hideApplicationMenus == true)
+        #expect(decoded.enableSecondaryContextMenu == false)
+        #expect(decoded.showOnHoverDelay == 0.5)
+        #expect(decoded.tooltipDelay == 2.0)
+        #expect(decoded.showMenuBarTooltips == false)
+        #expect(decoded.iconRefreshInterval == 5.0)
+        #expect(decoded.enableDiagnosticLogging == true)
+        #expect(decoded.useDoubleClickToShowAlwaysHiddenSection == true)
     }
 
     // MARK: - Forward-Compatibility Tests
 
-    func testDecodeOlderProfileMissingNewerKeys() throws {
+    @Test("A profile written before the newer keys existed decodes with their defaults")
+    func decodeOlderProfileMissingNewerKeys() throws {
         // Simulates a profile saved before useDoubleClickToShowAlwaysHiddenSection
         // and enableSecondaryContextMenuQuit were added. Decoding must succeed,
         // filling in defaults from Defaults.DefaultValue.
@@ -172,40 +178,42 @@ final class AdvancedSettingsSnapshotTests: XCTestCase {
 
         let decoded = try decoder.decode(AdvancedSettingsSnapshot.self, from: json)
 
-        XCTAssertTrue(decoded.enableAlwaysHiddenSection)
-        XCTAssertEqual(
-            decoded.useDoubleClickToShowAlwaysHiddenSection,
-            Defaults.DefaultValue.useDoubleClickToShowAlwaysHiddenSection
+        #expect(decoded.enableAlwaysHiddenSection)
+        #expect(
+            decoded.useDoubleClickToShowAlwaysHiddenSection
+                == Defaults.DefaultValue.useDoubleClickToShowAlwaysHiddenSection
         )
-        XCTAssertEqual(
-            decoded.enableSecondaryContextMenuQuit,
-            Defaults.DefaultValue.enableSecondaryContextMenuQuit
+        #expect(
+            decoded.enableSecondaryContextMenuQuit
+                == Defaults.DefaultValue.enableSecondaryContextMenuQuit
         )
     }
 
-    func testDecodeEmptyObjectFallsBackToDefaults() throws {
+    @Test("An empty object decodes to the shipped defaults")
+    func decodeEmptyObjectFallsBackToDefaults() throws {
         // Worst-case forward-compat: every key is missing, decoder must still
         // produce a snapshot rather than throwing keyNotFound.
         let json = "{}".data(using: .utf8)!
         let decoded = try decoder.decode(AdvancedSettingsSnapshot.self, from: json)
 
-        XCTAssertEqual(
-            decoded.enableAlwaysHiddenSection,
-            Defaults.DefaultValue.enableAlwaysHiddenSection
+        #expect(
+            decoded.enableAlwaysHiddenSection
+                == Defaults.DefaultValue.enableAlwaysHiddenSection
         )
-        XCTAssertEqual(
-            decoded.sectionDividerStyle,
-            Defaults.DefaultValue.sectionDividerStyle.rawValue
+        #expect(
+            decoded.sectionDividerStyle
+                == Defaults.DefaultValue.sectionDividerStyle.rawValue
         )
-        XCTAssertEqual(
-            decoded.enableSecondaryContextMenuQuit,
-            Defaults.DefaultValue.enableSecondaryContextMenuQuit
+        #expect(
+            decoded.enableSecondaryContextMenuQuit
+                == Defaults.DefaultValue.enableSecondaryContextMenuQuit
         )
     }
 
     // MARK: - SectionDividerStyle Tests
 
-    func testAllSectionDividerStyles() throws {
+    @Test("Every section divider style survives a round trip")
+    func allSectionDividerStyles() throws {
         for style in SectionDividerStyle.allCases {
             var snapshot = makeDefaultSnapshot()
             snapshot.sectionDividerStyle = style.rawValue
@@ -213,73 +221,80 @@ final class AdvancedSettingsSnapshotTests: XCTestCase {
             let data = try encoder.encode(snapshot)
             let decoded = try decoder.decode(AdvancedSettingsSnapshot.self, from: data)
 
-            XCTAssertEqual(decoded.sectionDividerStyle, style.rawValue)
+            #expect(decoded.sectionDividerStyle == style.rawValue)
         }
     }
 
     // MARK: - TimeInterval Edge Cases
 
-    func testZeroShowOnHoverDelay() throws {
+    @Test("A zero hover delay round-trips")
+    func zeroShowOnHoverDelay() throws {
         var snapshot = makeDefaultSnapshot()
         snapshot.showOnHoverDelay = 0
 
         let data = try encoder.encode(snapshot)
         let decoded = try decoder.decode(AdvancedSettingsSnapshot.self, from: data)
 
-        XCTAssertEqual(decoded.showOnHoverDelay, 0)
+        #expect(decoded.showOnHoverDelay == 0)
     }
 
-    func testLargeShowOnHoverDelay() throws {
+    @Test("A large hover delay round-trips")
+    func largeShowOnHoverDelay() throws {
         var snapshot = makeDefaultSnapshot()
         snapshot.showOnHoverDelay = 10.0
 
         let data = try encoder.encode(snapshot)
         let decoded = try decoder.decode(AdvancedSettingsSnapshot.self, from: data)
 
-        XCTAssertEqual(decoded.showOnHoverDelay, 10.0)
+        #expect(decoded.showOnHoverDelay == 10.0)
     }
 
-    func testZeroTooltipDelay() throws {
+    @Test("A zero tooltip delay round-trips")
+    func zeroTooltipDelay() throws {
         var snapshot = makeDefaultSnapshot()
         snapshot.tooltipDelay = 0
 
         let data = try encoder.encode(snapshot)
         let decoded = try decoder.decode(AdvancedSettingsSnapshot.self, from: data)
 
-        XCTAssertEqual(decoded.tooltipDelay, 0)
+        #expect(decoded.tooltipDelay == 0)
     }
 
-    func testLargeTooltipDelay() throws {
+    @Test("A large tooltip delay round-trips")
+    func largeTooltipDelay() throws {
         var snapshot = makeDefaultSnapshot()
         snapshot.tooltipDelay = 60.0
 
         let data = try encoder.encode(snapshot)
         let decoded = try decoder.decode(AdvancedSettingsSnapshot.self, from: data)
 
-        XCTAssertEqual(decoded.tooltipDelay, 60.0)
+        #expect(decoded.tooltipDelay == 60.0)
     }
 
-    func testZeroIconRefreshInterval() throws {
+    @Test("A zero icon refresh interval round-trips")
+    func zeroIconRefreshInterval() throws {
         var snapshot = makeDefaultSnapshot()
         snapshot.iconRefreshInterval = 0
 
         let data = try encoder.encode(snapshot)
         let decoded = try decoder.decode(AdvancedSettingsSnapshot.self, from: data)
 
-        XCTAssertEqual(decoded.iconRefreshInterval, 0)
+        #expect(decoded.iconRefreshInterval == 0)
     }
 
-    func testLargeIconRefreshInterval() throws {
+    @Test("A large icon refresh interval round-trips")
+    func largeIconRefreshInterval() throws {
         var snapshot = makeDefaultSnapshot()
         snapshot.iconRefreshInterval = 60.0
 
         let data = try encoder.encode(snapshot)
         let decoded = try decoder.decode(AdvancedSettingsSnapshot.self, from: data)
 
-        XCTAssertEqual(decoded.iconRefreshInterval, 60.0)
+        #expect(decoded.iconRefreshInterval == 60.0)
     }
 
-    func testFractionalDelays() throws {
+    @Test("Fractional delays round-trip within tolerance")
+    func fractionalDelays() throws {
         var snapshot = makeDefaultSnapshot()
         snapshot.showOnHoverDelay = 0.15
         snapshot.tooltipDelay = 0.75
@@ -288,14 +303,15 @@ final class AdvancedSettingsSnapshotTests: XCTestCase {
         let data = try encoder.encode(snapshot)
         let decoded = try decoder.decode(AdvancedSettingsSnapshot.self, from: data)
 
-        XCTAssertEqual(decoded.showOnHoverDelay, 0.15, accuracy: 0.001)
-        XCTAssertEqual(decoded.tooltipDelay, 0.75, accuracy: 0.001)
-        XCTAssertEqual(decoded.iconRefreshInterval, 2.5, accuracy: 0.001)
+        #expect(abs(decoded.showOnHoverDelay - 0.15) < 0.001)
+        #expect(abs(decoded.tooltipDelay - 0.75) < 0.001)
+        #expect(abs(decoded.iconRefreshInterval - 2.5) < 0.001)
     }
 
     // MARK: - Boolean Combinations
 
-    func testAllBooleansFalse() throws {
+    @Test("A snapshot with every boolean off round-trips")
+    func allBooleansFalse() throws {
         let snapshot = AdvancedSettingsSnapshot(
             enableAlwaysHiddenSection: false,
             showAllSectionsOnUserDrag: false,
@@ -321,20 +337,21 @@ final class AdvancedSettingsSnapshotTests: XCTestCase {
         let data = try encoder.encode(snapshot)
         let decoded = try decoder.decode(AdvancedSettingsSnapshot.self, from: data)
 
-        XCTAssertFalse(decoded.enableAlwaysHiddenSection)
-        XCTAssertFalse(decoded.showAllSectionsOnUserDrag)
-        XCTAssertFalse(decoded.hideApplicationMenus)
-        XCTAssertFalse(decoded.enableSecondaryContextMenu)
-        XCTAssertFalse(decoded.enableSecondaryContextMenuQuit)
-        XCTAssertFalse(decoded.showMenuBarTooltips)
-        XCTAssertFalse(decoded.enableDiagnosticLogging)
-        XCTAssertFalse(decoded.useDoubleClickToShowAlwaysHiddenSection)
-        XCTAssertFalse(decoded.searchIncludeVisible)
-        XCTAssertFalse(decoded.searchIncludeHidden)
-        XCTAssertFalse(decoded.searchIncludeAlwaysHidden)
+        #expect(!decoded.enableAlwaysHiddenSection)
+        #expect(!decoded.showAllSectionsOnUserDrag)
+        #expect(!decoded.hideApplicationMenus)
+        #expect(!decoded.enableSecondaryContextMenu)
+        #expect(!decoded.enableSecondaryContextMenuQuit)
+        #expect(!decoded.showMenuBarTooltips)
+        #expect(!decoded.enableDiagnosticLogging)
+        #expect(!decoded.useDoubleClickToShowAlwaysHiddenSection)
+        #expect(!decoded.searchIncludeVisible)
+        #expect(!decoded.searchIncludeHidden)
+        #expect(!decoded.searchIncludeAlwaysHidden)
     }
 
-    func testAllBooleansTrue() throws {
+    @Test("A snapshot with every boolean on round-trips")
+    func allBooleansTrue() throws {
         let snapshot = AdvancedSettingsSnapshot(
             enableAlwaysHiddenSection: true,
             showAllSectionsOnUserDrag: true,
@@ -360,22 +377,23 @@ final class AdvancedSettingsSnapshotTests: XCTestCase {
         let data = try encoder.encode(snapshot)
         let decoded = try decoder.decode(AdvancedSettingsSnapshot.self, from: data)
 
-        XCTAssertTrue(decoded.enableAlwaysHiddenSection)
-        XCTAssertTrue(decoded.showAllSectionsOnUserDrag)
-        XCTAssertTrue(decoded.hideApplicationMenus)
-        XCTAssertTrue(decoded.enableSecondaryContextMenu)
-        XCTAssertTrue(decoded.enableSecondaryContextMenuQuit)
-        XCTAssertTrue(decoded.showMenuBarTooltips)
-        XCTAssertTrue(decoded.enableDiagnosticLogging)
-        XCTAssertTrue(decoded.useDoubleClickToShowAlwaysHiddenSection)
-        XCTAssertTrue(decoded.searchIncludeVisible)
-        XCTAssertTrue(decoded.searchIncludeHidden)
-        XCTAssertTrue(decoded.searchIncludeAlwaysHidden)
+        #expect(decoded.enableAlwaysHiddenSection)
+        #expect(decoded.showAllSectionsOnUserDrag)
+        #expect(decoded.hideApplicationMenus)
+        #expect(decoded.enableSecondaryContextMenu)
+        #expect(decoded.enableSecondaryContextMenuQuit)
+        #expect(decoded.showMenuBarTooltips)
+        #expect(decoded.enableDiagnosticLogging)
+        #expect(decoded.useDoubleClickToShowAlwaysHiddenSection)
+        #expect(decoded.searchIncludeVisible)
+        #expect(decoded.searchIncludeHidden)
+        #expect(decoded.searchIncludeAlwaysHidden)
     }
 
     // MARK: - Search Section Ordering
 
-    func testSearchSectionOrderRoundTrip() throws {
+    @Test("The search section order and its filters round-trip")
+    func searchSectionOrderRoundTrip() throws {
         var snapshot = makeDefaultSnapshot()
         snapshot.searchSectionOrder = ["alwaysHidden", "hidden", "visible"]
         snapshot.searchIncludeVisible = false
@@ -383,13 +401,14 @@ final class AdvancedSettingsSnapshotTests: XCTestCase {
         let data = try encoder.encode(snapshot)
         let decoded = try decoder.decode(AdvancedSettingsSnapshot.self, from: data)
 
-        XCTAssertEqual(decoded.searchSectionOrder, ["alwaysHidden", "hidden", "visible"])
-        XCTAssertFalse(decoded.searchIncludeVisible)
-        XCTAssertTrue(decoded.searchIncludeHidden)
-        XCTAssertTrue(decoded.searchIncludeAlwaysHidden)
+        #expect(decoded.searchSectionOrder == ["alwaysHidden", "hidden", "visible"])
+        #expect(!decoded.searchIncludeVisible)
+        #expect(decoded.searchIncludeHidden)
+        #expect(decoded.searchIncludeAlwaysHidden)
     }
 
-    func testDecodeProfileMissingSearchKeysFallsBackToDefaults() throws {
+    @Test("A profile written before the search keys existed decodes with their defaults")
+    func decodeProfileMissingSearchKeysFallsBackToDefaults() throws {
         // Simulates a profile saved before the search-ordering fields were added.
         let json = """
         {
@@ -408,9 +427,9 @@ final class AdvancedSettingsSnapshotTests: XCTestCase {
 
         let decoded = try decoder.decode(AdvancedSettingsSnapshot.self, from: json)
 
-        XCTAssertEqual(decoded.searchSectionOrder, Defaults.DefaultValue.searchSectionOrder)
-        XCTAssertEqual(decoded.searchIncludeVisible, Defaults.DefaultValue.searchIncludeVisible)
-        XCTAssertEqual(decoded.searchIncludeHidden, Defaults.DefaultValue.searchIncludeHidden)
-        XCTAssertEqual(decoded.searchIncludeAlwaysHidden, Defaults.DefaultValue.searchIncludeAlwaysHidden)
+        #expect(decoded.searchSectionOrder == Defaults.DefaultValue.searchSectionOrder)
+        #expect(decoded.searchIncludeVisible == Defaults.DefaultValue.searchIncludeVisible)
+        #expect(decoded.searchIncludeHidden == Defaults.DefaultValue.searchIncludeHidden)
+        #expect(decoded.searchIncludeAlwaysHidden == Defaults.DefaultValue.searchIncludeAlwaysHidden)
     }
 }

@@ -6,8 +6,10 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import CoreGraphics
+import Foundation
+import Testing
 @testable import Thaw
-import XCTest
 
 /// Covers the ledger's contract along both of its dimensions: the
 /// session-scoped backoff that keeps bulk apply off a failing item, and
@@ -22,23 +24,24 @@ import XCTest
 /// saves and restores the key it touches rather than leaving the running
 /// user's domain modified.
 @MainActor
-final class MenuBarItemFailureLedgerTests: XCTestCase {
-    private var savedValue: Any?
+@Suite("Menu bar item failure ledger", .serialized)
+final class MenuBarItemFailureLedgerTests {
+    private let savedValue: Any?
 
-    override func setUp() {
-        super.setUp()
+    init() {
         savedValue = Defaults.object(forKey: .unresponsiveMenuBarItems)
         Defaults.removeObject(forKey: .unresponsiveMenuBarItems)
     }
 
-    override func tearDown() {
+    /// Isolated so the non-Sendable snapshot is reachable here; the suite is
+    /// already `@MainActor`.
+    @MainActor
+    deinit {
         if let savedValue {
             Defaults.set(savedValue, forKey: .unresponsiveMenuBarItems)
         } else {
             Defaults.removeObject(forKey: .unresponsiveMenuBarItems)
         }
-        savedValue = nil
-        super.tearDown()
     }
 
     /// A minimal item standing in for one owned by the named bundle.
@@ -67,30 +70,34 @@ final class MenuBarItemFailureLedgerTests: XCTestCase {
         )
     }
 
-    func testUnknownItemIsNotUnresponsive() {
+    @Test("An item the ledger has never seen is not unresponsive")
+    func unknownItemIsNotUnresponsive() {
         let ledger = MenuBarItemFailureLedger()
-        XCTAssertFalse(ledger.isUnresponsive(item("at.obdev.littlesnitch", "Item-0")))
+        #expect(!ledger.isUnresponsive(item("at.obdev.littlesnitch", "Item-0")))
     }
 
-    func testASingleFailureDoesNotMarkAnItem() {
+    @Test("A single failure does not mark an item")
+    func aSingleFailureDoesNotMarkAnItem() {
         let item = item("at.obdev.littlesnitch", "Item-0")
         let ledger = MenuBarItemFailureLedger()
         ledger.recordFailure(for: item, kind: .unresponsiveOwner)
 
-        XCTAssertFalse(ledger.isUnresponsive(item))
-        XCTAssertNil(Defaults.object(forKey: .unresponsiveMenuBarItems))
+        #expect(!ledger.isUnresponsive(item))
+        #expect(Defaults.object(forKey: .unresponsiveMenuBarItems) == nil)
     }
 
-    func testASecondFailureMarksTheItem() {
+    @Test("A second failure marks the item")
+    func aSecondFailureMarksTheItem() {
         let item = item("at.obdev.littlesnitch", "Item-0")
         let ledger = MenuBarItemFailureLedger()
         ledger.recordFailure(for: item, kind: .unresponsiveOwner)
         ledger.recordFailure(for: item, kind: .unresponsiveOwner)
 
-        XCTAssertTrue(ledger.isUnresponsive(item))
+        #expect(ledger.isUnresponsive(item))
     }
 
-    func testASuccessResetsTheProvisionalFailure() {
+    @Test("A success between two failures resets the provisional failure")
+    func aSuccessResetsTheProvisionalFailure() {
         // Two failures separated by a success are two unrelated blips, not
         // an owner that never answers.
         let item = item("at.obdev.littlesnitch", "Item-0")
@@ -99,10 +106,11 @@ final class MenuBarItemFailureLedgerTests: XCTestCase {
         ledger.recordSuccess(for: item)
         ledger.recordFailure(for: item, kind: .unresponsiveOwner)
 
-        XCTAssertFalse(ledger.isUnresponsive(item))
+        #expect(!ledger.isUnresponsive(item))
     }
 
-    func testMarkSurvivesANewStore() {
+    @Test("A mark survives a new store")
+    func markSurvivesANewStore() {
         let item = item("at.obdev.littlesnitch", "Item-0")
         let first = MenuBarItemFailureLedger()
         first.recordFailure(for: item, kind: .unresponsiveOwner)
@@ -110,30 +118,33 @@ final class MenuBarItemFailureLedgerTests: XCTestCase {
 
         // A second instance reads only what was persisted, which is what a
         // relaunch does.
-        XCTAssertTrue(MenuBarItemFailureLedger().isUnresponsive(item))
+        #expect(MenuBarItemFailureLedger().isUnresponsive(item))
     }
 
-    func testSuccessClearsTheRecordForGood() {
+    @Test("A success clears the record for good")
+    func successClearsTheRecordForGood() {
         let item = item("at.obdev.littlesnitch", "Item-0")
         let ledger = MenuBarItemFailureLedger()
         ledger.recordFailure(for: item, kind: .unresponsiveOwner)
         ledger.recordFailure(for: item, kind: .unresponsiveOwner)
         ledger.recordSuccess(for: item)
 
-        XCTAssertFalse(ledger.isUnresponsive(item))
-        XCTAssertFalse(MenuBarItemFailureLedger().isUnresponsive(item))
+        #expect(!ledger.isUnresponsive(item))
+        #expect(!MenuBarItemFailureLedger().isUnresponsive(item))
     }
 
-    func testRecordsAreScopedToTheExactItem() {
+    @Test("Records are scoped to the exact item")
+    func recordsAreScopedToTheExactItem() {
         let ledger = MenuBarItemFailureLedger()
         ledger.recordFailure(for: item("at.obdev.littlesnitch", "Item-0"), kind: .unresponsiveOwner)
         ledger.recordFailure(for: item("at.obdev.littlesnitch", "Item-0"), kind: .unresponsiveOwner)
 
-        XCTAssertFalse(ledger.isUnresponsive(item("at.obdev.littlesnitch", "Item-1")))
-        XCTAssertFalse(ledger.isUnresponsive(item("com.example.other", "Item-0")))
+        #expect(!ledger.isUnresponsive(item("at.obdev.littlesnitch", "Item-1")))
+        #expect(!ledger.isUnresponsive(item("com.example.other", "Item-0")))
     }
 
-    func testItemsWithoutAStableNamespaceAreNotRecorded() {
+    @Test("An item without a stable namespace is never recorded")
+    func itemsWithoutAStableNamespaceAreNotRecorded() {
         // A UUID namespace is reassigned every session, so recording one
         // would persist a key that can never match again.
         let ephemeral = ephemeralItem()
@@ -141,49 +152,54 @@ final class MenuBarItemFailureLedgerTests: XCTestCase {
         ledger.recordFailure(for: ephemeral, kind: .unresponsiveOwner)
         ledger.recordFailure(for: ephemeral, kind: .unresponsiveOwner)
 
-        XCTAssertFalse(ledger.isUnresponsive(ephemeral))
-        XCTAssertNil(Defaults.object(forKey: .unresponsiveMenuBarItems))
+        #expect(!ledger.isUnresponsive(ephemeral))
+        #expect(Defaults.object(forKey: .unresponsiveMenuBarItems) == nil)
     }
 
-    func testRemoveAllForgetsEverything() {
+    @Test("removeAll forgets everything")
+    func removeAllForgetsEverything() {
         let item = item("at.obdev.littlesnitch", "Item-0")
         let ledger = MenuBarItemFailureLedger()
         ledger.recordFailure(for: item, kind: .unresponsiveOwner)
         ledger.recordFailure(for: item, kind: .unresponsiveOwner)
         ledger.removeAll()
 
-        XCTAssertFalse(ledger.isUnresponsive(item))
-        XCTAssertNil(Defaults.object(forKey: .unresponsiveMenuBarItems))
+        #expect(!ledger.isUnresponsive(item))
+        #expect(Defaults.object(forKey: .unresponsiveMenuBarItems) == nil)
     }
 
     // MARK: Backoff
 
-    func testUnknownItemIsNotUnderBackoff() {
+    @Test("An item the ledger has never seen is not under backoff")
+    func unknownItemIsNotUnderBackoff() {
         let ledger = MenuBarItemFailureLedger()
-        XCTAssertFalse(ledger.isUnderBackoff(key: item("at.obdev.littlesnitch", "Item-0").uniqueIdentifier))
+        #expect(!ledger.isUnderBackoff(key: item("at.obdev.littlesnitch", "Item-0").uniqueIdentifier))
     }
 
-    func testASingleFailureOpensTheBackoffWindow() {
+    @Test("A single failure opens the backoff window")
+    func aSingleFailureOpensTheBackoffWindow() {
         let item = item("at.obdev.littlesnitch", "Item-0")
         let ledger = MenuBarItemFailureLedger()
         let now = ContinuousClock.Instant.now
         ledger.recordFailure(for: item, kind: .other, now: now)
 
-        XCTAssertTrue(ledger.isUnderBackoff(key: item.uniqueIdentifier, now: now))
+        #expect(ledger.isUnderBackoff(key: item.uniqueIdentifier, now: now))
     }
 
-    func testBackoffLapsesOnceItsWindowHasPassed() {
+    @Test("Backoff lapses once its window has passed")
+    func backoffLapsesOnceItsWindowHasPassed() {
         let item = item("at.obdev.littlesnitch", "Item-0")
         let ledger = MenuBarItemFailureLedger()
         let now = ContinuousClock.Instant.now
         ledger.recordFailure(for: item, kind: .other, now: now)
 
         // One failure buys 30 seconds and not a second more.
-        XCTAssertTrue(ledger.isUnderBackoff(key: item.uniqueIdentifier, now: now.advanced(by: .seconds(29))))
-        XCTAssertFalse(ledger.isUnderBackoff(key: item.uniqueIdentifier, now: now.advanced(by: .seconds(30))))
+        #expect(ledger.isUnderBackoff(key: item.uniqueIdentifier, now: now.advanced(by: .seconds(29))))
+        #expect(!ledger.isUnderBackoff(key: item.uniqueIdentifier, now: now.advanced(by: .seconds(30))))
     }
 
-    func testRepeatedFailuresWidenTheBackoffWindow() {
+    @Test("Repeated failures widen the backoff window")
+    func repeatedFailuresWidenTheBackoffWindow() {
         let item = item("at.obdev.littlesnitch", "Item-0")
         let ledger = MenuBarItemFailureLedger()
         let now = ContinuousClock.Instant.now
@@ -191,10 +207,11 @@ final class MenuBarItemFailureLedgerTests: XCTestCase {
         ledger.recordFailure(for: item, kind: .other, now: now)
 
         // Two failures, so 60 seconds — past where one would have lapsed.
-        XCTAssertTrue(ledger.isUnderBackoff(key: item.uniqueIdentifier, now: now.advanced(by: .seconds(45))))
+        #expect(ledger.isUnderBackoff(key: item.uniqueIdentifier, now: now.advanced(by: .seconds(45))))
     }
 
-    func testFailuresThatAreNotUnresponsiveOwnersNeverEarnAMark() {
+    @Test("Failures that are not unresponsive owners never earn a mark")
+    func failuresThatAreNotUnresponsiveOwnersNeverEarnAMark() {
         // A move that simply did not land says nothing about whether the
         // owner is answering, however often it happens.
         let item = item("at.obdev.littlesnitch", "Item-0")
@@ -203,36 +220,39 @@ final class MenuBarItemFailureLedgerTests: XCTestCase {
         ledger.recordFailure(for: item, kind: .other)
         ledger.recordFailure(for: item, kind: .other)
 
-        XCTAssertFalse(ledger.isUnresponsive(item))
-        XCTAssertNil(Defaults.object(forKey: .unresponsiveMenuBarItems))
+        #expect(!ledger.isUnresponsive(item))
+        #expect(Defaults.object(forKey: .unresponsiveMenuBarItems) == nil)
     }
 
-    func testOneSuccessClearsBothTheBackoffAndTheMark() {
+    @Test("One success clears both the backoff and the mark")
+    func oneSuccessClearsBothTheBackoffAndTheMark() {
         let item = item("at.obdev.littlesnitch", "Item-0")
         let ledger = MenuBarItemFailureLedger()
         let now = ContinuousClock.Instant.now
         ledger.recordFailure(for: item, kind: .unresponsiveOwner, now: now)
         ledger.recordFailure(for: item, kind: .unresponsiveOwner, now: now)
-        XCTAssertTrue(ledger.isUnderBackoff(key: item.uniqueIdentifier, now: now))
-        XCTAssertTrue(ledger.isUnresponsive(item))
+        #expect(ledger.isUnderBackoff(key: item.uniqueIdentifier, now: now))
+        #expect(ledger.isUnresponsive(item))
 
         ledger.recordSuccess(for: item)
 
-        XCTAssertFalse(ledger.isUnderBackoff(key: item.uniqueIdentifier, now: now))
-        XCTAssertFalse(ledger.isUnresponsive(item))
+        #expect(!ledger.isUnderBackoff(key: item.uniqueIdentifier, now: now))
+        #expect(!ledger.isUnresponsive(item))
     }
 
-    func testRemoveAllAlsoClearsTheBackoff() {
+    @Test("removeAll also clears the backoff")
+    func removeAllAlsoClearsTheBackoff() {
         let item = item("at.obdev.littlesnitch", "Item-0")
         let ledger = MenuBarItemFailureLedger()
         let now = ContinuousClock.Instant.now
         ledger.recordFailure(for: item, kind: .other, now: now)
         ledger.removeAll()
 
-        XCTAssertFalse(ledger.isUnderBackoff(key: item.uniqueIdentifier, now: now))
+        #expect(!ledger.isUnderBackoff(key: item.uniqueIdentifier, now: now))
     }
 
-    func testUnstableItemsStillGetBackoff() {
+    @Test("An item without a stable namespace still gets a backoff")
+    func unstableItemsStillGetBackoff() {
         // No persisted mark for them, but a session's worth of skipping is
         // still worth having.
         let ephemeral = ephemeralItem()
@@ -240,6 +260,6 @@ final class MenuBarItemFailureLedgerTests: XCTestCase {
         let now = ContinuousClock.Instant.now
         ledger.recordFailure(for: ephemeral, kind: .unresponsiveOwner, now: now)
 
-        XCTAssertTrue(ledger.isUnderBackoff(key: ephemeral.uniqueIdentifier, now: now))
+        #expect(ledger.isUnderBackoff(key: ephemeral.uniqueIdentifier, now: now))
     }
 }

@@ -6,13 +6,24 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Testing
 @testable import Thaw
-import XCTest
 
-final class ShareableContentCacheTests: XCTestCase {
+/// Covers `ShareableContentCache`'s coalescing: a hit inside `maxAge`, a miss
+/// once it has elapsed, concurrent callers joining one in-flight fetch, and
+/// one caller's cancellation not poisoning another's result.
+///
+/// Serialized because every case here measures real elapsed time against
+/// short `maxAge` budgets and staggers callers with sub-100ms sleeps. Run
+/// concurrently the cases contend for the same executor and the head starts
+/// stop being reliable, so the suite is kept to one case at a time as it was
+/// under XCTest.
+@Suite("Shareable content cache", .serialized, .timeLimit(.minutes(1)))
+struct ShareableContentCacheTests {
     // MARK: - Hit within maxAge
 
-    func testHitWithinMaxAgeInvokesFetchOnce() async throws {
+    @Test("A second call inside maxAge reuses the cached result")
+    func hitWithinMaxAgeInvokesFetchOnce() async throws {
         let cache = ShareableContentCache<Int>()
         let invocationCount = Counter()
 
@@ -24,15 +35,16 @@ final class ShareableContentCacheTests: XCTestCase {
         let first = try await cache.content(maxAge: .seconds(60), fetch: fetch)
         let second = try await cache.content(maxAge: .seconds(60), fetch: fetch)
 
-        XCTAssertEqual(first, 1)
-        XCTAssertEqual(second, 1)
+        #expect(first == 1)
+        #expect(second == 1)
         let count = await invocationCount.value
-        XCTAssertEqual(count, 1, "second call within maxAge should reuse the cached result")
+        #expect(count == 1, "second call within maxAge should reuse the cached result")
     }
 
     // MARK: - Miss after expiry
 
-    func testMissAfterExpiryInvokesFetchAgain() async throws {
+    @Test("A call after maxAge has elapsed fetches again")
+    func missAfterExpiryInvokesFetchAgain() async throws {
         let cache = ShareableContentCache<Int>()
         let invocationCount = Counter()
 
@@ -45,15 +57,16 @@ final class ShareableContentCacheTests: XCTestCase {
         try await Task.sleep(for: .milliseconds(300))
         let second = try await cache.content(maxAge: .milliseconds(100), fetch: fetch)
 
-        XCTAssertEqual(first, 1)
-        XCTAssertEqual(second, 2)
+        #expect(first == 1)
+        #expect(second == 2)
         let count = await invocationCount.value
-        XCTAssertEqual(count, 2, "call after maxAge has elapsed should trigger a fresh fetch")
+        #expect(count == 2, "call after maxAge has elapsed should trigger a fresh fetch")
     }
 
     // MARK: - Concurrent callers join one in-flight fetch
 
-    func testConcurrentCallersJoinSingleInFlightFetch() async throws {
+    @Test("Concurrent callers join the single in-flight fetch")
+    func concurrentCallersJoinSingleInFlightFetch() async throws {
         let cache = ShareableContentCache<Int>()
         let invocationCount = Counter()
 
@@ -72,14 +85,15 @@ final class ShareableContentCacheTests: XCTestCase {
 
         let results = try await [first, second, third]
 
-        XCTAssertEqual(results, [42, 42, 42])
+        #expect(results == [42, 42, 42])
         let count = await invocationCount.value
-        XCTAssertEqual(count, 1, "concurrent callers should join the single in-flight fetch rather than starting their own")
+        #expect(count == 1, "concurrent callers should join the single in-flight fetch rather than starting their own")
     }
 
     // MARK: - One caller's cancellation doesn't poison the result for the other
 
-    func testCancellingOneCallerDoesNotAffectAnother() async throws {
+    @Test("Cancelling one caller does not affect another")
+    func cancellingOneCallerDoesNotAffectAnother() async throws {
         let cache = ShareableContentCache<Int>()
         let invocationCount = Counter()
 
@@ -102,9 +116,9 @@ final class ShareableContentCacheTests: XCTestCase {
         // cancellation.
         let survivingResult = try await cache.content(maxAge: .seconds(60), fetch: slowFetch)
 
-        XCTAssertEqual(survivingResult, 7)
+        #expect(survivingResult == 7)
         let count = await invocationCount.value
-        XCTAssertEqual(count, 1, "the surviving caller should not trigger a second fetch")
+        #expect(count == 1, "the surviving caller should not trigger a second fetch")
 
         // Whether the cancelled caller's own await throws or still observes
         // the shared result is incidental; what matters is that its

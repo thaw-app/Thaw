@@ -6,19 +6,22 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Foundation
 import SwiftUI
+import Testing
 @testable import Thaw
-import XCTest
 
-// MARK: - Permission Tests
-
+/// Covers ``Permission``'s request/poll cycle through its injected closures,
+/// so nothing here touches the real TCC database.
 @MainActor
-final class PermissionTests: XCTestCase {
-    func testPerformRequestRestartsPollingAfterChecksStop() throws {
+@Suite("Permission request polling")
+struct PermissionTests {
+    @Test("A request restarts polling after checks have been stopped")
+    func performRequestRestartsPollingAfterChecksStop() async throws {
         var isGranted = false
         var requestCount = 0
         var openedSettingsURLs = [URL]()
-        let settingsURL = try XCTUnwrap(
+        let settingsURL = try #require(
             URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")
         )
         let permission = Permission(
@@ -42,17 +45,25 @@ final class PermissionTests: XCTestCase {
         permission.performRequest()
         isGranted = true
 
-        let granted = expectation(description: "Permission grant is observed after polling restarts")
-        permission.onChange = {
-            if permission.hasPermission {
-                granted.fulfill()
+        // `onChange` fires on every poll tick, not once on transition.
+        // `confirmation` expects exactly one call and `resume` traps on a
+        // second, so latch the first grant and ignore every later tick.
+        await confirmation("Permission grant is observed after polling restarts") { granted in
+            await withCheckedContinuation { continuation in
+                var hasResumed = false
+                permission.onChange = {
+                    guard permission.hasPermission, !hasResumed else {
+                        return
+                    }
+                    hasResumed = true
+                    granted()
+                    continuation.resume()
+                }
             }
         }
 
-        wait(for: [granted], timeout: 5)
-
-        XCTAssertEqual(requestCount, 2)
-        XCTAssertEqual(openedSettingsURLs, [settingsURL, settingsURL])
-        XCTAssertTrue(permission.hasPermission)
+        #expect(requestCount == 2)
+        #expect(openedSettingsURLs == [settingsURL, settingsURL])
+        #expect(permission.hasPermission)
     }
 }

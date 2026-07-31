@@ -7,11 +7,13 @@
 //  Licensed under the GNU GPLv3
 
 import CoreGraphics
+import Testing
 @testable import Thaw
-import XCTest
 
-final class ImageCacheDisplayResolutionTests: XCTestCase {
-    func testUsesPreferredDisplayWhenConnected() {
+@Suite("Image cache display resolution")
+struct ImageCacheDisplayResolutionTests {
+    @Test("A connected preferred display is used as-is")
+    func usesPreferredDisplayWhenConnected() {
         let resolution = MenuBarItemImageCache.resolveDisplayID(
             preferredDisplayID: 200,
             availableDisplayIDs: [100, 200, 300],
@@ -19,10 +21,11 @@ final class ImageCacheDisplayResolutionTests: XCTestCase {
             mainDisplayID: 100
         )
 
-        XCTAssertEqual(resolution, .init(displayID: 200, usedFallback: false))
+        #expect(resolution == .init(displayID: 200, usedFallback: false))
     }
 
-    func testCachedDisplayIDFromDisconnectedMonitorShouldNotAbortImageCaching() {
+    @Test("A cached display ID from a disconnected monitor falls back instead of aborting")
+    func cachedDisplayIDFromDisconnectedMonitorShouldNotAbortImageCaching() {
         let resolution = MenuBarItemImageCache.resolveDisplayID(
             preferredDisplayID: 999,
             availableDisplayIDs: [100, 200, 300],
@@ -30,10 +33,11 @@ final class ImageCacheDisplayResolutionTests: XCTestCase {
             mainDisplayID: 100
         )
 
-        XCTAssertEqual(resolution, .init(displayID: 300, usedFallback: true))
+        #expect(resolution == .init(displayID: 300, usedFallback: true))
     }
 
-    func testNilPreferredDisplayFallsBackToActiveWithoutStaleDisplayFallback() {
+    @Test("No preferred display falls back to the active one without flagging a stale fallback")
+    func nilPreferredDisplayFallsBackToActiveWithoutStaleDisplayFallback() {
         let resolution = MenuBarItemImageCache.resolveDisplayID(
             preferredDisplayID: nil,
             availableDisplayIDs: [100, 200, 300],
@@ -41,10 +45,11 @@ final class ImageCacheDisplayResolutionTests: XCTestCase {
             mainDisplayID: 100
         )
 
-        XCTAssertEqual(resolution, .init(displayID: 300, usedFallback: false))
+        #expect(resolution == .init(displayID: 300, usedFallback: false))
     }
 
-    func testFallsBackToMainDisplayWhenPreferredAndActiveAreStale() {
+    @Test("A stale preferred and active display fall back to the main display")
+    func fallsBackToMainDisplayWhenPreferredAndActiveAreStale() {
         let resolution = MenuBarItemImageCache.resolveDisplayID(
             preferredDisplayID: 999,
             availableDisplayIDs: [100, 200, 300],
@@ -52,10 +57,11 @@ final class ImageCacheDisplayResolutionTests: XCTestCase {
             mainDisplayID: 200
         )
 
-        XCTAssertEqual(resolution, .init(displayID: 200, usedFallback: true))
+        #expect(resolution == .init(displayID: 200, usedFallback: true))
     }
 
-    func testFallsBackToFirstScreenWhenNoPreferredActiveOrMainMatchExists() {
+    @Test("With no preferred, active, or main match the first screen is used")
+    func fallsBackToFirstScreenWhenNoPreferredActiveOrMainMatchExists() {
         let resolution = MenuBarItemImageCache.resolveDisplayID(
             preferredDisplayID: 999,
             availableDisplayIDs: [100, 200, 300],
@@ -63,10 +69,11 @@ final class ImageCacheDisplayResolutionTests: XCTestCase {
             mainDisplayID: 777
         )
 
-        XCTAssertEqual(resolution, .init(displayID: 100, usedFallback: true))
+        #expect(resolution == .init(displayID: 100, usedFallback: true))
     }
 
-    func testReturnsNilForEmptyScreenList() {
+    @Test("An empty screen list resolves to nothing")
+    func returnsNilForEmptyScreenList() {
         let resolution = MenuBarItemImageCache.resolveDisplayID(
             preferredDisplayID: 999,
             availableDisplayIDs: [],
@@ -74,6 +81,6 @@ final class ImageCacheDisplayResolutionTests: XCTestCase {
             mainDisplayID: 777
         )
 
-        XCTAssertNil(resolution)
+        #expect(resolution == nil)
     }
 }

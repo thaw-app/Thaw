@@ -6,8 +6,9 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Foundation
+import Testing
 @testable import Thaw
-import XCTest
 
 /// Characterizes the gate that decides whether updating a profile should
 /// re-arm MenuBarItemManager's in-memory active-profile layout cache.
@@ -17,52 +18,48 @@ import XCTest
 /// later late-arrival re-sort reverts the bar to the pre-update spec. The fix
 /// re-arms the cache, but only for the active profile and only when the update
 /// captured a fresh layout. These tests pin that decision matrix down.
-final class ProfileManagerRearmGateTests: XCTestCase {
+@Suite("Profile manager re-arm gate")
+struct ProfileManagerRearmGateTests {
     /// Updating the active profile's layout must re-arm the cache.
-    func testActiveProfileLayoutOnlyUpdateRearms() {
+    @Test("A layout-only update of the active profile re-arms")
+    func activeProfileLayoutOnlyUpdateRearms() {
         let id = UUID()
-        XCTAssertTrue(
-            ProfileManager.shouldRearmActiveLayout(updatedID: id, activeID: id, scope: .layoutOnly)
-        )
+
+        #expect(ProfileManager.shouldRearmActiveLayout(updatedID: id, activeID: id, scope: .layoutOnly))
     }
 
     /// An "Update All" on the active profile also captures the layout, so it
     /// must re-arm.
-    func testActiveProfileAllUpdateRearms() {
+    @Test("An update-all of the active profile re-arms")
+    func activeProfileAllUpdateRearms() {
         let id = UUID()
-        XCTAssertTrue(
-            ProfileManager.shouldRearmActiveLayout(updatedID: id, activeID: id, scope: .all)
-        )
+
+        #expect(ProfileManager.shouldRearmActiveLayout(updatedID: id, activeID: id, scope: .all))
     }
 
     /// A configuration-only update changes no layout, so it must not touch the
     /// layout cache.
-    func testActiveProfileConfigurationOnlyDoesNotRearm() {
+    @Test("A configuration-only update of the active profile does not re-arm")
+    func activeProfileConfigurationOnlyDoesNotRearm() {
         let id = UUID()
-        XCTAssertFalse(
-            ProfileManager.shouldRearmActiveLayout(updatedID: id, activeID: id, scope: .configurationOnly)
-        )
+
+        #expect(!ProfileManager.shouldRearmActiveLayout(updatedID: id, activeID: id, scope: .configurationOnly))
     }
 
     /// Updating a profile that is not the active one must never touch live
     /// state, regardless of scope.
-    func testInactiveProfileUpdateDoesNotRearm() {
-        XCTAssertFalse(
-            ProfileManager.shouldRearmActiveLayout(updatedID: UUID(), activeID: UUID(), scope: .layoutOnly)
-        )
-        XCTAssertFalse(
-            ProfileManager.shouldRearmActiveLayout(updatedID: UUID(), activeID: UUID(), scope: .all)
-        )
+    @Test("Updating an inactive profile never re-arms, whatever the scope")
+    func inactiveProfileUpdateDoesNotRearm() {
+        #expect(!ProfileManager.shouldRearmActiveLayout(updatedID: UUID(), activeID: UUID(), scope: .layoutOnly))
+        #expect(!ProfileManager.shouldRearmActiveLayout(updatedID: UUID(), activeID: UUID(), scope: .all))
     }
 
     /// With no active profile there is nothing to re-arm.
-    func testNoActiveProfileDoesNotRearm() {
+    @Test("With no active profile there is nothing to re-arm")
+    func noActiveProfileDoesNotRearm() {
         let id = UUID()
-        XCTAssertFalse(
-            ProfileManager.shouldRearmActiveLayout(updatedID: id, activeID: nil, scope: .layoutOnly)
-        )
-        XCTAssertFalse(
-            ProfileManager.shouldRearmActiveLayout(updatedID: id, activeID: nil, scope: .all)
-        )
+
+        #expect(!ProfileManager.shouldRearmActiveLayout(updatedID: id, activeID: nil, scope: .layoutOnly))
+        #expect(!ProfileManager.shouldRearmActiveLayout(updatedID: id, activeID: nil, scope: .all))
     }
 }

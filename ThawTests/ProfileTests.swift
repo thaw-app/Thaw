@@ -6,13 +6,16 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Foundation
+import Testing
 @testable import Thaw
-import XCTest
 
-final class ProfileMetadataTests: XCTestCase {
+@Suite("Profile metadata")
+struct ProfileMetadataTests {
     // MARK: - Initialization Tests
 
-    func testInitialization() {
+    @Test("Metadata keeps every field it was built with")
+    func initialization() {
         let id = UUID()
         let now = Date()
         let metadata = ProfileMetadata(
@@ -24,15 +27,16 @@ final class ProfileMetadataTests: XCTestCase {
             associatedDisplayName: "Test Display"
         )
 
-        XCTAssertEqual(metadata.id, id)
-        XCTAssertEqual(metadata.name, "Test Profile")
-        XCTAssertEqual(metadata.createdAt, now)
-        XCTAssertEqual(metadata.modifiedAt, now)
-        XCTAssertEqual(metadata.associatedDisplayUUID, "test-uuid")
-        XCTAssertEqual(metadata.associatedDisplayName, "Test Display")
+        #expect(metadata.id == id)
+        #expect(metadata.name == "Test Profile")
+        #expect(metadata.createdAt == now)
+        #expect(metadata.modifiedAt == now)
+        #expect(metadata.associatedDisplayUUID == "test-uuid")
+        #expect(metadata.associatedDisplayName == "Test Display")
     }
 
-    func testInitializationWithNilOptionals() {
+    @Test("Metadata built without a display association reports none")
+    func initializationWithNilOptionals() {
         let id = UUID()
         let now = Date()
         let metadata = ProfileMetadata(
@@ -44,13 +48,14 @@ final class ProfileMetadataTests: XCTestCase {
             associatedDisplayName: nil
         )
 
-        XCTAssertNil(metadata.associatedDisplayUUID)
-        XCTAssertNil(metadata.associatedDisplayName)
+        #expect(metadata.associatedDisplayUUID == nil)
+        #expect(metadata.associatedDisplayName == nil)
     }
 
     // MARK: - Codable Tests
 
-    func testEncodeDecode() throws {
+    @Test("Metadata round-trips through JSON")
+    func encodeDecode() throws {
         let original = ProfileMetadata(
             id: UUID(),
             name: "Encoded Profile",
@@ -66,46 +71,52 @@ final class ProfileMetadataTests: XCTestCase {
         let data = try encoder.encode(original)
         let decoded = try decoder.decode(ProfileMetadata.self, from: data)
 
-        XCTAssertEqual(decoded.id, original.id)
-        XCTAssertEqual(decoded.name, original.name)
-        XCTAssertEqual(decoded.associatedDisplayUUID, original.associatedDisplayUUID)
-        XCTAssertEqual(decoded.associatedDisplayName, original.associatedDisplayName)
+        #expect(decoded.id == original.id)
+        #expect(decoded.name == original.name)
+        #expect(decoded.associatedDisplayUUID == original.associatedDisplayUUID)
+        #expect(decoded.associatedDisplayName == original.associatedDisplayName)
     }
 
     // MARK: - Hashable Tests
 
-    func testHashableConformance() {
+    @Test("Two metadata values with the same fields hash alike")
+    func hashableConformance() {
         let id = UUID()
         let now = Date()
         let metadata1 = ProfileMetadata(id: id, name: "Test", createdAt: now, modifiedAt: now)
         let metadata2 = ProfileMetadata(id: id, name: "Test", createdAt: now, modifiedAt: now)
 
-        XCTAssertEqual(metadata1.hashValue, metadata2.hashValue)
+        #expect(metadata1.hashValue == metadata2.hashValue)
     }
 
-    func testUniqueHashForDifferentIds() {
+    @Test("Two metadata values built separately get distinct identifiers")
+    func uniqueHashForDifferentIds() {
         let now = Date()
         let metadata1 = ProfileMetadata(id: UUID(), name: "Test", createdAt: now, modifiedAt: now)
         let metadata2 = ProfileMetadata(id: UUID(), name: "Test", createdAt: now, modifiedAt: now)
 
         // Different IDs should typically produce different hashes
         // (not guaranteed but highly likely)
-        XCTAssertNotEqual(metadata1.id, metadata2.id)
+        #expect(metadata1.id != metadata2.id)
     }
 
     // MARK: - Identifiable Tests
 
-    func testIdentifiable() {
+    @Test("Metadata is identified by the identifier it was given")
+    func identifiable() {
         let id = UUID()
         let metadata = ProfileMetadata(id: id, name: "Test", createdAt: Date(), modifiedAt: Date())
-        XCTAssertEqual(metadata.id, id)
+
+        #expect(metadata.id == id)
     }
 }
 
-final class MenuBarLayoutSnapshotTests: XCTestCase {
+@Suite("Menu bar layout snapshot")
+struct MenuBarLayoutSnapshotTests {
     // MARK: - Initialization Tests
 
-    func testBasicInitialization() {
+    @Test("A snapshot keeps every collection it was built with")
+    func basicInitialization() {
         let snapshot = MenuBarLayoutSnapshot(
             savedSectionOrder: ["visible": ["app1", "app2"]],
             pinnedHiddenBundleIDs: ["com.hidden.app"],
@@ -113,15 +124,16 @@ final class MenuBarLayoutSnapshotTests: XCTestCase {
             customNames: ["app1": "Custom Name"]
         )
 
-        XCTAssertEqual(snapshot.savedSectionOrder["visible"], ["app1", "app2"])
-        XCTAssertEqual(snapshot.pinnedHiddenBundleIDs, ["com.hidden.app"])
-        XCTAssertEqual(snapshot.pinnedAlwaysHiddenBundleIDs, ["com.always.hidden"])
-        XCTAssertEqual(snapshot.customNames["app1"], "Custom Name")
+        #expect(snapshot.savedSectionOrder["visible"] == ["app1", "app2"])
+        #expect(snapshot.pinnedHiddenBundleIDs == ["com.hidden.app"])
+        #expect(snapshot.pinnedAlwaysHiddenBundleIDs == ["com.always.hidden"])
+        #expect(snapshot.customNames["app1"] == "Custom Name")
     }
 
     // MARK: - Codable Tests
 
-    func testEncodeDecode() throws {
+    @Test("A snapshot round-trips through JSON")
+    func encodeDecode() throws {
         let original = MenuBarLayoutSnapshot(
             savedSectionOrder: ["visible": ["a", "b"], "hidden": ["c"]],
             pinnedHiddenBundleIDs: ["com.test.hidden"],
@@ -137,13 +149,14 @@ final class MenuBarLayoutSnapshotTests: XCTestCase {
         let data = try encoder.encode(original)
         let decoded = try decoder.decode(MenuBarLayoutSnapshot.self, from: data)
 
-        XCTAssertEqual(decoded.savedSectionOrder, original.savedSectionOrder)
-        XCTAssertEqual(decoded.pinnedHiddenBundleIDs, original.pinnedHiddenBundleIDs)
-        XCTAssertEqual(decoded.itemSectionMap, original.itemSectionMap)
-        XCTAssertEqual(decoded.itemOrder, original.itemOrder)
+        #expect(decoded.savedSectionOrder == original.savedSectionOrder)
+        #expect(decoded.pinnedHiddenBundleIDs == original.pinnedHiddenBundleIDs)
+        #expect(decoded.itemSectionMap == original.itemSectionMap)
+        #expect(decoded.itemOrder == original.itemOrder)
     }
 
-    func testDecodeWithMissingOptionals() throws {
+    @Test("A snapshot from an older profile format decodes with the new fields absent")
+    func decodeWithMissingOptionals() throws {
         // Simulate old profile format without new fields
         let json = """
         {
@@ -157,13 +170,14 @@ final class MenuBarLayoutSnapshotTests: XCTestCase {
         let decoder = JSONDecoder()
         let decoded = try decoder.decode(MenuBarLayoutSnapshot.self, from: json)
 
-        XCTAssertNil(decoded.itemSectionMap)
-        XCTAssertNil(decoded.itemOrder)
-        XCTAssertNil(decoded.newItemsPlacement)
-        XCTAssertNil(decoded.itemHotkeys)
+        #expect(decoded.itemSectionMap == nil)
+        #expect(decoded.itemOrder == nil)
+        #expect(decoded.newItemsPlacement == nil)
+        #expect(decoded.itemHotkeys == nil)
     }
 
-    func testLegacyLayoutUsesSavedOrderForItemOrderAndSections() throws {
+    @Test("A legacy layout falls back to the saved order for item order and sections")
+    func legacyLayoutUsesSavedOrderForItemOrderAndSections() throws {
         let json = """
         {
             "savedSectionOrder": {
@@ -179,15 +193,16 @@ final class MenuBarLayoutSnapshotTests: XCTestCase {
 
         let decoded = try JSONDecoder().decode(MenuBarLayoutSnapshot.self, from: json)
 
-        XCTAssertEqual(decoded.resolvedItemOrder, decoded.savedSectionOrder)
-        XCTAssertEqual(decoded.resolvedItemSectionMap, [
+        #expect(decoded.resolvedItemOrder == decoded.savedSectionOrder)
+        #expect(decoded.resolvedItemSectionMap == [
             "com.example.visible:Status": "visible",
             "com.example.hidden:Status": "hidden",
             "com.example.alwaysHidden:Status": "alwaysHidden",
         ])
     }
 
-    func testEncodeDecodeItemHotkeys() throws {
+    @Test("Per-item hotkeys round-trip through JSON")
+    func encodeDecodeItemHotkeys() throws {
         let original = MenuBarLayoutSnapshot(
             savedSectionOrder: [:],
             pinnedHiddenBundleIDs: [],
@@ -205,12 +220,13 @@ final class MenuBarLayoutSnapshotTests: XCTestCase {
         let data = try encoder.encode(original)
         let decoded = try decoder.decode(MenuBarLayoutSnapshot.self, from: data)
 
-        XCTAssertEqual(decoded.itemHotkeys?.count, 2)
-        XCTAssertEqual(decoded.itemHotkeys?["com.apple.controlcenter:WiFi"], Data([0x01, 0x02]))
-        XCTAssertEqual(decoded.itemHotkeys?["com.apple.controlcenter:Battery"], Data([0x03]))
+        #expect(decoded.itemHotkeys?.count == 2)
+        #expect(decoded.itemHotkeys?["com.apple.controlcenter:WiFi"] == Data([0x01, 0x02]))
+        #expect(decoded.itemHotkeys?["com.apple.controlcenter:Battery"] == Data([0x03]))
     }
 
-    func testEmptyCollections() {
+    @Test("A snapshot built from empty collections stays empty")
+    func emptyCollections() {
         let snapshot = MenuBarLayoutSnapshot(
             savedSectionOrder: [:],
             pinnedHiddenBundleIDs: [],
@@ -218,13 +234,14 @@ final class MenuBarLayoutSnapshotTests: XCTestCase {
             customNames: [:]
         )
 
-        XCTAssertTrue(snapshot.savedSectionOrder.isEmpty)
-        XCTAssertTrue(snapshot.pinnedHiddenBundleIDs.isEmpty)
-        XCTAssertTrue(snapshot.pinnedAlwaysHiddenBundleIDs.isEmpty)
-        XCTAssertTrue(snapshot.customNames.isEmpty)
+        #expect(snapshot.savedSectionOrder.isEmpty)
+        #expect(snapshot.pinnedHiddenBundleIDs.isEmpty)
+        #expect(snapshot.pinnedAlwaysHiddenBundleIDs.isEmpty)
+        #expect(snapshot.customNames.isEmpty)
     }
 
-    func testMultipleSections() throws {
+    @Test("A snapshot spanning all three sections round-trips every collection")
+    func multipleSections() throws {
         let snapshot = MenuBarLayoutSnapshot(
             savedSectionOrder: [
                 "visible": ["app1", "app2", "app3"],
@@ -252,33 +269,29 @@ final class MenuBarLayoutSnapshotTests: XCTestCase {
         let data = try encoder.encode(snapshot)
         let decoded = try decoder.decode(MenuBarLayoutSnapshot.self, from: data)
 
-        XCTAssertEqual(decoded.savedSectionOrder.count, 3)
-        XCTAssertEqual(decoded.pinnedHiddenBundleIDs.count, 2)
-        XCTAssertEqual(decoded.pinnedAlwaysHiddenBundleIDs.count, 1)
-        XCTAssertEqual(decoded.customNames.count, 2)
-        XCTAssertEqual(decoded.itemSectionMap?.count, 3)
-        XCTAssertEqual(decoded.itemOrder?.count, 3)
+        #expect(decoded.savedSectionOrder.count == 3)
+        #expect(decoded.pinnedHiddenBundleIDs.count == 2)
+        #expect(decoded.pinnedAlwaysHiddenBundleIDs.count == 1)
+        #expect(decoded.customNames.count == 2)
+        #expect(decoded.itemSectionMap?.count == 3)
+        #expect(decoded.itemOrder?.count == 3)
     }
 }
 
 // MARK: - Profile Tests
 
-final class ProfileFullTests: XCTestCase {
-    private var encoder: JSONEncoder!
-    private var decoder: JSONDecoder!
+@Suite("Profile")
+struct ProfileFullTests {
+    /// Swift Testing builds a fresh suite instance per test, so these stand in
+    /// for the XCTest `setUp` that rebuilt them before every case.
+    private let encoder: JSONEncoder
+    private let decoder: JSONDecoder
 
-    override func setUp() {
-        super.setUp()
+    init() {
         encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-    }
-
-    override func tearDown() {
-        encoder = nil
-        decoder = nil
-        super.tearDown()
     }
 
     // MARK: - Helper Methods
@@ -337,17 +350,23 @@ final class ProfileFullTests: XCTestCase {
 
     // MARK: - Initialization Tests
 
-    func testProfileInitWithContent() {
+    /// `id`, `createdAt` and `modifiedAt` are non-optional, so the XCTest
+    /// original's `XCTAssertNotNil` on them could never fail. The substantive
+    /// form is that the initializer *defaults* the timestamps to now; fresh
+    /// identifier generation is covered by ``profileInitGeneratesUniqueId()``.
+    @Test("A profile built from content takes its name and defaults its timestamps")
+    func profileInitWithContent() {
         let content = makeTestContent()
+        let before = Date()
         let profile = Profile(name: "Test Profile", content: content)
 
-        XCTAssertEqual(profile.name, "Test Profile")
-        XCTAssertNotNil(profile.id)
-        XCTAssertNotNil(profile.createdAt)
-        XCTAssertNotNil(profile.modifiedAt)
+        #expect(profile.name == "Test Profile")
+        #expect(profile.createdAt >= before)
+        #expect(profile.modifiedAt >= before)
     }
 
-    func testProfileInitWithCustomDates() {
+    @Test("A profile built with explicit identity keeps it verbatim")
+    func profileInitWithCustomDates() {
         let content = makeTestContent()
         let id = UUID()
         let created = Date(timeIntervalSince1970: 1_000_000)
@@ -361,69 +380,85 @@ final class ProfileFullTests: XCTestCase {
             content: content
         )
 
-        XCTAssertEqual(profile.id, id)
-        XCTAssertEqual(profile.createdAt, created)
-        XCTAssertEqual(profile.modifiedAt, modified)
+        #expect(profile.id == id)
+        #expect(profile.createdAt == created)
+        #expect(profile.modifiedAt == modified)
     }
 
-    func testProfileInitGeneratesUniqueId() {
+    @Test("Each profile gets its own identifier")
+    func profileInitGeneratesUniqueId() {
         let content = makeTestContent()
         let profile1 = Profile(name: "Profile 1", content: content)
         let profile2 = Profile(name: "Profile 2", content: content)
 
-        XCTAssertNotEqual(profile1.id, profile2.id)
+        #expect(profile1.id != profile2.id)
     }
 
     // MARK: - Metadata Property Tests
 
-    func testMetadataProperty() {
+    @Test("A profile's metadata mirrors its identity fields")
+    func metadataProperty() {
         let content = makeTestContent()
         let profile = Profile(name: "Metadata Test", content: content)
         let metadata = profile.metadata
 
-        XCTAssertEqual(metadata.id, profile.id)
-        XCTAssertEqual(metadata.name, profile.name)
-        XCTAssertEqual(metadata.createdAt, profile.createdAt)
-        XCTAssertEqual(metadata.modifiedAt, profile.modifiedAt)
+        #expect(metadata.id == profile.id)
+        #expect(metadata.name == profile.name)
+        #expect(metadata.createdAt == profile.createdAt)
+        #expect(metadata.modifiedAt == profile.modifiedAt)
     }
 
-    func testMetadataHasNoDisplayAssociation() {
+    @Test("A profile's metadata carries no display association")
+    func metadataHasNoDisplayAssociation() {
         let content = makeTestContent()
         let profile = Profile(name: "No Display", content: content)
         let metadata = profile.metadata
 
         // Metadata from Profile doesn't include display association
-        XCTAssertNil(metadata.associatedDisplayUUID)
-        XCTAssertNil(metadata.associatedDisplayName)
+        #expect(metadata.associatedDisplayUUID == nil)
+        #expect(metadata.associatedDisplayName == nil)
     }
 
     // MARK: - Content Property Tests
 
-    func testContentProperty() {
+    @Test("A profile's content property returns the settings it was built from")
+    func contentProperty() {
         let originalContent = makeTestContent()
         let profile = Profile(name: "Content Test", content: originalContent)
         let retrievedContent = profile.content
 
-        XCTAssertEqual(retrievedContent.generalSettings.showIceIcon, originalContent.generalSettings.showIceIcon)
-        XCTAssertEqual(retrievedContent.advancedSettings.enableAlwaysHiddenSection, originalContent.advancedSettings.enableAlwaysHiddenSection)
+        #expect(retrievedContent.generalSettings.showIceIcon == originalContent.generalSettings.showIceIcon)
+        #expect(
+            retrievedContent.advancedSettings.enableAlwaysHiddenSection
+                == originalContent.advancedSettings.enableAlwaysHiddenSection
+        )
     }
 
     // MARK: - Encode/Decode Tests
 
-    func testEncodeDecodeProfile() throws {
+    @Test("A profile round-trips through JSON")
+    func encodeDecodeProfile() throws {
         let content = makeTestContent()
         let original = Profile(name: "Encode Test", content: content)
 
         let data = try encoder.encode(original)
         let decoded = try decoder.decode(Profile.self, from: data)
 
-        XCTAssertEqual(decoded.id, original.id)
-        XCTAssertEqual(decoded.name, original.name)
-        XCTAssertEqual(decoded.generalSettings.showIceIcon, original.generalSettings.showIceIcon)
-        XCTAssertEqual(decoded.advancedSettings.enableAlwaysHiddenSection, original.advancedSettings.enableAlwaysHiddenSection)
+        #expect(decoded.id == original.id)
+        #expect(decoded.name == original.name)
+        #expect(decoded.generalSettings.showIceIcon == original.generalSettings.showIceIcon)
+        #expect(
+            decoded.advancedSettings.enableAlwaysHiddenSection
+                == original.advancedSettings.enableAlwaysHiddenSection
+        )
     }
 
-    func testDecodeProfileWithMissingFields() throws {
+    /// The settings blocks are non-optional, so the XCTest original's
+    /// `XCTAssertNotNil` on them could never fail. What the forward-compatible
+    /// decoder actually promises is that an absent block is filled from
+    /// `Defaults.DefaultValue`, which is what this asserts instead.
+    @Test("A profile JSON missing everything but a name decodes with default settings")
+    func decodeProfileWithMissingFields() throws {
         // Minimal JSON with only required fields
         let json = """
         {
@@ -433,23 +468,26 @@ final class ProfileFullTests: XCTestCase {
 
         let decoded = try decoder.decode(Profile.self, from: json)
 
-        XCTAssertEqual(decoded.name, "Minimal Profile")
-        XCTAssertNotNil(decoded.id)
-        XCTAssertNotNil(decoded.generalSettings)
-        XCTAssertNotNil(decoded.advancedSettings)
+        #expect(decoded.name == "Minimal Profile")
+        #expect(decoded.generalSettings.showIceIcon == Defaults.DefaultValue.showIceIcon)
+        #expect(
+            decoded.advancedSettings.enableAlwaysHiddenSection
+                == Defaults.DefaultValue.enableAlwaysHiddenSection
+        )
     }
 
-    func testDecodeProfileWithEmptyJSON() throws {
+    @Test("An empty profile JSON decodes to the untitled default")
+    func decodeProfileWithEmptyJSON() throws {
         let json = "{}".data(using: .utf8)!
 
         let decoded = try decoder.decode(Profile.self, from: json)
 
         // Should use defaults
-        XCTAssertEqual(decoded.name, String(localized: "Untitled"))
-        XCTAssertNotNil(decoded.id)
+        #expect(decoded.name == String(localized: "Untitled"))
     }
 
-    func testDecodeProfilePreservesAllFields() throws {
+    @Test("Hotkeys and display configurations survive the round trip")
+    func decodeProfilePreservesAllFields() throws {
         var content = makeTestContent()
         content.hotkeys = ["toggleHidden": Data([0x01, 0x02])]
         content.displayConfigurations = ["display1": .defaultConfiguration]
@@ -459,25 +497,31 @@ final class ProfileFullTests: XCTestCase {
         let data = try encoder.encode(original)
         let decoded = try decoder.decode(Profile.self, from: data)
 
-        XCTAssertEqual(decoded.hotkeys.count, 1)
-        XCTAssertNotNil(decoded.hotkeys["toggleHidden"])
-        XCTAssertEqual(decoded.displayConfigurations.count, 1)
+        #expect(decoded.hotkeys.count == 1)
+        #expect(decoded.hotkeys["toggleHidden"] != nil)
+        #expect(decoded.displayConfigurations.count == 1)
     }
 
     // MARK: - Identifiable Tests
 
-    func testProfileIsIdentifiable() {
+    /// `Profile` conforms to `Identifiable` with `ID == UUID`: binding `id` to
+    /// a typed local is the compile-time half of that claim, and matching the
+    /// metadata identifier is the runtime half. (The XCTest original asserted
+    /// non-nil on a non-optional `UUID`, which could never fail.)
+    @Test("A profile is identifiable by a UUID")
+    func profileIsIdentifiable() {
         let content = makeTestContent()
         let profile = Profile(name: "Identifiable", content: content)
 
-        // Profile conforms to Identifiable
         let id: UUID = profile.id
-        XCTAssertNotNil(id)
+
+        #expect(id == profile.metadata.id)
     }
 
     // MARK: - Date Handling Tests
 
-    func testDatesArePreservedOnEncodeDecode() throws {
+    @Test("Dates survive an ISO8601 round trip to within a second")
+    func datesArePreservedOnEncodeDecode() throws {
         let content = makeTestContent()
         let created = Date(timeIntervalSince1970: 1_609_459_200) // 2021-01-01
         let modified = Date(timeIntervalSince1970: 1_640_995_200) // 2022-01-01
@@ -492,15 +536,17 @@ final class ProfileFullTests: XCTestCase {
         let data = try encoder.encode(original)
         let decoded = try decoder.decode(Profile.self, from: data)
 
-        XCTAssertEqual(decoded.createdAt.timeIntervalSince1970, created.timeIntervalSince1970, accuracy: 1.0)
-        XCTAssertEqual(decoded.modifiedAt.timeIntervalSince1970, modified.timeIntervalSince1970, accuracy: 1.0)
+        #expect(abs(decoded.createdAt.timeIntervalSince1970 - created.timeIntervalSince1970) < 1.0)
+        #expect(abs(decoded.modifiedAt.timeIntervalSince1970 - modified.timeIntervalSince1970) < 1.0)
     }
 }
 
 // MARK: - ProfileContent Tests
 
-final class ProfileContentTests: XCTestCase {
-    func testProfileContentInitialization() {
+@Suite("Profile content")
+struct ProfileContentTests {
+    @Test("Content keeps the settings and collections it was built with")
+    func profileContentInitialization() {
         let generalSettings = GeneralSettingsSnapshot(
             showIceIcon: true,
             iceIcon: .defaultIceIcon,
@@ -555,13 +601,14 @@ final class ProfileContentTests: XCTestCase {
             )
         )
 
-        XCTAssertEqual(content.generalSettings.showIceIcon, true)
-        XCTAssertEqual(content.advancedSettings.enableAlwaysHiddenSection, true)
-        XCTAssertEqual(content.hotkeys.count, 1)
-        XCTAssertEqual(content.displayConfigurations.count, 1)
+        #expect(content.generalSettings.showIceIcon)
+        #expect(content.advancedSettings.enableAlwaysHiddenSection)
+        #expect(content.hotkeys.count == 1)
+        #expect(content.displayConfigurations.count == 1)
     }
 
-    func testProfileContentWithEmptyCollections() {
+    @Test("Content built with empty collections reports them empty")
+    func profileContentWithEmptyCollections() {
         let content = ProfileContent(
             generalSettings: GeneralSettingsSnapshot(
                 showIceIcon: true,
@@ -612,7 +659,7 @@ final class ProfileContentTests: XCTestCase {
             )
         )
 
-        XCTAssertTrue(content.hotkeys.isEmpty)
-        XCTAssertTrue(content.displayConfigurations.isEmpty)
+        #expect(content.hotkeys.isEmpty)
+        #expect(content.displayConfigurations.isEmpty)
     }
 }

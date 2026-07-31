@@ -6,148 +6,163 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Foundation
+import Testing
 @testable import Thaw
-import XCTest
 
-final class MenuBarAppearanceConfigurationV2Tests: XCTestCase {
-    // MARK: - Default Configuration Tests
+@Suite("Menu bar appearance configuration")
+struct MenuBarAppearanceConfigurationTests {
+    @Suite("MenuBarAppearanceConfigurationV2")
+    struct MenuBarAppearanceConfigurationV2Tests {
+        // MARK: - Default Configuration Tests
 
-    func testDefaultConfiguration() {
-        let config = MenuBarAppearanceConfigurationV2.defaultConfiguration
+        @Test("The default configuration ships the documented values")
+        func defaultConfiguration() {
+            let config = MenuBarAppearanceConfigurationV2.defaultConfiguration
 
-        XCTAssertEqual(config.shapeKind, .noShape)
-        XCTAssertTrue(config.isInset)
-        XCTAssertEqual(config.leftMargin, 0)
-        XCTAssertEqual(config.rightMargin, 0)
-        XCTAssertFalse(config.isDynamic)
-    }
-
-    // MARK: - Has Rounded Shape Tests
-
-    func testHasRoundedShapeNoShape() {
-        var config = MenuBarAppearanceConfigurationV2.defaultConfiguration
-        config.shapeKind = .noShape
-
-        XCTAssertFalse(config.hasRoundedShape)
-    }
-
-    // MARK: - Codable Tests
-
-    func testEncodeDecode() throws {
-        let original = MenuBarAppearanceConfigurationV2.defaultConfiguration
-
-        let encoder = JSONEncoder()
-        let decoder = JSONDecoder()
-
-        let data = try encoder.encode(original)
-        let decoded = try decoder.decode(MenuBarAppearanceConfigurationV2.self, from: data)
-
-        XCTAssertEqual(decoded.shapeKind, original.shapeKind)
-        XCTAssertEqual(decoded.isInset, original.isInset)
-        XCTAssertEqual(decoded.leftMargin, original.leftMargin)
-        XCTAssertEqual(decoded.rightMargin, original.rightMargin)
-        XCTAssertEqual(decoded.isDynamic, original.isDynamic)
-    }
-
-    func testDecodeWithMissingFields() throws {
-        // Test forward compatibility - decode with minimal JSON
-        let json = "{}".data(using: .utf8)!
-
-        let decoder = JSONDecoder()
-        let decoded = try decoder.decode(MenuBarAppearanceConfigurationV2.self, from: json)
-
-        // Should use default values for missing fields
-        let defaultConfig = MenuBarAppearanceConfigurationV2.defaultConfiguration
-        XCTAssertEqual(decoded.shapeKind, defaultConfig.shapeKind)
-        XCTAssertEqual(decoded.isInset, defaultConfig.isInset)
-    }
-
-    func testDecodeWithPartialFields() throws {
-        let json = """
-        {
-            "isDynamic": true,
-            "leftMargin": 10.0,
-            "rightMargin": 5.0
+            #expect(config.shapeKind == .noShape)
+            #expect(config.isInset)
+            #expect(config.leftMargin == 0)
+            #expect(config.rightMargin == 0)
+            #expect(!config.isDynamic)
         }
-        """.data(using: .utf8)!
 
-        let decoder = JSONDecoder()
-        let decoded = try decoder.decode(MenuBarAppearanceConfigurationV2.self, from: json)
+        // MARK: - Has Rounded Shape Tests
 
-        XCTAssertTrue(decoded.isDynamic)
-        XCTAssertEqual(decoded.leftMargin, 10.0)
-        XCTAssertEqual(decoded.rightMargin, 5.0)
-        // Other fields should have defaults
-        XCTAssertEqual(decoded.shapeKind, .noShape)
-    }
+        @Test("A configuration with no shape has no rounded shape")
+        func hasRoundedShapeNoShape() {
+            var config = MenuBarAppearanceConfigurationV2.defaultConfiguration
+            config.shapeKind = .noShape
 
-    // MARK: - Hashable Tests
+            #expect(!config.hasRoundedShape)
+        }
 
-    func testHashableIdentical() {
-        let config1 = MenuBarAppearanceConfigurationV2.defaultConfiguration
-        let config2 = MenuBarAppearanceConfigurationV2.defaultConfiguration
+        // MARK: - Codable Tests
 
-        XCTAssertEqual(config1.hashValue, config2.hashValue)
-    }
-}
+        @Test("The default configuration survives a round trip")
+        func encodeDecode() throws {
+            let original = MenuBarAppearanceConfigurationV2.defaultConfiguration
 
-// MARK: - MenuBarAppearanceV1MigrationTests
+            let encoder = JSONEncoder()
+            let decoder = JSONDecoder()
 
-/// Tests for converting V1 appearance data — the format Ice used before its
-/// `0.11.10` release — which reaches Thaw only through the Ice importer.
-///
-/// `MenuBarAppearanceConfigurationV1` is main-actor isolated, as is the
-/// importer that reads it, so these tests are too.
-@MainActor
-final class MenuBarAppearanceV1MigrationTests: XCTestCase {
-    private var oldConfiguration: MenuBarAppearanceConfigurationV1 {
-        withMutableCopy(of: MenuBarAppearanceConfigurationV1.defaultConfiguration) { configuration in
-            configuration.hasShadow = true
-            configuration.hasBorder = true
-            configuration.borderWidth = 3
-            configuration.tintKind = .solid
-            configuration.shapeKind = .full
-            configuration.isInset = false
+            let data = try encoder.encode(original)
+            let decoded = try decoder.decode(MenuBarAppearanceConfigurationV2.self, from: data)
+
+            #expect(decoded.shapeKind == original.shapeKind)
+            #expect(decoded.isInset == original.isInset)
+            #expect(decoded.leftMargin == original.leftMargin)
+            #expect(decoded.rightMargin == original.rightMargin)
+            #expect(decoded.isDynamic == original.isDynamic)
+        }
+
+        @Test("An empty payload decodes to the defaults")
+        func decodeWithMissingFields() throws {
+            // Test forward compatibility - decode with minimal JSON
+            let json = "{}".data(using: .utf8)!
+
+            let decoder = JSONDecoder()
+            let decoded = try decoder.decode(MenuBarAppearanceConfigurationV2.self, from: json)
+
+            // Should use default values for missing fields
+            let defaultConfig = MenuBarAppearanceConfigurationV2.defaultConfiguration
+            #expect(decoded.shapeKind == defaultConfig.shapeKind)
+            #expect(decoded.isInset == defaultConfig.isInset)
+        }
+
+        @Test("A partial payload decodes its own fields and defaults the rest")
+        func decodeWithPartialFields() throws {
+            let json = """
+            {
+                "isDynamic": true,
+                "leftMargin": 10.0,
+                "rightMargin": 5.0
+            }
+            """.data(using: .utf8)!
+
+            let decoder = JSONDecoder()
+            let decoded = try decoder.decode(MenuBarAppearanceConfigurationV2.self, from: json)
+
+            #expect(decoded.isDynamic)
+            #expect(decoded.leftMargin == 10.0)
+            #expect(decoded.rightMargin == 5.0)
+            // Other fields should have defaults
+            #expect(decoded.shapeKind == .noShape)
+        }
+
+        // MARK: - Hashable Tests
+
+        @Test("Two default configurations hash alike")
+        func hashableIdentical() {
+            let config1 = MenuBarAppearanceConfigurationV2.defaultConfiguration
+            let config2 = MenuBarAppearanceConfigurationV2.defaultConfiguration
+
+            #expect(config1.hashValue == config2.hashValue)
         }
     }
 
-    /// V1 had one set of values for every system appearance, so all three of
-    /// the current configuration's slots receive them.
-    func testMigratedValuesApplyToEveryAppearance() {
-        let configuration = MenuBarAppearanceConfigurationV2(migrating: oldConfiguration)
-        let partials = [
-            configuration.lightModeConfiguration,
-            configuration.darkModeConfiguration,
-            configuration.staticConfiguration,
-        ]
+    // MARK: - MenuBarAppearanceV1MigrationTests
 
-        for partial in partials {
-            XCTAssertTrue(partial.hasShadow)
-            XCTAssertTrue(partial.hasBorder)
-            XCTAssertEqual(partial.borderWidth, 3)
-            XCTAssertEqual(partial.tintKind, .solid)
+    /// Tests for converting V1 appearance data — the format Ice used before its
+    /// `0.11.10` release — which reaches Thaw only through the Ice importer.
+    ///
+    /// `MenuBarAppearanceConfigurationV1` is main-actor isolated, as is the
+    /// importer that reads it, so these tests are too.
+    @MainActor
+    @Suite("V1 migration")
+    struct MenuBarAppearanceV1MigrationTests {
+        private var oldConfiguration: MenuBarAppearanceConfigurationV1 {
+            withMutableCopy(of: MenuBarAppearanceConfigurationV1.defaultConfiguration) { configuration in
+                configuration.hasShadow = true
+                configuration.hasBorder = true
+                configuration.borderWidth = 3
+                configuration.tintKind = .solid
+                configuration.shapeKind = .full
+                configuration.isInset = false
+            }
         }
-    }
 
-    /// Shape and inset sit on the configuration itself in both formats.
-    func testMigratedShapeAndInset() {
-        let configuration = MenuBarAppearanceConfigurationV2(migrating: oldConfiguration)
+        /// V1 had one set of values for every system appearance, so all three of
+        /// the current configuration's slots receive them.
+        @Test("Migrated values apply to every appearance")
+        func migratedValuesApplyToEveryAppearance() {
+            let configuration = MenuBarAppearanceConfigurationV2(migrating: oldConfiguration)
+            let partials = [
+                configuration.lightModeConfiguration,
+                configuration.darkModeConfiguration,
+                configuration.staticConfiguration,
+            ]
 
-        XCTAssertEqual(configuration.shapeKind, .full)
-        XCTAssertFalse(configuration.isInset)
-    }
+            for partial in partials {
+                #expect(partial.hasShadow)
+                #expect(partial.hasBorder)
+                #expect(partial.borderWidth == 3)
+                #expect(partial.tintKind == .solid)
+            }
+        }
 
-    /// V1 had no background, opacity, or notch values, so those keep the
-    /// current defaults rather than being zeroed out.
-    func testValuesAbsentFromV1KeepDefaults() {
-        let configuration = MenuBarAppearanceConfigurationV2(migrating: oldConfiguration)
-        let defaultConfiguration = MenuBarAppearanceConfigurationV2.defaultConfiguration
-        let defaultPartial = MenuBarAppearancePartialConfiguration.defaultConfiguration
+        /// Shape and inset sit on the configuration itself in both formats.
+        @Test("Shape and inset are carried across")
+        func migratedShapeAndInset() {
+            let configuration = MenuBarAppearanceConfigurationV2(migrating: oldConfiguration)
 
-        XCTAssertEqual(configuration.staticConfiguration.backgroundKind, defaultPartial.backgroundKind)
-        XCTAssertEqual(configuration.staticConfiguration.tintOpacity, defaultPartial.tintOpacity)
-        XCTAssertEqual(configuration.staticConfiguration.backgroundOpacity, defaultPartial.backgroundOpacity)
-        XCTAssertEqual(configuration.notchShapeInfo, defaultConfiguration.notchShapeInfo)
-        XCTAssertEqual(configuration.isDynamic, defaultConfiguration.isDynamic)
+            #expect(configuration.shapeKind == .full)
+            #expect(!configuration.isInset)
+        }
+
+        /// V1 had no background, opacity, or notch values, so those keep the
+        /// current defaults rather than being zeroed out.
+        @Test("Values absent from V1 keep the current defaults")
+        func valuesAbsentFromV1KeepDefaults() {
+            let configuration = MenuBarAppearanceConfigurationV2(migrating: oldConfiguration)
+            let defaultConfiguration = MenuBarAppearanceConfigurationV2.defaultConfiguration
+            let defaultPartial = MenuBarAppearancePartialConfiguration.defaultConfiguration
+
+            #expect(configuration.staticConfiguration.backgroundKind == defaultPartial.backgroundKind)
+            #expect(configuration.staticConfiguration.tintOpacity == defaultPartial.tintOpacity)
+            #expect(configuration.staticConfiguration.backgroundOpacity == defaultPartial.backgroundOpacity)
+            #expect(configuration.notchShapeInfo == defaultConfiguration.notchShapeInfo)
+            #expect(configuration.isDynamic == defaultConfiguration.isDynamic)
+        }
     }
 }

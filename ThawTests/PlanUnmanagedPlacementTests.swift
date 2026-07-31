@@ -6,8 +6,8 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Testing
 @testable import Thaw
-import XCTest
 
 /// Characterization tests for LayoutSolver.planUnmanagedPlacement.
 ///
@@ -15,9 +15,11 @@ import XCTest
 /// bar but not covered by a profile spec. Saved positions win; otherwise
 /// the user's NewItemsPlacement preference applies; otherwise fall back
 /// to the section default.
-final class PlanUnmanagedPlacementTests: XCTestCase {
+@Suite("Plan unmanaged placement")
+struct PlanUnmanagedPlacementTests {
     /// All unmanaged items have saved positions → all placements are .saved.
-    func testAllSavedReturnsSavedPlacements() {
+    @Test("Unmanaged items with saved positions all get saved placements")
+    func allSavedReturnsSavedPlacements() {
         let saved: [String: [String]] = [
             "visible": ["com.a.app:A", "com.b.app:B"],
             "hidden": ["com.c.app:C"],
@@ -35,13 +37,14 @@ final class PlanUnmanagedPlacementTests: XCTestCase {
             currentUIDs: Set(["com.a.app:A", "com.c.app:C"])
         )
 
-        XCTAssertEqual(result["com.a.app:A"], .saved(section: .visible, index: 0))
-        XCTAssertEqual(result["com.c.app:C"], .saved(section: .hidden, index: 0))
+        #expect(result["com.a.app:A"] == .saved(section: .visible, index: 0))
+        #expect(result["com.c.app:C"] == .saved(section: .hidden, index: 0))
     }
 
     /// No saved positions, no anchor → all .newItemDefault in the
     /// new-items section.
-    func testAllUnseenReturnsNewItemDefault() {
+    @Test("An unseen item with no anchor lands in the new-items section")
+    func allUnseenReturnsNewItemDefault() {
         let placement = MenuBarItemManager.NewItemsPlacement(
             sectionKey: "hidden",
             anchorIdentifier: nil,
@@ -55,11 +58,12 @@ final class PlanUnmanagedPlacementTests: XCTestCase {
             currentUIDs: ["com.new.app:Status"]
         )
 
-        XCTAssertEqual(result["com.new.app:Status"], .newItemDefault(section: .hidden))
+        #expect(result["com.new.app:Status"] == .newItemDefault(section: .hidden))
     }
 
     /// Mixed: one saved, one unseen → correct per-uid placements.
-    func testMixedSavedAndUnseen() {
+    @Test("A mix of saved and unseen items gets per-uid placements")
+    func mixedSavedAndUnseen() {
         let saved: [String: [String]] = [
             "visible": ["com.known.app:Status"],
         ]
@@ -76,14 +80,15 @@ final class PlanUnmanagedPlacementTests: XCTestCase {
             currentUIDs: ["com.known.app:Status", "com.new.app:Status"]
         )
 
-        XCTAssertEqual(result["com.known.app:Status"], .saved(section: .visible, index: 0))
-        XCTAssertEqual(result["com.new.app:Status"], .newItemDefault(section: .hidden))
+        #expect(result["com.known.app:Status"] == .saved(section: .visible, index: 0))
+        #expect(result["com.new.app:Status"] == .newItemDefault(section: .hidden))
     }
 
     /// Multi-instance: only one instance is saved, the other instance is
     /// the unmanaged one. baseID fallback gives the unmanaged instance
     /// the saved position (treating them as fungible).
-    func testMultiInstanceBaseIDFallback() {
+    @Test("A different instance index falls back to the saved baseID slot")
+    func multiInstanceBaseIDFallback() {
         let saved: [String: [String]] = [
             "hidden": ["com.example.app:Status"], // saved without :N suffix
         ]
@@ -102,13 +107,16 @@ final class PlanUnmanagedPlacementTests: XCTestCase {
             currentUIDs: ["com.example.app:Status:7"]
         )
 
-        XCTAssertEqual(result["com.example.app:Status:7"], .saved(section: .hidden, index: 0),
-                       "unmanaged instance with matching baseID should use the saved slot")
+        #expect(
+            result["com.example.app:Status:7"] == .saved(section: .hidden, index: 0),
+            "unmanaged instance with matching baseID should use the saved slot"
+        )
     }
 
     /// NewItemsPlacement configured with an anchor that's currently
     /// present → .newItemAnchored returned for an unseen item.
-    func testAnchorPlacementWhenAnchorPresent() {
+    @Test("A present anchor produces an anchored placement")
+    func anchorPlacementWhenAnchorPresent() {
         let placement = MenuBarItemManager.NewItemsPlacement(
             sectionKey: "visible",
             anchorIdentifier: "com.spotlight.app:Anchor",
@@ -122,9 +130,8 @@ final class PlanUnmanagedPlacementTests: XCTestCase {
             currentUIDs: ["com.new.app:Status", "com.spotlight.app:Anchor"]
         )
 
-        XCTAssertEqual(
-            result["com.new.app:Status"],
-            .newItemAnchored(
+        #expect(
+            result["com.new.app:Status"] == .newItemAnchored(
                 section: .visible,
                 anchorUID: "com.spotlight.app:Anchor",
                 relation: .leftOfAnchor
@@ -134,7 +141,8 @@ final class PlanUnmanagedPlacementTests: XCTestCase {
 
     /// NewItemsPlacement anchor configured but anchor item is absent from
     /// the current menu bar → fall back to .newItemDefault.
-    func testAnchorAbsentFallsBackToDefault() {
+    @Test("An absent anchor falls back to the section default")
+    func anchorAbsentFallsBackToDefault() {
         let placement = MenuBarItemManager.NewItemsPlacement(
             sectionKey: "visible",
             anchorIdentifier: "com.absent.app:Anchor",
@@ -148,6 +156,6 @@ final class PlanUnmanagedPlacementTests: XCTestCase {
             currentUIDs: ["com.new.app:Status"]
         )
 
-        XCTAssertEqual(result["com.new.app:Status"], .newItemDefault(section: .visible))
+        #expect(result["com.new.app:Status"] == .newItemDefault(section: .visible))
     }
 }

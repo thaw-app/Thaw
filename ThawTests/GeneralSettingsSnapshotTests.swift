@@ -6,24 +6,23 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Foundation
+import Testing
 @testable import Thaw
-import XCTest
 
-final class GeneralSettingsSnapshotTests: XCTestCase {
-    private var encoder: JSONEncoder!
-    private var decoder: JSONDecoder!
-
-    override func setUp() {
-        super.setUp()
-        encoder = JSONEncoder()
-        decoder = JSONDecoder()
-    }
-
-    override func tearDown() {
-        encoder = nil
-        decoder = nil
-        super.tearDown()
-    }
+/// Covers ``GeneralSettingsSnapshot``'s value semantics and its `Codable`
+/// conformance.
+///
+/// The snapshot is the on-disk shape of a profile's General pane, so the icon
+/// payloads, the enum-backed Ice Bar location, and the raw rehide strategy all
+/// have to survive a round trip unchanged.
+///
+/// Reads only; nothing here touches the defaults domain, so the suite is safe
+/// to run in parallel with the rest.
+@Suite("General settings snapshot")
+struct GeneralSettingsSnapshotTests {
+    private let encoder = JSONEncoder()
+    private let decoder = JSONDecoder()
 
     // MARK: - Helper Methods
 
@@ -73,106 +72,113 @@ final class GeneralSettingsSnapshotTests: XCTestCase {
 
     // MARK: - Initialization Tests
 
-    func testDefaultSnapshotValues() {
+    @Test("The default snapshot holds the values it was built with")
+    func defaultSnapshotValues() {
         let snapshot = makeDefaultSnapshot()
 
-        XCTAssertTrue(snapshot.showIceIcon)
-        XCTAssertNil(snapshot.lastCustomIceIcon)
-        XCTAssertTrue(snapshot.customIceIconIsTemplate)
-        XCTAssertFalse(snapshot.useIceBar)
-        XCTAssertFalse(snapshot.useIceBarOnlyOnNotchedDisplay)
-        XCTAssertEqual(snapshot.iceBarLocation, .dynamic)
-        XCTAssertFalse(snapshot.iceBarLocationOnHotkey)
-        XCTAssertTrue(snapshot.showOnClick)
-        XCTAssertFalse(snapshot.showOnDoubleClick)
-        XCTAssertFalse(snapshot.showOnHover)
-        XCTAssertFalse(snapshot.showOnScroll)
-        XCTAssertTrue(snapshot.autoRehide)
-        XCTAssertEqual(snapshot.rehideStrategyRawValue, 0)
-        XCTAssertEqual(snapshot.rehideInterval, 15)
+        #expect(snapshot.showIceIcon)
+        #expect(snapshot.lastCustomIceIcon == nil)
+        #expect(snapshot.customIceIconIsTemplate)
+        #expect(!snapshot.useIceBar)
+        #expect(!snapshot.useIceBarOnlyOnNotchedDisplay)
+        #expect(snapshot.iceBarLocation == .dynamic)
+        #expect(!snapshot.iceBarLocationOnHotkey)
+        #expect(snapshot.showOnClick)
+        #expect(!snapshot.showOnDoubleClick)
+        #expect(!snapshot.showOnHover)
+        #expect(!snapshot.showOnScroll)
+        #expect(snapshot.autoRehide)
+        #expect(snapshot.rehideStrategyRawValue == 0)
+        #expect(snapshot.rehideInterval == 15)
     }
 
-    func testCustomSnapshotValues() {
+    @Test("A custom snapshot holds the values it was built with")
+    func customSnapshotValues() {
         let snapshot = makeCustomSnapshot()
 
-        XCTAssertFalse(snapshot.showIceIcon)
-        XCTAssertNotNil(snapshot.lastCustomIceIcon)
-        XCTAssertFalse(snapshot.customIceIconIsTemplate)
-        XCTAssertTrue(snapshot.useIceBar)
-        XCTAssertTrue(snapshot.useIceBarOnlyOnNotchedDisplay)
-        XCTAssertEqual(snapshot.iceBarLocation, .mousePointer)
-        XCTAssertTrue(snapshot.iceBarLocationOnHotkey)
-        XCTAssertFalse(snapshot.showOnClick)
-        XCTAssertTrue(snapshot.showOnDoubleClick)
-        XCTAssertTrue(snapshot.showOnHover)
-        XCTAssertTrue(snapshot.showOnScroll)
-        XCTAssertFalse(snapshot.autoRehide)
-        XCTAssertEqual(snapshot.rehideStrategyRawValue, 2)
-        XCTAssertEqual(snapshot.rehideInterval, 30)
+        #expect(!snapshot.showIceIcon)
+        #expect(snapshot.lastCustomIceIcon != nil)
+        #expect(!snapshot.customIceIconIsTemplate)
+        #expect(snapshot.useIceBar)
+        #expect(snapshot.useIceBarOnlyOnNotchedDisplay)
+        #expect(snapshot.iceBarLocation == .mousePointer)
+        #expect(snapshot.iceBarLocationOnHotkey)
+        #expect(!snapshot.showOnClick)
+        #expect(snapshot.showOnDoubleClick)
+        #expect(snapshot.showOnHover)
+        #expect(snapshot.showOnScroll)
+        #expect(!snapshot.autoRehide)
+        #expect(snapshot.rehideStrategyRawValue == 2)
+        #expect(snapshot.rehideInterval == 30)
     }
 
     // MARK: - Encode/Decode Tests
 
-    func testEncodeDecodeDefaultSnapshot() throws {
+    @Test("The default snapshot survives a round trip")
+    func encodeDecodeDefaultSnapshot() throws {
         let original = makeDefaultSnapshot()
 
         let data = try encoder.encode(original)
         let decoded = try decoder.decode(GeneralSettingsSnapshot.self, from: data)
 
-        XCTAssertEqual(decoded.showIceIcon, original.showIceIcon)
-        XCTAssertEqual(decoded.customIceIconIsTemplate, original.customIceIconIsTemplate)
-        XCTAssertEqual(decoded.useIceBar, original.useIceBar)
-        XCTAssertEqual(decoded.iceBarLocation, original.iceBarLocation)
-        XCTAssertEqual(decoded.showOnClick, original.showOnClick)
-        XCTAssertEqual(decoded.autoRehide, original.autoRehide)
-        XCTAssertEqual(decoded.rehideStrategyRawValue, original.rehideStrategyRawValue)
-        XCTAssertEqual(decoded.rehideInterval, original.rehideInterval)
+        #expect(decoded.showIceIcon == original.showIceIcon)
+        #expect(decoded.customIceIconIsTemplate == original.customIceIconIsTemplate)
+        #expect(decoded.useIceBar == original.useIceBar)
+        #expect(decoded.iceBarLocation == original.iceBarLocation)
+        #expect(decoded.showOnClick == original.showOnClick)
+        #expect(decoded.autoRehide == original.autoRehide)
+        #expect(decoded.rehideStrategyRawValue == original.rehideStrategyRawValue)
+        #expect(decoded.rehideInterval == original.rehideInterval)
     }
 
-    func testEncodeDecodeCustomSnapshot() throws {
+    @Test("A custom snapshot survives a round trip")
+    func encodeDecodeCustomSnapshot() throws {
         let original = makeCustomSnapshot()
 
         let data = try encoder.encode(original)
         let decoded = try decoder.decode(GeneralSettingsSnapshot.self, from: data)
 
-        XCTAssertEqual(decoded.showIceIcon, false)
-        XCTAssertEqual(decoded.customIceIconIsTemplate, false)
-        XCTAssertEqual(decoded.useIceBar, true)
-        XCTAssertEqual(decoded.useIceBarOnlyOnNotchedDisplay, true)
-        XCTAssertEqual(decoded.iceBarLocation, .mousePointer)
-        XCTAssertEqual(decoded.iceBarLocationOnHotkey, true)
-        XCTAssertEqual(decoded.showOnClick, false)
-        XCTAssertEqual(decoded.showOnDoubleClick, true)
-        XCTAssertEqual(decoded.showOnHover, true)
-        XCTAssertEqual(decoded.showOnScroll, true)
-        XCTAssertEqual(decoded.autoRehide, false)
-        XCTAssertEqual(decoded.rehideStrategyRawValue, 2)
-        XCTAssertEqual(decoded.rehideInterval, 30)
+        #expect(decoded.showIceIcon == false)
+        #expect(decoded.customIceIconIsTemplate == false)
+        #expect(decoded.useIceBar == true)
+        #expect(decoded.useIceBarOnlyOnNotchedDisplay == true)
+        #expect(decoded.iceBarLocation == .mousePointer)
+        #expect(decoded.iceBarLocationOnHotkey == true)
+        #expect(decoded.showOnClick == false)
+        #expect(decoded.showOnDoubleClick == true)
+        #expect(decoded.showOnHover == true)
+        #expect(decoded.showOnScroll == true)
+        #expect(decoded.autoRehide == false)
+        #expect(decoded.rehideStrategyRawValue == 2)
+        #expect(decoded.rehideInterval == 30)
     }
 
-    func testEncodeDecodeWithNilLastCustomIcon() throws {
+    @Test("An absent last custom icon survives a round trip")
+    func encodeDecodeWithNilLastCustomIcon() throws {
         var snapshot = makeDefaultSnapshot()
         snapshot.lastCustomIceIcon = nil
 
         let data = try encoder.encode(snapshot)
         let decoded = try decoder.decode(GeneralSettingsSnapshot.self, from: data)
 
-        XCTAssertNil(decoded.lastCustomIceIcon)
+        #expect(decoded.lastCustomIceIcon == nil)
     }
 
-    func testEncodeDecodeWithLastCustomIcon() throws {
+    @Test("A stored last custom icon survives a round trip")
+    func encodeDecodeWithLastCustomIcon() throws {
         var snapshot = makeDefaultSnapshot()
         snapshot.lastCustomIceIcon = ControlItemImageSet.userSelectableIceIcons.first { $0.name == .chevron }
 
         let data = try encoder.encode(snapshot)
         let decoded = try decoder.decode(GeneralSettingsSnapshot.self, from: data)
 
-        XCTAssertNotNil(decoded.lastCustomIceIcon)
+        #expect(decoded.lastCustomIceIcon != nil)
     }
 
     // MARK: - IceBarLocation Tests
 
-    func testAllIceBarLocations() throws {
+    @Test("Every Ice Bar location survives a round trip")
+    func allIceBarLocations() throws {
         for location in IceBarLocation.allCases {
             var snapshot = makeDefaultSnapshot()
             snapshot.iceBarLocation = location
@@ -180,13 +186,14 @@ final class GeneralSettingsSnapshotTests: XCTestCase {
             let data = try encoder.encode(snapshot)
             let decoded = try decoder.decode(GeneralSettingsSnapshot.self, from: data)
 
-            XCTAssertEqual(decoded.iceBarLocation, location)
+            #expect(decoded.iceBarLocation == location)
         }
     }
 
     // MARK: - RehideStrategy Tests
 
-    func testAllRehideStrategyRawValues() throws {
+    @Test("Every rehide strategy raw value survives a round trip")
+    func allRehideStrategyRawValues() throws {
         for strategy in RehideStrategy.allCases {
             var snapshot = makeDefaultSnapshot()
             snapshot.rehideStrategyRawValue = strategy.rawValue
@@ -194,33 +201,36 @@ final class GeneralSettingsSnapshotTests: XCTestCase {
             let data = try encoder.encode(snapshot)
             let decoded = try decoder.decode(GeneralSettingsSnapshot.self, from: data)
 
-            XCTAssertEqual(decoded.rehideStrategyRawValue, strategy.rawValue)
+            #expect(decoded.rehideStrategyRawValue == strategy.rawValue)
         }
     }
 
     // MARK: - Edge Cases
 
-    func testLargeRehideInterval() throws {
+    @Test("A large rehide interval survives a round trip")
+    func largeRehideInterval() throws {
         var snapshot = makeDefaultSnapshot()
         snapshot.rehideInterval = 3600 // 1 hour
 
         let data = try encoder.encode(snapshot)
         let decoded = try decoder.decode(GeneralSettingsSnapshot.self, from: data)
 
-        XCTAssertEqual(decoded.rehideInterval, 3600)
+        #expect(decoded.rehideInterval == 3600)
     }
 
-    func testZeroRehideInterval() throws {
+    @Test("A zero rehide interval survives a round trip")
+    func zeroRehideInterval() throws {
         var snapshot = makeDefaultSnapshot()
         snapshot.rehideInterval = 0
 
         let data = try encoder.encode(snapshot)
         let decoded = try decoder.decode(GeneralSettingsSnapshot.self, from: data)
 
-        XCTAssertEqual(decoded.rehideInterval, 0)
+        #expect(decoded.rehideInterval == 0)
     }
 
-    func testFractionalShowOnHoverDelay() throws {
+    @Test("A fractional rehide interval survives a round trip")
+    func fractionalShowOnHoverDelay() throws {
         var snapshot = makeDefaultSnapshot()
         // showOnHoverDelay not in GeneralSettingsSnapshot, but rehideInterval is TimeInterval
         snapshot.rehideInterval = 15.5
@@ -228,6 +238,6 @@ final class GeneralSettingsSnapshotTests: XCTestCase {
         let data = try encoder.encode(snapshot)
         let decoded = try decoder.decode(GeneralSettingsSnapshot.self, from: data)
 
-        XCTAssertEqual(decoded.rehideInterval, 15.5, accuracy: 0.001)
+        #expect(abs(decoded.rehideInterval - 15.5) < 0.001)
     }
 }

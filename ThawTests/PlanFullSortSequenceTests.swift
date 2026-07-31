@@ -6,21 +6,23 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Testing
 @testable import Thaw
-import XCTest
 
 /// Characterization tests for LayoutSolver.planFullSortSequence.
 ///
 /// Pins down the sequence construction used by applyProfileLayout on
 /// notched displays: items grouped AH → hidden → visible, with control
 /// items at section boundaries. No-op when current already matches.
-final class PlanFullSortSequenceTests: XCTestCase {
+@Suite("Plan full sort sequence")
+struct PlanFullSortSequenceTests {
     private let hiddenCtrl = "thaw:HiddenControlItem"
     private let ahCtrl = "thaw:AlwaysHiddenControlItem"
 
     /// Items group by section in the order AH → AH ctrl → hidden → hidden
     /// ctrl → visible. Control items land at the section boundaries.
-    func testItemsGroupAlwaysHiddenThenHiddenThenVisible() {
+    @Test("Items group always-hidden, then hidden, then visible")
+    func itemsGroupAlwaysHiddenThenHiddenThenVisible() {
         // desiredFiltered with controls and items mixed: the planner
         // re-orders into the canonical sequence.
         let desired = ["v1", "v2", hiddenCtrl, "h1", "h2", ahCtrl, "ah1", "ah2"]
@@ -38,16 +40,16 @@ final class PlanFullSortSequenceTests: XCTestCase {
             ahCtrlUID: ahCtrl
         )
 
-        XCTAssertEqual(
-            sequence,
-            ["ah1", "ah2", ahCtrl, "h1", "h2", hiddenCtrl, "v1", "v2"],
+        #expect(
+            sequence == ["ah1", "ah2", ahCtrl, "h1", "h2", hiddenCtrl, "v1", "v2"],
             "sequence must place AH items, then AH ctrl, then hidden items, then hidden ctrl, then visible items"
         )
     }
 
     /// When the always-hidden control item is absent, the sequence omits
     /// it entirely. AH-tagged items still come before the hidden ctrl.
-    func testEmptyAlwaysHiddenControlOmittedFromSequence() {
+    @Test("An absent always-hidden control item is omitted from the sequence")
+    func emptyAlwaysHiddenControlOmittedFromSequence() {
         let desired = ["v1", hiddenCtrl, "h1"]
         let sectionMap: [String: String] = [
             "v1": "visible",
@@ -62,13 +64,14 @@ final class PlanFullSortSequenceTests: XCTestCase {
             ahCtrlUID: nil
         )
 
-        XCTAssertEqual(sequence, ["h1", hiddenCtrl, "v1"])
-        XCTAssertFalse(sequence.contains(ahCtrl))
+        #expect(sequence == ["h1", hiddenCtrl, "v1"])
+        #expect(!sequence.contains(ahCtrl))
     }
 
     /// An empty desired section is just absent from the sequence; the
     /// section dividers still appear at the correct boundaries.
-    func testEmptySectionIsOmittedFromSequence() {
+    @Test("An empty section is omitted while the dividers keep their boundaries")
+    func emptySectionIsOmittedFromSequence() {
         // No always-hidden items, no hidden items, just one visible item.
         let desired = ["v1", hiddenCtrl, ahCtrl]
         let sectionMap = ["v1": "visible"]
@@ -83,10 +86,11 @@ final class PlanFullSortSequenceTests: XCTestCase {
 
         // Empty AH section, empty hidden section, one visible item.
         // Sequence: AH ctrl, hidden ctrl, v1.
-        XCTAssertEqual(sequence, [ahCtrl, hiddenCtrl, "v1"])
+        #expect(sequence == [ahCtrl, hiddenCtrl, "v1"])
     }
 
-    func testTrimsOrderedPrefixForSingleOutOfPlaceItem() {
+    @Test("A single out-of-place item trims the already-ordered prefix")
+    func trimsOrderedPrefixForSingleOutOfPlaceItem() {
         let desired = ["v1", "v2", "v3", hiddenCtrl, "h1", "nowPlaying", ahCtrl, "ah1", "ah2"]
         let sectionMap: [String: String] = [
             "v1": "visible", "v2": "visible", "v3": "visible",
@@ -103,10 +107,11 @@ final class PlanFullSortSequenceTests: XCTestCase {
             ahCtrlUID: ahCtrl
         )
 
-        XCTAssertEqual(sequence, [hiddenCtrl, "v1", "v2", "v3"])
+        #expect(sequence == [hiddenCtrl, "v1", "v2", "v3"])
     }
 
-    func testLeftEdgeSwapReplaysFromFirstOutOfOrderItem() {
+    @Test("A left-edge swap replays from the first out-of-order item")
+    func leftEdgeSwapReplaysFromFirstOutOfOrderItem() {
         let desired = ["v1", hiddenCtrl, "h1", ahCtrl, "ah1", "ah2"]
         let sectionMap: [String: String] = [
             "v1": "visible", "h1": "hidden",
@@ -122,10 +127,11 @@ final class PlanFullSortSequenceTests: XCTestCase {
             ahCtrlUID: ahCtrl
         )
 
-        XCTAssertEqual(sequence, ["ah2", ahCtrl, "h1", hiddenCtrl, "v1"])
+        #expect(sequence == ["ah2", ahCtrl, "h1", hiddenCtrl, "v1"])
     }
 
-    func testUnmanagedItemsDoNotBreakPrefixTrim() {
+    @Test("Unmanaged items do not break the prefix trim")
+    func unmanagedItemsDoNotBreakPrefixTrim() {
         let desired = ["v1", "v2", hiddenCtrl, "h1"]
         let sectionMap: [String: String] = [
             "v1": "visible", "v2": "visible", "h1": "hidden",
@@ -140,12 +146,13 @@ final class PlanFullSortSequenceTests: XCTestCase {
             ahCtrlUID: nil
         )
 
-        XCTAssertEqual(sequence, ["v2"])
+        #expect(sequence == ["v2"])
     }
 
     /// If currentFlat already filtered against desiredFiltered matches
     /// desiredFiltered exactly, the sequence is empty (no-op signal).
-    func testNoOpWhenAlreadyMatches() {
+    @Test("A current layout that already matches yields no sequence")
+    func noOpWhenAlreadyMatches() {
         let desired = ["v1", hiddenCtrl, "h1", ahCtrl, "ah1"]
         let sectionMap: [String: String] = [
             "v1": "visible",
@@ -164,7 +171,7 @@ final class PlanFullSortSequenceTests: XCTestCase {
             ahCtrlUID: ahCtrl
         )
 
-        XCTAssertEqual(sequence, [],
-                       "no sequence when current already matches desired after filtering")
+        #expect(sequence == [],
+                "no sequence when current already matches desired after filtering")
     }
 }

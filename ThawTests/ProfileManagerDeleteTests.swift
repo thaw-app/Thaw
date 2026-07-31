@@ -6,8 +6,9 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Foundation
+import Testing
 @testable import Thaw
-import XCTest
 
 /// Regression lock for `ProfileManager.deleteProfile(id:)` when the
 /// profile's on-disk JSON file is already missing.
@@ -21,74 +22,89 @@ import XCTest
 ///
 /// These tests drive the real `ProfileManager` against an injected
 /// temporary profiles directory, never the user's real profile folder.
+///
+/// Serialized to match `ProfileManagerCRUDTests`: both drive a real
+/// `ProfileManager` on the main actor over on-disk state.
 @MainActor
-final class ProfileManagerDeleteTests: XCTestCase {
-    private var tmp: URL!
+@Suite("Profile manager delete", .serialized)
+final class ProfileManagerDeleteTests {
+    /// A fresh directory per test. Swift Testing builds a new suite instance
+    /// for every case, so `init`/`deinit` give the same per-test setup and
+    /// teardown the XCTest `setUp`/`tearDown` pair did.
+    private let tmp: URL
 
-    override func setUp() {
-        super.setUp()
+    init() {
         tmp = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
     }
 
-    override func tearDown() {
+    deinit {
         try? FileManager.default.removeItem(at: tmp)
-        tmp = nil
-        super.tearDown()
     }
 
     /// The regression: the profile's JSON file is deleted behind the
     /// manager's back (simulating out-of-band removal), then
     /// `deleteProfile(id:)` is called. It must not throw, and the manifest
     /// entry must be gone afterward.
-    func testDeleteProfileWithMissingFileDoesNotThrowAndRemovesManifestEntry() throws {
+    ///
+    /// The bare `try profileManager.deleteProfile(id:)` below is itself an
+    /// assertion: a throw fails the test, which is exactly the regression.
+    @Test("Deleting a profile whose file already vanished still clears the manifest entry")
+    func deleteProfileWithMissingFileDoesNotThrowAndRemovesManifestEntry() throws {
         let profile = makeProfile()
         try seedManifest(with: [profile], into: tmp)
         let profileManager = ProfileManager(profilesDirectory: tmp)
-        XCTAssertTrue(profileManager.profiles.contains { $0.id == profile.id })
+        #expect(profileManager.profiles.contains { $0.id == profile.id })
 
         // Simulate the file vanishing out-of-band before delete is called.
         try FileManager.default.removeItem(
             at: tmp.appendingPathComponent("\(profile.id.uuidString).json")
         )
 
-        XCTAssertNoThrow(try profileManager.deleteProfile(id: profile.id))
-        XCTAssertFalse(profileManager.profiles.contains { $0.id == profile.id })
+        try profileManager.deleteProfile(id: profile.id)
+        #expect(!profileManager.profiles.contains { $0.id == profile.id })
 
         // The in-memory list is not the regression: the manifest on disk is.
         // Reload from the same directory to prove the entry was persisted
         // away, not just dropped from this instance.
         let reloaded = ProfileManager(profilesDirectory: tmp)
-        XCTAssertFalse(reloaded.profiles.contains { $0.id == profile.id })
+        #expect(!reloaded.profiles.contains { $0.id == profile.id })
     }
 
     /// Calling `deleteProfile(id:)` twice in a row must not throw the
     /// second time either: the file is gone after the first call, and the
     /// manifest entry with it, so the second call is a no-op deletion of an
     /// already-absent file and an already-absent entry.
-    func testDeleteProfileCalledTwiceDoesNotThrowEitherTime() throws {
+    ///
+    /// Neither `try` below is allowed to throw; that not-throwing is the
+    /// assertion this case exists for.
+    @Test("Deleting the same profile twice throws neither time")
+    func deleteProfileCalledTwiceDoesNotThrowEitherTime() throws {
         let profile = makeProfile()
         try seedManifest(with: [profile], into: tmp)
         let profileManager = ProfileManager(profilesDirectory: tmp)
 
-        XCTAssertNoThrow(try profileManager.deleteProfile(id: profile.id))
-        XCTAssertNoThrow(try profileManager.deleteProfile(id: profile.id))
-        XCTAssertFalse(profileManager.profiles.contains { $0.id == profile.id })
+        try profileManager.deleteProfile(id: profile.id)
+        try profileManager.deleteProfile(id: profile.id)
+
+        #expect(!profileManager.profiles.contains { $0.id == profile.id })
     }
 
     /// Happy path: the file exists on disk, `deleteProfile(id:)` removes it
-    /// and the manifest entry, with no throw.
-    func testDeleteProfileHappyPathRemovesFileAndManifestEntry() throws {
+    /// and the manifest entry, with no throw — the bare `try` carries that
+    /// last part of the assertion.
+    @Test("Deleting a profile removes both its file and its manifest entry")
+    func deleteProfileHappyPathRemovesFileAndManifestEntry() throws {
         let profile = makeProfile()
         try seedManifest(with: [profile], into: tmp)
         let profileManager = ProfileManager(profilesDirectory: tmp)
         let fileURL = tmp.appendingPathComponent("\(profile.id.uuidString).json")
-        XCTAssertTrue(FileManager.default.fileExists(atPath: fileURL.path))
+        #expect(FileManager.default.fileExists(atPath: fileURL.path))
 
-        XCTAssertNoThrow(try profileManager.deleteProfile(id: profile.id))
+        try profileManager.deleteProfile(id: profile.id)
 
-        XCTAssertFalse(FileManager.default.fileExists(atPath: fileURL.path))
-        XCTAssertFalse(profileManager.profiles.contains { $0.id == profile.id })
+        #expect(!FileManager.default.fileExists(atPath: fileURL.path))
+        #expect(!profileManager.profiles.contains { $0.id == profile.id })
     }
 
     // MARK: - Helpers
@@ -150,8 +166,8 @@ final class ProfileManagerDeleteTests: XCTestCase {
     /// listing it, so a freshly constructed `ProfileManager` loads it into
     /// `profiles` the same way it would in production.
     private func seedManifest(with profiles: [Profile], into directory: URL) throws {
-        let fm = FileManager.default
-        try fm.createDirectory(at: directory, withIntermediateDirectories: true)
+        let fileManager = FileManager.default
+        try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
 
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601

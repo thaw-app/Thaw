@@ -6,9 +6,10 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-@testable import Thaw
-import XCTest
+import Foundation
 import os
+import Testing
+@testable import Thaw
 
 /// Characterizes `HIDEventManager.shouldProcessMouseMoved`, the time-based
 /// gate that replaced a count-based "process every 5th event" throttle.
@@ -18,20 +19,23 @@ import os
 /// work of a 125 Hz mouse for identical physical motion. These tests pin
 /// the replacement's actual contract: the processed-event rate is bounded
 /// by wall-clock time, not by how many events the device delivers.
-final class MouseMovedThrottleTests: XCTestCase {
+@Suite("Mouse moved throttle")
+struct MouseMovedThrottleTests {
     /// Two events observed at the exact same timestamp: only the first may
     /// be processed.
-    func testSameTimestampOnlyProcessesOnce() {
+    @Test("Two events at the same timestamp process only once")
+    func sameTimestampOnlyProcessesOnce() {
         let lastProcessTime = OSAllocatedUnfairLock(initialState: TimeInterval(0))
         let now: TimeInterval = 100
 
-        XCTAssertTrue(HIDEventManager.shouldProcessMouseMoved(now: now, lastProcessTime: lastProcessTime))
-        XCTAssertFalse(HIDEventManager.shouldProcessMouseMoved(now: now, lastProcessTime: lastProcessTime))
+        #expect(HIDEventManager.shouldProcessMouseMoved(now: now, lastProcessTime: lastProcessTime))
+        #expect(!HIDEventManager.shouldProcessMouseMoved(now: now, lastProcessTime: lastProcessTime))
     }
 
     /// An event exactly one throttle interval after the last processed
     /// event is processed.
-    func testFullIntervalLaterProcesses() {
+    @Test("An event a full interval later is processed")
+    func fullIntervalLaterProcesses() {
         let lastProcessTime = OSAllocatedUnfairLock(initialState: TimeInterval(0))
         let interval = HIDEventManager.mouseMovedThrottleInterval
         let first: TimeInterval = 100
@@ -44,20 +48,21 @@ final class MouseMovedThrottleTests: XCTestCase {
         // the test is here to catch.
         let second = (first + interval).nextUp
 
-        XCTAssertTrue(HIDEventManager.shouldProcessMouseMoved(now: first, lastProcessTime: lastProcessTime))
-        XCTAssertTrue(HIDEventManager.shouldProcessMouseMoved(now: second, lastProcessTime: lastProcessTime))
+        #expect(HIDEventManager.shouldProcessMouseMoved(now: first, lastProcessTime: lastProcessTime))
+        #expect(HIDEventManager.shouldProcessMouseMoved(now: second, lastProcessTime: lastProcessTime))
     }
 
     /// An event only half an interval after the last processed event is
     /// dropped.
-    func testHalfIntervalLaterDoesNotProcess() {
+    @Test("An event half an interval later is dropped")
+    func halfIntervalLaterDoesNotProcess() {
         let lastProcessTime = OSAllocatedUnfairLock(initialState: TimeInterval(0))
         let interval = HIDEventManager.mouseMovedThrottleInterval
         let first: TimeInterval = 100
         let second = first + (interval / 2)
 
-        XCTAssertTrue(HIDEventManager.shouldProcessMouseMoved(now: first, lastProcessTime: lastProcessTime))
-        XCTAssertFalse(HIDEventManager.shouldProcessMouseMoved(now: second, lastProcessTime: lastProcessTime))
+        #expect(HIDEventManager.shouldProcessMouseMoved(now: first, lastProcessTime: lastProcessTime))
+        #expect(!HIDEventManager.shouldProcessMouseMoved(now: second, lastProcessTime: lastProcessTime))
     }
 
     /// Regression guard for the original bug: with 1000 calls spread evenly
@@ -65,7 +70,8 @@ final class MouseMovedThrottleTests: XCTestCase {
     /// processed must land near the ~30 Hz time-based cap, not near 1000 —
     /// the old counter-based throttle would have processed ~200 of these
     /// (every 5th of a 1000 Hz stream).
-    func testHighFrequencyStreamIsBoundedByTimeNotCount() {
+    @Test("A high-frequency stream is bounded by time, not event count")
+    func highFrequencyStreamIsBoundedByTimeNotCount() {
         let lastProcessTime = OSAllocatedUnfairLock(initialState: TimeInterval(0))
         let interval = HIDEventManager.mouseMovedThrottleInterval
 
@@ -78,7 +84,7 @@ final class MouseMovedThrottleTests: XCTestCase {
         }
 
         let expectedMax = Int((1.0 / interval).rounded(.up)) + 1
-        XCTAssertLessThanOrEqual(processedCount, expectedMax)
-        XCTAssertGreaterThan(processedCount, 0)
+        #expect(processedCount <= expectedMax)
+        #expect(processedCount > 0)
     }
 }

@@ -6,97 +6,110 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Foundation
+import Testing
 @testable import Thaw
-import XCTest
 
-final class HotkeyActionTests: XCTestCase {
+@Suite("Hotkey action")
+struct HotkeyActionTests {
     // MARK: - Raw Value Tests
 
-    func testRawValues() {
-        XCTAssertEqual(HotkeyAction.toggleHiddenSection.rawValue, "ToggleHiddenSection")
-        XCTAssertEqual(HotkeyAction.toggleAlwaysHiddenSection.rawValue, "ToggleAlwaysHiddenSection")
-        XCTAssertEqual(HotkeyAction.searchMenuBarItems.rawValue, "SearchMenuBarItems")
-        XCTAssertEqual(HotkeyAction.enableIceBar.rawValue, "EnableIceBar")
-        XCTAssertEqual(HotkeyAction.toggleApplicationMenus.rawValue, "ToggleApplicationMenus")
-        XCTAssertEqual(HotkeyAction.profileApply.rawValue, "ProfileApply")
-        XCTAssertEqual(HotkeyAction.openMenuBarItem.rawValue, "OpenMenuBarItem")
+    @Test("Every action keeps its historical raw value")
+    func rawValues() {
+        #expect(HotkeyAction.toggleHiddenSection.rawValue == "ToggleHiddenSection")
+        #expect(HotkeyAction.toggleAlwaysHiddenSection.rawValue == "ToggleAlwaysHiddenSection")
+        #expect(HotkeyAction.searchMenuBarItems.rawValue == "SearchMenuBarItems")
+        #expect(HotkeyAction.enableIceBar.rawValue == "EnableIceBar")
+        #expect(HotkeyAction.toggleApplicationMenus.rawValue == "ToggleApplicationMenus")
+        #expect(HotkeyAction.profileApply.rawValue == "ProfileApply")
+        #expect(HotkeyAction.openMenuBarItem.rawValue == "OpenMenuBarItem")
     }
 
     // MARK: - Init from Raw Value Tests
 
-    func testInitFromRawValue() {
-        XCTAssertEqual(HotkeyAction(rawValue: "ToggleHiddenSection"), .toggleHiddenSection)
-        XCTAssertEqual(HotkeyAction(rawValue: "SearchMenuBarItems"), .searchMenuBarItems)
-        XCTAssertEqual(HotkeyAction(rawValue: "ProfileApply"), .profileApply)
+    @Test("A known raw value produces its action")
+    func initFromRawValue() {
+        #expect(HotkeyAction(rawValue: "ToggleHiddenSection") == .toggleHiddenSection)
+        #expect(HotkeyAction(rawValue: "SearchMenuBarItems") == .searchMenuBarItems)
+        #expect(HotkeyAction(rawValue: "ProfileApply") == .profileApply)
     }
 
-    func testInitFromInvalidRawValue() {
-        XCTAssertNil(HotkeyAction(rawValue: "InvalidAction"))
-        XCTAssertNil(HotkeyAction(rawValue: ""))
-        XCTAssertNil(HotkeyAction(rawValue: "togglehiddensection")) // case-sensitive
+    @Test("An unknown raw value produces nil")
+    func initFromInvalidRawValue() {
+        #expect(HotkeyAction(rawValue: "InvalidAction") == nil)
+        #expect(HotkeyAction(rawValue: "") == nil)
+        #expect(HotkeyAction(rawValue: "togglehiddensection") == nil) // case-sensitive
     }
 
     // MARK: - CaseIterable Tests
 
-    func testAllCasesCount() {
-        XCTAssertEqual(HotkeyAction.allCases.count, 7)
+    @Test("There are seven actions")
+    func allCasesCount() {
+        #expect(HotkeyAction.allCases.count == 7)
     }
 
-    func testAllCasesContainsExpectedActions() {
+    @Test("All cases contains every expected action")
+    func allCasesContainsExpectedActions() {
         let allCases = HotkeyAction.allCases
-        XCTAssertTrue(allCases.contains(.toggleHiddenSection))
-        XCTAssertTrue(allCases.contains(.toggleAlwaysHiddenSection))
-        XCTAssertTrue(allCases.contains(.searchMenuBarItems))
-        XCTAssertTrue(allCases.contains(.enableIceBar))
-        XCTAssertTrue(allCases.contains(.toggleApplicationMenus))
-        XCTAssertTrue(allCases.contains(.profileApply))
-        XCTAssertTrue(allCases.contains(.openMenuBarItem))
+        #expect(allCases.contains(.toggleHiddenSection))
+        #expect(allCases.contains(.toggleAlwaysHiddenSection))
+        #expect(allCases.contains(.searchMenuBarItems))
+        #expect(allCases.contains(.enableIceBar))
+        #expect(allCases.contains(.toggleApplicationMenus))
+        #expect(allCases.contains(.profileApply))
+        #expect(allCases.contains(.openMenuBarItem))
     }
 
     // MARK: - Settings Actions Tests
 
-    func testSettingsActionsExcludesProfileApply() {
+    @Test("Settings actions excludes profileApply")
+    func settingsActionsExcludesProfileApply() {
         let settingsActions = HotkeyAction.settingsActions
-        XCTAssertFalse(settingsActions.contains(.profileApply))
+        #expect(!settingsActions.contains(.profileApply))
     }
 
-    func testSettingsActionsExcludesOpenMenuBarItem() {
+    @Test("Settings actions excludes openMenuBarItem")
+    func settingsActionsExcludesOpenMenuBarItem() {
         let settingsActions = HotkeyAction.settingsActions
-        XCTAssertFalse(settingsActions.contains(.openMenuBarItem))
+        #expect(!settingsActions.contains(.openMenuBarItem))
     }
 
-    func testSettingsActionsContainsOtherActions() {
+    @Test("Settings actions contains the remaining actions")
+    func settingsActionsContainsOtherActions() {
         let settingsActions = HotkeyAction.settingsActions
-        XCTAssertTrue(settingsActions.contains(.toggleHiddenSection))
-        XCTAssertTrue(settingsActions.contains(.toggleAlwaysHiddenSection))
-        XCTAssertTrue(settingsActions.contains(.searchMenuBarItems))
-        XCTAssertTrue(settingsActions.contains(.enableIceBar))
-        XCTAssertTrue(settingsActions.contains(.toggleApplicationMenus))
+        #expect(settingsActions.contains(.toggleHiddenSection))
+        #expect(settingsActions.contains(.toggleAlwaysHiddenSection))
+        #expect(settingsActions.contains(.searchMenuBarItems))
+        #expect(settingsActions.contains(.enableIceBar))
+        #expect(settingsActions.contains(.toggleApplicationMenus))
     }
 
-    func testSettingsActionsCount() {
+    @Test("Settings actions is all cases minus two")
+    func settingsActionsCount() {
         // All cases minus the externally-handled profileApply and openMenuBarItem.
-        XCTAssertEqual(HotkeyAction.settingsActions.count, HotkeyAction.allCases.count - 2)
+        #expect(HotkeyAction.settingsActions.count == HotkeyAction.allCases.count - 2)
     }
 
     // MARK: - Codable Tests
 
-    func testEncodeDecode() throws {
+    @Test("Every action survives an encode/decode round trip")
+    func encodeDecode() throws {
         let encoder = JSONEncoder()
         let decoder = JSONDecoder()
 
         for action in HotkeyAction.allCases {
             let data = try encoder.encode(action)
             let decoded = try decoder.decode(HotkeyAction.self, from: data)
-            XCTAssertEqual(decoded, action)
+            #expect(decoded == action)
         }
     }
 
-    func testDecodeFromStringJSON() throws {
+    @Test("A bare JSON string decodes to its action")
+    func decodeFromStringJSON() throws {
         let json = "\"ToggleHiddenSection\"".data(using: .utf8)!
         let decoder = JSONDecoder()
 
         let decoded = try decoder.decode(HotkeyAction.self, from: json)
-        XCTAssertEqual(decoded, .toggleHiddenSection)
+        #expect(decoded == .toggleHiddenSection)
     }
 }

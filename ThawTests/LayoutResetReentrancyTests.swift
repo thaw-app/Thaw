@@ -6,8 +6,8 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Testing
 @testable import Thaw
-import XCTest
 
 /// Characterizes the re-entrancy guard on `resetLayoutToFreshState()`.
 ///
@@ -22,25 +22,31 @@ import XCTest
 /// Driving a full reset through the window server is impractical in a unit
 /// test, so these tests set `isResettingLayout` directly and assert on the
 /// guard's observable behavior rather than exercising the real reset body.
+/// Serialized: each test builds a live `MenuBarItemManager`, whose reset path
+/// reaches the process-wide diagnostic logger, and the `await` inside the
+/// rejected reset would otherwise let two managers interleave on the main
+/// actor.
 @MainActor
-final class LayoutResetReentrancyTests: XCTestCase {
+@Suite("Layout reset re-entrancy", .serialized)
+struct LayoutResetReentrancyTests {
     /// A reset attempted while another reset is already in flight must be
     /// rejected with `.alreadyInProgress` rather than silently overwriting
     /// the in-flight reset's state.
-    func testConcurrentResetThrowsAlreadyInProgress() async {
+    @Test("A concurrent reset is rejected with .alreadyInProgress")
+    func concurrentResetThrowsAlreadyInProgress() async {
         let manager = MenuBarItemManager()
         manager.isResettingLayout = true
 
         do {
             _ = try await manager.resetLayoutToFreshState()
-            XCTFail("resetLayoutToFreshState() must throw while a reset is already in progress")
+            Issue.record("resetLayoutToFreshState() must throw while a reset is already in progress")
         } catch let error as MenuBarItemManager.LayoutResetError {
             guard case .alreadyInProgress = error else {
-                XCTFail("Expected .alreadyInProgress, got \(error)")
+                Issue.record("Expected .alreadyInProgress, got \(error)")
                 return
             }
         } catch {
-            XCTFail("Expected LayoutResetError.alreadyInProgress, got \(error)")
+            Issue.record("Expected LayoutResetError.alreadyInProgress, got \(error)")
         }
     }
 
@@ -48,13 +54,14 @@ final class LayoutResetReentrancyTests: XCTestCase {
     /// rejected call's own `defer` ran, it would clear the flag out from under
     /// the still-in-flight first reset, reproducing the original
     /// silent-non-persistence bug.
-    func testRejectedResetDoesNotClearInFlightFlag() async {
+    @Test("A rejected reset leaves the in-flight reset's flag set")
+    func rejectedResetDoesNotClearInFlightFlag() async {
         let manager = MenuBarItemManager()
         manager.isResettingLayout = true
 
         _ = try? await manager.resetLayoutToFreshState()
 
-        XCTAssertTrue(
+        #expect(
             manager.isResettingLayout,
             "A rejected concurrent reset must leave the in-flight reset's flag untouched"
         )
@@ -63,8 +70,9 @@ final class LayoutResetReentrancyTests: XCTestCase {
     /// When no reset is in flight, the guard must not fire — the flag itself
     /// (rather than the guard misfiring) is what's under test elsewhere, but
     /// this pins that a fresh manager does not start in a rejecting state.
-    func testFreshManagerDoesNotRejectFirstReset() {
+    @Test("A fresh manager does not report a reset already in progress")
+    func freshManagerDoesNotRejectFirstReset() {
         let manager = MenuBarItemManager()
-        XCTAssertFalse(manager.isResettingLayout, "A fresh manager must not report a reset already in progress")
+        #expect(!manager.isResettingLayout, "A fresh manager must not report a reset already in progress")
     }
 }

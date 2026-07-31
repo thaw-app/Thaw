@@ -6,88 +6,111 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Testing
 @testable import Thaw
-import XCTest
 
 // MARK: - DiagnosticLogger.Level Tests
 
-final class DiagnosticLoggerLevelTests: XCTestCase {
+/// Pins the raw values of ``DiagnosticLogger/Level``.
+///
+/// The raw values are written verbatim into every diagnostic log line, so
+/// they are a parsed format rather than an implementation detail.
+///
+/// Reads only: nothing here reaches the shared ``DiagnosticLogger`` or any
+/// other process-global state, so the suite is safe to run in parallel with
+/// the rest.
+@Suite("Diagnostic logger levels")
+struct DiagnosticLoggerLevelTests {
     // MARK: - Raw Values
 
-    func testDebugRawValue() {
-        XCTAssertEqual(DiagnosticLogger.Level.debug.rawValue, "DEBUG")
+    @Test("The debug level's raw value is DEBUG")
+    func debugRawValue() {
+        #expect(DiagnosticLogger.Level.debug.rawValue == "DEBUG")
     }
 
-    func testInfoRawValue() {
-        XCTAssertEqual(DiagnosticLogger.Level.info.rawValue, "INFO")
+    @Test("The info level's raw value is INFO")
+    func infoRawValue() {
+        #expect(DiagnosticLogger.Level.info.rawValue == "INFO")
     }
 
-    func testNoticeRawValue() {
-        XCTAssertEqual(DiagnosticLogger.Level.notice.rawValue, "NOTICE")
+    @Test("The notice level's raw value is NOTICE")
+    func noticeRawValue() {
+        #expect(DiagnosticLogger.Level.notice.rawValue == "NOTICE")
     }
 
-    func testWarningRawValue() {
-        XCTAssertEqual(DiagnosticLogger.Level.warning.rawValue, "WARNING")
+    @Test("The warning level's raw value is WARNING")
+    func warningRawValue() {
+        #expect(DiagnosticLogger.Level.warning.rawValue == "WARNING")
     }
 
-    func testErrorRawValue() {
-        XCTAssertEqual(DiagnosticLogger.Level.error.rawValue, "ERROR")
+    @Test("The error level's raw value is ERROR")
+    func errorRawValue() {
+        #expect(DiagnosticLogger.Level.error.rawValue == "ERROR")
     }
 
     // MARK: - Init From Raw Value
 
-    func testInitFromDebugRawValue() {
+    @Test("DEBUG initializes the debug level")
+    func initFromDebugRawValue() {
         let level = DiagnosticLogger.Level(rawValue: "DEBUG")
-        XCTAssertEqual(level, .debug)
+        #expect(level == .debug)
     }
 
-    func testInitFromInfoRawValue() {
+    @Test("INFO initializes the info level")
+    func initFromInfoRawValue() {
         let level = DiagnosticLogger.Level(rawValue: "INFO")
-        XCTAssertEqual(level, .info)
+        #expect(level == .info)
     }
 
-    func testInitFromNoticeRawValue() {
+    @Test("NOTICE initializes the notice level")
+    func initFromNoticeRawValue() {
         let level = DiagnosticLogger.Level(rawValue: "NOTICE")
-        XCTAssertEqual(level, .notice)
+        #expect(level == .notice)
     }
 
-    func testInitFromWarningRawValue() {
+    @Test("WARNING initializes the warning level")
+    func initFromWarningRawValue() {
         let level = DiagnosticLogger.Level(rawValue: "WARNING")
-        XCTAssertEqual(level, .warning)
+        #expect(level == .warning)
     }
 
-    func testInitFromErrorRawValue() {
+    @Test("ERROR initializes the error level")
+    func initFromErrorRawValue() {
         let level = DiagnosticLogger.Level(rawValue: "ERROR")
-        XCTAssertEqual(level, .error)
+        #expect(level == .error)
     }
 
-    func testInitFromInvalidRawValue() {
+    @Test("An unrecognized raw value initializes nothing")
+    func initFromInvalidRawValue() {
         let level = DiagnosticLogger.Level(rawValue: "INVALID")
-        XCTAssertNil(level)
+        #expect(level == nil)
     }
 
-    func testInitFromLowercaseRawValue() {
+    @Test("A lowercase raw value initializes nothing")
+    func initFromLowercaseRawValue() {
         // Raw values are case-sensitive
         let level = DiagnosticLogger.Level(rawValue: "debug")
-        XCTAssertNil(level)
+        #expect(level == nil)
     }
 
     // MARK: - All Levels
 
-    func testAllLevelsHaveUppercaseRawValues() {
+    @Test("Every level has an uppercase raw value")
+    func allLevelsHaveUppercaseRawValues() {
         let levels: [DiagnosticLogger.Level] = [.debug, .info, .notice, .warning, .error]
 
         for level in levels {
-            XCTAssertEqual(level.rawValue, level.rawValue.uppercased(),
-                           "Level \(level) should have uppercase raw value")
+            #expect(level.rawValue == level.rawValue.uppercased(),
+                    "Level \(level) should have uppercase raw value")
         }
     }
 
-    func testAllLevelsAreDistinct() {
+    @Test("Every level has a distinct raw value")
+    func allLevelsAreDistinct() {
         let levels: [DiagnosticLogger.Level] = [.debug, .info, .notice, .warning, .error]
         let rawValues = Set(levels.map(\.rawValue))
 
-        XCTAssertEqual(rawValues.count, levels.count,
-                       "All levels should have distinct raw values")
+        #expect(rawValues.count == levels.count,
+                "All levels should have distinct raw values")
     }
 }
