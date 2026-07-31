@@ -25,8 +25,14 @@ struct SettingsURIHandlerTests {
         #expect(keys.contains("autoRehide"))
         #expect(keys.contains("showOnClick"))
         #expect(keys.contains("showOnHover"))
-        #expect(keys.contains("useIceBar"))
         #expect(keys.contains("enableDiagnosticLogging"))
+        // Per-display Booleans belong to `perDisplayKeys`, not here.
+        // `useIceBar` used to appear in both tables.
+        #expect(!keys.contains("useIceBar"))
+        #expect(!keys.contains("alwaysShowHiddenItems"))
+        #expect(SettingsURIHandler.perDisplayKeys.contains("useIceBar"))
+        // It stays a valid key -- validation consults both tables.
+        #expect(SettingsURIHandler.isValidSettingsKey("useIceBar"))
     }
 
     @Test("The double key table is populated")

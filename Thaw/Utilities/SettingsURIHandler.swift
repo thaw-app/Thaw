@@ -17,13 +17,22 @@ enum SettingsURIHandler {
     private static let diagLog = DiagLog(category: "SettingsURIHandler")
 
     /// Tier 1: Safe boolean toggles that can be manipulated via URI
+    /// Global Boolean settings, each backed by a `Defaults.Key` in
+    /// ``keyMapping``.
+    ///
+    /// Per-display Booleans do **not** belong here — they live only in
+    /// ``perDisplayKeys`` and are resolved through `DisplaySettingsManager`
+    /// rather than `Defaults`. `useIceBar` used to appear in both, which worked
+    /// only because every handler happens to test `perDisplayKeys` first; a new
+    /// call site consulting this table first would have found no mapping and
+    /// silently failed. `alwaysShowHiddenItems`, the other per-display Boolean,
+    /// was already absent, which is the shape both should have.
     static let supportedBooleanKeys: [String] = [
         "autoRehide",
         "showOnClick",
         "showOnDoubleClick",
         "showOnHover",
         "showOnScroll",
-        "useIceBar",
         "useIceBarOnlyOnNotchedDisplay",
         "hideApplicationMenus",
         "enableAlwaysHiddenSection",

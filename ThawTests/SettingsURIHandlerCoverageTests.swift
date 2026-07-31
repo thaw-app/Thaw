@@ -53,7 +53,6 @@ private let booleanKeys: [String] = [
     "showOnDoubleClick",
     "showOnHover",
     "showOnScroll",
-    "useIceBar",
     "useIceBarOnlyOnNotchedDisplay",
     "hideApplicationMenus",
     "enableAlwaysHiddenSection",

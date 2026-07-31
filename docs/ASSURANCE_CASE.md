@@ -6,8 +6,8 @@ a single interactive user on their own Mac.
 
 Update it when trust boundaries or major features change. It supports OpenSSF
 Best Practices documentation criteria (`assurance_case`, security requirements,
-architecture). OpenSSF Silver **`test_statement_coverage80` is not yet claimed**
-— see residual risks.
+architecture). OpenSSF Silver **`test_statement_coverage80` is claimed** — see
+§6.4 for the measurement and the exclusion set it rests on.
 
 ## 1. Security requirements (summary)
 
@@ -127,15 +127,27 @@ defect classes before merge.
    [`thaw-app`](https://github.com/thaw-app) (three owners: `stonerl`,
    `nightah`, `diazdesandi`) rely on the previous path continuing to serve the
    feed. Moving the appcast to a project-controlled domain is planned.
-4. **OpenSSF Silver statement coverage (`test_statement_coverage80`) is deferred.**
-   SonarCloud currently reports about **44%** coverage for `stonerl_Thaw` (not
-   ≥80%). CI collects coverage XML and uploads to SonarCloud
-   (`.github/workflows/ci.yml`, `sonar-project.properties`), but there is **no
-   80% gate** and this assurance case does **not** claim that criterion is Met.
-   Raise coverage (or document an accepted exclusion set with measured coverage
-   of the remainder) before marking Silver coverage Met. Tests still reduce
-   logic risk; UI-heavy modules excluded from coverage requirements remain a
-   residual testing gap.
+4. **OpenSSF Silver statement coverage (`test_statement_coverage80`) is Met,
+   against a documented exclusion set.** Statement coverage for `thaw-app_Thaw`
+   is **80.8%** over 9,960 measured lines, from 1,893 tests. The suite is
+   entirely Swift Testing; the last XCTest file was migrated in this cycle.
+
+   The measurement excludes code whose substance cannot execute in a headless
+   CI run — WindowServer/CGS private APIs, Accessibility permissions, Carbon
+   hotkey registration, live display and running-app state, NSWindow/NSPanel
+   subclasses, SwiftUI view bodies, XPC wiring, and `@main` entry points. The
+   set and the rule governing it are in `sonar-project.properties`, which
+   requires that pure value types, algorithms, Codable models and parsing stay
+   measured even under a UI-sounding path. Two files that buried both kinds of
+   code (`MenuBarSection`, `MenuBarItem`) were split along that seam rather
+   than excluded whole, so their logic still counts.
+
+   There is still **no enforced 80% gate** in CI; the figure is measured per
+   analysis and this claim should be re-checked when it moves. The residual
+   gap is concentrated in `ProfileManager` (about 700 lines reachable only
+   through a live `AppState`, which no test can currently construct) — that is
+   a testability limit, not an untested-logic claim, and narrowing those
+   entry points is the route to raising it further.
 
 ## 7. Evidence pointers
 
@@ -145,8 +157,8 @@ defect classes before merge.
 | URI allowlist + signature binding | `Thaw/Utilities/SettingsURIHandler.swift`, `docs/URI_SCHEMES.md` |
 | Update authenticity | `SUFeedURL` / `SUPublicEDKey` in `Thaw/Resources/Info.plist`; Sparkle release actions |
 | Architecture | `docs/ARCHITECTURE.md` |
-| Automated analysis | `.github/workflows/ci.yml`, SonarCloud project `stonerl_Thaw` |
-| Test coverage (measured, not Silver-met) | SonarCloud `coverage` measure; CI `coverage.xml` — **~44%, Silver 80% deferred** |
+| Automated analysis | `.github/workflows/ci.yml`, SonarCloud project `thaw-app_Thaw` |
+| Test coverage (Silver `test_statement_coverage80` Met) | SonarCloud `coverage` measure; CI `coverage.xml` — **80.8% over 9,960 measured lines, 1,893 tests**; exclusion set and its governing rule in `sonar-project.properties` |
 | Dependency monitoring | `.github/dependabot.yml` |
 
 ## Revision
@@ -155,3 +167,4 @@ defect classes before merge.
 | --- | --- |
 | 2026-07-27 | Initial version from `development` for OpenSSF docs |
 | 2026-07-27 | Deferred Silver coverage claim; measured ~44% |
+| 2026-07-31 | Claimed Silver `test_statement_coverage80`; measured 80.8% after migrating the suite to Swift Testing and documenting the exclusion set. Corrected the SonarCloud project key to `thaw-app_Thaw` |
