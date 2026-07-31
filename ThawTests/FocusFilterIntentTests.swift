@@ -56,7 +56,7 @@ struct FocusFilterIntentTests {
     func performStoresTheSelectedProfileIdentifier() async throws {
         try await withScratchDefaults { suite in
             let identifier = UUID().uuidString
-            var filter = ThawFocusFilter()
+            let filter = ThawFocusFilter()
             filter.profile = ProfileEntity(id: identifier, name: "Work")
 
             _ = try await filter.perform()
@@ -84,7 +84,7 @@ struct FocusFilterIntentTests {
     func performWithANonUUIDIdentifierClearsTheStoredIdentifier() async throws {
         try await withScratchDefaults { suite in
             suite.set(UUID().uuidString, forKey: Self.requestedProfileKey)
-            var filter = ThawFocusFilter()
+            let filter = ThawFocusFilter()
             // The entity's id is a plain `String`, so a stale or hand-built
             // entity can carry something that is not a profile identifier.
             filter.profile = ProfileEntity(id: "not-a-uuid", name: "Bogus")
@@ -99,7 +99,7 @@ struct FocusFilterIntentTests {
     func performWithAnEmptyIdentifierClearsTheStoredIdentifier() async throws {
         try await withScratchDefaults { suite in
             suite.set(UUID().uuidString, forKey: Self.requestedProfileKey)
-            var filter = ThawFocusFilter()
+            let filter = ThawFocusFilter()
             filter.profile = ProfileEntity(id: "", name: "")
 
             _ = try await filter.perform()
@@ -114,7 +114,7 @@ struct FocusFilterIntentTests {
             let superseded = UUID().uuidString
             let requested = UUID().uuidString
             suite.set(superseded, forKey: Self.requestedProfileKey)
-            var filter = ThawFocusFilter()
+            let filter = ThawFocusFilter()
             filter.profile = ProfileEntity(id: requested, name: "Focus")
 
             _ = try await filter.perform()
@@ -129,7 +129,7 @@ struct FocusFilterIntentTests {
     func performIsIdempotentForTheSameProfile() async throws {
         try await withScratchDefaults { suite in
             let identifier = UUID().uuidString
-            var filter = ThawFocusFilter()
+            let filter = ThawFocusFilter()
             filter.profile = ProfileEntity(id: identifier, name: "Work")
 
             _ = try await filter.perform()
@@ -150,7 +150,7 @@ struct FocusFilterIntentTests {
         // interpolation resolves the same "Profile: %@" catalog entry the
         // production string does instead of folding into a literal key.
         let name = "Work"
-        var filter = ThawFocusFilter()
+        let filter = ThawFocusFilter()
         filter.profile = ProfileEntity(id: UUID().uuidString, name: name)
 
         let representation = filter.displayRepresentation

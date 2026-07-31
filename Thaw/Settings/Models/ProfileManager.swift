@@ -6,8 +6,8 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import AsyncAlgorithms
 import Cocoa
-import Combine
 import Foundation
 
 @MainActor
@@ -37,7 +37,14 @@ final class ProfileManager {
     private let profilesDirectory: URL
     private let manifestURL: URL
     private(set) weak var appState: AppState?
-    private var cancellables = Set<AnyCancellable>()
+
+    /// Tasks backing the swift-async-algorithms debounces installed by
+    /// ``performSetup(with:)``. Each owns its own notification observer and
+    /// removes it when the task ends, so `deinit` only has to cancel them.
+    private var screenParametersTask: Task<Void, Never>?
+    private var focusFilterActivatedTask: Task<Void, Never>?
+    private var focusFilterDeactivatedTask: Task<Void, Never>?
+
     /// Tracks the last seen active display UUID for auto-switch debouncing.
     private var lastActiveDisplayUUID: String?
     /// Whether a Focus Filter profile is currently applied.
@@ -87,6 +94,15 @@ final class ProfileManager {
         loadManifest()
     }
 
+    @MainActor
+    deinit {
+        // Each observer task is manually owned, so cancel it here. Ending a
+        // task runs its defer, which removes its notification observer.
+        screenParametersTask?.cancel()
+        focusFilterActivatedTask?.cancel()
+        focusFilterDeactivatedTask?.cancel()
+    }
+
     /// Sets up the manager with the app state and configures auto-switch.
     /// If the current display has an associated profile, it is applied
     /// after the menu bar has settled.
@@ -99,44 +115,65 @@ final class ProfileManager {
         // every assignment after this class's own init, so no explicit
         // subscription is needed here (see the doc comment on `profiles`).
 
+        // The three observers below follow the pattern DisplaySettingsManager
+        // adopted: a NotificationCenter observer feeds an AsyncStream that
+        // `.debounce(for:)` coalesces, replacing Combine's
+        // `.debounce(for:scheduler:)`. Each observer is owned by its task --
+        // added when the task starts, removed by the defer when it ends -- so
+        // the non-Sendable observer token never lives on the class.
+        //
+        // A repeated setup must not leave the previous task, and the observer
+        // its defer owns, running; hence the cancel before each assignment.
+
         // Listen for display changes to trigger auto-switch.
-        NotificationCenter.default
-            .publisher(for: NSApplication.didChangeScreenParametersNotification)
-            .debounce(for: .seconds(1.5), scheduler: DispatchQueue.main)
-            .sink { [weak self] _ in
-                guard let self else { return }
-                Task { [weak self] in
-                    guard let self else { return }
-                    await self.checkDisplayAndAutoSwitch()
-                }
+        let (screenParameterEvents, screenParameterContinuation) = AsyncStream<Void>.makeStream()
+        screenParametersTask?.cancel()
+        screenParametersTask = Task { @MainActor [weak self] in
+            let observer = NotificationCenter.default.addObserver(
+                forName: NSApplication.didChangeScreenParametersNotification,
+                object: nil,
+                queue: .main
+            ) { _ in screenParameterContinuation.yield(()) }
+            defer { NotificationCenter.default.removeObserver(observer) }
+            for await _ in screenParameterEvents.debounce(for: .seconds(1.5)) {
+                guard let self else { break }
+                await checkDisplayAndAutoSwitch()
             }
-            .store(in: &cancellables)
+        }
 
         // Listen for Focus Filter activation from the system.
-        DistributedNotificationCenter.default()
-            .publisher(for: Notification.Name("com.stonerl.Thaw.focusFilterActivated"))
-            .debounce(for: .seconds(0.5), scheduler: DispatchQueue.main)
-            .sink { [weak self] _ in
-                guard let self else { return }
-                Task { [weak self] in
-                    guard let self else { return }
-                    await self.applyFocusFilterProfile()
-                }
+        let (activatedEvents, activatedContinuation) = AsyncStream<Void>.makeStream()
+        focusFilterActivatedTask?.cancel()
+        focusFilterActivatedTask = Task { @MainActor [weak self] in
+            let center = DistributedNotificationCenter.default()
+            let observer = center.addObserver(
+                forName: Notification.Name("com.stonerl.Thaw.focusFilterActivated"),
+                object: nil,
+                queue: .main
+            ) { _ in activatedContinuation.yield(()) }
+            defer { center.removeObserver(observer) }
+            for await _ in activatedEvents.debounce(for: .seconds(0.5)) {
+                guard let self else { break }
+                await applyFocusFilterProfile()
             }
-            .store(in: &cancellables)
+        }
 
         // Listen for Focus Filter deactivation (Focus mode turned off).
-        DistributedNotificationCenter.default()
-            .publisher(for: Notification.Name("com.stonerl.Thaw.focusFilterDeactivated"))
-            .debounce(for: .seconds(0.5), scheduler: DispatchQueue.main)
-            .sink { [weak self] _ in
-                guard let self else { return }
-                Task { [weak self] in
-                    guard let self else { return }
-                    await self.handleFocusFilterDeactivated()
-                }
+        let (deactivatedEvents, deactivatedContinuation) = AsyncStream<Void>.makeStream()
+        focusFilterDeactivatedTask?.cancel()
+        focusFilterDeactivatedTask = Task { @MainActor [weak self] in
+            let center = DistributedNotificationCenter.default()
+            let observer = center.addObserver(
+                forName: Notification.Name("com.stonerl.Thaw.focusFilterDeactivated"),
+                object: nil,
+                queue: .main
+            ) { _ in deactivatedContinuation.yield(()) }
+            defer { center.removeObserver(observer) }
+            for await _ in deactivatedEvents.debounce(for: .seconds(0.5)) {
+                guard let self else { break }
+                await handleFocusFilterDeactivated()
             }
-            .store(in: &cancellables)
+        }
 
         // Check if a Focus Filter is currently active. If so, apply it;
         // otherwise fall back to display-based profile.
@@ -310,7 +347,9 @@ final class ProfileManager {
                 previousProfileID: baseContext.previousID,
                 previousProfileName: baseContext.previousName
             ))
-            if Task.isCancelled { return }
+            if Task.isCancelled {
+                return
+            }
             await HookRunner.runIfEnabled(profilePre, context: HookRunner.Context(
                 phase: .pre,
                 scope: .profile,
@@ -319,7 +358,9 @@ final class ProfileManager {
                 previousProfileID: baseContext.previousID,
                 previousProfileName: baseContext.previousName
             ))
-            if Task.isCancelled { return }
+            if Task.isCancelled {
+                return
+            }
 
             // 2. Snapshot apply: push profile settings into the running
             //    app state.
