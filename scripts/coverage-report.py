@@ -18,6 +18,7 @@ xcresult-path defaults to the newest bundle under Build/Logs/Test.
 
 from __future__ import annotations
 
+import argparse
 import fnmatch
 import json
 import subprocess
@@ -47,14 +48,16 @@ def is_excluded(path: str, patterns: list[str]) -> bool:
     """Match a repo-relative path against Sonar's glob syntax."""
     for pattern in patterns:
         # Sonar treats a bare `dir/*.swift` as non-recursive and `**` as
-        # recursive; fnmatch's `*` already crosses `/`, so anchor on the
-        # directory to avoid over-matching a bare `*`.
-        if fnmatch.fnmatch(path, pattern):
-            return True
-        if pattern.endswith("/*.swift"):
+        # recursive; fnmatch's `*` crosses `/`, so match those patterns by
+        # hand and only accept files directly beneath the directory.
+        if pattern.endswith("/*.swift") and "**" not in pattern:
             prefix = pattern[: -len("*.swift")]
-            if path.startswith(prefix) and path.endswith(".swift"):
+            if (path.startswith(prefix)
+                    and path.endswith(".swift")
+                    and "/" not in path[len(prefix):]):
                 return True
+        elif fnmatch.fnmatch(path, pattern):
+            return True
     return False
 
 
@@ -72,23 +75,39 @@ def newest_xcresult() -> Path:
     return candidates[-1]
 
 
-def main(argv: list[str]) -> int:
-    top = 30
-    as_json = False
-    positional: list[str] = []
-    rest = argv[1:]
-    while rest:
-        arg = rest.pop(0)
-        if arg == "--top":
-            top = int(rest.pop(0))
-        elif arg == "--json":
-            as_json = True
-        elif arg.startswith("-"):
-            sys.exit(f"error: unknown option {arg}\n\n{__doc__}")
-        else:
-            positional.append(arg)
+def parse_args(argv: list[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        "xcresult_path",
+        nargs="?",
+        type=Path,
+        default=None,
+        help="path to the .xcresult bundle (default: newest under Build/Logs/Test)",
+    )
+    parser.add_argument(
+        "--top",
+        type=int,
+        default=30,
+        help="number of files to list in the text report (default: 30)",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        dest="as_json",
+        help="emit JSON instead of the text report",
+    )
+    return parser.parse_args(argv[1:])
 
-    bundle = Path(positional[0]) if positional else newest_xcresult()
+
+def main(argv: list[str]) -> int:
+    args = parse_args(argv)
+    top = args.top
+    as_json = args.as_json
+
+    bundle = args.xcresult_path if args.xcresult_path else newest_xcresult()
 
     raw = subprocess.run(
         ["xcrun", "xccov", "view", "--report", "--json", str(bundle)],
