@@ -29,7 +29,32 @@ jobs:
       pull-requests: write
       issues: write
     steps:
+      # Crowdin sync PRs are trusted translation dumps; skip labeling/shape checks.
+      # Identified by head branch + same-repo + maintainer association — never by
+      # PR title, which any untrusted fork author can set to bypass checks.
+      - name: Detect Crowdin sync PR
+        id: crowdin
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            if (!pr) {
+              core.setOutput('is_crowdin_sync', 'false');
+              return;
+            }
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const isCrowdinSync =
+              pr.head?.ref === 'l10n_development' &&
+              pr.head?.repo?.full_name === `${owner}/${repo}` &&
+              ['OWNER', 'MEMBER', 'COLLABORATOR'].includes(pr.author_association || '');
+            core.setOutput('is_crowdin_sync', isCrowdinSync ? 'true' : 'false');
+            if (isCrowdinSync) {
+              core.info('Skipping PR metadata for Crowdin sync PR.');
+            }
+
       - name: Apply labels from PR template and changed paths
+        if: steps.crowdin.outputs.is_crowdin_sync != 'true'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
@@ -39,18 +64,6 @@ jobs:
             const body = pr.body || '';
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-
-            // Crowdin sync PRs are trusted translation dumps; skip labeling/shape checks.
-            // Identified by head branch + same-repo + maintainer association — never by
-            // PR title, which any untrusted fork author can set to bypass checks.
-            const isCrowdinSync =
-              pr.head?.ref === 'l10n_development' &&
-              pr.head?.repo?.full_name === `${owner}/${repo}` &&
-              ['OWNER', 'MEMBER', 'COLLABORATOR'].includes(pr.author_association || '');
-            if (isCrowdinSync) {
-              core.info('Skipping PR metadata for Crowdin sync PR.');
-              return;
-            }
 
             // PR change kinds — never map Bug fix to `bug` (that label is issue-only).
             const typeLabels = {
@@ -229,6 +242,7 @@ jobs:
             }
 
       - name: Check PR conventions and post summary comment
+        if: steps.crowdin.outputs.is_crowdin_sync != 'true'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
@@ -243,17 +257,6 @@ jobs:
             const association = pr.author_association || '';
             const author = pr.user?.login || '';
             const maintainerAssociations = new Set(['OWNER', 'MEMBER', 'COLLABORATOR']);
-
-            // See the labeling step: Crowdin sync PRs are recognised by head branch,
-            // same-repo origin and maintainer association, never by PR title.
-            const isCrowdinSync =
-              pr.head?.ref === 'l10n_development' &&
-              pr.head?.repo?.full_name === `${owner}/${repo}` &&
-              maintainerAssociations.has(association);
-            if (isCrowdinSync) {
-              core.info('Skipping PR conventions for Crowdin sync PR.');
-              return;
-            }
 
             const failures = [];
             const warnings = [];
@@ -280,12 +283,14 @@ jobs:
             // DCO: every non-merge, non-bot commit needs Signed-off-by matching the author email.
             // Exemptions are an exact allowlist of verified bot identities; substring
             // matching on the login would let any account named `…crowdin…` skip DCO.
+            // Crowdin sync PRs are skipped above. Keep crowdin[bot] for the GitHub
+            // App identity if it ever commits outside that path; crowdin-bot is not
+            // a verified commit login on this repository.
             const dcoBotLogins = new Set([
               'dependabot[bot]',
               'renovate[bot]',
               'github-actions[bot]',
               'crowdin[bot]',
-              'crowdin-bot',
             ]);
 
             // Sign-off must live in the trailing trailer block (as `git commit -s`

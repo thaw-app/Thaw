@@ -108,19 +108,20 @@ Secrets / Environments — never committed to git.
 | Access | Who | Purpose |
 | --- | --- | --- |
 | **View / edit release secrets** | Organization owners (`stonerl`, `nightah`, `diazdesandi`), scoped to the repo or org secret store that holds them | Continuity: any one owner unavailable must not block a hotfix |
-| **Trigger release workflows that consume secrets** | Project Lead by default; Platform Lead for platform/update-path releases or when delegated; other org owners when delegated for a specific release | Cut signed/notarized builds and publish update assets |
-| **Write collaborators / contributors** | Everyone else with repo write | Code and docs only — no secret read |
+| **Dispatch `release.yml`** | Org owners only (`stonerl`, `nightah`, `diazdesandi`). Project Lead by default; Platform Lead for platform/update-path releases or when delegated; other org owners when delegated for a specific release | Start a release or dry-run workflow run |
+| **Consume release secrets in CI** | Steps in an authorized `release.yml` run that reference the secrets (Apple signing, notarization, Sparkle private key, updates tokens). Dispatch is gated by an actor allowlist in the workflow; a GitHub **Environment** with required reviewers is preferred additional protection and is not yet assigned | Cut signed/notarized builds and publish update assets |
+| **Write collaborators / contributors** | Everyone else with repo write | Code and docs only — no secret read, no release dispatch |
 
-Prefer GitHub **Environments** (e.g. `release`) with required reviewers so
-secret-consuming jobs need an org-owner approval. Prefer **org-owned** secrets
-under [`thaw-app`](https://github.com/thaw-app) so admin is not tied to one
-personal account.
+Prefer GitHub **Environments** (e.g. `release`) with required reviewers as a
+second gate on secret-consuming jobs. Prefer **org-owned** secrets under
+[`thaw-app`](https://github.com/thaw-app) so admin is not tied to one personal
+account.
 
 ### Approval path
 
-1. Routine application releases: Project Lead (or Platform Lead / delegated org
-   owner) starts the release workflow; Environment protection rules require
-   approval from an org owner when configured.
+1. Routine application releases: an org owner (Project Lead by default, or
+   Platform Lead / delegated org owner) starts the release workflow. The job
+   refuses any other `github.actor`.
 2. Secret create / rotate / delete: proposed by an org owner; a **second** org
    owner confirms out-of-band (Discord or GitHub) before the change is applied,
    except true emergencies (compromised key) where one owner may rotate
