@@ -149,8 +149,11 @@ nonisolated extension MenuBarBackgroundKind {
 
 nonisolated extension MenuBarBackgroundKind {
     /// App-level default for background rendering in appearance configs.
-    /// Named `default` for call-site readability (`.default`), escaped because `default` is a Swift keyword.
-    static let `default` = MenuBarBackgroundKind.none
+    ///
+    /// Named `defaultKind` rather than `default`: the latter is a Swift
+    /// keyword, and a backtick-escaped declaration reads as a language
+    /// construct at the point of use.
+    static let defaultKind = MenuBarBackgroundKind.none
 }
 
 /// A type that specifies which glass style to use for glass backgrounds and tints.

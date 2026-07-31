@@ -351,41 +351,22 @@ nonisolated struct MenuBarLayoutSnapshot: Codable {
 // MARK: - ProfileContent
 
 /// Groups all settings data for a profile, used to reduce init parameter count.
+///
+/// The initializer is left to synthesis rather than written out. The defaults
+/// below carry the same values the explicit initializer supplied, and the
+/// synthesized memberwise initializer takes its parameter order from the
+/// property order here, so every call site is unaffected.
 nonisolated struct ProfileContent {
     var generalSettings: GeneralSettingsSnapshot
     var advancedSettings: AdvancedSettingsSnapshot
     var hotkeys: [String: Data]
     var displayConfigurations: [String: DisplayIceBarConfiguration]
-    var globalDisplayConfiguration: DisplayIceBarConfiguration
-    var confirmSpacingRelaunch: Bool
-    var unconfirmedSpacingProfileScope: SpacingProfileSaveScope
+    var globalDisplayConfiguration = Defaults.DefaultValue.globalDisplayConfiguration
+    var confirmSpacingRelaunch = Defaults.DefaultValue.confirmSpacingRelaunch
+    var unconfirmedSpacingProfileScope = Defaults.DefaultValue.unconfirmedSpacingProfileScope
     var appearanceConfiguration: MenuBarAppearanceConfigurationV2
     var menuBarLayout: MenuBarLayoutSnapshot
     var automation: ProfileAutomation?
-
-    init(
-        generalSettings: GeneralSettingsSnapshot,
-        advancedSettings: AdvancedSettingsSnapshot,
-        hotkeys: [String: Data],
-        displayConfigurations: [String: DisplayIceBarConfiguration],
-        globalDisplayConfiguration: DisplayIceBarConfiguration = Defaults.DefaultValue.globalDisplayConfiguration,
-        confirmSpacingRelaunch: Bool = Defaults.DefaultValue.confirmSpacingRelaunch,
-        unconfirmedSpacingProfileScope: SpacingProfileSaveScope = Defaults.DefaultValue.unconfirmedSpacingProfileScope,
-        appearanceConfiguration: MenuBarAppearanceConfigurationV2,
-        menuBarLayout: MenuBarLayoutSnapshot,
-        automation: ProfileAutomation? = nil
-    ) {
-        self.generalSettings = generalSettings
-        self.advancedSettings = advancedSettings
-        self.hotkeys = hotkeys
-        self.displayConfigurations = displayConfigurations
-        self.globalDisplayConfiguration = globalDisplayConfiguration
-        self.confirmSpacingRelaunch = confirmSpacingRelaunch
-        self.unconfirmedSpacingProfileScope = unconfirmedSpacingProfileScope
-        self.appearanceConfiguration = appearanceConfiguration
-        self.menuBarLayout = menuBarLayout
-        self.automation = automation
-    }
 }
 
 // MARK: - Profile

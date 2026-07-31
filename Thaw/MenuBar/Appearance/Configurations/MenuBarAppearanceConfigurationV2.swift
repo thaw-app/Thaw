@@ -149,7 +149,7 @@ nonisolated extension MenuBarAppearancePartialConfiguration {
         tintColor: .black,
         tintGradient: .defaultMenuBarTint,
         tintOpacity: 0.2,
-        backgroundKind: .default,
+        backgroundKind: .defaultKind,
         backgroundColor: .black,
         backgroundGradient: .defaultMenuBarTint,
         backgroundOpacity: 0.2,
