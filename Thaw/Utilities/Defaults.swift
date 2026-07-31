@@ -10,10 +10,24 @@ import Foundation
 import SwiftUI
 
 nonisolated enum Defaults {
+    /// The store every accessor below reads and writes.
+    ///
+    /// Production never assigns this; it stays `.standard` for the life of
+    /// the process. It exists so tests can point the whole `Defaults` facade
+    /// at a scratch suite instead of the user's real `com.stonerl.Thaw`
+    /// domain. Without it, exercising anything that persists a setting
+    /// rewrites the defaults of whoever is running the tests, and the suite
+    /// has to defend itself with per-key snapshot/restore that is not safe
+    /// once tests run in parallel.
+    ///
+    /// `UserDefaults` is itself thread-safe, so the unchecked annotation
+    /// covers only the reassignment, which is confined to test setup.
+    nonisolated(unsafe) static var store: UserDefaults = .standard
+
     /// Returns a dictionary containing the keys and values for
     /// the defaults meant to be seen by all applications.
     static var globalDomain: [String: Any] {
-        UserDefaults.standard.persistentDomain(forName: UserDefaults.globalDomain) ?? [:]
+        store.persistentDomain(forName: UserDefaults.globalDomain) ?? [:]
     }
 
     /// Returns the object for the specified key.
@@ -21,7 +35,7 @@ nonisolated enum Defaults {
     /// - Parameter key: The key in the UserDefaults database
     ///   to retrieve the value for.
     static func object(forKey key: Key) -> Any? {
-        UserDefaults.standard.object(forKey: key.rawValue)
+        store.object(forKey: key.rawValue)
     }
 
     /// Returns the string for the specified key.
@@ -29,7 +43,7 @@ nonisolated enum Defaults {
     /// - Parameter key: The key in the UserDefaults database
     ///   to retrieve the value for.
     static func string(forKey key: Key) -> String? {
-        UserDefaults.standard.string(forKey: key.rawValue)
+        store.string(forKey: key.rawValue)
     }
 
     /// Returns the array for the specified key.
@@ -37,7 +51,7 @@ nonisolated enum Defaults {
     /// - Parameter key: The key in the UserDefaults database
     ///   to retrieve the value for.
     static func array(forKey key: Key) -> [Any]? {
-        UserDefaults.standard.array(forKey: key.rawValue)
+        store.array(forKey: key.rawValue)
     }
 
     /// Returns the dictionary for the specified key.
@@ -45,7 +59,7 @@ nonisolated enum Defaults {
     /// - Parameter key: The key in the UserDefaults database
     ///   to retrieve the value for.
     static func dictionary(forKey key: Key) -> [String: Any]? {
-        UserDefaults.standard.dictionary(forKey: key.rawValue)
+        store.dictionary(forKey: key.rawValue)
     }
 
     /// Returns the data for the specified key.
@@ -53,7 +67,7 @@ nonisolated enum Defaults {
     /// - Parameter key: The key in the UserDefaults database
     ///   to retrieve the value for.
     static func data(forKey key: Key) -> Data? {
-        UserDefaults.standard.data(forKey: key.rawValue)
+        store.data(forKey: key.rawValue)
     }
 
     /// Returns the string array for the specified key.
@@ -61,7 +75,7 @@ nonisolated enum Defaults {
     /// - Parameter key: The key in the UserDefaults database
     ///   to retrieve the value for.
     static func stringArray(forKey key: Key) -> [String]? {
-        UserDefaults.standard.stringArray(forKey: key.rawValue)
+        store.stringArray(forKey: key.rawValue)
     }
 
     /// Returns the integer value for the specified key.
@@ -69,7 +83,7 @@ nonisolated enum Defaults {
     /// - Parameter key: The key in the UserDefaults database
     ///   to retrieve the value for.
     static func integer(forKey key: Key) -> Int {
-        UserDefaults.standard.integer(forKey: key.rawValue)
+        store.integer(forKey: key.rawValue)
     }
 
     /// Returns the single precision floating point value for
@@ -78,7 +92,7 @@ nonisolated enum Defaults {
     /// - Parameter key: The key in the UserDefaults database
     ///   to retrieve the value for.
     static func float(forKey key: Key) -> Float {
-        UserDefaults.standard.float(forKey: key.rawValue)
+        store.float(forKey: key.rawValue)
     }
 
     /// Returns the double precision floating point value for
@@ -87,7 +101,7 @@ nonisolated enum Defaults {
     /// - Parameter key: The key in the UserDefaults database
     ///   to retrieve the value for.
     static func double(forKey key: Key) -> Double {
-        UserDefaults.standard.double(forKey: key.rawValue)
+        store.double(forKey: key.rawValue)
     }
 
     /// Returns the Boolean value for the specified key.
@@ -95,7 +109,7 @@ nonisolated enum Defaults {
     /// - Parameter key: The key in the UserDefaults database
     ///   to retrieve the value for.
     static func bool(forKey key: Key) -> Bool {
-        UserDefaults.standard.bool(forKey: key.rawValue)
+        store.bool(forKey: key.rawValue)
     }
 
     /// Returns the url for the specified key.
@@ -103,7 +117,7 @@ nonisolated enum Defaults {
     /// - Parameter key: The key in the UserDefaults database
     ///   to retrieve the value for.
     static func url(forKey key: Key) -> URL? {
-        UserDefaults.standard.url(forKey: key.rawValue)
+        store.url(forKey: key.rawValue)
     }
 
     /// Sets the value for the specified key.
@@ -111,7 +125,7 @@ nonisolated enum Defaults {
     /// - Parameter key: The key in the UserDefaults database
     ///   to set the value for.
     static func set(_ value: Any?, forKey key: Key) {
-        UserDefaults.standard.set(value, forKey: key.rawValue)
+        store.set(value, forKey: key.rawValue)
     }
 
     /// Removes the value of the specified key.
@@ -119,7 +133,7 @@ nonisolated enum Defaults {
     /// - Parameter key: The key in the UserDefaults database
     ///   to remove the value for.
     static func removeObject(forKey key: Key) {
-        UserDefaults.standard.removeObject(forKey: key.rawValue)
+        store.removeObject(forKey: key.rawValue)
     }
 
     /// Retrieves the value for the given key, and, if it is
