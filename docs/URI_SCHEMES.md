@@ -98,7 +98,7 @@ The following URLs are configured in `Thaw/Resources/Info.plist` for internal us
 
 | Key                                   | Value                                 | Description                          |
 | ------------------------------------- | ------------------------------------- | ------------------------------------ |
-| `ThawRepositoryURL`                   | `https://github.com/stonerl/Thaw`     | GitHub repository                    |
+| `ThawRepositoryURL`                   | `https://github.com/thaw-app/Thaw`    | GitHub repository                    |
 | `ThawDonateURL`                       | `https://github.com/sponsors/stonerl` | Sponsorship page                     |
 | `ThawMenuBarItemSpacingExecutableURI` | `file:///usr/bin/env`                 | Executable path for spacing commands |
 
