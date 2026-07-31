@@ -59,6 +59,7 @@ $(SRCROOT)/Thaw/MenuBar/MenuBarItems/AXItemActivator.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/ClickReactionVerifier.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/LayoutReconciler.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/LayoutSolver.swift
+$(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItem+Enumeration.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItem+Ordering.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItem.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemFailureLedger.swift
@@ -69,6 +70,7 @@ $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemTag.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/PendingLedger.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarManager.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarSection.swift
+$(SRCROOT)/Thaw/MenuBar/MenuBarSectionLayout.swift
 $(SRCROOT)/Thaw/MenuBar/Search/MenuBarSearchModel.swift
 $(SRCROOT)/Thaw/MenuBar/Search/MenuBarSearchPanel.swift
 $(SRCROOT)/Thaw/MenuBar/Spacing/MenuBarItemSpacingError.swift
