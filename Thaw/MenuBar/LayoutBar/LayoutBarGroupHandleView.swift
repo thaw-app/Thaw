@@ -35,7 +35,7 @@ final class LayoutBarGroupHandleView: NSView {
     let sourceSection: MenuBarSection.Name
 
     /// The persistent identifiers of the group's members, in visual order.
-    let memberIdentifiers: [String]
+    var memberIdentifiers: [String]
 
     init(
         sourceContainer: LayoutBarContainer,
@@ -92,6 +92,37 @@ final class LayoutBarGroupHandleView: NSView {
 
     override func mouseDown(with _: NSEvent) {
         // Swallow the mouse-down so the drag begins from this view.
+    }
+
+    /// The grip is the most direct place to act on a whole group, so it offers
+    /// the same menu a member does.
+    override func rightMouseDown(with event: NSEvent) {
+        guard let container = sourceContainer,
+              let appState = container.appState
+        else {
+            super.rightMouseDown(with: event)
+            return
+        }
+        let orderedItems = container.orderedItemsForMenu()
+        guard let group = appState.itemGroupManager
+            .resolvedGroups(for: orderedItems)
+            .first(where: { group in
+                group.memberIndices.contains { index in
+                    orderedItems.indices.contains(index)
+                        && memberIdentifiers.contains(orderedItems[index].uniqueIdentifier)
+                }
+            }),
+            let menu = LayoutBarItemMenu.menu(
+                subject: .group(group),
+                section: sourceSection,
+                orderedItems: orderedItems,
+                appState: appState
+            )
+        else {
+            super.rightMouseDown(with: event)
+            return
+        }
+        menu.popUp(positioning: nil, at: CGPoint(x: 0, y: bounds.maxY), in: self)
     }
 
     override func mouseDragged(with event: NSEvent) {

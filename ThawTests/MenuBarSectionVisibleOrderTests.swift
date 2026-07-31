@@ -33,7 +33,7 @@ struct MenuBarSectionVisibleOrderTests {
         let positionStore = MenuBarSectionControllerTests.FakeRuntimePreferenceStore()
         let positionHideBackend = MenuBarSectionControllerTests.FakePositionHideBackend()
 
-        MenuBarSectionController(
+        return MenuBarSectionController(
             appState: nil,
             backend: backend,
             ccModuleManager: ccModuleManager,

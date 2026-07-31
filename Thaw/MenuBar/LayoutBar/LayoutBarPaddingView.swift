@@ -102,10 +102,12 @@ final class LayoutBarPaddingView: NSView {
 
     override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
         guard !isStabilizing else { return [] }
-        if sender.draggingSource is LayoutBarGroupHandleView {
+        if let handle = sender.draggingSource as? LayoutBarGroupHandleView {
             // The whole-group drop mutates order/assignment on drop rather than
-            // reordering arranged views mid-drag, so just accept the move.
-            return .move
+            // reordering arranged views mid-drag, so there is nothing to
+            // preview — but the drop can still be refused, and discovering that
+            // only on release means the drag just springs back with no cue.
+            return groupDropOperation(for: handle)
         }
         // Freeze the destination's arrangedViews so that the cache refresh
         // triggered while the system move is in flight cannot overwrite the
@@ -125,10 +127,36 @@ final class LayoutBarPaddingView: NSView {
 
     override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation {
         guard !isStabilizing else { return [] }
-        if sender.draggingSource is LayoutBarGroupHandleView {
-            return .move
+        if let handle = sender.draggingSource as? LayoutBarGroupHandleView {
+            return groupDropOperation(for: handle)
         }
         return container.updateArrangedViewsForDrag(with: sender, phase: .updated)
+    }
+
+    /// Whether a group carried by `handle` may be dropped into this container's
+    /// section, so the cursor shows "no drop" while the drag is still in flight
+    /// instead of the user finding out on release.
+    ///
+    /// A same-section drop is a reorder and never changes membership, so it is
+    /// always permitted.
+    private func groupDropOperation(for handle: LayoutBarGroupHandleView) -> NSDragOperation {
+        guard handle.sourceSection != container.section else { return .move }
+        guard let appState = container.appState else { return .move }
+
+        let sourceItems = appState.itemManager.itemCache.managedItems(for: handle.sourceSection)
+        let members = handle.memberIdentifiers.compactMap { identifier in
+            sourceItems.first { $0.uniqueIdentifier == identifier }
+        }
+        guard !members.isEmpty else { return [] }
+
+        let feasibility = MenuBarSectionController.groupMoveFeasibility(
+            members: members,
+            expectedMemberCount: handle.memberIdentifiers.count,
+            to: container.section,
+            experimentalSystemItemHiding: appState.settings.advanced.enableExperimentalSystemItemHiding,
+            isHidingAvailable: appState.menuBarManager.sectionController?.isHidingAvailable ?? false
+        )
+        return feasibility.isAllowed ? .move : []
     }
 
     override func draggingEnded(_ sender: NSDraggingInfo) {
@@ -300,7 +328,30 @@ final class LayoutBarPaddingView: NSView {
                     sourceSection: sourceSection,
                     controller: controller
                 ) {
-                    controller?.setSection(container.section, items: groupMembers)
+                    // Dragging one member moves the whole group, so this must be
+                    // atomic and must explain itself when it cannot apply.
+                    if let refusal = controller?.setSection(
+                        container.section,
+                        items: groupMembers,
+                        atomically: true
+                    ) {
+                        if let appState = container.appState {
+                            let sourceItems = appState.itemManager.itemCache
+                                .managedItems(for: sourceSection)
+                            appState.layoutFeedback.post(
+                                LayoutBarFeedbackCenter.blockedGroupMove(
+                                    groupName: groupDisplayName(
+                                        for: groupMembers,
+                                        in: sourceItems,
+                                        appState: appState
+                                    ),
+                                    section: container.section,
+                                    refusal: refusal
+                                )
+                            )
+                        }
+                        return false
+                    }
                 } else {
                     controller?.setSection(container.section, item: item)
                     controller?.setSectionOrder(from: orderedItems, for: container.section)
@@ -644,13 +695,31 @@ final class LayoutBarPaddingView: NSView {
     /// arrangement. The visible Thaw control (`Thaw.ControlItem.Visible`) is
     /// included so a layout-bar drag can commit the icon's new slot; hidden
     /// section dividers stay structural and are omitted.
+    /// A collapsed group is one arranged view standing in for several items, so
+    /// it **must** be expanded back into its members here. Matching only `.item`
+    /// would drop every member of a collapsed group out of the persisted section
+    /// order — the items would silently vanish from the saved layout while still
+    /// being in the menu bar.
     static func layoutItemsForPersistence(from arrangedViews: [LayoutBarArrangedView]) -> [MenuBarItem] {
-        arrangedViews.compactMap { view in
-            guard case let .item(item) = view.kind else { return nil }
-            if item.isControlItem {
-                return item.tag.matchesVisibleControlItem ? item : nil
+        persistableItems(from: arrangedViews.map(\.kind))
+    }
+
+    /// The pure kind-list form, so the expansion rule can be tested without a
+    /// view tree — `LayoutBarArrangedView.kind` is get-only and the concrete
+    /// views need an `AppState`.
+    static func persistableItems(from kinds: [LayoutBarArrangedView.Kind]) -> [MenuBarItem] {
+        kinds.flatMap { kind -> [MenuBarItem] in
+            switch kind {
+            case let .item(item):
+                if item.isControlItem {
+                    return item.tag.matchesVisibleControlItem ? [item] : []
+                }
+                return [item]
+            case let .collapsedGroup(members):
+                return members.filter { !$0.isControlItem }
+            case .opaqueSlot, .newItemsBadge:
+                return []
             }
-            return item
         }
     }
 
@@ -658,12 +727,14 @@ final class LayoutBarPaddingView: NSView {
         Self.layoutItemsForPersistence(from: arrangedViews)
     }
 
-    /// The members of the dragged item's bundle group in its source section, or
-    /// `nil` when the item is ungrouped (single-item bundle or not groupable).
+    /// The members of the dragged item's group in its source section, or `nil`
+    /// when the item belongs to no group.
     ///
-    /// Grouping is by bundle, so the whole bundle travels together on a
-    /// cross-section drop — honoring "one section per group" — even if its items
-    /// are not currently adjacent in the source section.
+    /// The whole group travels together on a cross-section drop — honoring "one
+    /// section per group" — even if its members are not currently adjacent in
+    /// the source section. Resolution goes through the shared resolver, so a
+    /// user-authored group spanning several bundles moves as one unit exactly
+    /// like an automatic same-bundle cluster does.
     private func crossSectionGroupMembers(
         for item: MenuBarItem,
         sourceSection: MenuBarSection.Name,
@@ -674,9 +745,7 @@ final class LayoutBarPaddingView: NSView {
         }
         let managed = appState.itemManager.itemCache.managedItems(for: sourceSection)
         let sourceItems = controller?.ordered(managed, in: sourceSection) ?? managed
-        let tags = sourceItems.map(\.tag)
-        guard let index = sourceItems.firstIndex(where: { $0.tag == item.tag }),
-              let group = MenuBarItemGrouping.group(containing: index, in: tags),
+        guard let group = appState.itemGroupManager.resolvedGroup(containing: item, in: sourceItems),
               group.count >= 2
         else {
             return nil
@@ -886,6 +955,16 @@ final class LayoutBarPaddingView: NSView {
             }
             if !isPlaced() {
                 Self.diagLog.warning("Group reorder did not fully converge after \(maxPasses) passes")
+                // The persisted order below is still canonical; what failed is
+                // the physical AX placement. Say so rather than leaving a
+                // half-regrouped cluster with no explanation.
+                let sourceItems = appState.itemManager.itemCache.managedItems(for: section)
+                appState.layoutFeedback.post(
+                    LayoutBarFeedbackCenter.groupRegatherIncomplete(
+                        groupName: groupDisplayName(for: members, in: sourceItems, appState: appState),
+                        section: section
+                    )
+                )
             }
 
             appState.menuBarManager.sectionController?.setSectionOrder(
@@ -913,21 +992,38 @@ final class LayoutBarPaddingView: NSView {
             return false
         }
 
-        let experimentalSystemItemHiding = appState.settings.advanced.enableExperimentalSystemItemHiding
-        guard members.allSatisfy({
-            MenuBarSectionController.canAssign(
-                $0,
-                to: container.section,
-                experimentalSystemItemHiding: experimentalSystemItemHiding
+        // Atomic: a group is indivisible, so a member that cannot move refuses
+        // the whole batch rather than being quietly skipped. The refusal is
+        // surfaced instead of only logged — otherwise the drag just snaps back
+        // and reads as the app ignoring it.
+        if let refusal = controller?.setSection(container.section, items: members, atomically: true) {
+            appState.layoutFeedback.post(
+                LayoutBarFeedbackCenter.blockedGroupMove(
+                    groupName: groupDisplayName(for: members, in: sourceItems, appState: appState),
+                    section: container.section,
+                    refusal: refusal
+                )
             )
-        }) else {
-            Self.diagLog.warning("Refusing group move to \(container.section.logString): a member is non-hideable")
             return false
         }
 
-        controller?.setSection(container.section, items: members)
         Task { await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true) }
         return true
+    }
+
+    /// A user-facing name for the group these members belong to, for use in
+    /// refusal copy.
+    private func groupDisplayName(
+        for members: [MenuBarItem],
+        in sourceItems: [MenuBarItem],
+        appState: AppState
+    ) -> String {
+        guard let first = members.first,
+              let group = appState.itemGroupManager.resolvedGroup(containing: first, in: sourceItems)
+        else {
+            return members.first?.displayName ?? ""
+        }
+        return appState.itemGroupManager.displayName(for: group, in: sourceItems)
     }
 
     /// The insertion index (in `identifiers` space) for a group dropped at

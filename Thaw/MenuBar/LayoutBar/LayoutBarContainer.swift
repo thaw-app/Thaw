@@ -25,7 +25,7 @@ final class LayoutBarContainer: NSView {
     }
 
     /// The overlay grip views, one per detected cluster.
-    private var groupHandleViews = [LayoutBarGroupHandleView]()
+    private var groupHandleViews = [MenuBarItemGroupOrigin: LayoutBarGroupHandleView]()
     /// Phases for a dragging session.
     enum DraggingPhase {
         case entered, exited, updated, ended
@@ -129,6 +129,24 @@ final class LayoutBarContainer: NSView {
                 setArrangedViews(items: cache.managedItems(for: section))
             }
             .store(in: &c)
+
+            // Group membership is an input to layout (the handle gap) and to
+            // drawing (the cluster chrome), and it changes independently of the
+            // item cache — creating or dissolving a group touches no item.
+            // Without this, an edit would not show until something else forced
+            // a pass. Skipped while a drag has frozen updates, exactly like the
+            // cache observer above.
+            appState.itemGroupManager.$groupSet
+                .removeDuplicates()
+                .dropFirst()
+                .sink { [weak self] _ in
+                    guard let self, canSetArrangedViews else {
+                        return
+                    }
+                    needsLayout = true
+                    needsDisplay = true
+                }
+                .store(in: &c)
 
             // Observe average color changes to update badge appearance
             appState.menuBarManager.$averageColorInfo
@@ -251,8 +269,12 @@ final class LayoutBarContainer: NSView {
 
         // Reserve a leading gap before the first member of each cluster so its
         // drag handle has room to sit without overlapping any item.
-        let groups = groupedMemberIndices()
-        let groupStarts = Set(groups.compactMap(\.first))
+        let resolved = resolvedGroups()
+        let groups = Dictionary(
+            resolved.map { ($0.origin, $0.memberIndices) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        let groupStarts = Set(resolved.compactMap(\.memberIndices.first))
 
         for (index, entry) in arrangedViews.enumerated() {
             var view: NSView = entry
@@ -305,13 +327,18 @@ final class LayoutBarContainer: NSView {
     /// `groups` are member-index lists (a bundle's members may not be adjacent).
     /// One handle serves the whole bundle and carries every member's identifier,
     /// so dragging it gathers all members — not just a contiguous subset.
-    private func updateGroupHandles(groups: [[Int]]) {
-        for handle in groupHandleViews {
-            handle.removeFromSuperview()
-        }
-        groupHandleViews.removeAll()
+    /// Positions one drag handle per group, reusing the existing handle for a
+    /// group that is still present.
+    ///
+    /// Reuse rather than teardown-and-rebuild: a handle destroyed and recreated
+    /// every layout pass cannot hold per-group state (hover, and later collapse),
+    /// and rebuilding mid-interaction would drop the handle out from under a
+    /// cursor that is already on it.
+    private func updateGroupHandles(groups: [MenuBarItemGroupOrigin: [Int]]) {
+        var reusable = groupHandleViews
+        var live = [MenuBarItemGroupOrigin: LayoutBarGroupHandleView]()
 
-        for memberIndices in groups {
+        for (origin, memberIndices) in groups {
             let views = memberIndices.compactMap { arrangedViews.indices.contains($0) ? arrangedViews[$0] : nil }
             guard let first = views.first else {
                 continue
@@ -326,11 +353,19 @@ final class LayoutBarContainer: NSView {
                 continue
             }
 
-            let handle = LayoutBarGroupHandleView(
-                sourceContainer: self,
-                sourceSection: section,
-                memberIdentifiers: memberIdentifiers
-            )
+            let handle: LayoutBarGroupHandleView
+            if let existing = reusable.removeValue(forKey: origin) {
+                handle = existing
+                handle.memberIdentifiers = memberIdentifiers
+            } else {
+                handle = LayoutBarGroupHandleView(
+                    sourceContainer: self,
+                    sourceSection: section,
+                    memberIdentifiers: memberIdentifiers
+                )
+                addSubview(handle)
+            }
+
             let size = LayoutBarGroupHandleView.preferredSize(height: first.frame.height)
             handle.setFrameSize(size)
             handle.setFrameOrigin(
@@ -339,12 +374,22 @@ final class LayoutBarContainer: NSView {
                     y: first.frame.midY - (size.height / 2)
                 )
             )
-            addSubview(handle)
-            groupHandleViews.append(handle)
+            live[origin] = handle
         }
+
+        // Whatever was not claimed above belongs to a group that no longer exists.
+        for (_, stale) in reusable {
+            stale.removeFromSuperview()
+        }
+        groupHandleViews = live
     }
 
     /// Snapshots the member views of a cluster into a single drag image.
+    ///
+    /// Composites each member's own rendering left-to-right rather than caching
+    /// the union rect. A group's members need not be adjacent, and caching the
+    /// union would pull whatever sits *between* them into the drag image — so a
+    /// scattered group appeared to be dragging its neighbours along.
     ///
     /// Returns the image plus the union rect (in this container's coordinates)
     /// so the caller can align the drag image under the cursor.
@@ -362,31 +407,61 @@ final class LayoutBarContainer: NSView {
             .reduce(first.frame) { $0.union($1.frame) }
             .insetBy(dx: -GroupChrome.horizontalPadding, dy: -GroupChrome.verticalPadding)
             .intersection(bounds)
-        guard !rect.isNull, !rect.isEmpty,
-              let rep = bitmapImageRepForCachingDisplay(in: rect)
-        else {
+        guard !rect.isNull, !rect.isEmpty else {
             return nil
         }
-        cacheDisplay(in: rect, to: rep)
+
         let image = NSImage(size: rect.size)
-        image.addRepresentation(rep)
+        image.lockFocusFlipped(isFlipped)
+        defer { image.unlockFocus() }
+
+        for view in views {
+            guard let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else {
+                continue
+            }
+            view.cacheDisplay(in: view.bounds, to: rep)
+            // Position each member relative to the union rect's origin so the
+            // composite lines up with where the cluster actually sits.
+            let origin = CGPoint(x: view.frame.minX - rect.minX, y: view.frame.minY - rect.minY)
+            rep.draw(in: CGRect(origin: origin, size: view.bounds.size))
+        }
         return (image, rect)
     }
 
-    /// The member-index lists of the arranged views that form each same-bundle
-    /// cluster. A bundle's members may not be adjacent, so each entry is the full
-    /// set of that bundle's member indices, not a contiguous range.
+    /// The groups present among the arranged views: the user's authored groups
+    /// first, then automatic same-bundle clusters over whatever is left.
+    ///
+    /// The single authority every part of this view asks — chrome, handles, and
+    /// (later) collapse all read this, so there is exactly one answer to "what
+    /// group is this item in".
     ///
     /// Only item views carry a bundle tag; the badge and opaque slots are mapped
     /// to a non-groupable placeholder so they are never members.
-    private func groupedMemberIndices() -> [[Int]] {
+    ///
+    /// Returns nothing on the legacy backend. Grouping is a macOS 27 feature —
+    /// there `sectionController` is nil, so every group commit optional-chains
+    /// into a no-op. Drawing chrome and a draggable handle that silently do
+    /// nothing is worse than showing no affordance at all.
+    func resolvedGroups() -> [ResolvedGroup] {
+        guard !MenuBarBackendProvider.current.supportsLegacySectionHiding,
+              let appState
+        else {
+            return []
+        }
         let tags: [MenuBarItemTag] = arrangedViews.map { view in
             if case let .item(item) = view.kind {
                 return item.tag
             }
             return .visibleControlItem
         }
-        return MenuBarItemGrouping.groups(in: tags).map(\.memberIndices)
+        return MenuBarItemGroupResolver.resolve(tags: tags, groupSet: appState.itemGroupManager.groupSet)
+    }
+
+    /// The member-index lists of each group. A group's members may not be
+    /// adjacent, so each entry is the full set of member indices rather than a
+    /// contiguous range.
+    private func groupedMemberIndices() -> [[Int]] {
+        resolvedGroups().map(\.memberIndices)
     }
 
     override func draw(_ dirtyRect: NSRect) {
@@ -560,11 +635,25 @@ final class LayoutBarContainer: NSView {
             {
                 return []
             }
-            if !MenuBarSectionController.canAssign(
-                item,
-                to: section,
-                experimentalSystemItemHiding: experimentalSystemItemHiding
-            ) {
+            // A member drag carries its whole group, so every member has to be
+            // assignable here — not just the one under the cursor. Otherwise the
+            // cursor promises a drop that `setSection(_:items:atomically:)` will
+            // refuse on release.
+            let members = dragUnitViews(for: sourceView).compactMap { view -> MenuBarItem? in
+                if case let .item(member) = view.kind {
+                    member
+                } else {
+                    nil
+                }
+            }
+            let assignable = members.isEmpty ? [item] : members
+            if !assignable.allSatisfy({
+                MenuBarSectionController.canAssign(
+                    $0,
+                    to: section,
+                    experimentalSystemItemHiding: experimentalSystemItemHiding
+                )
+            }) {
                 return []
             }
         }
@@ -575,9 +664,13 @@ final class LayoutBarContainer: NSView {
             }
             return updateArrangedViewsForDrag(with: draggingInfo, phase: .updated)
         case .exited:
-            if let sourceIndex = arrangedViews.firstIndex(of: sourceView) {
+            if arrangedViews.contains(sourceView) {
                 shouldAnimateNextLayoutPass = false
-                arrangedViews.remove(at: sourceIndex)
+                // Pull the whole unit out, not just the dragged view — leaving
+                // its siblings behind would split the cluster on screen while
+                // the drop relocates all of them.
+                let unit = Set(dragUnitViews(for: sourceView).map(ObjectIdentifier.init))
+                arrangedViews.removeAll { unit.contains(ObjectIdentifier($0)) }
             }
             return .move
         case .updated:
@@ -599,9 +692,14 @@ final class LayoutBarContainer: NSView {
             // from being a swap destination. The badge position should only
             // change when the user explicitly drags the badge itself.
             let excludeBadge = !sourceView.isNewItemsBadge
+            // The whole group travels together, so a drop onto any of its own
+            // members is a no-op rather than a reorder.
+            let unitViews = dragUnitViews(for: sourceView)
+            sourceView.dragUnitCount = unitViews.count
+            let unitIdentities = Set(unitViews.map(ObjectIdentifier.init))
             guard
                 let destinationView = arrangedView(nearestTo: draggingLocation.x, excludingBadge: excludeBadge),
-                destinationView !== sourceView,
+                !unitIdentities.contains(ObjectIdentifier(destinationView)),
                 // don't rearrange if destination is disabled
                 destinationView.isEnabled,
                 // don't rearrange if in the middle of an animation
@@ -626,16 +724,55 @@ final class LayoutBarContainer: NSView {
                 if destinationIndex > sourceIndex {
                     targetIndex += 1
                 }
-                arrangedViews.move(fromOffsets: [sourceIndex], toOffset: targetIndex)
+                // `placeBlock` gathers the unit's members — which may be
+                // scattered — and reinserts them contiguously at the drop
+                // cursor. For a one-view unit it reduces exactly to the
+                // `move(fromOffsets:toOffset:)` this replaced.
+                let memberIndices = unitViews.compactMap { arrangedViews.firstIndex(of: $0) }
+                arrangedViews = MenuBarItemGroupResolver.placeBlock(
+                    arrangedViews,
+                    memberIndices: memberIndices,
+                    toIndexInOriginal: targetIndex
+                )
             } else {
                 // source view is being dragged from another container,
                 // so just insert it
-                arrangedViews.insert(sourceView, at: destinationIndex)
+                arrangedViews.insert(contentsOf: unitViews, at: destinationIndex)
             }
             return .move
         case .ended:
             return .move
         }
+    }
+
+    /// The items currently arranged here, in display order, for menu building.
+    ///
+    /// Taken from `arrangedViews` rather than the cache so the menu reasons
+    /// about exactly what the user is looking at, including any mid-drag state.
+    func orderedItemsForMenu() -> [MenuBarItem] {
+        arrangedViews.compactMap { view in
+            if case let .item(item) = view.kind { item } else { nil }
+        }
+    }
+
+    /// The arranged views a single drag moves as one block: every member of the
+    /// group containing `view`, in current left-to-right order, or just `view`
+    /// when it belongs to no group.
+    ///
+    /// Dragging any member moves the whole group, so the mid-drag preview has to
+    /// move the whole block too. If it moved only the dragged view, the cluster
+    /// would visibly split while the drop relocates all of it — the preview
+    /// would be lying about what is going to happen.
+    func dragUnitViews(for view: LayoutBarArrangedView) -> [LayoutBarArrangedView] {
+        guard let index = arrangedViews.firstIndex(of: view) else {
+            return [view]
+        }
+        let indices = MenuBarItemGroupResolver.dragUnitIndices(
+            forIndex: index,
+            in: resolvedGroups()
+        )
+        let views = indices.compactMap { arrangedViews.indices.contains($0) ? arrangedViews[$0] : nil }
+        return views.isEmpty ? [view] : views
     }
 
     /// Returns the nearest arranged view to the given X position within

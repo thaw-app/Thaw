@@ -899,7 +899,41 @@ final class MenuBarItemManager: ObservableObject {
             }
         }
 
-        return newOrder
+        return canonicalizingGroups(in: newOrder, cache: cache)
+    }
+
+    /// Applies the same group gathering ``MenuBarSectionController/commitOrder(reason:options:)``
+    /// applies, so the two writers of `savedSectionOrder` agree.
+    ///
+    /// This is not cosmetic. `savedSectionOrder` is written from two directions:
+    /// `mirrorMacOS27SectionOrder` pushes the controller's already-gathered
+    /// order in, and the cache cycle pushes this function's output in. The cycle
+    /// short-circuits on `mirrored != savedSectionOrder`, so if only one side
+    /// gathered, the two would disagree on every pass, the guard would never
+    /// fire, and each write would schedule an overflow rebalance that re-enters
+    /// the cycle — the same write-storm shape as commit `2e38d6c6`.
+    ///
+    /// Every section is gathered, including `.visible` — the two sides must
+    /// cover exactly the same sections or they diverge again. Visible matters
+    /// most of all here: its order is what drives the MenuBarAgent weight
+    /// permutation that physically holds a group's icons together.
+    private func canonicalizingGroups(
+        in order: [String: [String]],
+        cache: ItemCache
+    ) -> [String: [String]] {
+        let items = MenuBarSection.Name.allCases.flatMap { cache[$0] }
+        let groups = Self.groupPolicySet(for: items, appState: appState)
+        guard !groups.isEmpty else { return order }
+
+        var result = order
+        for section in MenuBarSection.Name.allCases {
+            let key = sectionKey(for: section)
+            guard let sectionOrder = result[key] else { continue }
+            let gathered = MenuBarItemGroupPolicy.gather(groups: groups, in: sectionOrder)
+            guard gathered.report.didChange else { continue }
+            result[key] = gathered.order
+        }
+        return result
     }
 
     /// Extracts the current per-section item order from the given cache
@@ -1632,6 +1666,28 @@ final class MenuBarItemManager: ObservableObject {
     private func configureCancellables(with appState: AppState) {
         var c = Set<AnyCancellable>()
 
+        // Creating, editing, or dissolving a group changes the *desired* order
+        // but moves nothing on screen. Gathering only rewrites
+        // `sectionItemOrder`; the icons do not follow until those identifiers
+        // are turned into adjacent MenuBarAgent weights, and the only path that
+        // does that for Visible previously ran on explicit profile apply. So a
+        // group made from the layout bar stayed visually scattered.
+        //
+        // Debounced because a multi-step edit (materialize, then rename) lands
+        // as several mutations, and each physical re-order costs a plist write
+        // plus an agent re-sort.
+        appState.itemGroupManager.$groupSet
+            .removeDuplicates()
+            .dropFirst()
+            .debounce(for: .milliseconds(250), scheduler: DispatchQueue.main)
+            .sink { [weak self] _ in
+                guard let self else { return }
+                Task { @MainActor [weak self] in
+                    await self?.applyGroupOrderToLiveSections()
+                }
+            }
+            .store(in: &c)
+
         // When any app launches, refresh the cache to detect new menu bar items
         // (e.g., apps with "unremembered" icons that need restoration) and restore
         // any items that moved to incorrect sections after their app restarted.
@@ -2142,6 +2198,14 @@ extension MenuBarItemManager {
         case .none:
             break
         case .mirrorSectionOrder:
+            // Repair before mirroring: a group split across sections by an older
+            // build must be consolidated first, or this cycle would mirror the
+            // split state straight back into savedSectionOrder. Reaching here
+            // already means `shouldPersistSavedOrder` passed, so no move is in
+            // flight, and the call is a no-op (no write, no refresh) whenever the
+            // persisted state is already healthy.
+            appState?.menuBarManager.sectionController?.repairGroupInvariantIfNeeded()
+
             // macOS 27 persists section membership through MenuBarSectionController, not
             // the position-derived savedSectionOrder. Mirror the curated section
             // order from itemCache so profiles, defaults, and applySavedLayout
@@ -4612,6 +4676,103 @@ extension MenuBarItemManager {
     /// Applies persisted order one achievable move at a time. Fixed anchors
     /// partition the requested order into independent segments, preventing an
     /// impossible cross-anchor move from driving reconciliation indefinitely.
+    /// Re-gathers the recorded order around the current groups and pushes it
+    /// into MenuBarAgent's preferred positions, so a group the user just created
+    /// physically closes up instead of only becoming contiguous on paper.
+    ///
+    /// Visible only. Hidden-style sections have no live AX elements to reorder
+    /// while concealed; their recorded order is already gathered by
+    /// `commitOrder` and is applied when the section is next revealed.
+    @MainActor
+    func applyGroupOrderToLiveSections() async {
+        guard #available(macOS 27, *),
+              !MenuBarBackendProvider.current.supportsLegacySectionHiding,
+              let controller = appState?.menuBarManager.sectionController
+        else {
+            return
+        }
+        // Re-commit so the order reflects the group set that just changed;
+        // gathering runs inside the commit. A no-op commit writes nothing.
+        controller.regatherGroups()
+        await applyMacOS27SectionItemOrder(sections: [.visible], controller: controller)
+
+        // `applyOrder` above only permutes weights MenuBarAgent already holds,
+        // which can order a group correctly while leaving other apps' weights
+        // between its members — and the agent sorts purely by weight, so the
+        // icons stay scattered. Re-space so the members occupy consecutive
+        // weights. Only when a group is genuinely interleaved: re-spacing
+        // rewrites the whole segment, which is not worth doing on every edit.
+        let desiredOrder = (controller.sectionItemOrder[.visible] ?? [])
+            .filter { controller.section(for: $0) == .visible }
+        if desiredOrder.count > 1, isAnyGroupInterleaved(in: desiredOrder) {
+            let liveItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+            let respaced = RuntimePositionStore.respaceOrder(
+                desiredOrder: desiredOrder,
+                liveItems: liveItems,
+                experimentalSystemItemHiding: appState?.settings.advanced.enableExperimentalSystemItemHiding ?? false
+            )
+            if !respaced.isEmpty {
+                controller.notePreferredPositionsSelfWrite()
+                requestMenuBarAgentPositionRefresh()
+            }
+        }
+
+        await cacheItemsRegardless(skipRecentMoveCheck: true)
+    }
+
+    /// Whether any group's members are separated by a non-member's weight.
+    ///
+    /// Reads the live preference weights rather than the desired order: the
+    /// order can be perfectly gathered while the weights that actually drive
+    /// MenuBarAgent's sort are still interleaved. That gap is the whole reason
+    /// a group looks "spilled" despite the model saying otherwise.
+    @available(macOS 27, *)
+    private func isAnyGroupInterleaved(in desiredOrder: [String]) -> Bool {
+        guard let appState else { return false }
+        let items = MenuBarSection.Name.allCases.flatMap { appState.itemManager.itemCache.managedItems(for: $0) }
+        let groups = Self.groupPolicySet(for: items, appState: appState)
+        guard !groups.isEmpty else { return false }
+
+        let positions = RuntimePositionStore.currentPositions()
+        guard !positions.isEmpty else { return false }
+        let keys = Array(positions.keys)
+
+        var weightByIdentifier = [String: Int]()
+        for item in items {
+            guard let key = RuntimePositionStore.resolveKey(
+                for: item,
+                existingKeys: keys,
+                positions: positions,
+                liveItems: items
+            ), let weight = positions[key] else {
+                continue
+            }
+            weightByIdentifier[item.uniqueIdentifier] = weight
+        }
+
+        // Only groups that actually live in the order being applied. A group
+        // sitting entirely in Hidden is not this pass's problem, and re-spacing
+        // the visible segment would not help it anyway.
+        let inScope = Set(desiredOrder)
+        for group in groups.groups where group.contains(where: inScope.contains) {
+            let memberWeights = group.compactMap { weightByIdentifier[$0] }
+            guard memberWeights.count >= 2,
+                  let low = memberWeights.min(),
+                  let high = memberWeights.max()
+            else {
+                continue
+            }
+            let memberSet = Set(group)
+            let interloper = weightByIdentifier.contains { identifier, weight in
+                !memberSet.contains(identifier) && weight > low && weight < high
+            }
+            if interloper {
+                return true
+            }
+        }
+        return false
+    }
+
     private func applyMacOS27SectionItemOrder(
         sections: [MenuBarSection.Name],
         controller: MenuBarSectionController,
@@ -7161,6 +7322,57 @@ extension MenuBarItemManager {
         )
     }
 
+    /// The groups the overflow planner must treat as indivisible.
+    ///
+    /// Resolved against the same item list the planner is budgeting, so member
+    /// identifiers line up with the uids in `desiredFiltered`.
+    private static func groupPolicySet(
+        for items: [MenuBarItem],
+        appState: AppState?
+    ) -> MenuBarItemGroupPolicy.GroupSet {
+        guard !MenuBarBackendProvider.current.supportsLegacySectionHiding,
+              let appState,
+              !items.isEmpty
+        else {
+            return .empty
+        }
+        let resolved = MenuBarItemGroupResolver.resolve(
+            tags: items.map(\.tag),
+            groupSet: appState.itemGroupManager.groupSet
+        )
+        return MenuBarItemGroupPolicy.GroupSet(
+            groups: resolved.map { group in
+                group.memberIndices.compactMap { index in
+                    items.indices.contains(index) ? items[index].uniqueIdentifier : nil
+                }
+            }
+        )
+    }
+
+    /// Surfaces what the (pure, non-logging) overflow planner reported.
+    ///
+    /// A group too wide for the display, or a uid with no measured width, both
+    /// change the outcome silently otherwise.
+    private static func logOverflowDiagnostics(_ result: LayoutSolver.NotchOverflowResult) {
+        if !result.groupsOverflowedWhole.isEmpty {
+            diagLog.info(
+                "macOS 27 overflow: moved \(result.groupsOverflowedWhole.count) group(s) to hidden as one unit"
+            )
+        }
+        for group in result.oversizedGroups {
+            diagLog.warning(
+                "macOS 27 overflow: group \(group.joined(separator: ", ")) is wider than the whole " +
+                    "budget and can never fit; moved to hidden without ejecting the rest of the bar"
+            )
+        }
+        if !result.missingWidthUIDs.isEmpty {
+            diagLog.warning(
+                "macOS 27 overflow: \(result.missingWidthUIDs.count) item(s) had no measured width " +
+                    "and were budgeted as zero: \(result.missingWidthUIDs.joined(separator: ", "))"
+            )
+        }
+    }
+
     /// Moves visible items into Hidden when they exceed the app-menu→Control
     /// Center budget on macOS 27.
     ///
@@ -7372,12 +7584,22 @@ extension MenuBarItemManager {
             controlUIDs: controlUIDs,
             sectionMap: sectionMap,
             uidWidths: uidWidths,
-            availableWidth: effectiveAvailableWidth
+            availableWidth: effectiveAvailableWidth,
+            groups: Self.groupPolicySet(for: visibleLive, appState: appState)
         )
+        Self.logOverflowDiagnostics(overflowResult)
 
         lastMacOS27OverflowRebalance = Date()
         let overflowSet = Set(overflowResult.overflowUIDs)
         let overflowItems = visibleLive.filter { overflowSet.contains($0.uniqueIdentifier) }
+        if overflowItems.count != overflowSet.count {
+            // `setOverflowHiddenIdentifiers` filters again by authored section,
+            // so a mismatch here is silently narrowed twice. The upstream
+            // invariant should make this unreachable.
+            MenuBarItemManager.diagLog.warning(
+                "macOS 27 overflow: \(overflowSet.count) planned but only \(overflowItems.count) resolved to live items"
+            )
+        }
         let didChange = controller.setOverflowHiddenItems(overflowItems)
         if didChange {
             MenuBarItemManager.diagLog.info(
@@ -8779,8 +9001,10 @@ extension MenuBarItemManager {
                 ),
                 sectionMap: sectionMap,
                 uidWidths: uidWidths,
-                availableWidth: availableWidth
+                availableWidth: availableWidth,
+                groups: Self.groupPolicySet(for: items, appState: appState)
             )
+            Self.logOverflowDiagnostics(overflowResult)
 
             if !overflowResult.overflowUIDs.isEmpty {
                 MenuBarItemManager.diagLog.info(

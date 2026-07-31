@@ -45,6 +45,10 @@ struct MenuBarLayoutSettingsPane: View {
                 LayoutBarsSection(itemManager: itemManager)
             }
 
+            if canArrangeLayout {
+                MenuBarLayoutGroupsSection()
+            }
+
             LayoutSectionOptions(
                 settings: appState.settings.advanced,
                 isHidingUnavailable: isHidingUnavailable
@@ -172,6 +176,22 @@ private struct LayoutBarsSection: View {
                     Text("Tip: Hold ⌘ Command while dragging an item directly in the menu bar.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
+                }
+
+                // A refused group move snaps back with no other explanation, so
+                // the reason appears here rather than in a modal that would
+                // cover the very bars the user is arranging.
+                if let refusal = appState.layoutFeedback.refusal {
+                    SettingsWarningPill(
+                        title: LocalizedStringKey(refusal.title),
+                        message: LocalizedStringKey(refusal.message),
+                        systemImage: "exclamationmark.triangle.fill",
+                        tint: .orange,
+                        actionTitle: "Dismiss"
+                    ) {
+                        appState.layoutFeedback.clear()
+                    }
+                    .transition(reduceMotion ? .identity : .opacity)
                 }
 
                 VStack(spacing: 20) {

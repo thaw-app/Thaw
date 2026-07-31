@@ -14,6 +14,15 @@ class LayoutBarArrangedView: NSView {
         case item(MenuBarItem)
         case opaqueSlot(LayoutOpaqueSlotDescriptor)
         case newItemsBadge
+        /// A collapsed group, standing in for several items at once.
+        ///
+        /// Every index-based translation in the layout bar assumes one arranged
+        /// view is one item. The most dangerous consequence is persistence:
+        /// `layoutItemsForPersistence` builds the saved section order by
+        /// matching `.item`, so a pill that contributes nothing would silently
+        /// delete its members from that order. It must always be expanded back
+        /// into its members before the order is committed.
+        case collapsedGroup(members: [MenuBarItem])
     }
 
     /// Temporary information retained while dragging between layout containers.
@@ -24,6 +33,14 @@ class LayoutBarArrangedView: NSView {
     /// out of its container mid-drag) and `oldContainerInfo` is only set once the
     /// drag reaches the `.updated` phase, so neither alone guarantees a restore.
     private weak var frozenSourceContainer: LayoutBarContainer?
+
+    /// How many arranged views this drag moves as one block.
+    ///
+    /// Recorded by the container each `.updated` phase. A rejected drag restores
+    /// by re-inserting `self` alone, which is correct for a single item but would
+    /// orphan the other members of a group — they were pulled out of
+    /// `arrangedViews` together and nothing else puts them back.
+    var dragUnitCount = 1
 
     /// A Boolean value that indicates whether the view is currently inside a container.
     var hasContainer = false
@@ -87,9 +104,11 @@ extension LayoutBarArrangedView: NSDraggingSource {
     func draggingSession(_: NSDraggingSession, endedAt _: NSPoint, operation: NSDragOperation) {
         let sourceContainer = oldContainerInfo?.container
         let frozenContainer = frozenSourceContainer
+        let wasGroupDrag = dragUnitCount > 1
         defer {
             oldContainerInfo = nil
             frozenSourceContainer = nil
+            dragUnitCount = 1
         }
 
         isDraggingPlaceholder = false
@@ -120,6 +139,19 @@ extension LayoutBarArrangedView: NSDraggingSource {
                 return
             }
             container.shouldAnimateNextLayoutPass = false
+            if wasGroupDrag {
+                // Re-inserting `self` would leave the rest of the group orphaned:
+                // the whole unit was pulled out together, and only this view
+                // carries `oldContainerInfo`. Rebuild from the cache instead,
+                // which is the truth for a drag that changed nothing. The badge
+                // path above restores the same way.
+                if let appState = container.appState {
+                    container.setArrangedViews(
+                        items: appState.itemManager.itemCache.managedItems(for: container.section)
+                    )
+                    return
+                }
+            }
             container.arrangedViews.insert(self, at: index)
         }
     }

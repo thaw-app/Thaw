@@ -50,6 +50,12 @@ final class AppState: ObservableObject {
     /// Global cache for menu bar item images.
     let imageCache = MenuBarItemImageCache()
 
+    /// Owner of user-authored menu bar item groups.
+    let itemGroupManager = MenuBarItemGroupManager()
+
+    /// Transient, user-facing explanations for refused layout actions.
+    let layoutFeedback = LayoutBarFeedbackCenter()
+
     /// Manager for input events received by the app.
     let hidEventManager = HIDEventManager()
 
@@ -291,6 +297,16 @@ final class AppState: ObservableObject {
         .store(in: &c)
 
         menuBarManager.objectWillChange
+            .sink { [weak self] in
+                self?.objectWillChange.send()
+            }
+            .store(in: &c)
+        layoutFeedback.objectWillChange
+            .sink { [weak self] in
+                self?.objectWillChange.send()
+            }
+            .store(in: &c)
+        itemGroupManager.objectWillChange
             .sink { [weak self] in
                 self?.objectWillChange.send()
             }

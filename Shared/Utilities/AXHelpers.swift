@@ -58,6 +58,11 @@ nonisolated enum AXHelpers {
         (try? element.arrayAttribute(.children)) ?? []
     }
 
+    /// The element's `AXHelp` attribute (tooltip/description string).
+    static func help(for element: UIElement) -> String? {
+        try? element.attribute(.help)
+    }
+
     static func childrenIfAvailable(for element: UIElement) -> [UIElement]? {
         try? element.arrayAttribute(.children)
     }

@@ -895,6 +895,46 @@ final class MenuBarSectionController: ObservableObject {
             || item.canBeHidden(experimentalSystemItemHiding: experimentalSystemItemHiding)
     }
 
+    /// Whether every member of a group can move to `section`.
+    ///
+    /// The single authority shared by the layout-bar drag UI, the batch
+    /// `setSection` paths, and profile apply, so a refusal has one definition and
+    /// one reportable reason. It composes the three existing per-item predicates
+    /// — it introduces no new policy.
+    ///
+    /// `expectedMemberCount` guards the case where the resolver returned fewer
+    /// live items than the group actually has. That is
+    /// ``GroupMoveRefusal/unresolvedMembers``, never a silent partial move: a
+    /// group is indivisible, so "we could only find some of it" must refuse
+    /// rather than move the part we found.
+    static func groupMoveFeasibility(
+        members: [MenuBarItem],
+        expectedMemberCount: Int,
+        to section: MenuBarSection.Name,
+        experimentalSystemItemHiding: Bool,
+        isHidingAvailable: Bool
+    ) -> GroupMoveFeasibility {
+        guard members.count == expectedMemberCount else {
+            let found = Set(members.map(\.uniqueIdentifier))
+            return .refused(.unresolvedMembers(missingCount: expectedMemberCount - found.count))
+        }
+        guard section == .visible || isHidingAvailable else {
+            return .refused(.hidingUnavailable)
+        }
+        for item in members {
+            if isProtectedAssignmentItem(item, experimentalSystemItemHiding: experimentalSystemItemHiding) {
+                return .refused(.protectedMember(item: item))
+            }
+            if isHidingUnsupportedAssignmentIdentifier(item.uniqueIdentifier) {
+                return .refused(.hidingUnsupported(item: item))
+            }
+            if !canAssign(item, to: section, experimentalSystemItemHiding: experimentalSystemItemHiding) {
+                return .refused(.notHideable(item: item))
+            }
+        }
+        return .allowed
+    }
+
     static func isProtectedAssignmentItem(
         _ item: MenuBarItem,
         experimentalSystemItemHiding: Bool
@@ -1021,6 +1061,199 @@ final class MenuBarSectionController: ObservableObject {
         sectionItemOrder = sectionItemOrder.mapValues(MenuBarItemTag.canonicalPersistentIdentifiers)
         let raw = Dictionary(uniqueKeysWithValues: sectionItemOrder.map { ($0.key.rawValue, $0.value) })
         UserDefaults.standard.set(raw, forKey: Self.orderKey)
+    }
+
+    /// What a commit does beyond persisting, for the paths that differ.
+    ///
+    /// `setSectionOrder` records one section's order and leaves assignment and
+    /// refresh to its caller (which triggers a recache); every path that changes
+    /// *membership* re-derives the assignment and refreshes.
+    struct CommitOptions: OptionSet {
+        let rawValue: Int
+
+        static let rebuildAssignment = CommitOptions(rawValue: 1 << 0)
+        static let refreshSections = CommitOptions(rawValue: 1 << 1)
+
+        /// A write that changes which section items belong to.
+        static let assignmentWrite: CommitOptions = [.rebuildAssignment, .refreshSections]
+        /// A write that only reorders within sections.
+        static let orderOnly: CommitOptions = []
+    }
+
+    /// The single writer for ``sectionItemOrder``.
+    ///
+    /// Every path that changes the order funnels through here, so there is
+    /// exactly one place to enforce the group invariant. That matters because
+    /// section membership is *derived* from order via ``assignmentFromOrder``:
+    /// canonicalizing the order therefore makes order and membership atomic in
+    /// one step, and `assignmentFromOrder` itself needs no group logic at all.
+    ///
+    /// Callers mutate `sectionItemOrder` in place and then commit; the mutation
+    /// helpers (`removeFromOrder`, `appendToVisibleOrder`) stay as they are.
+    private func commitOrder(reason: String, options: CommitOptions = .assignmentWrite) {
+        canonicalizeGroupsInOrder(reason: reason)
+        if options.contains(.rebuildAssignment) {
+            rebuildSectionAssignmentFromOrder()
+        }
+        persistOrder()
+        if options.contains(.refreshSections) {
+            refresh()
+        }
+    }
+
+    /// Gathers each group's members into one contiguous run, per section.
+    ///
+    /// **Visible is included, and that is what makes groups hold together on
+    /// screen.** `sectionItemOrder[.visible]` is the desired order
+    /// `applyMacOS27SectionItemOrder` hands to
+    /// ``RuntimePositionStore/applyOrder(desiredOrder:liveItems:experimentalSystemItemHiding:environment:)``,
+    /// which permutes the segment's existing MenuBarAgent weights onto that
+    /// sequence — so a gathered order is exactly how members end up with
+    /// adjacent weights and therefore adjacent icons.
+    ///
+    /// Gathering Visible costs nothing on the display side: `orderedItems`
+    /// short-circuits to `liveVisualOrder` for `.visible` and never consults
+    /// this array, so the layout bar keeps mirroring real AX geometry. The
+    /// warning on ``ordered(_:in:)`` is about *reading* persisted visible order
+    /// for display, which nothing does.
+    ///
+    /// Physical adjacency is still best-effort: MenuBarAgent re-sorts on the
+    /// weights it accepts, and a group whose members straddle a fixed system
+    /// anchor cannot be gathered because `achievableOrderSegments` splits there.
+    private func canonicalizeGroupsInOrder(reason: String) {
+        let groups = currentGroupPolicySet()
+        guard !groups.isEmpty else { return }
+
+        for section in MenuBarSection.Name.allCases {
+            guard let order = sectionItemOrder[section], !order.isEmpty else { continue }
+            let result = MenuBarItemGroupPolicy.gather(groups: groups, in: order)
+            guard result.report.didChange else { continue }
+            sectionItemOrder[section] = result.order
+            diagLog.info(
+                "\(reason): gathered \(result.report.gatheredGroups.count) group(s) in " +
+                    "\(section.logString), moving \(result.report.movedIdentifiers.count) item(s)"
+            )
+        }
+
+        // A canonical order is the postcondition of every commit. `assert`, not
+        // `precondition`: a layout quirk must never crash a menu bar app.
+        assert(
+            MenuBarSection.Name.allCases.allSatisfy {
+                MenuBarItemGroupPolicy.scattered(groups: groups, in: sectionItemOrder[$0] ?? []).isEmpty
+            },
+            "commitOrder left a group scattered"
+        )
+    }
+
+    /// Re-runs group gathering over the recorded order after the group set has
+    /// changed.
+    ///
+    /// Gathering is computed from the current groups, so an order committed
+    /// before an edit is stale with respect to it. Commits unconditionally
+    /// because the gathering itself decides whether anything moves — a commit
+    /// whose gather reports no change writes the same order back and is inert.
+    func regatherGroups() {
+        commitOrder(reason: "group membership changed", options: .orderOnly)
+    }
+
+    /// Consolidates any group whose members are spread across sections, and
+    /// reports what it repaired.
+    ///
+    /// This exists for state an *older build* left behind: before the invariant
+    /// existed, a drag or an overflow pass could put one member of a bundle in
+    /// Visible and its sibling in Hidden, and nothing would ever put them back
+    /// together. Every write path is group-aware now, so on healthy state this
+    /// must be a true no-op.
+    ///
+    /// "No-op" is load-bearing, not a nicety: this runs on the cache cycle, and
+    /// the cycle re-enters itself through the overflow rebalance. Writing on
+    /// every pass would be a write storm. ``MenuBarItemGroupPolicy/gather`` is
+    /// idempotent precisely so the early return below is reachable.
+    ///
+    /// - Returns: the repair report, or `nil` when nothing needed repairing.
+    @discardableResult
+    func repairGroupInvariantIfNeeded() -> MenuBarItemGroupPolicy.CanonicalizationReport? {
+        let groups = currentGroupPolicySet()
+        guard !groups.isEmpty else { return nil }
+        // Cheap check first: only a *split* group justifies a write here.
+        // Intra-section scatter is handled by `commitOrder` on the paths that
+        // actually change the order.
+        guard !MenuBarItemGroupPolicy.split(groups: groups, inSections: sectionItemOrder).isEmpty else {
+            return nil
+        }
+
+        let experimentalSystemItemHiding = appState?.settings.advanced.enableExperimentalSystemItemHiding ?? false
+        var itemsByIdentifier = [String: MenuBarItem]()
+        if let appState {
+            for section in MenuBarSection.Name.allCases {
+                for item in appState.itemManager.itemCache.managedItems(for: section) {
+                    itemsByIdentifier[
+                        MenuBarItemTag.canonicalPersistentIdentifier(item.uniqueIdentifier)
+                    ] = item
+                }
+            }
+        }
+
+        let result = MenuBarItemGroupPolicy.gather(
+            groups: groups,
+            inSections: sectionItemOrder,
+            // Visible's order mirrors live AX geometry, so membership may be
+            // repaired into it but its ordering must not be rewritten here.
+            gatheringWithin: Set(MenuBarSection.Name.allCases.filter { $0 != .visible })
+        ) { groupIndex, section in
+            groups.members(ofGroup: groupIndex).allSatisfy { identifier in
+                // An identifier with no live item cannot veto a destination —
+                // the owning app is simply not running.
+                guard let item = itemsByIdentifier[identifier] else { return true }
+                return Self.canAssign(
+                    item,
+                    to: section,
+                    experimentalSystemItemHiding: experimentalSystemItemHiding
+                )
+            }
+        }
+        guard result.report.didChange else { return nil }
+
+        sectionItemOrder = result.sections
+        commitOrder(reason: "repair split group(s)")
+        for repair in result.report.repairedGroups {
+            diagLog.info(
+                "repaired group split across \(repair.from.map(\.logString).joined(separator: ", ")) " +
+                    "into \(repair.to.logString) — this came from previously persisted state, " +
+                    "not from this session"
+            )
+        }
+        return result.report
+    }
+
+    /// The current groups, expressed as ordered identifier lists for
+    /// ``MenuBarItemGroupPolicy``.
+    ///
+    /// Resolved across *all* sections at once so a group whose members straddle
+    /// a section boundary is still recognized as one group.
+    private func currentGroupPolicySet() -> MenuBarItemGroupPolicy.GroupSet {
+        guard !MenuBarBackendProvider.current.supportsLegacySectionHiding,
+              let appState
+        else {
+            return .empty
+        }
+        let cache = appState.itemManager.itemCache
+        let items = MenuBarSection.Name.allCases.flatMap { cache.managedItems(for: $0) }
+        guard !items.isEmpty else { return .empty }
+
+        let resolved = MenuBarItemGroupResolver.resolve(
+            tags: items.map(\.tag),
+            groupSet: appState.itemGroupManager.groupSet
+        )
+        return MenuBarItemGroupPolicy.GroupSet(
+            groups: resolved.map { group in
+                group.memberIndices.compactMap { index in
+                    items.indices.contains(index)
+                        ? MenuBarItemTag.canonicalPersistentIdentifier(items[index].uniqueIdentifier)
+                        : nil
+                }
+            }
+        )
     }
 
     /// Returns the temporary reveal target for a section control.
@@ -1236,11 +1469,13 @@ final class MenuBarSectionController: ObservableObject {
     /// drag) and persists it. The caller is expected to trigger a recache so the
     /// layout bars re-render in the new order.
     func setSectionOrder(_ identifiers: [String], for section: MenuBarSection.Name) {
-        let identifiers = MenuBarItemTag.canonicalPersistentIdentifiers(identifiers)
-        sectionItemOrder[section] = identifiers
-        persistOrder()
-        appState?.itemManager.mirrorMacOS27SectionOrder(identifiers, for: section)
-        diagLog.info("setSectionOrder(\(section.rawValue)); \(identifiers.count) item(s)")
+        sectionItemOrder[section] = MenuBarItemTag.canonicalPersistentIdentifiers(identifiers)
+        commitOrder(reason: "setSectionOrder(\(section.rawValue))", options: .orderOnly)
+        // Mirror the order the commit actually persisted, not the caller's
+        // input — the two diverge once the commit canonicalizes.
+        let committed = sectionItemOrder[section] ?? []
+        appState?.itemManager.mirrorMacOS27SectionOrder(committed, for: section)
+        diagLog.info("setSectionOrder(\(section.rawValue)); \(committed.count) item(s)")
     }
 
     /// Records a section order from live layout items, dropping structural
@@ -1651,9 +1886,7 @@ final class MenuBarSectionController: ObservableObject {
         else {
             if sectionAssignment[identifier] != nil {
                 removeFromOrder(identifier: identifier)
-                rebuildSectionAssignmentFromOrder()
-                persistOrder()
-                refresh()
+                commitOrder(reason: "clear protected assignment")
             }
             diagLog.warning("ignored protected section assignment for \(identifier)")
             return
@@ -1686,10 +1919,8 @@ final class MenuBarSectionController: ObservableObject {
         } else {
             sectionItemOrder[section, default: []].append(identifier)
         }
-        rebuildSectionAssignmentFromOrder()
-        persistOrder()
+        commitOrder(reason: "setSection(\(section.rawValue)) \(identifier)")
         diagLog.info("setSection(\(section.rawValue)) \(identifier); \(sectionAssignment.count) assigned item(s)")
-        refresh()
     }
 
     /// Re-records an identifier in the visible order after a move back to Visible.
@@ -1735,8 +1966,37 @@ final class MenuBarSectionController: ObservableObject {
     /// Assigns several items to `section` in one write (single persist + refresh).
     /// Used by macOS 27 overflow rebalance so Spawner floods do not pay N
     /// restriction pulses.
-    func setSection(_ section: MenuBarSection.Name, items: [MenuBarItem]) {
-        guard !items.isEmpty else { return }
+    ///
+    /// - Parameter atomically: when `true`, a member that cannot be assigned
+    ///   refuses the *whole* batch instead of being skipped. Group moves pass
+    ///   `true`: a group is indivisible, so silently dropping one member is
+    ///   precisely the split the invariant forbids. The overflow rebalance
+    ///   passes `false`, since its batch is an arbitrary set of items rather
+    ///   than one logical object.
+    /// - Returns: the refusal when an atomic batch was rejected, else `nil`.
+    @discardableResult
+    func setSection(
+        _ section: MenuBarSection.Name,
+        items: [MenuBarItem],
+        atomically: Bool = false
+    ) -> GroupMoveRefusal? {
+        guard !items.isEmpty else { return nil }
+
+        if atomically {
+            let feasibility = Self.groupMoveFeasibility(
+                members: items,
+                expectedMemberCount: items.count,
+                to: section,
+                experimentalSystemItemHiding: appState?.settings.advanced.enableExperimentalSystemItemHiding ?? false,
+                isHidingAvailable: isHidingAvailable
+            )
+            if let refusal = feasibility.refusal {
+                diagLog.warning(
+                    "refusing group move to \(section.logString): \(refusal.localizedReason)"
+                )
+                return refusal
+            }
+        }
 
         if section == .alwaysHidden,
            let advanced = appState?.settings.advanced
@@ -1773,13 +2033,12 @@ final class MenuBarSectionController: ObservableObject {
             }
             moved.append(identifier)
         }
-        guard !moved.isEmpty else { return }
-        rebuildSectionAssignmentFromOrder()
-        persistOrder()
+        guard !moved.isEmpty else { return nil }
+        commitOrder(reason: "setSection(\(section.rawValue)) batch \(moved.count) item(s)")
         diagLog.info(
             "setSection(\(section.rawValue)) batch \(moved.count) item(s); \(sectionAssignment.count) assigned"
         )
-        refresh()
+        return nil
     }
 
     /// Assigns a live item to a section, rejecting items that can never be
@@ -1803,9 +2062,7 @@ final class MenuBarSectionController: ObservableObject {
         ), !cannotHideHere else {
             if sectionAssignment[item.uniqueIdentifier] != nil {
                 removeFromOrder(identifier: item.uniqueIdentifier)
-                rebuildSectionAssignmentFromOrder()
-                persistOrder()
-                refresh()
+                commitOrder(reason: "clear non-hideable assignment")
             }
             diagLog.warning("ignored section assignment for protected/non-hideable item \(item.uniqueIdentifier)")
             return
@@ -1874,10 +2131,8 @@ final class MenuBarSectionController: ObservableObject {
             newOrder[.visible] = visibleOrder
         }
         sectionItemOrder = newOrder
-        rebuildSectionAssignmentFromOrder()
-        persistOrder()
+        commitOrder(reason: "resetAssignment")
         diagLog.info("resetAssignment; \(sectionAssignment.count) assigned item(s)")
-        refresh()
     }
 
     /// Applies a profile or saved-layout spec on macOS 27. Section membership
@@ -1925,12 +2180,10 @@ final class MenuBarSectionController: ObservableObject {
             }
         }
         sectionItemOrder = newOrder
-        rebuildSectionAssignmentFromOrder()
-        persistOrder()
+        commitOrder(reason: "applyProfileLayout")
         diagLog.info(
             "applyProfileLayout; \(sectionAssignment.count) assigned item(s), order sections=\(sectionItemOrder.keys.map(\.rawValue))"
         )
-        refresh()
     }
 
     /// Builds a non-visible section assignment from profile layout fields.
@@ -2082,8 +2335,7 @@ final class MenuBarSectionController: ObservableObject {
             for identifier in invalidAssignmentIDs {
                 removeFromOrder(identifier: identifier)
             }
-            rebuildSectionAssignmentFromOrder()
-            persistOrder()
+            commitOrder(reason: "prune stale assignments", options: .rebuildAssignment)
             diagLog.info("removed \(invalidAssignmentIDs.count) stale/invalid assignment(s)")
         }
 

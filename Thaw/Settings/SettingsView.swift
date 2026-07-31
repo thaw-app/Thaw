@@ -34,7 +34,7 @@ struct SettingsView: View {
                 // Draw under the transparent toolbar so the page title isn't pushed
                 // down by the ~60pt title-bar safe area.
                 .ignoresSafeArea(.container, edges: .top)
-                // Dark panes use a solid Music-like surface. Light bumps vibrancy
+                // Dark panes use brand warm charcoal. Light bumps vibrancy
                 // with under-window materials instead of the denser `.sidebar` fill.
                 .background {
                     detailSurface
@@ -141,9 +141,9 @@ struct SettingsView: View {
         if isAbout {
             sharedSidebarSurface
         } else if prefersExtremeVibrancy {
-            // Apple Music–style solid page: no Liquid Glass veil over content.
+            // Brand warm charcoal in dark mode (icon plate companion), not flat system gray.
             Rectangle()
-                .fill(Color(nsColor: .windowBackgroundColor))
+                .fill(Color("BrandSurface"))
         } else {
             // Light panes: under-window vibrancy + glass for a touch more life
             // than glass alone, without the muddy dark-mode double stack.

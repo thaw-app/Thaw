@@ -139,10 +139,40 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable {
         return identifier.hasPrefix(prefix) && !isPositionManageableMenuBarAgentIdentifier(identifier)
     }
 
-    /// iStat Menus status-item bundle ID. Titles and identifiers are
-    /// canonicalized via ``canonicalIStatMetricTitle`` so live metric values do
-    /// not churn layout keys every second.
+    /// iStat Menus status-item bundle ID for the direct-download build. Titles
+    /// and identifiers are canonicalized via ``canonicalIStatMetricTitle`` so
+    /// live metric values do not churn layout keys every second.
+    ///
+    /// Prefer ``hasDynamicMetricTitles(_:)`` over comparing against this
+    /// constant: the same app ships under several bundle IDs.
     public static let iStatMenusStatusBundleID = "com.bjango.istatmenus.status"
+
+    /// Bundle identifier families whose status items rewrite their AX title with
+    /// live metric values, so the raw title cannot serve as a stable identity.
+    ///
+    /// Matched as prefix/suffix pairs rather than exact literals because these
+    /// apps ship under several bundle IDs. iStat Menus alone is
+    /// `com.bjango.istatmenus.status` (direct) and
+    /// `com.bjango.istatmenus-setapp.status` (Setapp) — matching only the former
+    /// left Setapp users' identifiers un-canonicalized, so every metric tick
+    /// minted a fresh identity and silently churned their saved layout.
+    ///
+    /// - Important: only add an app here if its AX titles genuinely carry live
+    ///   values. ``canonicalIStatMetricTitle`` replaces *every* run of digits,
+    ///   so an app whose titles merely contain ordinals ("Fan 1", "Fan 2")
+    ///   would have those distinct items collapsed onto one identifier.
+    private static let dynamicMetricTitleBundleMatchers: [(prefix: String, suffix: String)] = [
+        (prefix: "com.bjango.istatmenus", suffix: ".status"),
+        (prefix: "eu.exelban.Stats", suffix: ""),
+    ]
+
+    /// Whether `bundleID` belongs to an app whose status-item titles carry live
+    /// metric values and therefore need canonicalizing before use as identity.
+    public static func hasDynamicMetricTitles(_ bundleID: String) -> Bool {
+        dynamicMetricTitleBundleMatchers.contains { matcher in
+            bundleID.hasPrefix(matcher.prefix) && bundleID.hasSuffix(matcher.suffix)
+        }
+    }
 
     /// Bundle identifiers whose menu bar items Thaw can reorder but cannot yet
     /// reliably hide on macOS 27. Denylisted items are forced visible in the
@@ -397,20 +427,34 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable {
     }
 
     public static func canonicalTitle(namespace: Namespace, title: String) -> String {
-        guard namespace == .string(iStatMenusStatusBundleID) else {
+        guard case let .string(bundleID) = namespace, hasDynamicMetricTitles(bundleID) else {
             return title
         }
         return canonicalIStatMetricTitle(title)
     }
 
     public static func canonicalPersistentIdentifier(_ identifier: String) -> String {
-        let prefix = "\(iStatMenusStatusBundleID):"
-        guard identifier.hasPrefix(prefix) else {
+        // An identifier is `namespace:title[:instance]`, and a bundle ID never
+        // contains a colon, so the first one separates the namespace.
+        guard let separator = identifier.firstIndex(of: ":") else {
+            return identifier
+        }
+        let bundleID = String(identifier[..<separator])
+        guard hasDynamicMetricTitles(bundleID) else {
             return identifier
         }
 
-        let suffix = String(identifier.dropFirst(prefix.count))
-        if let separator = suffix.lastIndex(of: ":") {
+        let prefix = "\(bundleID):"
+        let suffix = String(identifier[identifier.index(after: separator)...])
+        // A trailing `:<int>` is normally the instance index appended by
+        // `tagIdentifier`. A clock title ends the same way ("15:41") without
+        // being an instance at all, and splitting there would leave the minute
+        // as the "instance" — churning identity every sixty seconds. Times have
+        // two digits after the colon *and* digits before it, which an instance
+        // suffix never does, so that shape is enough to tell them apart.
+        if !suffix.contains(/\d{1,2}:\d{2}(?::\d{2})?$/),
+           let separator = suffix.lastIndex(of: ":")
+        {
             let title = String(suffix[..<separator])
             let instance = String(suffix[suffix.index(after: separator)...])
             if Int(instance) != nil {
@@ -431,8 +475,33 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable {
         }
     }
 
+    /// Reduces a live metric title to something stable enough to identify an
+    /// item across ticks.
+    ///
+    /// Two rules, in order:
+    ///
+    /// 1. **`Module: live data` shape → the module name.** iStat renders most
+    ///    modules this way ("Battery: 87%, Charging. AirPods Pro: 45%."), and
+    ///    the trailing data churns in ways a digit rule cannot catch: charge
+    ///    state flips between words, and connected peripherals appear and
+    ///    disappear entirely. Word matching is not an option because these
+    ///    titles are localized, so an English state list would fix only English
+    ///    installs. The leading module name is the one stable, locale-consistent
+    ///    part, so identity keys on it and the rest is discarded.
+    /// 2. **Otherwise, neutralize numbers.** Titles like "CPU 42%" or
+    ///    "Upload 15.3 KB/s" carry their values inline with no module prefix.
+    ///
+    /// - Note: a title that is *only* a colon-separated value with no module
+    ///   prefix (a bare clock, "15:41") has no `": "` and so takes rule 2,
+    ///   canonicalizing to "#:#" — still stable.
     public static func canonicalIStatMetricTitle(_ raw: String) -> String {
-        raw
+        if let separator = raw.range(of: ": ") {
+            let module = raw[..<separator.lowerBound].trimmingCharacters(in: .whitespaces)
+            if !module.isEmpty {
+                return module
+            }
+        }
+        return raw
             .replacing(/[-+]?\d+(?:[.,]\d+)?/, with: "#")
             .replacing(/#\s*[KMGTPE]?[Bb]\/s/, with: "# B/s")
             .replacing(/#\s*[KMGTPE]?[Bb]/, with: "# B")

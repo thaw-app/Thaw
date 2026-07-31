@@ -222,7 +222,10 @@ final class ProfileManager: ObservableObject {
                 confirmSpacingRelaunch: appState.settings.displaySettings.confirmSpacingRelaunch,
                 unconfirmedSpacingProfileScope: appState.settings.displaySettings.unconfirmedSpacingProfileScope,
                 appearanceConfiguration: appState.appearanceManager.configuration,
-                menuBarLayout: captureCurrentLayout(from: appState.itemManager)
+                menuBarLayout: captureCurrentLayout(
+                    from: appState.itemManager,
+                    groups: appState.itemGroupManager.snapshot()
+                )
             )
         )
 
@@ -484,6 +487,11 @@ final class ProfileManager: ObservableObject {
         )
         appState.menuBarManager.rebuildItemHotkeys()
 
+        // Apply item groups before the layout task starts, so the order the
+        // profile applies is already resolved against the profile's own groups
+        // rather than the outgoing profile's.
+        appState.itemGroupManager.apply(profile.menuBarLayout.itemGroups)
+
         // Apply the New Items badge placement before starting the layout
         // task, so late-arriving items land in the profile-defined spot.
         if let placement = profile.menuBarLayout.newItemsPlacement {
@@ -597,7 +605,10 @@ final class ProfileManager: ObservableObject {
         rearmActiveLayoutIfNeeded(
             updatedID: id,
             scope: .all,
-            layout: captureCurrentLayout(from: appState.itemManager),
+            layout: captureCurrentLayout(
+                from: appState.itemManager,
+                groups: appState.itemGroupManager.snapshot()
+            ),
             itemManager: appState.itemManager
         )
     }
@@ -607,7 +618,10 @@ final class ProfileManager: ObservableObject {
     /// Captures the current menu bar layout. Depends only on the item manager
     /// (and UserDefaults), not the full app state, so the capture and re-arm
     /// paths can be exercised in tests without standing up an AppState.
-    private func captureCurrentLayout(from itemManager: MenuBarItemManager) -> MenuBarLayoutSnapshot {
+    private func captureCurrentLayout(
+        from itemManager: MenuBarItemManager,
+        groups: MenuBarItemGroupSet
+    ) -> MenuBarLayoutSnapshot {
         let computedItemOrder = itemManager.computeSectionOrder(
             from: itemManager.itemCache
         )
@@ -677,7 +691,8 @@ final class ProfileManager: ObservableObject {
             itemSectionMap: itemSectionMap,
             itemOrder: itemOrder,
             newItemsPlacement: itemManager.newItemsPlacement,
-            itemHotkeys: itemHotkeys
+            itemHotkeys: itemHotkeys,
+            itemGroups: groups
         )
     }
 
@@ -746,7 +761,11 @@ final class ProfileManager: ObservableObject {
         case .all:
             try updateProfileWithCurrentState(id: id, appState: appState)
         case .layoutOnly:
-            try updateProfileLayout(id: id, itemManager: appState.itemManager)
+            try updateProfileLayout(
+                id: id,
+                itemManager: appState.itemManager,
+                groups: appState.itemGroupManager.snapshot()
+            )
         case .configurationOnly:
             try updateProfileConfiguration(id: id, appState: appState)
         }
@@ -757,9 +776,19 @@ final class ProfileManager: ObservableObject {
     /// nothing else, and the narrower dependency lets this be exercised in
     /// tests without an AppState. Internal so the integration test can drive it
     /// directly through the injected profiles directory.
-    func updateProfileLayout(id: UUID, itemManager: MenuBarItemManager) throws {
+    func updateProfileLayout(
+        id: UUID,
+        itemManager: MenuBarItemManager,
+        groups: MenuBarItemGroupSet? = nil
+    ) throws {
         var profile = try loadProfile(id: id)
-        let layout = captureCurrentLayout(from: itemManager)
+        // Preserve the profile's existing groups when no fresh snapshot is
+        // supplied. This path is deliberately drivable without an AppState, and
+        // defaulting to "no groups" would silently erase them from the profile.
+        let layout = captureCurrentLayout(
+            from: itemManager,
+            groups: groups ?? profile.menuBarLayout.itemGroups ?? .empty
+        )
         profile.menuBarLayout = layout
         profile.modifiedAt = Date()
         try saveProfileAndUpdateManifest(profile)

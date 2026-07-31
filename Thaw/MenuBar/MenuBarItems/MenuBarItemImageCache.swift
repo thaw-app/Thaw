@@ -1251,6 +1251,49 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
         return blankTags
     }
 
+    /// Fresh AX frames for `candidates`, keyed by unique identifier, gathered
+    /// through ``AXIdentityCatalog``.
+    ///
+    /// Each candidate's pre-capture rect is correlated against the snapshot by
+    /// frame overlap. The catalog refuses a correlation below half the smaller
+    /// rect's area, or a tie, so an item that has moved far enough to matter
+    /// simply yields no entry — which the caller reads as "bounds changed" and
+    /// falls back to the app icon. That is the intended outcome: a crop we
+    /// cannot vouch for should not be shown as the item's icon.
+    @available(macOS 27, *)
+    private static func catalogBounds(
+        for candidates: [(item: MenuBarItem, bounds: CGRect)]
+    ) async -> [String: CGRect] {
+        guard !candidates.isEmpty else { return [:] }
+
+        let hosts = await MainActor.run { () -> [NSRunningApplication] in
+            var seen = Set<pid_t>()
+            return candidates.compactMap { candidate in
+                guard let app = candidate.item.sourceApplication ?? candidate.item.owningApplication,
+                      seen.insert(app.processIdentifier).inserted
+                else {
+                    return nil
+                }
+                return app
+            }
+        }
+        guard !hosts.isEmpty else { return [:] }
+
+        let snapshot = await MainActor.run {
+            AXIdentityCatalog.snapshot(hosts: hosts)
+        }
+        guard !snapshot.isEmpty else { return [:] }
+
+        var bounds = [String: CGRect]()
+        for candidate in candidates {
+            guard let identity = AXIdentityCatalog.identity(for: candidate.bounds, in: snapshot) else {
+                continue
+            }
+            bounds[candidate.item.uniqueIdentifier] = identity.frame
+        }
+        return bounds
+    }
+
     @available(macOS 27, *)
     static nonisolated func isCompleteCrop(
         expected: CGRect,
@@ -1513,7 +1556,19 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
                 uniquingKeysWith: { first, _ in first }
             )
         } else {
-            postCaptureBoundsByID = [:]
+            // Strip crops come from the on-screen bar, so a stale rect lands on
+            // whatever now occupies that space — a neighbouring app's glyph, or
+            // bare wallpaper. Re-read their frames through the bounded identity
+            // catalog rather than a full item enumeration: the enumeration is
+            // unbounded per element and is paced by whichever app answers
+            // slowest (~515 ms for iStat Menus against a ~100 ms healthy
+            // figure), which is far too costly to run on every visible capture.
+            //
+            // The catalog caps each handle at 0.25 s, so a slow app contributes
+            // no frame instead of stalling the pass. For a validator that is the
+            // right failure: no frame means the crop cannot be trusted, and the
+            // item falls back to its app icon.
+            postCaptureBoundsByID = await Self.catalogBounds(for: stripCandidates)
         }
         let postCaptureOverflowBounds = await Task.detached(priority: .utility) {
             MenuBarItemAXProvider.nativeOverflowControlBounds(on: displayID)
@@ -1557,7 +1612,14 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
                 capture: stripCapture,
                 sourceLabel: "display-strip",
                 knockOutBackground: true,
-                validateFreshBounds: validateFreshBounds,
+                // Strip crops are always validated, including for the visible
+                // section where the expensive enumeration is deliberately
+                // skipped. Their rects are read from the live on-screen bar, so
+                // an out-of-date one crops a neighbour rather than merely being
+                // imprecise — that is the "wrong icon" failure. Hosting crops
+                // come from MenuBarAgent's own composited window and keep the
+                // caller's policy.
+                validateFreshBounds: true,
                 postCaptureBoundsByID: postCaptureBoundsByID,
                 overflowBounds: overflowBounds,
                 cropRectOwners: &stripCropRectOwners,
@@ -1693,12 +1755,27 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
             // Display-strip crops include menu bar fill / wallpaper. Knock out
             // the near-uniform edge color so Layout Bar matches clean hosting
             // glyphs. Hosting captures are already transparent.
-            let croppedImage: CGImage = if knockOutBackground,
-                                           let cleaned = rawCroppedImage.knockingOutNearUniformBackground()
-            {
-                cleaned // already a fresh makeImage() — do NOT double-detach
+            //
+            // A `nil` knock-out means "I could not separate the glyph from the
+            // background" — the corner samples disagreed, which is what happens
+            // over a busy or gradient wallpaper. Storing the raw crop then
+            // caches the wallpaper itself and draws it as the item's icon.
+            // Treat it as a failed capture and fall back to the app icon, the
+            // way every other untrustworthy crop in this loop is handled.
+            let croppedImage: CGImage
+            if knockOutBackground {
+                guard let cleaned = rawCroppedImage.knockingOutNearUniformBackground() else {
+                    MenuBarItemImageCache.diagLog.debug(
+                        "axBoundsCapture: could not separate \(item.logString) from the menu bar " +
+                            "background; clearing prior image for app-icon fallback"
+                    )
+                    result.excluded.append(item)
+                    result.invalidatedTags.insert(item.tag)
+                    continue
+                }
+                croppedImage = cleaned // already a fresh makeImage() — do NOT double-detach
             } else {
-                rawCroppedImage.detachedCopy()
+                croppedImage = rawCroppedImage.detachedCopy()
             }
 
             // A concealed / off-screen item is not rendered on the on-screen

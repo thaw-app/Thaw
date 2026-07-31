@@ -173,6 +173,26 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         tooltipController.cancel()
     }
 
+    /// Group editing lives on right-click: the view already owns `mouseDragged`
+    /// and never handles `mouseDown`, so this is the one gesture available that
+    /// cannot interfere with dragging.
+    override func rightMouseDown(with event: NSEvent) {
+        tooltipController.cancel()
+        guard let container = superview as? LayoutBarContainer,
+              let appState = container.appState,
+              let menu = LayoutBarItemMenu.menu(
+                  subject: .item(item),
+                  section: container.section,
+                  orderedItems: container.orderedItemsForMenu(),
+                  appState: appState
+              )
+        else {
+            super.rightMouseDown(with: event)
+            return
+        }
+        menu.popUp(positioning: nil, at: CGPoint(x: 0, y: bounds.maxY), in: self)
+    }
+
     private func configureCancellables() {
         var c = Set<AnyCancellable>()
 

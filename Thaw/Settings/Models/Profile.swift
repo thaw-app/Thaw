@@ -7,6 +7,7 @@
 //  Licensed under the GNU GPLv3
 
 import Foundation
+import MenuBarModel
 
 // MARK: - ProfileMetadata
 
@@ -453,6 +454,10 @@ nonisolated struct MenuBarLayoutSnapshot: Codable {
     /// the menuBarItemHotkeys default. Absent in profiles saved before this
     /// field was introduced.
     var itemHotkeys: [String: Data]?
+
+    /// User-authored item groups. Absent in profiles saved before this field
+    /// was introduced, where it decodes as `nil` and means "no groups".
+    var itemGroups: MenuBarItemGroupSet?
 }
 
 // MARK: - ProfileContent

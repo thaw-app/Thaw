@@ -315,6 +315,13 @@ extension Defaults {
 
         case menuBarItemCustomNames = "MenuBarItemCustomNames"
 
+        // MARK: Menu Bar Item Groups
+
+        /// User-authored menu bar item groups, as a JSON-encoded
+        /// ``MenuBarItemGroupSet``. Absent when the user has never created or
+        /// dissolved a group, which is the default and means "no groups".
+        case menuBarItemGroups = "MenuBarItemGroups"
+
         // MARK: Internal (Event Delivery)
 
         /// Items whose owners have recently failed to answer synthetic

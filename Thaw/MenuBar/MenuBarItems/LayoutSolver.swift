@@ -7,6 +7,7 @@
 //  Licensed under the GNU GPLv3
 
 import CoreGraphics
+import MenuBarModel
 
 // MARK: - LayoutSolver
 
@@ -76,6 +77,54 @@ nonisolated enum LayoutSolver {
         /// "hidden". Keys are uniqueIdentifiers, values are persisted
         /// section keys ("visible"/"hidden"/"alwaysHidden").
         let updatedSectionMap: [String: String]
+
+        // MARK: Diagnostics
+
+        //
+        // The planner is pure and `nonisolated`, and that purity is load-bearing
+        // for its tests, so it reports facts instead of logging them. Callers log.
+
+        /// Groups moved to hidden as one unit.
+        let groupsOverflowedWhole: [[String]]
+        /// Groups wider than the entire budget, which can never fit. These
+        /// overflow whole without cascading the rest of the section after them.
+        let oversizedGroups: [[String]]
+        /// UIDs with no entry in `uidWidths`. They coerce to zero width, which
+        /// silently deflates the budget — worth surfacing rather than guessing.
+        let missingWidthUIDs: [String]
+
+        init(
+            overflowUIDs: [String],
+            updatedDesiredFiltered: [String],
+            updatedSectionMap: [String: String],
+            groupsOverflowedWhole: [[String]] = [],
+            oversizedGroups: [[String]] = [],
+            missingWidthUIDs: [String] = []
+        ) {
+            self.overflowUIDs = overflowUIDs
+            self.updatedDesiredFiltered = updatedDesiredFiltered
+            self.updatedSectionMap = updatedSectionMap
+            self.groupsOverflowedWhole = groupsOverflowedWhole
+            self.oversizedGroups = oversizedGroups
+            self.missingWidthUIDs = missingWidthUIDs
+        }
+    }
+
+    /// One indivisible candidate in the visible lane: a single ungrouped item,
+    /// or a whole group that must move together.
+    private struct OverflowUnit {
+        /// Members in visible (left-to-right) order.
+        let members: [String]
+        /// Summed member width.
+        let width: CGFloat
+        /// True when *any* member is unmanaged. A group is one user-visible
+        /// object, so requiring *all* members would let a mostly-saved group
+        /// pin the profile tier and never overflow.
+        let isUnmanaged: Bool
+
+        var isGroup: Bool {
+            members.count > 1
+        }
     }
 
     /// An abstract destination emitted by the LCS planner.
@@ -409,13 +458,17 @@ nonisolated enum LayoutSolver {
     /// and supply per-uid widths derived from live item bounds. This
     /// keeps the planner pure for testing and pins down the algorithm
     /// for regression-locking.
+    /// - Parameter groups: groups whose members must overflow together. Defaults
+    ///   to none, so every existing caller and test is unaffected — that the
+    ///   default is genuinely inert is itself the regression lock on this change.
     static nonisolated func planNotchOverflow(
         desiredFiltered: [String],
         unmanagedUIDs: [String],
         controlUIDs: ControlUIDs,
         sectionMap: [String: String],
         uidWidths: [String: CGFloat],
-        availableWidth: CGFloat
+        availableWidth: CGFloat,
+        groups: MenuBarItemGroupPolicy.GroupSet = .empty
     ) -> NotchOverflowResult {
         // Guard against invalid / not-yet-settled geometry. A non-positive or
         // non-finite budget means the menu bar layout could not be measured:
@@ -440,63 +493,61 @@ nonisolated enum LayoutSolver {
 
         let unmanagedSet = Set(unmanagedUIDs)
         let nonChevronUIDs = visibleUIDs.filter { $0 != controlUIDs.visible }
-        let unmanagedNonChevron = nonChevronUIDs.filter { unmanagedSet.contains($0) }
-        let profileNonChevron = nonChevronUIDs.filter { !unmanagedSet.contains($0) }
+        let missingWidthUIDs = nonChevronUIDs.filter { uidWidths[$0] == nil }
 
-        // Profile baseline: chevron + all profile-saved visible items.
-        var profileBaseline: CGFloat = chevronWidth
-        for uid in profileNonChevron {
-            profileBaseline += uidWidths[uid] ?? 0
-        }
+        // Fit *units*, not identifiers: a group is one indivisible object, so
+        // it must overflow whole or not at all. Without this the budget could
+        // conceal one member of a bundle and leave its sibling visible.
+        let units = overflowUnits(
+            in: nonChevronUIDs,
+            groups: groups,
+            unmanagedSet: unmanagedSet,
+            uidWidths: uidWidths
+        )
+        let unmanagedUnits = units.filter(\.isUnmanaged)
+        let profileUnits = units.filter { !$0.isUnmanaged }
 
-        var overflowUIDs: [String] = []
+        // Profile baseline: chevron + all profile-saved visible units.
+        let profileBaseline = profileUnits.reduce(chevronWidth) { $0 + $1.width }
+
+        var overflowUnits = [OverflowUnit]()
+        var oversized = [OverflowUnit]()
 
         if profileBaseline > availableWidth {
-            // Profile alone exceeds budget. All unmanaged overflow plus
-            // enough profile items (leftmost first) to fit. Iterate
-            // profile items from the CC end inward; whatever doesn't fit
-            // overflows.
-            overflowUIDs.append(contentsOf: unmanagedNonChevron)
-            var profileFitting = [String]()
-            var usedWidth = chevronWidth
-            for uid in profileNonChevron.reversed() {
-                let width = uidWidths[uid] ?? 0
-                if usedWidth + width <= availableWidth {
-                    usedWidth += width
-                    profileFitting.insert(uid, at: 0)
-                } else {
-                    break
-                }
-            }
-            let profileOverflow = Array(
-                profileNonChevron.prefix(profileNonChevron.count - profileFitting.count)
+            // Profile alone exceeds budget. All unmanaged overflow plus enough
+            // profile units (leftmost first) to fit.
+            overflowUnits.append(contentsOf: unmanagedUnits)
+            let fitted = fitFromTrailingEdge(
+                profileUnits,
+                startingWidth: chevronWidth,
+                availableWidth: availableWidth,
+                oversized: &oversized
             )
-            overflowUIDs.append(contentsOf: profileOverflow)
+            overflowUnits.append(contentsOf: profileUnits.filter { !fitted.contains($0.members) })
         } else {
-            // Profile fits. Try to fit unmanaged items from the CC end;
-            // whatever doesn't fit overflows. Profile items stay put.
-            var usedWidth = profileBaseline
-            var unmanagedFitting = [String]()
-            for uid in unmanagedNonChevron.reversed() {
-                let width = uidWidths[uid] ?? 0
-                if usedWidth + width <= availableWidth {
-                    usedWidth += width
-                    unmanagedFitting.insert(uid, at: 0)
-                } else {
-                    break
-                }
-            }
-            overflowUIDs = Array(
-                unmanagedNonChevron.prefix(unmanagedNonChevron.count - unmanagedFitting.count)
+            // Profile fits. Try to fit unmanaged units from the CC end;
+            // whatever doesn't fit overflows. Profile units stay put.
+            let fitted = fitFromTrailingEdge(
+                unmanagedUnits,
+                startingWidth: profileBaseline,
+                availableWidth: availableWidth,
+                oversized: &oversized
             )
+            overflowUnits.append(contentsOf: unmanagedUnits.filter { !fitted.contains($0.members) })
         }
+
+        let overflowMembers = Set(overflowUnits.flatMap(\.members))
+        // Back to identifiers in the original visible order, so the existing
+        // "leftmost-from-visible lands deepest in hidden" contract holds.
+        let overflowUIDs = nonChevronUIDs.filter { overflowMembers.contains($0) }
 
         // No overflow → return inputs unchanged.
         if overflowUIDs.isEmpty {
             return NotchOverflowResult(
                 overflowUIDs: [],
                 updatedDesiredFiltered: desiredFiltered,
-                updatedSectionMap: sectionMap
+                updatedSectionMap: sectionMap,
+                missingWidthUIDs: missingWidthUIDs
             )
         }
 
@@ -549,8 +600,86 @@ nonisolated enum LayoutSolver {
         return NotchOverflowResult(
             overflowUIDs: overflowUIDs,
             updatedDesiredFiltered: rebuilt,
-            updatedSectionMap: updatedSectionMap
+            updatedSectionMap: updatedSectionMap,
+            groupsOverflowedWhole: overflowUnits.filter(\.isGroup).map(\.members),
+            oversizedGroups: oversized.map(\.members),
+            missingWidthUIDs: missingWidthUIDs
         )
+    }
+
+    /// Collapses `uids` into indivisible units: each group becomes one unit at
+    /// its leftmost member's position, everything else stays a singleton.
+    ///
+    /// Members need not be adjacent — a group scattered across the lane is still
+    /// one unit, so the budget can never split it.
+    private static nonisolated func overflowUnits(
+        in uids: [String],
+        groups: MenuBarItemGroupPolicy.GroupSet,
+        unmanagedSet: Set<String>,
+        uidWidths: [String: CGFloat]
+    ) -> [OverflowUnit] {
+        var units = [OverflowUnit]()
+        var emittedGroups = Set<Int>()
+
+        for uid in uids {
+            guard let group = groups.groupIndex(of: uid) else {
+                units.append(
+                    OverflowUnit(
+                        members: [uid],
+                        width: uidWidths[uid] ?? 0,
+                        isUnmanaged: unmanagedSet.contains(uid)
+                    )
+                )
+                continue
+            }
+            guard emittedGroups.insert(group).inserted else {
+                continue // already emitted at this group's leftmost member
+            }
+            let members = uids.filter { groups.groupIndex(of: $0) == group }
+            units.append(
+                OverflowUnit(
+                    members: members,
+                    width: members.reduce(0) { $0 + (uidWidths[$1] ?? 0) },
+                    isUnmanaged: members.contains { unmanagedSet.contains($0) }
+                )
+            )
+        }
+        return units
+    }
+
+    /// Fills the budget from the Control Center end inward, returning the units
+    /// that fit.
+    ///
+    /// Stops at the first unit that does not fit, so the survivors are always a
+    /// trailing run with no holes — the contract the caller's "leftmost
+    /// overflows first" rebuild depends on.
+    ///
+    /// The one exception is a *group* that could not fit even in an empty bar.
+    /// Breaking on it would cascade every unit to its left into hidden and empty
+    /// the visible section over one oversized cluster, so it overflows whole and
+    /// the scan continues past it.
+    private static nonisolated func fitFromTrailingEdge(
+        _ units: [OverflowUnit],
+        startingWidth: CGFloat,
+        availableWidth: CGFloat,
+        oversized: inout [OverflowUnit]
+    ) -> Set<[String]> {
+        var fitted = Set<[String]>()
+        var usedWidth = startingWidth
+
+        for unit in units.reversed() {
+            if usedWidth + unit.width <= availableWidth {
+                usedWidth += unit.width
+                fitted.insert(unit.members)
+                continue
+            }
+            if unit.isGroup, startingWidth + unit.width > availableWidth {
+                oversized.append(unit)
+                continue
+            }
+            break
+        }
+        return fitted
     }
 
     // MARK: - LCS reorder
