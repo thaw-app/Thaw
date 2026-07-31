@@ -11,7 +11,7 @@ import Foundation
 import Testing
 @testable import Thaw
 
-@Suite("External settings changes")
+@Suite("External settings changes", .serialized)
 @MainActor
 struct ExternalSettingsChangeTests {
     @Test("A setting key is required")
@@ -55,6 +55,11 @@ struct ExternalSettingsChangeTests {
                 subscription = NotificationCenter.observeSettingsChangesViaURI { change in
                     #expect(change.key == "showOnHover")
                     #expect(change.boolValue == true)
+                    // Cancel before resuming so a duplicate delivery can
+                    // neither over-count the confirmation nor resume the
+                    // continuation twice.
+                    subscription?.cancel()
+                    subscription = nil
                     confirm()
                     continuation.resume()
                 }

@@ -55,6 +55,7 @@ private let droppyURIs: [String] = [
     "thaw://get?key=all&callback=droppy%3A%2F%2Fthaw-response",
     "thaw://get?key=all&callback=droppy://thaw-response&requestId=7",
     "thaw://get?key=all&callback=droppy://thaw-response&broadcast=true",
+    "thaw://get?key=all&callback=droppy://thaw-response&requestId=7&broadcast=true",
     "thaw://toggle?key=autoRehide",
     "thaw://toggle?key=useIceBar",
 ]
@@ -145,7 +146,12 @@ struct IntegrationURIContractTests {
 
         @Test("Request correlation and broadcast are carried through")
         func requestIdAndBroadcast() throws {
-            let uri = "thaw://get?key=all&callback=droppy://thaw-response&requestId=7&broadcast=true"
+            // Read from the fixture so `droppyURIs` stays the single source of
+            // truth for every URL shape Droppy emits.
+            let uri = try #require(
+                droppyURIs.first { $0.contains("requestId=") && $0.contains("broadcast=") },
+                "droppyURIs must keep the combined requestId+broadcast shape"
+            )
             guard case let .get(_, _, _, broadcast, requestId) = try parse(uri).route else {
                 Issue.record("\(uri) did not parse as a get route")
                 return

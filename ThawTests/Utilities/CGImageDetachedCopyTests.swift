@@ -16,18 +16,21 @@ struct CGImageDetachedCopyTests {
     // MARK: - Helpers
 
     /// Creates an `width` x `height` bitmap where every pixel is `color`.
-    private func makeSolidImage(width: Int, height: Int, color: (UInt8, UInt8, UInt8, UInt8)) -> CGImage {
+    private func makeSolidImage(width: Int, height: Int, color: (UInt8, UInt8, UInt8, UInt8)) throws -> CGImage {
         let colorSpace = CGColorSpaceCreateDeviceRGB()
         let bitmapInfo = CGImageAlphaInfo.premultipliedLast.rawValue
-        let context = CGContext(
-            data: nil,
-            width: width,
-            height: height,
-            bitsPerComponent: 8,
-            bytesPerRow: 0,
-            space: colorSpace,
-            bitmapInfo: bitmapInfo
-        )!
+        let context = try #require(
+            CGContext(
+                data: nil,
+                width: width,
+                height: height,
+                bitsPerComponent: 8,
+                bytesPerRow: 0,
+                space: colorSpace,
+                bitmapInfo: bitmapInfo
+            ),
+            "Could not create a bitmap context"
+        )
         context.setFillColor(
             red: CGFloat(color.0) / 255,
             green: CGFloat(color.1) / 255,
@@ -35,17 +38,17 @@ struct CGImageDetachedCopyTests {
             alpha: CGFloat(color.3) / 255
         )
         context.fill(CGRect(x: 0, y: 0, width: width, height: height))
-        return context.makeImage()!
+        return try #require(context.makeImage(), "Could not snapshot the bitmap context")
     }
 
     /// Reads the raw RGBA bytes of `image` into an array.
-    private func pixelData(of image: CGImage) -> [UInt8] {
+    private func pixelData(of image: CGImage) throws -> [UInt8] {
         let width = image.width
         let height = image.height
         var data = [UInt8](repeating: 0, count: width * height * 4)
         let colorSpace = CGColorSpaceCreateDeviceRGB()
         let bitmapInfo = CGImageAlphaInfo.premultipliedLast.rawValue
-        let context = CGContext(
+        let bitmapContext = CGContext(
             data: &data,
             width: width,
             height: height,
@@ -53,7 +56,8 @@ struct CGImageDetachedCopyTests {
             bytesPerRow: width * 4,
             space: colorSpace,
             bitmapInfo: bitmapInfo
-        )!
+        )
+        let context = try #require(bitmapContext, "Could not create a bitmap context")
         context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
         return data
     }
@@ -61,8 +65,8 @@ struct CGImageDetachedCopyTests {
     // MARK: - Tests
 
     @Test("A detached copy preserves dimensions and pixels")
-    func detachedCopyPreservesDimensionsAndPixels() {
-        let parent = makeSolidImage(width: 20, height: 20, color: (255, 0, 0, 255))
+    func detachedCopyPreservesDimensionsAndPixels() throws {
+        let parent = try makeSolidImage(width: 20, height: 20, color: (255, 0, 0, 255))
         guard let cropped = parent.cropping(to: CGRect(x: 5, y: 5, width: 8, height: 8)) else {
             Issue.record("Failed to crop parent image")
             return
@@ -72,12 +76,12 @@ struct CGImageDetachedCopyTests {
 
         #expect(detached.width == cropped.width)
         #expect(detached.height == cropped.height)
-        #expect(pixelData(of: detached) == pixelData(of: cropped))
+        #expect(try pixelData(of: detached) == pixelData(of: cropped))
     }
 
     @Test("A detached copy owns its own buffer")
-    func detachedCopyOwnsItsOwnBuffer() {
-        let parent = makeSolidImage(width: 40, height: 40, color: (0, 255, 0, 255))
+    func detachedCopyOwnsItsOwnBuffer() throws {
+        let parent = try makeSolidImage(width: 40, height: 40, color: (0, 255, 0, 255))
         guard let cropped = parent.cropping(to: CGRect(x: 10, y: 10, width: 6, height: 6)) else {
             Issue.record("Failed to crop parent image")
             return
@@ -130,13 +134,13 @@ struct CGImageDetachedCopyTests {
     }
 
     @Test("A one-pixel image detaches cleanly")
-    func detachedCopyHandlesDegenerateOnePixelImage() {
-        let image = makeSolidImage(width: 1, height: 1, color: (10, 20, 30, 255))
+    func detachedCopyHandlesDegenerateOnePixelImage() throws {
+        let image = try makeSolidImage(width: 1, height: 1, color: (10, 20, 30, 255))
 
         let detached = image.detachedCopy()
 
         #expect(detached.width == 1)
         #expect(detached.height == 1)
-        #expect(pixelData(of: detached) == pixelData(of: image))
+        #expect(try pixelData(of: detached) == pixelData(of: image))
     }
 }

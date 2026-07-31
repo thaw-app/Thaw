@@ -104,6 +104,32 @@ struct ShouldPersistSavedOrderTests {
         ))
     }
 
+    /// The always-hidden divider went unresolved for this cache cycle:
+    /// without that boundary every always-hidden item degrades to
+    /// `.hidden`, and persisting the misread would make it the user's
+    /// layout (#849).
+    @Test("An unresolved always-hidden section blocks the save")
+    func alwaysHiddenSectionUnresolvedBlocks() {
+        #expect(!LayoutSolver.shouldPersistSavedOrder(
+            .init(
+                alwaysHiddenSectionResolved: false
+            )
+        ))
+    }
+
+    /// The hidden section's span between the dividers has closed to
+    /// zero while the saved layout still expects hidden items: the cache
+    /// resolves those items as visible, and persisting would move them
+    /// out of the hidden section for good (#795).
+    @Test("A hidden section without room blocks the save")
+    func hiddenSectionWithoutRoomBlocks() {
+        #expect(!LayoutSolver.shouldPersistSavedOrder(
+            .init(
+                hiddenSectionHasRoom: false
+            )
+        ))
+    }
+
     /// Two flags simultaneously: any blocking flag is sufficient to
     /// block the save. Sanity-check that the gate is the AND of all
     /// per-flag predicates rather than counting.

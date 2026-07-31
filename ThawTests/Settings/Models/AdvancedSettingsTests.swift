@@ -25,68 +25,15 @@ import Testing
 /// `SettingsURIHandlerApplyTests` covers the sending side of the same
 /// notification; the two suites have to agree on the `userInfo` shape.
 ///
-/// The model persists through `didSet` and `Defaults` is hardcoded to
-/// `.standard`, so the suite snapshots the keys it touches and restores them
-/// afterwards.
-///
-/// Snapshotting the *keys* rather than the whole persistent domain is
-/// deliberate: suites run concurrently, so a whole-domain snapshot taken while
-/// another suite holds scratch values captures them, and restoring it writes
-/// them back over the developer's own settings. Restoring one model's keys
-/// cannot reach anything this suite did not write.
+/// The model persists through `didSet`, so every test body runs inside
+/// `withScratchDefaults`: writes land in a throwaway store rather than the
+/// developer's own settings, and each test starts from the empty store of a
+/// first launch. That also keeps `enableDiagnosticLogging` at its compiled-in
+/// default, so the model never runs the `didSet` that reaches into the shared
+/// ``DiagnosticLogger``.
 @MainActor
 @Suite("Advanced settings", .serialized)
-final class AdvancedSettingsTests {
-    /// The keys this suite reads and writes.
-    ///
-    /// `enableDiagnosticLogging` is cleared along with the rest so that the
-    /// model loads its compiled-in default and never runs the `didSet` that
-    /// reaches into the shared ``DiagnosticLogger``.
-    private static let touchedKeys: [Defaults.Key] = [
-        .enableAlwaysHiddenSection,
-        .enableDiagnosticLogging,
-        .useOptionClickToShowAlwaysHiddenSection,
-        .useDoubleClickToShowAlwaysHiddenSection,
-        .showAllSectionsOnUserDrag,
-        .sectionDividerStyle,
-        .hideApplicationMenus,
-        .enableSecondaryContextMenu,
-        .enableSecondaryContextMenuQuit,
-        .showOnHoverDelay,
-        .tooltipDelay,
-        .showMenuBarTooltips,
-        .iconRefreshInterval,
-        .useLCSSortingOnNotchedDisplays,
-        .enableMenuBarItemOverflow,
-        .useThawBarOnNotchOverflow,
-        .useAXClickDelivery,
-        .searchSectionOrder,
-        .searchIncludeVisible,
-        .searchIncludeHidden,
-        .searchIncludeAlwaysHidden,
-    ]
-
-    private let savedDefaults: [Defaults.Key: Any?]
-
-    init() {
-        savedDefaults = Dictionary(
-            uniqueKeysWithValues: Self.touchedKeys.map { ($0, Defaults.object(forKey: $0)) }
-        )
-    }
-
-    /// Isolated so the non-Sendable snapshot is reachable here; the suite is
-    /// already `@MainActor`.
-    @MainActor
-    deinit {
-        for (key, value) in savedDefaults {
-            if let value {
-                Defaults.set(value, forKey: key)
-            } else {
-                Defaults.removeObject(forKey: key)
-            }
-        }
-    }
-
+struct AdvancedSettingsTests {
     /// Returns a model that has run its setup against the current `Defaults`.
     ///
     /// The app state is unused by this model, so setup runs without one.
@@ -94,14 +41,6 @@ final class AdvancedSettingsTests {
         let settings = AdvancedSettings()
         settings.performSetup()
         return settings
-    }
-
-    /// Removes every key the model loads, so a test starts from the state of a
-    /// first launch rather than from the developer's own settings.
-    private func clearStoredSettings() {
-        for key in Self.touchedKeys {
-            Defaults.removeObject(forKey: key)
-        }
     }
 
     /// Posts external settings changes and waits for the model to handle them.
@@ -113,7 +52,7 @@ final class AdvancedSettingsTests {
     ///
     /// Changes are posted as a batch so that a test suspends once rather than
     /// once per change: every suspension is a window in which another suite can
-    /// run while this one's scratch values sit in `Defaults`.
+    /// run while this one's scratch store is installed.
     ///
     /// The model listens on `NotificationCenter.default`, so a suite that posts
     /// its own changes — `SettingsURIHandlerApplyTests` does — reaches this
@@ -143,308 +82,327 @@ final class AdvancedSettingsTests {
     // MARK: Initial load
 
     @Test("Stored values are loaded into the model")
-    func storedValuesAreLoaded() {
-        clearStoredSettings()
-        Defaults.set(true, forKey: .enableAlwaysHiddenSection)
-        Defaults.set(true, forKey: .useOptionClickToShowAlwaysHiddenSection)
-        Defaults.set(true, forKey: .useDoubleClickToShowAlwaysHiddenSection)
-        Defaults.set(false, forKey: .showAllSectionsOnUserDrag)
-        Defaults.set(false, forKey: .hideApplicationMenus)
-        Defaults.set(false, forKey: .enableSecondaryContextMenu)
-        Defaults.set(true, forKey: .enableSecondaryContextMenuQuit)
-        Defaults.set(1.5, forKey: .showOnHoverDelay)
-        Defaults.set(2.5, forKey: .tooltipDelay)
-        Defaults.set(3.5, forKey: .iconRefreshInterval)
-        Defaults.set(true, forKey: .showMenuBarTooltips)
-        Defaults.set(false, forKey: .useLCSSortingOnNotchedDisplays)
-        Defaults.set(false, forKey: .enableMenuBarItemOverflow)
-        Defaults.set(false, forKey: .useThawBarOnNotchOverflow)
-        Defaults.set(true, forKey: .useAXClickDelivery)
-        Defaults.set(false, forKey: .searchIncludeVisible)
-        Defaults.set(false, forKey: .searchIncludeHidden)
-        Defaults.set(false, forKey: .searchIncludeAlwaysHidden)
+    func storedValuesAreLoaded() throws {
+        try withScratchDefaults { _ in
+            Defaults.set(true, forKey: .enableAlwaysHiddenSection)
+            Defaults.set(true, forKey: .useOptionClickToShowAlwaysHiddenSection)
+            Defaults.set(true, forKey: .useDoubleClickToShowAlwaysHiddenSection)
+            Defaults.set(false, forKey: .showAllSectionsOnUserDrag)
+            Defaults.set(false, forKey: .hideApplicationMenus)
+            Defaults.set(false, forKey: .enableSecondaryContextMenu)
+            Defaults.set(true, forKey: .enableSecondaryContextMenuQuit)
+            Defaults.set(1.5, forKey: .showOnHoverDelay)
+            Defaults.set(2.5, forKey: .tooltipDelay)
+            Defaults.set(3.5, forKey: .iconRefreshInterval)
+            Defaults.set(true, forKey: .showMenuBarTooltips)
+            Defaults.set(false, forKey: .useLCSSortingOnNotchedDisplays)
+            Defaults.set(false, forKey: .enableMenuBarItemOverflow)
+            Defaults.set(false, forKey: .useThawBarOnNotchOverflow)
+            Defaults.set(true, forKey: .useAXClickDelivery)
+            Defaults.set(false, forKey: .searchIncludeVisible)
+            Defaults.set(false, forKey: .searchIncludeHidden)
+            Defaults.set(false, forKey: .searchIncludeAlwaysHidden)
 
-        let settings = makeSettings()
+            let settings = makeSettings()
 
-        #expect(settings.enableAlwaysHiddenSection)
-        #expect(settings.useOptionClickToShowAlwaysHiddenSection)
-        #expect(settings.useDoubleClickToShowAlwaysHiddenSection)
-        #expect(!settings.showAllSectionsOnUserDrag)
-        #expect(!settings.hideApplicationMenus)
-        #expect(!settings.enableSecondaryContextMenu)
-        #expect(settings.enableSecondaryContextMenuQuit)
-        #expect(settings.showOnHoverDelay == 1.5)
-        #expect(settings.tooltipDelay == 2.5)
-        #expect(settings.iconRefreshInterval == 3.5)
-        #expect(settings.showMenuBarTooltips)
-        #expect(!settings.useLCSSortingOnNotchedDisplays)
-        #expect(!settings.enableMenuBarItemOverflow)
-        #expect(!settings.useThawBarOnNotchOverflow)
-        #expect(settings.useAXClickDelivery)
-        #expect(!settings.searchIncludeVisible)
-        #expect(!settings.searchIncludeHidden)
-        #expect(!settings.searchIncludeAlwaysHidden)
+            #expect(settings.enableAlwaysHiddenSection)
+            #expect(settings.useOptionClickToShowAlwaysHiddenSection)
+            #expect(settings.useDoubleClickToShowAlwaysHiddenSection)
+            #expect(!settings.showAllSectionsOnUserDrag)
+            #expect(!settings.hideApplicationMenus)
+            #expect(!settings.enableSecondaryContextMenu)
+            #expect(settings.enableSecondaryContextMenuQuit)
+            #expect(settings.showOnHoverDelay == 1.5)
+            #expect(settings.tooltipDelay == 2.5)
+            #expect(settings.iconRefreshInterval == 3.5)
+            #expect(settings.showMenuBarTooltips)
+            #expect(!settings.useLCSSortingOnNotchedDisplays)
+            #expect(!settings.enableMenuBarItemOverflow)
+            #expect(!settings.useThawBarOnNotchOverflow)
+            #expect(settings.useAXClickDelivery)
+            #expect(!settings.searchIncludeVisible)
+            #expect(!settings.searchIncludeHidden)
+            #expect(!settings.searchIncludeAlwaysHidden)
+        }
     }
 
     @Test("Absent keys leave the shipped defaults in place")
-    func absentKeysLeaveTheDefaults() {
-        clearStoredSettings()
+    func absentKeysLeaveTheDefaults() throws {
+        try withScratchDefaults { _ in
+            let settings = makeSettings()
 
-        let settings = makeSettings()
-
-        #expect(settings.enableAlwaysHiddenSection == Defaults.DefaultValue.enableAlwaysHiddenSection)
-        #expect(settings.showAllSectionsOnUserDrag == Defaults.DefaultValue.showAllSectionsOnUserDrag)
-        #expect(settings.sectionDividerStyle == Defaults.DefaultValue.sectionDividerStyle)
-        #expect(settings.hideApplicationMenus == Defaults.DefaultValue.hideApplicationMenus)
-        #expect(settings.showOnHoverDelay == Defaults.DefaultValue.showOnHoverDelay)
-        #expect(settings.tooltipDelay == Defaults.DefaultValue.tooltipDelay)
-        #expect(settings.iconRefreshInterval == Defaults.DefaultValue.iconRefreshInterval)
-        #expect(settings.useAXClickDelivery == Defaults.DefaultValue.useAXClickDelivery)
-        #expect(settings.searchSectionOrder.map(\.rawValue) == Defaults.DefaultValue.searchSectionOrder)
+            #expect(settings.enableAlwaysHiddenSection == Defaults.DefaultValue.enableAlwaysHiddenSection)
+            #expect(settings.showAllSectionsOnUserDrag == Defaults.DefaultValue.showAllSectionsOnUserDrag)
+            #expect(settings.sectionDividerStyle == Defaults.DefaultValue.sectionDividerStyle)
+            #expect(settings.hideApplicationMenus == Defaults.DefaultValue.hideApplicationMenus)
+            #expect(settings.showOnHoverDelay == Defaults.DefaultValue.showOnHoverDelay)
+            #expect(settings.tooltipDelay == Defaults.DefaultValue.tooltipDelay)
+            #expect(settings.iconRefreshInterval == Defaults.DefaultValue.iconRefreshInterval)
+            #expect(settings.useAXClickDelivery == Defaults.DefaultValue.useAXClickDelivery)
+            #expect(settings.searchSectionOrder.map(\.rawValue) == Defaults.DefaultValue.searchSectionOrder)
+        }
     }
 
     @Test("A stored divider style is loaded")
-    func storedDividerStyleIsLoaded() {
-        clearStoredSettings()
-        Defaults.set(SectionDividerStyle.chevron.rawValue, forKey: .sectionDividerStyle)
+    func storedDividerStyleIsLoaded() throws {
+        try withScratchDefaults { _ in
+            Defaults.set(SectionDividerStyle.chevron.rawValue, forKey: .sectionDividerStyle)
 
-        #expect(makeSettings().sectionDividerStyle == .chevron)
+            #expect(makeSettings().sectionDividerStyle == .chevron)
+        }
     }
 
     @Test("An unrecognized divider style leaves the default in place")
-    func unrecognizedDividerStyleIsIgnored() {
-        clearStoredSettings()
-        Defaults.set(42, forKey: .sectionDividerStyle)
+    func unrecognizedDividerStyleIsIgnored() throws {
+        try withScratchDefaults { _ in
+            Defaults.set(42, forKey: .sectionDividerStyle)
 
-        #expect(makeSettings().sectionDividerStyle == Defaults.DefaultValue.sectionDividerStyle)
+            #expect(makeSettings().sectionDividerStyle == Defaults.DefaultValue.sectionDividerStyle)
+        }
     }
 
     // MARK: Search section order
 
     @Test("A stored search order is loaded in the order it was written")
-    func storedSearchOrderIsLoaded() {
-        clearStoredSettings()
-        Defaults.set(["alwaysHidden", "hidden", "visible"], forKey: .searchSectionOrder)
+    func storedSearchOrderIsLoaded() throws {
+        try withScratchDefaults { _ in
+            Defaults.set(["alwaysHidden", "hidden", "visible"], forKey: .searchSectionOrder)
 
-        #expect(makeSettings().searchSectionOrder == [.alwaysHidden, .hidden, .visible])
+            #expect(makeSettings().searchSectionOrder == [.alwaysHidden, .hidden, .visible])
+        }
     }
 
     @Test("A short stored search order is filled out with the missing sections")
-    func shortSearchOrderIsFilledOut() {
-        clearStoredSettings()
-        Defaults.set(["alwaysHidden"], forKey: .searchSectionOrder)
+    func shortSearchOrderIsFilledOut() throws {
+        try withScratchDefaults { _ in
+            Defaults.set(["alwaysHidden"], forKey: .searchSectionOrder)
 
-        let order = makeSettings().searchSectionOrder
+            let order = makeSettings().searchSectionOrder
 
-        #expect(order.first == .alwaysHidden)
-        #expect(Set(order) == Set(MenuBarSection.Name.allCases), "every section has to be listed exactly once")
-        #expect(order.count == MenuBarSection.Name.allCases.count)
+            #expect(order.first == .alwaysHidden)
+            #expect(Set(order) == Set(MenuBarSection.Name.allCases), "every section has to be listed exactly once")
+            #expect(order.count == MenuBarSection.Name.allCases.count)
+        }
     }
 
     @Test("Duplicate and unknown section names are dropped from a stored order")
-    func malformedSearchOrderIsSanitized() {
-        clearStoredSettings()
-        Defaults.set(["hidden", "hidden", "sideways", "", "visible"], forKey: .searchSectionOrder)
+    func malformedSearchOrderIsSanitized() throws {
+        try withScratchDefaults { _ in
+            Defaults.set(["hidden", "hidden", "sideways", "", "visible"], forKey: .searchSectionOrder)
 
-        let order = makeSettings().searchSectionOrder
+            let order = makeSettings().searchSectionOrder
 
-        #expect(order == [.hidden, .visible, .alwaysHidden])
+            #expect(order == [.hidden, .visible, .alwaysHidden])
+        }
     }
 
     @Test("An empty stored search order falls back to the full set")
-    func emptySearchOrderFallsBack() {
-        clearStoredSettings()
-        Defaults.set([String](), forKey: .searchSectionOrder)
+    func emptySearchOrderFallsBack() throws {
+        try withScratchDefaults { _ in
+            Defaults.set([String](), forKey: .searchSectionOrder)
 
-        #expect(makeSettings().searchSectionOrder == MenuBarSection.Name.allCases)
+            #expect(makeSettings().searchSectionOrder == MenuBarSection.Name.allCases)
+        }
     }
 
     // MARK: Persistence
 
     @Test("A property change is written straight through to Defaults")
-    func propertyChangesArePersisted() {
-        clearStoredSettings()
-        let settings = makeSettings()
+    func propertyChangesArePersisted() throws {
+        try withScratchDefaults { _ in
+            let settings = makeSettings()
 
-        settings.enableAlwaysHiddenSection = true
-        settings.tooltipDelay = 1.25
-        settings.sectionDividerStyle = .chevron
-        settings.searchSectionOrder = [.alwaysHidden, .hidden, .visible]
+            settings.enableAlwaysHiddenSection = true
+            settings.tooltipDelay = 1.25
+            settings.sectionDividerStyle = .chevron
+            settings.searchSectionOrder = [.alwaysHidden, .hidden, .visible]
 
-        #expect(Defaults.bool(forKey: .enableAlwaysHiddenSection))
-        #expect(Defaults.double(forKey: .tooltipDelay) == 1.25)
-        #expect(Defaults.integer(forKey: .sectionDividerStyle) == SectionDividerStyle.chevron.rawValue)
-        #expect(Defaults.stringArray(forKey: .searchSectionOrder) == ["alwaysHidden", "hidden", "visible"])
+            #expect(Defaults.bool(forKey: .enableAlwaysHiddenSection))
+            #expect(Defaults.double(forKey: .tooltipDelay) == 1.25)
+            #expect(Defaults.integer(forKey: .sectionDividerStyle) == SectionDividerStyle.chevron.rawValue)
+            #expect(Defaults.stringArray(forKey: .searchSectionOrder) == ["alwaysHidden", "hidden", "visible"])
+        }
     }
 
     @Test("Stored values survive a reload")
-    func storedValuesRoundTrip() {
-        clearStoredSettings()
-        let settings = makeSettings()
-        settings.enableAlwaysHiddenSection = true
-        settings.sectionDividerStyle = .chevron
-        settings.searchSectionOrder = [.hidden, .alwaysHidden, .visible]
+    func storedValuesRoundTrip() throws {
+        try withScratchDefaults { _ in
+            let settings = makeSettings()
+            settings.enableAlwaysHiddenSection = true
+            settings.sectionDividerStyle = .chevron
+            settings.searchSectionOrder = [.hidden, .alwaysHidden, .visible]
 
-        let reloaded = makeSettings()
+            let reloaded = makeSettings()
 
-        #expect(reloaded.enableAlwaysHiddenSection)
-        #expect(reloaded.sectionDividerStyle == .chevron)
-        #expect(reloaded.searchSectionOrder == [.hidden, .alwaysHidden, .visible])
+            #expect(reloaded.enableAlwaysHiddenSection)
+            #expect(reloaded.sectionDividerStyle == .chevron)
+            #expect(reloaded.searchSectionOrder == [.hidden, .alwaysHidden, .visible])
+        }
     }
 
     // MARK: External changes
 
     @Test("An external boolean change updates the matching property")
-    func externalBooleanChangeIsApplied() async {
-        clearStoredSettings()
-        let settings = makeSettings()
+    func externalBooleanChangeIsApplied() async throws {
+        try await withScratchDefaults { _ in
+            let settings = makeSettings()
 
-        await postExternalChanges([
-            ["key": "enableAlwaysHiddenSection", "value": true],
-            ["key": "useOptionClickToShowAlwaysHiddenSection", "value": true],
-            ["key": "useDoubleClickToShowAlwaysHiddenSection", "value": true],
-            ["key": "showAllSectionsOnUserDrag", "value": false],
-            ["key": "hideApplicationMenus", "value": false],
-            ["key": "enableSecondaryContextMenu", "value": false],
-            ["key": "enableSecondaryContextMenuQuit", "value": true],
-            ["key": "showMenuBarTooltips", "value": true],
-            ["key": "useLCSSortingOnNotchedDisplays", "value": false],
-            ["key": "enableMenuBarItemOverflow", "value": false],
-            ["key": "useThawBarOnNotchOverflow", "value": false],
-            ["key": "useAXClickDelivery", "value": true],
-        ])
+            await postExternalChanges([
+                ["key": "enableAlwaysHiddenSection", "value": true],
+                ["key": "useOptionClickToShowAlwaysHiddenSection", "value": true],
+                ["key": "useDoubleClickToShowAlwaysHiddenSection", "value": true],
+                ["key": "showAllSectionsOnUserDrag", "value": false],
+                ["key": "hideApplicationMenus", "value": false],
+                ["key": "enableSecondaryContextMenu", "value": false],
+                ["key": "enableSecondaryContextMenuQuit", "value": true],
+                ["key": "showMenuBarTooltips", "value": true],
+                ["key": "useLCSSortingOnNotchedDisplays", "value": false],
+                ["key": "enableMenuBarItemOverflow", "value": false],
+                ["key": "useThawBarOnNotchOverflow", "value": false],
+                ["key": "useAXClickDelivery", "value": true],
+            ])
 
-        #expect(settings.enableAlwaysHiddenSection)
-        #expect(settings.useOptionClickToShowAlwaysHiddenSection)
-        #expect(settings.useDoubleClickToShowAlwaysHiddenSection)
-        #expect(!settings.showAllSectionsOnUserDrag)
-        #expect(!settings.hideApplicationMenus)
-        #expect(!settings.enableSecondaryContextMenu)
-        #expect(settings.enableSecondaryContextMenuQuit)
-        #expect(settings.showMenuBarTooltips)
-        #expect(!settings.useLCSSortingOnNotchedDisplays)
-        #expect(!settings.enableMenuBarItemOverflow)
-        #expect(!settings.useThawBarOnNotchOverflow)
-        #expect(settings.useAXClickDelivery)
+            #expect(settings.enableAlwaysHiddenSection)
+            #expect(settings.useOptionClickToShowAlwaysHiddenSection)
+            #expect(settings.useDoubleClickToShowAlwaysHiddenSection)
+            #expect(!settings.showAllSectionsOnUserDrag)
+            #expect(!settings.hideApplicationMenus)
+            #expect(!settings.enableSecondaryContextMenu)
+            #expect(settings.enableSecondaryContextMenuQuit)
+            #expect(settings.showMenuBarTooltips)
+            #expect(!settings.useLCSSortingOnNotchedDisplays)
+            #expect(!settings.enableMenuBarItemOverflow)
+            #expect(!settings.useThawBarOnNotchOverflow)
+            #expect(settings.useAXClickDelivery)
+        }
     }
 
     @Test("An external change to a search filter updates it")
-    func externalSearchFilterChangeIsApplied() async {
-        clearStoredSettings()
-        let settings = makeSettings()
+    func externalSearchFilterChangeIsApplied() async throws {
+        try await withScratchDefaults { _ in
+            let settings = makeSettings()
 
-        await postExternalChanges([
-            ["key": "searchIncludeVisible", "value": false],
-            ["key": "searchIncludeHidden", "value": false],
-            ["key": "searchIncludeAlwaysHidden", "value": false],
-        ])
+            await postExternalChanges([
+                ["key": "searchIncludeVisible", "value": false],
+                ["key": "searchIncludeHidden", "value": false],
+                ["key": "searchIncludeAlwaysHidden", "value": false],
+            ])
 
-        #expect(!settings.searchIncludeVisible)
-        #expect(!settings.searchIncludeHidden)
-        #expect(!settings.searchIncludeAlwaysHidden)
+            #expect(!settings.searchIncludeVisible)
+            #expect(!settings.searchIncludeHidden)
+            #expect(!settings.searchIncludeAlwaysHidden)
+        }
     }
 
     @Test("An external double change updates the matching delay")
-    func externalDoubleChangeIsApplied() async {
-        clearStoredSettings()
-        let settings = makeSettings()
+    func externalDoubleChangeIsApplied() async throws {
+        try await withScratchDefaults { _ in
+            let settings = makeSettings()
 
-        await postExternalChanges([
-            ["key": "showOnHoverDelay", "doubleValue": 1.75],
-            ["key": "tooltipDelay", "doubleValue": 2.75],
-            ["key": "iconRefreshInterval", "doubleValue": 3.75],
-        ])
+            await postExternalChanges([
+                ["key": "showOnHoverDelay", "doubleValue": 1.75],
+                ["key": "tooltipDelay", "doubleValue": 2.75],
+                ["key": "iconRefreshInterval", "doubleValue": 3.75],
+            ])
 
-        // Only the model is asserted, not `Defaults`: a suite that restores a
-        // whole persistent domain can land during the suspension above and
-        // wipe the writes this model just made. Persistence itself is covered
-        // synchronously by `propertyChangesArePersisted`.
-        #expect(settings.showOnHoverDelay == 1.75)
-        #expect(settings.tooltipDelay == 2.75)
-        #expect(settings.iconRefreshInterval == 3.75)
+            // Only the model is asserted, not `Defaults`: a suite that restores a
+            // whole persistent domain can land during the suspension above and
+            // wipe the writes this model just made. Persistence itself is covered
+            // synchronously by `propertyChangesArePersisted`.
+            #expect(settings.showOnHoverDelay == 1.75)
+            #expect(settings.tooltipDelay == 2.75)
+            #expect(settings.iconRefreshInterval == 3.75)
+        }
     }
 
     @Test(
         "An external change to an unknown key is ignored",
         arguments: ["", "nope", "enableAlwaysHiddenSectio", "ENABLEALWAYSHIDDENSECTION"]
     )
-    func externalChangeToUnknownKeyIsIgnored(_ key: String) async {
-        clearStoredSettings()
-        let settings = makeSettings()
+    func externalChangeToUnknownKeyIsIgnored(_ key: String) async throws {
+        try await withScratchDefaults { _ in
+            let settings = makeSettings()
 
-        await postExternalChange(["key": key, "value": true])
+            await postExternalChange(["key": key, "value": true])
 
-        #expect(!settings.enableAlwaysHiddenSection, "\(key) must not reach any property")
+            #expect(!settings.enableAlwaysHiddenSection, "\(key) must not reach any property")
+        }
     }
 
     @Test("An external change to another model's key is ignored")
-    func externalChangeToAnotherModelsKeyIsIgnored() async {
-        clearStoredSettings()
-        let settings = makeSettings()
+    func externalChangeToAnotherModelsKeyIsIgnored() async throws {
+        try await withScratchDefaults { _ in
+            let settings = makeSettings()
 
-        // `alwaysShowHiddenItems` is a per-display setting owned by
-        // DisplaySettingsManager. This model sees every change posted on this
-        // channel and has to let the ones it does not own by.
-        await postExternalChange(["key": "alwaysShowHiddenItems", "value": true])
+            // `alwaysShowHiddenItems` is a per-display setting owned by
+            // DisplaySettingsManager. This model sees every change posted on this
+            // channel and has to let the ones it does not own by.
+            await postExternalChange(["key": "alwaysShowHiddenItems", "value": true])
 
-        #expect(settings.enableAlwaysHiddenSection == Defaults.DefaultValue.enableAlwaysHiddenSection)
-        #expect(settings.showMenuBarTooltips == Defaults.DefaultValue.showMenuBarTooltips)
+            #expect(settings.enableAlwaysHiddenSection == Defaults.DefaultValue.enableAlwaysHiddenSection)
+            #expect(settings.showMenuBarTooltips == Defaults.DefaultValue.showMenuBarTooltips)
+        }
     }
 
     @Test("A numeric payload for a boolean setting is ignored")
-    func wronglyTypedNumericPayloadIsIgnored() async {
-        clearStoredSettings()
-        let settings = makeSettings()
+    func wronglyTypedNumericPayloadIsIgnored() async throws {
+        try await withScratchDefaults { _ in
+            let settings = makeSettings()
 
-        await postExternalChange(["key": "enableAlwaysHiddenSection", "doubleValue": 1.0])
+            await postExternalChange(["key": "enableAlwaysHiddenSection", "doubleValue": 1.0])
 
-        #expect(!settings.enableAlwaysHiddenSection)
+            #expect(!settings.enableAlwaysHiddenSection)
+        }
     }
 
     @Test("A boolean payload for a numeric setting is ignored")
-    func wronglyTypedBooleanPayloadIsIgnored() async {
-        clearStoredSettings()
-        let settings = makeSettings()
+    func wronglyTypedBooleanPayloadIsIgnored() async throws {
+        try await withScratchDefaults { _ in
+            let settings = makeSettings()
 
-        await postExternalChange(["key": "tooltipDelay", "value": true])
+            await postExternalChange(["key": "tooltipDelay", "value": true])
 
-        #expect(settings.tooltipDelay == Defaults.DefaultValue.tooltipDelay)
+            #expect(settings.tooltipDelay == Defaults.DefaultValue.tooltipDelay)
+        }
     }
 
     @Test("A string payload reaches no property")
-    func stringPayloadIsIgnored() async {
-        clearStoredSettings()
-        let settings = makeSettings()
+    func stringPayloadIsIgnored() async throws {
+        try await withScratchDefaults { _ in
+            let settings = makeSettings()
 
-        await postExternalChange(["key": "enableAlwaysHiddenSection", "value": "true"])
+            await postExternalChange(["key": "enableAlwaysHiddenSection", "value": "true"])
 
-        #expect(!settings.enableAlwaysHiddenSection)
+            #expect(!settings.enableAlwaysHiddenSection)
+        }
     }
 
     @Test("Settings with no external channel are left alone")
-    func settingsWithoutAnExternalChannelAreLeftAlone() async {
-        clearStoredSettings()
-        let settings = makeSettings()
-        let order = settings.searchSectionOrder
+    func settingsWithoutAnExternalChannelAreLeftAlone() async throws {
+        try await withScratchDefaults { _ in
+            let settings = makeSettings()
+            let order = settings.searchSectionOrder
 
-        // Neither key is handled by `handleExternalSettingsChange`, so a
-        // well-formed payload for one must still change nothing.
-        await postExternalChanges([
-            ["key": "sectionDividerStyle", "rawEnumValue": SectionDividerStyle.chevron.rawValue],
-            ["key": "searchSectionOrder", "value": true],
-        ])
+            // Neither key is handled by `handleExternalSettingsChange`, so a
+            // well-formed payload for one must still change nothing.
+            await postExternalChanges([
+                ["key": "sectionDividerStyle", "rawEnumValue": SectionDividerStyle.chevron.rawValue],
+                ["key": "searchSectionOrder", "value": true],
+            ])
 
-        #expect(settings.sectionDividerStyle == Defaults.DefaultValue.sectionDividerStyle)
-        #expect(settings.searchSectionOrder == order)
+            #expect(settings.sectionDividerStyle == Defaults.DefaultValue.sectionDividerStyle)
+            #expect(settings.searchSectionOrder == order)
+        }
     }
 
     @Test("A change with no key is dropped before it reaches the model")
-    func changeWithoutAKeyIsDropped() async {
-        clearStoredSettings()
-        let settings = makeSettings()
+    func changeWithoutAKeyIsDropped() async throws {
+        try await withScratchDefaults { _ in
+            let settings = makeSettings()
 
-        await postExternalChange(["value": true])
+            await postExternalChange(["value": true])
 
-        #expect(!settings.enableAlwaysHiddenSection)
+            #expect(!settings.enableAlwaysHiddenSection)
+        }
     }
 }

@@ -294,60 +294,6 @@ struct ProfileFullTests {
         decoder.dateDecodingStrategy = .iso8601
     }
 
-    // MARK: - Helper Methods
-
-    private func makeTestContent() -> ProfileContent {
-        ProfileContent(
-            generalSettings: GeneralSettingsSnapshot(
-                showIceIcon: true,
-                iceIcon: .defaultIceIcon,
-                lastCustomIceIcon: nil,
-                customIceIconIsTemplate: true,
-                useIceBar: false,
-                useIceBarOnlyOnNotchedDisplay: false,
-                iceBarLocation: .dynamic,
-                iceBarLocationOnHotkey: false,
-                showOnClick: true,
-                showOnDoubleClick: false,
-                showOnHover: false,
-                showOnScroll: false,
-                autoRehide: true,
-                rehideStrategyRawValue: 0,
-                rehideInterval: 15
-            ),
-            advancedSettings: AdvancedSettingsSnapshot(
-                enableAlwaysHiddenSection: true,
-                showAllSectionsOnUserDrag: true,
-                sectionDividerStyle: 0,
-                hideApplicationMenus: false,
-                enableSecondaryContextMenu: true,
-                enableSecondaryContextMenuQuit: false,
-                showOnHoverDelay: 0.2,
-                tooltipDelay: 1.0,
-                showMenuBarTooltips: true,
-                iconRefreshInterval: 3.0,
-                enableDiagnosticLogging: false,
-                useDoubleClickToShowAlwaysHiddenSection: false,
-                useOptionClickToShowAlwaysHiddenSection: false,
-                useLCSSortingOnNotchedDisplays: false,
-                enableMenuBarItemOverflow: false,
-                searchSectionOrder: ["visible", "hidden", "alwaysHidden"],
-                searchIncludeVisible: true,
-                searchIncludeHidden: true,
-                searchIncludeAlwaysHidden: true
-            ),
-            hotkeys: [:],
-            displayConfigurations: [:],
-            appearanceConfiguration: .defaultConfiguration,
-            menuBarLayout: MenuBarLayoutSnapshot(
-                savedSectionOrder: [:],
-                pinnedHiddenBundleIDs: [],
-                pinnedAlwaysHiddenBundleIDs: [],
-                customNames: [:]
-            )
-        )
-    }
-
     // MARK: - Initialization Tests
 
     /// `id`, `createdAt` and `modifiedAt` are non-optional, so the XCTest
@@ -356,7 +302,7 @@ struct ProfileFullTests {
     /// identifier generation is covered by ``profileInitGeneratesUniqueId()``.
     @Test("A profile built from content takes its name and defaults its timestamps")
     func profileInitWithContent() {
-        let content = makeTestContent()
+        let content = makeTestProfileContent()
         let before = Date()
         let profile = Profile(name: "Test Profile", content: content)
 
@@ -367,7 +313,7 @@ struct ProfileFullTests {
 
     @Test("A profile built with explicit identity keeps it verbatim")
     func profileInitWithCustomDates() {
-        let content = makeTestContent()
+        let content = makeTestProfileContent()
         let id = UUID()
         let created = Date(timeIntervalSince1970: 1_000_000)
         let modified = Date(timeIntervalSince1970: 2_000_000)
@@ -387,7 +333,7 @@ struct ProfileFullTests {
 
     @Test("Each profile gets its own identifier")
     func profileInitGeneratesUniqueId() {
-        let content = makeTestContent()
+        let content = makeTestProfileContent()
         let profile1 = Profile(name: "Profile 1", content: content)
         let profile2 = Profile(name: "Profile 2", content: content)
 
@@ -398,7 +344,7 @@ struct ProfileFullTests {
 
     @Test("A profile's metadata mirrors its identity fields")
     func metadataProperty() {
-        let content = makeTestContent()
+        let content = makeTestProfileContent()
         let profile = Profile(name: "Metadata Test", content: content)
         let metadata = profile.metadata
 
@@ -410,7 +356,7 @@ struct ProfileFullTests {
 
     @Test("A profile's metadata carries no display association")
     func metadataHasNoDisplayAssociation() {
-        let content = makeTestContent()
+        let content = makeTestProfileContent()
         let profile = Profile(name: "No Display", content: content)
         let metadata = profile.metadata
 
@@ -423,7 +369,7 @@ struct ProfileFullTests {
 
     @Test("A profile's content property returns the settings it was built from")
     func contentProperty() {
-        let originalContent = makeTestContent()
+        let originalContent = makeTestProfileContent()
         let profile = Profile(name: "Content Test", content: originalContent)
         let retrievedContent = profile.content
 
@@ -438,7 +384,7 @@ struct ProfileFullTests {
 
     @Test("A profile round-trips through JSON")
     func encodeDecodeProfile() throws {
-        let content = makeTestContent()
+        let content = makeTestProfileContent()
         let original = Profile(name: "Encode Test", content: content)
 
         let data = try encoder.encode(original)
@@ -488,7 +434,7 @@ struct ProfileFullTests {
 
     @Test("Hotkeys and display configurations survive the round trip")
     func decodeProfilePreservesAllFields() throws {
-        var content = makeTestContent()
+        var content = makeTestProfileContent()
         content.hotkeys = ["toggleHidden": Data([0x01, 0x02])]
         content.displayConfigurations = ["display1": .defaultConfiguration]
 
@@ -510,7 +456,7 @@ struct ProfileFullTests {
     /// non-nil on a non-optional `UUID`, which could never fail.)
     @Test("A profile is identifiable by a UUID")
     func profileIsIdentifiable() {
-        let content = makeTestContent()
+        let content = makeTestProfileContent()
         let profile = Profile(name: "Identifiable", content: content)
 
         let id: UUID = profile.id
@@ -522,7 +468,7 @@ struct ProfileFullTests {
 
     @Test("Dates survive an ISO8601 round trip to within a second")
     func datesArePreservedOnEncodeDecode() throws {
-        let content = makeTestContent()
+        let content = makeTestProfileContent()
         let created = Date(timeIntervalSince1970: 1_609_459_200) // 2021-01-01
         let modified = Date(timeIntervalSince1970: 1_640_995_200) // 2022-01-01
 
@@ -547,58 +493,9 @@ struct ProfileFullTests {
 struct ProfileContentTests {
     @Test("Content keeps the settings and collections it was built with")
     func profileContentInitialization() {
-        let generalSettings = GeneralSettingsSnapshot(
-            showIceIcon: true,
-            iceIcon: .defaultIceIcon,
-            lastCustomIceIcon: nil,
-            customIceIconIsTemplate: true,
-            useIceBar: false,
-            useIceBarOnlyOnNotchedDisplay: false,
-            iceBarLocation: .dynamic,
-            iceBarLocationOnHotkey: false,
-            showOnClick: true,
-            showOnDoubleClick: false,
-            showOnHover: false,
-            showOnScroll: false,
-            autoRehide: true,
-            rehideStrategyRawValue: 0,
-            rehideInterval: 15
-        )
-
-        let advancedSettings = AdvancedSettingsSnapshot(
-            enableAlwaysHiddenSection: true,
-            showAllSectionsOnUserDrag: true,
-            sectionDividerStyle: 0,
-            hideApplicationMenus: false,
-            enableSecondaryContextMenu: true,
-            enableSecondaryContextMenuQuit: false,
-            showOnHoverDelay: 0.2,
-            tooltipDelay: 1.0,
-            showMenuBarTooltips: true,
-            iconRefreshInterval: 3.0,
-            enableDiagnosticLogging: false,
-            useDoubleClickToShowAlwaysHiddenSection: false,
-            useOptionClickToShowAlwaysHiddenSection: false,
-            useLCSSortingOnNotchedDisplays: false,
-            enableMenuBarItemOverflow: false,
-            searchSectionOrder: ["visible", "hidden", "alwaysHidden"],
-            searchIncludeVisible: true,
-            searchIncludeHidden: true,
-            searchIncludeAlwaysHidden: true
-        )
-
-        let content = ProfileContent(
-            generalSettings: generalSettings,
-            advancedSettings: advancedSettings,
+        let content = makeTestProfileContent(
             hotkeys: ["key1": Data()],
-            displayConfigurations: ["display1": .defaultConfiguration],
-            appearanceConfiguration: .defaultConfiguration,
-            menuBarLayout: MenuBarLayoutSnapshot(
-                savedSectionOrder: [:],
-                pinnedHiddenBundleIDs: [],
-                pinnedAlwaysHiddenBundleIDs: [],
-                customNames: [:]
-            )
+            displayConfigurations: ["display1": .defaultConfiguration]
         )
 
         #expect(content.generalSettings.showIceIcon)
@@ -609,55 +506,7 @@ struct ProfileContentTests {
 
     @Test("Content built with empty collections reports them empty")
     func profileContentWithEmptyCollections() {
-        let content = ProfileContent(
-            generalSettings: GeneralSettingsSnapshot(
-                showIceIcon: true,
-                iceIcon: .defaultIceIcon,
-                lastCustomIceIcon: nil,
-                customIceIconIsTemplate: true,
-                useIceBar: false,
-                useIceBarOnlyOnNotchedDisplay: false,
-                iceBarLocation: .dynamic,
-                iceBarLocationOnHotkey: false,
-                showOnClick: true,
-                showOnDoubleClick: false,
-                showOnHover: false,
-                showOnScroll: false,
-                autoRehide: true,
-                rehideStrategyRawValue: 0,
-                rehideInterval: 15
-            ),
-            advancedSettings: AdvancedSettingsSnapshot(
-                enableAlwaysHiddenSection: true,
-                showAllSectionsOnUserDrag: true,
-                sectionDividerStyle: 0,
-                hideApplicationMenus: false,
-                enableSecondaryContextMenu: true,
-                enableSecondaryContextMenuQuit: false,
-                showOnHoverDelay: 0.2,
-                tooltipDelay: 1.0,
-                showMenuBarTooltips: true,
-                iconRefreshInterval: 3.0,
-                enableDiagnosticLogging: false,
-                useDoubleClickToShowAlwaysHiddenSection: false,
-                useOptionClickToShowAlwaysHiddenSection: false,
-                useLCSSortingOnNotchedDisplays: false,
-                enableMenuBarItemOverflow: false,
-                searchSectionOrder: ["visible", "hidden", "alwaysHidden"],
-                searchIncludeVisible: true,
-                searchIncludeHidden: true,
-                searchIncludeAlwaysHidden: true
-            ),
-            hotkeys: [:],
-            displayConfigurations: [:],
-            appearanceConfiguration: .defaultConfiguration,
-            menuBarLayout: MenuBarLayoutSnapshot(
-                savedSectionOrder: [:],
-                pinnedHiddenBundleIDs: [],
-                pinnedAlwaysHiddenBundleIDs: [],
-                customNames: [:]
-            )
-        )
+        let content = makeTestProfileContent()
 
         #expect(content.hotkeys.isEmpty)
         #expect(content.displayConfigurations.isEmpty)

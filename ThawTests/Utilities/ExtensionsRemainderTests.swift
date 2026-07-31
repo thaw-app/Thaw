@@ -162,27 +162,6 @@ private func makeMask(width: Int, height: Int, value: UInt8) throws -> CGImage {
     )
 }
 
-/// Builds an ordinary opaque device-RGB image, for the cases where the image
-/// itself is not what is under test.
-private func makeOpaqueImage(width: Int, height: Int) throws -> CGImage {
-    let context = try #require(
-        CGContext(
-            data: nil,
-            width: width,
-            height: height,
-            bitsPerComponent: 8,
-            bytesPerRow: 0,
-            space: CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue
-                | CGBitmapInfo.byteOrder32Little.rawValue
-        ),
-        "Could not create a bitmap context"
-    )
-    context.setFillColor(red: 0.25, green: 0.5, blue: 0.75, alpha: 1)
-    context.fill(CGRect(x: 0, y: 0, width: width, height: height))
-    return try #require(context.makeImage(), "Could not snapshot the bitmap context")
-}
-
 // MARK: - Suite
 
 /// Covers what `ExtensionsTests`, `ExtensionsCoverageTests`,

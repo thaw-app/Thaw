@@ -19,34 +19,14 @@ import Testing
 /// MenuBarItemManager cache test could not reach on their own. It fails if the
 /// rearm wiring is removed from updateProfileLayout.
 ///
-/// Serialized because it writes `MenuBarItemManager.savedSectionOrder` into
-/// `UserDefaults.standard`, which every other settings suite also reads.
+/// Serialized because the tests swap the process-wide `Defaults` store via
+/// `withScratchDefaults`, which requires the suite to be `.serialized`. The
+/// `MenuBarItemManager.savedSectionOrder` seed lands in the scratch store, so
+/// the developer's real saved menu bar arrangement is never touched.
 @MainActor
 @Suite("Profile manager update re-arm integration", .serialized)
 final class ProfileManagerRearmIntegrationTests {
     private let savedSectionOrderKey = "MenuBarItemManager.savedSectionOrder"
-
-    /// The developer's own saved layout, captured before the test overwrites
-    /// it. `MenuBarItemManager` writes this key straight to
-    /// `UserDefaults.standard`, and the test host runs as the real app bundle,
-    /// so tearing down by removing the key deleted whatever menu bar
-    /// arrangement the developer actually had.
-    private let savedSectionOrderSnapshot: Any?
-
-    init() {
-        savedSectionOrderSnapshot = UserDefaults.standard.object(forKey: savedSectionOrderKey)
-    }
-
-    /// Isolated so the non-Sendable snapshot is reachable here; the suite is
-    /// already `@MainActor`.
-    @MainActor
-    deinit {
-        if let savedSectionOrderSnapshot {
-            UserDefaults.standard.set(savedSectionOrderSnapshot, forKey: savedSectionOrderKey)
-        } else {
-            UserDefaults.standard.removeObject(forKey: savedSectionOrderKey)
-        }
-    }
 
     /// A profile is active with an item in Always-Hidden, the user moves it to
     /// Hidden (updating the live savedSectionOrder), then updates the active
@@ -82,11 +62,13 @@ final class ProfileManagerRearmIntegrationTests {
             "Precondition: cache reflects the applied (Always-Hidden) spec"
         )
 
-        // The user dragged the item to Hidden: the live layout is now B.
-        UserDefaults.standard.set(["hidden": [uid]], forKey: savedSectionOrderKey)
-
-        // The user updates the active profile's layout.
-        try profileManager.updateProfileLayout(id: profile.id, itemManager: itemManager)
+        // The user dragged the item to Hidden (the live layout is now B), then
+        // updates the active profile's layout. Both the seed and the capture
+        // read go through the scratch store.
+        try withScratchDefaults { suite in
+            suite.set(["hidden": [uid]], forKey: savedSectionOrderKey)
+            try profileManager.updateProfileLayout(id: profile.id, itemManager: itemManager)
+        }
 
         // The cache now reflects Hidden, so the next late-arrival re-sort
         // targets the updated layout instead of reverting to Always-Hidden.
@@ -122,8 +104,10 @@ final class ProfileManagerRearmIntegrationTests {
             itemOrder: ["alwaysHidden": [uid]]
         )
 
-        UserDefaults.standard.set(["hidden": [uid]], forKey: savedSectionOrderKey)
-        try profileManager.updateProfileLayout(id: inactiveProfile.id, itemManager: itemManager)
+        try withScratchDefaults { suite in
+            suite.set(["hidden": [uid]], forKey: savedSectionOrderKey)
+            try profileManager.updateProfileLayout(id: inactiveProfile.id, itemManager: itemManager)
+        }
 
         #expect(
             itemManager.activeProfileLayout?.sectionOrder == ["alwaysHidden": [uid]],
@@ -132,59 +116,6 @@ final class ProfileManagerRearmIntegrationTests {
     }
 
     // MARK: - Helpers
-
-    private func makeProfile(savedSectionOrder: [String: [String]]) -> Profile {
-        let content = ProfileContent(
-            generalSettings: GeneralSettingsSnapshot(
-                showIceIcon: true,
-                iceIcon: .defaultIceIcon,
-                lastCustomIceIcon: nil,
-                customIceIconIsTemplate: true,
-                useIceBar: false,
-                useIceBarOnlyOnNotchedDisplay: false,
-                iceBarLocation: .dynamic,
-                iceBarLocationOnHotkey: false,
-                showOnClick: true,
-                showOnDoubleClick: false,
-                showOnHover: false,
-                showOnScroll: false,
-                autoRehide: true,
-                rehideStrategyRawValue: 0,
-                rehideInterval: 15
-            ),
-            advancedSettings: AdvancedSettingsSnapshot(
-                enableAlwaysHiddenSection: true,
-                showAllSectionsOnUserDrag: true,
-                sectionDividerStyle: 0,
-                hideApplicationMenus: false,
-                enableSecondaryContextMenu: true,
-                enableSecondaryContextMenuQuit: false,
-                showOnHoverDelay: 0.2,
-                tooltipDelay: 1.0,
-                showMenuBarTooltips: true,
-                iconRefreshInterval: 3.0,
-                enableDiagnosticLogging: false,
-                useDoubleClickToShowAlwaysHiddenSection: false,
-                useOptionClickToShowAlwaysHiddenSection: false,
-                useLCSSortingOnNotchedDisplays: false,
-                enableMenuBarItemOverflow: false,
-                searchSectionOrder: ["visible", "hidden", "alwaysHidden"],
-                searchIncludeVisible: true,
-                searchIncludeHidden: true,
-                searchIncludeAlwaysHidden: true
-            ),
-            hotkeys: [:],
-            displayConfigurations: [:],
-            appearanceConfiguration: .defaultConfiguration,
-            menuBarLayout: MenuBarLayoutSnapshot(
-                savedSectionOrder: savedSectionOrder,
-                pinnedHiddenBundleIDs: [],
-                pinnedAlwaysHiddenBundleIDs: [],
-                customNames: [:]
-            )
-        )
-        return Profile(name: "Integration Test", content: content)
-    }
 
     private func writeProfile(_ profile: Profile, into directory: URL) throws {
         let encoder = JSONEncoder()

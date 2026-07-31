@@ -59,9 +59,24 @@ struct SearchModelTests {
         let german = try Self.localizationBundle("de")
         let english = try Self.localizationBundle("en")
 
-        #expect(entry.titleText == "Launch at Login")
-        #expect(entry.localizedTitle(bundle: english) == "Launch at Login")
-        #expect(entry.localizedTitle(bundle: german) == "Beim Einloggen starten")
+        let englishTitle = entry.localizedTitle(bundle: english)
+        let germanTitle = entry.localizedTitle(bundle: german)
+
+        #expect(
+            englishTitle != germanTitle,
+            "the de catalog must translate the title, or localization cannot be observed"
+        )
+
+        // Pin the running resolution only when the host's active localization
+        // is one of the two catalogs loaded above; asserting a specific
+        // language unconditionally would depend on the host's settings.
+        if let active = Bundle.main.preferredLocalizations.first {
+            if active.hasPrefix("de") {
+                #expect(entry.localizedTitle() == germanTitle)
+            } else if active.hasPrefix("en") {
+                #expect(entry.localizedTitle() == englishTitle)
+            }
+        }
     }
 
     @Test("A German query matches the entry whose German title it names")

@@ -13,37 +13,13 @@ import Testing
 /// Covers ``AutomationSettings``' whitelist bookkeeping — the part of the
 /// Settings URI automation surface that is real logic rather than view code.
 ///
-/// The whitelist lives in `UserDefaults` through `SettingsURIHandler`, and
-/// `Defaults` is hardcoded to `.standard`, so the suite snapshots the two keys
-/// it touches and restores them afterwards rather than editing the
-/// developer's own automation settings.
+/// The whitelist lives in `UserDefaults` through `SettingsURIHandler`, so
+/// every case that touches it runs inside `withScratchDefaults`: the model
+/// reads and writes a throwaway store instead of the developer's own
+/// automation settings, and each case starts from an empty domain.
 @MainActor
 @Suite("Automation settings", .serialized)
-final class AutomationSettingsTests {
-    private static let touchedKeys: [Defaults.Key] = [.settingsURIWhitelist, .settingsURIEnabled]
-
-    private let savedDefaults: [Defaults.Key: Any?]
-
-    init() {
-        savedDefaults = Dictionary(
-            uniqueKeysWithValues: Self.touchedKeys.map { ($0, Defaults.object(forKey: $0)) }
-        )
-        Defaults.removeObject(forKey: .settingsURIWhitelist)
-    }
-
-    /// Isolated so the non-Sendable `[Defaults.Key: Any?]` snapshot is
-    /// reachable here; the suite is already `@MainActor`.
-    @MainActor
-    deinit {
-        for (key, value) in savedDefaults {
-            if let value {
-                Defaults.set(value, forKey: key)
-            } else {
-                Defaults.removeObject(forKey: key)
-            }
-        }
-    }
-
+struct AutomationSettingsTests {
     // MARK: Bundle ID validation
 
     @Test("A dotted, space-free bundle ID is valid")
@@ -67,85 +43,101 @@ final class AutomationSettingsTests {
     // MARK: Whitelist
 
     @Test("An added bundle ID appears in the whitelist")
-    func addingABundleIDWhitelistsIt() {
-        let settings = AutomationSettings()
-        settings.addToWhitelist(bundleId: "com.example.Alpha")
+    func addingABundleIDWhitelistsIt() throws {
+        try withScratchDefaults { _ in
+            let settings = AutomationSettings()
+            settings.addToWhitelist(bundleId: "com.example.Alpha")
 
-        #expect(settings.whitelistedApps.map(\.bundleId) == ["com.example.Alpha"])
+            #expect(settings.whitelistedApps.map(\.bundleId) == ["com.example.Alpha"])
+        }
     }
 
     @Test("A blank bundle ID is not added")
-    func blankBundleIDIsIgnored() {
-        let settings = AutomationSettings()
-        settings.addToWhitelist(bundleId: "   \n")
+    func blankBundleIDIsIgnored() throws {
+        try withScratchDefaults { _ in
+            let settings = AutomationSettings()
+            settings.addToWhitelist(bundleId: "   \n")
 
-        #expect(settings.whitelistedApps.isEmpty)
+            #expect(settings.whitelistedApps.isEmpty)
+        }
     }
 
     @Test("An added bundle ID is stored trimmed")
-    func addedBundleIDIsTrimmed() {
-        let settings = AutomationSettings()
-        settings.addToWhitelist(bundleId: "  com.example.Alpha  ")
+    func addedBundleIDIsTrimmed() throws {
+        try withScratchDefaults { _ in
+            let settings = AutomationSettings()
+            settings.addToWhitelist(bundleId: "  com.example.Alpha  ")
 
-        #expect(settings.whitelistedApps.map(\.bundleId) == ["com.example.Alpha"])
+            #expect(settings.whitelistedApps.map(\.bundleId) == ["com.example.Alpha"])
+        }
     }
 
     @Test("Removing a bundle ID drops it from the whitelist")
-    func removingABundleIDDropsIt() {
-        let settings = AutomationSettings()
-        settings.addToWhitelist(bundleId: "com.example.Alpha")
-        settings.addToWhitelist(bundleId: "com.example.Beta")
+    func removingABundleIDDropsIt() throws {
+        try withScratchDefaults { _ in
+            let settings = AutomationSettings()
+            settings.addToWhitelist(bundleId: "com.example.Alpha")
+            settings.addToWhitelist(bundleId: "com.example.Beta")
 
-        settings.removeFromWhitelist(bundleId: "com.example.Alpha")
+            settings.removeFromWhitelist(bundleId: "com.example.Alpha")
 
-        #expect(settings.whitelistedApps.map(\.bundleId) == ["com.example.Beta"])
+            #expect(settings.whitelistedApps.map(\.bundleId) == ["com.example.Beta"])
+        }
     }
 
     @Test("Removing by index drops exactly the selected rows")
-    func removingByIndexDropsTheSelectedRows() {
-        let settings = AutomationSettings()
-        for id in ["com.example.Alpha", "com.example.Beta", "com.example.Gamma"] {
-            settings.addToWhitelist(bundleId: id)
+    func removingByIndexDropsTheSelectedRows() throws {
+        try withScratchDefaults { _ in
+            let settings = AutomationSettings()
+            for id in ["com.example.Alpha", "com.example.Beta", "com.example.Gamma"] {
+                settings.addToWhitelist(bundleId: id)
+            }
+            // Sorted by display name, so the order here is alpha, beta, gamma.
+            #expect(settings.whitelistedApps.count == 3)
+
+            settings.removeWhitelistedApp(at: IndexSet([0, 2]))
+
+            #expect(settings.whitelistedApps.map(\.bundleId) == ["com.example.Beta"])
         }
-        // Sorted by display name, so the order here is alpha, beta, gamma.
-        #expect(settings.whitelistedApps.count == 3)
-
-        settings.removeWhitelistedApp(at: IndexSet([0, 2]))
-
-        #expect(settings.whitelistedApps.map(\.bundleId) == ["com.example.Beta"])
     }
 
     @Test("An out-of-range index is skipped rather than trapping")
-    func outOfRangeIndexIsSkipped() {
-        let settings = AutomationSettings()
-        settings.addToWhitelist(bundleId: "com.example.Alpha")
+    func outOfRangeIndexIsSkipped() throws {
+        try withScratchDefaults { _ in
+            let settings = AutomationSettings()
+            settings.addToWhitelist(bundleId: "com.example.Alpha")
 
-        settings.removeWhitelistedApp(at: IndexSet([5]))
+            settings.removeWhitelistedApp(at: IndexSet([5]))
 
-        #expect(settings.whitelistedApps.map(\.bundleId) == ["com.example.Alpha"])
+            #expect(settings.whitelistedApps.map(\.bundleId) == ["com.example.Alpha"])
+        }
     }
 
     @Test("Entries are ordered by display name, not insertion order")
-    func whitelistIsSortedByDisplayName() {
-        let settings = AutomationSettings()
-        for id in ["com.example.Zulu", "com.example.Alpha", "com.example.Mike"] {
-            settings.addToWhitelist(bundleId: id)
-        }
+    func whitelistIsSortedByDisplayName() throws {
+        try withScratchDefaults { _ in
+            let settings = AutomationSettings()
+            for id in ["com.example.Zulu", "com.example.Alpha", "com.example.Mike"] {
+                settings.addToWhitelist(bundleId: id)
+            }
 
-        #expect(settings.whitelistedApps.map(\.bundleId) == [
-            "com.example.Alpha",
-            "com.example.Mike",
-            "com.example.Zulu",
-        ])
+            #expect(settings.whitelistedApps.map(\.bundleId) == [
+                "com.example.Alpha",
+                "com.example.Mike",
+                "com.example.Zulu",
+            ])
+        }
     }
 
     @Test("An unresolvable bundle ID displays as itself")
-    func unknownAppDisplaysItsBundleID() {
-        let settings = AutomationSettings()
-        settings.addToWhitelist(bundleId: "com.example.NotInstalled")
+    func unknownAppDisplaysItsBundleID() throws {
+        try withScratchDefaults { _ in
+            let settings = AutomationSettings()
+            settings.addToWhitelist(bundleId: "com.example.NotInstalled")
 
-        let app = settings.whitelistedApps.first
-        #expect(app?.displayName == "com.example.NotInstalled")
+            let app = settings.whitelistedApps.first
+            #expect(app?.displayName == "com.example.NotInstalled")
+        }
     }
 
     @Test("Whitelisted apps compare by bundle ID alone")
@@ -160,12 +152,14 @@ final class AutomationSettingsTests {
     }
 
     @Test("The enabled flag round-trips through Defaults")
-    func enabledFlagPersists() {
-        let settings = AutomationSettings()
-        settings.isSettingsURIEnabled = true
-        #expect(Defaults.bool(forKey: .settingsURIEnabled))
+    func enabledFlagPersists() throws {
+        try withScratchDefaults { _ in
+            let settings = AutomationSettings()
+            settings.isSettingsURIEnabled = true
+            #expect(Defaults.bool(forKey: .settingsURIEnabled))
 
-        settings.isSettingsURIEnabled = false
-        #expect(!Defaults.bool(forKey: .settingsURIEnabled))
+            settings.isSettingsURIEnabled = false
+            #expect(!Defaults.bool(forKey: .settingsURIEnabled))
+        }
     }
 }

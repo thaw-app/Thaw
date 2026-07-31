@@ -24,61 +24,6 @@ struct ProfileExportBundleTests {
         decoder.dateDecodingStrategy = .iso8601
     }
 
-    // MARK: - Helper Methods
-
-    private func makeTestProfile(name: String = "Test Profile") -> Profile {
-        let content = ProfileContent(
-            generalSettings: GeneralSettingsSnapshot(
-                showIceIcon: true,
-                iceIcon: .defaultIceIcon,
-                lastCustomIceIcon: nil,
-                customIceIconIsTemplate: true,
-                useIceBar: false,
-                useIceBarOnlyOnNotchedDisplay: false,
-                iceBarLocation: .dynamic,
-                iceBarLocationOnHotkey: false,
-                showOnClick: true,
-                showOnDoubleClick: false,
-                showOnHover: false,
-                showOnScroll: false,
-                autoRehide: true,
-                rehideStrategyRawValue: 0,
-                rehideInterval: 15
-            ),
-            advancedSettings: AdvancedSettingsSnapshot(
-                enableAlwaysHiddenSection: true,
-                showAllSectionsOnUserDrag: true,
-                sectionDividerStyle: 0,
-                hideApplicationMenus: false,
-                enableSecondaryContextMenu: true,
-                enableSecondaryContextMenuQuit: false,
-                showOnHoverDelay: 0.2,
-                tooltipDelay: 1.0,
-                showMenuBarTooltips: true,
-                iconRefreshInterval: 3.0,
-                enableDiagnosticLogging: false,
-                useDoubleClickToShowAlwaysHiddenSection: false,
-                useOptionClickToShowAlwaysHiddenSection: false,
-                useLCSSortingOnNotchedDisplays: false,
-                enableMenuBarItemOverflow: false,
-                searchSectionOrder: ["visible", "hidden", "alwaysHidden"],
-                searchIncludeVisible: true,
-                searchIncludeHidden: true,
-                searchIncludeAlwaysHidden: true
-            ),
-            hotkeys: [:],
-            displayConfigurations: [:],
-            appearanceConfiguration: .defaultConfiguration,
-            menuBarLayout: MenuBarLayoutSnapshot(
-                savedSectionOrder: [:],
-                pinnedHiddenBundleIDs: [],
-                pinnedAlwaysHiddenBundleIDs: [],
-                customNames: [:]
-            )
-        )
-        return Profile(name: name, content: content)
-    }
-
     // MARK: - ProfileExportBundle Tests
 
     @Test("An empty bundle round-trips with its version intact")
@@ -101,7 +46,7 @@ struct ProfileExportBundleTests {
 
     @Test("A single-entry bundle round-trips its profile")
     func singleEntryEncodeDecode() throws {
-        let profile = makeTestProfile(name: "Single Profile")
+        let profile = makeProfile(named: "Single Profile")
         let entry = ProfileExportEntry(
             profile: profile,
             associatedDisplayUUID: nil,
@@ -120,9 +65,9 @@ struct ProfileExportBundleTests {
 
     @Test("A multi-entry bundle round-trips every profile in order")
     func multipleEntriesEncodeDecode() throws {
-        let profile1 = makeTestProfile(name: "Profile One")
-        let profile2 = makeTestProfile(name: "Profile Two")
-        let profile3 = makeTestProfile(name: "Profile Three")
+        let profile1 = makeProfile(named: "Profile One")
+        let profile2 = makeProfile(named: "Profile Two")
+        let profile3 = makeProfile(named: "Profile Three")
 
         let entries = [
             ProfileExportEntry(profile: profile1, associatedDisplayUUID: nil, associatedDisplayName: nil),
@@ -142,7 +87,7 @@ struct ProfileExportBundleTests {
 
     @Test("An entry's display association survives the round trip")
     func entryWithDisplayAssociation() throws {
-        let profile = makeTestProfile()
+        let profile = makeProfile()
         let entry = ProfileExportEntry(
             profile: profile,
             associatedDisplayUUID: "12345-ABCDE-67890",
@@ -159,7 +104,7 @@ struct ProfileExportBundleTests {
 
     @Test("An entry with no display association decodes back to nil")
     func entryWithoutDisplayAssociation() throws {
-        let profile = makeTestProfile()
+        let profile = makeProfile()
         let entry = ProfileExportEntry(
             profile: profile,
             associatedDisplayUUID: nil,
@@ -176,7 +121,7 @@ struct ProfileExportBundleTests {
 
     @Test("An entry can carry a display UUID with no display name")
     func entryWithUUIDButNoName() throws {
-        let profile = makeTestProfile()
+        let profile = makeProfile()
         let entry = ProfileExportEntry(
             profile: profile,
             associatedDisplayUUID: "some-uuid",
@@ -195,7 +140,7 @@ struct ProfileExportBundleTests {
 
     @Test("An entry preserves its profile's identifier")
     func exportEntryPreservesProfileId() throws {
-        let profile = makeTestProfile()
+        let profile = makeProfile()
         let originalId = profile.id
         let entry = ProfileExportEntry(
             profile: profile,
@@ -211,7 +156,7 @@ struct ProfileExportBundleTests {
 
     @Test("An entry preserves its profile's dates")
     func exportEntryPreservesProfileDates() throws {
-        let profile = makeTestProfile()
+        let profile = makeProfile()
         let entry = ProfileExportEntry(
             profile: profile,
             associatedDisplayUUID: nil,
@@ -232,7 +177,7 @@ struct ProfileExportBundleTests {
 
     @Test("An entry preserves its profile's general settings")
     func exportEntryPreservesGeneralSettings() throws {
-        let profile = makeTestProfile()
+        let profile = makeProfile()
         let entry = ProfileExportEntry(
             profile: profile,
             associatedDisplayUUID: nil,
@@ -249,7 +194,7 @@ struct ProfileExportBundleTests {
 
     @Test("An entry preserves its profile's advanced settings")
     func exportEntryPreservesAdvancedSettings() throws {
-        let profile = makeTestProfile()
+        let profile = makeProfile()
         let entry = ProfileExportEntry(
             profile: profile,
             associatedDisplayUUID: nil,

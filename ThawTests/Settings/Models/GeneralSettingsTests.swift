@@ -332,7 +332,10 @@ final class GeneralSettingsTests {
 
         await postExternalChange(["key": key, "value": false])
 
-        #expect(settings.showIceIcon, "\(key) must not reach any property")
+        #expect(
+            settings.showIceIcon == Defaults.DefaultValue.showIceIcon,
+            "\(key) must not reach any property"
+        )
     }
 
     @Test("An external change to another model's key is ignored")
@@ -380,7 +383,7 @@ final class GeneralSettingsTests {
 
         await postExternalChange(["key": "showIceIcon", "value": "false"])
 
-        #expect(settings.showIceIcon)
+        #expect(settings.showIceIcon == Defaults.DefaultValue.showIceIcon)
     }
 
     @Test("An unrecognized rehide strategy raw value is ignored")
@@ -401,7 +404,7 @@ final class GeneralSettingsTests {
 
         await postExternalChange(["value": false])
 
-        #expect(settings.showIceIcon)
+        #expect(settings.showIceIcon == Defaults.DefaultValue.showIceIcon)
     }
 
     @Test("An external change that matches the current value is a no-op")

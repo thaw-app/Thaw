@@ -107,6 +107,7 @@ struct MigrationTests {
             MigrationManager().migrateAll()
 
             let configurations = try #require(try storedConfigurations())
+            #expect(!configurations.isEmpty, "the migration should write at least one display entry")
             #expect(Defaults.bool(forKey: .hasMigratedPerDisplayIceBar))
 
             for configuration in configurations.values {
@@ -132,6 +133,7 @@ struct MigrationTests {
             MigrationManager().migrateAll()
 
             let configurations = try #require(try storedConfigurations())
+            #expect(!configurations.isEmpty, "the migration should write at least one display entry")
             for configuration in configurations.values {
                 #expect(configuration.iceBarLocation == .dynamic)
             }

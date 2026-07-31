@@ -14,10 +14,9 @@ import Testing
 /// one caller's cancellation not poisoning another's result.
 ///
 /// Serialized because every case here measures real elapsed time against
-/// short `maxAge` budgets and staggers callers with sub-100ms sleeps. Run
-/// concurrently the cases contend for the same executor and the head starts
-/// stop being reliable, so the suite is kept to one case at a time as it was
-/// under XCTest.
+/// short `maxAge` budgets. Run concurrently the cases contend for the same
+/// executor and the timings stop being reliable, so the suite is kept to one
+/// case at a time as it was under XCTest.
 @Suite("Shareable content cache", .serialized, .timeLimit(.minutes(1)))
 struct ShareableContentCacheTests {
     // MARK: - Hit within maxAge
@@ -68,17 +67,21 @@ struct ShareableContentCacheTests {
     func concurrentCallersJoinSingleInFlightFetch() async throws {
         let cache = ShareableContentCache<Int>()
         let invocationCount = Counter()
+        let (fetchBegan, fetchBeganContinuation) = AsyncStream.makeStream(of: Void.self)
 
         @Sendable func slowFetch() async throws -> Int {
             await invocationCount.increment()
+            fetchBeganContinuation.yield()
             try await Task.sleep(for: .milliseconds(150))
             return 42
         }
 
         async let first = cache.content(maxAge: .seconds(60), fetch: slowFetch)
-        // Give the first call a head start so it's the one that creates the
-        // in-flight task, then join it with two more concurrent callers.
-        try await Task.sleep(for: .milliseconds(20))
+        // Wait until the first call's fetch has actually begun — so it's the
+        // one that creates the in-flight task — then join it with two more
+        // concurrent callers.
+        var began = fetchBegan.makeAsyncIterator()
+        _ = await began.next()
         async let second = cache.content(maxAge: .seconds(60), fetch: slowFetch)
         async let third = cache.content(maxAge: .seconds(60), fetch: slowFetch)
 
@@ -95,19 +98,23 @@ struct ShareableContentCacheTests {
     func cancellingOneCallerDoesNotAffectAnother() async throws {
         let cache = ShareableContentCache<Int>()
         let invocationCount = Counter()
+        let (fetchBegan, fetchBeganContinuation) = AsyncStream.makeStream(of: Void.self)
 
         @Sendable func slowFetch() async throws -> Int {
             await invocationCount.increment()
+            fetchBeganContinuation.yield()
             try await Task.sleep(for: .milliseconds(150))
             return 7
         }
 
         // The first caller starts the in-flight fetch and will be cancelled
-        // before it completes.
+        // before it completes. Wait until its fetch has actually begun so the
+        // cancellation is guaranteed to land on an in-flight fetch.
         let cancelledTask = Task<Int, any Error> {
             try await cache.content(maxAge: .seconds(60), fetch: slowFetch)
         }
-        try await Task.sleep(for: .milliseconds(20))
+        var began = fetchBegan.makeAsyncIterator()
+        _ = await began.next()
         cancelledTask.cancel()
 
         // The second caller joins the same in-flight fetch and should still

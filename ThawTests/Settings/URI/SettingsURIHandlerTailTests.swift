@@ -147,7 +147,7 @@ struct SettingsURIHandlerTailTests {
             "An empty display identifier scopes a set the same way omitting it does",
             arguments: ["useIceBar", "alwaysShowHiddenItems", "iceBarLocation", "iceBarLayout", "gridColumns"]
         )
-        func emptyDisplayIdentifierFallsBackToTheDefaultScopeOnSet(_ key: String) {
+        func emptyDisplayIdentifierFallsBackToTheDefaultScopeOnSet(_ key: String) throws {
             let value = switch key {
             case "iceBarLocation": "dynamic"
             case "iceBarLayout": "grid"
@@ -160,27 +160,31 @@ struct SettingsURIHandlerTailTests {
             default: "allEnabled"
             }
 
-            let posted = notifications(named: .perDisplaySettingsDidChangeViaURI) {
-                _ = SettingsURIHandler.handleSet(key: key, value: value, sender: "test", displayUUID: "")
-            }
+            try withScratchDefaults { _ in
+                let posted = notifications(named: .perDisplaySettingsDidChangeViaURI) {
+                    _ = SettingsURIHandler.handleSet(key: key, value: value, sender: "test", displayUUID: "")
+                }
 
-            #expect(posted.count == 1, "\(key)")
-            #expect(posted.first?.userInfo?["scope"] as? String == expectedScope, "\(key)")
+                #expect(posted.count == 1, "\(key)")
+                #expect(posted.first?.userInfo?["scope"] as? String == expectedScope, "\(key)")
+            }
         }
 
         @Test(
             "An empty display identifier scopes a toggle the same way omitting it does",
             arguments: [("useIceBar", "active"), ("alwaysShowHiddenItems", "allNonIceBar")]
         )
-        func emptyDisplayIdentifierFallsBackToTheDefaultScopeOnToggle(_ pair: (String, String)) {
+        func emptyDisplayIdentifierFallsBackToTheDefaultScopeOnToggle(_ pair: (String, String)) throws {
             let (key, expectedScope) = pair
 
-            let posted = notifications(named: .perDisplaySettingsDidChangeViaURI) {
-                _ = SettingsURIHandler.handleToggle(key: key, sender: "test", displayUUID: "")
-            }
+            try withScratchDefaults { _ in
+                let posted = notifications(named: .perDisplaySettingsDidChangeViaURI) {
+                    _ = SettingsURIHandler.handleToggle(key: key, sender: "test", displayUUID: "")
+                }
 
-            #expect(posted.count == 1, "\(key)")
-            #expect(posted.first?.userInfo?["scope"] as? String == expectedScope, "\(key)")
+                #expect(posted.count == 1, "\(key)")
+                #expect(posted.first?.userInfo?["scope"] as? String == expectedScope, "\(key)")
+            }
         }
 
         /// The empty identifier must not be mistaken for a malformed one
@@ -188,23 +192,25 @@ struct SettingsURIHandlerTailTests {
         /// refused outright, and the caller would see a failure instead of a
         /// change applied to the default scope.
         @Test("An empty display identifier is not treated as a malformed one")
-        func emptyDisplayIdentifierIsNotAMalformedOne() {
-            #expect(
-                SettingsURIHandler.handleSet(
-                    key: "useIceBar",
-                    value: "true",
-                    sender: "test",
-                    displayUUID: ""
+        func emptyDisplayIdentifierIsNotAMalformedOne() throws {
+            try withScratchDefaults { _ in
+                #expect(
+                    SettingsURIHandler.handleSet(
+                        key: "useIceBar",
+                        value: "true",
+                        sender: "test",
+                        displayUUID: ""
+                    )
                 )
-            )
-            #expect(
-                !SettingsURIHandler.handleSet(
-                    key: "useIceBar",
-                    value: "true",
-                    sender: "test",
-                    displayUUID: " "
+                #expect(
+                    !SettingsURIHandler.handleSet(
+                        key: "useIceBar",
+                        value: "true",
+                        sender: "test",
+                        displayUUID: " "
+                    )
                 )
-            )
+            }
         }
     }
 
@@ -220,27 +226,31 @@ struct SettingsURIHandlerTailTests {
             "A per-display key that is not a Boolean cannot be toggled",
             arguments: ["iceBarLayout", "gridColumns"]
         )
-        func nonBooleanPerDisplayKeyCannotBeToggled(_ key: String) {
-            #expect(!SettingsURIHandler.handleToggle(key: key, sender: "test"))
-            #expect(
-                !SettingsURIHandler.handleToggle(
-                    key: key,
-                    sender: "test",
-                    displayUUID: UUID().uuidString
+        func nonBooleanPerDisplayKeyCannotBeToggled(_ key: String) throws {
+            try withScratchDefaults { _ in
+                #expect(!SettingsURIHandler.handleToggle(key: key, sender: "test"))
+                #expect(
+                    !SettingsURIHandler.handleToggle(
+                        key: key,
+                        sender: "test",
+                        displayUUID: UUID().uuidString
+                    )
                 )
-            )
+            }
         }
 
         /// A refusal has to be silent as well as false; a listener that acted on
         /// the notification would apply a change the handler declined to make.
         @Test("A refused per-display toggle announces nothing")
-        func refusedPerDisplayToggleAnnouncesNothing() {
-            let posted = notifications(named: .perDisplaySettingsDidChangeViaURI) {
-                _ = SettingsURIHandler.handleToggle(key: "gridColumns", sender: "test")
-                _ = SettingsURIHandler.handleToggle(key: "iceBarLayout", sender: "test")
-            }
+        func refusedPerDisplayToggleAnnouncesNothing() throws {
+            try withScratchDefaults { _ in
+                let posted = notifications(named: .perDisplaySettingsDidChangeViaURI) {
+                    _ = SettingsURIHandler.handleToggle(key: "gridColumns", sender: "test")
+                    _ = SettingsURIHandler.handleToggle(key: "iceBarLayout", sender: "test")
+                }
 
-            #expect(posted.isEmpty)
+                #expect(posted.isEmpty)
+            }
         }
     }
 
@@ -253,60 +263,68 @@ struct SettingsURIHandlerTailTests {
         /// looking for these keys, so exactly one of the three has to be there.
         @Test("A Boolean change carries a value and neither of the other two")
         func booleanChangeCarriesOnlyItsValue() throws {
-            let posted = notifications(named: .perDisplaySettingsDidChangeViaURI) {
-                _ = SettingsURIHandler.handleSet(key: "useIceBar", value: "true", sender: "test")
-            }
-            let userInfo = try #require(posted.first?.userInfo)
+            try withScratchDefaults { _ in
+                let posted = notifications(named: .perDisplaySettingsDidChangeViaURI) {
+                    _ = SettingsURIHandler.handleSet(key: "useIceBar", value: "true", sender: "test")
+                }
+                let userInfo = try #require(posted.first?.userInfo)
 
-            #expect(userInfo["key"] as? String == "useIceBar")
-            #expect(userInfo["value"] as? Bool == true)
-            #expect(userInfo["stringValue"] == nil)
-            #expect(userInfo["toggle"] == nil)
+                #expect(userInfo["key"] as? String == "useIceBar")
+                #expect(userInfo["value"] as? Bool == true)
+                #expect(userInfo["stringValue"] == nil)
+                #expect(userInfo["toggle"] == nil)
+            }
         }
 
         @Test("An enumeration change carries a string value and no Boolean")
         func enumerationChangeCarriesOnlyItsStringValue() throws {
-            let posted = notifications(named: .perDisplaySettingsDidChangeViaURI) {
-                _ = SettingsURIHandler.handleSet(key: "iceBarLocation", value: "mousePointer", sender: "test")
-            }
-            let userInfo = try #require(posted.first?.userInfo)
+            try withScratchDefaults { _ in
+                let posted = notifications(named: .perDisplaySettingsDidChangeViaURI) {
+                    _ = SettingsURIHandler.handleSet(key: "iceBarLocation", value: "mousePointer", sender: "test")
+                }
+                let userInfo = try #require(posted.first?.userInfo)
 
-            let stringValue = try #require(userInfo["stringValue"] as? String)
-            #expect(userInfo["key"] as? String == "iceBarLocation")
-            #expect(!stringValue.isEmpty)
-            #expect(userInfo["value"] == nil)
-            #expect(userInfo["toggle"] == nil)
+                let stringValue = try #require(userInfo["stringValue"] as? String)
+                #expect(userInfo["key"] as? String == "iceBarLocation")
+                #expect(!stringValue.isEmpty)
+                #expect(userInfo["value"] == nil)
+                #expect(userInfo["toggle"] == nil)
+            }
         }
 
         /// A toggle carries no value at all — the reader is being told to flip
         /// whatever it currently holds, not to store something.
         @Test("A toggle carries the toggle flag and no value")
         func toggleCarriesOnlyItsFlag() throws {
-            let posted = notifications(named: .perDisplaySettingsDidChangeViaURI) {
-                _ = SettingsURIHandler.handleToggle(key: "alwaysShowHiddenItems", sender: "test")
-            }
-            let userInfo = try #require(posted.first?.userInfo)
+            try withScratchDefaults { _ in
+                let posted = notifications(named: .perDisplaySettingsDidChangeViaURI) {
+                    _ = SettingsURIHandler.handleToggle(key: "alwaysShowHiddenItems", sender: "test")
+                }
+                let userInfo = try #require(posted.first?.userInfo)
 
-            #expect(userInfo["toggle"] as? Bool == true)
-            #expect(userInfo["value"] == nil)
-            #expect(userInfo["stringValue"] == nil)
+                #expect(userInfo["toggle"] as? Bool == true)
+                #expect(userInfo["value"] == nil)
+                #expect(userInfo["stringValue"] == nil)
+            }
         }
 
         /// The scope is the only routing information a reader gets, so it is
         /// always present, whichever arm built the payload.
         @Test("Every per-display announcement names a scope and a key")
         func everyAnnouncementNamesAScopeAndAKey() throws {
-            let posted = notifications(named: .perDisplaySettingsDidChangeViaURI) {
-                _ = SettingsURIHandler.handleSet(key: "useIceBar", value: "false", sender: "test")
-                _ = SettingsURIHandler.handleSet(key: "gridColumns", value: "6", sender: "test")
-                _ = SettingsURIHandler.handleToggle(key: "useIceBar", sender: "test")
-            }
+            try withScratchDefaults { _ in
+                let posted = notifications(named: .perDisplaySettingsDidChangeViaURI) {
+                    _ = SettingsURIHandler.handleSet(key: "useIceBar", value: "false", sender: "test")
+                    _ = SettingsURIHandler.handleSet(key: "gridColumns", value: "6", sender: "test")
+                    _ = SettingsURIHandler.handleToggle(key: "useIceBar", sender: "test")
+                }
 
-            #expect(posted.count == 3)
-            for notification in posted {
-                let userInfo = try #require(notification.userInfo)
-                _ = try #require(userInfo["scope"] as? String)
-                _ = try #require(userInfo["key"] as? String)
+                #expect(posted.count == 3)
+                for notification in posted {
+                    let userInfo = try #require(notification.userInfo)
+                    _ = try #require(userInfo["scope"] as? String)
+                    _ = try #require(userInfo["key"] as? String)
+                }
             }
         }
     }

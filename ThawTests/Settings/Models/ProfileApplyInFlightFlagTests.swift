@@ -70,7 +70,7 @@ struct ProfileApplyInFlightFlagTests {
 
     /// An empty profile layout has no moves to run, but it still must release
     /// the profile-apply gate so a later saved-layout restore can proceed.
-    @Test("An empty profile apply clears the in-flight flag")
+    @Test("An empty profile apply clears the in-flight flag", .timeLimit(.minutes(1)))
     func emptyProfileApplyClearsInFlightFlag() async {
         let manager = MenuBarItemManager()
 

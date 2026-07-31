@@ -38,31 +38,12 @@ import Testing
 /// does, and no response, however shaped, talks its way past callback
 /// validation.
 ///
-/// The handler is a namespace of statics writing straight to
-/// `UserDefaults.standard`, so the suite snapshots the app's persistent domain
-/// and restores it afterwards.
+/// Every test body runs inside `withScratchDefaults`, so the handler's reads
+/// and writes go to a throwaway store rather than the real `com.stonerl.Thaw`
+/// domain, and each test starts from an empty store.
 @MainActor
 @Suite("Settings URI handler get", .serialized)
-final class SettingsURIHandlerGetTests {
-    private let domainName: String
-    private let savedDomain: [String: Any]?
-
-    init() {
-        domainName = Bundle.main.bundleIdentifier ?? "com.stonerl.Thaw"
-        savedDomain = UserDefaults.standard.persistentDomain(forName: domainName)
-    }
-
-    /// Isolated so the non-Sendable domain snapshot is reachable here; the
-    /// suite is already `@MainActor`.
-    @MainActor
-    deinit {
-        if let savedDomain {
-            UserDefaults.standard.setPersistentDomain(savedDomain, forName: domainName)
-        } else {
-            UserDefaults.standard.removePersistentDomain(forName: domainName)
-        }
-    }
-
+struct SettingsURIHandlerGetTests {
     // MARK: Helpers
 
     /// Persists a configuration for `uuid` so the handler accepts it as a
@@ -108,31 +89,35 @@ final class SettingsURIHandlerGetTests {
     // MARK: Response mechanism
 
     @Test("A get that names no way to answer is refused")
-    func getWithoutResponseMechanismIsRefused() {
-        #expect(
-            !SettingsURIHandler.handleGet(
-                key: "all",
-                displayUUID: nil,
-                callback: nil,
-                broadcast: false,
-                requestId: "req-no-mechanism"
+    func getWithoutResponseMechanismIsRefused() throws {
+        try withScratchDefaults { _ in
+            #expect(
+                !SettingsURIHandler.handleGet(
+                    key: "all",
+                    displayUUID: nil,
+                    callback: nil,
+                    broadcast: false,
+                    requestId: "req-no-mechanism"
+                )
             )
-        )
+        }
     }
 
     @Test("A keyless get that names no way to answer is refused too")
-    func keylessGetWithoutResponseMechanismIsRefused() {
-        // The missing response mechanism is checked before the missing key, so
-        // this must not be mistaken for the "no key specified" error path.
-        #expect(
-            !SettingsURIHandler.handleGet(
-                key: nil,
-                displayUUID: nil,
-                callback: nil,
-                broadcast: false,
-                requestId: nil
+    func keylessGetWithoutResponseMechanismIsRefused() throws {
+        try withScratchDefaults { _ in
+            // The missing response mechanism is checked before the missing key, so
+            // this must not be mistaken for the "no key specified" error path.
+            #expect(
+                !SettingsURIHandler.handleGet(
+                    key: nil,
+                    displayUUID: nil,
+                    callback: nil,
+                    broadcast: false,
+                    requestId: nil
+                )
             )
-        )
+        }
     }
 
     // MARK: Callback URL refusal
@@ -146,16 +131,18 @@ final class SettingsURIHandlerGetTests {
         "x-apple-systempreferences:com.example",
         "x-apple-helpbasic:anything",
     ])
-    func dangerousCallbackSchemeIsRefused(_ callback: String) {
-        #expect(
-            !SettingsURIHandler.handleGet(
-                key: "version",
-                displayUUID: nil,
-                callback: callback,
-                broadcast: false,
-                requestId: "req-dangerous-scheme"
+    func dangerousCallbackSchemeIsRefused(_ callback: String) throws {
+        try withScratchDefaults { _ in
+            #expect(
+                !SettingsURIHandler.handleGet(
+                    key: "version",
+                    displayUUID: nil,
+                    callback: callback,
+                    broadcast: false,
+                    requestId: "req-dangerous-scheme"
+                )
             )
-        )
+        }
     }
 
     @Test("A dangerous callback scheme is refused whatever its casing", arguments: [
@@ -165,16 +152,18 @@ final class SettingsURIHandlerGetTests {
         "AbOuT:blank",
         "X-Apple-SystemPreferences:com.example",
     ])
-    func dangerousCallbackSchemeIsRefusedCaseInsensitively(_ callback: String) {
-        #expect(
-            !SettingsURIHandler.handleGet(
-                key: "version",
-                displayUUID: nil,
-                callback: callback,
-                broadcast: false,
-                requestId: "req-dangerous-scheme-case"
+    func dangerousCallbackSchemeIsRefusedCaseInsensitively(_ callback: String) throws {
+        try withScratchDefaults { _ in
+            #expect(
+                !SettingsURIHandler.handleGet(
+                    key: "version",
+                    displayUUID: nil,
+                    callback: callback,
+                    broadcast: false,
+                    requestId: "req-dangerous-scheme-case"
+                )
             )
-        )
+        }
     }
 
     @Test("A callback URL without a usable scheme is refused", arguments: [
@@ -185,18 +174,20 @@ final class SettingsURIHandlerGetTests {
         "//example.com/thaw-callback",
         "://nope",
     ])
-    func schemelessCallbackIsRefused(_ callback: String) {
-        // Whether the string fails to parse or parses without a scheme, the
-        // handler has no app to hand it to and must refuse either way.
-        #expect(
-            !SettingsURIHandler.handleGet(
-                key: "version",
-                displayUUID: nil,
-                callback: callback,
-                broadcast: false,
-                requestId: "req-schemeless"
+    func schemelessCallbackIsRefused(_ callback: String) throws {
+        try withScratchDefaults { _ in
+            // Whether the string fails to parse or parses without a scheme, the
+            // handler has no app to hand it to and must refuse either way.
+            #expect(
+                !SettingsURIHandler.handleGet(
+                    key: "version",
+                    displayUUID: nil,
+                    callback: callback,
+                    broadcast: false,
+                    requestId: "req-schemeless"
+                )
             )
-        )
+        }
     }
 
     @Test("A refused callback is refused for every readable key", arguments: [
@@ -209,64 +200,72 @@ final class SettingsURIHandlerGetTests {
         "rehideStrategy",
         "useIceBar",
     ])
-    func refusedCallbackIsRefusedForEveryKey(_ key: String) {
-        // The response is built before the callback is validated, so this also
-        // pins that no key's response shape can talk its way past the check.
-        #expect(
-            !SettingsURIHandler.handleGet(
-                key: key,
-                displayUUID: nil,
-                callback: "javascript:alert(1)",
-                broadcast: false,
-                requestId: "req-\(key)"
+    func refusedCallbackIsRefusedForEveryKey(_ key: String) throws {
+        try withScratchDefaults { _ in
+            // The response is built before the callback is validated, so this also
+            // pins that no key's response shape can talk its way past the check.
+            #expect(
+                !SettingsURIHandler.handleGet(
+                    key: key,
+                    displayUUID: nil,
+                    callback: "javascript:alert(1)",
+                    broadcast: false,
+                    requestId: "req-\(key)"
+                )
             )
-        )
+        }
     }
 
     @Test("A refused callback is not quietly retried as a broadcast")
-    func refusedCallbackIsNotRetriedAsABroadcast() {
-        // The callback wins whenever both are given, so a callback the handler
-        // will not open fails the whole request instead of downgrading to the
-        // broadcast the caller also asked for.
-        #expect(
-            !SettingsURIHandler.handleGet(
-                key: "all",
-                displayUUID: nil,
-                callback: "file:///tmp/thaw-callback",
-                broadcast: true,
-                requestId: "req-both"
+    func refusedCallbackIsNotRetriedAsABroadcast() throws {
+        try withScratchDefaults { _ in
+            // The callback wins whenever both are given, so a callback the handler
+            // will not open fails the whole request instead of downgrading to the
+            // broadcast the caller also asked for.
+            #expect(
+                !SettingsURIHandler.handleGet(
+                    key: "all",
+                    displayUUID: nil,
+                    callback: "file:///tmp/thaw-callback",
+                    broadcast: true,
+                    requestId: "req-both"
+                )
             )
-        )
+        }
     }
 
     // MARK: Broadcast response
 
     @Test("A broadcast get is answered")
-    func broadcastGetIsAnswered() {
-        #expect(
-            SettingsURIHandler.handleGet(
-                key: "all",
-                displayUUID: nil,
-                callback: nil,
-                broadcast: true,
-                requestId: "req-ack"
+    func broadcastGetIsAnswered() throws {
+        try withScratchDefaults { _ in
+            #expect(
+                SettingsURIHandler.handleGet(
+                    key: "all",
+                    displayUUID: nil,
+                    callback: nil,
+                    broadcast: true,
+                    requestId: "req-ack"
+                )
             )
-        )
+        }
     }
 
     @Test("A get without a request id is answered all the same")
-    func getWithoutARequestIdIsAnswered() {
-        // The handler mints a UUID when the caller omits one, so a missing
-        // request id must not be mistaken for a malformed request.
-        #expect(
-            SettingsURIHandler.handleGet(
-                key: "version",
-                displayUUID: nil,
-                callback: nil,
-                broadcast: true,
-                requestId: nil
+    func getWithoutARequestIdIsAnswered() throws {
+        try withScratchDefaults { _ in
+            // The handler mints a UUID when the caller omits one, so a missing
+            // request id must not be mistaken for a malformed request.
+            #expect(
+                SettingsURIHandler.handleGet(
+                    key: "version",
+                    displayUUID: nil,
+                    callback: nil,
+                    broadcast: true,
+                    requestId: nil
+                )
             )
-        )
+        }
     }
 
     @Test("An unknown key is refused over the broadcast channel", arguments: [
@@ -275,35 +274,39 @@ final class SettingsURIHandlerGetTests {
         "SHOWONHOVER",
         "showOnHove",
     ])
-    func unknownKeyIsRefusedOverBroadcast(_ key: String) {
-        // The acknowledgement still goes out unchanged — it is a fixed shape a
-        // third-party integrator reads — but the handler reports the failure to
-        // its own caller, exactly as the callback path does.
-        #expect(
-            !SettingsURIHandler.handleGet(
-                key: key,
-                displayUUID: nil,
-                callback: nil,
-                broadcast: true,
-                requestId: "req-unknown-key"
-            ),
-            "key=\(key)"
-        )
+    func unknownKeyIsRefusedOverBroadcast(_ key: String) throws {
+        try withScratchDefaults { _ in
+            // The acknowledgement still goes out unchanged — it is a fixed shape a
+            // third-party integrator reads — but the handler reports the failure to
+            // its own caller, exactly as the callback path does.
+            #expect(
+                !SettingsURIHandler.handleGet(
+                    key: key,
+                    displayUUID: nil,
+                    callback: nil,
+                    broadcast: true,
+                    requestId: "req-unknown-key"
+                ),
+                "key=\(key)"
+            )
+        }
     }
 
     @Test("A keyless broadcast get reports the error it built")
-    func keylessBroadcastGetIsRefused() {
-        // Same shape as an unknown key: the "No key specified" response is not
-        // deliverable over the broadcast channel, so the request fails.
-        #expect(
-            !SettingsURIHandler.handleGet(
-                key: nil,
-                displayUUID: nil,
-                callback: nil,
-                broadcast: true,
-                requestId: "req-no-key"
+    func keylessBroadcastGetIsRefused() throws {
+        try withScratchDefaults { _ in
+            // Same shape as an unknown key: the "No key specified" response is not
+            // deliverable over the broadcast channel, so the request fails.
+            #expect(
+                !SettingsURIHandler.handleGet(
+                    key: nil,
+                    displayUUID: nil,
+                    callback: nil,
+                    broadcast: true,
+                    requestId: "req-no-key"
+                )
             )
-        )
+        }
     }
 
     @Test("Every readable key is answered over the broadcast channel", arguments: [
@@ -321,35 +324,39 @@ final class SettingsURIHandlerGetTests {
         "iceBarLayout",
         "gridColumns",
     ])
-    func everyReadableKeyIsAnswered(_ key: String) {
-        // Reading a key must never fail the request: `all` walks every setting
-        // and every attached screen, and the per-display keys resolve against
-        // the active display when no UUID is given.
-        #expect(
-            SettingsURIHandler.handleGet(
-                key: key,
-                displayUUID: nil,
-                callback: nil,
-                broadcast: true,
-                requestId: "req-read-\(key)"
+    func everyReadableKeyIsAnswered(_ key: String) throws {
+        try withScratchDefaults { _ in
+            // Reading a key must never fail the request: `all` walks every setting
+            // and every attached screen, and the per-display keys resolve against
+            // the active display when no UUID is given.
+            #expect(
+                SettingsURIHandler.handleGet(
+                    key: key,
+                    displayUUID: nil,
+                    callback: nil,
+                    broadcast: true,
+                    requestId: "req-read-\(key)"
+                )
             )
-        )
+        }
     }
 
     @Test("A display get for a known display is answered")
     func displayGetForAKnownDisplayIsAnswered() throws {
-        let knownUUID = UUID().uuidString
-        try persistConfiguration(.defaultConfiguration, forUUID: knownUUID)
+        try withScratchDefaults { _ in
+            let knownUUID = UUID().uuidString
+            try persistConfiguration(.defaultConfiguration, forUUID: knownUUID)
 
-        #expect(
-            SettingsURIHandler.handleGet(
-                key: "display",
-                displayUUID: knownUUID,
-                callback: nil,
-                broadcast: true,
-                requestId: "req-display-known"
+            #expect(
+                SettingsURIHandler.handleGet(
+                    key: "display",
+                    displayUUID: knownUUID,
+                    callback: nil,
+                    broadcast: true,
+                    requestId: "req-display-known"
+                )
             )
-        )
+        }
     }
 
     @Test("A display get that names no known display is refused", arguments: [
@@ -358,45 +365,49 @@ final class SettingsURIHandlerGetTests {
         "missing",
     ])
     func displayGetWithoutAKnownUUIDIsRefused(_ variant: String) throws {
-        try persistConfiguration(.defaultConfiguration, forUUID: UUID().uuidString)
+        try withScratchDefaults { _ in
+            try persistConfiguration(.defaultConfiguration, forUUID: UUID().uuidString)
 
-        let displayUUID: String? = switch variant {
-        case "unknown": UUID().uuidString
-        case "malformed": "not-a-uuid"
-        default: nil
+            let displayUUID: String? = switch variant {
+            case "unknown": UUID().uuidString
+            case "malformed": "not-a-uuid"
+            default: nil
+            }
+
+            // A "Display not found" response cannot travel over the broadcast
+            // channel, so the failure has to reach the caller through the return
+            // value instead of being masked by the acknowledgement.
+            #expect(
+                !SettingsURIHandler.handleGet(
+                    key: "display",
+                    displayUUID: displayUUID,
+                    callback: nil,
+                    broadcast: true,
+                    requestId: "req-display-\(variant)"
+                ),
+                "display=\(variant)"
+            )
         }
-
-        // A "Display not found" response cannot travel over the broadcast
-        // channel, so the failure has to reach the caller through the return
-        // value instead of being masked by the acknowledgement.
-        #expect(
-            !SettingsURIHandler.handleGet(
-                key: "display",
-                displayUUID: displayUUID,
-                callback: nil,
-                broadcast: true,
-                requestId: "req-display-\(variant)"
-            ),
-            "display=\(variant)"
-        )
     }
 
     @Test("A per-display key is readable for a display that only exists in persisted configuration")
     func perDisplayKeyIsReadableForAPersistedDisplay() throws {
-        let uuid = UUID().uuidString
-        try persistConfiguration(.defaultConfiguration.withGridColumns(7), forUUID: uuid)
+        try withScratchDefaults { _ in
+            let uuid = UUID().uuidString
+            try persistConfiguration(.defaultConfiguration.withGridColumns(7), forUUID: uuid)
 
-        for key in SettingsURIHandler.perDisplayKeys {
-            #expect(
-                SettingsURIHandler.handleGet(
-                    key: key,
-                    displayUUID: uuid,
-                    callback: nil,
-                    broadcast: true,
-                    requestId: "req-persisted-\(key)"
-                ),
-                "\(key)"
-            )
+            for key in SettingsURIHandler.perDisplayKeys {
+                #expect(
+                    SettingsURIHandler.handleGet(
+                        key: key,
+                        displayUUID: uuid,
+                        callback: nil,
+                        broadcast: true,
+                        requestId: "req-persisted-\(key)"
+                    ),
+                    "\(key)"
+                )
+            }
         }
     }
 
@@ -404,162 +415,171 @@ final class SettingsURIHandlerGetTests {
 
     @Test("A set for a specific display is announced with that display's scope")
     func specificDisplaySetIsAnnouncedWithItsScope() throws {
-        let uuid = UUID().uuidString
-        try persistConfiguration(.defaultConfiguration, forUUID: uuid)
+        try withScratchDefaults { _ in
+            let uuid = UUID().uuidString
+            try persistConfiguration(.defaultConfiguration, forUUID: uuid)
 
-        let posted = notifications(named: .perDisplaySettingsDidChangeViaURI) {
-            _ = SettingsURIHandler.handleSet(
-                key: "useIceBar",
-                value: "true",
-                sender: "test",
-                displayUUID: uuid
-            )
-        }
-
-        #expect(posted.count == 1)
-        #expect(posted.first?.userInfo?["key"] as? String == "useIceBar")
-        #expect(posted.first?.userInfo?["value"] as? Bool == true)
-        #expect(posted.first?.userInfo?["scope"] as? String == "specific:\(uuid)")
-    }
-
-    @Test("Every per-display key can be set on a specific display")
-    func everyPerDisplayKeyIsSettableOnASpecificDisplay() throws {
-        let uuid = UUID().uuidString
-        try persistConfiguration(.defaultConfiguration, forUUID: uuid)
-
-        let cases = [
-            ("useIceBar", "true"),
-            ("alwaysShowHiddenItems", "true"),
-            ("iceBarLocation", "mousePointer"),
-            ("iceBarLayout", "grid"),
-            ("gridColumns", "6"),
-        ]
-
-        for (key, value) in cases {
             let posted = notifications(named: .perDisplaySettingsDidChangeViaURI) {
                 _ = SettingsURIHandler.handleSet(
-                    key: key,
-                    value: value,
+                    key: "useIceBar",
+                    value: "true",
                     sender: "test",
                     displayUUID: uuid
                 )
             }
-            #expect(posted.first?.userInfo?["scope"] as? String == "specific:\(uuid)", "\(key)")
+
+            #expect(posted.count == 1)
+            #expect(posted.first?.userInfo?["key"] as? String == "useIceBar")
+            #expect(posted.first?.userInfo?["value"] as? Bool == true)
+            #expect(posted.first?.userInfo?["scope"] as? String == "specific:\(uuid)")
+        }
+    }
+
+    @Test("Every per-display key can be set on a specific display")
+    func everyPerDisplayKeyIsSettableOnASpecificDisplay() throws {
+        try withScratchDefaults { _ in
+            let uuid = UUID().uuidString
+            try persistConfiguration(.defaultConfiguration, forUUID: uuid)
+
+            let cases = [
+                ("useIceBar", "true"),
+                ("alwaysShowHiddenItems", "true"),
+                ("iceBarLocation", "mousePointer"),
+                ("iceBarLayout", "grid"),
+                ("gridColumns", "6"),
+            ]
+
+            for (key, value) in cases {
+                let posted = notifications(named: .perDisplaySettingsDidChangeViaURI) {
+                    _ = SettingsURIHandler.handleSet(
+                        key: key,
+                        value: value,
+                        sender: "test",
+                        displayUUID: uuid
+                    )
+                }
+                #expect(posted.first?.userInfo?["scope"] as? String == "specific:\(uuid)", "\(key)")
+            }
         }
     }
 
     @Test("A set for a known display still refuses an unparsable value")
     func specificDisplaySetStillValidatesTheValue() throws {
-        let uuid = UUID().uuidString
-        try persistConfiguration(.defaultConfiguration, forUUID: uuid)
+        try withScratchDefaults { _ in
+            let uuid = UUID().uuidString
+            try persistConfiguration(.defaultConfiguration, forUUID: uuid)
 
-        let cases = [
-            ("useIceBar", "maybe"),
-            ("alwaysShowHiddenItems", "sometimes"),
-            ("iceBarLocation", "sideways"),
-            ("iceBarLayout", "diagonal"),
-            ("gridColumns", "several"),
-        ]
+            let cases = [
+                ("useIceBar", "maybe"),
+                ("alwaysShowHiddenItems", "sometimes"),
+                ("iceBarLocation", "sideways"),
+                ("iceBarLayout", "diagonal"),
+                ("gridColumns", "several"),
+            ]
 
-        for (key, value) in cases {
-            #expect(
-                !SettingsURIHandler.handleSet(
-                    key: key,
-                    value: value,
-                    sender: "test",
-                    displayUUID: uuid
-                ),
-                "\(key)=\(value)"
-            )
+            for (key, value) in cases {
+                #expect(
+                    !SettingsURIHandler.handleSet(
+                        key: key,
+                        value: value,
+                        sender: "test",
+                        displayUUID: uuid
+                    ),
+                    "\(key)=\(value)"
+                )
+            }
         }
     }
 
     @Test("gridColumns is clamped into 2...10 for a specific display too")
     func gridColumnsIsClampedForASpecificDisplay() throws {
-        let uuid = UUID().uuidString
-        try persistConfiguration(.defaultConfiguration, forUUID: uuid)
+        try withScratchDefaults { _ in
+            let uuid = UUID().uuidString
+            try persistConfiguration(.defaultConfiguration, forUUID: uuid)
 
-        for (requested, expected) in [("0", "2"), ("1", "2"), ("-7", "2"), ("11", "10"), ("400", "10"), ("5", "5")] {
-            let posted = notifications(named: .perDisplaySettingsDidChangeViaURI) {
-                _ = SettingsURIHandler.handleSet(
-                    key: "gridColumns",
-                    value: requested,
-                    sender: "test",
-                    displayUUID: uuid
-                )
+            for (requested, expected) in [("0", "2"), ("1", "2"), ("-7", "2"), ("11", "10"), ("400", "10"), ("5", "5")] {
+                let posted = notifications(named: .perDisplaySettingsDidChangeViaURI) {
+                    _ = SettingsURIHandler.handleSet(
+                        key: "gridColumns",
+                        value: requested,
+                        sender: "test",
+                        displayUUID: uuid
+                    )
+                }
+                #expect(posted.first?.userInfo?["stringValue"] as? String == expected, "gridColumns=\(requested)")
             }
-            #expect(posted.first?.userInfo?["stringValue"] as? String == expected, "gridColumns=\(requested)")
         }
     }
 
     @Test("A display known only by a persisted configuration is still checked for UUID shape")
     func specificDisplaySetChecksTheUUIDShapeFirst() throws {
-        let uuid = UUID().uuidString
-        try persistConfiguration(.defaultConfiguration, forUUID: uuid)
+        try withScratchDefaults { _ in
+            let uuid = UUID().uuidString
+            try persistConfiguration(.defaultConfiguration, forUUID: uuid)
 
-        // A well-formed but unlisted UUID and a malformed one are both refused,
-        // so persisting one configuration does not open the door to any other.
-        #expect(
-            !SettingsURIHandler.handleSet(
-                key: "useIceBar",
-                value: "true",
-                sender: "test",
-                displayUUID: UUID().uuidString
+            // A well-formed but unlisted UUID and a malformed one are both refused,
+            // so persisting one configuration does not open the door to any other.
+            #expect(
+                !SettingsURIHandler.handleSet(
+                    key: "useIceBar",
+                    value: "true",
+                    sender: "test",
+                    displayUUID: UUID().uuidString
+                )
             )
-        )
-        #expect(
-            !SettingsURIHandler.handleSet(
-                key: "useIceBar",
-                value: "true",
-                sender: "test",
-                displayUUID: "\(uuid)-extra"
+            #expect(
+                !SettingsURIHandler.handleSet(
+                    key: "useIceBar",
+                    value: "true",
+                    sender: "test",
+                    displayUUID: "\(uuid)-extra"
+                )
             )
-        )
+        }
     }
 
     // MARK: Code-signature verification
 
     @Test("An empty bundle identifier is refused before any signature check")
-    func emptyBundleIdentifierIsRefused() {
-        #expect(!SettingsURIHandler.isWhitelisted(bundleIdentifier: ""))
+    func emptyBundleIdentifierIsRefused() throws {
+        try withScratchDefaults { _ in
+            #expect(!SettingsURIHandler.isWhitelisted(bundleIdentifier: ""))
+        }
     }
 
     @Test("An app authorized with a team identifier fails verification once it is gone")
-    func storedTeamIdentifierFailsWhenTheAppIsGone() {
-        Defaults.removeObject(forKey: .settingsURIWhitelist)
-        Defaults.removeObject(forKey: .settingsURISigningIdentities)
+    func storedTeamIdentifierFailsWhenTheAppIsGone() throws {
+        try withScratchDefaults { _ in
+            SettingsURIHandler.addToWhitelist(bundleId: "com.example.Ghost", teamIdentifier: "ABCDE12345")
 
-        SettingsURIHandler.addToWhitelist(bundleId: "com.example.Ghost", teamIdentifier: "ABCDE12345")
-
-        // Nothing on disk answers to that bundle ID, so no current team
-        // identifier can be read and the stored one cannot be matched.
-        #expect(!SettingsURIHandler.isWhitelisted(bundleIdentifier: "com.example.Ghost"))
+            // Nothing on disk answers to that bundle ID, so no current team
+            // identifier can be read and the stored one cannot be matched.
+            #expect(!SettingsURIHandler.isWhitelisted(bundleIdentifier: "com.example.Ghost"))
+        }
     }
 
     @Test("An app authorized without a team identifier fails once it cannot be located")
-    func missingTeamIdentifierFailsForAnUnresolvableApp() {
-        Defaults.removeObject(forKey: .settingsURIWhitelist)
-        Defaults.removeObject(forKey: .settingsURISigningIdentities)
+    func missingTeamIdentifierFailsForAnUnresolvableApp() throws {
+        try withScratchDefaults { _ in
+            SettingsURIHandler.addToWhitelist(bundleId: "com.example.Ghost")
 
-        SettingsURIHandler.addToWhitelist(bundleId: "com.example.Ghost")
-
-        // An entry with no stored team identifier is only accepted when the app
-        // is there to read and genuinely names no team. A bundle ID that
-        // resolves to nothing tells us nothing, and anything can claim one.
-        #expect(!SettingsURIHandler.isWhitelisted(bundleIdentifier: "com.example.Ghost"))
+            // An entry with no stored team identifier is only accepted when the app
+            // is there to read and genuinely names no team. A bundle ID that
+            // resolves to nothing tells us nothing, and anything can claim one.
+            #expect(!SettingsURIHandler.isWhitelisted(bundleIdentifier: "com.example.Ghost"))
+        }
     }
 
     @Test("An app authorized without a team identifier still passes while it can be read")
-    func missingTeamIdentifierPassesForAResolvableApp() {
-        Defaults.removeObject(forKey: .settingsURIWhitelist)
-        Defaults.removeObject(forKey: .settingsURISigningIdentities)
+    func missingTeamIdentifierPassesForAResolvableApp() throws {
+        try withScratchDefaults { _ in
+            // Finder is a platform binary: it resolves, and its signature reads back
+            // without a team identifier. That is the case a legacy entry was made
+            // for, and it must keep working.
+            SettingsURIHandler.addToWhitelist(bundleId: "com.apple.finder")
 
-        // Finder is a platform binary: it resolves, and its signature reads back
-        // without a team identifier. That is the case a legacy entry was made
-        // for, and it must keep working.
-        SettingsURIHandler.addToWhitelist(bundleId: "com.apple.finder")
-
-        #expect(SettingsURIHandler.isWhitelisted(bundleIdentifier: "com.apple.finder"))
+            #expect(SettingsURIHandler.isWhitelisted(bundleIdentifier: "com.apple.finder"))
+        }
     }
 
     @Test("An app that names no team reads differently from one that cannot be located")
@@ -569,46 +589,45 @@ final class SettingsURIHandlerGetTests {
     }
 
     @Test("Re-authorizing an app already on the whitelist records its signing identity")
-    func reauthorizingRecordsTheSigningIdentity() {
-        Defaults.removeObject(forKey: .settingsURIWhitelist)
-        Defaults.removeObject(forKey: .settingsURISigningIdentities)
+    func reauthorizingRecordsTheSigningIdentity() throws {
+        try withScratchDefaults { _ in
+            SettingsURIHandler.addToWhitelist(bundleId: "com.apple.finder")
+            #expect(SettingsURIHandler.isWhitelisted(bundleIdentifier: "com.apple.finder"))
 
-        SettingsURIHandler.addToWhitelist(bundleId: "com.apple.finder")
-        #expect(SettingsURIHandler.isWhitelisted(bundleIdentifier: "com.apple.finder"))
+            // The identity has to be recorded even though the bundle ID is already
+            // listed. Once it is, the entry is verified against it instead of the
+            // unsigned-legacy rule — and Finder does not carry that team.
+            SettingsURIHandler.addToWhitelist(bundleId: "com.apple.finder", teamIdentifier: "ABCDE12345")
 
-        // The identity has to be recorded even though the bundle ID is already
-        // listed. Once it is, the entry is verified against it instead of the
-        // unsigned-legacy rule — and Finder does not carry that team.
-        SettingsURIHandler.addToWhitelist(bundleId: "com.apple.finder", teamIdentifier: "ABCDE12345")
-
-        #expect(!SettingsURIHandler.isWhitelisted(bundleIdentifier: "com.apple.finder"))
-        #expect(SettingsURIHandler.getWhitelist().filter { $0 == "com.apple.finder" }.count == 1)
+            #expect(!SettingsURIHandler.isWhitelisted(bundleIdentifier: "com.apple.finder"))
+            #expect(SettingsURIHandler.getWhitelist().filter { $0 == "com.apple.finder" }.count == 1)
+        }
     }
 
     @Test("Recording a signing identity for a listed app announces the change")
-    func recordingASigningIdentityIsAnnounced() {
-        Defaults.removeObject(forKey: .settingsURIWhitelist)
-        Defaults.removeObject(forKey: .settingsURISigningIdentities)
-        SettingsURIHandler.addToWhitelist(bundleId: "com.example.Ghost")
+    func recordingASigningIdentityIsAnnounced() throws {
+        try withScratchDefaults { _ in
+            SettingsURIHandler.addToWhitelist(bundleId: "com.example.Ghost")
 
-        let posted = notifications(named: .settingsURIWhitelistDidChange) {
-            SettingsURIHandler.addToWhitelist(bundleId: "com.example.Ghost", teamIdentifier: "ABCDE12345")
+            let posted = notifications(named: .settingsURIWhitelistDidChange) {
+                SettingsURIHandler.addToWhitelist(bundleId: "com.example.Ghost", teamIdentifier: "ABCDE12345")
+            }
+
+            #expect(!posted.isEmpty)
         }
-
-        #expect(!posted.isEmpty)
     }
 
     @Test("Re-adding a listed app with nothing new to store announces nothing")
-    func redundantReauthorizationIsSilent() {
-        Defaults.removeObject(forKey: .settingsURIWhitelist)
-        Defaults.removeObject(forKey: .settingsURISigningIdentities)
-        SettingsURIHandler.addToWhitelist(bundleId: "com.example.Ghost", teamIdentifier: "ABCDE12345")
-
-        let posted = notifications(named: .settingsURIWhitelistDidChange) {
+    func redundantReauthorizationIsSilent() throws {
+        try withScratchDefaults { _ in
             SettingsURIHandler.addToWhitelist(bundleId: "com.example.Ghost", teamIdentifier: "ABCDE12345")
-        }
 
-        #expect(posted.isEmpty)
+            let posted = notifications(named: .settingsURIWhitelistDidChange) {
+                SettingsURIHandler.addToWhitelist(bundleId: "com.example.Ghost", teamIdentifier: "ABCDE12345")
+            }
+
+            #expect(posted.isEmpty)
+        }
     }
 
     // MARK: App identity

@@ -16,7 +16,7 @@ import Testing
 @MainActor
 @Suite("Permission request polling")
 struct PermissionTests {
-    @Test("A request restarts polling after checks have been stopped")
+    @Test("A request restarts polling after checks have been stopped", .timeLimit(.minutes(1)))
     func performRequestRestartsPollingAfterChecksStop() async throws {
         var isGranted = false
         var requestCount = 0

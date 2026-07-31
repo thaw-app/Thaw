@@ -15,30 +15,29 @@ import Testing
 struct HotkeysSettingsPersistenceTests {
     @Test("Bindings load, update, and clear without app setup")
     func bindingsRoundTrip() throws {
-        let previousHotkeys = Defaults.object(forKey: .hotkeys)
-        defer { Defaults.set(previousHotkeys, forKey: .hotkeys) }
+        try withScratchDefaults { _ in
+            let action = HotkeyAction.searchMenuBarItems
+            let initial = KeyCombination(key: .f19, modifiers: [.command, .shift])
+            let updated = KeyCombination(key: .f20, modifiers: [.control, .option])
+            try Defaults.set(
+                [action.rawValue: JSONEncoder().encode(initial)],
+                forKey: .hotkeys
+            )
 
-        let action = HotkeyAction.searchMenuBarItems
-        let initial = KeyCombination(key: .f19, modifiers: [.command, .shift])
-        let updated = KeyCombination(key: .f20, modifiers: [.control, .option])
-        try Defaults.set(
-            [action.rawValue: JSONEncoder().encode(initial)],
-            forKey: .hotkeys
-        )
+            let settings = HotkeysSettings()
+            let hotkey = try #require(settings.hotkey(withAction: action))
+            #expect(hotkey.keyCombination == initial)
 
-        let settings = HotkeysSettings()
-        let hotkey = try #require(settings.hotkey(withAction: action))
-        #expect(hotkey.keyCombination == initial)
+            hotkey.keyCombination = updated
 
-        hotkey.keyCombination = updated
+            let storedData = try #require(
+                Defaults.dictionary(forKey: .hotkeys)?[action.rawValue] as? Data
+            )
+            #expect(try JSONDecoder().decode(KeyCombination.self, from: storedData) == updated)
 
-        let storedData = try #require(
-            Defaults.dictionary(forKey: .hotkeys)?[action.rawValue] as? Data
-        )
-        #expect(try JSONDecoder().decode(KeyCombination.self, from: storedData) == updated)
+            hotkey.keyCombination = nil
 
-        hotkey.keyCombination = nil
-
-        #expect(Defaults.dictionary(forKey: .hotkeys)?[action.rawValue] == nil)
+            #expect(Defaults.dictionary(forKey: .hotkeys)?[action.rawValue] == nil)
+        }
     }
 }

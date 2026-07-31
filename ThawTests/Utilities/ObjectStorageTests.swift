@@ -150,12 +150,14 @@ struct ObjectStorageTests {
         let host = Host()
         weak var observed: Payload?
 
-        do {
-            let payload = Payload(id: 1)
-            observed = payload
-            storage.weakSet(payload, for: host)
-            #expect(storage.value(for: host) === payload)
-        }
+        var payload: Payload? = Payload(id: 1)
+        observed = payload
+        storage.weakSet(payload, for: host)
+        #expect(storage.value(for: host) === payload)
+
+        // End the payload's lifetime explicitly rather than relying on a
+        // scope ending to release the last strong reference.
+        payload = nil
 
         #expect(observed == nil)
         #expect(storage.value(for: host) == nil)
@@ -189,12 +191,14 @@ struct ObjectStorageTests {
         let host = Host()
         weak var observed: Payload?
 
-        do {
-            let payload = Payload(id: 1)
-            observed = payload
-            storage.set(payload, for: host)
-            storage.weakSet(payload, for: host)
-        }
+        var payload: Payload? = Payload(id: 1)
+        observed = payload
+        storage.set(payload, for: host)
+        storage.weakSet(payload, for: host)
+
+        // End the payload's lifetime explicitly rather than relying on a
+        // scope ending to release the last strong reference.
+        payload = nil
 
         #expect(observed == nil)
         #expect(storage.value(for: host) == nil)

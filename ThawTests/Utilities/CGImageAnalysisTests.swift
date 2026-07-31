@@ -30,7 +30,7 @@ struct CGImageAnalysisTests {
 
     @Test("A solid image averages to its own color")
     func solidImageAveragesToItself() throws {
-        let image = try makeImage(width: 8, height: 8) { context in
+        let image = try makeCanvas(width: 8, height: 8) { context in
             context.setFillColor(red: 1, green: 0, blue: 0, alpha: 1)
             context.fill(CGRect(x: 0, y: 0, width: 8, height: 8))
         }
@@ -46,7 +46,7 @@ struct CGImageAnalysisTests {
 
     @Test("A half-and-half image averages between its two colors")
     func twoToneImageAveragesBetween() throws {
-        let image = try makeImage(width: 8, height: 8) { context in
+        let image = try makeCanvas(width: 8, height: 8) { context in
             context.setFillColor(red: 0, green: 0, blue: 0, alpha: 1)
             context.fill(CGRect(x: 0, y: 0, width: 8, height: 4))
             context.setFillColor(red: 1, green: 1, blue: 1, alpha: 1)
@@ -63,7 +63,7 @@ struct CGImageAnalysisTests {
 
     @Test("A fully transparent image has no average color")
     func fullyTransparentImageHasNoAverage() throws {
-        let image = try makeImage(width: 8, height: 8) { _ in
+        let image = try makeCanvas(width: 8, height: 8) { _ in
             // Nothing drawn: every pixel keeps alpha 0.
         }
 
@@ -74,7 +74,7 @@ struct CGImageAnalysisTests {
     func ignoringAlphaPinsTheAlphaComponent() throws {
         // Half-transparent white: with a threshold of 0 every pixel counts,
         // so the only difference the option makes is the alpha component.
-        let image = try makeImage(width: 8, height: 8) { context in
+        let image = try makeCanvas(width: 8, height: 8) { context in
             context.setFillColor(red: 1, green: 1, blue: 1, alpha: 0.5)
             context.fill(CGRect(x: 0, y: 0, width: 8, height: 8))
         }
@@ -91,7 +91,7 @@ struct CGImageAnalysisTests {
     @Test("The alpha threshold decides which pixels count")
     func alphaThresholdSelectsContributingPixels() throws {
         // Half opaque red, half barely-there red.
-        let image = try makeImage(width: 8, height: 8) { context in
+        let image = try makeCanvas(width: 8, height: 8) { context in
             context.setFillColor(red: 1, green: 0, blue: 0, alpha: 1)
             context.fill(CGRect(x: 0, y: 0, width: 8, height: 4))
             context.setFillColor(red: 0, green: 0, blue: 1, alpha: 0.1)
@@ -108,19 +108,20 @@ struct CGImageAnalysisTests {
 
     @Test("An explicit RGB color space is honored")
     func explicitColorSpaceIsUsed() throws {
-        let image = try makeImage(width: 4, height: 4) { context in
+        let image = try makeCanvas(width: 4, height: 4) { context in
             context.setFillColor(red: 0.5, green: 0.5, blue: 0.5, alpha: 1)
             context.fill(CGRect(x: 0, y: 0, width: 4, height: 4))
         }
         let space = try #require(CGColorSpace(name: CGColorSpace.sRGB))
 
         let average = try #require(image.averageColor(using: space))
-        #expect(average.colorSpace?.model == .rgb)
+        let name = try #require(average.colorSpace?.name)
+        #expect((name as String) == (CGColorSpace.sRGB as String))
     }
 
     @Test("A non-RGB color space argument is ignored rather than fatal")
     func nonRGBColorSpaceFallsBack() throws {
-        let image = try makeImage(width: 4, height: 4) { context in
+        let image = try makeCanvas(width: 4, height: 4) { context in
             context.setFillColor(red: 0.2, green: 0.4, blue: 0.6, alpha: 1)
             context.fill(CGRect(x: 0, y: 0, width: 4, height: 4))
         }
@@ -131,7 +132,7 @@ struct CGImageAnalysisTests {
 
     @Test("A large image is downsampled rather than refused")
     func largeImageIsHandled() throws {
-        let image = try makeImage(width: 200, height: 120) { context in
+        let image = try makeCanvas(width: 200, height: 120) { context in
             context.setFillColor(red: 0, green: 1, blue: 0, alpha: 1)
             context.fill(CGRect(x: 0, y: 0, width: 200, height: 120))
         }
@@ -142,7 +143,7 @@ struct CGImageAnalysisTests {
 
     @Test("A single-pixel image still averages")
     func singlePixelImageAverages() throws {
-        let image = try makeImage(width: 1, height: 1) { context in
+        let image = try makeCanvas(width: 1, height: 1) { context in
             context.setFillColor(red: 0, green: 0, blue: 1, alpha: 1)
             context.fill(CGRect(x: 0, y: 0, width: 1, height: 1))
         }
@@ -155,14 +156,14 @@ struct CGImageAnalysisTests {
 
     @Test("A fully clear image reads as transparent")
     func clearImageIsTransparent() throws {
-        let image = try makeImage(width: 8, height: 8) { _ in }
+        let image = try makeCanvas(width: 8, height: 8) { _ in }
 
         #expect(image.isTransparent())
     }
 
     @Test("A fully opaque image does not read as transparent")
     func opaqueImageIsNotTransparent() throws {
-        let image = try makeImage(width: 8, height: 8) { context in
+        let image = try makeCanvas(width: 8, height: 8) { context in
             context.setFillColor(red: 1, green: 1, blue: 1, alpha: 1)
             context.fill(CGRect(x: 0, y: 0, width: 8, height: 8))
         }
@@ -172,7 +173,7 @@ struct CGImageAnalysisTests {
 
     @Test("A single opaque pixel is enough to be non-transparent")
     func oneOpaquePixelDefeatsTransparency() throws {
-        let image = try makeImage(width: 16, height: 16) { context in
+        let image = try makeCanvas(width: 16, height: 16) { context in
             context.setFillColor(red: 0, green: 0, blue: 0, alpha: 1)
             context.fill(CGRect(x: 15, y: 15, width: 1, height: 1))
         }
@@ -182,7 +183,7 @@ struct CGImageAnalysisTests {
 
     @Test("The alpha threshold decides what counts as transparent")
     func transparencyThresholdIsHonored() throws {
-        let image = try makeImage(width: 8, height: 8) { context in
+        let image = try makeCanvas(width: 8, height: 8) { context in
             context.setFillColor(red: 1, green: 1, blue: 1, alpha: 0.2)
             context.fill(CGRect(x: 0, y: 0, width: 8, height: 8))
         }
@@ -198,7 +199,7 @@ struct CGImageAnalysisTests {
         // An image with no explicit byte order is outside the fast path, so
         // this exercises the TransparencyContext fallback.
         let fallback = try makeDefaultByteOrderImage(width: 8, height: 8, opaque: opaque)
-        let normal = try makeImage(width: 8, height: 8) { context in
+        let normal = try makeCanvas(width: 8, height: 8) { context in
             if opaque {
                 context.setFillColor(red: 1, green: 0, blue: 0, alpha: 1)
                 context.fill(CGRect(x: 0, y: 0, width: 8, height: 8))
@@ -210,35 +211,12 @@ struct CGImageAnalysisTests {
 
     @Test("A single-pixel clear image reads as transparent")
     func singleClearPixelIsTransparent() throws {
-        let image = try makeImage(width: 1, height: 1) { _ in }
+        let image = try makeCanvas(width: 1, height: 1) { _ in }
 
         #expect(image.isTransparent())
     }
 
     // MARK: - Helpers
-
-    /// Builds a premultiplied-first, 32-bit little-endian RGBA image — the
-    /// shape the capture paths produce, and one the fast path recognises.
-    private func makeImage(
-        width: Int,
-        height: Int,
-        draw: (CGContext) -> Void
-    ) throws -> CGImage {
-        let context = try #require(
-            CGContext(
-                data: nil,
-                width: width,
-                height: height,
-                bitsPerComponent: 8,
-                bytesPerRow: 0,
-                space: CGColorSpaceCreateDeviceRGB(),
-                bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue
-                    | CGBitmapInfo.byteOrder32Little.rawValue
-            )
-        )
-        draw(context)
-        return try #require(context.makeImage())
-    }
 
     /// Builds an image with no explicit byte order. The alpha fast path
     /// bails on `byteOrderDefault` "for safety", so this routes through the

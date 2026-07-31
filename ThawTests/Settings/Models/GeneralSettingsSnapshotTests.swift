@@ -46,10 +46,16 @@ struct GeneralSettingsSnapshotTests {
         )
     }
 
-    private func makeCustomSnapshot() -> GeneralSettingsSnapshot {
-        // Use one of the user selectable icons
-        let ellipsisIcon = ControlItemImageSet.userSelectableIceIcons.first { $0.name == .ellipsis } ?? .defaultIceIcon
-        let chevronIcon = ControlItemImageSet.userSelectableIceIcons.first { $0.name == .chevron } ?? .defaultIceIcon
+    private func makeCustomSnapshot() throws -> GeneralSettingsSnapshot {
+        // Use one of the user selectable icons; a missing fixture is a broken
+        // icon catalog and must fail the test immediately rather than fall
+        // back to the default icon.
+        let ellipsisIcon = try #require(
+            ControlItemImageSet.userSelectableIceIcons.first { $0.name == .ellipsis }
+        )
+        let chevronIcon = try #require(
+            ControlItemImageSet.userSelectableIceIcons.first { $0.name == .chevron }
+        )
 
         return GeneralSettingsSnapshot(
             showIceIcon: false,
@@ -93,8 +99,8 @@ struct GeneralSettingsSnapshotTests {
     }
 
     @Test("A custom snapshot holds the values it was built with")
-    func customSnapshotValues() {
-        let snapshot = makeCustomSnapshot()
+    func customSnapshotValues() throws {
+        let snapshot = try makeCustomSnapshot()
 
         #expect(!snapshot.showIceIcon)
         #expect(snapshot.lastCustomIceIcon != nil)
@@ -133,7 +139,7 @@ struct GeneralSettingsSnapshotTests {
 
     @Test("A custom snapshot survives a round trip")
     func encodeDecodeCustomSnapshot() throws {
-        let original = makeCustomSnapshot()
+        let original = try makeCustomSnapshot()
 
         let data = try encoder.encode(original)
         let decoded = try decoder.decode(GeneralSettingsSnapshot.self, from: data)

@@ -19,7 +19,7 @@ private func parse(_ string: String) throws -> SettingsURIRequest {
 @Suite("SettingsURIParser")
 struct SettingsURIParserTests {
     @Suite("set")
-    struct Set {
+    struct SetRoute {
         @Test("Key and value produce a set route")
         func keyAndValue() throws {
             #expect(try parse("thaw://set?key=autoRehide&value=true").route
@@ -36,13 +36,11 @@ struct SettingsURIParserTests {
         /// it parses and is rejected later by key validation. ThawCtl and Droppy
         /// both emit this shape, so it must not be treated as malformed.
         @Test("An empty key is present, not absent", arguments: [
-            "thaw://set?key=&value=true",
-            "thaw://toggle?key=",
+            ("thaw://set?key=&value=true", SettingsURIRoute.set(key: "", value: "true", displayUUID: nil)),
+            ("thaw://toggle?key=", .toggle(key: "", displayUUID: nil)),
         ])
-        func emptyKeyIsNotMalformed(uri: String) throws {
-            let route = try parse(uri).route
-            #expect(route != .malformed(host: "set"))
-            #expect(route != .malformed(host: "toggle"))
+        func emptyKeyIsNotMalformed(uri: String, expected: SettingsURIRoute) throws {
+            #expect(try parse(uri).route == expected)
         }
     }
 

@@ -457,7 +457,8 @@ struct MenuBarItemValueTests {
                 MenuBarItemTag.Namespace.textInputMenuAgent,
             ]
         )
-        func menuAgentNamespacesIgnoreTheTitle(namespace: MenuBarItemTag.Namespace) {
+        func menuAgentNamespacesIgnoreTheTitle(namespace: MenuBarItemTag.Namespace) throws {
+            let sourceName = try #require(testRunnerSourceName)
             let first = MenuBarItem.fixture(
                 tag: namespacedTag(namespace, "PasswordsMenuBarExtra"),
                 windowID: 40,
@@ -470,9 +471,9 @@ struct MenuBarItemValueTests {
             )
 
             #expect(first.autoDetectedName == second.autoDetectedName)
-            // These agents name themselves "<Feature>MenuBarExtra"; the
-            // "Menu..." tail is stripped rather than shown to the user.
-            #expect(!first.autoDetectedName.contains("Menu"))
+            // These agents are named after their owning application; the
+            // window title never reaches the user-visible name.
+            #expect(first.autoDetectedName == sourceName)
             #expect(!first.autoDetectedName.isEmpty)
         }
 

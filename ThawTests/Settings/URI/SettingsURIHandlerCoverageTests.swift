@@ -94,8 +94,13 @@ private let perDisplayKeys: [String] = [
 ]
 
 /// The Boolean keys that live in `Defaults` rather than in
-/// `DisplaySettingsManager`, and so answer on the global notification channel.
-private let globalBooleanKeys: [String] = booleanKeys.filter { !perDisplayKeys.contains($0) }
+/// `DisplaySettingsManager`, and so answer on `.settingsDidChangeViaURI`
+/// rather than `.perDisplaySettingsDidChangeViaURI`.
+///
+/// This is all of ``booleanKeys``, not a filtered subset: the handler keeps
+/// the per-display Booleans out of `supportedBooleanKeys` by design, and
+/// `localKeyListsMatchTheHandler` pins that the copies here mirror it.
+private let globalBooleanKeys: [String] = booleanKeys
 
 /// Every key the `get` action can be asked for that is not a per-display one.
 private let globalReadableKeys: [String] = globalBooleanKeys + doubleKeys + enumKeys

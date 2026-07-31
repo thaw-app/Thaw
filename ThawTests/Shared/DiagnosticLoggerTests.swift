@@ -97,9 +97,7 @@ struct DiagnosticLoggerLevelTests {
 
     @Test("Every level has an uppercase raw value")
     func allLevelsHaveUppercaseRawValues() {
-        let levels: [DiagnosticLogger.Level] = [.debug, .info, .notice, .warning, .error]
-
-        for level in levels {
+        for level in DiagnosticLogger.Level.allCases {
             #expect(level.rawValue == level.rawValue.uppercased(),
                     "Level \(level) should have uppercase raw value")
         }
@@ -107,7 +105,7 @@ struct DiagnosticLoggerLevelTests {
 
     @Test("Every level has a distinct raw value")
     func allLevelsAreDistinct() {
-        let levels: [DiagnosticLogger.Level] = [.debug, .info, .notice, .warning, .error]
+        let levels = DiagnosticLogger.Level.allCases
         let rawValues = Set(levels.map(\.rawValue))
 
         #expect(rawValues.count == levels.count,

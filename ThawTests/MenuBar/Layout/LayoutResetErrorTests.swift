@@ -12,26 +12,6 @@ import Testing
 
 @Suite("Layout reset errors")
 struct LayoutResetErrorTests {
-    // MARK: - Error Cases
-
-    @Test("The missing-app-state case exists")
-    func missingAppStateError() {
-        let error: MenuBarItemManager.LayoutResetError? = .missingAppState
-        #expect(error != nil)
-    }
-
-    @Test("The missing-control-items case exists")
-    func missingControlItemsError() {
-        let error: MenuBarItemManager.LayoutResetError? = .missingControlItems
-        #expect(error != nil)
-    }
-
-    @Test("The already-in-progress case exists")
-    func alreadyInProgressError() {
-        let error: MenuBarItemManager.LayoutResetError? = .alreadyInProgress
-        #expect(error != nil)
-    }
-
     // MARK: - Error Description
 
     @Test("Missing app state describes itself as an app state failure")

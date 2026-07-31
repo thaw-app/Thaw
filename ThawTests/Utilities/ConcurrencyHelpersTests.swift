@@ -75,8 +75,12 @@ struct ConcurrencyHelpersTests {
         }
 
         // The cancellation is delivered after withTimeout has already thrown,
-        // so give the losing arm a moment to observe it.
-        try await Task.sleep(for: .milliseconds(200))
+        // so poll until the losing arm observes it — a fixed sleep would race
+        // scheduler latency. The deadline keeps a regression from hanging.
+        let deadline = ContinuousClock.now + .seconds(5)
+        while !observed.withLock({ $0 }), ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(10))
+        }
         #expect(observed.withLock { $0 })
     }
 

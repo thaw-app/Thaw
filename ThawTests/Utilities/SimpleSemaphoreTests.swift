@@ -56,8 +56,9 @@ struct SimpleSemaphoreTests {
     }
 
     /// Hammers the timeout/acquire race: a holder releases after a random
-    /// 0-2 ms delay while a waiter times out at 1 ms. Whichever side wins
-    /// reconciles and signals, so the semaphore never leaks or deadlocks.
+    /// 0-2 ms delay while a waiter times out at 1 ms. Whichever side wins,
+    /// each iteration reconciles back to the held state, so the semaphore
+    /// never leaks or deadlocks.
     @Test("Every iteration of the timeout/acquire race reconciles")
     func raceHammerReconcilesEveryIteration() async throws {
         let semaphore = SimpleSemaphore(value: 1)
@@ -87,19 +88,24 @@ struct SimpleSemaphoreTests {
             let acquired = await waitTask
             _ = await releaseTask
 
-            if acquired {
-                // The waiter won the race and now holds the permit that the
-                // release() call restored; give it back for the next
-                // iteration.
-                await semaphore.signal()
+            // If the waiter won the race it now holds the permit that
+            // signal() restored, which is exactly the held state the next
+            // iteration expects. If it timed out, reconciliation inside
+            // wait(timeout:) already gave back any permit it might have
+            // raced into — so signal()'s restored permit is unclaimed, and
+            // it has to be consumed to get back to the held state; with the
+            // permit free this cannot block.
+            if !acquired {
+                try await semaphore.wait(timeout: .seconds(1))
             }
-            // If the waiter timed out, reconciliation inside wait(timeout:)
-            // already gave back any permit it might have raced into, and
-            // release() already restored the held permit, so the semaphore
-            // is back to "held by nobody, value == 1" either way.
+            // Either way each iteration ends with the semaphore held, so
+            // every iteration genuinely races the release against the
+            // timeout.
         }
 
-        // Final sanity check: the semaphore must be fully available.
+        // Release the permit held across the loop, then run the final sanity
+        // check: the semaphore must be fully available.
+        await semaphore.signal()
         try await semaphore.wait(timeout: .seconds(1))
         await semaphore.signal()
     }

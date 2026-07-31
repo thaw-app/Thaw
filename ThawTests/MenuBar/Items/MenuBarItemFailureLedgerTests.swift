@@ -27,10 +27,13 @@ import Testing
 @Suite("Menu bar item failure ledger", .serialized)
 final class MenuBarItemFailureLedgerTests {
     private let savedValue: Any?
+    private let savedBuildValue: Any?
 
     init() {
         savedValue = Defaults.object(forKey: .unresponsiveMenuBarItems)
+        savedBuildValue = Defaults.object(forKey: .unresponsiveMenuBarItemsBuild)
         Defaults.removeObject(forKey: .unresponsiveMenuBarItems)
+        Defaults.removeObject(forKey: .unresponsiveMenuBarItemsBuild)
     }
 
     /// Isolated so the non-Sendable snapshot is reachable here; the suite is
@@ -41,6 +44,11 @@ final class MenuBarItemFailureLedgerTests {
             Defaults.set(savedValue, forKey: .unresponsiveMenuBarItems)
         } else {
             Defaults.removeObject(forKey: .unresponsiveMenuBarItems)
+        }
+        if let savedBuildValue {
+            Defaults.set(savedBuildValue, forKey: .unresponsiveMenuBarItemsBuild)
+        } else {
+            Defaults.removeObject(forKey: .unresponsiveMenuBarItemsBuild)
         }
     }
 

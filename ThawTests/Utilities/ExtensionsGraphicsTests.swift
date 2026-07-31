@@ -12,27 +12,8 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Builds a premultiplied-first, 32-bit little-endian RGBA image — the shape
-/// the capture paths produce — and runs `draw` against its context.
-private func makeCanvas(width: Int, height: Int, draw: (CGContext) -> Void) throws -> CGImage {
-    let context = try #require(
-        CGContext(
-            data: nil,
-            width: width,
-            height: height,
-            bitsPerComponent: 8,
-            bytesPerRow: 0,
-            space: CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue
-                | CGBitmapInfo.byteOrder32Little.rawValue
-        ),
-        "Could not create a bitmap context"
-    )
-    draw(context)
-    return try #require(context.makeImage(), "Could not snapshot the bitmap context")
-}
-
-/// Builds a clear canvas with a single filled rectangle on it.
+/// Builds a clear canvas with a single filled rectangle on it, on top of the
+/// shared `makeCanvas` fixture in `Support/GraphicsTestFixtures.swift`.
 ///
 /// The rectangle is given in Core Graphics coordinates (origin bottom left),
 /// but every assertion below is written in terms of the trimmed *size*, which
@@ -51,6 +32,13 @@ private func makeCanvas(
         context.setFillColor(red: 1, green: 0, blue: 0, alpha: 1)
         context.fill(rect)
     }
+}
+
+/// Whether the test process has a window server session. Ordering a window in
+/// requires one, so cases that depend on it are skipped in headless runs
+/// instead of failing.
+private var hasWindowServerSession: Bool {
+    CGSessionCopyCurrentDictionary() != nil
 }
 
 /// Covers the graphical extensions in `Utilities/Extensions.swift`.
@@ -479,13 +467,16 @@ struct ExtensionsGraphicsTests {
             await panel.waitUntilClosed(timeout: .seconds(180))
         }
 
-        @Test("A visible panel wakes the waiter as soon as it hides", .timeLimit(.minutes(1)))
-        func visiblePanelWakesTheWaiter() async throws {
+        @Test(
+            "A visible panel wakes the waiter as soon as it hides",
+            .timeLimit(.minutes(1)),
+            .enabled(if: hasWindowServerSession, "Ordering a panel in requires a window server session")
+        )
+        func visiblePanelWakesTheWaiter() async {
             let panel = makePanel()
             defer { panel.close() }
 
             panel.orderFront(nil)
-            try #require(panel.isVisible, "The panel could not be ordered in; a window server session is required")
 
             let closer = Task { @MainActor in
                 try? await Task.sleep(for: .milliseconds(50))

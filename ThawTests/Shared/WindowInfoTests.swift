@@ -23,7 +23,7 @@ struct WindowInfoTests {
         title: String? = "TestItem",
         ownerName: String? = "TestApp",
         isOnScreen: Bool = true
-    ) -> WindowInfo {
+    ) throws -> WindowInfo {
         // CGRect encodes as nested arrays: [[x,y],[width,height]]
         let titleJSON = title.map { "\"\($0)\"" } ?? "null"
         let ownerNameJSON = ownerName.map { "\"\($0)\"" } ?? "null"
@@ -38,15 +38,15 @@ struct WindowInfoTests {
             "isOnScreen": \(isOnScreen)
         }
         """
-        let data = json.data(using: .utf8)!
-        return try! JSONDecoder().decode(WindowInfo.self, from: data)
+        let data = Data(json.utf8)
+        return try JSONDecoder().decode(WindowInfo.self, from: data)
     }
 
     // MARK: - Codable Tests
 
     @Test("A window survives an encode/decode round trip")
     func encodeDecode() throws {
-        let original = createWindowInfo()
+        let original = try createWindowInfo()
 
         let encoder = JSONEncoder()
         let decoder = JSONDecoder()
@@ -65,7 +65,7 @@ struct WindowInfoTests {
 
     @Test("A nil title stays nil across a round trip")
     func decodeWithNilTitle() throws {
-        let window = createWindowInfo(title: nil)
+        let window = try createWindowInfo(title: nil)
 
         let encoder = JSONEncoder()
         let decoder = JSONDecoder()
@@ -78,7 +78,7 @@ struct WindowInfoTests {
 
     @Test("A nil owner name stays nil across a round trip")
     func decodeWithNilOwnerName() throws {
-        let window = createWindowInfo(ownerName: nil)
+        let window = try createWindowInfo(ownerName: nil)
 
         let encoder = JSONEncoder()
         let decoder = JSONDecoder()
@@ -91,7 +91,7 @@ struct WindowInfoTests {
 
     @Test("Every field survives a round trip with its own value")
     func decodePreservesAllFields() throws {
-        let original = createWindowInfo(
+        let original = try createWindowInfo(
             windowID: 99999,
             ownerPID: 5555,
             bounds: CGRect(x: 100, y: 200, width: 300, height: 400),
@@ -122,73 +122,73 @@ struct WindowInfoTests {
     // MARK: - Equatable Tests
 
     @Test("Two identically built windows are equal")
-    func equalityIdentical() {
-        let window1 = createWindowInfo()
-        let window2 = createWindowInfo()
+    func equalityIdentical() throws {
+        let window1 = try createWindowInfo()
+        let window2 = try createWindowInfo()
 
         #expect(window1 == window2)
     }
 
     @Test("A different window ID breaks equality")
-    func equalityDifferentWindowID() {
-        let window1 = createWindowInfo(windowID: 1)
-        let window2 = createWindowInfo(windowID: 2)
+    func equalityDifferentWindowID() throws {
+        let window1 = try createWindowInfo(windowID: 1)
+        let window2 = try createWindowInfo(windowID: 2)
 
         #expect(window1 != window2)
     }
 
     @Test("A different owner PID breaks equality")
-    func equalityDifferentOwnerPID() {
-        let window1 = createWindowInfo(ownerPID: 100)
-        let window2 = createWindowInfo(ownerPID: 200)
+    func equalityDifferentOwnerPID() throws {
+        let window1 = try createWindowInfo(ownerPID: 100)
+        let window2 = try createWindowInfo(ownerPID: 200)
 
         #expect(window1 != window2)
     }
 
     @Test("Different bounds break equality")
-    func equalityDifferentBounds() {
-        let window1 = createWindowInfo(bounds: CGRect(x: 0, y: 0, width: 100, height: 100))
-        let window2 = createWindowInfo(bounds: CGRect(x: 10, y: 10, width: 100, height: 100))
+    func equalityDifferentBounds() throws {
+        let window1 = try createWindowInfo(bounds: CGRect(x: 0, y: 0, width: 100, height: 100))
+        let window2 = try createWindowInfo(bounds: CGRect(x: 10, y: 10, width: 100, height: 100))
 
         #expect(window1 != window2)
     }
 
     @Test("A different layer breaks equality")
-    func equalityDifferentLayer() {
-        let window1 = createWindowInfo(layer: 10)
-        let window2 = createWindowInfo(layer: 20)
+    func equalityDifferentLayer() throws {
+        let window1 = try createWindowInfo(layer: 10)
+        let window2 = try createWindowInfo(layer: 20)
 
         #expect(window1 != window2)
     }
 
     @Test("A different title breaks equality")
-    func equalityDifferentTitle() {
-        let window1 = createWindowInfo(title: "Title1")
-        let window2 = createWindowInfo(title: "Title2")
+    func equalityDifferentTitle() throws {
+        let window1 = try createWindowInfo(title: "Title1")
+        let window2 = try createWindowInfo(title: "Title2")
 
         #expect(window1 != window2)
     }
 
     @Test("A different owner name breaks equality")
-    func equalityDifferentOwnerName() {
-        let window1 = createWindowInfo(ownerName: "App1")
-        let window2 = createWindowInfo(ownerName: "App2")
+    func equalityDifferentOwnerName() throws {
+        let window1 = try createWindowInfo(ownerName: "App1")
+        let window2 = try createWindowInfo(ownerName: "App2")
 
         #expect(window1 != window2)
     }
 
     @Test("A different on-screen flag breaks equality")
-    func equalityDifferentIsOnScreen() {
-        let window1 = createWindowInfo(isOnScreen: true)
-        let window2 = createWindowInfo(isOnScreen: false)
+    func equalityDifferentIsOnScreen() throws {
+        let window1 = try createWindowInfo(isOnScreen: true)
+        let window2 = try createWindowInfo(isOnScreen: false)
 
         #expect(window1 != window2)
     }
 
     @Test("A nil title is not equal to a present one")
-    func equalityNilVsNonNilTitle() {
-        let window1 = createWindowInfo(title: nil)
-        let window2 = createWindowInfo(title: "SomeTitle")
+    func equalityNilVsNonNilTitle() throws {
+        let window1 = try createWindowInfo(title: nil)
+        let window2 = try createWindowInfo(title: "SomeTitle")
 
         #expect(window1 != window2)
     }
@@ -196,18 +196,18 @@ struct WindowInfoTests {
     // MARK: - Hashable Tests
 
     @Test("Equal windows hash equally")
-    func hashableConsistency() {
-        let window1 = createWindowInfo()
-        let window2 = createWindowInfo()
+    func hashableConsistency() throws {
+        let window1 = try createWindowInfo()
+        let window2 = try createWindowInfo()
 
         #expect(window1.hashValue == window2.hashValue)
     }
 
     @Test("A set deduplicates equal windows")
-    func hashableInSet() {
-        let window1 = createWindowInfo(windowID: 1)
-        let window2 = createWindowInfo(windowID: 2)
-        let window3 = createWindowInfo(windowID: 1) // duplicate of window1
+    func hashableInSet() throws {
+        let window1 = try createWindowInfo(windowID: 1)
+        let window2 = try createWindowInfo(windowID: 2)
+        let window3 = try createWindowInfo(windowID: 1) // duplicate of window1
 
         var set = Set<WindowInfo>()
         set.insert(window1)
@@ -218,8 +218,8 @@ struct WindowInfoTests {
     }
 
     @Test("A window works as a dictionary key")
-    func hashableAsDictionaryKey() {
-        let window = createWindowInfo()
+    func hashableAsDictionaryKey() throws {
+        let window = try createWindowInfo()
         var dict = [WindowInfo: String]()
 
         dict[window] = "test"
@@ -230,54 +230,54 @@ struct WindowInfoTests {
     // MARK: - Computed Property Tests
 
     @Test("Only the Window Server's own windows are window server windows")
-    func isWindowServerWindow() {
-        let windowServerWindow = createWindowInfo(ownerName: "Window Server")
-        let regularWindow = createWindowInfo(ownerName: "SomeApp")
+    func isWindowServerWindow() throws {
+        let windowServerWindow = try createWindowInfo(ownerName: "Window Server")
+        let regularWindow = try createWindowInfo(ownerName: "SomeApp")
 
         #expect(windowServerWindow.isWindowServerWindow)
         #expect(!regularWindow.isWindowServerWindow)
     }
 
     @Test("A nil owner name is not a window server window")
-    func isWindowServerWindowWithNilOwnerName() {
-        let window = createWindowInfo(ownerName: nil)
+    func isWindowServerWindowWithNilOwnerName() throws {
+        let window = try createWindowInfo(ownerName: nil)
 
         #expect(!window.isWindowServerWindow)
     }
 
     @Test("A Window Server window is menu related")
-    func isMenuRelatedForWindowServer() {
-        let window = createWindowInfo(ownerName: "Window Server")
+    func isMenuRelatedForWindowServer() throws {
+        let window = try createWindowInfo(ownerName: "Window Server")
 
         #expect(window.isMenuRelated)
     }
 
     @Test("A main menu level window is menu related")
-    func isMenuRelatedForMainMenuLevel() {
+    func isMenuRelatedForMainMenuLevel() throws {
         // kCGMainMenuWindowLevel is typically 24
-        let window = createWindowInfo(layer: Int(CGWindowLevelForKey(.mainMenuWindow)), ownerName: "SomeApp")
+        let window = try createWindowInfo(layer: Int(CGWindowLevelForKey(.mainMenuWindow)), ownerName: "SomeApp")
 
         #expect(window.isMenuRelated)
     }
 
     @Test("A status level window is menu related")
-    func isMenuRelatedForStatusWindowLevel() {
-        let window = createWindowInfo(layer: Int(CGWindowLevelForKey(.statusWindow)), ownerName: "SomeApp")
+    func isMenuRelatedForStatusWindowLevel() throws {
+        let window = try createWindowInfo(layer: Int(CGWindowLevelForKey(.statusWindow)), ownerName: "SomeApp")
 
         #expect(window.isMenuRelated)
     }
 
     @Test("A pop-up menu level window is menu related")
-    func isMenuRelatedForPopUpMenuLevel() {
-        let window = createWindowInfo(layer: Int(CGWindowLevelForKey(.popUpMenuWindow)), ownerName: "SomeApp")
+    func isMenuRelatedForPopUpMenuLevel() throws {
+        let window = try createWindowInfo(layer: Int(CGWindowLevelForKey(.popUpMenuWindow)), ownerName: "SomeApp")
 
         #expect(window.isMenuRelated)
     }
 
     @Test("A normal level window is not menu related")
-    func isNotMenuRelatedForRegularWindow() {
+    func isNotMenuRelatedForRegularWindow() throws {
         // Normal window level is 0
-        let window = createWindowInfo(layer: 0, ownerName: "SomeApp")
+        let window = try createWindowInfo(layer: 0, ownerName: "SomeApp")
 
         #expect(!window.isMenuRelated)
     }

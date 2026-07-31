@@ -29,9 +29,9 @@ import Testing
 /// is harmless: nothing in the test process subscribes to it.
 ///
 /// The key is written through `Defaults.store`, so every case that performs the
-/// filter runs inside `withScratchDefaults` and the suite is `.serialized`.
-/// The async overload of that helper deliberately takes no process-wide lock,
-/// which is why serialization is not optional here.
+/// filter runs inside `withScratchDefaults`, whose async overload serializes
+/// the store swap process-wide. The suite stays `.serialized` because the
+/// metadata and default-query cases read `nonisolated(unsafe) static var`s.
 ///
 /// Deliberate gap: `ProfileEntityQuery.allProfiles()` hardcodes
 /// `FileManager.default.urls(for: .applicationSupportDirectory, …)` plus
