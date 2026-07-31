@@ -10,6 +10,7 @@ $(SRCROOT)/Shared/Utilities/DiagnosticLogger.swift
 $(SRCROOT)/Shared/Utilities/MarkerPairResolver.swift
 $(SRCROOT)/Shared/Utilities/SharedConstants.swift
 $(SRCROOT)/Shared/Utilities/SharedExtensions.swift
+$(SRCROOT)/Shared/Utilities/SourcePIDNegativeCachePolicy.swift
 $(SRCROOT)/Shared/Utilities/WindowInfo.swift
 $(SRCROOT)/Thaw/Events/EventMonitor.swift
 $(SRCROOT)/Thaw/Events/EventTap.swift
@@ -41,6 +42,7 @@ $(SRCROOT)/Thaw/MenuBar/Appearance/MissionControlDetector.swift
 $(SRCROOT)/Thaw/MenuBar/ControlItem/ControlItem.swift
 $(SRCROOT)/Thaw/MenuBar/ControlItem/ControlItemImage.swift
 $(SRCROOT)/Thaw/MenuBar/ControlItem/ControlItemImageSet.swift
+$(SRCROOT)/Thaw/MenuBar/ControlItem/ControlItemOcclusion.swift
 $(SRCROOT)/Thaw/MenuBar/IceBar/IceBar.swift
 $(SRCROOT)/Thaw/MenuBar/IceBar/IceBarColorManager.swift
 $(SRCROOT)/Thaw/MenuBar/IceBar/IceBarLayout.swift
@@ -58,8 +60,8 @@ $(SRCROOT)/Thaw/MenuBar/MenuBarItems/AXItemActivator.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/ClickReactionVerifier.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/LayoutReconciler.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/LayoutSolver.swift
-$(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItem.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItem+Ordering.swift
+$(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItem.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemFailureLedger.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemImageCache.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemManager.swift
