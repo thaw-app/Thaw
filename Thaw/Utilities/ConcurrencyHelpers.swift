@@ -6,8 +6,42 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import AsyncAlgorithms
 import Foundation
 import os.lock
+
+// MARK: - Debounced Notification Task
+
+/// Starts a `MainActor` task that owns a notification observer feeding a
+/// debounced `AsyncStream`: bursts of notifications posted to `center`
+/// coalesce over `interval`, then `action` runs once per burst.
+///
+/// The observer is registered before this returns — no notification can
+/// slip past during task startup — and is removed by the task's defer
+/// when it ends, so the non-Sendable observer token stays confined to
+/// this MainActor context. Cancel the returned task to stop observing;
+/// a repeated setup must cancel the previous task before starting a new
+/// one, or the old observer keeps yielding into its own stream.
+@MainActor
+func debouncedNotificationTask(
+    center: NotificationCenter,
+    name: Notification.Name,
+    interval: Duration,
+    action: @escaping @MainActor () async -> Void
+) -> Task<Void, Never> {
+    let (events, continuation) = AsyncStream<Void>.makeStream()
+    let observer = center.addObserver(
+        forName: name,
+        object: nil,
+        queue: .main
+    ) { _ in continuation.yield(()) }
+    return Task { @MainActor in
+        defer { center.removeObserver(observer) }
+        for await _ in events.debounce(for: interval) {
+            await action()
+        }
+    }
+}
 
 // MARK: - Task Timeout
 
