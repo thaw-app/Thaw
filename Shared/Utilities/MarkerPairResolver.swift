@@ -61,11 +61,23 @@ nonisolated enum MarkerPairResolver {
     }
 
     /// Pairs unresolved icons with same-size marker windows and
-    /// resolves each icon to a sourcePID via the marker. Multi-match
-    /// cases (two unresolved icons sharing a size with two markers)
-    /// are skipped to prevent misattribution. Thaw and Control Center
-    /// are excluded from the resolution paths so a marker hosted by
-    /// either does not collapse the resolution back to those PIDs.
+    /// resolves each icon to a sourcePID via the marker. The pairing
+    /// must be unique in *both* directions: a width matching more than
+    /// one marker is ambiguous, and so is a width shared by more than
+    /// one unresolved icon. Thaw and Control Center are excluded from
+    /// the resolution paths so a marker hosted by either does not
+    /// collapse the resolution back to those PIDs.
+    ///
+    /// Both halves of that rule are load-bearing. Checking only the
+    /// marker side lets a single marker be claimed by every unresolved
+    /// icon that happens to share its width: a field log (2.0.0-rc.2,
+    /// a bar with 24 items) shows one marker resolving five distinct
+    /// icons to the same PID, which stamped Control Center's own Sound
+    /// and Wi-Fi modules with a third-party bundle identifier. A wrong
+    /// PID is worse than none — it renames the item, so its saved
+    /// position stops matching, and it slips past the unresolved-
+    /// sourcePID gates that keep a degraded snapshot from being acted
+    /// on or persisted.
     ///
     /// - Parameters:
     ///   - unresolvedIcons: candidate on-screen icons. Icons whose own
@@ -93,22 +105,28 @@ nonisolated enum MarkerPairResolver {
         pidToBundleID: (pid_t) -> String?,
         bundleIDToPID: (String) -> pid_t?
     ) -> [Resolution] {
+        // Icons whose own title is bundle-ID-shaped are markers, not
+        // candidates; dropping them up front keeps them out of the
+        // per-width candidate census below as well as out of the
+        // pairing loop.
         let candidates = unresolvedIcons.filter { icon in
             guard let title = icon.title else { return true }
             return !title.contains(".")
         }
 
-        var candidatesPerWidth: [CFGFloat: Int]()
-
+        // How many candidate icons share each width. A marker may be
+        // claimed by exactly one of them; when several compete for the
+        // same width there is no evidence saying which one owns it, so
+        // none resolve.
+        var candidatesPerWidth = [CGFloat: Int]()
         for icon in candidates {
             candidatesPerWidth[icon.size.width, default: 0] += 1
         }
 
         var result = [Resolution]()
         for icon in candidates {
-        guard candidatesPerWidth[icon.size.width] == 1 else { continue }
+            guard candidatesPerWidth[icon.size.width] == 1 else { continue }
 
-        for icon in candidates {
             // Match by width only, not exact size. The on-screen icon
             // and its off-screen marker share width (the widget's
             // intrinsic icon width), but heights differ: the icon
@@ -117,9 +135,10 @@ nonisolated enum MarkerPairResolver {
             // the marker carries a default placeholder height
             // (33pt observed in field logs). Exact size matching
             // rejected legitimate pairs whose widths agreed but whose
-            // heights drifted by 3pt. The uniqueness check on
-            // matching.count == 1 still prevents misattribution when
-            // multiple markers happen to share a width.
+            // heights drifted by 3pt. The two uniqueness checks — one
+            // candidate icon per width above, one marker per width
+            // here — still prevent misattribution when several windows
+            // happen to share a width.
             let matching = markers.filter {
                 $0.windowID != icon.windowID && $0.size.width == icon.size.width
             }
@@ -239,15 +258,17 @@ nonisolated enum HostedItemOwnership {
     /// rejecting same-vendor different-app pairs such as
     /// pl.maketheweb.pixelsnap2 vs pl.maketheweb.cleanshotx and unrelated
     /// neighbors such as com.wireguard.macos vs app.updatest.Updatest.
-    /// Comparison is case-insensitive. Generic titles without a reverse-DNS
-    /// shape (Item-0, empty) never qualify.
+    /// Comparison is case-insensitive.
+    ///
+    /// A title with no reverse-DNS shape at all qualifies only when it is
+    /// exactly the bundle's final component — BetterTouchTool's slot titles
+    /// itself "BetterTouchTool" and belongs to com.hegenberg.BetterTouchTool.
+    /// Vendor components and generic titles (Item-0, empty) never qualify.
     static func titleIndicatesOwner(_ title: String?, bundleID: String) -> Bool {
         guard let title, !title.isEmpty else { return false }
         let titleParts = title.lowercased().split(separator: ".", omittingEmptySubsequences: false)
         let bundleParts = bundleID.lowercased().split(separator: ".", omittingEmptySubsequences: false)
-        // A reverse-DNS-shaped title has at least three components; a bundle
-        // id at least two. Demanding three on the title keeps two-component
-        // or generic titles out.
+        // A bundle id has at least two components.
         guard bundleParts.count >= 2 else { return false }
 
         // A title with no reverse-DNS shape at all still identifies the app when
@@ -256,11 +277,13 @@ nonisolated enum HostedItemOwnership {
         // final component qualifies — a vendor component (apple, maketheweb) names
         // a publisher, not an app, and matching on it would hand every widget that
         // vendor ships to whichever of its apps happened to be checked first.
-        if titleParts.count == 1, let appComponent = bundleParts.last  {
+        if titleParts.count == 1, let appComponent = bundleParts.last {
             return titleParts[0] == appComponent
         }
 
-        // Two component titles are neither shape: too short to be a reverse-DNS title and too long to be a bare app name.
+        // Two-component titles are neither shape: too short to carry a
+        // distinctive component pair, too long to be a bare app name.
+        // A reverse-DNS-shaped title has at least three components.
         guard titleParts.count >= 3 else { return false }
 
         let shared = zip(titleParts, bundleParts).prefix { $0 == $1 }.count
