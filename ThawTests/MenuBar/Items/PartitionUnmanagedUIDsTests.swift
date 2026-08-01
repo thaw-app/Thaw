@@ -46,7 +46,7 @@ struct PartitionUnmanagedUIDsTests {
             hiddenCtrlUID: hidden,
             ahCtrlUID: ah,
             visibleCtrlUID: visible,
-            unresolvedGenericCCUIDs: []
+            provisionalIdentityUIDs: []
         )
 
         #expect(result == [app])
@@ -69,7 +69,7 @@ struct PartitionUnmanagedUIDsTests {
             hiddenCtrlUID: hidden,
             ahCtrlUID: nil,
             visibleCtrlUID: visible,
-            unresolvedGenericCCUIDs: []
+            provisionalIdentityUIDs: []
         )
 
         #expect(result == [unsaved])
@@ -90,19 +90,19 @@ struct PartitionUnmanagedUIDsTests {
             hiddenCtrlUID: nil,
             ahCtrlUID: nil,
             visibleCtrlUID: nil,
-            unresolvedGenericCCUIDs: []
+            provisionalIdentityUIDs: []
         )
 
         #expect(result == [unsaved])
     }
 
-    /// Items passed in unresolvedGenericCCUIDs are excluded even though they
+    /// Items passed in provisionalIdentityUIDs are excluded even though they
     /// are absent from desiredUIDs and are not control items. This is the
     /// Little Snitch orphan case: a Control-Center-hosted widget with no
     /// resolved source PID must not be treated as an unmanaged arrival and
     /// relocated.
-    @Test("Unresolved generic Control Center UIDs are excluded")
-    func unresolvedGenericCCUIDsAreExcluded() {
+    @Test("Provisional-identity UIDs are excluded")
+    func provisionalIdentityUIDsAreExcluded() {
         let orphan = "com.apple.controlcenter:Item-0"
         let app = "com.example.app:Item-0"
 
@@ -112,7 +112,7 @@ struct PartitionUnmanagedUIDsTests {
             hiddenCtrlUID: nil,
             ahCtrlUID: nil,
             visibleCtrlUID: nil,
-            unresolvedGenericCCUIDs: [orphan]
+            provisionalIdentityUIDs: [orphan]
         )
 
         #expect(result == [app])
@@ -134,7 +134,7 @@ struct PartitionUnmanagedUIDsTests {
             hiddenCtrlUID: nil,
             ahCtrlUID: nil,
             visibleCtrlUID: nil,
-            unresolvedGenericCCUIDs: []
+            provisionalIdentityUIDs: []
         )
 
         #expect(result == [c, a, b])
@@ -150,7 +150,7 @@ struct PartitionUnmanagedUIDsTests {
             hiddenCtrlUID: "h",
             ahCtrlUID: "ah",
             visibleCtrlUID: "v",
-            unresolvedGenericCCUIDs: []
+            provisionalIdentityUIDs: []
         )
 
         #expect(result.isEmpty)
