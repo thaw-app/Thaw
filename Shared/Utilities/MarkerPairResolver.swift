@@ -154,6 +154,7 @@ nonisolated enum MarkerPairResolver {
                 }
                 if let pid = bundleIDToPID(marker.title),
                    let bundleID = pidToBundleID(pid),
+                   bundleID != ccBundleID,
                    bundleID != thawBundleID
                 {
                     return pid

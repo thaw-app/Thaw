@@ -202,6 +202,26 @@ struct MarkerPairResolverTests {
         #expect(result == [])
     }
 
+    /// A marker titled with Control Center's own bundle identifier must not
+    /// resolve an icon to Control Center. The owning-PID path already rejects
+    /// it; the title-lookup path must too, or the icon gets a *resolved* CC
+    /// PID, reads as a transient CC widget (canBeHidden false), and drops out
+    /// of profile management — past every unresolved-sourcePID gate.
+    @Test("A Control-Center-titled marker resolves nothing")
+    func controlCenterTitledMarkerResolvesNothing() {
+        let icons = [icon(windowID: 1, title: "Item-0")]
+        let markers = [marker(windowID: 2, title: "com.apple.controlcenter", owningPID: 1117)]
+        let result = MarkerPairResolver.resolve(
+            unresolvedIcons: icons,
+            markers: markers,
+            thawBundleID: thawBundleID,
+            ccBundleID: ccBundleID,
+            pidToBundleID: { _ in self.ccBundleID },
+            bundleIDToPID: { $0 == self.ccBundleID ? 1117 : nil }
+        )
+        #expect(result == [])
+    }
+
     /// Two unresolved icons share the same size and there are two
     /// markers of that size: the ambiguity is unresolvable, so no
     /// pairings emit. Prevents the cross-attribution where an icon
