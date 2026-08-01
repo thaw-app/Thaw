@@ -562,4 +562,23 @@ struct HostedItemOwnershipTests {
         #expect(!HostedItemOwnership.titleIndicatesOwner(nil, bundleID: "codes.rambo.AirBuddyHelper"))
         #expect(!HostedItemOwnership.titleIndicatesOwner("", bundleID: "codes.rambo.AirBuddyHelper"))
     }
+
+    @Test("A bare app-name title matches its bundle's last component")
+    func bareAppNameMatchesLastComponent() {
+        // windowID 3511 in the rc2 log: title "BetterTouchTool", AX child 15pt
+        // // away in com.hegenberg.BetterTouchTool, refused for lack of shape.
+        #expect(HostedItemOwnership.titleIndicatesOwner("BetterTouchTool", bundleID: "com.hegenberg.BetterTouchTool"))
+        }
+
+    @Test("A bare vendor component never matches")
+    func bareVendorComponentNeverMatches() {
+            #expect(!HostedItemOwnership.titleIndicatesOwner("hegenberg", bundleID: "com.hegenberg.BetterTouchTool"))
+    }
+
+    @Test("A bare title must equal the app component exactly")
+    func bareTitleMustEqualAppComponentExactly() {
+        // Substring agreement is not enough — "Clock" is a Control Center module.
+        #expect(!HostedItemOwnership.titleIndicatesOwner("Clock", bundleID: "com.fabriceleyne.theclock"))
+        #expect(!HostedItemOwnership.titleIndicatesOwner("Sound", bundleID: "com.rogueamoeba.soundsource"))
+    }
 }

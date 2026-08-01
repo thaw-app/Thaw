@@ -106,7 +106,7 @@ nonisolated enum MarkerPairResolver {
 
         var result = [Resolution]()
         for icon in candidates {
-            guard candidatesPerWidth[icon.size.width] == 1 else { continue }
+        guard candidatesPerWidth[icon.size.width] == 1 else { continue }
 
         for icon in candidates {
             // Match by width only, not exact size. The on-screen icon
@@ -248,7 +248,21 @@ nonisolated enum HostedItemOwnership {
         // A reverse-DNS-shaped title has at least three components; a bundle
         // id at least two. Demanding three on the title keeps two-component
         // or generic titles out.
-        guard titleParts.count >= 3, bundleParts.count >= 2 else { return false }
+        guard bundleParts.count >= 2 else { return false }
+
+        // A title with no reverse-DNS shape at all still identifies the app when
+        // it *is* the app's name: BetterTouchTool's slot titles itself
+        // "BetterTouchTool" and belongs to com.hegenberg.BetterTouchTool. Only the
+        // final component qualifies — a vendor component (apple, maketheweb) names
+        // a publisher, not an app, and matching on it would hand every widget that
+        // vendor ships to whichever of its apps happened to be checked first.
+        if titleParts.count == 1, let appComponent = bundleParts.last  {
+            return titleParts[0] == appComponent
+        }
+
+        // Two component titles are neither shape: too short to be a reverse-DNS title and too long to be a bare app name.
+        guard titleParts.count >= 3 else { return false }
+
         let shared = zip(titleParts, bundleParts).prefix { $0 == $1 }.count
         // Require agreement on at least the vendor plus one component so a
         // bare vendor prefix (com.apple, pl.maketheweb) is never enough.
