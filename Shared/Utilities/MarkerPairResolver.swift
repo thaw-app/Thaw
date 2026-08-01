@@ -93,12 +93,22 @@ nonisolated enum MarkerPairResolver {
         pidToBundleID: (pid_t) -> String?,
         bundleIDToPID: (String) -> pid_t?
     ) -> [Resolution] {
-        var result = [Resolution]()
-        for icon in unresolvedIcons {
-            if let title = icon.title, title.contains(".") {
-                continue
-            }
+        let candidates = unresolvedIcons.filter { icon in
+            guard let title = icon.title else { return true }
+            return !title.contains(".")
+        }
 
+        var candidatesPerWidth: [CFGFloat: Int]()
+
+        for icon in candidates {
+            candidatesPerWidth[icon.size.width, default: 0] += 1
+        }
+
+        var result = [Resolution]()
+        for icon in candidates {
+            guard candidatesPerWidth[icon.size.width] == 1 else { continue }
+
+        for icon in candidates {
             // Match by width only, not exact size. The on-screen icon
             // and its off-screen marker share width (the widget's
             // intrinsic icon width), but heights differ: the icon

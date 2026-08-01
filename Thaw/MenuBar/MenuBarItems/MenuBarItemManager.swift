@@ -797,7 +797,7 @@ final class MenuBarItemManager {
                 // ambiguous CC identifiers by an XPC resolution failure
                 // (#784) — neither is a stable identity worth persisting.
                 guard !item.isTransientControlCenterItem,
-                      !(item.tag.isControlCenterGenericItem && item.sourcePID == nil)
+                      !item.hasProvisionalIdentity
                 else { continue }
                 allCurrentIdentifiers.insert(item.uniqueIdentifier)
             }
@@ -810,7 +810,7 @@ final class MenuBarItemManager {
                 .filter {
                     isPersistable($0) &&
                         !$0.isTransientControlCenterItem &&
-                        !($0.tag.isControlCenterGenericItem && $0.sourcePID == nil) &&
+                        !$0.hasProvisionalIdentity &&
                         !pendingRehideTagIDs.contains($0.tag.tagIdentifier) &&
                         !ejectedStillInHidden.contains($0.uniqueIdentifier)
                 }
@@ -7354,18 +7354,14 @@ extension MenuBarItemManager {
         // marker window appears). They fall back to the com.apple.controlcenter
         // namespace, never match a profile entry, and so would be relocated as
         // unmanaged arrivals on every cycle. Exclude them until they resolve.
-        let unresolvedGenericCCUIDs = Set(
-            items
-                .filter { $0.tag.isControlCenterGenericItem && $0.sourcePID == nil }
-                .map(\.uniqueIdentifier)
-        )
+        let provisionalIdentityUIDs = LayoutSolver.provisionalIdentityUIDs(items: items)
         let unmanagedUIDs = LayoutSolver.partitionUnmanagedUIDs(
             currentFlat: currentFlat,
             desiredUIDs: desiredSet,
             hiddenCtrlUID: hiddenCtrlUID,
             ahCtrlUID: ahCtrlUID,
             visibleCtrlUID: visibleCtrlUID,
-            unresolvedGenericCCUIDs: unresolvedGenericCCUIDs
+            provisionalIdentityUIDs: provisionalIdentityUIDs
         )
         if !unmanagedUIDs.isEmpty {
             // Build a DesiredLayout for the profile-apply context: the

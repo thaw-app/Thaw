@@ -235,6 +235,33 @@ struct MarkerPairResolverTests {
         #expect(result == [])
     }
 
+    /// One marker cannot be claimed by several same-size icons: the
+    /// first icon to claim the marker wins, the others are rejected.
+    @Test("One marker cannot be claimed by several same-width icons")
+    func oneMarkerCannotBeClaimedBySeveralIcons() {
+        let size = CGSize(width: 38, height: 30)
+        let icons = [
+            icon(windowID: 34, title: "Sound", size: size),
+            icon(windowID: 90, title: "WiFi", size: size),
+            icon(windowID: 243, title: "Item-0", size: size),
+        ]
+        let markers = [marker(
+            windowID: 3059,
+            title: "com.sindresorhus.Pure-Paste",
+            size: CGSize(width: 38, height: 33),
+            owningPID: 1117 // Control Center
+        )]
+        let result = MarkerPairResolver.resolve(
+            unresolvedIcons: icons,
+            markers: markers,
+            thawBundleID: thawBundleID,
+            ccBundleID: ccBundleID,
+            pidToBundleID: { pid in pid == 1117 ? self.ccBundleID : "com.sindresorhus.Pure-Paste" },
+            bundleIDToPID: { $0 == "com.sindresorhus.Pure-Paste" ? 1877 : nil }
+        )
+        #expect(result == [])
+    }
+
     /// Icon whose own title is bundle-ID-shaped is not a candidate:
     /// it's a marker, not an icon. This prevents two markers from
     /// pairing with each other. The generic-titled icon resolves

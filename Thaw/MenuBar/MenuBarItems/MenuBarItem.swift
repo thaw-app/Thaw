@@ -53,6 +53,16 @@ nonisolated struct MenuBarItem: CustomStringConvertible {
         tag.isControlCenterGenericItem && sourcePID != nil
     }
 
+    /// A Boolean value that indicates whether this item's identifier is only
+    /// provisional: its source PID never resolved, so the namespace fell back
+    /// to the owner of the window — Control Center, which on macOS 26 owns the
+    /// window of every hosted status item. The same item is named after its
+    /// real app on the next cycle that resolves it, so nothing keyed by the
+    /// identifier (a saved position, a section assignment) can be trusted.
+    var hasProvisionalIdentity: Bool {
+        sourcePID == nil && tag.namespace == .controlCenter
+    }
+
     /// A Boolean value that indicates whether this item is one of Ice's
     /// control items.
     var isControlItem: Bool {

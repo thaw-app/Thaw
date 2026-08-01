@@ -230,15 +230,19 @@ nonisolated enum LayoutSolver {
         hiddenCtrlUID: String?,
         ahCtrlUID: String?,
         visibleCtrlUID: String?,
-        unresolvedGenericCCUIDs: Set<String>
+        provisionalIdentityUIDs: Set<String>
     ) -> [String] {
         currentFlat.filter { uid in
             !desiredUIDs.contains(uid)
                 && uid != hiddenCtrlUID
                 && uid != ahCtrlUID
                 && uid != visibleCtrlUID
-                && !unresolvedGenericCCUIDs.contains(uid)
+                && !provisionalIdentityUIDs.contains(uid)
         }
+    }
+
+    static nonisolated func provisionalIdentityUIDs(items: [MenuBarItem]) -> Set<String> {
+        Set(items.filter(\.hasProvisionalIdentity).map(\.uniqueIdentifier))
     }
 
     // MARK: - Leftmost relocation
