@@ -1,0 +1,74 @@
+name: Attest build provenance
+
+# Reusable provenance signing for SLSA Build L3 isolation.
+# Called with subject digests only — no Apple/Sparkle secrets, no `release`
+# Environment. Keeps signing away from the macOS build trust boundary.
+#
+# See: https://github.blog/enterprise-software/devsecops/enhance-build-security-and-reach-slsa-level-3-with-github-artifact-attestations/
+
+on:
+  workflow_call:
+    inputs:
+      subject-name:
+        description: Artifact basename as it should appear in the attestation
+        required: true
+        type: string
+      subject-digest:
+        description: Digest in the form sha256:<hex>
+        required: true
+        type: string
+    outputs:
+      artifact-name:
+        description: Workflow artifact name containing the attestation bundle
+        value: ${{ jobs.attest.outputs.artifact-name }}
+
+permissions:
+  contents: read
+
+jobs:
+  attest:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      attestations: write
+      contents: read
+    outputs:
+      artifact-name: ${{ steps.meta.outputs.artifact-name }}
+    steps:
+      - name: Sanitize artifact name
+        id: meta
+        env:
+          SUBJECT_NAME: ${{ inputs.subject-name }}
+        run: |
+          set -euo pipefail
+          # Artifact names must be filesystem-safe; keep basename only.
+          safe="$(basename "$SUBJECT_NAME" | tr -c 'A-Za-z0-9._-' '_')"
+          echo "artifact-name=provenance-${safe}" >> "$GITHUB_OUTPUT"
+          echo "bundle-name=${safe}.intoto.jsonl" >> "$GITHUB_OUTPUT"
+
+      - name: Attest subject
+        id: attest
+        uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1
+        with:
+          subject-name: ${{ inputs.subject-name }}
+          subject-digest: ${{ inputs.subject-digest }}
+
+      - name: Stage attestation bundle
+        env:
+          BUNDLE_PATH: ${{ steps.attest.outputs.bundle-path }}
+          BUNDLE_NAME: ${{ steps.meta.outputs.bundle-name }}
+        run: |
+          set -euo pipefail
+          test -n "$BUNDLE_PATH"
+          test -f "$BUNDLE_PATH"
+          mkdir -p "$RUNNER_TEMP/provenance"
+          cp "$BUNDLE_PATH" "$RUNNER_TEMP/provenance/${BUNDLE_NAME}"
+          ls -la "$RUNNER_TEMP/provenance/${BUNDLE_NAME}"
+
+      - name: Upload attestation bundle
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.meta.outputs.artifact-name }}
+          path: ${{ runner.temp }}/provenance/${{ steps.meta.outputs.bundle-name }}
+          if-no-files-found: error
+          retention-days: 7

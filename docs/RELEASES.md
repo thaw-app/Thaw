@@ -8,7 +8,7 @@ How Thaw ships installers vs in-app updates.
 | --- | --- | --- |
 | **Appcast** (`appcast.xml`) | [`thaw-app/updates`](https://github.com/thaw-app/updates) GitHub Pages | `https://thaw-app.github.io/updates/appcast.xml` |
 | **Update payloads** (Sparkle ZIP + deltas, all channels) | `thaw-app/updates` GitHub Releases | `https://github.com/thaw-app/updates/releases/download/<tag>/…` |
-| **DMG** (human installer) + **SBOM** + Sigstore bundles | [`thaw-app/Thaw`](https://github.com/thaw-app/Thaw) GitHub Releases only | `https://github.com/thaw-app/Thaw/releases/…` |
+| **DMG** (human installer) + **SBOM** + Sigstore bundles + SLSA provenance | [`thaw-app/Thaw`](https://github.com/thaw-app/Thaw) GitHub Releases only | `https://github.com/thaw-app/Thaw/releases/…` |
 
 The app polls the appcast (`SUFeedURL` in `Thaw/Resources/Info.plist`). Sparkle
 never downloads the DMG for in-app updates.
@@ -28,7 +28,7 @@ flowchart LR
   end
 
   subgraph thawRepo["thaw-app/Thaw"]
-    ThawRel["GitHub Releases<br/>DMG + SBOM"]
+    ThawRel["GitHub Releases<br/>DMG + SBOM + provenance"]
     CI["Release workflow"]
   end
 
@@ -39,7 +39,7 @@ flowchart LR
   Human --> ThawRel
 
   CI -->|"publish ZIP/deltas + appcast"| updatesRepo
-  CI -->|"publish DMG + SBOM"| ThawRel
+  CI -->|"publish DMG + SBOM + provenance"| ThawRel
 ```
 
 ## In-app update path
@@ -66,7 +66,11 @@ payloads.
 4. Publish ZIP + deltas to **`thaw-app/updates`** (same tag).
 5. Cosign-sign the installer DMG and SBOM; publish DMG + SBOM + `*.sigstore.json`
    + `*.sha256` to **`thaw-app/Thaw`**.
-6. Push signed `appcast.xml` to **`thaw-app/updates`** `gh-pages`.
+6. Sign SLSA build provenance for the DMG and SBOM in the reusable
+   [`attest-build-provenance.yml`](../.github/workflows/attest-build-provenance.yml)
+   workflow (isolated from the macOS build job); attach `*.intoto.jsonl` to the
+   same Thaw release.
+7. Push signed `appcast.xml` to **`thaw-app/updates`** `gh-pages`.
 
 Workflow: [`.github/workflows/release.yml`](../.github/workflows/release.yml).  
 Shared Sparkle action: [`thaw-app/org-ci` `sparkle-release`](https://github.com/thaw-app/org-ci/tree/main/actions/sparkle-release).
@@ -77,13 +81,14 @@ Required secret on Thaw: `UPDATES_GITHUB_TOKEN` (`contents: write` on
 ## Dry runs
 
 Check **Dry run** when dispatching the workflow to build and report without
-publishing anything. Steps 1–3 run normally; steps 4–6 are skipped, so no
-GitHub Release is created (not even a draft), nothing is cosign-signed, and no
-appcast is pushed to either `thaw-app/updates` or the legacy mirror.
+publishing anything. Steps 1–3 run normally; steps 4–7 are skipped, so no
+GitHub Release is created (not even a draft), nothing is cosign-signed or
+attested, and no appcast is pushed to either `thaw-app/updates` or the legacy
+mirror.
 
-Signing is skipped deliberately: cosign keyless signing writes a permanent,
-public entry to the Sigstore transparency log that cannot be retracted, so a
-rehearsal must not produce one.
+Signing and attestation are skipped deliberately: cosign keyless signing and
+GitHub Artifact Attestations write permanent, public Sigstore / attestation
+records that cannot be retracted, so a rehearsal must not produce them.
 
 The run's job summary then reports:
 

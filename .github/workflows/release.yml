@@ -5,9 +5,12 @@ name: Release
 # release history or pointing tags at old commits without distributing.
 #
 # Artifact split:
-#   - thaw-app/Thaw releases: DMG, cosign bundles, CycloneDX SBOM
+#   - thaw-app/Thaw releases: DMG, cosign bundles, CycloneDX SBOM, SLSA provenance
 #   - thaw-app/updates releases + Pages: Sparkle ZIP, deltas, appcast.xml
 #   - stonerl/Thaw main: mirrored appcast.xml for legacy SUFeedURL installs
+#
+# SLSA Build L3: provenance is signed in attest-build-provenance.yml (reusable),
+# not in this job, so signing stays isolated from the macOS build trust boundary.
 
 on:
   workflow_dispatch:
@@ -60,6 +63,12 @@ jobs:
     permissions:
       contents: write
       id-token: write
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+      dmg-name: ${{ steps.sbom-meta.outputs.dmg-name }}
+      dmg-digest: ${{ steps.sbom-meta.outputs.dmg-digest }}
+      sbom-name: ${{ steps.sbom-meta.outputs.name }}
+      sbom-digest: ${{ steps.sbom-meta.outputs.sbom-digest }}
     env:
       APP_NAME: "Thaw.app"
       DMG_NAME: "Thaw.dmg"
@@ -205,8 +214,16 @@ jobs:
             shasum -a 256 "$DMG_NAME" | tee "${DMG_NAME}.sha256"
           )
 
-          echo "path=${sbom_path}" >> "$GITHUB_OUTPUT"
-          echo "name=${sbom_name}" >> "$GITHUB_OUTPUT"
+          sbom_hex="$(awk '{print $1}' "build/${sbom_name}.sha256")"
+          dmg_hex="$(awk '{print $1}' "build/${DMG_NAME}.sha256")"
+
+          {
+            echo "path=${sbom_path}"
+            echo "name=${sbom_name}"
+            echo "dmg-name=${DMG_NAME}"
+            echo "sbom-digest=sha256:${sbom_hex}"
+            echo "dmg-digest=sha256:${dmg_hex}"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Sparkle ZIP and appcast
         id: sparkle
@@ -435,8 +452,8 @@ jobs:
 
           s "# Dry run — nothing was published"
           s ""
-          s "No GitHub Release was created, no blob was signed, and no appcast was"
-          s "pushed. Re-run with **Dry run** unchecked to publish."
+          s "No GitHub Release was created, no blob was signed or attested, and no"
+          s "appcast was pushed. Re-run with **Dry run** unchecked to publish."
           s ""
           s "| Setting | Value |"
           s "| --- | --- |"
@@ -458,6 +475,8 @@ jobs:
           done
           s "| \`${DMG_NAME}.sigstore.json\` | — | _skipped: signing is disabled on dry runs_ |"
           s "| \`${SBOM_NAME}.sigstore.json\` | — | _skipped: signing is disabled on dry runs_ |"
+          s "| \`${DMG_NAME}.intoto.jsonl\` | — | _skipped: provenance is disabled on dry runs_ |"
+          s "| \`${SBOM_NAME}.intoto.jsonl\` | — | _skipped: provenance is disabled on dry runs_ |"
 
           s ""
           s "## Would upload to \`${UPDATES_REPO}\` (release \`${TAG}\`)"
@@ -545,3 +564,65 @@ jobs:
       - name: Cleanup keychain
         if: always()
         run: security delete-keychain "$RUNNER_TEMP/buildagent.keychain" || true
+
+  # Provenance signing is isolated in a reusable workflow (SLSA Build L3).
+  # Skipped on dry run: attestations are permanent Sigstore / GitHub records.
+  attest-dmg:
+    needs: release
+    if: ${{ !inputs.dry_run }}
+    permissions:
+      id-token: write
+      attestations: write
+      contents: read
+    uses: ./.github/workflows/attest-build-provenance.yml
+    with:
+      subject-name: ${{ needs.release.outputs.dmg-name }}
+      subject-digest: ${{ needs.release.outputs.dmg-digest }}
+
+  attest-sbom:
+    needs: release
+    if: ${{ !inputs.dry_run }}
+    permissions:
+      id-token: write
+      attestations: write
+      contents: read
+    uses: ./.github/workflows/attest-build-provenance.yml
+    with:
+      subject-name: ${{ needs.release.outputs.sbom-name }}
+      subject-digest: ${{ needs.release.outputs.sbom-digest }}
+
+  attach-provenance:
+    needs: [release, attest-dmg, attest-sbom]
+    if: ${{ !inputs.dry_run }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download DMG provenance
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ needs.attest-dmg.outputs.artifact-name }}
+          path: provenance
+
+      - name: Download SBOM provenance
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ needs.attest-sbom.outputs.artifact-name }}
+          path: provenance
+
+      - name: Upload provenance to GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.release.outputs.tag }}
+          DMG_NAME: ${{ needs.release.outputs.dmg-name }}
+          SBOM_NAME: ${{ needs.release.outputs.sbom-name }}
+        run: |
+          set -euo pipefail
+          dmg_bundle="provenance/${DMG_NAME}.intoto.jsonl"
+          sbom_bundle="provenance/${SBOM_NAME}.intoto.jsonl"
+          test -f "$dmg_bundle"
+          test -f "$sbom_bundle"
+          ls -la provenance/
+          gh release upload "$TAG" "$dmg_bundle" "$sbom_bundle" --clobber
+          echo "Attached provenance to release ${TAG}"
+
