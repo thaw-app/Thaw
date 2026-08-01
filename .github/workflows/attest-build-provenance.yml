@@ -1,10 +1,16 @@
 name: Attest build provenance
 
-# Reusable provenance signing for SLSA Build L3 isolation.
+# Reusable provenance signing, isolated from the macOS build job.
 # Called with subject digests only — no Apple/Sparkle secrets, no `release`
-# Environment. Keeps signing away from the macOS build trust boundary.
+# Environment — so verification can be pinned to this workflow's signing
+# identity with `gh attestation verify --signer-workflow`.
 #
-# See: https://github.blog/enterprise-software/devsecops/enhance-build-security-and-reach-slsa-level-3-with-github-artifact-attestations/
+# This is SLSA v1.0 Build L2. Build L3 additionally requires the *build itself*
+# to run in the trusted reusable workflow, so the caller cannot influence what
+# gets attested; here the caller supplies the digest. Moving the macOS build
+# into thaw-app/org-ci is the prerequisite for claiming L3.
+#
+# See: https://docs.github.com/actions/security-guides/using-artifact-attestations-and-reusable-workflows-to-achieve-slsa-v1-build-level-3
 
 on:
   workflow_call:
@@ -21,6 +27,9 @@ on:
       artifact-name:
         description: Workflow artifact name containing the attestation bundle
         value: ${{ jobs.attest.outputs.artifact-name }}
+      bundle-name:
+        description: File name of the attestation bundle inside that artifact
+        value: ${{ jobs.attest.outputs.bundle-name }}
 
 permissions:
   contents: read
@@ -34,6 +43,7 @@ jobs:
       contents: read
     outputs:
       artifact-name: ${{ steps.meta.outputs.artifact-name }}
+      bundle-name: ${{ steps.meta.outputs.bundle-name }}
     steps:
       - name: Sanitize artifact name
         id: meta
@@ -42,9 +52,16 @@ jobs:
         run: |
           set -euo pipefail
           # Artifact names must be filesystem-safe; keep basename only.
-          safe="$(basename "$SUBJECT_NAME" | tr -c 'A-Za-z0-9._-' '_')"
-          echo "artifact-name=provenance-${safe}" >> "$GITHUB_OUTPUT"
-          echo "bundle-name=${safe}.intoto.jsonl" >> "$GITHUB_OUTPUT"
+          # Parameter expansion, not `basename | tr`: tr would rewrite the
+          # trailing newline basename emits into a stray character, producing
+          # `Thaw.dmg_` and a bundle the release job cannot find.
+          safe="${SUBJECT_NAME##*/}"
+          safe="${safe//[^A-Za-z0-9._-]/_}"
+          test -n "$safe"
+          {
+            echo "artifact-name=provenance-${safe}"
+            echo "bundle-name=${safe}.intoto.jsonl"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Attest subject
         id: attest

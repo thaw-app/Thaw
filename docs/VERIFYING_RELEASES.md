@@ -11,7 +11,7 @@ them.
 | **Apple Developer ID + notarization** | Binary came from the Thaw developer team and passed Apple’s notarization checks | Release GitHub Actions (signing + `notarytool`) |
 | **Sparkle EdDSA** | Downloaded **update archives** (e.g. release ZIPs) match signatures produced with the project’s Sparkle private key; the app verifies them with `SUPublicEDKey` | Sparkle tools in the release pipeline sign update packages; public key embedded in the app (`Info.plist`). The appcast lists those updates over HTTPS; **feed-level** signing (`SURequireSignedFeed`) is not enabled |
 | **Sigstore (cosign)** | GitHub Release **DMG** (and **SBOM**) blobs match a keyless cosign signature bundle uploaded beside the asset | Release workflow runs `cosign sign-blob` and attaches `*.sigstore.json` |
-| **SLSA build provenance** | Subject was built by this repository’s release pipeline on GitHub-hosted runners; provenance is signed in an isolated reusable workflow (target **SLSA Build L3**) | `attest-build-provenance.yml` via `actions/attest`; stored in the GitHub Attestation Store and attached as `*.intoto.jsonl` |
+| **SLSA build provenance** | Subject was produced by this repository’s release pipeline; provenance is signed in a dedicated reusable workflow, so verification can be pinned to that signing identity (**SLSA v1.0 Build L2**) | `attest-build-provenance.yml` via `actions/attest`; stored in the GitHub Attestation Store and attached as `*.intoto.jsonl` |
 | **CycloneDX SBOM** | Machine-readable inventory of the SwiftPM dependencies linked into the shipped app | Syft (pinned by version and archive digest) over the tagged source tree in the release workflow; uploaded as `Thaw_<tag>.cdx.json` |
 | **Git tag signatures** | Important version tags are GPG-signed by the releaser | `git tag -s` (or equivalent) on release tags |
 
@@ -87,10 +87,15 @@ cosign verify-blob \
 Releases that went through the current release workflow also publish **GitHub
 Artifact Attestations** for the installer DMG and SBOM. Provenance is generated
 in [`.github/workflows/attest-build-provenance.yml`](../.github/workflows/attest-build-provenance.yml)
-(a reusable workflow called from the release job) so signing stays isolated from
-the macOS build and Apple/Sparkle credential boundary. That layout targets
-**SLSA Build L3** on GitHub-hosted runners (`xcode-27` for the build; Ubuntu for
-attestation).
+(a reusable workflow called from the release job) so the signing identity is
+separate from the macOS build and its Apple/Sparkle credential boundary. That
+gives **SLSA v1.0 Build L2** plus a signer you can pin.
+
+It is not Build L3. L3 additionally requires the *build itself* to run inside the
+trusted reusable workflow, so that the caller cannot influence what gets
+attested. Here the macOS release job builds the DMG and passes the digest to the
+signer. Moving the build into [`thaw-app/org-ci`](https://github.com/thaw-app/org-ci)
+is the prerequisite for that claim.
 
 The same attestation bundle is attached to the GitHub Release as
 `Thaw.dmg.intoto.jsonl` / `Thaw_<tag>.cdx.json.intoto.jsonl` (for offline copy
@@ -107,10 +112,10 @@ gh attestation verify Thaw_2.0.0.cdx.json --repo thaw-app/Thaw \
   --signer-workflow thaw-app/Thaw/.github/workflows/attest-build-provenance.yml
 ```
 
-`--signer-workflow` pins verification to the reusable provenance workflow (the
-actual signer for L3 isolation). Cosign `*.sigstore.json` bundles prove **blob
-integrity** from the release job; attestations prove **build provenance**. Check
-both for a full release review.
+`--signer-workflow` pins verification to the reusable provenance workflow — the
+identity that actually signed, rather than any workflow in the repository.
+Cosign `*.sigstore.json` bundles prove **blob integrity** from the release job;
+attestations prove **build provenance**. Check both for a full release review.
 
 ## Check the release SBOM
 

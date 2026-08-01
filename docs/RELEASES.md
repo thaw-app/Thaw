@@ -64,13 +64,20 @@ payloads.
    (`Thaw_<tag>.cdx.json`), and checksum the DMG.
 3. Create Sparkle ZIP (and deltas when prior ZIPs exist).
 4. Publish ZIP + deltas to **`thaw-app/updates`** (same tag).
-5. Cosign-sign the installer DMG and SBOM; publish DMG + SBOM + `*.sigstore.json`
-   + `*.sha256` to **`thaw-app/Thaw`**.
-6. Sign SLSA build provenance for the DMG and SBOM in the reusable
+5. Cosign-sign the installer DMG and SBOM; create the **`thaw-app/Thaw`** release
+   **as a draft** with DMG + SBOM + `*.sigstore.json` + `*.sha256`.
+6. Push signed `appcast.xml` to **`thaw-app/updates`** `gh-pages`.
+7. Sign build provenance for the DMG and SBOM in the reusable
    [`attest-build-provenance.yml`](../.github/workflows/attest-build-provenance.yml)
-   workflow (isolated from the macOS build job); attach `*.intoto.jsonl` to the
-   same Thaw release.
-7. Push signed `appcast.xml` to **`thaw-app/updates`** `gh-pages`.
+   workflow (a signing identity separate from the macOS build job); attach
+   `*.intoto.jsonl` to the draft, then publish it when **Publish release** is
+   checked.
+
+The release is drafted in step 5 and published in step 7 so that a failed
+attestation leaves an unpublished draft rather than a public release with no
+provenance. The appcast in step 6 goes out first, so an appcast entry's release
+link can 404 for the minute or two the attestation jobs take; in-app updates are
+unaffected, since Sparkle downloads from `thaw-app/updates`.
 
 Workflow: [`.github/workflows/release.yml`](../.github/workflows/release.yml).  
 Shared Sparkle action: [`thaw-app/org-ci` `sparkle-release`](https://github.com/thaw-app/org-ci/tree/main/actions/sparkle-release).

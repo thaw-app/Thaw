@@ -9,8 +9,15 @@ name: Release
 #   - thaw-app/updates releases + Pages: Sparkle ZIP, deltas, appcast.xml
 #   - stonerl/Thaw main: mirrored appcast.xml for legacy SUFeedURL installs
 #
-# SLSA Build L3: provenance is signed in attest-build-provenance.yml (reusable),
-# not in this job, so signing stays isolated from the macOS build trust boundary.
+# Build provenance is signed in attest-build-provenance.yml (reusable), not in
+# this job, so the signing identity is separate from the macOS build trust
+# boundary and verifiers can pin it with `--signer-workflow`. That is SLSA v1.0
+# Build L2; see the header of that workflow for what L3 would additionally
+# require.
+#
+# The Thaw release is always created as a draft and only published by
+# attach-provenance, so a provenance failure cannot leave a public release
+# without its attestation bundles.
 
 on:
   workflow_dispatch:
@@ -310,8 +317,10 @@ jobs:
             ${{ steps.sbom-meta.outputs.path }}.sigstore.json
             ${{ steps.sbom-meta.outputs.path }}.sha256
           generate_release_notes: false
-          # Draft unless publish_release is checked.
-          draft: ${{ !inputs.publish_release }}
+          # Always a draft here. attach-provenance flips it to published once the
+          # attestation bundles are attached (and only when publish_release is
+          # checked), so a failed attestation cannot ship an unattested release.
+          draft: true
           prerelease: ${{ steps.meta.outputs.prerelease == 'true' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -565,7 +574,7 @@ jobs:
         if: always()
         run: security delete-keychain "$RUNNER_TEMP/buildagent.keychain" || true
 
-  # Provenance signing is isolated in a reusable workflow (SLSA Build L3).
+  # Provenance signing runs in a reusable workflow with its own signing identity.
   # Skipped on dry run: attestations are permanent Sigstore / GitHub records.
   attest-dmg:
     needs: release
@@ -610,19 +619,33 @@ jobs:
           name: ${{ needs.attest-sbom.outputs.artifact-name }}
           path: provenance
 
+      # No checkout here, so gh cannot infer the repository from a git remote.
       - name: Upload provenance to GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
           TAG: ${{ needs.release.outputs.tag }}
-          DMG_NAME: ${{ needs.release.outputs.dmg-name }}
-          SBOM_NAME: ${{ needs.release.outputs.sbom-name }}
+          DMG_BUNDLE: ${{ needs.attest-dmg.outputs.bundle-name }}
+          SBOM_BUNDLE: ${{ needs.attest-sbom.outputs.bundle-name }}
         run: |
           set -euo pipefail
-          dmg_bundle="provenance/${DMG_NAME}.intoto.jsonl"
-          sbom_bundle="provenance/${SBOM_NAME}.intoto.jsonl"
+          dmg_bundle="provenance/${DMG_BUNDLE}"
+          sbom_bundle="provenance/${SBOM_BUNDLE}"
           test -f "$dmg_bundle"
           test -f "$sbom_bundle"
           ls -la provenance/
           gh release upload "$TAG" "$dmg_bundle" "$sbom_bundle" --clobber
           echo "Attached provenance to release ${TAG}"
 
+      # The release job always drafts; publishing happens only after both
+      # bundles are attached. Left as a draft when publish_release is unchecked.
+      - name: Publish release
+        if: ${{ inputs.publish_release }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.release.outputs.tag }}
+        run: |
+          set -euo pipefail
+          gh release edit "$TAG" --draft=false
+          echo "Published release ${TAG} with provenance attached"
