@@ -103,6 +103,35 @@ nonisolated struct LayoutOpaqueSlotDescriptor: Equatable {
         return Self.insertionIndex(opaqueWeight: opaqueWeight, references: references, fallback: items.endIndex)
     }
 
+    /// Inserts the opaque slot by its live AX frame's on-screen `midX`,
+    /// instead of the saved preferred-position weights the ``insertionIndex``
+    /// heuristic compares against.
+    ///
+    /// The weight path can drift 2-3 items away from where the LS icon
+    /// actually renders: every reference item must resolve a fresh runtime
+    /// key with an up-to-date weight, and any reference whose saved weight
+    /// lags behind its current X (after a recent reorder, an app-quit title
+    /// churn, or a `resolveKey` ambiguity miss) biases the slot's predicted
+    /// position past several real neighbours. The opaque item itself carries
+    /// a live AX frame in the same pass, so anchoring on its `midX` reads
+    /// the truth: the cache enumerates items left-to-right, the displayed
+    /// items keep that order, and the slot inserts before the first
+    /// neighbour whose `midX` is at or past the anchor.
+    ///
+    /// `nil` is returned when the anchor is unusable (non-finite or
+    /// non-positive); the caller then falls back to the weight heuristic
+    /// rather than dropping the slot entirely. Pure value-level work over
+    /// `MenuBarItem` bounds, so no OS-availability gate is needed.
+    static func insertionIndex(
+        byAnchorX anchorX: CGFloat,
+        in displayedItems: [MenuBarItem]
+    ) -> Int? {
+        guard anchorX.isFinite, anchorX > 0 else { return nil }
+        return displayedItems.firstIndex { item in
+            item.bounds.midX.isFinite && item.bounds.midX >= anchorX
+        } ?? displayedItems.endIndex
+    }
+
     static func insertionIndex(
         opaqueWeight: Int,
         references: [(index: Int, x: CGFloat, weight: Int)],

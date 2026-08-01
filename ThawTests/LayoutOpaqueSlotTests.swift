@@ -123,6 +123,82 @@ final class LayoutOpaqueSlotTests: XCTestCase {
         )
     }
 
+    /// Replaces the `XCTUnwrap` calls in the anchored-insertion tests with
+    /// a fail-on-nil guard. `XCTUnwrap` requires `throws`, but the test body
+    /// is synchronous and we want a clear failure message instead.
+    private func requireAnchoredIndex(
+        _ result: Int?,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) -> Int {
+        guard let result else {
+            XCTFail("Expected an anchored insertion index for a finite, positive anchor", file: file, line: line)
+            return .max
+        }
+        return result
+    }
+
+    /// Reproduces the off-by-2-3-items regression where the LS app-icon slot
+    /// landed at the wrong menu-bar position because the weight heuristic
+    /// compared the LS preferred-position weight against the saved weights
+    /// of its neighbours, and those weights lagged behind the live bar after
+    /// recent reorder / title churn.
+    ///
+    /// The fix anchors the slot on the LS item's live AX `midX` against the
+    /// displayed neighbours' `midX` (also live), so the saved weights no
+    /// longer participate. `displayedItems` already excludes the LS item;
+    /// given three neighbours at midX 100/220/360 and an LS anchor at 230,
+    /// the slot must insert at index 1 (just before the 220 neighbour —
+    /// `midX >= anchorX`).
+    func testInsertionByAnchorXPlacesSlotAtLivePosition() {
+        let displayedItems = [
+            makeItemAtX(tag: .appItem(bundleID: "com.example.alpha", title: "A"), x: 100),
+            makeItemAtX(tag: .appItem(bundleID: "com.example.bravo", title: "B"), x: 220),
+            makeItemAtX(tag: .appItem(bundleID: "com.example.charlie", title: "C"), x: 360),
+        ]
+        let result = requireAnchoredIndex(
+            LayoutOpaqueSlotDescriptor.insertionIndex(
+                byAnchorX: CGFloat(230),
+                in: displayedItems
+            )
+        )
+        // Index 1 — slot sits between the alpha (midX=100) and bravo
+        // (midX=220) neighbours, matching where Little Snitch actually is.
+        XCTAssertEqual(result, 1)
+    }
+
+    /// An anchor to the right of every neighbour clamps to `endIndex` so the
+    /// slot trails the last item rather than being dropped or moved into the
+    /// bar.
+    func testInsertionByAnchorXRightOfAllNeighboursClampsToEnd() {
+        let displayedItems = [
+            makeItemAtX(tag: .appItem(bundleID: "com.example.alpha", title: "A"), x: 100),
+            makeItemAtX(tag: .appItem(bundleID: "com.example.bravo", title: "B"), x: 220),
+        ]
+        let result = requireAnchoredIndex(
+            LayoutOpaqueSlotDescriptor.insertionIndex(
+                byAnchorX: CGFloat(500),
+                in: displayedItems
+            )
+        )
+        XCTAssertEqual(result, displayedItems.endIndex)
+    }
+
+    /// A non-finite or non-positive anchor must return `nil` so the caller
+    /// can fall back to the weight heuristic instead of inserting at a
+    /// meaningless index.
+    func testInsertionByAnchorXRejectsUnusableAnchor() {
+        XCTAssertNil(
+            LayoutOpaqueSlotDescriptor.insertionIndex(byAnchorX: .nan, in: [])
+        )
+        XCTAssertNil(
+            LayoutOpaqueSlotDescriptor.insertionIndex(byAnchorX: 0, in: [])
+        )
+        XCTAssertNil(
+            LayoutOpaqueSlotDescriptor.insertionIndex(byAnchorX: -1, in: [])
+        )
+    }
+
     @MainActor
     func testOpaqueViewIsInformationalAndNonDraggable() throws {
         let descriptor = try XCTUnwrap(makeDescriptor())
@@ -169,6 +245,22 @@ final class LayoutOpaqueSlotTests: XCTestCase {
             ownerPID: 100,
             sourcePID: 100,
             bounds: CGRect(x: 100, y: 0, width: 24, height: 22),
+            title: tag.title,
+            isOnScreen: true
+        )
+    }
+
+    /// Neighbour fixture anchored at a specific on-screen X, used by the
+    /// `insertionIndex(byAnchorX:in:)` regressions. The opaque slot insertion
+    /// by anchor only reads `bounds.midX`, so the fixture zeroes everything
+    /// else.
+    private func makeItemAtX(tag: MenuBarItemTag, x: CGFloat) -> MenuBarItem {
+        MenuBarItem(
+            tag: tag,
+            windowID: 42,
+            ownerPID: 100,
+            sourcePID: 100,
+            bounds: CGRect(x: x, y: 0, width: 24, height: 22),
             title: tag.title,
             isOnScreen: true
         )

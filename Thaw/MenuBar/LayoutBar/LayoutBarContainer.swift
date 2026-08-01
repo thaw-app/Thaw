@@ -579,10 +579,32 @@ final class LayoutBarContainer: NSView {
                 descriptor: opaqueSlot,
                 runningApplications: runningApplications
             )
-            let insertionIndex = opaqueSlot
-                .insertionIndex(in: displayedItems, positions: positions)
-                .clamped(to: newViews.startIndex ... newViews.endIndex)
-            newViews.insert(opaqueView, at: insertionIndex)
+            // Prefer the live AX frame of the item the opaque slot is standing
+            // in for. The slot previously anchored on saved preferred-position
+            // weights, which drift when a reference's saved weight lags behind
+            // its current X after a reorder or title churn — observed as the
+            // LS app-icon slot landing 2-3 items away from where Little Snitch
+            // actually renders. The cache enumerates items left-to-right, so
+            // matching the AX item's midX against the displayed neighbours'
+            // midX reads the truth and drops the slot straight into its
+            // on-screen slot. Fall back to the weight heuristic only when the
+            // AX item is absent or its frame is unusable.
+            let insertionIndex: Int
+            if let opaqueAnchorX = items
+                .first(where: { opaqueSlot.matchesOpaqueItem($0) })?
+                .bounds
+                .midX,
+               let anchored = LayoutOpaqueSlotDescriptor.insertionIndex(
+                   byAnchorX: opaqueAnchorX,
+                   in: displayedItems
+               )
+            {
+                insertionIndex = anchored
+            } else {
+                insertionIndex = opaqueSlot
+                    .insertionIndex(in: displayedItems, positions: positions)
+            }
+            newViews.insert(opaqueView, at: insertionIndex.clamped(to: newViews.startIndex ... newViews.endIndex))
         }
         var newlyCreatedBadgeView: LayoutBarNewItemsBadgeView?
         if let badgeIndex {

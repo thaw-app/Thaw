@@ -476,6 +476,17 @@ extension CGImage {
 
         var cleared = 0
         var kept = 0
+        // Per-row and per-column tallies of the pixels we *kept*. A real
+        // status-item glyph has at least one column with a near-continuous
+        // vertical stem and at least one row with a near-continuous run — a
+        // tight shape, not scattered single pixels. Wallpaper/Liquid-Glass
+        // noise that survives the colour knock-out spreads the kept pixels
+        // roughly evenly across the grid, so neither axis builds a dense
+        // bin. The "kept ≥ 2%" check below let that noise through and cached
+        // the mac-background crop as a fake glyph; the histogram gate below
+        // rejects it without ever drawing geometry.
+        var perRowKept = [Int](repeating: 0, count: height)
+        var perColKept = [Int](repeating: 0, count: width)
         for y in 0 ..< height {
             for x in 0 ..< width {
                 let i = y * bytesPerRow + x * bytesPerPixel
@@ -502,12 +513,30 @@ extension CGImage {
                     cleared += 1
                 } else {
                     kept += 1
+                    perRowKept[y] += 1
+                    perColKept[x] += 1
                 }
             }
         }
 
         // Reject no-ops and over-aggressive knocks that erase the glyph.
         guard kept > 0, cleared > 0, Double(kept) / Double(kept + cleared) >= 0.02 else {
+            return nil
+        }
+
+        // Glyph-density gate. A genuine glyph produces a column whose kept
+        // pixel count covers at least a third of the image height (a vertical
+        // stem or solid body) — or a row whose count covers at least a fifth
+        // of the width (a horizontal band such as a text label). Wallpaper
+        // noise that survives the colour knock-out spreads its kept pixels
+        // roughly evenly across the grid, so neither axis builds a dense bin;
+        // treat such sparse scatter as no glyph so callers fall back to the
+        // app icon instead of caching the background as a fake glyph.
+        let maxColumnKept = perColKept.max() ?? 0
+        let maxRowKept = perRowKept.max() ?? 0
+        let columnThreshold = max(1, height / 3)
+        let rowThreshold = max(1, width / 5)
+        guard maxColumnKept >= columnThreshold || maxRowKept >= rowThreshold else {
             return nil
         }
 

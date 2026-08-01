@@ -290,6 +290,62 @@ final class CGImageBackgroundKnockOutTests: XCTestCase {
         XCTAssertGreaterThan(centerAlpha, 200)
     }
 
+    /// Reproduces the layout-bar regression where a hidden item's empty
+    /// status-item slot, captured against a busy Liquid Glass menu bar, gets
+    /// cached as a "mac-background" thumbnail. The corner samples agree on the
+    /// bar fill (so the colour knock-out runs), but enough wallpaper texture
+    /// bleeds through the translucent bar to satisfy the legacy "kept ≥ 2%"
+    /// minimum. The per-row/per-column density gate rejects that scatter
+    /// because no glyph-like vertical column or horizontal row forms; the
+    /// function returns `nil`, which lets `axBoundsCapture` invalidate the
+    /// tag and fall back to the app icon.
+    func testKnockingOutNearUniformBackgroundRejectsScatteredWallpaperNoise() throws {
+        let width = 64
+        let height = 48
+        let bytesPerRow = width * 4
+        var data = [UInt8](repeating: 0, count: bytesPerRow * height)
+        // Opaque dark bar fill.
+        for i in stride(from: 0, to: data.count, by: 4) {
+            data[i] = 40
+            data[i + 1] = 40
+            data[i + 2] = 42
+            data[i + 3] = 255
+        }
+        // Scattered wallpaper-bearing noise: roughly one bright pixel per
+        // row, well below the per-column "vertical stem" threshold (height/3
+        // = 16) and well below the per-row "horizontal band" threshold
+        // (width/5 = 12). No coherent glyph shape.
+        var rng = SystemRandomNumberGenerator()
+        for _ in 0 ..< (width * height) / 16 {
+            let x = Int(rng.next(upperBound: UInt(width)))
+            let y = Int(rng.next(upperBound: UInt(height)))
+            let i = y * bytesPerRow + x * 4
+            data[i] = 200
+            data[i + 1] = 180
+            data[i + 2] = 160
+            data[i + 3] = 255
+        }
+
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let image = try XCTUnwrap(
+            CGContext(
+                data: &data,
+                width: width,
+                height: height,
+                bitsPerComponent: 8,
+                bytesPerRow: bytesPerRow,
+                space: colorSpace,
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            )?.makeImage()
+        )
+
+        XCTAssertNil(
+            image.knockingOutNearUniformBackground(maxColorDistance: 40),
+            "Scattered wallpaper-noise survivors must not pass as a glyph; "
+                + "axBoundsCapture relies on a nil knock-out here to fall back to the app icon."
+        )
+    }
+
     private func alpha(atX x: Int, y: Int, in image: CGImage) -> UInt8? {
         var pixel = [UInt8](repeating: 0, count: 4)
         let colorSpace = CGColorSpaceCreateDeviceRGB()
