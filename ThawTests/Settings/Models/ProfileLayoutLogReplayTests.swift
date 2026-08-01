@@ -28,8 +28,8 @@ import Testing
 /// is treated as an unmanaged new arrival and relocated every cycle until
 /// marker-pair resolution finally identifies it ~46 minutes in.
 ///
-/// The Layer-1 fix excludes unresolved generic Control Center orphans from the
-/// unmanaged set inside the live partitioner. Two tests pin it down:
+/// The Layer-1 fix excludes provisional-identity orphans from the unmanaged
+/// set inside the live partitioner. Two tests pin it down:
 /// testWithoutExclusionTheOrphanWouldBeUnmanaged documents the bug mechanism
 /// (with no exclusion the orphan is classified unmanaged, matching the field
 /// log), and testBuggyCycleDoesNotPlanMoveForUnresolvedOrphan is the regression
@@ -116,7 +116,7 @@ struct ProfileLayoutLogReplayTests {
 
     // MARK: Bug mechanism (documents what the exclusion is responsible for)
 
-    /// With no orphan exclusion (unresolvedGenericCCUIDs empty), replaying the
+    /// With no orphan exclusion (provisionalIdentityUIDs empty), replaying the
     /// buggy cycle through the real partitioner reproduces the field verdict
     /// exactly: the unresolved Little Snitch orphan is the sole item routed to
     /// planUnmanagedPlacement, which is what dragged it on every cycle. The
@@ -129,7 +129,7 @@ struct ProfileLayoutLogReplayTests {
         let buggy = try #require(parsed.cycles.first)
         let inputs = buggy.partitionInputs(unresolvedSourcePIDBaseUIDs: parsed.unresolvedSourcePIDBaseUIDs)
 
-        #expect(inputs.unresolvedGenericCCOrphans == [orphanUID])
+        #expect(inputs.provisionalIdentityOrphans == [orphanUID])
 
         let result = LayoutSolver.partitionUnmanagedUIDs(
             currentFlat: inputs.currentFlat,
@@ -137,7 +137,7 @@ struct ProfileLayoutLogReplayTests {
             hiddenCtrlUID: inputs.hiddenCtrlUID,
             ahCtrlUID: inputs.ahCtrlUID,
             visibleCtrlUID: inputs.visibleCtrlUID,
-            unresolvedGenericCCUIDs: []
+            provisionalIdentityUIDs: []
         )
 
         #expect(result == buggy.loggedUnmanagedUIDs)
@@ -150,7 +150,7 @@ struct ProfileLayoutLogReplayTests {
     /// orphan set the orchestrator now computes, the unresolved Little Snitch
     /// orphan is no longer classified unmanaged, so no unmanaged placement (and
     /// therefore no move) is planned for it. This fails before Layer 1 applies
-    /// unresolvedGenericCCUIDs and passes once it does.
+    /// provisionalIdentityUIDs and passes once it does.
     @Test("The buggy cycle plans no move for the unresolved orphan")
     func buggyCycleDoesNotPlanMoveForUnresolvedOrphan() throws {
         let parsed = ProfileLayoutLogReplay.parse(LittleSnitchOrphanLog.text)
@@ -159,7 +159,7 @@ struct ProfileLayoutLogReplayTests {
 
         // The field log confirms this orphan WAS classified unmanaged and moved.
         #expect(buggy.loggedUnmanagedUIDs.contains(orphanUID))
-        #expect(inputs.unresolvedGenericCCOrphans == [orphanUID])
+        #expect(inputs.provisionalIdentityOrphans == [orphanUID])
 
         let result = LayoutSolver.partitionUnmanagedUIDs(
             currentFlat: inputs.currentFlat,
@@ -167,7 +167,7 @@ struct ProfileLayoutLogReplayTests {
             hiddenCtrlUID: inputs.hiddenCtrlUID,
             ahCtrlUID: inputs.ahCtrlUID,
             visibleCtrlUID: inputs.visibleCtrlUID,
-            unresolvedGenericCCUIDs: inputs.unresolvedGenericCCOrphans
+            provisionalIdentityUIDs: inputs.provisionalIdentityOrphans
         )
 
         #expect(
@@ -189,7 +189,7 @@ struct ProfileLayoutLogReplayTests {
         let clean = try #require(parsed.cycles.last)
         let inputs = clean.partitionInputs(unresolvedSourcePIDBaseUIDs: parsed.unresolvedSourcePIDBaseUIDs)
 
-        #expect(inputs.unresolvedGenericCCOrphans.isEmpty)
+        #expect(inputs.provisionalIdentityOrphans.isEmpty)
 
         let result = LayoutSolver.partitionUnmanagedUIDs(
             currentFlat: inputs.currentFlat,
@@ -197,7 +197,7 @@ struct ProfileLayoutLogReplayTests {
             hiddenCtrlUID: inputs.hiddenCtrlUID,
             ahCtrlUID: inputs.ahCtrlUID,
             visibleCtrlUID: inputs.visibleCtrlUID,
-            unresolvedGenericCCUIDs: inputs.unresolvedGenericCCOrphans
+            provisionalIdentityUIDs: inputs.provisionalIdentityOrphans
         )
 
         #expect(result == clean.loggedUnmanagedUIDs)
@@ -252,7 +252,7 @@ struct ProfileLayoutLogReplayTests {
         #expect(cycle.desiredVisible == ["com.rogueamoeba.soundsource:SSMainAppMenuIcon"])
 
         let inputs = cycle.partitionInputs(unresolvedSourcePIDBaseUIDs: parsed.unresolvedSourcePIDBaseUIDs)
-        #expect(inputs.unresolvedGenericCCOrphans.isEmpty)
+        #expect(inputs.provisionalIdentityOrphans.isEmpty)
 
         let result = LayoutSolver.partitionUnmanagedUIDs(
             currentFlat: inputs.currentFlat,
@@ -260,7 +260,7 @@ struct ProfileLayoutLogReplayTests {
             hiddenCtrlUID: inputs.hiddenCtrlUID,
             ahCtrlUID: inputs.ahCtrlUID,
             visibleCtrlUID: inputs.visibleCtrlUID,
-            unresolvedGenericCCUIDs: inputs.unresolvedGenericCCOrphans
+            provisionalIdentityUIDs: inputs.provisionalIdentityOrphans
         )
 
         #expect(result == ["com.example.extra:Item-0"])
@@ -447,9 +447,10 @@ enum ProfileLayoutLogReplay {
         let hiddenCtrlUID: String?
         let ahCtrlUID: String?
         let visibleCtrlUID: String?
-        /// Unresolved generic Control Center items present this cycle (nil
-        /// sourcePID, Item-N title). These are what the proposed fix excludes.
-        let unresolvedGenericCCOrphans: Set<String>
+        /// Items present this cycle whose identifier is only provisional
+        /// (nil sourcePID, Control Center namespace). These are what the fix
+        /// excludes.
+        let provisionalIdentityOrphans: Set<String>
     }
 
     private static let visibleCtrlUID = "com.stonerl.Thaw:Thaw.ControlItem.Visible"
@@ -606,10 +607,9 @@ extension ProfileLayoutLogReplay.Cycle {
     /// it), that captured set is used verbatim, so nothing about the desired
     /// layout is inferred. For older captures that predate the line, the
     /// visible desired set is reconstructed as the current visible items that
-    /// are neither control items nor unresolved generic Control Center
-    /// orphans, which is sound for those fixtures because the field log
-    /// confirmed the orphan was the only visible item the profile did not
-    /// cover.
+    /// are neither control items nor provisional-identity orphans, which is
+    /// sound for those fixtures because the field log confirmed the orphan was
+    /// the only visible item the profile did not cover.
     func partitionInputs(unresolvedSourcePIDBaseUIDs: Set<String>) -> ProfileLayoutLogReplay.PartitionInputs {
         // Control identifiers come from the live control-item tags, not
         // hardcoded strings, so a change to control-item identity is caught.
@@ -619,7 +619,7 @@ extension ProfileLayoutLogReplay.Cycle {
 
         // Live items for the current bar, per section; everything below is
         // derived from them through live Thaw code (uniqueIdentifier,
-        // isControlCenterGenericItem) rather than from string heuristics.
+        // hasProvisionalIdentity) rather than from string heuristics.
         let visibleItems = ProfileLayoutLogReplay.makeCurrentItems(
             sectionOrderedUIDs: currentVisible,
             unresolvedSourcePIDBaseUIDs: unresolvedSourcePIDBaseUIDs,
@@ -646,12 +646,13 @@ extension ProfileLayoutLogReplay.Cycle {
             ahCtrlUID: ahCtrl
         )
 
-        // The exact condition the Layer-1 fix will exclude: a generic Control
-        // Center item (Item-N title) with no resolved source PID. Computed with
-        // the live predicate so the harness tracks the production predicate.
+        // The exact condition the Layer-1 fix excludes: an item left with a
+        // provisional identifier because its source PID never resolved.
+        // Computed with the live predicate so the harness tracks the
+        // production predicate.
         let orphans = Set(
             (visibleItems + hiddenItems + ahItems)
-                .filter { $0.tag.isControlCenterGenericItem && $0.sourcePID == nil }
+                .filter(\.hasProvisionalIdentity)
                 .map(\.uniqueIdentifier)
         )
 
@@ -669,7 +670,7 @@ extension ProfileLayoutLogReplay.Cycle {
             hiddenCtrlUID: hiddenCtrl,
             ahCtrlUID: ahCtrl,
             visibleCtrlUID: visibleCtrl,
-            unresolvedGenericCCOrphans: orphans
+            provisionalIdentityOrphans: orphans
         )
     }
 }
