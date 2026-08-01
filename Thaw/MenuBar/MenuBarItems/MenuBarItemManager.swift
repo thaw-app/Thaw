@@ -5196,20 +5196,26 @@ extension MenuBarItemManager {
     /// item into *that* section, and once macOS persists the position the
     /// item stays there across relaunches. Items that can never be hidden are
     /// the common case — Control Center modules such as `AudioVideoModule`
-    /// come and go as the mic or camera is used, and since the item list is
-    /// in Window Server order rather than left-to-right order, a freshly
-    /// created window can land next to one from anywhere in the bar.
+    /// come and go as the mic or camera is used, and even with the items
+    /// sorted into left-to-right order, the physically adjacent item can
+    /// belong to another section.
     private func getReturnDestination(
         for item: MenuBarItem,
         in items: [MenuBarItem],
         section: MenuBarSection.Name
     ) -> (destination: MoveDestination, fallbackNeighbor: (tag: MenuBarItemTag, pid: pid_t)?)? {
-        guard let index = items.firstIndex(matching: item.tag) else {
+        // The anchor math below treats index adjacency as physical
+        // adjacency, but the item list arrives in Window Server order.
+        // Sort by each item's leading edge so successor/predecessor mean
+        // the item's actual on-screen neighbors.
+        let orderedItems = items.sorted { $0.bounds.minX < $1.bounds.minX }
+
+        guard let index = orderedItems.firstIndex(matching: item.tag) else {
             return nil
         }
 
-        let eligibleIndices = Set(items.indices.filter { candidateIndex in
-            let candidate = items[candidateIndex]
+        let eligibleIndices = Set(orderedItems.indices.filter { candidateIndex in
+            let candidate = orderedItems[candidateIndex]
             guard candidate.canBeHidden else {
                 return false
             }
@@ -5218,7 +5224,7 @@ extension MenuBarItemManager {
 
         let anchors = LayoutSolver.returnAnchors(
             forIndex: index,
-            itemCount: items.count,
+            itemCount: orderedItems.count,
             eligibleIndices: eligibleIndices
         )
 
@@ -5226,13 +5232,13 @@ extension MenuBarItemManager {
         // nearest eligible neighbor on the opposite side.
         if let successor = anchors.successor {
             let fallback: (MenuBarItemTag, pid_t)? = anchors.predecessor.map { predecessor in
-                let neighbor = items[predecessor]
+                let neighbor = orderedItems[predecessor]
                 return (neighbor.tag, neighbor.sourcePID ?? neighbor.ownerPID)
             }
-            return (.leftOfItem(items[successor]), fallback)
+            return (.leftOfItem(orderedItems[successor]), fallback)
         }
         if let predecessor = anchors.predecessor {
-            return (.rightOfItem(items[predecessor]), nil)
+            return (.rightOfItem(orderedItems[predecessor]), nil)
         }
 
         // The section holds no other item to anchor against, so aim at the
