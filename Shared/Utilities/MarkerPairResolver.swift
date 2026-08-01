@@ -268,8 +268,15 @@ nonisolated enum HostedItemOwnership {
         guard let title, !title.isEmpty else { return false }
         let titleParts = title.lowercased().split(separator: ".", omittingEmptySubsequences: false)
         let bundleParts = bundleID.lowercased().split(separator: ".", omittingEmptySubsequences: false)
-        // A bundle id has at least two components.
-        guard bundleParts.count >= 2 else { return false }
+        // A bundle id has at least two components. Empty components are
+        // rejected outright: split(omittingEmptySubsequences: false) keeps a
+        // trailing empty component, and "" is a prefix of every string, so a
+        // malformed vendor-only title (pl.maketheweb.) would otherwise clear
+        // the prefix test against any app from that vendor.
+        guard bundleParts.count >= 2,
+              titleParts.allSatisfy({ !$0.isEmpty }),
+              bundleParts.allSatisfy({ !$0.isEmpty })
+        else { return false }
 
         // A title with no reverse-DNS shape at all still identifies the app when
         // it *is* the app's name: BetterTouchTool's slot titles itself

@@ -521,6 +521,14 @@ struct HostedItemOwnershipTests {
         )
     }
 
+    @Test("A malformed vendor-only title never matches")
+    func malformedVendorOnlyTitleNeverMatches() {
+        // "pl.maketheweb." splits to ["pl", "maketheweb", ""], clearing the
+        // three-component guard. Without the empty-component rejection the
+        // trailing "" is a prefix of "cleanshotx" and the pair matches.
+        #expect(!HostedItemOwnership.titleIndicatesOwner("pl.maketheweb.", bundleID: "pl.maketheweb.cleanshotx"))
+    }
+
     // MARK: - Reject: unrelated neighbors that sat within the radius
 
     @Test("WireGuard does not match Updatest")
