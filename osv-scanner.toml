@@ -3,7 +3,7 @@
 #
 # Add an entry only when a finding is non-exploitable in Thaw's threat model
 # (or a fix is not yet available) and a maintainer has approved the waiver.
-# Prefer a short expiry via ignoreUntil so suppressions do not rot forever.
+# CI requires both `reason` and `ignoreUntil` on every IgnoredVulns entry.
 
 # Example:
 # [[IgnoredVulns]]

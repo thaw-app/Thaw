@@ -132,7 +132,7 @@ Dependabot continues to open update PRs; those PRs are subject to the same gate.
 | Finding | Gate behavior |
 | --- | --- |
 | Any **unsuppressed** vulnerability reported by OSV-Scanner for scanned artifacts | **Fail** — required check `dependency-sca` must be green to merge into `development` |
-| Vulnerability listed in `osv-scanner.toml` with a documented reason (and preferably an expiry) | **Pass** (suppressed) — treated as an accepted residual risk |
+| Vulnerability listed in `osv-scanner.toml` with a documented **reason** and **ignoreUntil** expiry | **Pass** (suppressed) — treated as an accepted residual risk |
 
 There is no severity carve-out for High/Critical only: if OSV reports it and it
 is not suppressed, the change does not merge. Malicious or compromised
@@ -156,7 +156,9 @@ Rules for maintainers:
 1. Prefer upgrading or removing the dependency over suppressing.
 2. Every suppression needs a **reason** tied to Thaw’s threat model (e.g. not
    reachable, unused feature, fix not yet published).
-3. Set **`ignoreUntil`** whenever practical so waivers expire and get revisited.
+3. Every suppression needs **`ignoreUntil`** (YYYY-MM-DD) so waivers expire and
+   get revisited. The `dependency-sca` workflow rejects entries missing `reason`
+   or `ignoreUntil`.
 4. Suppressions require the same human review as any other change (non-author
    approval on `development`).
 

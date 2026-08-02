@@ -4,7 +4,7 @@
 name: Dependency SCA
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 on:
@@ -34,6 +34,54 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Validate SCA suppressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from __future__ import annotations
+
+          import sys
+          import tomllib
+          from pathlib import Path
+
+          path = Path("osv-scanner.toml")
+          if not path.is_file():
+              print("::error::osv-scanner.toml is missing")
+              sys.exit(1)
+
+          data = tomllib.loads(path.read_text(encoding="utf-8"))
+          ignored = data.get("IgnoredVulns") or []
+          errors: list[str] = []
+
+          for i, entry in enumerate(ignored, start=1):
+              if not isinstance(entry, dict):
+                  errors.append(f"IgnoredVulns[{i}] must be a table")
+                  continue
+              vuln_id = entry.get("id") or f"#{i}"
+              reason = entry.get("reason")
+              if not isinstance(reason, str) or not reason.strip():
+                  errors.append(
+                      f"IgnoredVulns id={vuln_id!r} requires a non-empty reason "
+                      "(see .github/SECURITY.md § Dependency SCA policy)"
+                  )
+              ignore_until = entry.get("ignoreUntil")
+              if ignore_until is None or (
+                  isinstance(ignore_until, str) and not str(ignore_until).strip()
+              ):
+                  errors.append(
+                      f"IgnoredVulns id={vuln_id!r} requires ignoreUntil "
+                      "(YYYY-MM-DD expiry; see .github/SECURITY.md)"
+                  )
+
+          if errors:
+              for msg in errors:
+                  print(f"::error::{msg}")
+              sys.exit(1)
+
+          print(f"Validated {len(ignored)} IgnoredVulns suppression(s)")
+          PY
+
       - name: Scan dependencies (OSV)
         id: scan
         continue-on-error: true
@@ -46,6 +94,15 @@ jobs:
             -r
             ./
 
+      # continue-on-error lets the reporter run when exit code 1 means "vulns
+      # found". Hard scanner failures often produce no results.json — fail closed.
+      - name: Require scanner results
+        if: ${{ hashFiles('results.json') == '' }}
+        shell: bash
+        run: |
+          echo "::error::OSV-Scanner did not produce results.json (scan outcome=${{ steps.scan.outcome }})"
+          exit 1
+
       - name: Report findings
         uses: google/osv-scanner-action/osv-reporter-action@8dc09193bb540e09b23da07ad7e30bd33bf87018 # v2.3.8
         with:
@@ -56,7 +113,13 @@ jobs:
             --fail-on-vuln=true
 
       - name: Upload SARIF
-        if: ${{ !cancelled() && hashFiles('results.sarif') != '' }}
+        if: >-
+          ${{
+            !cancelled()
+            && hashFiles('results.sarif') != ''
+            && (github.event_name != 'pull_request'
+                || github.event.pull_request.head.repo.full_name == github.repository)
+          }}
         uses: github/codeql-action/upload-sarif@c54b30b7df092240050e69945842bc67aee0f0f4 # v4.37.3
         with:
           sarif_file: results.sarif
