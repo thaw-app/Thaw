@@ -151,16 +151,21 @@ Pull requests are automatically reviewed by SonarCloud for code quality and Code
 
 ### SCA / SAST expectations
 
-Thaw treats automated security and quality findings as part of the merge bar:
+Thaw treats automated security and quality findings as part of the merge bar.
+The full dependency SCA policy (thresholds + suppressions) lives in
+[SECURITY.md](SECURITY.md) (§ Dependency SCA policy).
 
 | Signal | Where | Expectation |
 | --- | --- | --- |
-| **Dependabot** | Dependency / Actions update PRs | Review and merge promptly; do not leave known vulnerable pins open without a documented waiver |
+| **Dependency SCA** (`dependency-sca`) | OSV-Scanner on every PR / `development` push | **Required.** Fix or suppress (via `osv-scanner.toml` + reason) before merge |
+| **Dependabot** | Dependency / Actions update PRs | Review and merge promptly; those PRs must still pass `dependency-sca` |
 | **SonarCloud** | PR decoration + quality gate | Fix new issues / smells called out on the PR unless a maintainer marks won’t-fix |
 | **CodeQL** | Security analysis workflow (when enabled on the branch) | Address high/critical findings before merge; discuss false positives with maintainers |
 | **CodeRabbit** | PR review comments | Treat as required unless a maintainer marks won’t-fix (same bar as above) |
 
-Do not merge with a failing required check. If a finding is a false positive, say so in the PR and link evidence; maintainers may waive it.
+Do not merge with a failing required check. If a finding is a false positive or
+not exploitable in Thaw, add a documented suppression in `osv-scanner.toml` (see
+SECURITY.md) rather than bypassing the check.
 
 ### Tests
 

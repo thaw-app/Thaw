@@ -13,8 +13,9 @@
 
 <p align="center">
   <a href="https://github.com/thaw-app/Thaw/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/thaw-app/Thaw/ci.yml?style=flat-square&label=CI" /></a>
-  <a href="https://www.bestpractices.dev/projects/13303"><img alt="OpenSSF Best Practices" src="https://img.shields.io/cii/summary/13303?style=flat-square&label=OpenSSF" /></a>
-  <a href="https://scorecard.dev/viewer/?uri=github.com/thaw-app/Thaw"><img alt="OpenSSF Scorecard" src="https://api.scorecard.dev/projects/github.com/thaw-app/Thaw/badge" /></a>
+  <a href="https://www.bestpractices.dev/projects/13303"><img alt="OpenSSF Best Practices" src="https://www.bestpractices.dev/projects/13303/badge?style=flat-square" /></a>
+  <a href="https://www.bestpractices.dev/projects/13303"><img alt="OpenSSF Baseline" src="https://www.bestpractices.dev/projects/13303/baseline?style=flat-square" /></a>
+  <a href="https://scorecard.dev/viewer/?uri=github.com/thaw-app/Thaw"><img alt="OpenSSF Scorecard" src="https://api.scorecard.dev/projects/github.com/thaw-app/Thaw/badge?style=flat-square" /></a>
   <a href="docs/VERIFYING_RELEASES.md"><img alt="SLSA Build Level 2" src="https://img.shields.io/badge/SLSA-Build_L2-555555?style=flat-square" /></a>
 </p>
 

@@ -110,6 +110,61 @@ Include:
 We aim to fix critical, exploitable issues promptly; timelines depend on
 complexity and whether an OS update is also required.
 
+## Dependency SCA policy
+
+Thaw automatically evaluates every proposed change for known-vulnerable
+dependencies and blocks merge when the policy is violated. This is the project’s
+software composition analysis (SCA) gate (OpenSSF Baseline **OSPS-VM-05.03**).
+
+### What is evaluated
+
+On every pull request and on pushes to `development`, the **Dependency SCA**
+workflow (`.github/workflows/dependency-sca.yml`) runs [OSV-Scanner](https://google.github.io/osv-scanner/)
+against checked-in lockfiles and manifests (including Swift
+`Package.resolved`, GitHub Actions pins via workflow files, and other supported
+ecosystems present in the tree). Findings are also uploaded to GitHub code
+scanning when permissions allow.
+
+Dependabot continues to open update PRs; those PRs are subject to the same gate.
+
+### Pass / fail thresholds
+
+| Finding | Gate behavior |
+| --- | --- |
+| Any **unsuppressed** vulnerability reported by OSV-Scanner for scanned artifacts | **Fail** — required check `dependency-sca` must be green to merge into `development` |
+| Vulnerability listed in `osv-scanner.toml` with a documented reason (and preferably an expiry) | **Pass** (suppressed) — treated as an accepted residual risk |
+
+There is no severity carve-out for High/Critical only: if OSV reports it and it
+is not suppressed, the change does not merge. Malicious or compromised
+dependency indicators that surface as OSV/advisory hits are handled the same way
+(block until upgraded or explicitly suppressed).
+
+### Suppressions (non-exploitable / accepted risk)
+
+Suppressions are **checked in** under `osv-scanner.toml` at the repository root
+so they are reviewable in the same PR as the waiver:
+
+```toml
+[[IgnoredVulns]]
+id = "GHSA-xxxx-xxxx-xxxx"
+ignoreUntil = 2026-12-31
+reason = "Not exploitable in Thaw: …"
+```
+
+Rules for maintainers:
+
+1. Prefer upgrading or removing the dependency over suppressing.
+2. Every suppression needs a **reason** tied to Thaw’s threat model (e.g. not
+   reachable, unused feature, fix not yet published).
+3. Set **`ignoreUntil`** whenever practical so waivers expire and get revisited.
+4. Suppressions require the same human review as any other change (non-author
+   approval on `development`).
+
+### Related docs
+
+- Contributor expectations: [CONTRIBUTING.md](CONTRIBUTING.md) (§ SCA / SAST)
+- Release verification / provenance: [docs/VERIFYING_RELEASES.md](../docs/VERIFYING_RELEASES.md)
+
 ## Public vulnerability history
 
 Published advisories (when any exist):  

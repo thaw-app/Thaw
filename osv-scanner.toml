@@ -1,0 +1,12 @@
+# OSV-Scanner suppressions for Thaw's dependency SCA gate.
+# Policy: .github/SECURITY.md § "Dependency SCA policy"
+#
+# Add an entry only when a finding is non-exploitable in Thaw's threat model
+# (or a fix is not yet available) and a maintainer has approved the waiver.
+# Prefer a short expiry via ignoreUntil so suppressions do not rot forever.
+
+# Example:
+# [[IgnoredVulns]]
+# id = "GHSA-xxxx-xxxx-xxxx"
+# ignoreUntil = 2026-12-31
+# reason = "Not reachable: dependency is compile-time only / no network path"

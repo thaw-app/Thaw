@@ -1,0 +1,71 @@
+# Software composition analysis gate for OpenSSF Baseline OSPS-VM-05.03.
+# Scans lockfiles / manifests (including Swift Package.resolved) against OSV
+# and fails the check when known vulnerabilities remain unsuppressed.
+name: Dependency SCA
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+  push:
+    branches:
+      - development
+  schedule:
+    # Weekly hygiene scan (offset from Scorecard / CodeQL).
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-sca:
+    name: dependency-sca
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Scan dependencies (OSV)
+        id: scan
+        continue-on-error: true
+        uses: google/osv-scanner-action/osv-scanner-action@8dc09193bb540e09b23da07ad7e30bd33bf87018 # v2.3.8
+        with:
+          scan-args: |-
+            --format=json
+            --output=results.json
+            --config=osv-scanner.toml
+            -r
+            ./
+
+      - name: Report findings
+        uses: google/osv-scanner-action/osv-reporter-action@8dc09193bb540e09b23da07ad7e30bd33bf87018 # v2.3.8
+        with:
+          scan-args: |-
+            --output=results.sarif
+            --new=results.json
+            --gh-annotations=true
+            --fail-on-vuln=true
+
+      - name: Upload SARIF
+        if: ${{ !cancelled() && hashFiles('results.sarif') != '' }}
+        uses: github/codeql-action/upload-sarif@c54b30b7df092240050e69945842bc67aee0f0f4 # v4.37.3
+        with:
+          sarif_file: results.sarif
+          category: dependency-sca
+
+      - name: Upload JSON results
+        if: ${{ !cancelled() && hashFiles('results.json') != '' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: osv-scanner-results
+          path: results.json
+          retention-days: 14
