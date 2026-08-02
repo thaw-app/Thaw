@@ -1,23 +1,23 @@
 ![Thaw](https://raw.githubusercontent.com/thaw-app/brand-assets/main/headers/light_header.svg#gh-light-mode-only)
 ![Thaw](https://raw.githubusercontent.com/thaw-app/brand-assets/main/headers/dark_header.svg#gh-dark-mode-only)
 
-<!-- Badges: shieldcn.dev (variant=secondary&theme=zinc) -->
+<!-- Badges: shieldcn.dev — split + semantic value colors -->
 <p align="center">
-  <a href="https://github.com/thaw-app/Thaw/releases/latest"><img alt="Stable release" src="https://shieldcn.dev/badge/dynamic/json.svg?url=https%3A%2F%2Fapi.github.com%2Frepos%2Fthaw-app%2FThaw%2Freleases%2Flatest&query=%24.tag_name&label=stable&variant=secondary&theme=zinc" /></a>
-  <a href="https://github.com/thaw-app/Thaw/releases"><img alt="Beta / pre-release" src="https://shieldcn.dev/badge/dynamic/json.svg?url=https%3A%2F%2Fapi.github.com%2Frepos%2Fthaw-app%2FThaw%2Freleases&query=%24%5B0%5D.tag_name&label=beta&variant=secondary&theme=zinc" /></a>
-  <img alt="Requirements" src="https://shieldcn.dev/badge/macOS-26%2B.svg?variant=secondary&theme=zinc" />
-  <a href="https://crowdin.com/project/thaw"><img alt="Translated into 20 languages" src="https://shieldcn.dev/badge/translated-20_languages.svg?logo=crowdin&variant=secondary&theme=zinc" /></a>
-  <a href="https://discord.gg/5cnKkKbMFd"><img alt="Discord" src="https://shieldcn.dev/badge/Discord.svg?logo=discord&variant=secondary&theme=zinc" /></a>
-  <a href="https://github.com/sponsors/stonerl"><img alt="Sponsor" src="https://shieldcn.dev/badge/Sponsor-%E2%9D%A4.svg?variant=secondary&theme=zinc" /></a>
-  <a href="LICENSE"><img alt="License" src="https://shieldcn.dev/github/license/thaw-app/Thaw.svg?variant=secondary&theme=zinc" /></a>
+  <a href="https://github.com/thaw-app/Thaw/releases/latest"><img alt="Stable release" src="https://shieldcn.dev/badge/dynamic/json.svg?url=https%3A%2F%2Fapi.github.com%2Frepos%2Fthaw-app%2FThaw%2Freleases%2Flatest&query=%24.tag_name&label=stable&split=true&labelColor=3f3f46&color=3b82f6&variant=default" /></a>
+  <a href="https://github.com/thaw-app/Thaw/releases"><img alt="Beta / pre-release" src="https://shieldcn.dev/badge/dynamic/json.svg?url=https%3A%2F%2Fapi.github.com%2Frepos%2Fthaw-app%2FThaw%2Freleases&query=%24%5B0%5D.tag_name&label=beta&split=true&labelColor=3f3f46&color=f59e0b&variant=default" /></a>
+  <img alt="Requirements" src="https://shieldcn.dev/badge/macOS-26%2B.svg?split=true&labelColor=3f3f46&color=64748b&variant=default" />
+  <a href="https://crowdin.com/project/thaw"><img alt="Translated into 20 languages" src="https://shieldcn.dev/badge/translated-20_languages.svg?logo=crowdin&logoColor=white&split=true&labelColor=3f3f46&color=2e3340&variant=default" /></a>
+  <a href="https://discord.gg/5cnKkKbMFd"><img alt="Discord" src="https://shieldcn.dev/badge/Discord-5865F2.svg?logo=discord&logoColor=white&split=true&labelColor=3f3f46&color=5865F2&variant=default" /></a>
+  <a href="https://github.com/sponsors/stonerl"><img alt="Sponsor" src="https://shieldcn.dev/badge/Sponsor-%E2%9D%A4.svg?split=true&labelColor=3f3f46&color=e11d48&variant=default" /></a>
+  <a href="LICENSE"><img alt="License" src="https://shieldcn.dev/github/license/thaw-app/Thaw.svg?split=true&labelColor=3f3f46&color=3b82f6&variant=default" /></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/thaw-app/Thaw/actions/workflows/ci.yml"><img alt="CI" src="https://shieldcn.dev/github/ci/thaw-app/Thaw.svg?variant=secondary&theme=zinc" /></a>
-  <a href="https://www.bestpractices.dev/projects/13303"><img alt="OpenSSF Best Practices" src="https://shieldcn.dev/badge/dynamic/json.svg?url=https%3A%2F%2Fwww.bestpractices.dev%2Fprojects%2F13303%2Fbadge.json&query=%24.badge_level&label=OpenSSF&variant=secondary&theme=zinc" /></a>
-  <a href="https://www.bestpractices.dev/projects/13303"><img alt="OpenSSF Baseline" src="https://shieldcn.dev/badge/dynamic/json.svg?url=https%3A%2F%2Fwww.bestpractices.dev%2Fprojects%2F13303%2Fbaseline.json&query=%24.badge_level&label=OpenSSF%20Baseline&variant=secondary&theme=zinc" /></a>
-  <a href="https://scorecard.dev/viewer/?uri=github.com/thaw-app/Thaw"><img alt="OpenSSF Scorecard" src="https://shieldcn.dev/badge/dynamic/json.svg?url=https%3A%2F%2Fapi.scorecard.dev%2Fprojects%2Fgithub.com%2Fthaw-app%2FThaw&query=%24.score&label=Scorecard&variant=secondary&theme=zinc" /></a>
-  <a href="docs/VERIFYING_RELEASES.md"><img alt="SLSA Build Level 3" src="https://shieldcn.dev/badge/SLSA-Build_L3.svg?variant=secondary&theme=zinc" /></a>
+  <a href="https://github.com/thaw-app/Thaw/actions/workflows/ci.yml"><img alt="CI" src="https://shieldcn.dev/github/ci/thaw-app/Thaw.svg?split=true&labelColor=3f3f46&variant=default&statusDot=true" /></a>
+  <a href="https://www.bestpractices.dev/projects/13303"><img alt="OpenSSF Best Practices" src="https://shieldcn.dev/badge/dynamic/json.svg?url=https%3A%2F%2Fwww.bestpractices.dev%2Fprojects%2F13303%2Fbadge.json&query=%24.badge_level&label=OpenSSF&split=true&labelColor=3f3f46&color=c0c0c0&valueColor=18181b&variant=default" /></a>
+  <a href="https://www.bestpractices.dev/projects/13303"><img alt="OpenSSF Baseline" src="https://shieldcn.dev/badge/dynamic/json.svg?url=https%3A%2F%2Fwww.bestpractices.dev%2Fprojects%2F13303%2Fbaseline.json&query=%24.badge_level&label=OpenSSF%20Baseline&split=true&labelColor=3f3f46&color=22c55e&variant=default" /></a>
+  <a href="https://scorecard.dev/viewer/?uri=github.com/thaw-app/Thaw"><img alt="OpenSSF Scorecard" src="https://shieldcn.dev/badge/dynamic/json.svg?url=https%3A%2F%2Fapi.scorecard.dev%2Fprojects%2Fgithub.com%2Fthaw-app%2FThaw&query=%24.score&label=Scorecard&split=true&labelColor=3f3f46&color=22c55e&variant=default" /></a>
+  <a href="docs/VERIFYING_RELEASES.md"><img alt="SLSA Build Level 3" src="https://shieldcn.dev/badge/SLSA-Build_L3.svg?split=true&labelColor=3f3f46&color=0ea5e9&variant=default" /></a>
 </p>
 
 <p align="center">
