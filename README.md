@@ -3,12 +3,6 @@
 
 <!-- Badges: shieldcn — individuals + small related groups (light/dark) -->
 <p align="center">
-  <a href="https://github.com/thaw-app/Thaw/releases">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/group/badge%2Fdynamic%2Fjson%3Furl%3Dhttps%253A%252F%252Fapi.github.com%252Frepos%252Fthaw-app%252FThaw%252Freleases%252Flatest%26query%3D%24.tag_name%26label%3Dstable%26color%3D3b82f6+badge%2Fdynamic%2Fjson%3Furl%3Dhttps%253A%252F%252Fapi.github.com%252Frepos%252Fthaw-app%252FThaw%252Freleases%26query%3D%24%5B0%5D.tag_name%26label%3Dbeta%26color%3Df59e0b.svg?variant=default&amp;mode=dark&amp;split=true&amp;labelColor=3f3f46" />
-      <img alt="Stable and beta releases" src="https://shieldcn.dev/group/badge%2Fdynamic%2Fjson%3Furl%3Dhttps%253A%252F%252Fapi.github.com%252Frepos%252Fthaw-app%252FThaw%252Freleases%252Flatest%26query%3D%24.tag_name%26label%3Dstable%26color%3D3b82f6+badge%2Fdynamic%2Fjson%3Furl%3Dhttps%253A%252F%252Fapi.github.com%252Frepos%252Fthaw-app%252FThaw%252Freleases%26query%3D%24%5B0%5D.tag_name%26label%3Dbeta%26color%3Df59e0b.svg?variant=default&amp;mode=light&amp;split=true&amp;labelColor=3f3f46" />
-    </picture>
-  </a>
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/macOS-26%2B.svg?variant=default&amp;mode=dark&amp;split=true&amp;labelColor=3f3f46&amp;color=64748b" />
     <img alt="macOS 26+" src="https://shieldcn.dev/badge/macOS-26%2B.svg?variant=default&amp;mode=light&amp;split=true&amp;labelColor=3f3f46&amp;color=64748b" />
