@@ -1,19 +1,63 @@
 ![Thaw](https://raw.githubusercontent.com/thaw-app/brand-assets/main/headers/light_header.svg#gh-light-mode-only)
 ![Thaw](https://raw.githubusercontent.com/thaw-app/brand-assets/main/headers/dark_header.svg#gh-dark-mode-only)
 
-<!-- Badges: short shieldcn groups (GitHub camo rejects long/encoded group URLs) -->
+<!-- Badges: shieldcn — individuals + small related groups (light/dark) -->
 <p align="center">
+  <a href="https://github.com/thaw-app/Thaw/releases">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/group/badge%2Fdynamic%2Fjson%3Furl%3Dhttps%253A%252F%252Fapi.github.com%252Frepos%252Fthaw-app%252FThaw%252Freleases%252Flatest%26query%3D%24.tag_name%26label%3Dstable%26color%3D3b82f6+badge%2Fdynamic%2Fjson%3Furl%3Dhttps%253A%252F%252Fapi.github.com%252Frepos%252Fthaw-app%252FThaw%252Freleases%26query%3D%24%5B0%5D.tag_name%26label%3Dbeta%26color%3Df59e0b.svg?variant=default&amp;mode=dark&amp;split=true&amp;labelColor=3f3f46" />
+      <img alt="Stable and beta releases" src="https://shieldcn.dev/group/badge%2Fdynamic%2Fjson%3Furl%3Dhttps%253A%252F%252Fapi.github.com%252Frepos%252Fthaw-app%252FThaw%252Freleases%252Flatest%26query%3D%24.tag_name%26label%3Dstable%26color%3D3b82f6+badge%2Fdynamic%2Fjson%3Furl%3Dhttps%253A%252F%252Fapi.github.com%252Frepos%252Fthaw-app%252FThaw%252Freleases%26query%3D%24%5B0%5D.tag_name%26label%3Dbeta%26color%3Df59e0b.svg?variant=default&amp;mode=light&amp;split=true&amp;labelColor=3f3f46" />
+    </picture>
+  </a>
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/group/github/release/thaw-app/Thaw+github/tag/thaw-app/Thaw+badge/macOS-26%2B+badge/translated-20_languages+badge/Discord+badge/Sponsor-%E2%9D%A4+github/license/thaw-app/Thaw.svg?variant=secondary&amp;mode=dark&amp;statusDot=true" />
-    <img alt="Release and community badges" src="https://shieldcn.dev/group/github/release/thaw-app/Thaw+github/tag/thaw-app/Thaw+badge/macOS-26%2B+badge/translated-20_languages+badge/Discord+badge/Sponsor-%E2%9D%A4+github/license/thaw-app/Thaw.svg?variant=secondary&amp;mode=light&amp;statusDot=true" />
+    <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/macOS-26%2B.svg?variant=default&amp;mode=dark&amp;split=true&amp;labelColor=3f3f46&amp;color=64748b" />
+    <img alt="macOS 26+" src="https://shieldcn.dev/badge/macOS-26%2B.svg?variant=default&amp;mode=light&amp;split=true&amp;labelColor=3f3f46&amp;color=64748b" />
   </picture>
+  <a href="https://crowdin.com/project/thaw">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/translated-20_languages.svg?variant=default&amp;mode=dark&amp;split=true&amp;labelColor=3f3f46&amp;logo=crowdin&amp;logoColor=ffffff&amp;color=2e3340" />
+      <img alt="Translated into 20 languages" src="https://shieldcn.dev/badge/translated-20_languages.svg?variant=default&amp;mode=light&amp;split=true&amp;labelColor=3f3f46&amp;logo=crowdin&amp;logoColor=ffffff&amp;color=2e3340" />
+    </picture>
+  </a>
+  <a href="https://discord.gg/5cnKkKbMFd">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/Discord.svg?variant=default&amp;mode=dark&amp;split=true&amp;labelColor=3f3f46&amp;logo=discord&amp;logoColor=ffffff&amp;color=5865F2" />
+      <img alt="Discord" src="https://shieldcn.dev/badge/Discord.svg?variant=default&amp;mode=light&amp;split=true&amp;labelColor=3f3f46&amp;logo=discord&amp;logoColor=ffffff&amp;color=5865F2" />
+    </picture>
+  </a>
+  <a href="https://github.com/sponsors/stonerl">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/Sponsor-%E2%9D%A4.svg?variant=default&amp;mode=dark&amp;split=true&amp;labelColor=3f3f46&amp;color=e11d48" />
+      <img alt="Sponsor" src="https://shieldcn.dev/badge/Sponsor-%E2%9D%A4.svg?variant=default&amp;mode=light&amp;split=true&amp;labelColor=3f3f46&amp;color=e11d48" />
+    </picture>
+  </a>
+  <a href="LICENSE">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/license/thaw-app/Thaw.svg?variant=default&amp;mode=dark&amp;split=true&amp;labelColor=3f3f46&amp;color=3b82f6" />
+      <img alt="License" src="https://shieldcn.dev/github/license/thaw-app/Thaw.svg?variant=default&amp;mode=light&amp;split=true&amp;labelColor=3f3f46&amp;color=3b82f6" />
+    </picture>
+  </a>
 </p>
 
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/group/github/ci/thaw-app/Thaw+badge/OpenSSF-silver+badge/OpenSSF_Baseline-baseline-2+badge/Scorecard-9.1+badge/SLSA-Build_L3.svg?variant=secondary&amp;mode=dark&amp;statusDot=true" />
-    <img alt="Supply-chain badges" src="https://shieldcn.dev/group/github/ci/thaw-app/Thaw+badge/OpenSSF-silver+badge/OpenSSF_Baseline-baseline-2+badge/Scorecard-9.1+badge/SLSA-Build_L3.svg?variant=secondary&amp;mode=light&amp;statusDot=true" />
-  </picture>
+  <a href="https://github.com/thaw-app/Thaw/actions/workflows/ci.yml">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/ci/thaw-app/Thaw.svg?variant=default&amp;mode=dark&amp;split=true&amp;labelColor=3f3f46&amp;statusDot=true" />
+      <img alt="CI" src="https://shieldcn.dev/github/ci/thaw-app/Thaw.svg?variant=default&amp;mode=light&amp;split=true&amp;labelColor=3f3f46&amp;statusDot=true" />
+    </picture>
+  </a>
+  <a href="https://www.bestpractices.dev/projects/13303">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/group/badge/OpenSSF-silver-c0c0c0+badge/Baseline-baseline-2-22c55e+badge/Scorecard-9.1-22c55e.svg?variant=default&amp;mode=dark&amp;split=true&amp;labelColor=3f3f46" />
+      <img alt="OpenSSF Best Practices, Baseline, and Scorecard" src="https://shieldcn.dev/group/badge/OpenSSF-silver-c0c0c0+badge/Baseline-baseline-2-22c55e+badge/Scorecard-9.1-22c55e.svg?variant=default&amp;mode=light&amp;split=true&amp;labelColor=3f3f46" />
+    </picture>
+  </a>
+  <a href="docs/VERIFYING_RELEASES.md">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/SLSA-Build_L3.svg?variant=default&amp;mode=dark&amp;split=true&amp;labelColor=3f3f46&amp;color=0ea5e9" />
+      <img alt="SLSA Build Level 3" src="https://shieldcn.dev/badge/SLSA-Build_L3.svg?variant=default&amp;mode=light&amp;split=true&amp;labelColor=3f3f46&amp;color=0ea5e9" />
+    </picture>
+  </a>
 </p>
 
 <p align="center">
