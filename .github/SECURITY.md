@@ -119,10 +119,10 @@ software composition analysis (SCA) gate (OpenSSF Baseline **OSPS-VM-05.03**).
 ### What is evaluated
 
 On every pull request and on pushes to `development`, the **Dependency SCA**
-workflow (`.github/workflows/dependency-sca.yml`) runs [OSV-Scanner](https://google.github.io/osv-scanner/)
-against checked-in lockfiles and manifests (including Swift
-`Package.resolved`, GitHub Actions pins via workflow files, and other supported
-ecosystems present in the tree). Findings are also uploaded to GitHub code
+workflow (`.github/workflows/dependency-sca.yml`) runs a
+version-and-SHA256–pinned [OSV-Scanner](https://google.github.io/osv-scanner/)
+binary (same digest-pin pattern as Syft in the release workflow) against the
+checked-in Swift `Package.resolved`. Findings are also uploaded to GitHub code
 scanning when permissions allow.
 
 Dependabot continues to open update PRs; those PRs are subject to the same gate.

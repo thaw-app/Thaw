@@ -1,6 +1,10 @@
 # Software composition analysis gate for OpenSSF Baseline OSPS-VM-05.03.
-# Scans lockfiles / manifests (including Swift Package.resolved) against OSV
-# and fails the check when known vulnerabilities remain unsuppressed.
+# Scans Swift Package.resolved (and other lockfiles we pass) against OSV and
+# fails when known vulnerabilities remain unsuppressed.
+#
+# Uses a version+SHA256–pinned osv-scanner binary (same trust pattern as Syft
+# in release.yml). The google/osv-scanner-action image is still on v2.3.8, which
+# cannot extract Package.resolved; CLI v2.4.0 can.
 name: Dependency SCA
 
 concurrency:
@@ -82,40 +86,69 @@ jobs:
           print(f"Validated {len(ignored)} IgnoredVulns suppression(s)")
           PY
 
+      - name: Install OSV-Scanner
+        env:
+          # Pin by version *and* archive digest — same pattern as Syft in
+          # release.yml. Digests from osv-scanner_SHA256SUMS on the release.
+          OSV_SCANNER_VERSION: "2.4.0"
+          OSV_SCANNER_SHA256_LINUX_AMD64: "15314940c10d26af9c6649f150b8a47c1262e8fc7e17b1d1029b0e479e8ed8a0"
+        run: |
+          set -euo pipefail
+          bin="$RUNNER_TEMP/osv-scanner-bin"
+          mkdir -p "$bin"
+          dest="$bin/osv-scanner"
+          curl -sSfL --retry 3 \
+            "https://github.com/google/osv-scanner/releases/download/v${OSV_SCANNER_VERSION}/osv-scanner_linux_amd64" \
+            -o "$dest"
+          echo "${OSV_SCANNER_SHA256_LINUX_AMD64}  ${dest}" | sha256sum -c -
+          chmod +x "$dest"
+          echo "$bin" >> "$GITHUB_PATH"
+          "$dest" --version
+
       - name: Scan dependencies (OSV)
         id: scan
-        continue-on-error: true
-        uses: google/osv-scanner-action/osv-scanner-action@8dc09193bb540e09b23da07ad7e30bd33bf87018 # v2.3.8
-        with:
-          scan-args: |-
-            --format=json
-            --output=results.json
-            --config=osv-scanner.toml
-            -r
-            ./
-
-      # continue-on-error lets the reporter run when exit code 1 means "vulns
-      # found". Hard scanner failures often produce no results.json — fail closed.
-      - name: Require scanner results
-        if: ${{ hashFiles('results.json') == '' }}
-        shell: bash
+        env:
+          LOCKFILE: Thaw.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
         run: |
-          echo "::error::OSV-Scanner did not produce results.json (scan outcome=${{ steps.scan.outcome }})"
-          exit 1
+          set -euo pipefail
+          test -f "$LOCKFILE"
 
-      - name: Report findings
-        uses: google/osv-scanner-action/osv-reporter-action@8dc09193bb540e09b23da07ad7e30bd33bf87018 # v2.3.8
-        with:
-          scan-args: |-
-            --output=results.sarif
-            --new=results.json
-            --gh-annotations=true
-            --fail-on-vuln=true
+          # Always write reports, then exit with the scanner status so SARIF
+          # upload can use if: always() while vulns still fail the job.
+          set +e
+          osv-scanner scan source \
+            --lockfile="$LOCKFILE" \
+            --config=osv-scanner.toml \
+            --format=json \
+            --output-file=results.json
+          json_ec=$?
+          osv-scanner scan source \
+            --lockfile="$LOCKFILE" \
+            --config=osv-scanner.toml \
+            --format=sarif \
+            --output-file=results.sarif
+          sarif_ec=$?
+          set -e
+
+          if [[ ! -f results.json ]]; then
+            echo "::error::OSV-Scanner did not produce results.json (exit=${json_ec})"
+            exit 1
+          fi
+
+          # Prefer the JSON scan exit code (0 clean, 1 vulns, 128+ errors).
+          if [[ "$json_ec" -ne 0 ]]; then
+            exit "$json_ec"
+          fi
+          if [[ "$sarif_ec" -ne 0 && "$sarif_ec" -ne 1 ]]; then
+            exit "$sarif_ec"
+          fi
+          exit 0
 
       - name: Upload SARIF
         if: >-
           ${{
-            !cancelled()
+            always()
+            && !cancelled()
             && hashFiles('results.sarif') != ''
             && (github.event_name != 'pull_request'
                 || github.event.pull_request.head.repo.full_name == github.repository)
@@ -126,7 +159,7 @@ jobs:
           category: dependency-sca
 
       - name: Upload JSON results
-        if: ${{ !cancelled() && hashFiles('results.json') != '' }}
+        if: ${{ always() && !cancelled() && hashFiles('results.json') != '' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: osv-scanner-results
