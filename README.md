@@ -1,22 +1,23 @@
 ![Thaw](https://raw.githubusercontent.com/thaw-app/brand-assets/main/headers/light_header.svg#gh-light-mode-only)
 ![Thaw](https://raw.githubusercontent.com/thaw-app/brand-assets/main/headers/dark_header.svg#gh-dark-mode-only)
 
+<!-- shieldcn.dev preview (example) — swap back to shields/official badges if we keep the flat-square look -->
 <p align="center">
-  <a href="https://github.com/thaw-app/Thaw/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/thaw-app/Thaw?style=flat-square&label=latest&color=555555" /></a>
-  <a href="https://github.com/thaw-app/Thaw/releases"><img alt="Beta / pre-release" src="https://img.shields.io/github/v/release/thaw-app/Thaw?include_prereleases&style=flat-square&label=beta&color=555555" /></a>
-  <img alt="Requirements" src="https://img.shields.io/badge/macOS-26%2B-555555?style=flat-square" />
-  <a href="https://crowdin.com/project/thaw"><img alt="Translated into 20 languages" src="https://img.shields.io/badge/translated-20_languages-555555?style=flat-square&logo=crowdin&logoColor=white" /></a>
-  <a href="https://discord.gg/5cnKkKbMFd"><img alt="Discord" src="https://img.shields.io/badge/Discord-7289DA?style=flat-square&logo=discord&logoColor=white" /></a>
-  <a href="https://github.com/sponsors/stonerl"><img alt="Sponsor" src="https://img.shields.io/badge/Sponsor-%E2%9D%A4-555555?style=flat-square" /></a>
-  <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/thaw-app/Thaw?style=flat-square&color=555555" /></a>
+  <a href="https://github.com/thaw-app/Thaw/releases/latest"><img alt="Latest release" src="https://shieldcn.dev/github/thaw-app/Thaw/release.svg?label=latest" /></a>
+  <a href="https://github.com/thaw-app/Thaw/releases"><img alt="Beta / pre-release" src="https://shieldcn.dev/github/thaw-app/Thaw/release.svg?label=beta" /></a>
+  <img alt="Requirements" src="https://shieldcn.dev/badge/macOS-26+-gray.svg" />
+  <a href="https://crowdin.com/project/thaw"><img alt="Translated into 20 languages" src="https://shieldcn.dev/badge/translated-20_languages-gray.svg?logo=crowdin" /></a>
+  <a href="https://discord.gg/5cnKkKbMFd"><img alt="Discord" src="https://shieldcn.dev/badge/Discord-7289DA.svg?logo=discord&variant=branded" /></a>
+  <a href="https://github.com/sponsors/stonerl"><img alt="Sponsor" src="https://shieldcn.dev/badge/Sponsor-%E2%9D%A4-rose.svg" /></a>
+  <a href="LICENSE"><img alt="License" src="https://shieldcn.dev/github/thaw-app/Thaw/license.svg" /></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/thaw-app/Thaw/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/thaw-app/Thaw/ci.yml?style=flat-square&label=CI" /></a>
-  <a href="https://www.bestpractices.dev/projects/13303"><img alt="OpenSSF Best Practices" src="https://www.bestpractices.dev/projects/13303/badge?style=flat-square" /></a>
-  <a href="https://www.bestpractices.dev/projects/13303"><img alt="OpenSSF Baseline" src="https://www.bestpractices.dev/projects/13303/baseline?style=flat-square" /></a>
-  <a href="https://scorecard.dev/viewer/?uri=github.com/thaw-app/Thaw"><img alt="OpenSSF Scorecard" src="https://api.scorecard.dev/projects/github.com/thaw-app/Thaw/badge?style=flat-square" /></a>
-  <a href="docs/VERIFYING_RELEASES.md"><img alt="SLSA Build Level 2" src="https://img.shields.io/badge/SLSA-Build_L2-555555?style=flat-square" /></a>
+  <a href="https://github.com/thaw-app/Thaw/actions/workflows/ci.yml"><img alt="CI" src="https://shieldcn.dev/github/thaw-app/Thaw/ci.svg" /></a>
+  <a href="https://www.bestpractices.dev/projects/13303"><img alt="OpenSSF Best Practices" src="https://shieldcn.dev/badge/dynamic/json.svg?url=https%3A%2F%2Fwww.bestpractices.dev%2Fprojects%2F13303.json&query=%24.badge_level&label=OpenSSF" /></a>
+  <a href="https://www.bestpractices.dev/projects/13303"><img alt="OpenSSF Baseline" src="https://shieldcn.dev/badge/OpenSSF_Baseline-2-green.svg" /></a>
+  <a href="https://scorecard.dev/viewer/?uri=github.com/thaw-app/Thaw"><img alt="OpenSSF Scorecard" src="https://shieldcn.dev/badge/dynamic/json.svg?url=https%3A%2F%2Fapi.scorecard.dev%2Fprojects%2Fgithub.com%2Fthaw-app%2FThaw&query=%24.score&label=Scorecard" /></a>
+  <a href="docs/VERIFYING_RELEASES.md"><img alt="SLSA Build Level 2" src="https://shieldcn.dev/badge/SLSA-Build_L2-gray.svg" /></a>
 </p>
 
 <p align="center">

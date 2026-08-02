@@ -17,3 +17,6 @@ ThawCtl/.build/
 xcode-skills
 xcuserdata/
 plans/
+
+# Local badge mockups
+.tmp-badge-preview/
