@@ -5069,6 +5069,15 @@ extension MenuBarItemManager {
         }
         appState?.menuBarManager.sectionController?.notePreferredPositionsSelfWrite()
         requestMenuBarAgentPositionRefresh()
+        // Stamp at issue time, not only on verification: MenuBarAgent starts
+        // re-sorting and animating the bar the moment the write lands, and
+        // stamping late left that whole window unguarded — the live-refresh
+        // loop and itemCache observers screenshotted the bar mid-animation and
+        // cached garbled neighbour slices for the entire visible row (#687).
+        // A write the agent applies after the poll budget is covered too.
+        // Verification below re-stamps, so "since move completed" consumers
+        // (e.g. applySavedLayout's cooldown) still see the later time.
+        lastMoveOperationTimestamp = .now
 
         // Poll the live order until MenuBarAgent observes the synchronized write.
         let destinationSatisfied: ([MenuBarItem]) -> Bool = { items in
@@ -5106,6 +5115,8 @@ extension MenuBarItemManager {
         {
             appState?.menuBarManager.sectionController?.notePreferredPositionsSelfWrite()
             requestMenuBarAgentPositionRefresh()
+            // Same issue-time stamp as the first write above.
+            lastMoveOperationTimestamp = .now
             MenuBarItemManager.diagLog.debug(
                 "Retrying preferred-position move after refreshed key resolution for \(item.logString)"
             )

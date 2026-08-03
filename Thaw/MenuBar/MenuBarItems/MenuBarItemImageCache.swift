@@ -2566,8 +2566,17 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
 
     /// Updates the cache for the given sections, without checking whether
     /// caching is necessary.
+    ///
+    /// `ignoreRecentMove` lets a deliberate post-reorder refresh keep its
+    /// result: the reorder itself stamps the move timestamp on verification,
+    /// so without the bypass the corrective capture was always discarded by
+    /// the in-flight guard below and the garbled pre-reorder images stayed
+    /// on screen (#687). Only pass `true` after the bar has settled.
     @MainActor
-    func updateCacheWithoutChecks(sections: [MenuBarSection.Name]) async {
+    func updateCacheWithoutChecks(
+        sections: [MenuBarSection.Name],
+        ignoreRecentMove: Bool = false
+    ) async {
         guard let appState else {
             MenuBarItemImageCache.diagLog.warning("updateCacheWithoutChecks: appState is nil, aborting")
             return
@@ -2624,7 +2633,7 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
             )
 
             guard !appState.itemManager.isResettingLayout,
-                  !appState.itemManager.lastMoveOperationOccurred(within: .seconds(2))
+                  ignoreRecentMove || !appState.itemManager.lastMoveOperationOccurred(within: .seconds(2))
             else {
                 MenuBarItemImageCache.diagLog.debug(
                     "updateCacheWithoutChecks: discarding in-flight capture because layout changed"
@@ -3231,7 +3240,7 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
         }
 
         MenuBarItemImageCache.diagLog.debug("updateCache: proceeding with cache update for \(sections.count) sections (iceBar=\(navSnapshot.isIceBarPresented), search=\(navSnapshot.isSearchPresented), background=\(allowBackgroundCapture))")
-        await updateCacheWithoutChecks(sections: sections)
+        await updateCacheWithoutChecks(sections: sections, ignoreRecentMove: skipRecentMoveCheck)
     }
 
     /// Updates the cache for all sections, if necessary.
@@ -3300,6 +3309,11 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
         guard !sectionsNeedingDisplay.isEmpty else {
             return
         }
+
+        // AX order verifies before MenuBarAgent finishes compositing the moved
+        // glyphs; capturing immediately would store a mid-slide frame. One
+        // short render settle mirrors the prewarm paths.
+        try? await Task.sleep(for: Constants.MenuBarTuning.layoutPrewarmRenderSettle)
 
         await updateCache(
             sections: sectionsNeedingDisplay,
