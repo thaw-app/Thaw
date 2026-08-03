@@ -21,7 +21,7 @@ jobs:
     outputs:
       code: ${{ steps.filter.outputs.code }}
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
       - name: Detect code-related paths
@@ -59,7 +59,7 @@ jobs:
     needs: changes
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: needs.changes.outputs.code == 'true'
         with:
           fetch-depth: 0
@@ -108,7 +108,7 @@ jobs:
         if: needs.changes.outputs.code != 'true'
         run: echo "No code-related paths changed; skipping xcodebuild test."
 
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: needs.changes.outputs.code == 'true'
       - run: sudo xcode-select -s /Applications/Xcode_26.5.app/Contents/Developer
         if: needs.changes.outputs.code == 'true'
@@ -213,7 +213,7 @@ jobs:
           echo "Skipping SonarQube analysis for PR from fork"
           echo "Analysis will be performed after merge to the default branch"
 
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: env.SONAR_ENABLED == 'true'
         with:
           fetch-depth: 0
