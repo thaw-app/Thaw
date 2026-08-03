@@ -8490,6 +8490,30 @@ extension MenuBarItemManager {
         }
 
         let trigger = windowIDsChanged ? "windowID change" : "layout divergence"
+
+        // The apply must refuse the same geometry the save path refuses to
+        // persist. When the dividers have collapsed onto one coordinate,
+        // findSection has already misread every hidden item, so the section
+        // mismatch computed below is an artifact of the collapse, not drift
+        // to correct — dispatching here drags the whole hidden section to
+        // the wrong side of the dividers with synthetic mouse events. Worse,
+        // the drags separate the dividers, so the saveSectionOrder gate that
+        // caught the collapse a cycle earlier passes on the next cycle and
+        // persists the damage (#868). Refusing keeps the bar untouched; the
+        // change gate re-fires via layout divergence once the geometry
+        // recovers, and the apply then runs against a trustworthy reading.
+        let hiddenSectionHasRoom = LayoutSolver.hiddenSectionHasRoom(
+            hiddenControlItemMinX: controlItems.hidden.bounds.minX,
+            alwaysHiddenControlItemMaxX: controlItems.alwaysHidden?.bounds.maxX,
+            savedHiddenItemCount: savedSectionOrder[sectionKey(for: .hidden)]?.count ?? 0
+        )
+        guard hiddenSectionHasRoom else {
+            MenuBarItemManager.diagLog.warning(
+                "applySavedLayout: skipping (\(trigger)); hidden section has zero width between the dividers (hidden.minX=\(controlItems.hidden.bounds.minX), alwaysHidden.maxX=\(controlItems.alwaysHidden?.bounds.maxX.description ?? "nil"))"
+            )
+            return false
+        }
+
         MenuBarItemManager.diagLog.info("applySavedLayout: dispatching bulk apply (\(trigger))")
 
         // The shared body uses itemOrder as the per-section ordered

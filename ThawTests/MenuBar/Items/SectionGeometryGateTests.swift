@@ -11,7 +11,8 @@ import Testing
 @testable import Thaw
 
 /// Covers the two section-geometry predicates that feed
-/// `LayoutSolver.shouldPersistSavedOrder`.
+/// `LayoutSolver.shouldPersistSavedOrder`. `hiddenSectionHasRoom`
+/// additionally gates `applySavedLayout`'s bulk dispatch (#868).
 ///
 /// Both exist for the same reason: `CacheContext.findSection` degrades
 /// rather than fails when the dividers cannot describe the sections, and
@@ -125,6 +126,22 @@ struct SectionGeometryGateTests {
             hiddenControlItemMinX: -4270.5,
             alwaysHiddenControlItemMaxX: -4271,
             savedHiddenItemCount: 41
+        ))
+    }
+
+    @Test("The apply-path bypass geometry has no room")
+    func applyPathBypassGeometryHasNoRoom() {
+        // The #868 field incident: dividers collapsed at -5743 with 46
+        // items saved hidden. saveSectionOrder refused this geometry, but
+        // applySavedLayout read the same collapse as an 11-item section
+        // mismatch and dispatched 21 synthetic drags — which separated the
+        // dividers, un-tripping the save gate, so the next cycle persisted
+        // the misclassification. The apply path now consults this predicate
+        // before dispatching, so both writers refuse the same reading.
+        #expect(!LayoutSolver.hiddenSectionHasRoom(
+            hiddenControlItemMinX: -5743,
+            alwaysHiddenControlItemMaxX: -5743,
+            savedHiddenItemCount: 46
         ))
     }
 
