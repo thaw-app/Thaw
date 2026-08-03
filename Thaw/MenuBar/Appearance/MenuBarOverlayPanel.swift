@@ -418,7 +418,13 @@ final class MenuBarOverlayPanel: NSPanel {
     private var missionControlDisplacedSince: Date?
 
     private var shouldPollMissionControlProbe: Bool {
-        appState != nil && alphaValue > 0
+        // Keep polling while `isMissionControlActive` is set: this poll is the
+        // only path that can clear the flag when no space change fires.
+        // "Click wallpaper to reveal desktop" displaces the probe window just
+        // like Mission Control but never changes the active space, so gating
+        // purely on visibility left the panel wedged at alpha 0 (border and
+        // tint gone) until relaunch (#687).
+        appState != nil && (alphaValue > 0 || isMissionControlActive)
     }
 
     /// Creates an overlay panel with the given app state and owning screen.
