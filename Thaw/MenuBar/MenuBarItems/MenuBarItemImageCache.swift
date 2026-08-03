@@ -150,6 +150,13 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
         /// entries let ``OverflowFallbackIcon`` show the app icon instead of a
         /// stale screenshot.
         var invalidatedTags = Set<MenuBarItemTag>()
+
+        /// The subset of ``invalidatedTags`` whose prior cache entry must be
+        /// dropped even when it looks like a settled glyph. A concealed macOS 27
+        /// item is never rendered on the strip, so a non-blank, full-width prior
+        /// for it can only be a background/wallpaper crop — exactly what the
+        /// "retain settled prior" heuristic would otherwise shield (#687).
+        var unconditionallyInvalidatedTags = Set<MenuBarItemTag>()
     }
 
     /// The cached item images, keyed by their corresponding tags.
@@ -1431,7 +1438,8 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
         _ itemsWithBounds: [(item: MenuBarItem, bounds: CGRect)],
         scale _: CGFloat,
         displayID: CGDirectDisplayID,
-        validateFreshBounds: Bool
+        validateFreshBounds: Bool,
+        concealedIdentifiers: Set<String>
     ) async -> CaptureResult {
         guard !itemsWithBounds.isEmpty else { return CaptureResult() }
 
@@ -1597,6 +1605,7 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
                 validateFreshBounds: validateFreshBounds,
                 postCaptureBoundsByID: postCaptureBoundsByID,
                 overflowBounds: overflowBounds,
+                concealedIdentifiers: concealedIdentifiers,
                 cropRectOwners: &hostingCropRectOwners,
                 into: &result
             )
@@ -1622,6 +1631,7 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
                 validateFreshBounds: true,
                 postCaptureBoundsByID: postCaptureBoundsByID,
                 overflowBounds: overflowBounds,
+                concealedIdentifiers: concealedIdentifiers,
                 cropRectOwners: &stripCropRectOwners,
                 into: &result
             )
@@ -1640,6 +1650,7 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
         validateFreshBounds: Bool,
         postCaptureBoundsByID: [String: CGRect],
         overflowBounds: [CGRect],
+        concealedIdentifiers: Set<String>,
         cropRectOwners: inout [CGRect: MenuBarItemTag],
         into result: inout CaptureResult
     ) {
@@ -1651,6 +1662,32 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
         for (item, bounds) in candidates {
             if shouldSkipCapture(for: item) {
                 result.excluded.append(item)
+                continue
+            }
+
+            // A concealed item is physically removed from MenuBarAgent, so a
+            // crop at its (stale) bounds is never its glyph — it is whatever
+            // now occupies that strip region: bare wallpaper, menu bar fill,
+            // or a neighbour's pixels. Membership in the section controller's
+            // effective concealment set is the authoritative test; the old
+            // `!item.isOnScreen` check here was dead code because the AX
+            // provider hardcodes `isOnScreen: true` for every enumerated item.
+            // Invalidate unconditionally: for a concealed item, a non-blank
+            // full-width prior can only be an earlier background crop, so the
+            // "retain settled prior" heuristic must not shield it. Temporarily
+            // revealed items are excluded from the set, so prewarm captures of
+            // genuinely rendered glyphs are never dropped. Denylisted
+            // hiding-unsupported items always render and are never in the set.
+            if concealedIdentifiers.contains(
+                MenuBarItemTag.canonicalPersistentIdentifier(item.uniqueIdentifier)
+            ), !item.tag.isHidingUnsupported {
+                MenuBarItemImageCache.diagLog.debug(
+                    "axBoundsCapture: \(item.logString) is concealed and has no on-screen glyph " +
+                        "to capture; clearing prior image for app-icon fallback"
+                )
+                result.excluded.append(item)
+                result.invalidatedTags.insert(item.tag)
+                result.unconditionallyInvalidatedTags.insert(item.tag)
                 continue
             }
 
@@ -1778,27 +1815,6 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
                 croppedImage = rawCroppedImage.detachedCopy()
             }
 
-            // A concealed / off-screen item is not rendered on the on-screen
-            // strip, so its crop is never the item's glyph — it is either
-            // transparent, or (over non-uniform wallpaper, where the background
-            // knock-out can't fully clear) an opaque background rectangle. The
-            // transparent guard below only catches the former; the latter used
-            // to be stored and drawn as a misleading "blank strip". Reject
-            // off-screen crops regardless of transparency so the layout bar
-            // shows the honest app-icon fallback instead. Scoped to off-screen
-            // items, so a genuinely revealed on-screen glyph is never dropped.
-            // Denylisted hiding-unsupported items keep their transient-blank
-            // handling in the guard below (they retain their last good image).
-            if !item.isOnScreen, !item.tag.isHidingUnsupported {
-                MenuBarItemImageCache.diagLog.debug(
-                    "axBoundsCapture: off-screen \(item.logString) has no on-screen glyph to " +
-                        "capture; clearing prior image for app-icon fallback (position-hidden)"
-                )
-                result.excluded.append(item)
-                result.invalidatedTags.insert(item.tag)
-                continue
-            }
-
             guard !croppedImage.isTransparent(alphaThreshold: 0.05) else {
                 // Denylisted hiding-unsupported apps transiently render blank during
                 // Assessment Mode reflows — the assertion recomposites the whole
@@ -1861,7 +1877,8 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
         of items: [MenuBarItem],
         scale: CGFloat,
         appState: AppState,
-        freshBounds: Bool = false
+        freshBounds: Bool = false,
+        concealedIdentifiers: Set<String> = []
     ) async -> CaptureResult {
         // Thaw's section-divider control items capture as transparent via
         // CGWindowListCreateImage on macOS <=26, so skip them there. On macOS
@@ -1972,7 +1989,8 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
                 axItems,
                 scale: scale,
                 displayID: displayID,
-                validateFreshBounds: freshBounds
+                validateFreshBounds: freshBounds,
+                concealedIdentifiers: concealedIdentifiers
             )
         }
 
@@ -2216,6 +2234,13 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
         if shouldUseFreshBounds {
             clearCaptureFailures(for: items)
         }
+        // Concealed items can flow through a capturable section's pass while
+        // the item cache is stale (e.g. between conceal and the next cache
+        // cycle, or via resurrection snapshots carrying on-band bounds). Their
+        // strip crops are never their glyphs, so the crop loop rejects them
+        // against this set.
+        let concealedIdentifiers = appState.menuBarManager.sectionController?
+            .effectivelyConcealedIdentifiers ?? []
         let captureResult = await captureImages(
             of: items,
             scale: scale,
@@ -2224,7 +2249,8 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
             // coherent; an extra AX walk can observe a different dynamic layout
             // and crop a neighbour. Revealed concealed sections need fresh bounds
             // because their items move on-screen during the reveal.
-            freshBounds: shouldUseFreshBounds
+            freshBounds: shouldUseFreshBounds,
+            concealedIdentifiers: concealedIdentifiers
         )
         if !captureResult.excluded.isEmpty {
             MenuBarItemImageCache.diagLog.debug(
@@ -2560,6 +2586,7 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
         MenuBarItemImageCache.diagLog.notice("updateCacheWithoutChecks: displayID=\(screen.displayID) backingScaleFactor=\(Double(scale)) hasNotch=\(screen.hasNotch) menuBarHeight=\(Double(screen.getMenuBarHeightEstimate())) sections=\(sectionsToCapture.map(\.logString))")
         var newImages = [MenuBarItemTag: CapturedImage]()
         var invalidatedTags = Set<MenuBarItemTag>()
+        var unconditionallyInvalidatedTags = Set<MenuBarItemTag>()
 
         for section in sectionsToCapture {
             guard !Task.isCancelled else {
@@ -2587,6 +2614,7 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
             }
 
             invalidatedTags.formUnion(sectionResult.invalidatedTags)
+            unconditionallyInvalidatedTags.formUnion(sectionResult.unconditionallyInvalidatedTags)
 
             guard !sectionResult.images.isEmpty else {
                 // Expected for off-screen sections (e.g. hidden): live refresh
@@ -2621,16 +2649,19 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
         // here and show a blank Hidden slot after a visible→hidden move.
         let assignedSnapshotTags = appState.menuBarManager.sectionController?.assignedSnapshotTags ?? []
 
-        await MainActor.run { [newImages, invalidatedTags, allValidTags, assignedSnapshotTags] in
+        await MainActor.run { [newImages, invalidatedTags, unconditionallyInvalidatedTags, allValidTags, assignedSnapshotTags] in
             let beforeCount = images.count
 
             // Drop priors that this pass proved unusable (incomplete crop /
             // off-window), but keep a settled non-blank glyph when the new
             // pass has no replacement. Clearing those priors is what turned
             // Layout open into "double arrow" / app-icon churn on macOS 27.
+            // Concealment-proven tags skip the retention heuristic: a concealed
+            // item's "settled" prior can only be a background/wallpaper crop.
             var retainedPriorCount = 0
             for tag in invalidatedTags {
-                if newImages[tag] == nil,
+                if !unconditionallyInvalidatedTags.contains(tag),
+                   newImages[tag] == nil,
                    let existing = images[tag],
                    !existing.isEffectivelyBlank,
                    existing.scaledSize.width >= Self.minimumTrustedGlyphWidth
@@ -3063,10 +3094,14 @@ final class MenuBarItemImageCache: ObservableObject, @unchecked Sendable {
                         [(item: liveItem, bounds: liveItem.bounds)],
                         scale: scale,
                         displayID: displayID,
-                        validateFreshBounds: true
+                        validateFreshBounds: true,
+                        // This path just revealed the item itself and waited for
+                        // its live AX element, so it is not concealed here.
+                        concealedIdentifiers: []
                     )
                     for tag in captureResult.invalidatedTags {
-                        if let existing = self.images[tag],
+                        if !captureResult.unconditionallyInvalidatedTags.contains(tag),
+                           let existing = self.images[tag],
                            !existing.isEffectivelyBlank,
                            existing.scaledSize.width >= Self.minimumTrustedGlyphWidth
                         {

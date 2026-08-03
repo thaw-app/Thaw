@@ -2767,6 +2767,17 @@ final class MenuBarSectionController: ObservableObject {
         )
     }
 
+    /// Canonical identifiers of items that are effectively concealed right now:
+    /// assigned to a hidden section (including automatic overflow), not covered
+    /// by a section reveal, and not temporarily revealed for capture.
+    ///
+    /// On macOS 27 a concealed item is physically removed from MenuBarAgent, so
+    /// any on-screen crop at its (stale) bounds is menu bar background, never
+    /// its glyph. The image cache uses this set to reject such crops (#687).
+    var effectivelyConcealedIdentifiers: Set<String> {
+        Set(effectiveAssignmentExcludingTemporarilyRevealed().keys)
+    }
+
     /// Experimental surgical hide: when `enabled`, hide third-party items via
     /// per-key plist manipulation instead of the assessment-mode assertion,
     /// which re-composites the whole bar and can disrupt dynamic neighbors
