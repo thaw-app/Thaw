@@ -180,7 +180,7 @@ struct AboutSettingsPane: View {
     }
 
     private func openAcknowledgements() {
-        guard let url = Bundle.main.url(forResource: "Acknowledgements", withExtension: "pdf") else { return }
+        guard let url = Bundle.main.url(forResource: "Acknowledgements", withExtension: "md") else { return }
         NSWorkspace.shared.open(url)
     }
 
