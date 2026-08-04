@@ -94,7 +94,7 @@ jobs:
       LEGACY_APPCAST_REPOSITORY: stonerl/Thaw
     steps:
       - name: Checkout code
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           ref: refs/tags/${{ inputs.tag }}
@@ -344,7 +344,7 @@ jobs:
       # the Sigstore transparency log, which cannot be retracted afterwards.
       - name: Install cosign
         if: ${{ !inputs.dry_run }}
-        uses: sigstore/cosign-installer@d7543c93d881b35a8faa02e8e3605f69b7a1ce62 # v3.10.0
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
 
       - name: Sign installer DMG and SBOM (Sigstore)
         if: ${{ !inputs.dry_run }}

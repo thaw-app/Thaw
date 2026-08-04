@@ -19,7 +19,7 @@ jobs:
     steps:
       - name: Parse command
         id: command
-        uses: github/command@76d69a2a6b747d621fba374d707409f89114c620
+        uses: github/command@3442f3fa1efe01bdb024b157083c337902d17372
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           command: ".build"

@@ -22,8 +22,8 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install gh-aw extension
-        uses: github/gh-aw-actions/setup-cli@b6d1443e05b8716267fa19425b99aa4f12006b4a # v0.82.14
+        uses: github/gh-aw-actions/setup-cli@fd783ac87efde5e0c0e05d593f1906ea25b5d92e # v0.84.2
         with:
           version: v0.82.14
