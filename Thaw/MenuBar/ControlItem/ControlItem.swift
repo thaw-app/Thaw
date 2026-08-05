@@ -132,15 +132,21 @@ final class ControlItem {
         /// Removes the status item from the status bar.
         private func removeStatusItem() {
             // Removing the status item has the unwanted side effect of
-            // deleting the preferred position. Cache and restore it,
-            // but only for non-section-divider items.
+            // deleting the preferred position. Cache and restore it.
+            //
+            // Dividers are restored too, for the reason in
+            // hideIceIconCompletely: the exclusion only made sense while the
+            // subscript refused divider writes outright, and leaving it in
+            // place would let a recreate silently discard the position
+            // preflightSetup had just seeded (#890).
             let autosaveName = statusItem.autosaveName as String
-            let isSectionDivider = ControlItemDefaults.isSectionDivider(autosaveName: autosaveName)
             let cached = ControlItemDefaults[.preferredPosition, autosaveName]
             NSStatusBar.system.removeStatusItem(statusItem)
-            if !isSectionDivider {
-                ControlItemDefaults[.preferredPosition, autosaveName] = cached
-            }
+            ControlItemDefaults.setIgnoringSectionDividerGuard(
+                .preferredPosition,
+                autosaveName,
+                to: cached
+            )
         }
     }
 
@@ -744,15 +750,21 @@ final class ControlItem {
             return
         }
         // Setting `statusItem.isVisible` to `false` has the unwanted side
-        // effect of deleting the preferred position. Cache and restore it,
-        // but only for non-section-divider items.
+        // effect of deleting the preferred position. Cache and restore it.
+        //
+        // Dividers used to be excluded here, which was consistent while the
+        // subscript refused to write them anyway. Now that seeding has a path
+        // through that guard, skipping the restore would undo it: hiding the
+        // icon would delete the position seeding had just established and
+        // leave the divider free to be placed on top of the other one (#890).
         let autosaveName = statusItem.autosaveName as String
-        let isSectionDivider = (identifier == .hidden || identifier == .alwaysHidden)
         let cached = ControlItemDefaults[.preferredPosition, autosaveName]
         statusItem.isVisible = false
-        if !isSectionDivider {
-            ControlItemDefaults[.preferredPosition, autosaveName] = cached
-        }
+        ControlItemDefaults.setIgnoringSectionDividerGuard(
+            .preferredPosition,
+            autosaveName,
+            to: cached
+        )
     }
 
     /// Updates the status item's visibility without clearing its preferred position.
