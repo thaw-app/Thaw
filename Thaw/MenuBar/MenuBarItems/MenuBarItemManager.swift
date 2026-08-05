@@ -308,11 +308,27 @@ final class MenuBarItemManager {
 
     /// The currently running "is any menu open" probe, reused so concurrent
     /// smart-rehide callers do not all trigger their own full menu-bar scan.
-    private var menuOpenCheckTask: Task<Bool, Never>?
+    /// Returns the window IDs of candidate menu windows owned by menu bar
+    /// item processes; persistence filtering happens on the actor.
+    private var menuOpenCheckTask: Task<Set<CGWindowID>, Never>?
 
     /// The most recent open-menu probe result and its timestamp.
     private var menuOpenCheckCachedResult: Bool?
     private var menuOpenCheckCachedAt: ContinuousClock.Instant?
+
+    /// First-seen timestamps for candidate menu windows, keyed by window ID.
+    /// A real menu is transient; a window that stays on screen longer than
+    /// ``menuWindowPersistenceThreshold`` is persistent furniture (Droppy's
+    /// shelf, notch HUDs) and must not block moves (#879 regression).
+    private var menuWindowFirstSeen: [CGWindowID: ContinuousClock.Instant] = [:]
+
+    /// Whether the open-menu probe has run at least once. Windows already
+    /// on screen at the first probe are grandfathered as persistent.
+    private var hasSeededMenuWindowProbe = false
+
+    /// How long a candidate menu window may stay on screen before it is
+    /// reclassified as persistent furniture rather than an open menu.
+    nonisolated static let menuWindowPersistenceThreshold: Duration = .seconds(30)
 
     /// Timer for lightweight periodic cache checks.
     private var cacheTickCancellable: AnyCancellable?
@@ -6287,13 +6303,13 @@ extension MenuBarItemManager {
 
         if let existingTask = menuOpenCheckTask {
             MenuBarItemManager.diagLog.debug("Menu open check: joining in-flight probe")
-            return await existingTask.value
+            return applyMenuWindowPersistenceFilter(to: await existingTask.value)
         }
 
         let cachedItems = itemCache.managedItems.filter(\.isOnScreen)
         let controlCenterBundleID = MenuBarItemTag.Namespace.controlCenter.description
 
-        let task = Task.detached(priority: .utility) { () -> Bool in
+        let task = Task.detached(priority: .utility) { () -> Set<CGWindowID> in
             // Get all on-screen windows.
             let windows = WindowInfo.createWindows(option: .onScreen)
             let potentialMenuWindows = windows.filter { window in
@@ -6313,7 +6329,7 @@ extension MenuBarItemManager {
                 MenuBarItemManager.diagLog.debug(
                     "Menu open check: no candidate menu windows on screen"
                 )
-                return false
+                return []
             }
 
             let fastPathPIDs = Set(cachedItems.compactMap { item -> pid_t? in
@@ -6333,7 +6349,7 @@ extension MenuBarItemManager {
                 """
             )
 
-            let fastPathResult = potentialMenuWindows.contains { window in
+            let fastPathMatches = potentialMenuWindows.filter { window in
                 let isMenuOpen = fastPathPIDs.contains(window.ownerPID)
                 if isMenuOpen {
                     MenuBarItemManager.diagLog.debug(
@@ -6347,9 +6363,9 @@ extension MenuBarItemManager {
                 return isMenuOpen
             }
 
-            if fastPathResult {
-                MenuBarItemManager.diagLog.debug("Menu open check result: true (fast path)")
-                return true
+            if !fastPathMatches.isEmpty {
+                MenuBarItemManager.diagLog.debug("Menu open check: \(fastPathMatches.count) candidate windows (fast path)")
+                return Set(fastPathMatches.map(\.windowID))
             }
 
             let unresolvedWindows = WindowInfo.createWindows(
@@ -6365,8 +6381,8 @@ extension MenuBarItemManager {
             )
 
             guard !unresolvedWindows.isEmpty else {
-                MenuBarItemManager.diagLog.debug("Menu open check result: false (fast path)")
-                return false
+                MenuBarItemManager.diagLog.debug("Menu open check: no candidate windows (fast path)")
+                return []
             }
 
             MenuBarItemManager.diagLog.debug(
@@ -6376,7 +6392,7 @@ extension MenuBarItemManager {
             let resolvedPIDs = await MenuBarItemManager.resolveAllSourcePIDs(for: unresolvedWindows)
 
             let precisePIDs = fastPathPIDs.union(resolvedPIDs)
-            let result = potentialMenuWindows.contains { window in
+            let preciseMatches = potentialMenuWindows.filter { window in
                 let isMenuOpen = precisePIDs.contains(window.ownerPID)
                 if isMenuOpen {
                     MenuBarItemManager.diagLog.debug(
@@ -6391,14 +6407,15 @@ extension MenuBarItemManager {
             }
 
             MenuBarItemManager.diagLog.debug(
-                "Menu open check result: \(result) (precise fallback with \(resolvedPIDs.count) resolved PIDs)"
+                "Menu open check: \(preciseMatches.count) candidate windows (precise fallback with \(resolvedPIDs.count) resolved PIDs)"
             )
-            return result
+            return Set(preciseMatches.map(\.windowID))
         }
 
         menuOpenCheckTask = task
-        let result = await task.value
+        let matchedWindowIDs = await task.value
         menuOpenCheckTask = nil
+        let result = applyMenuWindowPersistenceFilter(to: matchedWindowIDs)
         // Cache negative results too: bulk move operations (applyProfileLayout)
         // call this guard once per move, and re-enumerating on-screen windows
         // for every move when no menu is open is the common, expensive case.
@@ -6406,6 +6423,66 @@ extension MenuBarItemManager {
         menuOpenCheckCachedResult = result
         menuOpenCheckCachedAt = .now
         return result
+    }
+
+    /// Updates first-seen tracking for the matched candidate windows and
+    /// returns whether any of them is fresh enough to be a real open menu.
+    private func applyMenuWindowPersistenceFilter(to matchedWindowIDs: Set<CGWindowID>) -> Bool {
+        let outcome = MenuBarItemManager.classifyMenuWindowCandidates(
+            matchedWindowIDs: matchedWindowIDs,
+            firstSeen: menuWindowFirstSeen,
+            now: .now,
+            isFirstProbe: !hasSeededMenuWindowProbe,
+            threshold: MenuBarItemManager.menuWindowPersistenceThreshold
+        )
+        menuWindowFirstSeen = outcome.updatedFirstSeen
+        hasSeededMenuWindowProbe = true
+        if !outcome.ignoredPersistentWindowIDs.isEmpty {
+            MenuBarItemManager.diagLog.debug(
+                "Menu open check: ignoring \(outcome.ignoredPersistentWindowIDs.count) persistent candidate window(s) \(outcome.ignoredPersistentWindowIDs.sorted())"
+            )
+        }
+        MenuBarItemManager.diagLog.debug("Menu open check result: \(outcome.isMenuOpen)")
+        return outcome.isMenuOpen
+    }
+
+    /// Pure classification core for the open-menu probe: a candidate window
+    /// only counts as an open menu while it is young. Real menus are
+    /// transient; persistent status-level windows (Droppy's shelf, notch
+    /// HUDs) stay on screen for the app's whole lifetime and previously
+    /// deferred every move indefinitely. Windows already on screen at the
+    /// first probe are grandfathered as persistent, and entries for windows
+    /// that disappeared are pruned so a reused window ID starts fresh.
+    nonisolated static func classifyMenuWindowCandidates(
+        matchedWindowIDs: Set<CGWindowID>,
+        firstSeen: [CGWindowID: ContinuousClock.Instant],
+        now: ContinuousClock.Instant,
+        isFirstProbe: Bool,
+        threshold: Duration
+    ) -> (
+        isMenuOpen: Bool,
+        updatedFirstSeen: [CGWindowID: ContinuousClock.Instant],
+        ignoredPersistentWindowIDs: Set<CGWindowID>
+    ) {
+        var updatedFirstSeen = firstSeen.filter { matchedWindowIDs.contains($0.key) }
+        let firstSeenForNewWindows = isFirstProbe ? now - threshold : now
+        var isMenuOpen = false
+        var ignored = Set<CGWindowID>()
+        for windowID in matchedWindowIDs {
+            let firstSeenAt: ContinuousClock.Instant
+            if let existing = updatedFirstSeen[windowID] {
+                firstSeenAt = existing
+            } else {
+                firstSeenAt = firstSeenForNewWindows
+                updatedFirstSeen[windowID] = firstSeenAt
+            }
+            if firstSeenAt.duration(to: now) < threshold {
+                isMenuOpen = true
+            } else {
+                ignored.insert(windowID)
+            }
+        }
+        return (isMenuOpen, updatedFirstSeen, ignored)
     }
 
     private static nonisolated func resolveAllSourcePIDs(for windows: [WindowInfo]) async -> Set<pid_t> {
