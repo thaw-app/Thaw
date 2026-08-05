@@ -152,7 +152,7 @@ struct ContentView: View {
          "useOptionClickToShowAlwaysHiddenSection", "useDoubleClickToShowAlwaysHiddenSection",
          "enableSecondaryContextMenu", "showAllSectionsOnUserDrag", "showMenuBarTooltips",
          "enableDiagnosticLogging", "customIceIconIsTemplate", "showIceIcon",
-         "iceBarLocationOnHotkey", "useLCSSortingOnNotchedDisplays"]
+         "iceBarLocationOnHotkey"]
     }
 
     private var getKeys: [String] {

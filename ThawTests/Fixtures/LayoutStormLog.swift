@@ -89,10 +89,14 @@ enum LayoutStormLog {
     ]
 
     /// Section map for every UID in the cycle.
-    static var sectionMap: [String: String] {
+    static let sectionMap: [String: String] = {
         var map = [String: String]()
-        for uid in currentVisible { map[uid] = "visible" }
-        for uid in currentHidden { map[uid] = "hidden" }
+        for uid in currentVisible {
+            map[uid] = "visible"
+        }
+        for uid in currentHidden {
+            map[uid] = "hidden"
+        }
         return map
-    }
+    }()
 }

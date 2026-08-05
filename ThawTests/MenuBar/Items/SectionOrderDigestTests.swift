@@ -97,7 +97,7 @@ struct SectionOrderDigestTests {
     @Test("The reporter's shape is distinguishable in one line")
     func reporterShapeIsReadable() {
         let before = (0 ..< 46).map { "app\($0):Item-0" }
-        let after = before.reversed() + ["com.FluidApp.app:Item-0:1"]
+        let after = Array(before.reversed()) + ["com.FluidApp.app:Item-0:1"]
 
         let summary = MenuBarItemManager.sectionOrderChangeSummary(
             from: ["hidden": before],
