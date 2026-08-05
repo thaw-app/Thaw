@@ -222,25 +222,6 @@ final class IceBarColorManager {
         windowImage = image
     }
 
-    /// The horizontal position (`0...1`) of the bar's center within the screen,
-    /// used to sample the wallpaper/menu-bar color at the matching offset.
-    ///
-    /// `insetScreenFrame` is the screen inset by half the bar width on each
-    /// side, so its width collapses to zero when a horizontal bar overflows to
-    /// the full screen width — a state the bar itself detects at
-    /// `frame.width == screen.frame.width` (see `IceBar.swift`). Dividing by
-    /// that zero width yields `NaN`, which then drives `cropRect.x` and makes
-    /// the color sample at a garbage offset (or stop updating) instead of the
-    /// bar's actual center. The guard falls back to the panel's middle so the
-    /// degenerate case still samples a sensible color.
-    static func colorSamplePercentage(frame: CGRect, screenFrame: CGRect) -> CGFloat {
-        let insetScreenFrame = screenFrame.insetBy(dx: frame.width / 2, dy: 0)
-        guard insetScreenFrame.width > 0 else {
-            return 0.5
-        }
-        return ((frame.midX - insetScreenFrame.minX) / insetScreenFrame.width).clamped(to: 0 ... 1)
-    }
-
     private func updateColorInfo(with frame: CGRect, screen: NSScreen) {
         guard let image = windowImage else {
             return
@@ -248,7 +229,8 @@ final class IceBarColorManager {
 
         let imageBounds = CGRect(x: 0, y: 0, width: image.width, height: image.height)
 
-        let percentage = Self.colorSamplePercentage(frame: frame, screenFrame: screen.frame)
+        let insetScreenFrame = screen.frame.insetBy(dx: frame.width / 2, dy: 0)
+        let percentage = ((frame.midX - insetScreenFrame.minX) / insetScreenFrame.width).clamped(to: 0 ... 1)
 
         let cropRect = CGRect(x: imageBounds.width * percentage, y: 0, width: 0, height: 1)
             .insetBy(dx: -150, dy: 0)

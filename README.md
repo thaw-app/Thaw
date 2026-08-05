@@ -3,20 +3,56 @@
 
 <!-- Badges: shieldcn — individuals + small related groups (light/dark) -->
 <p align="center">
-  <picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/badge/macOS-26%2B.svg?variant=outline&amp;size=sm&amp;mode=dark&amp;font=geist" /><img alt="macOS 26+" src="https://www.shieldcn.dev/badge/macOS-26%2B.svg?variant=outline&amp;size=sm&amp;mode=light&amp;font=geist" /></picture>
-  <a href="https://crowdin.com/project/thaw"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/badge/translated-20_languages.svg?variant=outline&amp;size=sm&amp;mode=dark&amp;font=geist&amp;logo=crowdin" /><img alt="Translated into 20 languages" src="https://www.shieldcn.dev/badge/translated-20_languages.svg?variant=outline&amp;size=sm&amp;mode=light&amp;font=geist&amp;logo=crowdin" /></picture></a>
-  <a href="https://discord.gg/5cnKkKbMFd"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/badge/Discord-join.svg?variant=outline&amp;size=sm&amp;mode=dark&amp;font=geist&amp;logo=discord&amp;" /><img alt="Discord" src="https://www.shieldcn.dev/badge/Discord-join.svg?variant=outline&amp;size=sm&amp;mode=light&amp;font=geist&amp;logo=discord&amp;" /></picture></a>
-  <a href="https://github.com/sponsors/stonerl"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/badge/Sponsor-GitHub.svg?logo=githubsponsors&amp;variant=outline&amp;size=sm&amp;mode=dark&amp;font=geist" /><img alt="Sponsor" src="https://www.shieldcn.dev/badge/Sponsor-GitHub.svg?logo=githubsponsors&amp;variant=outline&amp;size=sm&amp;mode=light&amp;font=geist" /></picture></a>
-  <a href="LICENSE"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/github/license/thaw-app/Thaw.svg?variant=outline&amp;size=sm&amp;mode=dark&amp;font=geist" /><img alt="License" src="https://www.shieldcn.dev/github/license/thaw-app/Thaw.svg?variant=outline&amp;size=sm&amp;mode=light&amp;font=geist" /></picture></a>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/macOS-26%2B.svg?variant=default&amp;mode=dark&amp;split=true&amp;labelColor=3f3f46&amp;color=64748b" />
+    <img alt="macOS 26+" src="https://shieldcn.dev/badge/macOS-26%2B.svg?variant=default&amp;mode=light&amp;split=true&amp;labelColor=3f3f46&amp;color=64748b" />
+  </picture>
+  <a href="https://crowdin.com/project/thaw">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/translated-20_languages.svg?variant=default&amp;mode=dark&amp;split=true&amp;labelColor=3f3f46&amp;logo=crowdin&amp;logoColor=ffffff&amp;color=2e3340" />
+      <img alt="Translated into 20 languages" src="https://shieldcn.dev/badge/translated-20_languages.svg?variant=default&amp;mode=light&amp;split=true&amp;labelColor=3f3f46&amp;logo=crowdin&amp;logoColor=ffffff&amp;color=2e3340" />
+    </picture>
+  </a>
+  <a href="https://discord.gg/5cnKkKbMFd">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/Discord.svg?variant=default&amp;mode=dark&amp;split=true&amp;labelColor=3f3f46&amp;logo=discord&amp;logoColor=ffffff&amp;color=5865F2" />
+      <img alt="Discord" src="https://shieldcn.dev/badge/Discord.svg?variant=default&amp;mode=light&amp;split=true&amp;labelColor=3f3f46&amp;logo=discord&amp;logoColor=ffffff&amp;color=5865F2" />
+    </picture>
+  </a>
+  <a href="https://github.com/sponsors/stonerl">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/Sponsor-%E2%9D%A4.svg?variant=default&amp;mode=dark&amp;split=true&amp;labelColor=3f3f46&amp;color=e11d48" />
+      <img alt="Sponsor" src="https://shieldcn.dev/badge/Sponsor-%E2%9D%A4.svg?variant=default&amp;mode=light&amp;split=true&amp;labelColor=3f3f46&amp;color=e11d48" />
+    </picture>
+  </a>
+  <a href="LICENSE">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/license/thaw-app/Thaw.svg?variant=default&amp;mode=dark&amp;split=true&amp;labelColor=3f3f46&amp;color=3b82f6" />
+      <img alt="License" src="https://shieldcn.dev/github/license/thaw-app/Thaw.svg?variant=default&amp;mode=light&amp;split=true&amp;labelColor=3f3f46&amp;color=3b82f6" />
+    </picture>
+  </a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/thaw-app/Thaw/actions/workflows/ci.yml"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/github/ci/thaw-app/Thaw.svg?variant=outline&amp;size=sm&amp;mode=dark&amp;font=geist&amp;statusDot=true" /><img alt="CI" src="https://www.shieldcn.dev/github/ci/thaw-app/Thaw.svg?variant=outline&amp;size=sm&amp;mode=light&amp;font=geist&amp;statusDot=true" /></picture></a>
-<picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/group/badge/OpenSSF+badge/Scorecard-9%2E1+badge/Best_Practices-Gold+badge/Baseline-3.svg?variant=outline&amp;size=sm&amp;mode=dark&amp;font=geist" /><img alt="OpenSSF: Scorecard 9.1, Best Practices Gold, Baseline Level 3" src="https://www.shieldcn.dev/group/badge/OpenSSF+badge/Scorecard-9%2E1+badge/Best_Practices-Gold+badge/Baseline-3.svg?variant=outline&amp;size=sm&amp;mode=light&amp;font=geist" /></picture>
-  <a href="docs/VERIFYING_RELEASES.md"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/badge/SLSA-Build_L3.svg?variant=outline&amp;size=sm&amp;mode=dark&amp;font=geist&amp;logo=ri:GoPackage" /><img alt="SLSA 3" src="https://www.shieldcn.dev/badge/SLSA-3.svg?variant=outline&amp;size=sm&amp;mode=light&amp;font=geist&amp;logo=ri:GoPackage" /></picture></a>
-<a href="https://sonarcloud.io/component_measures?id=thaw-app_Thaw&amp;metric=coverage"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/sonar/coverage/thaw-app_Thaw.svg?variant=outline&amp;size=sm&amp;mode=dark&amp;font=geist&amp;logo=sonarqubecloud" /><img alt="Sonar coverage" src="https://www.shieldcn.dev/sonar/coverage/thaw-app_Thaw.svg?variant=outline&amp;size=sm&amp;mode=light&amp;font=geist&amp;logo=sonarqubecloud" /></picture></a>
+  <a href="https://github.com/thaw-app/Thaw/actions/workflows/ci.yml">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/ci/thaw-app/Thaw.svg?variant=default&amp;mode=dark&amp;split=true&amp;labelColor=3f3f46&amp;statusDot=true" />
+      <img alt="CI" src="https://shieldcn.dev/github/ci/thaw-app/Thaw.svg?variant=default&amp;mode=light&amp;split=true&amp;labelColor=3f3f46&amp;statusDot=true" />
+    </picture>
+  </a>
+  <a href="https://www.bestpractices.dev/projects/13303">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/group/badge/OpenSSF-silver-c0c0c0+badge/Baseline-baseline-2-22c55e+badge/Scorecard-9.1-22c55e.svg?variant=default&amp;mode=dark&amp;split=true&amp;labelColor=3f3f46" />
+      <img alt="OpenSSF Best Practices, Baseline, and Scorecard" src="https://shieldcn.dev/group/badge/OpenSSF-silver-c0c0c0+badge/Baseline-baseline-2-22c55e+badge/Scorecard-9.1-22c55e.svg?variant=default&amp;mode=light&amp;split=true&amp;labelColor=3f3f46" />
+    </picture>
+  </a>
+  <a href="docs/VERIFYING_RELEASES.md">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/SLSA-Build_L3.svg?variant=default&amp;mode=dark&amp;split=true&amp;labelColor=3f3f46&amp;color=0ea5e9" />
+      <img alt="SLSA Build Level 3" src="https://shieldcn.dev/badge/SLSA-Build_L3.svg?variant=default&amp;mode=light&amp;split=true&amp;labelColor=3f3f46&amp;color=0ea5e9" />
+    </picture>
+  </a>
 </p>
-
 
 <p align="center">
   <b>Take back your menu bar. Hide what you don't need, find anything in a keystroke,<br />  and make the bar look the way you want.</b><br />

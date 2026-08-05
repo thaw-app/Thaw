@@ -20,10 +20,10 @@ import Testing
 /// leave existing users with an undecodable icon and a blank menu bar item, so
 /// the encoded shape is pinned here rather than assumed.
 ///
-/// The conversion to `NSImage` is covered by
-/// `ControlItemImageConversionTests` through the
-/// `nsImage(customIceIconIsTemplate:)` seam; only the `AppState` overload,
-/// which forwards the one flag it reads, stays out of reach.
+/// `nsImage(for:)` is deliberately out of scope: it needs a live `AppState`,
+/// which the suite has no way to build without touching the user's real
+/// profiles directory. The same limitation is noted in `ProfileManagerCRUDTests`
+/// and `DisplaySettingsManagerMutationTests`.
 @Suite("Control item image")
 struct ControlItemImageTests {
     private var encoder: JSONEncoder {

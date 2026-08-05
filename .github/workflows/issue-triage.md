@@ -1,5 +1,5 @@
 ---
-description: "Triages new issues: sets type and Priority, applies classifier labels, identifies duplicates, and asks clarifying questions ONLY when required fields are missing."
+description: "Triages new issues: labels by type and priority, identifies duplicates, and asks clarifying questions ONLY when required fields are missing."
 model: gpt-5-mini
 engine:
   id: copilot
@@ -15,7 +15,7 @@ permissions:
 tools:
   github:
     allowed-repos: all
-    mode: gh-proxy
+    mode: remote
     toolsets: [default, search, labels]
     min-integrity: unapproved
 safe-outputs:
@@ -24,18 +24,14 @@ safe-outputs:
     hide-older-comments: true
   add-labels:
     max: 7
-    allowed: [chore, ci, cd, docs, refactor, test, duplicate, invalid, needs-info, question, regression, upstream, wontfix, macos-14, macos-15, macos-26, macos-27, unsupported, menubar, icebar, layout, appearance, settings, onboarding, permissions, profiles, hotkeys, updates, ops]
-  set-issue-type:
-    allowed: [Bug, Feature, Task]
-    max: 1
-  set-issue-field:
-    allowed-fields: [Priority]
+    allowed: [bug, docs, duplicate, enhancement, feature, invalid, needs-info, question, regression, upstream, wontfix, macos-14, macos-15, macos-26, macos-27, P0, P1, P2, P3, P4, P5, unsupported, menubar, icebar, layout, appearance, settings, onboarding, permissions, profiles, hotkeys, updates, ops]
+  update-issue:
     max: 1
   close-issue:
     max: 1
     state-reason: duplicate
-  # Successful "nothing to do" triage runs are normal. Do not open/update a
-  # [aw] No-Op Runs tracker issue.
+  # Successful "nothing to do" triage runs are normal (e.g. template already
+  # applied bug/feature). Do not open/update a [aw] No-Op Runs tracker issue.
   noop:
     report-as-issue: false
 ---
@@ -48,19 +44,12 @@ Your job is to triage issue #${{ github.event.issue.number }} that was just open
 
 **Issue title**: ${{ github.event.issue.title }}
 
-Start by fetching the full issue details (body, author, existing type and labels) using `gh`.
+Start by fetching the full issue details (body, author, existing labels) using the GitHub tools.
 
-## Critical duplicate safety rule
+## Label axes (important)
 
-Never close a new issue as a duplicate of a **closed** issue. A report that matches a closed issue may be evidence that the bug has returned or was not fully fixed.
-
-Before closing any issue as a duplicate, fetch the proposed canonical issue and verify that its current state is **OPEN**. If it is closed, do not apply the `duplicate` label and do not call `close_issue`. Instead, mention the closed issue in the single triage comment, say that the new report is being left open for investigation, and continue normal triage. If the report says the problem persists or returned after the closed issue was fixed, apply the `regression` label.
-
-## Triage axes (important)
-
-- **Kind** is the Issue type: `Bug`, `Feature`, or `Task`. Bug **fixes** live on PRs as the `fix` label; never encode an issue's kind with `bug`, `feature`, or `enhancement` labels.
-- **Urgency** is the org Issue field `Priority` (`P0`–`P5`), never a `P*` label.
-- **OS** (`macos-*`) and process (`needs-info`, `blocked`, `parked`, `stale`, …) remain labels.
+- **Request kind** (`bug`, `feature`, `enhancement`, …) describes what was *filed*. `bug` means a defect **report**. Bug **fixes** live on PRs as `fix` — never apply `fix`, `refactor`, `performance`, `test`, `ci`, `cd`, `chore`, or `breaking-change` to issues.
+- **Priority** (`P0`–`P5`) and **OS** (`macos-*`) are issue-only.
 - **Area** (`menubar`, `icebar`, `ops`, …) names the product surface **or** repo operations (`ops` = CI/GitHub/scripts). Skip when unclear.
 
 ## Critical rule: do NOT ask for information that is already present
@@ -91,19 +80,17 @@ If the report is about **macOS 27** / **Golden Gate** (version field, title, or 
 - restating problems already covered by the tracking discussion
 - a feature request that is effectively “add macOS 27 support”
 
-…then fetch #687 and verify its current state. If #687 is **open**, **stop other triage**. Do **not** ask clarifying questions. Do **not** assign priority. Do this only:
+…then **stop other triage**. Do **not** ask clarifying questions. Do **not** assign priority. Do this only:
 
 1. Apply labels `duplicate` and `macos-27` using `add_labels`.
 2. Post **one** short comment with `add_comment` pointing to **#687**.
 3. Close the issue with `close_issue` (`state_reason: duplicate`, `duplicate_of: 687`).
 
-If #687 is **closed**, follow the critical duplicate safety rule instead: do not apply `duplicate`, do not close the new issue, mention #687 in the single triage comment, and continue normal triage.
-
-When #687 is open, use this example comment (keep it brief and firm):
+Example comment (keep it brief and firm):
 
 > This belongs in the macOS 27 tracking issue: **#687**. Please continue there (and read the pinned issue / README note before opening new reports). Closing as a duplicate.
 
-When #687 is open, **only keep the issue open** when it is a **narrow, specific, reproducible bug on macOS 27** that is clearly distinct from “27 support is incomplete” (unique steps, unique symptom). In that case apply `macos-27` and continue normal triage. When #687 is closed, the critical duplicate safety rule takes precedence and the new issue stays open.
+**Only keep the issue open** when it is a **narrow, specific, reproducible bug on macOS 27** that is clearly distinct from “27 support is incomplete” (unique steps, unique symptom). In that case apply `macos-27` and continue normal triage.
 
 ### 1. Support Policy Check (comment + label if unsupported)
 
@@ -118,36 +105,40 @@ Example comment:
 
 If the issue does **not** include both versions explicitly, do **not** assume — instead, request the missing version info under **“Ask Clarifying Questions”**.
 
-### 2. Set the Issue Type
+### 2. Identify the Issue Type
 
-Based on the title and body, assign **exactly one** Issue type using `set_issue_type`:
+Based on the title and body, classify the issue and apply **exactly one** type label using `add_labels`:
 
-| Issue type | When to use |
-|------------|-------------|
-| `Bug` | A defect, crash, unexpected behaviour, or regression |
-| `Feature` | A request for entirely new functionality |
-| `Task` | Polish or an improvement to an existing surface; documentation, maintenance, CI/CD, refactoring, or test work; questions and invalid reports |
+| Label | When to use |
+|-------|-------------|
+| `bug` | A defect, crash, unexpected behaviour, or regression |
+| `regression` | Something that **used to work** and broke in a recent version |
+| `feature` | A request for entirely new functionality |
+| `enhancement` | An improvement or extension of existing functionality |
+| `docs` | A gap, inaccuracy, or improvement needed in documentation or the README |
+| `question` | A usage question — not a true bug or feature request |
+| `invalid` | The report is not reproducible, out of scope, or not actionable |
 
-For something that used to work and recently broke, set type `Bug` and also apply the `regression` label. For type `Task`, also apply the relevant classifier labels: `chore` for upkeep, `ci` / `cd` for automation, `docs` for documentation, `refactor` for internal restructuring, and `test` for test work. Questions and invalid reports use type `Task` plus the matching process label. Never add `bug`, `feature`, or `enhancement` labels.
+**Important:** Always apply the appropriate type label (`bug`, `feature`, or `enhancement`) when it corresponds to the issue content. Remember: `bug` is for reports only, not for describing a fix.
 
-### 3. Set the Priority Field
+### 3. Assign a Priority Label
 
-For every actionable `Bug`, `Feature`, or `Task`, assess urgency and impact, then set **exactly one** org Issue field value using `set_issue_field` with field `Priority`:
+For **bug** and **regression** issues, assess severity and impact, then apply **exactly one** priority label using `add_labels`:
 
-| Value | Criteria |
+| Label | Criteria |
 |-------|----------|
-| `P0` | App crashes or essential work is unusable; no workaround |
-| `P1` | Core functionality or critical work is blocked for most; workaround is painful or partial |
-| `P2` | Noticeable impact with a usable workaround |
+| `P0` | App crashes or is completely unusable; no workaround |
+| `P1` | Core feature is broken for most users; workaround is painful or partial |
+| `P2` | Noticeable bug with a usable workaround |
 | `P3` | Minor issue that doesn't block usage; important but not urgent |
 | `P4` | Cosmetic or low-impact issue unrelated to core functionality |
 | `P5` | Acknowledged, but not planned; open for discussion |
 
-Do not apply `P0`–`P5` labels. Skip Priority only when the issue is not actionable, such as a clear duplicate or invalid report.
+Skip priority labelling for `feature`, `enhancement`, `docs`, `question`, and `invalid` issues.
 
 ### 4. Apply Modifier Labels (if applicable)
 
-In addition to the Issue type and Priority field, apply any of the following modifier labels that apply:
+In addition to the type and priority labels, apply any of the following modifier labels that apply:
 
 - **`upstream`** — The issue is caused by a third-party app that provides the menu bar icon, not by Thaw itself.
 - **`macos-14`**, **`macos-15`**, **`macos-26`**, **`macos-27`** — Apply the macOS version label that matches the reporter’s stated macOS version (if provided).
@@ -179,22 +170,13 @@ Search for existing open **and** closed issues that are similar to this one. Use
 - Issues with similar titles or keywords
 - Issues describing the same error, symptom, or feature
 
-Fetch the best candidate and verify its current state before taking duplicate actions.
-
-If the canonical issue is **open** and the new report is clearly a duplicate:
+If you find a duplicate:
 
 1. Apply the **`duplicate`** label using `add_labels`
 2. Post a comment with `add_comment` pointing to the original issue.
-3. Close the issue with `close_issue` (`state_reason: duplicate`, `duplicate_of: <canonical issue number>`).
+3. Close the issue with `close_issue` (`state_reason: duplicate`, `duplicate_of: <canonical issue number>`) when it is clearly a duplicate (especially of #687 or another tracking/canonical issue).
 
-If the matching issue is **closed**:
-
-1. Do **not** apply the `duplicate` label.
-2. Do **not** call `close_issue`.
-3. Mention the closed issue in the single triage comment and explicitly say the new report is being left open for investigation.
-4. Continue normal triage, including type and Priority. Apply `regression` when the report indicates a supposedly fixed problem persists or has returned.
-
-If you also need clarifying info, combine the related-issue notice and questions into a single comment. Only prefer closing clear duplicates when the canonical issue is currently open.
+If you also need clarifying info, combine the duplicate notice and questions into a single comment — but prefer closing clear duplicates instead of leaving them open.
 
 ### 7. Ask Clarifying Questions (if needed)
 
@@ -230,12 +212,7 @@ Do not assign issues automatically. Leave assignment decisions to maintainers.
 
 - **Be concise and firm** when redirecting ignored tracking issues (especially #687). Do not spend tokens on lengthy sympathy for reports that skipped the pinned issue / README.
 - **Do not spam**. Only post a comment if you have something useful to say (clarifying questions, duplicate/redirect, or unsupported). Never post a generic "I've triaged your issue" comment.
-- **Respect an existing Issue type and labels** already applied by issue templates or maintainers; update the type only when it is clearly wrong, and do not remove or duplicate labels.
-- **Only use labels from the allowed list**: `chore`, `ci`, `cd`, `docs`, `refactor`, `test`, `duplicate`, `invalid`, `needs-info`, `question`, `regression`, `upstream`, `wontfix`, `unsupported`, `macos-14`, `macos-15`, `macos-26`, `macos-27`, `menubar`, `icebar`, `layout`, `appearance`, `settings`, `onboarding`, `permissions`, `profiles`, `hotkeys`, `updates`, `ops`.
+- **Respect existing labels** already applied by issue templates — do not remove or duplicate them.
+- **Only use labels from the allowed list**: `bug`, `docs`, `duplicate`, `enhancement`, `feature`, `invalid`, `needs-info`, `question`, `regression`, `upstream`, `wontfix`, `unsupported`, `macos-14`, `macos-15`, `macos-26`, `macos-27`, `P0`, `P1`, `P2`, `P3`, `P4`, `P5`, `menubar`, `icebar`, `layout`, `appearance`, `settings`, `onboarding`, `permissions`, `profiles`, `hotkeys`, `updates`, `ops`.
 - **One comment at a time** — combine any clarifying questions and duplicate notice into a single comment if both apply.
-
-## Completing the triage
-
-Collect the full triage decision before emitting outputs. Emit metadata changes (`set_issue_type`, `set_issue_field`, and `add_labels`) first, followed by `add_comment`, then `close_issue` when applicable.
-
-A completed run has either the applicable triage outputs or one `noop` result. Use `noop` only when the issue already has every applicable type, field, and label and no comment or closure is needed. Do not emit `noop` alongside other outputs.
+- **Always complete with a safe-output call**: You must always call at least one safe-output tool (`add_labels`, `add_comment`, `update_issue`, `close_issue`, `noop`, `missing_tool`, or `missing_data`) to indicate you finished.

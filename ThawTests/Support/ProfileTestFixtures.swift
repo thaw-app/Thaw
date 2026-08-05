@@ -54,7 +54,6 @@ func makeTestAdvancedSettings() -> AdvancedSettingsSnapshot {
         enableDiagnosticLogging: false,
         useDoubleClickToShowAlwaysHiddenSection: false,
         useOptionClickToShowAlwaysHiddenSection: false,
-        useLCSSortingOnNotchedDisplays: false,
         enableMenuBarItemOverflow: false,
         searchSectionOrder: ["visible", "hidden", "alwaysHidden"],
         searchIncludeVisible: true,

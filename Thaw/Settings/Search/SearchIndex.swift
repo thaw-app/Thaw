@@ -79,8 +79,7 @@ nonisolated struct SearchEntry: Identifiable, @unchecked Sendable {
         case "advanced.alwaysUseAppIconForMenuBarItems",
              "advanced.enableMenuBarItemOverflow",
              "advanced.useThawBarOnNotchOverflow",
-             "advanced.menuBarOrderFulfillmentTimeout",
-             "advanced.useLCSSortingOnNotchedDisplays":
+             "advanced.menuBarOrderFulfillmentTimeout":
             .advancedLayoutControls
         default:
             nil
@@ -539,17 +538,6 @@ nonisolated enum SearchIndex {
             sectionText: "Advanced layout controls",
             keywords: ["overflow", "notch", "thaw bar", "ice bar", "hidden", "reveal"],
             property: .advanced("useThawBarOnNotchOverflow")
-        ),
-        SearchEntry(
-            id: "advanced.useLCSSortingOnNotchedDisplays",
-            titleKey: "Use LCS sorting on notched displays",
-            titleText: "Use LCS sorting on notched displays",
-            descriptionText: "Use the faster LCS algorithm for profile sorting on notched displays instead of the full sort.",
-            pane: .menuBarLayout,
-            sectionKey: "Advanced layout controls",
-            sectionText: "Advanced layout controls",
-            keywords: ["lcs", "sorting", "notch", "profile", "sort"],
-            property: .advanced("useLCSSortingOnNotchedDisplays")
         ),
         SearchEntry(
             id: "advanced.hideApplicationMenus",

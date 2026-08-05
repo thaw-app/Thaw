@@ -36,10 +36,10 @@ private func fixtureItem(_ title: String, windowID: CGWindowID) -> MenuBarItem {
 ///
 /// - `Comparable.clamped`, `EdgeInsets`, and `CGImage.ColorAveragingOption`
 ///   are already covered by `ExtensionsTests`.
-/// - The `NSScreen` members depend on the number, arrangement, and notch
-///   status of the attached displays, so their *values* cannot be asserted
-///   deterministically here; `CoverageSweep6Tests` covers them through
-///   machine-independent invariants instead.
+/// - Every `NSScreen` member depends on the number, arrangement, and notch
+///   status of the attached displays, or mutates process-global caches shared
+///   with the running host app, so none of it can be asserted deterministically
+///   from a unit test.
 /// - `NSStatusItem.showMenu(_:)` calls `performClick(nil)`, which runs a modal
 ///   menu tracking loop; it cannot be driven headlessly.
 @Suite("Extensions coverage")

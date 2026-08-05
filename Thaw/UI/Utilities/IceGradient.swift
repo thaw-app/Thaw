@@ -157,16 +157,6 @@ nonisolated struct IceGradient: Codable, Hashable {
             count += 1
         }
 
-        // No sample contributed components — for example, a gradient whose
-        // stops cannot be interpolated into an NSGradient — so there is
-        // nothing to average. Dividing by the zero count below would hand
-        // back a CGColor whose components are all NaN, which reads as a
-        // valid color to every caller and poisons whatever it is blended
-        // into. Mirrors the same guard in ``CGImage.averageColor``.
-        guard count > 0 else {
-            return nil
-        }
-
         var components: [CGFloat] = [
             totals.red / count,
             totals.green / count,

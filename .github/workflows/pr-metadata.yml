@@ -82,7 +82,7 @@ jobs:
             const owner = context.repo.owner;
             const repo = context.repo.repo;
 
-            // PR change kinds — Bug is an Issue type; bug fixes use `fix` on PRs.
+            // PR change kinds — never map Bug fix to `bug` (that label is issue-only).
             const typeLabels = {
               'Bug fix': ['fix'],
               'CI/CD': ['ci', 'cd'],
@@ -177,7 +177,7 @@ jobs:
               toRemove.add('breaking-change');
             }
 
-            // Retired on issues and invalid on PRs: never leave `bug` on a PR.
+            // Issue-only: never leave `bug` on a PR.
             toRemove.add('bug');
 
             // Path-based areas.

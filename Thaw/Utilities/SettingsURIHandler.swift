@@ -45,7 +45,6 @@ enum SettingsURIHandler {
         "customIceIconIsTemplate",
         "showIceIcon",
         "iceBarLocationOnHotkey",
-        "useLCSSortingOnNotchedDisplays",
         "enableMenuBarItemOverflow",
         "useThawBarOnNotchOverflow",
         "searchIncludeVisible",
@@ -94,7 +93,6 @@ enum SettingsURIHandler {
         "customIceIconIsTemplate": .customIceIconIsTemplate,
         "showIceIcon": .showIceIcon,
         "iceBarLocationOnHotkey": .iceBarLocationOnHotkey,
-        "useLCSSortingOnNotchedDisplays": .useLCSSortingOnNotchedDisplays,
         "enableMenuBarItemOverflow": .enableMenuBarItemOverflow,
         "useThawBarOnNotchOverflow": .useThawBarOnNotchOverflow,
         "searchIncludeVisible": .searchIncludeVisible,
@@ -952,13 +950,7 @@ enum SettingsURIHandler {
     }
 
     /// Gets a single setting value with metadata.
-    ///
-    /// `internal` rather than `private` so the test suite can pin the
-    /// `validValues` maps a `thaw://get` advertises. The function is a read
-    /// with no delivery side effects, so calling it directly never opens a
-    /// callback URL or posts a distributed notification — the two actions the
-    /// get suite otherwise avoids.
-    static func getSettingValue(key: String, displayUUID: String?) -> [String: Any]? {
+    private static func getSettingValue(key: String, displayUUID: String?) -> [String: Any]? {
         // Handle per-display keys specially (not in keyMapping)
         if perDisplayKeys.contains(key) {
             // Validate display UUID if provided
@@ -978,7 +970,7 @@ enum SettingsURIHandler {
                     "value": String(describing: config.iceBarLocation),
                     "rawValue": config.iceBarLocation.rawValue,
                     "type": "enum",
-                    "validValues": ["dynamic": 0, "mousePointer": 1, "iceIcon": 2, "leftAligned": 3, "rightAligned": 4],
+                    "validValues": ["dynamic": 0, "mousePointer": 1, "iceIcon": 2],
                 ]
             case "alwaysShowHiddenItems":
                 return [
