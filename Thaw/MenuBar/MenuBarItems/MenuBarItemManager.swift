@@ -590,6 +590,59 @@ final class MenuBarItemManager {
         }
     }
 
+    /// A launch-stable digest of an identifier list.
+    ///
+    /// FNV-1a rather than `hashValue`: Swift seeds its hasher per process,
+    /// so `hashValue` cannot be compared across relaunches, which is exactly
+    /// the comparison a field log needs to support.
+    ///
+    /// Order-sensitive by construction — that is the entire point. The saved
+    /// section order is logged by count today, and a permutation that keeps
+    /// membership intact is invisible in a count (#885).
+    static nonisolated func orderDigest(_ identifiers: [String]) -> String {
+        let prime: UInt64 = 0x100_0000_01b3
+        var hash: UInt64 = 0xcbf2_9ce4_8422_2325
+        for identifier in identifiers {
+            for byte in identifier.utf8 {
+                hash ^= UInt64(byte)
+                hash &*= prime
+            }
+            // Separator, so ["ab", "c"] and ["a", "bc"] differ.
+            hash ^= 0x1f
+            hash &*= prime
+        }
+        return String(format: "%08x", UInt32(truncatingIfNeeded: hash))
+    }
+
+    /// A one-line, per-section description of how a saved order changed.
+    ///
+    /// Calls out the case where a section's membership is unchanged but its
+    /// sequence is not. That combination is #885's signature and nothing in
+    /// the logs surfaces it: counts match, the zero-width gate reads healthy,
+    /// and identity resolution is clean, while every item sits at a new
+    /// index. Naming it here means the next occurrence is attributable from
+    /// the log alone instead of needing a plist captured before the fact.
+    static nonisolated func sectionOrderChangeSummary(
+        from old: [String: [String]],
+        to new: [String: [String]]
+    ) -> String {
+        let keys = Set(old.keys).union(new.keys).sorted()
+        let parts = keys.map { key -> String in
+            let before = old[key] ?? []
+            let after = new[key] ?? []
+            if before == after {
+                return "\(key)=\(after.count) unchanged"
+            }
+            let digests = "\(orderDigest(before))→\(orderDigest(after))"
+            guard Set(before) == Set(after) else {
+                return "\(key)=\(before.count)→\(after.count) \(digests)"
+            }
+            let displaced = zip(before, after).count { $0 != $1 }
+            return "\(key)=\(after.count) REORDERED-ONLY \(digests) \(displaced)/\(after.count) displaced"
+        }
+        return parts.joined(separator: ", ")
+    }
+
     /// How a single `postMoveEvents` attempt turned out, for the purpose of
     /// sizing the next attempt's budget.
     enum MoveAttemptOutcome {
@@ -699,6 +752,12 @@ final class MenuBarItemManager {
         let key = "MenuBarItemManager.savedSectionOrder"
         if let stored = Defaults.store.dictionary(forKey: key) as? [String: [String]] {
             savedSectionOrder = stored
+            // Baseline digest, so a log that opens mid-session can still be
+            // compared against a later save (#885).
+            let baseline = stored.keys.sorted()
+                .map { "\($0)=\(stored[$0]?.count ?? 0) \(Self.orderDigest(stored[$0] ?? []))" }
+                .joined(separator: ", ")
+            MenuBarItemManager.diagLog.info("Loaded saved section order: \(baseline)")
         }
     }
 
@@ -915,9 +974,16 @@ final class MenuBarItemManager {
         }
         let newOrder = computeSectionOrder(from: cache)
         guard newOrder != savedSectionOrder else { return }
+        let previousOrder = savedSectionOrder
         savedSectionOrder = newOrder
         persistSavedSectionOrder()
         MenuBarItemManager.diagLog.debug("Saved section order: \(newOrder.mapValues(\.count))")
+        // Logged at info, and separately from the counts above, because the
+        // counts are what made #885 unattributable: they were correct while
+        // the order underneath them was not.
+        MenuBarItemManager.diagLog.info(
+            "Saved section order changed: \(Self.sectionOrderChangeSummary(from: previousOrder, to: newOrder))"
+        )
     }
 
     /// Returns a persistable string key for the given section name.
