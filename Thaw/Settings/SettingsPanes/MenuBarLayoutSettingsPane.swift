@@ -81,7 +81,6 @@ struct MenuBarLayoutSettingsPane: View {
                 if advancedSettings.enableMenuBarItemOverflow {
                     useThawBarOnNotchOverflow
                 }
-                useLCSSortingOnNotchedDisplays
             }
         }
         .onChange(of: appState.navigationState.requestedSettingsDisclosure, initial: true) { _, _ in
@@ -125,24 +124,6 @@ struct MenuBarLayoutSettingsPane: View {
                 ejected. The visible row has no room left beside the notch at that \
                 point, so expanding the hidden section inline cannot show them. \
                 Disable to always follow the per-display Thaw Bar setting.
-                """
-            )
-            .padding(.trailing, 75)
-        }
-    }
-
-    private var useLCSSortingOnNotchedDisplays: some View {
-        Toggle(
-            "Use LCS sorting on notched displays",
-            isOn: $advancedSettings.useLCSSortingOnNotchedDisplays
-        )
-        .annotation {
-            Text(
-                """
-                Use the faster LCS (Longest Common Subsequence) algorithm for \
-                profile sorting on notched displays instead of the full sort. \
-                LCS minimises the number of moves but may be less reliable on \
-                notched displays with smaller resolutions.
                 """
             )
             .padding(.trailing, 75)

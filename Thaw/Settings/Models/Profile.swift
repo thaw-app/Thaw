@@ -107,7 +107,6 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
     var enableDiagnosticLogging: Bool
     var useDoubleClickToShowAlwaysHiddenSection: Bool
     var useOptionClickToShowAlwaysHiddenSection: Bool
-    var useLCSSortingOnNotchedDisplays: Bool
     var enableMenuBarItemOverflow: Bool
     var useThawBarOnNotchOverflow: Bool
     var searchSectionOrder: [String]
@@ -131,7 +130,6 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
             enableDiagnosticLogging: settings.enableDiagnosticLogging,
             useDoubleClickToShowAlwaysHiddenSection: settings.useDoubleClickToShowAlwaysHiddenSection,
             useOptionClickToShowAlwaysHiddenSection: settings.useOptionClickToShowAlwaysHiddenSection,
-            useLCSSortingOnNotchedDisplays: settings.useLCSSortingOnNotchedDisplays,
             enableMenuBarItemOverflow: settings.enableMenuBarItemOverflow,
             useThawBarOnNotchOverflow: settings.useThawBarOnNotchOverflow,
             searchSectionOrder: settings.searchSectionOrder.map(\.rawValue),
@@ -158,7 +156,6 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
         settings.enableDiagnosticLogging = enableDiagnosticLogging
         settings.useDoubleClickToShowAlwaysHiddenSection = useDoubleClickToShowAlwaysHiddenSection
         settings.useOptionClickToShowAlwaysHiddenSection = useOptionClickToShowAlwaysHiddenSection
-        settings.useLCSSortingOnNotchedDisplays = useLCSSortingOnNotchedDisplays
         settings.enableMenuBarItemOverflow = enableMenuBarItemOverflow
         settings.useThawBarOnNotchOverflow = useThawBarOnNotchOverflow
         settings.searchSectionOrder = AdvancedSettings.sanitizedSearchSectionOrder(from: searchSectionOrder)
@@ -181,7 +178,6 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
         case enableDiagnosticLogging
         case useDoubleClickToShowAlwaysHiddenSection
         case useOptionClickToShowAlwaysHiddenSection
-        case useLCSSortingOnNotchedDisplays
         case enableMenuBarItemOverflow
         case useThawBarOnNotchOverflow
         case searchSectionOrder
@@ -204,7 +200,6 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
         enableDiagnosticLogging: Bool,
         useDoubleClickToShowAlwaysHiddenSection: Bool,
         useOptionClickToShowAlwaysHiddenSection: Bool,
-        useLCSSortingOnNotchedDisplays: Bool,
         enableMenuBarItemOverflow: Bool,
         useThawBarOnNotchOverflow: Bool = Defaults.DefaultValue.useThawBarOnNotchOverflow,
         searchSectionOrder: [String],
@@ -225,7 +220,6 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
         self.enableDiagnosticLogging = enableDiagnosticLogging
         self.useDoubleClickToShowAlwaysHiddenSection = useDoubleClickToShowAlwaysHiddenSection
         self.useOptionClickToShowAlwaysHiddenSection = useOptionClickToShowAlwaysHiddenSection
-        self.useLCSSortingOnNotchedDisplays = useLCSSortingOnNotchedDisplays
         self.enableMenuBarItemOverflow = enableMenuBarItemOverflow
         self.useThawBarOnNotchOverflow = useThawBarOnNotchOverflow
         self.searchSectionOrder = searchSectionOrder
@@ -275,9 +269,6 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
         useOptionClickToShowAlwaysHiddenSection = try container.decodeIfPresent(
             Bool.self, forKey: .useOptionClickToShowAlwaysHiddenSection
         ) ?? Defaults.DefaultValue.useOptionClickToShowAlwaysHiddenSection
-        useLCSSortingOnNotchedDisplays = try container.decodeIfPresent(
-            Bool.self, forKey: .useLCSSortingOnNotchedDisplays
-        ) ?? Defaults.DefaultValue.useLCSSortingOnNotchedDisplays
         enableMenuBarItemOverflow = try container.decodeIfPresent(
             Bool.self, forKey: .enableMenuBarItemOverflow
         ) ?? Defaults.DefaultValue.enableMenuBarItemOverflow
@@ -518,7 +509,6 @@ nonisolated struct Profile: Codable, Identifiable {
             enableDiagnosticLogging: Defaults.DefaultValue.enableDiagnosticLogging,
             useDoubleClickToShowAlwaysHiddenSection: Defaults.DefaultValue.useDoubleClickToShowAlwaysHiddenSection,
             useOptionClickToShowAlwaysHiddenSection: Defaults.DefaultValue.useOptionClickToShowAlwaysHiddenSection,
-            useLCSSortingOnNotchedDisplays: Defaults.DefaultValue.useLCSSortingOnNotchedDisplays,
             enableMenuBarItemOverflow: Defaults.DefaultValue.enableMenuBarItemOverflow,
             useThawBarOnNotchOverflow: Defaults.DefaultValue.useThawBarOnNotchOverflow,
             searchSectionOrder: Defaults.DefaultValue.searchSectionOrder,

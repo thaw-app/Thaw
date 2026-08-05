@@ -94,7 +94,6 @@ struct SearchIndexTests {
             "advanced.enableMenuBarItemOverflow",
             "advanced.useThawBarOnNotchOverflow",
             "advanced.menuBarOrderFulfillmentTimeout",
-            "advanced.useLCSSortingOnNotchedDisplays",
         ]
     )
     func gatedRowsRequestDisclosure(id: String) {

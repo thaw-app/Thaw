@@ -131,15 +131,6 @@ final class AdvancedSettings {
         }
     }
 
-    /// A Boolean value that indicates whether to use LCS sorting instead of
-    /// full sorting on notched displays.
-    var useLCSSortingOnNotchedDisplays = Defaults.DefaultValue.useLCSSortingOnNotchedDisplays {
-        didSet {
-            guard oldValue != useLCSSortingOnNotchedDisplays else { return }
-            Defaults.set(useLCSSortingOnNotchedDisplays, forKey: .useLCSSortingOnNotchedDisplays)
-        }
-    }
-
     /// A Boolean value that controls whether profile-apply overflows menu bar
     /// items from visible to hidden when they don't fit on a notched display.
     /// Only affects notched displays; non-notched displays never use this path.
@@ -248,7 +239,6 @@ final class AdvancedSettings {
         Defaults.ifPresent(key: .showMenuBarTooltips, assign: &showMenuBarTooltips)
         Defaults.ifPresent(key: .iconRefreshInterval, assign: &iconRefreshInterval)
         Defaults.ifPresent(key: .enableDiagnosticLogging, assign: &enableDiagnosticLogging)
-        Defaults.ifPresent(key: .useLCSSortingOnNotchedDisplays, assign: &useLCSSortingOnNotchedDisplays)
         Defaults.ifPresent(key: .enableMenuBarItemOverflow, assign: &enableMenuBarItemOverflow)
         Defaults.ifPresent(key: .useThawBarOnNotchOverflow, assign: &useThawBarOnNotchOverflow)
         Defaults.ifPresent(key: .useAXClickDelivery, assign: &useAXClickDelivery)
@@ -315,8 +305,6 @@ final class AdvancedSettings {
                 showMenuBarTooltips = boolValue
             case "enableDiagnosticLogging":
                 enableDiagnosticLogging = boolValue
-            case "useLCSSortingOnNotchedDisplays":
-                useLCSSortingOnNotchedDisplays = boolValue
             case "enableMenuBarItemOverflow":
                 enableMenuBarItemOverflow = boolValue
             case "useThawBarOnNotchOverflow":

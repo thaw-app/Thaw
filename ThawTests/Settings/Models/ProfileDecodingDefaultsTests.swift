@@ -253,7 +253,6 @@ struct ProfileSnapshotLiveSettingsTests {
             settings.iconRefreshInterval = 2.5
             settings.useDoubleClickToShowAlwaysHiddenSection = true
             settings.useOptionClickToShowAlwaysHiddenSection = true
-            settings.useLCSSortingOnNotchedDisplays = false
             settings.enableMenuBarItemOverflow = false
             settings.useThawBarOnNotchOverflow = false
             settings.searchSectionOrder = [.alwaysHidden, .visible, .hidden]
@@ -275,7 +274,6 @@ struct ProfileSnapshotLiveSettingsTests {
             #expect(snapshot.iconRefreshInterval == 2.5)
             #expect(snapshot.useDoubleClickToShowAlwaysHiddenSection)
             #expect(snapshot.useOptionClickToShowAlwaysHiddenSection)
-            #expect(snapshot.useLCSSortingOnNotchedDisplays == false)
             #expect(snapshot.enableMenuBarItemOverflow == false)
             #expect(snapshot.useThawBarOnNotchOverflow == false)
             // The snapshot stores raw strings so a section name this build does
@@ -307,7 +305,6 @@ struct ProfileSnapshotLiveSettingsTests {
                 enableDiagnosticLogging: Defaults.DefaultValue.enableDiagnosticLogging,
                 useDoubleClickToShowAlwaysHiddenSection: true,
                 useOptionClickToShowAlwaysHiddenSection: true,
-                useLCSSortingOnNotchedDisplays: false,
                 enableMenuBarItemOverflow: false,
                 useThawBarOnNotchOverflow: false,
                 searchSectionOrder: ["alwaysHidden", "hidden", "visible"],
@@ -330,7 +327,6 @@ struct ProfileSnapshotLiveSettingsTests {
             #expect(settings.iconRefreshInterval == 2.5)
             #expect(settings.useDoubleClickToShowAlwaysHiddenSection)
             #expect(settings.useOptionClickToShowAlwaysHiddenSection)
-            #expect(settings.useLCSSortingOnNotchedDisplays == false)
             #expect(settings.enableMenuBarItemOverflow == false)
             #expect(settings.useThawBarOnNotchOverflow == false)
             #expect(settings.searchSectionOrder == [.alwaysHidden, .hidden, .visible])
@@ -467,7 +463,6 @@ struct ProfileSnapshotLiveSettingsTests {
             source.iconRefreshInterval = 1.5
             source.useDoubleClickToShowAlwaysHiddenSection = true
             source.useOptionClickToShowAlwaysHiddenSection = true
-            source.useLCSSortingOnNotchedDisplays = false
             source.enableMenuBarItemOverflow = false
             source.useThawBarOnNotchOverflow = false
             source.searchSectionOrder = [.hidden, .alwaysHidden, .visible]
@@ -498,7 +493,6 @@ struct ProfileSnapshotLiveSettingsTests {
                 destination.useOptionClickToShowAlwaysHiddenSection
                     == source.useOptionClickToShowAlwaysHiddenSection
             )
-            #expect(destination.useLCSSortingOnNotchedDisplays == source.useLCSSortingOnNotchedDisplays)
             #expect(destination.enableMenuBarItemOverflow == source.enableMenuBarItemOverflow)
             #expect(destination.useThawBarOnNotchOverflow == source.useThawBarOnNotchOverflow)
             #expect(destination.searchSectionOrder == source.searchSectionOrder)

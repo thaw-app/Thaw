@@ -95,7 +95,6 @@ struct AdvancedSettingsTests {
             Defaults.set(2.5, forKey: .tooltipDelay)
             Defaults.set(3.5, forKey: .iconRefreshInterval)
             Defaults.set(true, forKey: .showMenuBarTooltips)
-            Defaults.set(false, forKey: .useLCSSortingOnNotchedDisplays)
             Defaults.set(false, forKey: .enableMenuBarItemOverflow)
             Defaults.set(false, forKey: .useThawBarOnNotchOverflow)
             Defaults.set(true, forKey: .useAXClickDelivery)
@@ -116,7 +115,6 @@ struct AdvancedSettingsTests {
             #expect(settings.tooltipDelay == 2.5)
             #expect(settings.iconRefreshInterval == 3.5)
             #expect(settings.showMenuBarTooltips)
-            #expect(!settings.useLCSSortingOnNotchedDisplays)
             #expect(!settings.enableMenuBarItemOverflow)
             #expect(!settings.useThawBarOnNotchOverflow)
             #expect(settings.useAXClickDelivery)
@@ -256,7 +254,6 @@ struct AdvancedSettingsTests {
                 ["key": "enableSecondaryContextMenu", "value": false],
                 ["key": "enableSecondaryContextMenuQuit", "value": true],
                 ["key": "showMenuBarTooltips", "value": true],
-                ["key": "useLCSSortingOnNotchedDisplays", "value": false],
                 ["key": "enableMenuBarItemOverflow", "value": false],
                 ["key": "useThawBarOnNotchOverflow", "value": false],
                 ["key": "useAXClickDelivery", "value": true],
@@ -270,7 +267,6 @@ struct AdvancedSettingsTests {
             #expect(!settings.enableSecondaryContextMenu)
             #expect(settings.enableSecondaryContextMenuQuit)
             #expect(settings.showMenuBarTooltips)
-            #expect(!settings.useLCSSortingOnNotchedDisplays)
             #expect(!settings.enableMenuBarItemOverflow)
             #expect(!settings.useThawBarOnNotchOverflow)
             #expect(settings.useAXClickDelivery)

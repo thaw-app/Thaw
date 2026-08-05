@@ -65,7 +65,6 @@ private let booleanKeys: [String] = [
     "customIceIconIsTemplate",
     "showIceIcon",
     "iceBarLocationOnHotkey",
-    "useLCSSortingOnNotchedDisplays",
     "enableMenuBarItemOverflow",
     "useThawBarOnNotchOverflow",
     "searchIncludeVisible",
