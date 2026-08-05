@@ -751,11 +751,24 @@ final class MenuBarItemManager {
     private func loadSavedSectionOrder() {
         let key = "MenuBarItemManager.savedSectionOrder"
         if let stored = Defaults.store.dictionary(forKey: key) as? [String: [String]] {
-            savedSectionOrder = stored
+            // Repair entries that can never match a live item again before
+            // anything plans against them. Earlier fixes stopped these from
+            // being written but left what was already on disk (#788, #815).
+            let pruned = LayoutSolver.prunedSectionOrder(stored)
+            savedSectionOrder = pruned
+            if pruned != stored {
+                let removed = stored.reduce(into: 0) { total, entry in
+                    total += entry.value.count - (pruned[entry.key]?.count ?? 0)
+                }
+                MenuBarItemManager.diagLog.info(
+                    "Pruned \(removed) unmatchable entr(y/ies) from the saved section order"
+                )
+                persistSavedSectionOrder()
+            }
             // Baseline digest, so a log that opens mid-session can still be
             // compared against a later save (#885).
-            let baseline = stored.keys.sorted()
-                .map { "\($0)=\(stored[$0]?.count ?? 0) \(Self.orderDigest(stored[$0] ?? []))" }
+            let baseline = pruned.keys.sorted()
+                .map { "\($0)=\(pruned[$0]?.count ?? 0) \(Self.orderDigest(pruned[$0] ?? []))" }
                 .joined(separator: ", ")
             MenuBarItemManager.diagLog.info("Loaded saved section order: \(baseline)")
         }

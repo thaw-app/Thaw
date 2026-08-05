@@ -1155,6 +1155,75 @@ nonisolated enum LayoutSolver {
         String(id.prefix { $0 != ":" })
     }
 
+    // MARK: - Saved-order pruning
+
+    /// The title portion of a `namespace:title` identifier, with any trailing
+    /// `:<digits>` instance index left attached — two entries only count as
+    /// the same item if their instance indexes match too.
+    private static nonisolated func titlePortion(forIdentifier id: String) -> String {
+        guard let separator = id.firstIndex(of: ":") else { return "" }
+        return String(id[id.index(after: separator)...])
+    }
+
+    /// Removes persisted entries that can no longer match any live item.
+    ///
+    /// Two fixes so far prevent their own failure from recurring but leave
+    /// the damage already written to disk in place. This clears both.
+    ///
+    /// **Provisional-identity duplicates (#788).** A Control-Center-hosted
+    /// item whose source PID fails to resolve is namespaced
+    /// `com.apple.controlcenter:<title>`, and older builds persisted that
+    /// form. Once resolution works, the same item is saved again under its
+    /// real owner, so the layout holds both. The Control Center copy can
+    /// never match a live item again — resolution now succeeds — but it is
+    /// still planned against on every apply. Dropped only when the identical
+    /// title is also present under a real owner, so a genuine Control Center
+    /// item is never removed on its own.
+    ///
+    /// **Volatile-title accumulation (#815).** An owner that titles its item
+    /// with live content wrote one entry per sample: iStat Menus one per
+    /// metric reading, LyricsX one per lyric. Canonicalization collapses them
+    /// to a single key, and the rest are dead weight. This also matters
+    /// beyond tidiness — the namespace fallback in
+    /// ``planLeftmostRelocation`` only fires when an owner has exactly one
+    /// saved entry, so the accumulated history disables the very remedy that
+    /// would have prevented the churn.
+    ///
+    /// Order is preserved: entries are dropped, never rearranged, so pruning
+    /// cannot itself permute a section (#885).
+    ///
+    /// Pure over its inputs.
+    static nonisolated func prunedSectionOrder(
+        _ savedSectionOrder: [String: [String]]
+    ) -> [String: [String]] {
+        let controlCenter = MenuBarItemTag.Namespace.controlCenter.description
+
+        // Titles claimed by a real owner somewhere in the saved layout.
+        var titlesWithRealOwner = Set<String>()
+        for identifiers in savedSectionOrder.values {
+            for identifier in identifiers where namespace(forIdentifier: identifier) != controlCenter {
+                titlesWithRealOwner.insert(titlePortion(forIdentifier: identifier))
+            }
+        }
+
+        return savedSectionOrder.mapValues { identifiers in
+            var seenCanonical = Set<String>()
+            return identifiers.filter { identifier in
+                let isProvisionalDuplicate = namespace(forIdentifier: identifier) == controlCenter
+                    && titlesWithRealOwner.contains(titlePortion(forIdentifier: identifier))
+                if isProvisionalDuplicate {
+                    return false
+                }
+                // Collapse volatile-title history to its first occurrence.
+                // A no-op for every owner outside that allowlist, whose
+                // canonical form is the identifier itself.
+                return seenCanonical.insert(
+                    MenuBarItemTag.canonicalPersistentIdentifier(identifier)
+                ).inserted
+            }
+        }
+    }
+
     /// Maps a persisted section key string to its enum value.
     private static nonisolated func sectionName(forPersistedKey key: String) -> MenuBarSection.Name? {
         switch key {
