@@ -130,4 +130,77 @@ struct MenuBarItemTagCanonicalizationTests {
         ])
         #expect(result.count == 2)
     }
+
+    // MARK: - Opaque titles (LyricsX, #815)
+
+    /// LyricsX titles its menu bar item with the lyric line on screen, so
+    /// consecutive titles share nothing at all. Every song change minted a
+    /// fresh identifier, the item read as a brand-new arrival, and Thaw
+    /// filed it under the new-items section — moving the lyrics back into
+    /// hidden however many times the user dragged them out (#815).
+    @Test("Lyric titles collapse to a single identifier")
+    func lyricTitlesCollapse() {
+        let owner = MenuBarItemTag.lyricsXBundleID
+        let first = MenuBarItemTag.canonicalPersistentIdentifier("\(owner):I walked through the door")
+        let second = MenuBarItemTag.canonicalPersistentIdentifier("\(owner):and then the music stopped")
+
+        #expect(first == second)
+        #expect(first == "\(owner):\(MenuBarItemTag.opaqueTitle)")
+    }
+
+    /// The metric canonicalizer would not have helped here: it collapses
+    /// digits, and a lyric has none. This is why the owner needed its own
+    /// title shape rather than an entry in the existing allowlist.
+    @Test("The metric canonicalizer alone would not collapse lyrics")
+    func metricCanonicalizerIsInsufficientForLyrics() {
+        let a = MenuBarItemTag.canonicalMetricTitle("I walked through the door")
+        let b = MenuBarItemTag.canonicalMetricTitle("and then the music stopped")
+        #expect(a != b)
+    }
+
+    /// An instance index is identity, not title, so it survives the collapse.
+    /// With the title gone it is the only thing separating two items from the
+    /// same opaque owner.
+    @Test("The instance index survives an opaque collapse")
+    func opaqueCollapsePreservesInstanceIndex() {
+        let owner = MenuBarItemTag.lyricsXBundleID
+        let zero = MenuBarItemTag.canonicalPersistentIdentifier("\(owner):some lyric")
+        let one = MenuBarItemTag.canonicalPersistentIdentifier("\(owner):another lyric:1")
+
+        #expect(one == "\(owner):\(MenuBarItemTag.opaqueTitle):1")
+        #expect(zero != one)
+    }
+
+    /// A lyric containing a colon must not be mistaken for an instance index.
+    @Test("A colon inside a lyric is not read as an instance index")
+    func colonInLyricIsNotAnInstanceIndex() {
+        let owner = MenuBarItemTag.lyricsXBundleID
+        let identifier = MenuBarItemTag.canonicalPersistentIdentifier("\(owner):Chapter: the end")
+        #expect(identifier == "\(owner):\(MenuBarItemTag.opaqueTitle)")
+    }
+
+    /// Adding an owner must not have widened the net. Everything outside the
+    /// allowlist still passes through untouched, including apps whose titles
+    /// happen to look volatile.
+    @Test("Unlisted owners are still untouched")
+    func unlistedOwnersAreUntouched() {
+        for identifier in [
+            "com.apple.controlcenter:WiFi",
+            "net.cozic.joplin-desktop:Item-0",
+            "com.example.player:Now Playing — Some Song",
+            "ddddxxx.LyricsXHelper:Item-0",
+        ] {
+            #expect(MenuBarItemTag.canonicalPersistentIdentifier(identifier) == identifier)
+        }
+    }
+
+    /// The saved layout accumulated one entry per lyric ever displayed.
+    /// Canonicalizing collapses that history to a single key.
+    @Test("A layout polluted with per-lyric entries collapses to one key")
+    func pollutedLayoutCollapses() {
+        let owner = MenuBarItemTag.lyricsXBundleID
+        let polluted = (0 ..< 40).map { "\(owner):lyric line number \($0)" }
+        let canonical = MenuBarItemTag.canonicalPersistentIdentifiers(polluted)
+        #expect(canonical == ["\(owner):\(MenuBarItemTag.opaqueTitle)"])
+    }
 }
