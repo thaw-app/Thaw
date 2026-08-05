@@ -4277,7 +4277,7 @@ extension MenuBarItemManager {
         destination: MoveDestination,
         on displayID: CGDirectDisplayID,
         warpCursorAfter: Bool = true
-    ) async throws {
+    ) async throws -> Duration {
         var acquiredSemaphore = false
         do {
             try await eventSemaphore.wait(timeout: .milliseconds(3500))
@@ -4423,7 +4423,7 @@ extension MenuBarItemManager {
         // original location (the drop position the receiving app uses to place
         // the item). For non-notched displays the original behaviour is
         // preserved (no override).
-        if !warpIsOnScreen {
+        if !useGestureGeometry, !warpIsOnScreen {
             let activeScreen = NSScreen.screens.first(where: { $0.displayID == displayID })
                 ?? NSScreen.main
             if let activeScreen,
@@ -4447,7 +4447,6 @@ extension MenuBarItemManager {
                 MouseHelpers.showCursor()
             }
             lastMoveOperationTimestamp = .now
-            updateMoveOperationTimeout(timeout, for: item)
         }
 
         do {
@@ -4481,17 +4480,6 @@ extension MenuBarItemManager {
                 initialOrigin: itemOrigin,
                 timeout: timeout
             )
-            // See nextMoveOperationTimeout: a miss that still displaced the
-            // item must not be rewarded with a shorter budget (#881).
-            let landedOnDestination = (try? await itemHasCorrectPosition(
-                item: item,
-                for: destination,
-                on: displayID
-            )) ?? false
-            timeout = Self.nextMoveOperationTimeout(
-                after: timeout,
-                outcome: landedOnDestination ? .landed : .displacedWithoutLanding
-            )
         } catch {
             do {
                 MenuBarItemManager.diagLog.warning("Move events failed, posting fallback")
@@ -4507,8 +4495,10 @@ extension MenuBarItemManager {
                 MenuBarItemManager.diagLog.error("Fallback failed with error: \(error)")
             }
             timeout = Self.nextMoveOperationTimeout(after: timeout, outcome: .ownerDidNotRespond)
+            updateMoveOperationTimeout(timeout, for: item)
             throw error
         }
+        return timeout
     }
 
     /// Posts the `leftMouseDragged` steps that carry a held item from the
@@ -4830,7 +4820,7 @@ extension MenuBarItemManager {
                         "Position match without observable displacement on attempt \(n); treating as false positive on a zero-width control item and retrying"
                     )
                 }
-                try await postMoveEvents(
+                let attemptTimeout = try await postMoveEvents(
                     item: item,
                     destination: destination,
                     on: resolvedDisplayID,
@@ -4841,7 +4831,24 @@ extension MenuBarItemManager {
                 // i.e. our drag actually displaced the item.
                 anyMoveEventsSucceeded = true
                 // Verify the item actually reached the correct position.
-                if try await itemHasCorrectPosition(item: item, for: destination, on: resolvedDisplayID) {
+                let landedOnDestination = try await itemHasCorrectPosition(
+                    item: item,
+                    for: destination,
+                    on: resolvedDisplayID
+                )
+                // `postMoveEvents` only observes displacement. Let this
+                // single post-event landing check decide whether the next
+                // attempt earns a shorter budget or keeps it unchanged;
+                // querying Window Server in both places made misses look like
+                // successful moves (#889).
+                updateMoveOperationTimeout(
+                    Self.nextMoveOperationTimeout(
+                        after: attemptTimeout,
+                        outcome: landedOnDestination ? .landed : .displacedWithoutLanding
+                    ),
+                    for: item
+                )
+                if landedOnDestination {
                     // Logged at info so an A/B of move-delivery geometry can
                     // be read straight off a field log: grep "move landed"
                     // and compare the attempt counts.
@@ -7904,12 +7911,13 @@ extension MenuBarItemManager {
 
         // MARK: Phase 6: LCS execution
 
-        // ── Sub-phase 1: Move control items to optimal boundary positions ──
+        // ── Sub-phase 0: Move control items to optimal boundary positions ──
         //
         // Moving a control item reassigns all items on either side to
         // different sections in a single move. Calculate whether moving
         // a control item is cheaper than moving individual items.
         var movedCount = 0
+        var didAttemptHCtrl = false
 
         // Classify items into the two sets Phase 1 actually consults.
         // Read from the sectionByWindowID snapshot built earlier so the
@@ -7947,7 +7955,7 @@ extension MenuBarItemManager {
         // Check if AH_ctrl needs to move: items changing between hidden↔alwaysHidden.
         let wrongInHidden = currentHiddenSet.subtracting(desiredHiddenSet).intersection(desiredAHSet)
         let wrongInAH = currentAHSet.subtracting(desiredAHSet).intersection(desiredHiddenSet)
-        let crossSectionMoves = wrongInHidden.count + wrongInAH.count
+        var crossSectionMoves = wrongInHidden.count + wrongInAH.count
 
         // Items that are in always-hidden currently but should be in
         // hidden per the profile (or vice versa), regardless of whether
@@ -7961,7 +7969,7 @@ extension MenuBarItemManager {
         // for everything it crosses.
         let needsHiddenMove = currentAHSet.intersection(desiredHiddenSet)
         let needsAHMove = currentHiddenSet.intersection(desiredAHSet)
-        let totalSectionMismatch = needsHiddenMove.count + needsAHMove.count
+        var totalSectionMismatch = needsHiddenMove.count + needsAHMove.count
 
         // Items on the wrong side of H_ctrl. Both tallies above intersect
         // against currentHiddenSet / currentAHSet, so a bar whose hidden
@@ -8014,7 +8022,7 @@ extension MenuBarItemManager {
             "Profile layout Phase 1: hiddenBoundaryMismatch=\(hiddenBoundaryMismatch)"
         )
 
-        // ── Sub-phase 0: Move H_ctrl to the visible/hidden boundary ──
+        // ── Sub-phase 1: Move H_ctrl to the visible/hidden boundary ──
         //
         // Runs before the AH_ctrl placement so the always-hidden planning
         // below sees a divider pair that already brackets the right set of
@@ -8048,6 +8056,7 @@ extension MenuBarItemManager {
                     case .leftOf: .leftOfItem(anchorItem)
                     }
                     MenuBarItemManager.diagLog.debug("Profile layout: moving H_ctrl → \(dest.logString)")
+                    didAttemptHCtrl = true
                     do {
                         try await move(item: hItem, to: dest, skipInputPause: true)
                         movedCount += 1
@@ -8063,6 +8072,72 @@ extension MenuBarItemManager {
                 MenuBarItemManager.diagLog.warning(
                     "Profile layout: no anchor available for the H_ctrl boundary move"
                 )
+            }
+        }
+
+        // Moving H_ctrl changes the section of every item it crosses. The
+        // snapshot used to decide the move is therefore stale at this point;
+        // classify the post-move bounds again before deciding whether an
+        // AH_ctrl move (and its per-item fallback) is still warranted.
+        if didAttemptHCtrl {
+            var postMoveItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+            postMoveItems.removeAll(where: \.isSystemClone)
+            var postMoveItemsCopy = postMoveItems
+            if let postMoveControl = ControlItemPair(
+                items: &postMoveItemsCopy,
+                hiddenControlItemWindowID: hiddenWID,
+                alwaysHiddenControlItemWindowID: alwaysHiddenWID
+            ) {
+                var postMoveContext = CacheContext(
+                    controlItems: postMoveControl,
+                    displayID: Bridging.getActiveMenuBarDisplayID()
+                )
+
+                sectionByWindowID.removeAll(keepingCapacity: true)
+                for item in postMoveItems where isProfileItem(item) {
+                    if let section = postMoveContext.findSection(for: item) {
+                        sectionByWindowID[item.windowID] = section
+                    }
+                }
+
+                currentVisibleSet.removeAll(keepingCapacity: true)
+                currentHiddenSet.removeAll(keepingCapacity: true)
+                currentAHSet.removeAll(keepingCapacity: true)
+                for item in postMoveItems where isProfileItem(item) {
+                    switch sectionByWindowID[item.windowID] {
+                    case .visible:
+                        currentVisibleSet.insert(item.uniqueIdentifier)
+                    case .hidden:
+                        currentHiddenSet.insert(item.uniqueIdentifier)
+                    case .alwaysHidden:
+                        currentAHSet.insert(item.uniqueIdentifier)
+                    case nil:
+                        break
+                    }
+                }
+
+                let postWrongInHidden = currentHiddenSet
+                    .subtracting(desiredHiddenSet)
+                    .intersection(desiredAHSet)
+                let postWrongInAH = currentAHSet
+                    .subtracting(desiredAHSet)
+                    .intersection(desiredHiddenSet)
+                crossSectionMoves = postWrongInHidden.count + postWrongInAH.count
+
+                let postNeedsHiddenMove = currentAHSet.intersection(desiredHiddenSet)
+                let postNeedsAHMove = currentHiddenSet.intersection(desiredAHSet)
+                totalSectionMismatch = postNeedsHiddenMove.count + postNeedsAHMove.count
+
+                MenuBarItemManager.diagLog.debug(
+                    "Profile layout: post-H_ctrl classification crossSectionMoves=\(crossSectionMoves), totalSectionMismatch=\(totalSectionMismatch)"
+                )
+            } else {
+                MenuBarItemManager.diagLog.warning(
+                    "Profile layout: could not reclassify sections after moving H_ctrl"
+                )
+                clearProfileState(source: source, items: postMoveItems)
+                scheduleDeferredCacheRefresh()
+                return
             }
         }
 
@@ -8229,7 +8304,7 @@ extension MenuBarItemManager {
         //
         // Re-fetch items and rebuild sequences after control item moves
         // may have changed section assignments.
-        if movedCount > 0 {
+        if movedCount > 0 || didAttemptHCtrl {
             // Re-fetch items and rebuild section assignments after
             // the control item move changed section boundaries.
             items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
