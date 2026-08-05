@@ -218,14 +218,45 @@ nonisolated struct MenuBarItemTag: Hashable, CustomStringConvertible {
             .replacing(/#\s*[KMGTPE]?[Bb]/, with: "# B")
     }
 
+    /// Bundle identifier of LyricsX, whose menu bar item titles itself with
+    /// the lyric line currently on screen.
+    static let lyricsXBundleID = "ddddxxx.LyricsX"
+
+    /// The canonical title for an owner whose title carries no identity.
+    ///
+    /// A metric title has a stable skeleton worth keeping — "CPU #" and
+    /// "Network #" still tell two iStat items apart. A lyric has none: every
+    /// character of it is the volatile part, and two consecutive lines share
+    /// nothing. Collapsing to a constant is therefore the whole title
+    /// canonicalization for such an owner, which means its items are
+    /// distinguished only by instance index. That is fine while the owner
+    /// contributes a single item, and is the reason this is an allowlist
+    /// rather than a heuristic.
+    static let opaqueTitle = "#"
+
+    /// The volatile-title owner an identifier belongs to, if any, paired with
+    /// how that owner's titles collapse.
+    private static func volatileTitleOwner(
+        of identifier: String
+    ) -> (prefix: String, canonicalize: (String) -> String)? {
+        let iStatPrefix = "\(iStatMenusStatusBundleID):"
+        if identifier.hasPrefix(iStatPrefix) {
+            return (iStatPrefix, canonicalMetricTitle)
+        }
+        let lyricsXPrefix = "\(lyricsXBundleID):"
+        if identifier.hasPrefix(lyricsXPrefix) {
+            return (lyricsXPrefix, { _ in opaqueTitle })
+        }
+        return nil
+    }
+
     /// The canonical form of a `namespace:title[:index]` identifier.
     ///
     /// A no-op for every owner except the volatile-title ones above, so it is
     /// safe to apply to identifiers of unknown provenance — including ones
     /// read back from a profile written before this existed.
     static func canonicalPersistentIdentifier(_ identifier: String) -> String {
-        let prefix = "\(iStatMenusStatusBundleID):"
-        guard identifier.hasPrefix(prefix) else {
+        guard let (prefix, canonicalize) = volatileTitleOwner(of: identifier) else {
             return identifier
         }
 
@@ -236,10 +267,10 @@ nonisolated struct MenuBarItemTag: Hashable, CustomStringConvertible {
             let title = String(suffix[..<separator])
             let instance = String(suffix[suffix.index(after: separator)...])
             if Int(instance) != nil {
-                return "\(prefix)\(canonicalMetricTitle(title)):\(instance)"
+                return "\(prefix)\(canonicalize(title)):\(instance)"
             }
         }
-        return "\(prefix)\(canonicalMetricTitle(suffix))"
+        return "\(prefix)\(canonicalize(suffix))"
     }
 
     /// Canonicalizes a list of identifiers, dropping duplicates that only
