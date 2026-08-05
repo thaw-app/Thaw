@@ -306,11 +306,17 @@ final class MenuBarItemManager {
     /// Observes `appState.navigationState`'s @Observable properties (wave 3).
     private var navigationStateObservationTask: Task<Void, Never>?
 
+    /// A candidate menu window matched by the open-menu probe.
+    nonisolated struct MenuWindowCandidate: Sendable {
+        let windowID: CGWindowID
+        let bounds: CGRect
+    }
+
     /// The currently running "is any menu open" probe, reused so concurrent
     /// smart-rehide callers do not all trigger their own full menu-bar scan.
-    /// Returns the window IDs of candidate menu windows owned by menu bar
-    /// item processes; persistence filtering happens on the actor.
-    private var menuOpenCheckTask: Task<Set<CGWindowID>, Never>?
+    /// Returns the candidate menu windows owned by menu bar item processes;
+    /// persistence filtering happens on the actor.
+    private var menuOpenCheckTask: Task<[MenuWindowCandidate], Never>?
 
     /// The most recent open-menu probe result and its timestamp.
     private var menuOpenCheckCachedResult: Bool?
@@ -6309,7 +6315,7 @@ extension MenuBarItemManager {
         let cachedItems = itemCache.managedItems.filter(\.isOnScreen)
         let controlCenterBundleID = MenuBarItemTag.Namespace.controlCenter.description
 
-        let task = Task.detached(priority: .utility) { () -> Set<CGWindowID> in
+        let task = Task.detached(priority: .utility) { () -> [MenuWindowCandidate] in
             // Get all on-screen windows.
             let windows = WindowInfo.createWindows(option: .onScreen)
             let potentialMenuWindows = windows.filter { window in
@@ -6365,7 +6371,7 @@ extension MenuBarItemManager {
 
             if !fastPathMatches.isEmpty {
                 MenuBarItemManager.diagLog.debug("Menu open check: \(fastPathMatches.count) candidate windows (fast path)")
-                return Set(fastPathMatches.map(\.windowID))
+                return fastPathMatches.map { MenuWindowCandidate(windowID: $0.windowID, bounds: $0.bounds) }
             }
 
             let unresolvedWindows = WindowInfo.createWindows(
@@ -6409,7 +6415,7 @@ extension MenuBarItemManager {
             MenuBarItemManager.diagLog.debug(
                 "Menu open check: \(preciseMatches.count) candidate windows (precise fallback with \(resolvedPIDs.count) resolved PIDs)"
             )
-            return Set(preciseMatches.map(\.windowID))
+            return preciseMatches.map { MenuWindowCandidate(windowID: $0.windowID, bounds: $0.bounds) }
         }
 
         menuOpenCheckTask = task
@@ -6426,10 +6432,12 @@ extension MenuBarItemManager {
     }
 
     /// Updates first-seen tracking for the matched candidate windows and
-    /// returns whether any of them is fresh enough to be a real open menu.
-    private func applyMenuWindowPersistenceFilter(to matchedWindowIDs: Set<CGWindowID>) -> Bool {
+    /// returns whether any of them is fresh enough — or currently under the
+    /// pointer — to be a real open menu.
+    private func applyMenuWindowPersistenceFilter(to candidates: [MenuWindowCandidate]) -> Bool {
         let outcome = MenuBarItemManager.classifyMenuWindowCandidates(
-            matchedWindowIDs: matchedWindowIDs,
+            candidates: candidates,
+            pointerLocation: CGEvent(source: nil)?.location,
             firstSeen: menuWindowFirstSeen,
             now: .now,
             isFirstProbe: !hasSeededMenuWindowProbe,
@@ -6447,14 +6455,17 @@ extension MenuBarItemManager {
     }
 
     /// Pure classification core for the open-menu probe: a candidate window
-    /// only counts as an open menu while it is young. Real menus are
-    /// transient; persistent status-level windows (Droppy's shelf, notch
-    /// HUDs) stay on screen for the app's whole lifetime and previously
-    /// deferred every move indefinitely. Windows already on screen at the
-    /// first probe are grandfathered as persistent, and entries for windows
-    /// that disappeared are pruned so a reused window ID starts fresh.
+    /// counts as an open menu while it is young, or at any age while the
+    /// pointer is inside it (a user interacting with a long-open menu, or
+    /// mid-drop on a shelf). Real menus are transient; persistent
+    /// status-level windows (Droppy's shelf, notch HUDs) stay on screen for
+    /// the app's whole lifetime and previously deferred every move
+    /// indefinitely. Windows already on screen at the first probe are
+    /// grandfathered as persistent, and entries for windows that
+    /// disappeared are pruned so a reused window ID starts fresh.
     nonisolated static func classifyMenuWindowCandidates(
-        matchedWindowIDs: Set<CGWindowID>,
+        candidates: [MenuWindowCandidate],
+        pointerLocation: CGPoint?,
         firstSeen: [CGWindowID: ContinuousClock.Instant],
         now: ContinuousClock.Instant,
         isFirstProbe: Bool,
@@ -6464,22 +6475,25 @@ extension MenuBarItemManager {
         updatedFirstSeen: [CGWindowID: ContinuousClock.Instant],
         ignoredPersistentWindowIDs: Set<CGWindowID>
     ) {
+        let matchedWindowIDs = Set(candidates.map(\.windowID))
         var updatedFirstSeen = firstSeen.filter { matchedWindowIDs.contains($0.key) }
         let firstSeenForNewWindows = isFirstProbe ? now - threshold : now
         var isMenuOpen = false
         var ignored = Set<CGWindowID>()
-        for windowID in matchedWindowIDs {
+        for candidate in candidates {
             let firstSeenAt: ContinuousClock.Instant
-            if let existing = updatedFirstSeen[windowID] {
+            if let existing = updatedFirstSeen[candidate.windowID] {
                 firstSeenAt = existing
             } else {
                 firstSeenAt = firstSeenForNewWindows
-                updatedFirstSeen[windowID] = firstSeenAt
+                updatedFirstSeen[candidate.windowID] = firstSeenAt
             }
-            if firstSeenAt.duration(to: now) < threshold {
+            let isYoung = firstSeenAt.duration(to: now) < threshold
+            let isUnderPointer = pointerLocation.map(candidate.bounds.contains) ?? false
+            if isYoung || isUnderPointer {
                 isMenuOpen = true
             } else {
-                ignored.insert(windowID)
+                ignored.insert(candidate.windowID)
             }
         }
         return (isMenuOpen, updatedFirstSeen, ignored)
