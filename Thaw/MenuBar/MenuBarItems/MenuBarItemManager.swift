@@ -566,6 +566,41 @@ final class MenuBarItemManager {
         (error as? EventError)?.failureKind ?? .other
     }
 
+    /// The move-operation budget the next attempt should use, given how the
+    /// attempt that just finished turned out.
+    ///
+    /// The budget shrinks only as a reward for an attempt that actually
+    /// placed the item, grows when the owner stopped responding, and holds
+    /// steady when the attempt displaced the item without landing it.
+    ///
+    /// That last case is the one that matters. `waitForMoveEventResponse`
+    /// returns on any origin change, and an attempt that misses still nudges
+    /// the item a pixel or two as the owner registers the click. Decaying on
+    /// those responses let a run of misses starve the budget until the item
+    /// could no longer answer inside it — the `itemResponseTimeout` cascade
+    /// in #881. Misses must be neutral, not rewarded.
+    static nonisolated func nextMoveOperationTimeout(
+        after current: Duration,
+        outcome: MoveAttemptOutcome
+    ) -> Duration {
+        switch outcome {
+        case .landed: current - current / 4
+        case .displacedWithoutLanding: current
+        case .ownerDidNotRespond: current + current / 2
+        }
+    }
+
+    /// How a single `postMoveEvents` attempt turned out, for the purpose of
+    /// sizing the next attempt's budget.
+    enum MoveAttemptOutcome {
+        /// The item reached its destination.
+        case landed
+        /// The item moved but did not reach its destination.
+        case displacedWithoutLanding
+        /// The owner never answered the posted events.
+        case ownerDidNotRespond
+    }
+
     /// Persisted mapping of item tag identifiers to their original section name for
     /// temporarily shown items whose apps quit before they could be rehidden. When
     /// the app relaunches, this allows us to move the item back to its original section.
@@ -4347,7 +4382,17 @@ extension MenuBarItemManager {
                 initialOrigin: itemOrigin,
                 timeout: timeout
             )
-            timeout -= timeout / 4
+            // See nextMoveOperationTimeout: a miss that still displaced the
+            // item must not be rewarded with a shorter budget (#881).
+            let landedOnDestination = (try? await itemHasCorrectPosition(
+                item: item,
+                for: destination,
+                on: displayID
+            )) ?? false
+            timeout = Self.nextMoveOperationTimeout(
+                after: timeout,
+                outcome: landedOnDestination ? .landed : .displacedWithoutLanding
+            )
         } catch {
             do {
                 MenuBarItemManager.diagLog.warning("Move events failed, posting fallback")
@@ -4362,7 +4407,7 @@ extension MenuBarItemManager {
                 // the original error.
                 MenuBarItemManager.diagLog.error("Fallback failed with error: \(error)")
             }
-            timeout += timeout / 2
+            timeout = Self.nextMoveOperationTimeout(after: timeout, outcome: .ownerDidNotRespond)
             throw error
         }
     }
