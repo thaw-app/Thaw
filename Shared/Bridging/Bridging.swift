@@ -706,83 +706,113 @@ nonisolated extension Bridging {
             return nil
         }
 
-        // Preserve caller's z-order so the composite renders correctly.
-        let scWindows = windowIDs.compactMap { id in
-            content.windows.first { $0.windowID == id }
+        /// Everything derived from one shareable-content snapshot.
+        ///
+        /// Grouped so a refresh re-derives all of it together. The windows,
+        /// their union, and the host display all come from the same snapshot,
+        /// so recomputing only the display against a fresh one would match a
+        /// current display set against stale window frames — and hand stale
+        /// `SCWindow` objects to a filter built from a fresh `SCDisplay`.
+        struct Resolved {
+            let windows: [SCWindow]
+            let unionBounds: CGRect
+            let display: SCDisplay
         }
 
-        // Require an exact match. Partial captures are unsafe: cache composites
-        // rely on the result covering every requested window's bounds for the
-        // post-capture crop math, and color samplers rely on every requested
-        // window being included for the averaged color to mean anything.
-        // Fail fast so callers fall back cleanly to SkyLight or skip the tick.
-        guard scWindows.count == windowIDs.count else {
-            let matched = Set(scWindows.map(\.windowID))
-            let missing = windowIDs.filter { !matched.contains($0) }
-            diagLog.warning("captureWindowsImageSCK: SCK resolved \(scWindows.count)/\(windowIDs.count) requested windows; missing IDs: \(missing)")
-            return nil
-        }
-
-        // Union of selected window frames; used both as default bounds and
-        // to find the host display.
-        let unionBounds = scWindows.reduce(CGRect.null) { $0.union($1.frame) }
-        let effectiveBounds: CGRect = {
-            if let screenBounds, !screenBounds.isNull {
-                return screenBounds
+        func resolve(from content: SCShareableContent) -> Resolved? {
+            // Preserve caller's z-order so the composite renders correctly.
+            let scWindows = windowIDs.compactMap { id in
+                content.windows.first { $0.windowID == id }
             }
-            return unionBounds
-        }()
 
-        guard isValidCaptureBounds(effectiveBounds) else {
-            diagLog.error("captureWindowsImageSCK: refusing capture with invalid effectiveBounds=\(effectiveBounds) (screenBounds=\(String(describing: screenBounds)), unionBounds=\(unionBounds)) — see issue #759")
-            return nil
-        }
+            // Require an exact match. Partial captures are unsafe: cache
+            // composites rely on the result covering every requested window's
+            // bounds for the post-capture crop math, and color samplers rely
+            // on every requested window being included for the averaged color
+            // to mean anything.
+            guard scWindows.count == windowIDs.count else {
+                let matched = Set(scWindows.map(\.windowID))
+                let missing = windowIDs.filter { !matched.contains($0) }
+                diagLog.warning("captureWindowsImageSCK: SCK resolved \(scWindows.count)/\(windowIDs.count) requested windows; missing IDs: \(missing)")
+                return nil
+            }
 
-        // Pick the display that holds the largest share of unionBounds. A
-        // strict frame.contains check rejected status-item windows whose
-        // bounds overshoot NSScreen.frame.maxX by a handful of pixels
-        // (observed on the Clock and Thaw items: bounds = (1029, 0, 443, 33)
-        // on a 1470-wide display), so the SCK capture never happened and the
-        // icons disappeared from Settings / Search. Largest-intersection wins
-        // the common edge-overshoot case, picks the majority display for a
-        // cross-display span, and still returns nil when no display overlaps
-        // at all so truly orphan windows fall back / skip cleanly.
-        func hostDisplay(in content: SCShareableContent) -> SCDisplay? {
-            content.displays
+            let unionBounds = scWindows.reduce(CGRect.null) { $0.union($1.frame) }
+
+            // Pick the display holding the largest share of unionBounds. A
+            // strict frame.contains check rejected status-item windows whose
+            // bounds overshoot NSScreen.frame.maxX by a handful of pixels
+            // (observed on the Clock and Thaw items: bounds = (1029, 0, 443,
+            // 33) on a 1470-wide display), so the SCK capture never happened
+            // and the icons disappeared from Settings / Search.
+            // Largest-intersection wins the common edge-overshoot case, picks
+            // the majority display for a cross-display span, and still fails
+            // when no display overlaps at all.
+            let host = content.displays
                 .compactMap { display -> (SCDisplay, CGFloat)? in
                     let intersection = display.frame.intersection(unionBounds)
                     guard !intersection.isNull else { return nil }
                     return (display, intersection.width * intersection.height)
                 }
                 .max { $0.1 < $1.1 }?.0
+            guard let host else { return nil }
+
+            return Resolved(windows: scWindows, unionBounds: unionBounds, display: host)
         }
 
-        var display = hostDisplay(in: content)
+        var resolved = resolve(from: content)
 
-        // "No display intersects" is not necessarily an orphan window. The
-        // content above is served from a cache with a 150ms max age, so a
-        // display arriving, leaving, or being rearranged inside that window
-        // leaves us matching real item positions against a display set that
-        // no longer describes the desktop. Every window then looks orphaned,
+        // A failed resolve is not necessarily an orphan window. The content
+        // above is served from a cache with a 150ms max age, so a display
+        // arriving, leaving, or being rearranged inside that window leaves
+        // real item positions being matched against a display set that no
+        // longer describes the desktop. Every window then looks orphaned,
         // capture returns nil, and the appearance overlay reports "No valid
         // menu bar found" and stops updating (#794).
         //
-        // Refresh once, and only on this mismatch, rather than paying an
-        // uncached enumeration on the 4fps live-refresh path for everyone.
-        // A genuinely orphaned window still falls through to nil, just one
+        // Refresh once, and only on that failure, rather than charging an
+        // uncached enumeration to the 4fps live-refresh path for everyone. A
+        // genuinely orphaned window still falls through to nil, one
         // enumeration later.
-        if display == nil {
-            diagLog.debug("captureWindowsImageSCK: no display intersects cached content; refreshing topology once")
+        var usedRefreshedTopology = false
+        if resolved == nil {
+            diagLog.debug("captureWindowsImageSCK: could not resolve against cached content; refreshing topology once")
             if let fresh = try? await shareableContentIncludingOffscreen(maxAge: .zero) {
-                display = hostDisplay(in: fresh)
-                if display != nil {
-                    diagLog.info("captureWindowsImageSCK: stale display topology; recovered after refresh")
+                resolved = resolve(from: fresh)
+                if resolved != nil {
+                    usedRefreshedTopology = true
+                    diagLog.info("captureWindowsImageSCK: stale shareable content; recovered after refresh")
                 }
             }
         }
 
-        guard let display else {
-            diagLog.warning("captureWindowsImageSCK: no display intersects unionBounds=\(unionBounds) (effectiveBounds=\(effectiveBounds)) after refresh")
+        guard let resolved else {
+            diagLog.warning("captureWindowsImageSCK: could not resolve requested windows to a display after refresh")
+            return nil
+        }
+
+        let scWindows = resolved.windows
+        let unionBounds = resolved.unionBounds
+        let display = resolved.display
+
+        // `screenBounds` is the caller's crop rect in the coordinate space it
+        // observed. If the topology moved out from under us that rect may now
+        // describe a different region, so it is only honoured when it still
+        // overlaps the freshly resolved windows; otherwise fall back to their
+        // union, which is by construction current.
+        let effectiveBounds: CGRect = {
+            guard let screenBounds, !screenBounds.isNull else {
+                return unionBounds
+            }
+            if usedRefreshedTopology, screenBounds.intersection(unionBounds).isNull {
+                diagLog.warning("captureWindowsImageSCK: caller screenBounds=\(screenBounds) no longer overlaps refreshed unionBounds=\(unionBounds); using unionBounds")
+                return unionBounds
+            }
+            return screenBounds
+        }()
+
+        guard isValidCaptureBounds(effectiveBounds) else {
+            diagLog.error("captureWindowsImageSCK: refusing capture with invalid effectiveBounds=\(effectiveBounds) (screenBounds=\(String(describing: screenBounds)), unionBounds=\(unionBounds)) — see issue #759")
             return nil
         }
 

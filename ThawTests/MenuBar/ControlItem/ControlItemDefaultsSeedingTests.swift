@@ -18,17 +18,15 @@ import Testing
 /// `NSStatusItem Preferred Position <autosaveName>` itself, never through
 /// `ControlItemDefaults` — so it only ever blocked Thaw's own writes,
 /// including the seeding the very same commit introduced.
-@Suite("Control item defaults seeding")
+/// Serialized and run against a scratch defaults suite: these cases write
+/// real `NSStatusItem Preferred Position` keys, and `Defaults.store` is
+/// process-wide, so without both a run would clobber the divider positions of
+/// whoever is running the tests.
+@Suite("Control item defaults seeding", .serialized)
 struct ControlItemDefaultsSeedingTests {
     private static let hidden = ControlItem.Identifier.hidden.rawValue
     private static let alwaysHidden = ControlItem.Identifier.alwaysHidden.rawValue
     private static let visible = ControlItem.Identifier.visible.rawValue
-
-    private func clear(_ autosaveName: String) {
-        Defaults.store.removeObject(
-            forKey: ControlItemDefaults.Key<CGFloat>.preferredPosition.stringKey(for: autosaveName)
-        )
-    }
 
     private func storedPosition(_ autosaveName: String) -> CGFloat? {
         ControlItemDefaults[.preferredPosition, autosaveName]
@@ -46,11 +44,11 @@ struct ControlItemDefaultsSeedingTests {
     /// removed: the guard still applies to any caller that is not one of the
     /// two deliberate seeding paths.
     @Test("The subscript still refuses to write a divider position")
-    func subscriptStillRefusesDividerWrites() {
-        clear(Self.hidden)
-        ControlItemDefaults[.preferredPosition, Self.hidden] = 1
-        #expect(storedPosition(Self.hidden) == nil)
-        clear(Self.hidden)
+    func subscriptStillRefusesDividerWrites() throws {
+        try withScratchDefaults { _ in
+            ControlItemDefaults[.preferredPosition, Self.hidden] = 1
+            #expect(storedPosition(Self.hidden) == nil)
+        }
     }
 
     /// The fix. Without this, the hidden divider never receives the position
@@ -58,21 +56,21 @@ struct ControlItemDefaultsSeedingTests {
     /// dividers can be placed at the same X — collapsing the span between
     /// them to zero width.
     @Test("The seeding path writes through the guard")
-    func seedingPathWritesThroughTheGuard() {
-        clear(Self.hidden)
-        ControlItemDefaults.setIgnoringSectionDividerGuard(.preferredPosition, Self.hidden, to: 1)
-        #expect(storedPosition(Self.hidden) == 1)
-        clear(Self.hidden)
+    func seedingPathWritesThroughTheGuard() throws {
+        try withScratchDefaults { _ in
+            ControlItemDefaults.setIgnoringSectionDividerGuard(.preferredPosition, Self.hidden, to: 1)
+            #expect(storedPosition(Self.hidden) == 1)
+        }
     }
 
     /// The seeding path is not divider-specific — it is simply unguarded —
     /// so it must behave identically for a non-divider autosave name.
     @Test("The seeding path is unguarded for non-dividers too")
-    func seedingPathWorksForNonDividers() {
-        clear(Self.visible)
-        ControlItemDefaults.setIgnoringSectionDividerGuard(.preferredPosition, Self.visible, to: 0)
-        #expect(storedPosition(Self.visible) == 0)
-        clear(Self.visible)
+    func seedingPathWorksForNonDividers() throws {
+        try withScratchDefaults { _ in
+            ControlItemDefaults.setIgnoringSectionDividerGuard(.preferredPosition, Self.visible, to: 0)
+            #expect(storedPosition(Self.visible) == 0)
+        }
     }
 
     /// Non-position keys were never guarded and must stay unaffected.
