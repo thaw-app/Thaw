@@ -141,4 +141,53 @@ struct PrunedSectionOrderTests {
         #expect(pruned.keys.sorted() == ["hidden", "visible"])
         #expect(pruned["hidden"]?.isEmpty == true)
     }
+
+    /// A volatile-title owner saved in one section under one sample and in
+    /// another section under a later one leaves two entries that canonicalize
+    /// to the same key. Deduplicating per section keeps both, and the section
+    /// lookups built from this order then resolve that key by whichever
+    /// section the dictionary iterated last — a nondeterministic answer to
+    /// "where does this item belong".
+    @Test("The same canonical identity is kept in only one section")
+    func canonicalDuplicateAcrossSectionsIsResolved() {
+        let owner = MenuBarItemTag.lyricsXBundleID
+        let pruned = LayoutSolver.prunedSectionOrder([
+            "visible": ["\(owner):a lyric from earlier"],
+            "hidden": ["\(owner):a different lyric"],
+        ])
+
+        let survivors = (pruned["visible"] ?? []) + (pruned["hidden"] ?? [])
+        #expect(survivors.count == 1, "one identity must not occupy two sections")
+        #expect(pruned["visible"]?.count == 1, "the more visible section wins")
+        #expect(pruned["hidden"]?.isEmpty == true)
+    }
+
+    /// Same shape for the metric owner, and across all three sections.
+    @Test("Section precedence is visible, then hidden, then always-hidden")
+    func sectionPrecedenceIsDeterministic() {
+        let owner = MenuBarItemTag.iStatMenusStatusBundleID
+        let pruned = LayoutSolver.prunedSectionOrder([
+            "alwaysHidden": ["\(owner):CPU 3%"],
+            "hidden": ["\(owner):CPU 55%"],
+            "visible": ["\(owner):CPU 12%"],
+        ])
+
+        #expect(pruned["visible"] == ["\(owner):CPU 12%"])
+        #expect(pruned["hidden"]?.isEmpty == true)
+        #expect(pruned["alwaysHidden"]?.isEmpty == true)
+    }
+
+    /// Distinct identities from the same owner must not be collapsed into one
+    /// another just because they share a namespace.
+    @Test("Distinct metrics from one owner survive in their own sections")
+    func distinctMetricsAreNotCollapsed() {
+        let owner = MenuBarItemTag.iStatMenusStatusBundleID
+        let pruned = LayoutSolver.prunedSectionOrder([
+            "visible": ["\(owner):CPU 12%"],
+            "hidden": ["\(owner):Network 3.4 MB/s"],
+        ])
+
+        #expect(pruned["visible"] == ["\(owner):CPU 12%"])
+        #expect(pruned["hidden"] == ["\(owner):Network 3.4 MB/s"])
+    }
 }

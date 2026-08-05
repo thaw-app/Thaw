@@ -876,6 +876,32 @@ nonisolated enum LayoutSolver {
         if let exact = savedPosition(for: uid, in: savedSectionOrder) {
             return exact
         }
+
+        // Canonical match, before the base-ID fallback below.
+        //
+        // A volatile-title owner is saved under whatever its title was at the
+        // time and carries a different one now, so the exact match above
+        // always misses. The base-ID fallback misses too: for these owners the
+        // title *is* the volatile part, so `namespace:title` differs between
+        // the saved entry and the live item just as the full identifier does.
+        // Without this the item reaches planUnmanagedPlacement with no saved
+        // position and is placed by newItemDefault instead of where the user
+        // put it (#815).
+        //
+        // Instance index is preserved by canonicalization, so two items from
+        // the same opaque owner still resolve to their own saved entries.
+        let canonicalUID = MenuBarItemTag.canonicalPersistentIdentifier(uid)
+        if canonicalUID != uid {
+            for (sectionKeyString, identifiers) in savedSectionOrder {
+                guard let section = sectionName(forPersistedKey: sectionKeyString) else { continue }
+                for (index, identifier) in identifiers.enumerated()
+                    where MenuBarItemTag.canonicalPersistentIdentifier(identifier) == canonicalUID
+                {
+                    return SavedPosition(section: section, index: index)
+                }
+            }
+        }
+
         let baseID = uid.split(separator: ":", maxSplits: 2).prefix(2).joined(separator: ":")
         guard baseID.contains(":") else { return nil }
         for (sectionKeyString, identifiers) in savedSectionOrder {
@@ -1206,20 +1232,52 @@ nonisolated enum LayoutSolver {
             }
         }
 
-        return savedSectionOrder.mapValues { identifiers in
-            var seenCanonical = Set<String>()
-            return identifiers.filter { identifier in
+        // Deduplicate canonical forms across the *whole* saved order, not per
+        // section. A volatile-title owner whose item was in visible when one
+        // sample was persisted and in hidden when another was leaves two
+        // entries that canonicalize to the same key in different sections.
+        // Both would survive a per-section pass, and the section lookups built
+        // from this order would then resolve that key by whichever section the
+        // dictionary happened to iterate last — a nondeterministic answer to
+        // "where does this item belong".
+        //
+        // Visible wins over hidden wins over always-hidden: keeping the item
+        // in the most visible section it was ever saved in fails toward the
+        // user seeing it, rather than toward it disappearing into a section
+        // they have to open.
+        var seenCanonical = Set<String>()
+        var keptPerSection = [String: Set<String>]()
+        for sectionKey in ["visible", "hidden", "alwaysHidden"] where savedSectionOrder[sectionKey] != nil {
+            var keptHere = Set<String>()
+            for identifier in savedSectionOrder[sectionKey] ?? [] {
+                let canonical = MenuBarItemTag.canonicalPersistentIdentifier(identifier)
+                if seenCanonical.insert(canonical).inserted {
+                    keptHere.insert(identifier)
+                }
+            }
+            keptPerSection[sectionKey] = keptHere
+        }
+        // Sections outside the known three keep their own entries; they are
+        // not part of the precedence order and must not be silently emptied.
+        for (sectionKey, identifiers) in savedSectionOrder where keptPerSection[sectionKey] == nil {
+            keptPerSection[sectionKey] = Set(identifiers)
+        }
+
+        return savedSectionOrder.reduce(into: [String: [String]]()) { result, entry in
+            let (sectionKey, identifiers) = entry
+            let kept = keptPerSection[sectionKey] ?? []
+            var emitted = Set<String>()
+            result[sectionKey] = identifiers.filter { identifier in
                 let isProvisionalDuplicate = namespace(forIdentifier: identifier) == controlCenter
                     && titlesWithRealOwner.contains(titlePortion(forIdentifier: identifier))
                 if isProvisionalDuplicate {
                     return false
                 }
-                // Collapse volatile-title history to its first occurrence.
-                // A no-op for every owner outside that allowlist, whose
-                // canonical form is the identifier itself.
-                return seenCanonical.insert(
-                    MenuBarItemTag.canonicalPersistentIdentifier(identifier)
-                ).inserted
+                // `kept` decides which section owns a canonical form; this
+                // guards against the same raw identifier being listed twice
+                // within one section.
+                guard kept.contains(identifier) else { return false }
+                return emitted.insert(identifier).inserted
             }
         }
     }
