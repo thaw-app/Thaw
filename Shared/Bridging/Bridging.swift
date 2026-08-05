@@ -751,8 +751,9 @@ nonisolated extension Bridging {
             let host = content.displays
                 .compactMap { display -> (SCDisplay, CGFloat)? in
                     let intersection = display.frame.intersection(unionBounds)
-                    guard !intersection.isNull else { return nil }
-                    return (display, intersection.width * intersection.height)
+                    let area = intersection.isNull ? 0 : intersection.width * intersection.height
+                    guard area > 0 else { return nil }
+                    return (display, area)
                 }
                 .max { $0.1 < $1.1 }?.0
             guard let host else { return nil }
