@@ -39,6 +39,7 @@ struct AdvancedSettingsPane: View {
                     enableSecondaryContextMenuQuit
                 }
                 useAXClickDelivery
+                useGestureMoveDrag
             }
             IceSection("Permissions") {
                 allPermissions
@@ -241,6 +242,25 @@ struct AdvancedSettingsPane: View {
                 Right-click in an empty area of the menu bar to display a minimal \
                 version of \(Constants.displayName)'s menu. Disable this setting if you encounter conflicts \
                 with other apps.
+                """
+            )
+            .padding(.trailing, 75)
+        }
+    }
+
+    private var useGestureMoveDrag: some View {
+        Toggle(
+            "Move items with a drag gesture (Experimental)",
+            isOn: $settings.useGestureMoveDrag
+        )
+        .annotation {
+            Text(
+                """
+                Reorder items by pressing on an item, dragging it across the menu \
+                bar, and releasing it at its destination, instead of clicking at \
+                the destination with the item's window attached. Intended to \
+                remove the warm-up attempt every move currently needs. Only \
+                affects moves \(Constants.displayName) performs on your behalf.
                 """
             )
             .padding(.trailing, 75)
