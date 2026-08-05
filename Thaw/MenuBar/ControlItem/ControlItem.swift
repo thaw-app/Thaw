@@ -1088,6 +1088,31 @@ nonisolated enum ControlItemDefaults {
         }
     }
 
+    /// Writes a value without the section-divider guard above.
+    ///
+    /// The guard was added to stop a user from breaking their menu bar by
+    /// dragging a chevron (`ff7517f7`, "Prevents users from breaking menu bar
+    /// by moving chevrons"). It cannot do that: AppKit writes
+    /// `NSStatusItem Preferred Position <autosaveName>` itself when it places
+    /// an item, and that write never passes through this type. So the guard
+    /// only ever blocked Thaw's own writes — including the seeding that
+    /// `preflightSetup(for:)` and `resetChevronPositions()` exist to perform,
+    /// which the same commit introduced and silently disabled (#890).
+    ///
+    /// With no stored position, both dividers can be placed at the same X,
+    /// which collapses the span between them to zero width.
+    ///
+    /// Kept separate from the subscript rather than deleting the guard, so
+    /// only these two deliberate seeding paths bypass it and any future
+    /// caller still gets the original, conservative behavior.
+    static func setIgnoringSectionDividerGuard<Value>(
+        _ key: Key<Value>,
+        _ autosaveName: String,
+        to newValue: Value?
+    ) {
+        Defaults.store.set(newValue, forKey: key.stringKey(for: autosaveName))
+    }
+
     /// Returns whether the given autosave name belongs to a section divider.
     static func isSectionDivider(autosaveName: String) -> Bool {
         autosaveName == ControlItem.Identifier.hidden.rawValue ||
@@ -1116,7 +1141,7 @@ nonisolated enum ControlItemDefaults {
             case .visible:
                 ControlItemDefaults[.preferredPosition, autosaveName] = 0
             case .hidden:
-                ControlItemDefaults[.preferredPosition, autosaveName] = 1
+                ControlItemDefaults.setIgnoringSectionDividerGuard(.preferredPosition, autosaveName, to: 1)
             case .alwaysHidden:
                 break
             }
@@ -1127,7 +1152,7 @@ nonisolated enum ControlItemDefaults {
         if isSectionDivider(autosaveName: autosaveName) {
             switch controlItem.identifier {
             case .hidden:
-                ControlItemDefaults[.preferredPosition, autosaveName] = 1
+                ControlItemDefaults.setIgnoringSectionDividerGuard(.preferredPosition, autosaveName, to: 1)
             case .alwaysHidden:
                 // Don't set a default position for always-hidden
                 // It will be positioned dynamically by the system
@@ -1149,7 +1174,11 @@ nonisolated enum ControlItemDefaults {
 
     /// Resets chevron section divider positions to their defaults.
     static func resetChevronPositions() {
-        ControlItemDefaults[.preferredPosition, ControlItem.Identifier.hidden.rawValue] = 1
+        ControlItemDefaults.setIgnoringSectionDividerGuard(
+            .preferredPosition,
+            ControlItem.Identifier.hidden.rawValue,
+            to: 1
+        )
         // Always-hidden position is handled dynamically
     }
 }
