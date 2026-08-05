@@ -747,13 +747,42 @@ nonisolated extension Bridging {
         // the common edge-overshoot case, picks the majority display for a
         // cross-display span, and still returns nil when no display overlaps
         // at all so truly orphan windows fall back / skip cleanly.
-        let displayCandidates = content.displays.compactMap { display -> (SCDisplay, CGFloat)? in
-            let intersection = display.frame.intersection(unionBounds)
-            guard !intersection.isNull else { return nil }
-            return (display, intersection.width * intersection.height)
+        func hostDisplay(in content: SCShareableContent) -> SCDisplay? {
+            content.displays
+                .compactMap { display -> (SCDisplay, CGFloat)? in
+                    let intersection = display.frame.intersection(unionBounds)
+                    guard !intersection.isNull else { return nil }
+                    return (display, intersection.width * intersection.height)
+                }
+                .max { $0.1 < $1.1 }?.0
         }
-        guard let display = displayCandidates.max(by: { $0.1 < $1.1 })?.0 else {
-            diagLog.warning("captureWindowsImageSCK: no display intersects unionBounds=\(unionBounds) (effectiveBounds=\(effectiveBounds))")
+
+        var display = hostDisplay(in: content)
+
+        // "No display intersects" is not necessarily an orphan window. The
+        // content above is served from a cache with a 150ms max age, so a
+        // display arriving, leaving, or being rearranged inside that window
+        // leaves us matching real item positions against a display set that
+        // no longer describes the desktop. Every window then looks orphaned,
+        // capture returns nil, and the appearance overlay reports "No valid
+        // menu bar found" and stops updating (#794).
+        //
+        // Refresh once, and only on this mismatch, rather than paying an
+        // uncached enumeration on the 4fps live-refresh path for everyone.
+        // A genuinely orphaned window still falls through to nil, just one
+        // enumeration later.
+        if display == nil {
+            diagLog.debug("captureWindowsImageSCK: no display intersects cached content; refreshing topology once")
+            if let fresh = try? await shareableContentIncludingOffscreen(maxAge: .zero) {
+                display = hostDisplay(in: fresh)
+                if display != nil {
+                    diagLog.info("captureWindowsImageSCK: stale display topology; recovered after refresh")
+                }
+            }
+        }
+
+        guard let display else {
+            diagLog.warning("captureWindowsImageSCK: no display intersects unionBounds=\(unionBounds) (effectiveBounds=\(effectiveBounds)) after refresh")
             return nil
         }
 
