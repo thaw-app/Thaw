@@ -144,4 +144,30 @@ private actor Counter {
         value += 1
         return value
     }
+
+    // MARK: - Forced refresh
+
+    /// `captureWindowsImageSCK` re-fetches with `maxAge: .zero` when no
+    /// display intersects the windows it is capturing, on the theory that the
+    /// cached display set predates a topology change (#794). That recovery
+    /// only works if a zero budget genuinely bypasses the cache rather than
+    /// treating a just-stored entry as fresh.
+    @Test("A zero maxAge always bypasses the cache")
+    func zeroMaxAgeAlwaysRefetches() async throws {
+        let cache = ShareableContentCache<Int>()
+        let invocationCount = Counter()
+
+        @Sendable func fetch() async throws -> Int {
+            await invocationCount.increment()
+            return await invocationCount.value
+        }
+
+        let warm = try await cache.content(maxAge: .seconds(60), fetch: fetch)
+        let forced = try await cache.content(maxAge: .zero, fetch: fetch)
+
+        #expect(warm == 1)
+        #expect(forced == 2, "a zero budget must not be served from the cache")
+        let count = await invocationCount.value
+        #expect(count == 2)
+    }
 }
