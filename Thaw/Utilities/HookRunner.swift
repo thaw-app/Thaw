@@ -242,8 +242,8 @@ enum HookRunner {
         case let .failed(error):
             throw HookError.runFailed(path: hook.path, error: error)
         case let .completed(result):
-            let stdout = (result.standardOutput ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-            let stderr = (result.standardError ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            let stdout = result.standardOutput.trimmingCharacters(in: .whitespacesAndNewlines)
+            let stderr = result.standardError.trimmingCharacters(in: .whitespacesAndNewlines)
             let exitStatus: Int32 = switch result.terminationStatus {
             case let .exited(code): code
             case let .signaled(code): code

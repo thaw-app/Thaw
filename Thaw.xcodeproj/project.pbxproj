@@ -863,8 +863,8 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/swiftlang/swift-subprocess";
 			requirement = {
-				kind = upToNextMinorVersion;
-				minimumVersion = 0.5.0;
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
 			};
 		};
 		1FE809086FD6E22D3C218F67 /* XCRemoteSwiftPackageReference "swift-algorithms" */ = {
