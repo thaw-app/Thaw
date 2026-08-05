@@ -357,18 +357,25 @@ final class LayoutBarContainer: NSView {
             {
                 sourceView.oldContainerInfo = (self, sourceIndex)
             }
-            // updating normally relies on the presence of other arranged views,
-            // but if the container is empty, it needs to be handled separately
-            guard !arrangedViews.filter(\.isEnabled).isEmpty else {
-                arrangedViews.insert(sourceView, at: 0)
-                return .move
-            }
             // convert dragging location from window coordinates
             let draggingLocation = convert(draggingInfo.draggingLocation, from: nil)
             // When dragging a regular item (not the badge), exclude the badge
             // from being a swap destination. The badge position should only
             // change when the user explicitly drags the badge itself.
             let excludeBadge = !sourceView.isNewItemsBadge
+            // updating normally relies on the presence of other arranged views,
+            // but if the container has no valid swap destination it needs to be
+            // handled separately. The badge must be excluded here with the same
+            // rule as the destination search below: a section whose only
+            // occupant is the new-items badge would otherwise pass this guard,
+            // fail the destination search, and never insert the dragged view —
+            // making it impossible to drop anything into an empty section that
+            // hosts the badge.
+            guard arrangedViews.contains(where: { $0.isEnabled && !(excludeBadge && $0.isNewItemsBadge) }) else {
+                let insertionIndex = arrangedViews.firstIndex { draggingLocation.x < $0.frame.midX } ?? arrangedViews.count
+                arrangedViews.insert(sourceView, at: insertionIndex)
+                return .move
+            }
             guard
                 let destinationView = arrangedView(nearestTo: draggingLocation.x, excludingBadge: excludeBadge),
                 destinationView !== sourceView,
