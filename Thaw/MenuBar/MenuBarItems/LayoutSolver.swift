@@ -679,6 +679,84 @@ nonisolated enum LayoutSolver {
         )
     }
 
+    // MARK: - Hidden divider boundary
+
+    /// Where the hidden divider belongs, expressed relative to a live
+    /// anchor item so the orchestrator can resolve it against fresh
+    /// items at move time.
+    enum HiddenDividerAnchor: Equatable {
+        /// Place the hidden divider directly right of this item.
+        case rightOf(String)
+        /// Place the hidden divider directly left of this item.
+        case leftOf(String)
+    }
+
+    /// Counts the items sitting on the wrong side of the hidden divider.
+    ///
+    /// Phase 1's hidden↔always-hidden arithmetic cannot see these: both of
+    /// its tallies intersect against the currently-occupied hidden and
+    /// always-hidden sets, so a bar whose divider has drifted past every
+    /// managed item (leaving both sets empty) reports zero mismatch. The
+    /// LCS pass cannot see them either — it receives sequences with the
+    /// dividers stripped, so a divergence that is purely a divider
+    /// position leaves current equal to desired and plans no moves (#879).
+    ///
+    /// A non-zero count means one divider move fixes every listed item at
+    /// once, which is why this is measured separately from the per-item
+    /// reorder the LCS plans.
+    static nonisolated func hiddenBoundaryMismatch(
+        currentVisible: Set<String>,
+        currentHidden: Set<String>,
+        currentAlwaysHidden: Set<String>,
+        desiredVisible: Set<String>,
+        desiredHidden: Set<String>,
+        desiredAlwaysHidden: Set<String>
+    ) -> Int {
+        // Everything the profile places left of the hidden divider, in
+        // either of the two concealed sections. Which of the two an item
+        // lands in is the always-hidden divider's problem, handled by the
+        // AH_ctrl planning that follows this check.
+        let desiredConcealed = desiredHidden.union(desiredAlwaysHidden)
+        let currentConcealed = currentHidden.union(currentAlwaysHidden)
+
+        let wronglyVisible = currentVisible.intersection(desiredConcealed)
+        let wronglyConcealed = currentConcealed.intersection(desiredVisible)
+
+        return wronglyVisible.count + wronglyConcealed.count
+    }
+
+    /// Plans where to drag the hidden divider so the visible/hidden split
+    /// matches the profile.
+    ///
+    /// Section order runs right-to-left: index 0 of each ordered section
+    /// is its rightmost item, and items live to one side of their own
+    /// divider (visible right of the hidden divider, hidden left of it).
+    /// The divider therefore belongs immediately right of the rightmost
+    /// item the profile assigns to hidden, which is the same gap as
+    /// immediately left of the leftmost item it assigns to visible.
+    ///
+    /// Anchors to the hidden side first because that side is what the
+    /// profile is trying to repopulate; falls back to the visible side
+    /// when the profile's hidden section has no live members, so a
+    /// profile that empties the hidden section still parks the divider
+    /// past every visible item instead of leaving it mid-bar.
+    ///
+    /// Pure over its inputs. Returns nil when neither section has a live
+    /// movable member to anchor against.
+    static nonisolated func planHiddenDividerAnchor(
+        desiredHidden: [String],
+        desiredVisible: [String],
+        liveMovableUIDs: Set<String>
+    ) -> HiddenDividerAnchor? {
+        if let rightmostHidden = desiredHidden.first(where: liveMovableUIDs.contains) {
+            return .rightOf(rightmostHidden)
+        }
+        if let leftmostVisible = desiredVisible.last(where: liveMovableUIDs.contains) {
+            return .leftOf(leftmostVisible)
+        }
+        return nil
+    }
+
     // MARK: - LCS reorder
 
     /// Plans the LCS-anchored move sequence for items that need to move

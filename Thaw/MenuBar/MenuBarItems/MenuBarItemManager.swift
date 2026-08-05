@@ -7737,15 +7737,18 @@ extension MenuBarItemManager {
             // values for the same windowID if section.show()'s control-item
             // moves landed in between, which surfaces as an empty Phase 1
             // view of currently-occupied hidden / always-hidden sections.
+            var currentVisibleSet = Set<String>()
             var currentHiddenSet = Set<String>()
             var currentAHSet = Set<String>()
             for item in items where isProfileItem(item) {
                 switch sectionByWindowID[item.windowID] {
+                case .visible:
+                    currentVisibleSet.insert(item.uniqueIdentifier)
                 case .hidden:
                     currentHiddenSet.insert(item.uniqueIdentifier)
                 case .alwaysHidden:
                     currentAHSet.insert(item.uniqueIdentifier)
-                case .visible, nil:
+                case nil:
                     break
                 }
             }
@@ -7754,8 +7757,10 @@ extension MenuBarItemManager {
             let desiredAHSet = Set(itemOrder["alwaysHidden"] ?? [])
             // Logged for the log-replay harness so the desired visible set is
             // captured rather than inferred from current visible minus control
-            // items and unresolved orphans. Not consulted by Phase 1's section
-            // arithmetic, which only crosses hidden and always-hidden.
+            // items and unresolved orphans. Also feeds the hidden-divider
+            // boundary check below; the crossSectionMoves / totalSectionMismatch
+            // arithmetic that follows still only crosses hidden and
+            // always-hidden.
             let desiredVisibleSet = Set(itemOrder["visible"] ?? [])
 
             // Check if AH_ctrl needs to move: items changing between hidden↔alwaysHidden.
@@ -7776,6 +7781,25 @@ extension MenuBarItemManager {
             let needsHiddenMove = currentAHSet.intersection(desiredHiddenSet)
             let needsAHMove = currentHiddenSet.intersection(desiredAHSet)
             let totalSectionMismatch = needsHiddenMove.count + needsAHMove.count
+
+            // Items on the wrong side of H_ctrl. Both tallies above intersect
+            // against currentHiddenSet / currentAHSet, so a bar whose hidden
+            // divider has drifted past every managed item — leaving both sets
+            // empty while the profile wants a full hidden section — scores
+            // zero on both and falls through to the LCS. The LCS is blind to
+            // it too: the dividers are stripped from its sequences, so a
+            // divider-only divergence leaves current equal to desired and
+            // plans no moves, and the apply reports "all items already in
+            // correct positions" while the whole hidden section stays visible
+            // (#879). One H_ctrl move fixes every one of them.
+            let hiddenBoundaryMismatch = LayoutSolver.hiddenBoundaryMismatch(
+                currentVisible: currentVisibleSet,
+                currentHidden: currentHiddenSet,
+                currentAlwaysHidden: currentAHSet,
+                desiredVisible: desiredVisibleSet,
+                desiredHidden: desiredHiddenSet,
+                desiredAlwaysHidden: desiredAHSet
+            )
 
             // Format contract: parsed by ProfileLayoutLogReplayTests.parse(_:).
             // Changing this string breaks log-replay regression tests.
@@ -7803,6 +7827,63 @@ extension MenuBarItemManager {
             MenuBarItemManager.diagLog.debug(
                 "Profile layout Phase 1: desiredVisible=\(desiredVisibleSet.sorted())"
             )
+            // Format contract: parsed by ProfileLayoutLogReplayTests.parse(_:).
+            // Changing this string breaks log-replay regression tests.
+            MenuBarItemManager.diagLog.debug(
+                "Profile layout Phase 1: hiddenBoundaryMismatch=\(hiddenBoundaryMismatch)"
+            )
+
+            // ── Sub-phase 0: Move H_ctrl to the visible/hidden boundary ──
+            //
+            // Runs before the AH_ctrl placement so the always-hidden planning
+            // below sees a divider pair that already brackets the right set of
+            // items. Both dividers move by the same mechanism: one drag that
+            // re-sections everything it crosses, which is why neither is left
+            // to the per-item LCS pass.
+            if hiddenBoundaryMismatch > 0, !Task.isCancelled {
+                MenuBarItemManager.diagLog.debug(
+                    "Profile layout: \(hiddenBoundaryMismatch) item(s) on the wrong side of H_ctrl, moving H_ctrl to the boundary"
+                )
+
+                let allFreshItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+                let liveMovableUIDs = Set(
+                    allFreshItems.lazy.filter { $0.isMovable && isProfileItem($0) }.map(\.uniqueIdentifier)
+                )
+                let anchor = LayoutSolver.planHiddenDividerAnchor(
+                    desiredHidden: itemOrder["hidden"] ?? [],
+                    desiredVisible: itemOrder["visible"] ?? [],
+                    liveMovableUIDs: liveMovableUIDs
+                )
+
+                if let hItem = allFreshItems.first(where: { $0.uniqueIdentifier == hiddenCtrlUID }),
+                   let anchor
+                {
+                    let anchorUID = switch anchor {
+                    case let .rightOf(uid), let .leftOf(uid): uid
+                    }
+                    if let anchorItem = allFreshItems.first(where: { $0.uniqueIdentifier == anchorUID }) {
+                        let dest: MoveDestination = switch anchor {
+                        case .rightOf: .rightOfItem(anchorItem)
+                        case .leftOf: .leftOfItem(anchorItem)
+                        }
+                        MenuBarItemManager.diagLog.debug("Profile layout: moving H_ctrl → \(dest.logString)")
+                        do {
+                            try await move(item: hItem, to: dest, skipInputPause: true)
+                            movedCount += 1
+                            try? await Task.sleep(for: .milliseconds(200))
+                        } catch {
+                            MenuBarItemManager.diagLog.error("Profile layout: failed to move H_ctrl: \(error)")
+                        }
+                    }
+                } else {
+                    // No live movable member on either side to anchor against;
+                    // the LCS pass below still runs against whatever ordering
+                    // divergence remains.
+                    MenuBarItemManager.diagLog.warning(
+                        "Profile layout: no anchor available for the H_ctrl boundary move"
+                    )
+                }
+            }
 
             if crossSectionMoves > 0 || totalSectionMismatch > 0, let ahCtrlUID {
                 // Moving AH_ctrl to the correct position is 1 move that
