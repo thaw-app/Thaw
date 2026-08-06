@@ -1671,12 +1671,25 @@ final class MenuBarItemManager {
             // skipRecentMoveCheck: true; relocateNewLeftmostItems/relocatePendingItems
             // may have stamped lastMoveOperationTimestamp during settling; without this
             // flag the final restore would be silently skipped by the 5 s cooldown.
-            await cacheItemsRegardless(skipRecentMoveCheck: true, resolveSourcePID: false)
+            //
+            // skipRecentMoveCheck only clears cacheItemsRegardless's own 1 s gate.
+            // applySavedLayout keeps a separate 5 s gate, and this pass reaches it
+            // through the recache relocateNewLeftmostItems schedules — so the bypass
+            // has to be requested explicitly and carried across that hand-off.
+            await cacheItemsRegardless(
+                skipRecentMoveCheck: true,
+                resolveSourcePID: false,
+                bypassSavedLayoutCooldown: true
+            )
             // Final authoritative recache that resolves source PIDs so items used later
             // (which read item.sourcePID ?? item.ownerPID) reflect the true source PID.
             // skipRecentMoveCheck: true ensures this pass is never suppressed by the
             // 1-second recent-move cooldown stamped by the fast restore above.
-            await cacheItemsRegardless(skipRecentMoveCheck: true, resolveSourcePID: true)
+            await cacheItemsRegardless(
+                skipRecentMoveCheck: true,
+                resolveSourcePID: true,
+                bypassSavedLayoutCooldown: true
+            )
         }
     }
 
@@ -2714,10 +2727,11 @@ extension MenuBarItemManager {
         skipRecentMoveCheck: Bool = false,
         resolveSourcePID: Bool = true,
         skipSavedLayoutApply: Bool = false,
+        bypassSavedLayoutCooldown: Bool = false,
         waiterToken: Int? = nil
     ) async {
         MenuBarItemManager.diagLog.debug(
-            "cacheItemsRegardless: entering (skipRecentMoveCheck=\(skipRecentMoveCheck), hasCurrentItemWindowIDs=\(currentItemWindowIDs != nil), resolveSourcePID=\(resolveSourcePID), skipSavedLayoutApply=\(skipSavedLayoutApply))"
+            "cacheItemsRegardless: entering (skipRecentMoveCheck=\(skipRecentMoveCheck), hasCurrentItemWindowIDs=\(currentItemWindowIDs != nil), resolveSourcePID=\(resolveSourcePID), skipSavedLayoutApply=\(skipSavedLayoutApply), bypassSavedLayoutCooldown=\(bypassSavedLayoutCooldown))"
         )
 
         guard skipRecentMoveCheck || !lastMoveOperationOccurred(within: .seconds(1)) else {
@@ -3108,7 +3122,14 @@ extension MenuBarItemManager {
             ownsWaiter = false
             Task { [weak self] in
                 try? await Task.sleep(for: MenuBarItemManager.uiSettleDelay)
-                await self?.cacheItemsRegardless(skipRecentMoveCheck: true, waiterToken: waiterToken)
+                // Carry the bypass across the hand-off: this recache is where the
+                // launch restore actually runs, and the move it is retrying behind
+                // was stamped by the relocation just above.
+                await self?.cacheItemsRegardless(
+                    skipRecentMoveCheck: true,
+                    bypassSavedLayoutCooldown: bypassSavedLayoutCooldown,
+                    waiterToken: waiterToken
+                )
             }
             return
         }
@@ -3120,7 +3141,11 @@ extension MenuBarItemManager {
             ownsWaiter = false
             Task { [weak self] in
                 try? await Task.sleep(for: MenuBarItemManager.uiSettleDelay)
-                await self?.cacheItemsRegardless(skipRecentMoveCheck: true, waiterToken: waiterToken)
+                await self?.cacheItemsRegardless(
+                    skipRecentMoveCheck: true,
+                    bypassSavedLayoutCooldown: bypassSavedLayoutCooldown,
+                    waiterToken: waiterToken
+                )
             }
             return
         }
@@ -3166,7 +3191,8 @@ extension MenuBarItemManager {
                 controlItems: controlItems,
                 previousDisplayID: itemCache.displayID,
                 currentDisplayID: displayID,
-                previousCCGenericWindowIDs: previousCCGenericWindowIDs
+                previousCCGenericWindowIDs: previousCCGenericWindowIDs,
+                bypassMoveCooldown: bypassSavedLayoutCooldown
             )
             if didApplySavedLayout {
                 return
@@ -8640,7 +8666,8 @@ extension MenuBarItemManager {
         controlItems: ControlItemPair,
         previousDisplayID: CGDirectDisplayID? = nil,
         currentDisplayID: CGDirectDisplayID? = nil,
-        previousCCGenericWindowIDs: Set<CGWindowID> = []
+        previousCCGenericWindowIDs: Set<CGWindowID> = [],
+        bypassMoveCooldown: Bool = false
     ) async -> Bool {
         // Each guard logs a distinct reason so a "Thaw stopped
         // restoring my layout" bug report can be diagnosed from the
@@ -8664,7 +8691,14 @@ extension MenuBarItemManager {
         // 5 s cooldown after a recent move (same value the legacy
         // restoreItemsToSavedSections used) prevents cascading
         // re-applies when many apps relaunch in quick succession.
-        guard !lastMoveOperationOccurred(within: .seconds(5)) else {
+        //
+        // bypassMoveCooldown opts the launch restore out: that pass runs
+        // immediately after relocateNewLeftmostItems has moved our own
+        // control item, so the cooldown it would observe is one this same
+        // chain just stamped. There is no later retry, so honouring the
+        // cooldown here means the saved layout is never applied at all and
+        // the drifted arrangement gets persisted over it (#881).
+        guard bypassMoveCooldown || !lastMoveOperationOccurred(within: .seconds(5)) else {
             MenuBarItemManager.diagLog.debug("applySavedLayout: skipping, within 5s move cooldown")
             return false
         }
