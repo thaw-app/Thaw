@@ -18,7 +18,7 @@ permissions:
 jobs:
   changes:
     if: github.repository == 'thaw-app/Thaw'
-    runs-on: ubuntu-slim
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     outputs:
       code: ${{ steps.filter.outputs.code }}
     steps:
@@ -59,7 +59,7 @@ jobs:
   static_analysis:
     needs: changes
     if: github.repository == 'thaw-app/Thaw'
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: needs.changes.outputs.code == 'true'
@@ -102,7 +102,7 @@ jobs:
 
   build:
     if: github.repository == 'thaw-app/Thaw'
-    runs-on: macos-26
+    runs-on: blacksmith-6vcpu-macos-26
     needs: [changes, static_analysis]
     env:
       HOMEBREW_NO_AUTO_UPDATE: 1
@@ -206,7 +206,7 @@ jobs:
   sonarqube:
     needs: [changes, build]
     if: github.repository == 'thaw-app/Thaw'
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     env:
       # Forks and Dependabot get no SONAR_TOKEN on pull_request.
       SONAR_ENABLED: ${{ github.actor != 'dependabot[bot]' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
