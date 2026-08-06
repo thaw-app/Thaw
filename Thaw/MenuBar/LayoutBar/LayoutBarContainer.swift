@@ -363,17 +363,19 @@ final class LayoutBarContainer: NSView {
             // from being a swap destination. The badge position should only
             // change when the user explicitly drags the badge itself.
             let excludeBadge = !sourceView.isNewItemsBadge
-            // updating normally relies on the presence of other arranged views,
-            // but if the container has no valid swap destination it needs to be
-            // handled separately. The badge must be excluded here with the same
-            // rule as the destination search below: a section whose only
-            // occupant is the new-items badge would otherwise pass this guard,
-            // fail the destination search, and never insert the dragged view —
-            // making it impossible to drop anything into an empty section that
-            // hosts the badge.
-            guard arrangedViews.contains(where: { $0.isEnabled && !(excludeBadge && $0.isNewItemsBadge) }) else {
-                let insertionIndex = arrangedViews.firstIndex { draggingLocation.x < $0.frame.midX } ?? arrangedViews.count
-                arrangedViews.insert(sourceView, at: insertionIndex)
+            // Updating normally relies on the presence of other arranged
+            // views. A section containing only the New Items badge should
+            // still accept regular item drops; otherwise the badge becomes a
+            // dead zone that prevents moving the first icon into the section.
+            guard !Self.enabledDropTargets(in: arrangedViews, excludingBadge: excludeBadge).isEmpty else {
+                if !arrangedViews.contains(sourceView) {
+                    let insertionIndex = Self.emptyTargetInsertionIndex(
+                        for: draggingLocation.x,
+                        in: arrangedViews,
+                        excludingBadge: excludeBadge
+                    )
+                    arrangedViews.insert(sourceView, at: insertionIndex)
+                }
                 return .move
             }
             guard
@@ -413,6 +415,29 @@ final class LayoutBarContainer: NSView {
         case .ended:
             return .move
         }
+    }
+
+    static func enabledDropTargets(
+        in arrangedViews: [LayoutBarArrangedView],
+        excludingBadge: Bool
+    ) -> [LayoutBarArrangedView] {
+        arrangedViews.filter { view in
+            view.isEnabled && (!excludingBadge || !view.isNewItemsBadge)
+        }
+    }
+
+    static func emptyTargetInsertionIndex(
+        for xPosition: CGFloat,
+        in arrangedViews: [LayoutBarArrangedView],
+        excludingBadge: Bool
+    ) -> Int {
+        guard excludingBadge,
+              let badgeIndex = arrangedViews.firstIndex(where: { $0.isNewItemsBadge })
+        else {
+            return arrangedViews.startIndex
+        }
+        let badgeView = arrangedViews[badgeIndex]
+        return xPosition > badgeView.frame.midX ? badgeIndex + 1 : badgeIndex
     }
 
     /// Returns the nearest arranged view to the given X position within
