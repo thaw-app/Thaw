@@ -11,7 +11,7 @@ permissions:
 jobs:
   stale:
     if: github.repository == 'thaw-app/Thaw'
-    runs-on: ubuntu-slim
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
       issues: write
     steps:
@@ -25,4 +25,4 @@ jobs:
           stale-issue-label: "stale"
           stale-issue-message: "This issue has been automatically marked as stale due to inactivity."
           close-issue-message: "Closing this issue due to prolonged inactivity."
-          exempt-issue-labels: "help wanted,keep open,feature,enhancement"
+          exempt-issue-labels: "help wanted,keep open"
