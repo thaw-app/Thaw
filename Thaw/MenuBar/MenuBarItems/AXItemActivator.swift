@@ -15,9 +15,10 @@ import Cocoa
 /// system gesture handling and lets items with their own click handling
 /// (e.g. the Wi-Fi picker) behave exactly as they would for a real click.
 ///
-/// Feature-flagged behind `AdvancedSettings.useAXClickDelivery` (default
-/// off). On any failure the caller (`MenuBarItemManager.click(item:with:)`)
-/// falls back to the existing synthetic click path unchanged.
+/// Controlled by `AdvancedSettings.useAXClickDelivery` (default on; no
+/// longer surfaced in Settings). On any failure the caller
+/// (`MenuBarItemManager.click(item:with:)`) falls back to the existing
+/// synthetic click path unchanged.
 @MainActor
 enum AXItemActivator {
     enum ActivationError: Error {

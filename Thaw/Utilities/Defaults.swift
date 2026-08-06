@@ -195,8 +195,7 @@ nonisolated extension Defaults {
         static let useDoubleClickToShowAlwaysHiddenSection = false
         static let enableMenuBarItemOverflow = true
         static let useThawBarOnNotchOverflow = true
-        static let useAXClickDelivery = false
-        static let useGestureMoveDrag = false
+        static let useAXClickDelivery = true
 
         // MARK: Search
 
@@ -280,7 +279,6 @@ nonisolated extension Defaults {
         case enableMenuBarItemOverflow = "EnableMenuBarItemOverflow"
         case useThawBarOnNotchOverflow = "UseThawBarOnNotchOverflow"
         case useAXClickDelivery = "UseAXClickDelivery"
-        case useGestureMoveDrag = "UseGestureMoveDrag"
 
         // MARK: Search
 
