@@ -432,6 +432,12 @@ final class MenuBarItemManager {
     /// (e.g. app update checks). Cleared after a fixed delay, then one final
     /// restore runs to enforce the user's saved layout.
     private var isInStartupSettling = false
+    /// Whether the early, resolved-identities-only saved-layout apply has
+    /// already been attempted for the current settling period. Bounds that
+    /// pass to one attempt per launch: it exists to get the identifiable
+    /// items into place while sourcePID resolution is still catching up, and
+    /// the unrestricted settling-end pass covers whatever it left behind.
+    private var didAttemptEarlySavedLayoutApply = false
     /// Handle to the in-flight startup settling Task. Retained so that a
     /// subsequent performSetup() call can cancel the previous settling period
     /// before starting a new one, preventing multiple concurrent settling tasks.
@@ -1533,6 +1539,7 @@ final class MenuBarItemManager {
         // manages isInStartupSettling for the new period.
         startupSettlingTask?.cancel()
         isInStartupSettling = true
+        didAttemptEarlySavedLayoutApply = false
         MenuBarItemManager.diagLog.debug("\(reason): settling period started (max duration: \(maxDuration))")
         // @MainActor ensures the flag flip and final cache call are never
         // interleaved with notification-triggered cache cycles between them.
@@ -3163,6 +3170,34 @@ extension MenuBarItemManager {
                     profileSortedItemIdentifiers.insert(item.uniqueIdentifier)
                 }
             }
+
+            // One early apply restricted to items we can already identify,
+            // rather than leaving the bar in macOS's arrangement for the
+            // whole settling period. Waiting for every sourcePID means the
+            // user watches an unsaved layout for as long as resolution takes
+            // — ~8 s on a dense bar (#881). Restricted so the items still
+            // being resolved are not move targets; the settling-end pass
+            // runs unrestricted and LCS leaves whatever this placed alone.
+            if !skipSavedLayoutApply, !didAttemptEarlySavedLayoutApply {
+                didAttemptEarlySavedLayoutApply = true
+                let didApply = await applySavedLayout(
+                    items: items,
+                    previousWindowIDs: previousWindowIDs,
+                    controlItems: controlItems,
+                    previousDisplayID: itemCache.displayID,
+                    currentDisplayID: displayID,
+                    previousCCGenericWindowIDs: previousCCGenericWindowIDs,
+                    bypassMoveCooldown: bypassSavedLayoutCooldown,
+                    resolvedIdentitiesOnly: true
+                )
+                if didApply {
+                    MenuBarItemManager.diagLog.debug(
+                        "cacheItemsRegardless: early saved-layout apply dispatched during settling"
+                    )
+                    return
+                }
+            }
+
             MenuBarItemManager.diagLog.debug("cacheItemsRegardless: startup settling active, skipping restore")
             return
         }
@@ -8642,6 +8677,29 @@ extension MenuBarItemManager {
         itemCount >= 4 && unresolvedCount * 2 > itemCount
     }
 
+    /// Narrows a saved order to the identifiers whose live item has a
+    /// resolved sourcePID, for the early apply that runs while resolution is
+    /// still in progress.
+    ///
+    /// Dropping an identifier from the desired order leaves the
+    /// corresponding item untouched rather than mispositioned, because
+    /// ``LayoutSolver/planLCSMoveSequence(currentNoControls:desiredNoControls:sectionMap:)``
+    /// intersects current with desired and only moves identifiers present in
+    /// both. Section keys are preserved even when they empty out, so the
+    /// caller can tell an empty section from a missing one.
+    ///
+    /// The match is exact rather than base-identifier: a base match could
+    /// admit an unresolved sibling of a resolved item (`Item-0:1` resolved,
+    /// `Item-0:2` not), which is exactly what this restriction excludes.
+    static nonisolated func savedOrderRestrictedToResolvedIdentities(
+        savedSectionOrder: [String: [String]],
+        resolvedIdentifiers: Set<String>
+    ) -> [String: [String]] {
+        savedSectionOrder.mapValues { identifiers in
+            identifiers.filter(resolvedIdentifiers.contains)
+        }
+    }
+
     /// Decides whether a divergence observation should trigger the apply.
     ///
     /// A single divergent reading of `currentLayoutDivergesFromSaved` can be
@@ -8695,7 +8753,8 @@ extension MenuBarItemManager {
         previousDisplayID: CGDirectDisplayID? = nil,
         currentDisplayID: CGDirectDisplayID? = nil,
         previousCCGenericWindowIDs: Set<CGWindowID> = [],
-        bypassMoveCooldown: Bool = false
+        bypassMoveCooldown: Bool = false,
+        resolvedIdentitiesOnly: Bool = false
     ) async -> Bool {
         // Each guard logs a distinct reason so a "Thaw stopped
         // restoring my layout" bug report can be diagnosed from the
@@ -8812,8 +8871,13 @@ extension MenuBarItemManager {
         // Skip the bulk apply while the majority of items have no resolved
         // sourcePID — mirrors relocateNewLeftmostItems's unresolved-sourcePID
         // noop.
+        //
+        // resolvedIdentitiesOnly callers are exempt: they deliberately run
+        // while most sourcePIDs are still unresolved, and confine the apply
+        // to the identities that *are* resolved (see effectiveSavedOrder).
         let unresolvedSourcePIDCount = items.count { $0.sourcePID == nil }
-        if Self.majorityOfSourcePIDsUnresolved(unresolvedCount: unresolvedSourcePIDCount, itemCount: items.count) {
+        if !resolvedIdentitiesOnly,
+           Self.majorityOfSourcePIDsUnresolved(unresolvedCount: unresolvedSourcePIDCount, itemCount: items.count) {
             MenuBarItemManager.diagLog.info(
                 "applySavedLayout: skipping, \(unresolvedSourcePIDCount)/\(items.count) items have unresolved sourcePIDs (XPC resolution likely failed)"
             )
@@ -8845,16 +8909,54 @@ extension MenuBarItemManager {
             return false
         }
 
-        // Build itemSectionMap from savedSectionOrder. Each identifier
+        // The desired order this apply will actually enact.
+        //
+        // Under resolvedIdentitiesOnly the saved order is narrowed to
+        // identifiers whose live item has a resolved sourcePID, so an item
+        // we cannot yet identify is never a move target. That is safe
+        // because planLCSMoveSequence intersects current with desired and
+        // only moves identifiers present in both — dropping one from
+        // desired leaves it untouched rather than mispositioned. The
+        // settling-end pass then runs unrestricted and, because LCS keeps
+        // whatever is already in place, moves only the remainder.
+        //
+        // Match is exact on uniqueIdentifier: base-identifier fallback
+        // could admit an unresolved sibling of a resolved item, which is
+        // precisely the item this restriction exists to exclude.
+        let effectiveSavedOrder: [String: [String]]
+        if resolvedIdentitiesOnly {
+            effectiveSavedOrder = Self.savedOrderRestrictedToResolvedIdentities(
+                savedSectionOrder: savedSectionOrder,
+                resolvedIdentifiers: Set(
+                    items.lazy.filter { $0.sourcePID != nil }.map(\.uniqueIdentifier)
+                )
+            )
+            guard effectiveSavedOrder.values.contains(where: { !$0.isEmpty }) else {
+                MenuBarItemManager.diagLog.debug(
+                    "applySavedLayout: skipping, no saved items have resolved identities yet"
+                )
+                return false
+            }
+        } else {
+            effectiveSavedOrder = savedSectionOrder
+        }
+
+        // Build itemSectionMap from the effective order. Each identifier
         // points back at its persisted section key.
         var itemSectionMap = [String: String]()
-        for (sectionKey, identifiers) in savedSectionOrder {
+        for (sectionKey, identifiers) in effectiveSavedOrder {
             for identifier in identifiers {
                 itemSectionMap[identifier] = sectionKey
             }
         }
 
-        let trigger = windowIDsChanged ? "windowID change" : "layout divergence"
+        let trigger = if windowIDsChanged {
+            "windowID change"
+        } else if resolvedIdentitiesOnly {
+            "layout divergence, resolved identities only"
+        } else {
+            "layout divergence"
+        }
 
         // The apply must refuse the same geometry the save path refuses to
         // persist. When the dividers have collapsed onto one coordinate,
@@ -8870,7 +8972,7 @@ extension MenuBarItemManager {
         let hiddenSectionHasRoom = LayoutSolver.hiddenSectionHasRoom(
             hiddenControlItemMinX: controlItems.hidden.bounds.minX,
             alwaysHiddenControlItemMaxX: controlItems.alwaysHidden?.bounds.maxX,
-            savedHiddenItemCount: savedSectionOrder[sectionKey(for: .hidden)]?.count ?? 0
+            savedHiddenItemCount: effectiveSavedOrder[sectionKey(for: .hidden)]?.count ?? 0
         )
         guard hiddenSectionHasRoom else {
             MenuBarItemManager.diagLog.warning(
@@ -8889,9 +8991,9 @@ extension MenuBarItemManager {
         await applyProfileLayout(
             pinnedHidden: pinnedHiddenBundleIDs,
             pinnedAlwaysHidden: pinnedAlwaysHiddenBundleIDs,
-            sectionOrder: savedSectionOrder,
+            sectionOrder: effectiveSavedOrder,
             itemSectionMap: itemSectionMap,
-            itemOrder: savedSectionOrder,
+            itemOrder: effectiveSavedOrder,
             source: .savedOrder
         )
         return true
