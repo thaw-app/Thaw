@@ -80,6 +80,42 @@ struct ControlItemDefaultsSeedingTests {
         #expect(ControlItemDefaults.Key<CGFloat>.preferredPosition.isPreferredPosition)
     }
 
+    /// Preflight ran a second, unconditional reset of the hidden divider
+    /// alongside the seed above. It was inert while the subscript guard
+    /// refused divider writes, so activating the seed in #890 also activated
+    /// the reset: a populated bar had its hidden divider yanked back beside
+    /// the visible one on every launch and every `recreateStatusItem()`, and
+    /// the save that followed persisted the collapsed span (#895).
+    @Test("Preflight leaves a divider position the user already has")
+    func preflightKeepsStoredDividerPosition() throws {
+        try withScratchDefaults { _ in
+            ControlItemDefaults.setIgnoringSectionDividerGuard(.preferredPosition, Self.hidden, to: 1051)
+            ControlItemDefaults.preflightSetup(for: .hidden)
+            #expect(storedPosition(Self.hidden) == 1051)
+        }
+    }
+
+    /// The seed itself has to survive the fix above: a first launch has no
+    /// stored position, and leaving it unset lets both dividers land on the
+    /// same X.
+    @Test("Preflight still seeds a divider that has no stored position")
+    func preflightSeedsUnsetDivider() throws {
+        try withScratchDefaults { _ in
+            ControlItemDefaults.preflightSetup(for: .hidden)
+            #expect(storedPosition(Self.hidden) == 1)
+        }
+    }
+
+    /// Always-hidden is positioned dynamically and is deliberately never
+    /// seeded, so preflight must leave it absent rather than default it.
+    @Test("Preflight does not seed the always-hidden divider")
+    func preflightLeavesAlwaysHiddenUnset() throws {
+        try withScratchDefaults { _ in
+            ControlItemDefaults.preflightSetup(for: .alwaysHidden)
+            #expect(storedPosition(Self.alwaysHidden) == nil)
+        }
+    }
+
     /// The reporter's workaround writes this exact defaults key by hand, so
     /// the key shape is part of the contract with anyone already using it.
     @Test("The stored key matches the AppKit defaults key")
