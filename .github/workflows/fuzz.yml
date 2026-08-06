@@ -34,7 +34,7 @@ jobs:
   fuzz:
     if: github.repository == 'thaw-app/Thaw'
     name: SettingsURIParser
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 30
     container:
       image: swift@sha256:dd349c6dfc3cd3040910a84ab3e5bd5d08efdd547e5fb9f77b765abed16fe5ff # 6.2-noble

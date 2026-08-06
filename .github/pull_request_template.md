@@ -21,7 +21,7 @@ Closes: N/A
 
 ## PR Type
 
-Describe **what this change does** (not the linked issue’s request kind). Bug *reports* use `bug` on issues; bug *fixes* use `fix` on PRs.
+Describe **what this change does** (not the linked issue’s request kind). Bug *reports* use the `Bug` Issue type; bug *fixes* use `fix` on PRs.
 
 If you tick **Feature** or **Refactor** and touch more than ~20 files, please mention why this can’t be split.
 

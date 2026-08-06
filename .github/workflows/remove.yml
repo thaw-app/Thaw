@@ -8,7 +8,7 @@ permissions:
 jobs:
   remove-skipped-runs:
     if: github.repository == 'thaw-app/Thaw'
-    runs-on: ubuntu-slim
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
       actions: write
     steps:

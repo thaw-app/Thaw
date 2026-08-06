@@ -26,7 +26,7 @@ permissions:
 jobs:
   metadata:
     if: github.repository == 'thaw-app/Thaw'
-    runs-on: ubuntu-slim
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
       contents: read
       pull-requests: write
@@ -82,7 +82,7 @@ jobs:
             const owner = context.repo.owner;
             const repo = context.repo.repo;
 
-            // PR change kinds — never map Bug fix to `bug` (that label is issue-only).
+            // PR change kinds — Bug is an Issue type; bug fixes use `fix` on PRs.
             const typeLabels = {
               'Bug fix': ['fix'],
               'CI/CD': ['ci', 'cd'],
@@ -177,7 +177,7 @@ jobs:
               toRemove.add('breaking-change');
             }
 
-            // Issue-only: never leave `bug` on a PR.
+            // Retired on issues and invalid on PRs: never leave `bug` on a PR.
             toRemove.add('bug');
 
             // Path-based areas.
