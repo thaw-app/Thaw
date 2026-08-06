@@ -4338,28 +4338,15 @@ extension MenuBarItemManager {
         var itemOrigin = itemBounds.origin
         let targetPoints = try await getTargetPoints(forMoving: item, to: destination, on: displayID)
 
-        // Experimental gesture geometry. See AdvancedSettings.useGestureMoveDrag.
-        //
-        // The shipping geometry presses and releases at the *destination*
-        // (targetPoints.start == .end == the target edge) with the moved
-        // item's window ID stamped on the press, and relies on the owner
-        // relocating its item to the press location. Every move observed in
-        // #881 needed a warm-up attempt before that took: the first press
-        // nudged the item a pixel, the second teleported it.
-        //
-        // This presses on the item where it actually is, drags across the
-        // bar, and releases at the target — the gesture a user performs by
-        // hand. 289667ac removed an earlier synthetic drag that never warped
-        // the cursor and never stamped a window field, so WindowServer
-        // resolved the drag from the real, unmoved pointer and the move
-        // silently no-op'd. Both mechanisms are kept here: the cursor is
-        // warped along the path and every event is built by
-        // CGEvent.menuBarItemEvent, so it carries the 0x33 window ID and the
-        // usual PID routing.
-        let useGestureGeometry = appState?.settings.advanced.useGestureMoveDrag == true
-        let pressPoint = useGestureGeometry
-            ? CGPoint(x: itemBounds.midX, y: targetPoints.start.y)
-            : targetPoints.start
+        // Press and release at the *destination* (targetPoints.start == .end
+        // == the target edge) with the moved item's window ID stamped on the
+        // press, relying on the owner to relocate its item to the press
+        // location. Every move observed in #881 needed a warm-up attempt
+        // before that took: the first press nudged the item a pixel, the
+        // second teleported it. A drag-gesture geometry was trialled behind
+        // a setting to remove that warm-up and did not fix it, so it was
+        // withdrawn; the warm-up attempt remains an open problem.
+        let pressPoint = targetPoints.start
 
         // Capture mouse location only when this call owns the cursor warp.
         // When called from move(), the outer move() handles the single warp
@@ -4436,7 +4423,7 @@ extension MenuBarItemManager {
         // original location (the drop position the receiving app uses to place
         // the item). For non-notched displays the original behaviour is
         // preserved (no override).
-        if !useGestureGeometry, !warpIsOnScreen {
+        if !warpIsOnScreen {
             let activeScreen = NSScreen.screens.first(where: { $0.displayID == displayID })
                 ?? NSScreen.main
             if let activeScreen,
@@ -4473,15 +4460,6 @@ extension MenuBarItemManager {
                 initialOrigin: itemOrigin,
                 timeout: timeout
             )
-            if useGestureGeometry {
-                try await postGestureDragSteps(
-                    item: item,
-                    source: source,
-                    from: pressPoint,
-                    to: targetPoints.end,
-                    warpAlongPath: warpIsOnScreen
-                )
-            }
             try await scrombleEvent(
                 mouseUp,
                 item: item,
@@ -4512,57 +4490,6 @@ extension MenuBarItemManager {
             throw error
         }
         return timeout
-    }
-
-    /// Posts the `leftMouseDragged` steps that carry a held item from the
-    /// press point across to its destination.
-    ///
-    /// Only used by the experimental gesture geometry (see
-    /// `AdvancedSettings.useGestureMoveDrag`). Events are built by
-    /// `CGEvent.menuBarItemEvent` so they carry the same 0x33 window ID
-    /// stamping and PID routing as the press and release around them.
-    ///
-    /// The cursor is warped to each step when the path is on screen.
-    /// 289667ac established that WindowServer resolves a drag's target from
-    /// the *real* pointer, so events describing a path the pointer never
-    /// travelled are discarded. Warping is skipped entirely for offscreen
-    /// paths for the same reason the press warp is: the warp would clamp to
-    /// the display edge under the Apple menu.
-    ///
-    /// Steps are unsynchronized on purpose. The press and release around
-    /// them are scrombled and waited on; these only need to exist in the
-    /// stream between the two, so paying a round trip per step would cost
-    /// more than the warm-up attempt this is trying to remove.
-    private nonisolated func postGestureDragSteps(
-        item: MenuBarItem,
-        source: CGEventSource,
-        from start: CGPoint,
-        to end: CGPoint,
-        warpAlongPath: Bool
-    ) async throws {
-        // Enough steps for the drag to read as continuous motion, few enough
-        // that the whole sequence costs well under one retry attempt.
-        let stepCount = 8
-        for step in 1 ... stepCount {
-            let progress = CGFloat(step) / CGFloat(stepCount)
-            let point = CGPoint(
-                x: start.x + (end.x - start.x) * progress,
-                y: start.y + (end.y - start.y) * progress
-            )
-            guard let dragged = CGEvent.menuBarItemEvent(
-                item: item,
-                source: source,
-                type: .move(.mouseDragged),
-                location: point
-            ) else {
-                throw EventError.eventCreationFailure(item)
-            }
-            if warpAlongPath {
-                MouseHelpers.warpCursor(to: point)
-            }
-            dragged.post(to: .sessionEventTap)
-            await eventSleep(for: .milliseconds(8))
-        }
     }
 
     /// Checks if a menu bar item is in a "blocked" state (positioned at x=-1 off-screen).
@@ -4862,14 +4789,11 @@ extension MenuBarItemManager {
                     for: item
                 )
                 if landedOnDestination {
-                    // Logged at info so an A/B of move-delivery geometry can
-                    // be read straight off a field log: grep "move landed"
-                    // and compare the attempt counts.
+                    // Logged at info so the warm-up attempt cost can be read
+                    // straight off a field log: grep "Move landed" and compare
+                    // the attempt counts.
                     MenuBarItemManager.diagLog.info(
-                        """
-                        Move landed: \(item.logString) after \(n) attempt(s), \
-                        geometry=\(appState.settings.advanced.useGestureMoveDrag ? "gesture" : "press-at-destination")
-                        """
+                        "Move landed: \(item.logString) after \(n) attempt(s)"
                     )
                     MenuBarItemManager.diagLog.debug("Attempt \(n) succeeded and verified, finished with move")
                     failureLedger.recordSuccess(for: item)

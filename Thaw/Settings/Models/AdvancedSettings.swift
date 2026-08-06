@@ -159,26 +159,9 @@ final class AdvancedSettings {
     /// A Boolean value that controls whether left-clicks on menu bar items
     /// from the IceBar are delivered via an accessibility action (AXShowMenu,
     /// falling back to AXPress) instead of a synthetic mouse click.
-    /// Experimental; automatically falls back to the synthetic click on any
-    /// failure. Moves and right-clicks are unaffected.
-    /// A Boolean value that indicates whether a move is delivered as a
-    /// Command-drag gesture across the menu bar rather than as a single
-    /// press stamped at the destination.
-    ///
-    /// Experimental, default off. The shipping path warps the cursor to the
-    /// destination and posts mouseDown/mouseUp there with the moved item's
-    /// window ID stamped on both, which relies on the owner relocating the
-    /// item to the press location. That takes a warm-up attempt on every
-    /// observed move (#881). This path keeps the same event construction,
-    /// window-ID stamping and PID routing, but gives the events real gesture
-    /// geometry: press on the item, drag across, release at the target.
-    var useGestureMoveDrag = Defaults.DefaultValue.useGestureMoveDrag {
-        didSet {
-            guard oldValue != useGestureMoveDrag else { return }
-            Defaults.set(useGestureMoveDrag, forKey: .useGestureMoveDrag)
-        }
-    }
-
+    /// Default on and no longer surfaced in Settings; automatically falls
+    /// back to the synthetic click on any failure. Moves and right-clicks
+    /// are unaffected.
     var useAXClickDelivery = Defaults.DefaultValue.useAXClickDelivery {
         didSet {
             guard oldValue != useAXClickDelivery else { return }
@@ -260,7 +243,6 @@ final class AdvancedSettings {
         Defaults.ifPresent(key: .enableMenuBarItemOverflow, assign: &enableMenuBarItemOverflow)
         Defaults.ifPresent(key: .useThawBarOnNotchOverflow, assign: &useThawBarOnNotchOverflow)
         Defaults.ifPresent(key: .useAXClickDelivery, assign: &useAXClickDelivery)
-        Defaults.ifPresent(key: .useGestureMoveDrag, assign: &useGestureMoveDrag)
         Defaults.ifPresent(key: .searchIncludeVisible, assign: &searchIncludeVisible)
         Defaults.ifPresent(key: .searchIncludeHidden, assign: &searchIncludeHidden)
         Defaults.ifPresent(key: .searchIncludeAlwaysHidden, assign: &searchIncludeAlwaysHidden)
@@ -330,8 +312,6 @@ final class AdvancedSettings {
                 useThawBarOnNotchOverflow = boolValue
             case "useAXClickDelivery":
                 useAXClickDelivery = boolValue
-            case "useGestureMoveDrag":
-                useGestureMoveDrag = boolValue
             case "searchIncludeVisible":
                 searchIncludeVisible = boolValue
             case "searchIncludeHidden":
