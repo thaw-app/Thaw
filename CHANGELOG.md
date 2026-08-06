@@ -9,7 +9,13 @@ and the Sparkle appcast, unless overridden with the `release_notes` input.
 
 ## [Unreleased]
 
-## [2.0.0-rc.2]
+## [2.0.0-rc.2.1]
+
+### Hotfix
+
+- **Hidden divider boundary and layout-editor drags** — repair the visible/hidden boundary when `H_ctrl` drifts before the per-item reorder pass, so `applyProfileLayout` no longer reports "all items already in correct positions" while the whole hidden section sits misplaced. Drops into an empty hidden section that only contains the new-items badge no longer snap back, and persistent status-level windows (shelf/HUD) no longer defer every move — deferral still applies while the pointer is inside a long-open menu (#880, fixes #879).
+
+---
 
 This RC is a large reliability and platform update: menu bar identity/ordering, layout persistence, notch overflow, settings UI, Swift 6.2 / concurrency, and Sparkle update hosting.
 
@@ -186,7 +192,8 @@ Related merged fix PRs called out above include #716, #741, #749, #756, #774, #7
 
 ### Upgrade notes
 
-1. **From 2.0.0-rc.1:** in-place Sparkle update; failure-ledger marks clear on build change.
-2. **Legacy Ice / V1 appearance:** converted on import.
-3. **Update feed:** new installs use `thaw-app/updates`; existing stonerl feed users keep updating via the mirrored appcast.
-4. **Experimental:** Advanced → AX click delivery remains off by default.
+1. **From 2.0.0-rc.2:** in-place Sparkle update; hotfix only, no behaviour changes beyond the fix above.
+2. **From 2.0.0-rc.1:** in-place Sparkle update; failure-ledger marks clear on build change.
+3. **Legacy Ice / V1 appearance:** converted on import.
+4. **Update feed:** new installs use `thaw-app/updates`; existing stonerl feed users keep updating via the mirrored appcast.
+5. **Experimental:** Advanced → AX click delivery remains off by default.

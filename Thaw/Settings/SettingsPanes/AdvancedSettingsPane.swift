@@ -38,7 +38,6 @@ struct AdvancedSettingsPane: View {
                 if settings.enableSecondaryContextMenu {
                     enableSecondaryContextMenuQuit
                 }
-                useAXClickDelivery
             }
             IceSection("Permissions") {
                 allPermissions
@@ -241,25 +240,6 @@ struct AdvancedSettingsPane: View {
                 Right-click in an empty area of the menu bar to display a minimal \
                 version of \(Constants.displayName)'s menu. Disable this setting if you encounter conflicts \
                 with other apps.
-                """
-            )
-            .padding(.trailing, 75)
-        }
-    }
-
-    private var useAXClickDelivery: some View {
-        Toggle(
-            "Use accessibility actions to activate menu bar items (Experimental)",
-            isOn: $settings.useAXClickDelivery
-        )
-        .annotation {
-            Text(
-                """
-                Activate items using an accessibility action instead of a simulated \
-                click. Falls back automatically to the simulated click if the \
-                accessibility action fails. Affects every left-click \
-                \(Constants.displayName) delivers on your behalf — from the IceBar, \
-                search, and other features; moves and right-clicks are unaffected.
                 """
             )
             .padding(.trailing, 75)

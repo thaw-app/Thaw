@@ -98,9 +98,16 @@ final class MenuBarItemSpacingManager {
     private func runCommand(_ command: String, with arguments: [String]) async throws {
         let result: ExecutionResult<Void, DiscardedOutput, StringOutput<UTF8>>
         do {
+            // Executed by absolute path, with no argv[0] prepended.
+            //
+            // This used to run /usr/bin/env with "defaults" as its first
+            // argument, so the tool that ended up writing to the global
+            // domain was whatever `defaults` the inherited PATH resolved to.
+            // `command` is now only used to describe the invocation in logs
+            // and errors; the executable is fixed by Info.plist.
             result = try await Subprocess.run(
                 .path(FilePath(Constants.menuBarItemSpacingExecutableURL.path)),
-                arguments: Arguments([command] + arguments),
+                arguments: Arguments(arguments),
                 output: .discarded,
                 error: .string(limit: Self.errorByteLimit)
             )
@@ -117,7 +124,7 @@ final class MenuBarItemSpacingManager {
             case let .exited(code): code
             case let .signaled(code): code
             }
-            let stderr = (result.standardError ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            let stderr = result.standardError.trimmingCharacters(in: .whitespacesAndNewlines)
             MenuBarItemSpacingManager.diagLog.error(
                 "\(command) \(arguments.joined(separator: " ")) exited with status \(exitStatus): \(stderr)"
             )

@@ -158,4 +158,88 @@ struct PlanUnmanagedPlacementTests {
 
         #expect(result["com.new.app:Status"] == .newItemDefault(section: .visible))
     }
+
+    // MARK: Volatile-title identities (#815)
+
+    /// A volatile-title owner is saved under whatever its title was at the
+    /// time and carries a different one now, so the exact lookup misses. The
+    /// baseID fallback misses too, because for these owners the title *is*
+    /// the volatile part, so `namespace:title` differs just as the full
+    /// identifier does. Without a canonical comparison the item arrives here
+    /// with no saved position and is placed by newItemDefault — dropping the
+    /// lyrics back into the hidden section the user dragged them out of.
+    @Test("A canonicalized identity reuses its saved position")
+    func canonicalIdentityReusesSavedPosition() {
+        let owner = MenuBarItemTag.lyricsXBundleID
+        let saved: [String: [String]] = [
+            "visible": ["com.a.app:A", "\(owner):a lyric from when this was saved"],
+        ]
+        let placement = MenuBarItemManager.NewItemsPlacement(
+            sectionKey: "hidden",
+            anchorIdentifier: nil,
+            relation: .sectionDefault
+        )
+        let liveUID = "\(owner):an entirely different lyric"
+
+        let result = LayoutSolver.planUnmanagedPlacement(
+            unmanagedUIDs: [liveUID],
+            savedSectionOrder: saved,
+            newItemsPlacement: placement,
+            currentUIDs: Set([liveUID])
+        )
+
+        #expect(result[liveUID] == .saved(section: .visible, index: 1))
+        #expect(result[liveUID] != .newItemDefault(section: .hidden))
+    }
+
+    /// The same for the metric owner the canonicalizer was built for.
+    @Test("A changed metric reading reuses its saved position")
+    func changedMetricReusesSavedPosition() {
+        let owner = MenuBarItemTag.iStatMenusStatusBundleID
+        let saved: [String: [String]] = ["hidden": ["\(owner):CPU 12%"]]
+        let placement = MenuBarItemManager.NewItemsPlacement(
+            sectionKey: "visible",
+            anchorIdentifier: nil,
+            relation: .sectionDefault
+        )
+        let liveUID = "\(owner):CPU 87%"
+
+        let result = LayoutSolver.planUnmanagedPlacement(
+            unmanagedUIDs: [liveUID],
+            savedSectionOrder: saved,
+            newItemsPlacement: placement,
+            currentUIDs: Set([liveUID])
+        )
+
+        #expect(result[liveUID] == .saved(section: .hidden, index: 0))
+    }
+
+    /// Canonicalization preserves the instance index, so two items from one
+    /// opaque owner must still resolve to their own saved entries rather than
+    /// both collapsing onto the first.
+    @Test("Instance indexes still separate two items from one owner")
+    func instanceIndexesResolveSeparately() {
+        let owner = MenuBarItemTag.lyricsXBundleID
+        let saved: [String: [String]] = [
+            "visible": ["\(owner):first"],
+            "hidden": ["\(owner):second:1"],
+        ]
+        let placement = MenuBarItemManager.NewItemsPlacement(
+            sectionKey: "visible",
+            anchorIdentifier: nil,
+            relation: .sectionDefault
+        )
+        let liveZero = "\(owner):now playing"
+        let liveOne = "\(owner):also playing:1"
+
+        let result = LayoutSolver.planUnmanagedPlacement(
+            unmanagedUIDs: [liveZero, liveOne],
+            savedSectionOrder: saved,
+            newItemsPlacement: placement,
+            currentUIDs: Set([liveZero, liveOne])
+        )
+
+        #expect(result[liveZero] == .saved(section: .visible, index: 0))
+        #expect(result[liveOne] == .saved(section: .hidden, index: 0))
+    }
 }

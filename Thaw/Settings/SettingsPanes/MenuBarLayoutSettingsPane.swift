@@ -20,6 +20,12 @@ struct MenuBarLayoutSettingsPane: View {
     @State private var maxSliderLabelWidth: CGFloat = 0
     @State private var isAdvancedExpanded = false
 
+    /// Bumped whenever the screen the editor reflects may have changed, so
+    /// the display title above the bars re-evaluates. Screen parameters cover
+    /// displays arriving, leaving or being rearranged; app activation covers
+    /// the menu bar moving to another screen without the layout changing.
+    @State private var displayTitleRefreshToken = 0
+
     private let diagLog = DiagLog(category: "MenuBarLayoutPane")
 
     private var hasItems: Bool {
@@ -55,6 +61,18 @@ struct MenuBarLayoutSettingsPane: View {
                 // path) can run (#759).
                 appState.imageCache.markSettingsPaneClosed()
             }
+            .onReceive(
+                NotificationCenter.default
+                    .publisher(for: NSApplication.didChangeScreenParametersNotification)
+            ) { _ in
+                displayTitleRefreshToken &+= 1
+            }
+            .onReceive(
+                NSWorkspace.shared.notificationCenter
+                    .publisher(for: NSWorkspace.didActivateApplicationNotification)
+            ) { _ in
+                displayTitleRefreshToken &+= 1
+            }
         }
     }
 
@@ -81,7 +99,6 @@ struct MenuBarLayoutSettingsPane: View {
                 if advancedSettings.enableMenuBarItemOverflow {
                     useThawBarOnNotchOverflow
                 }
-                useLCSSortingOnNotchedDisplays
             }
         }
         .onChange(of: appState.navigationState.requestedSettingsDisclosure, initial: true) { _, _ in
@@ -131,24 +148,6 @@ struct MenuBarLayoutSettingsPane: View {
         }
     }
 
-    private var useLCSSortingOnNotchedDisplays: some View {
-        Toggle(
-            "Use LCS sorting on notched displays",
-            isOn: $advancedSettings.useLCSSortingOnNotchedDisplays
-        )
-        .annotation {
-            Text(
-                """
-                Use the faster LCS (Longest Common Subsequence) algorithm for \
-                profile sorting on notched displays instead of the full sort. \
-                LCS minimises the number of moves but may be less reliable on \
-                notched displays with smaller resolutions.
-                """
-            )
-            .padding(.trailing, 75)
-        }
-    }
-
     private var sectionDividerStyle: some View {
         IcePicker("Section divider style", selection: $advancedSettings.sectionDividerStyle) {
             ForEach(SectionDividerStyle.allCases) { style in
@@ -185,8 +184,36 @@ struct MenuBarLayoutSettingsPane: View {
         .annotation("How often animated menu bar icons are refreshed in panels. Higher values are smoother but use more CPU.")
     }
 
+    /// The name of the display whose layout the bars below are showing.
+    ///
+    /// The editor has no display picker: it always reflects the screen that
+    /// currently owns the menu bar, which is what `LayoutBarContainer` and
+    /// `LayoutBarPaddingView` both read. On a single Mac that is invisible,
+    /// but with an external display as the primary the editor silently
+    /// describes a different screen than the user is picturing — and the
+    /// notch placeholder correctly disappearing is the symptom people
+    /// actually notice (#886). Naming the display makes the existing
+    /// behaviour legible instead of changing it.
+    private var editingDisplayName: String? {
+        guard NSScreen.screens.count > 1 else {
+            return nil
+        }
+        let screen = NSScreen.screenWithActiveMenuBar ?? NSScreen.main
+        let name = screen?.localizedName.trimmingCharacters(in: .whitespaces)
+        return (name?.isEmpty ?? true) ? nil : name
+    }
+
     private var layoutBarsSection: some View {
         IceSection {
+            if let editingDisplayName {
+                Text(editingDisplayName)
+                    // Redrawn on the same signals LayoutBarPaddingView uses to
+                    // re-evaluate the notch indicator, so the title and the
+                    // bars below it can never disagree about which screen
+                    // they are describing.
+                    .id(displayTitleRefreshToken)
+            }
+        } content: {
             layoutBars
         } footer: {
             // Native grouped Section footer beneath the bars. Interpolated so

@@ -145,7 +145,6 @@ Thaw supports programmatic settings manipulation via the `thaw://` URL scheme wi
 | `customIceIconIsTemplate`                 | Bool | Custom icon renders as template              |
 | `showIceIcon`                             | Bool | Show the Thaw icon in menu bar               |
 | `iceBarLocationOnHotkey`                  | Bool | Thaw Bar appears at mouse location on hotkey     |
-| `useLCSSortingOnNotchedDisplays`          | Bool | Use LCS sorting on notched displays          |
 
 #### Double/Time Interval Settings
 

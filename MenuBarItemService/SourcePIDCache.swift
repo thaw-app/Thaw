@@ -449,6 +449,7 @@ actor SourcePIDCache {
         }
 
         let ccBundleID = "com.apple.controlcenter"
+        let thawBundleID = "com.stonerl.Thaw"
         var appsChecked = 0
         var appsWithBar = 0
         var totalChildrenChecked = 0
@@ -465,6 +466,19 @@ actor SourcePIDCache {
                     return
                 }
                 appsWithBar += 1
+                // Thaw's own children are never skipped for being disabled.
+                // A collapsed section divider is deliberately disabled
+                // (ControlItem sets isEnabled = false in .hideSection so the
+                // spacer stays inert), which is its normal steady state — so
+                // skipping it here leaves Thaw unable to resolve its own
+                // control items for as long as the section stays collapsed.
+                // That kills both ControlItemPair fallbacks that key off
+                // sourcePID: the tag+PID match, and the AX-frame correlation,
+                // whose candidate predicate requires sourcePID == ourPID.
+                // Thaw then cannot identify its own dividers even with an
+                // exact positional match available (#899, and the
+                // "strategies 1 through 3 never fired" report in #895).
+                let isOwnApp = app.bundleIdentifier == thawBundleID
                 let children = AXHelpers.children(for: bar)
                 for child in children {
                     totalChildrenChecked += 1
@@ -474,7 +488,7 @@ actor SourcePIDCache {
                     // among them) never publish AXEnabled, and treating absent as
                     // disabled would drop an otherwise exact positional match and
                     // leave the item unresolved.
-                    guard AXHelpers.enabledAttribute(child) != false,
+                    guard isOwnApp || AXHelpers.enabledAttribute(child) != false,
                           let childFrame = AXHelpers.frame(for: child)
                     else {
                         continue
@@ -597,7 +611,6 @@ actor SourcePIDCache {
         // never be attributed to a third-party widget.
         var markerWindowIDs = Set<CGWindowID>()
         if !unresolvedWindows.isEmpty {
-            let thawBundleID = "com.stonerl.Thaw"
             let markers = MarkerPairResolver.extractMarkers(
                 from: allWindows.map { win in
                     (

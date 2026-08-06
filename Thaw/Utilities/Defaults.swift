@@ -191,12 +191,11 @@ nonisolated extension Defaults {
         #else
             static let enableDiagnosticLogging = false
         #endif
-        static let useLCSSortingOnNotchedDisplays = true
         static let useOptionClickToShowAlwaysHiddenSection = false
         static let useDoubleClickToShowAlwaysHiddenSection = false
         static let enableMenuBarItemOverflow = true
         static let useThawBarOnNotchOverflow = true
-        static let useAXClickDelivery = false
+        static let useAXClickDelivery = true
 
         // MARK: Search
 
@@ -275,7 +274,6 @@ nonisolated extension Defaults {
         case iconRefreshInterval = "IconRefreshInterval"
         case showMenuBarTooltips = "ShowMenuBarTooltips"
         case enableDiagnosticLogging = "EnableDiagnosticLogging"
-        case useLCSSortingOnNotchedDisplays = "UseLCSSortingOnNotchedDisplays"
         case useOptionClickToShowAlwaysHiddenSection = "UseOptionClickToShowAlwaysHiddenSection"
         case useDoubleClickToShowAlwaysHiddenSection = "UseDoubleClickToShowAlwaysHiddenSection"
         case enableMenuBarItemOverflow = "EnableMenuBarItemOverflow"
