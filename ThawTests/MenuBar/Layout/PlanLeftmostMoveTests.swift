@@ -536,4 +536,50 @@ struct PlanLeftmostMoveTests {
             Issue.record("expected .newHideableItem, got \(decision)")
         }
     }
+
+    // MARK: - Thaw icon, standalone
+
+    /// planThawIconMove is what the startup-settling path calls, before the
+    /// other items' namespace tags are trustworthy. It must agree with the
+    /// Thaw-icon branch of the full planner.
+    @Test("planThawIconMove finds the Thaw icon left of the divider")
+    func planThawIconMoveFindsIconLeftOfDivider() {
+        let thaw = leftmostItem(tag: .visibleControlItem, x: 100, windowID: 700)
+
+        let icon = LayoutSolver.planThawIconMove(items: [thaw], hiddenBounds: hiddenBounds)
+
+        #expect(icon?.windowID == 700)
+    }
+
+    /// Once the icon sits right of the divider it is on screen, so repeated
+    /// settling polls must not keep moving it.
+    @Test("planThawIconMove returns nil when the Thaw icon is already placed")
+    func planThawIconMoveIgnoresIconRightOfDivider() {
+        let thaw = leftmostItem(tag: .visibleControlItem, x: 500, windowID: 700)
+
+        let icon = LayoutSolver.planThawIconMove(items: [thaw], hiddenBounds: hiddenBounds)
+
+        #expect(icon == nil)
+    }
+
+    /// The settling path must act on the Thaw icon only. Third-party items
+    /// left of the divider are the ones whose tags aren't settled yet, and
+    /// deferring them is the whole point of the settling guard.
+    @Test("planThawIconMove ignores non-Thaw items left of the divider")
+    func planThawIconMoveIgnoresOtherLeftmostItems() {
+        let other = leftmostItem(tag: appTag("com.example.app", "Item"), x: 100, windowID: 710)
+        let unresolved = leftmostItem(
+            tag: .appItem(bundleID: "com.apple.controlcenter", title: "Item-0"),
+            x: 150,
+            windowID: 711,
+            sourcePID: nil
+        )
+
+        let icon = LayoutSolver.planThawIconMove(
+            items: [other, unresolved],
+            hiddenBounds: hiddenBounds
+        )
+
+        #expect(icon == nil)
+    }
 }

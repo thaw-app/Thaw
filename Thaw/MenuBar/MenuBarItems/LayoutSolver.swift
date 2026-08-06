@@ -260,6 +260,47 @@ nonisolated enum LayoutSolver {
     /// (all of which depend on live state) and passes them in. State
     /// mutation (knownItemIdentifiers, persistence) and execution
     /// (move()) stay with the orchestrator.
+    /// Items sitting left of the hidden divider, ordered so `first` is a
+    /// stable choice. The Thaw icon is a control item but must always be
+    /// visible, so it is admitted here.
+    private static nonisolated func leftmostItems(
+        items: [MenuBarItem],
+        hiddenBounds: CGRect
+    ) -> [MenuBarItem] {
+        let candidates = items
+            .filter { item in
+                // Generic Control Center placeholders are not draggable, but
+                // the planner must still see them so the unresolved-sourcePID
+                // safety path can defer relocation without acting on an
+                // unstable identifier.
+                let isUnresolvedControlCenterPlaceholder =
+                    item.tag.isControlCenterGenericItem && item.sourcePID == nil
+
+                return item.bounds.maxX <= hiddenBounds.minX &&
+                    (item.isMovable || isUnresolvedControlCenterPlaceholder) &&
+                    (!item.isControlItem || item.tag == .visibleControlItem)
+            }
+        // Tie-broken: `first` on this list picks the item to relocate, so a
+        // minX tie during reflow must not hand the decision to a different
+        // item on an otherwise identical pass.
+        return MenuBarItem.sortByLeadingEdgeThenIdentifier(candidates)
+    }
+
+    /// The Thaw-icon relocation decision on its own, for callers that must
+    /// act before the rest of ``planLeftmostMove``'s inputs are trustworthy.
+    ///
+    /// This decision reads only geometry and our own control item's tag,
+    /// both of which are correct from the first cache pass. The other paths
+    /// classify third-party items by namespace, which is why they have to
+    /// wait for source PIDs to resolve.
+    static nonisolated func planThawIconMove(
+        items: [MenuBarItem],
+        hiddenBounds: CGRect
+    ) -> MenuBarItem? {
+        leftmostItems(items: items, hiddenBounds: hiddenBounds)
+            .first { $0.tag == .visibleControlItem }
+    }
+
     static nonisolated func planLeftmostMove(
         items: [MenuBarItem],
         observation: LeftmostObservation,
@@ -269,25 +310,7 @@ nonisolated enum LayoutSolver {
         alwaysHiddenTags: Set<MenuBarItemTag>,
         effectiveNewItemsSection: MenuBarSection.Name
     ) -> LeftmostMove {
-        // Items sitting left of the hidden divider. The Thaw icon is a
-        // control item but must always be visible, so we admit it here.
-        let leftmostCandidates = items
-            .filter { item in
-                // Generic Control Center placeholders are not draggable, but
-                // the planner must still see them so the unresolved-sourcePID
-                // safety path below can defer relocation without acting on an
-                // unstable identifier.
-                let isUnresolvedControlCenterPlaceholder =
-                    item.tag.isControlCenterGenericItem && item.sourcePID == nil
-
-                return item.bounds.maxX <= observation.hiddenBounds.minX &&
-                    (item.isMovable || isUnresolvedControlCenterPlaceholder) &&
-                    (!item.isControlItem || item.tag == .visibleControlItem)
-            }
-        // Tie-broken: `first` on this list picks the item to relocate, so a
-        // minX tie during reflow must not hand the decision to a different
-        // item on an otherwise identical pass.
-        let leftmostItems = MenuBarItem.sortByLeadingEdgeThenIdentifier(leftmostCandidates)
+        let leftmostItems = leftmostItems(items: items, hiddenBounds: observation.hiddenBounds)
 
         guard !leftmostItems.isEmpty else {
             return .noop(reason: .noLeftmostItems)

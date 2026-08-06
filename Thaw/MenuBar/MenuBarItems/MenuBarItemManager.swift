@@ -6159,6 +6159,24 @@ extension MenuBarItemManager {
                 .map { "\($0.tag.namespace):\($0.tag.title)" }
             knownItemIdentifiers.formUnion(identifiers)
             persistKnownItemIdentifiers()
+
+            // The Thaw icon is exempt from the deferral above. macOS can
+            // restore our two control items in the wrong relative order,
+            // parking the visible one left of the hidden divider — i.e.
+            // off screen. Waiting for the settling-end pass to correct that
+            // leaves the menu bar with no Thaw icon for as long as settling
+            // runs, which is ~8 s when Control Center is slow to hand out
+            // source PIDs, and reads as the app having crashed (#881).
+            //
+            // Safe to act on early because it turns only on geometry and our
+            // own control item's tag; it is the namespace tags of *other*
+            // items that aren't trustworthy yet.
+            if let thawIcon = LayoutSolver.planThawIconMove(
+                items: items,
+                hiddenBounds: bestBounds(for: controlItems.hidden)
+            ) {
+                return await relocateThawIcon(thawIcon, controlItems: controlItems)
+            }
             return false
         }
 
@@ -6200,18 +6218,7 @@ extension MenuBarItemManager {
 
         switch decision {
         case let .thawIcon(thawIcon):
-            MenuBarItemManager.diagLog.info("Relocating Thaw icon \(thawIcon.logString) to visible section")
-            do {
-                try await move(
-                    item: thawIcon,
-                    to: .rightOfItem(controlItems.hidden),
-                    skipInputPause: true
-                )
-            } catch {
-                MenuBarItemManager.diagLog.error("Failed to relocate Thaw icon \(thawIcon.logString): \(error)")
-                return false
-            }
-            return true
+            return await relocateThawIcon(thawIcon, controlItems: controlItems)
 
         case let .systemItem(systemItem):
             MenuBarItemManager.diagLog.info("Relocating non-hideable system item \(systemItem.logString) to visible section")
@@ -6273,6 +6280,27 @@ extension MenuBarItemManager {
             }
             return false
         }
+    }
+
+    /// Moves the Thaw icon back to the right of the hidden divider, where it
+    /// is on screen. Shared by the startup-settling path and the regular
+    /// planner path, which reach the same decision from different inputs.
+    private func relocateThawIcon(
+        _ thawIcon: MenuBarItem,
+        controlItems: ControlItemPair
+    ) async -> Bool {
+        MenuBarItemManager.diagLog.info("Relocating Thaw icon \(thawIcon.logString) to visible section")
+        do {
+            try await move(
+                item: thawIcon,
+                to: .rightOfItem(controlItems.hidden),
+                skipInputPause: true
+            )
+        } catch {
+            MenuBarItemManager.diagLog.error("Failed to relocate Thaw icon \(thawIcon.logString): \(error)")
+            return false
+        }
+        return true
     }
 
     /// Relocates items whose apps quit while they were temporarily shown
