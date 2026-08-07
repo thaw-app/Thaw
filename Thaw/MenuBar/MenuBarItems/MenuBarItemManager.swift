@@ -563,6 +563,17 @@ final class MenuBarItemManager {
     /// record. See `unfinishedMoveBatchBlocksSave(observedAt:now:)`.
     private var unfinishedMoveBatchObservedAt: ContinuousClock.Instant?
 
+    /// How many bulk applies in a row ended with planned moves unenacted.
+    ///
+    /// Feeds `automaticBulkApplyPermitted`. On a bar where drags fail
+    /// systemically (#900), every retry apply ends unfinished, re-arms the
+    /// save withhold, and so keeps the divergence it would need to clear —
+    /// an unbounded loop in which the cursor is hidden for the length of a
+    /// batch on every pass (#899). The streak is what lets the dispatch
+    /// gate tell "one batch had a bad day" from "batches on this bar do
+    /// not complete".
+    private var consecutiveUnfinishedBulkApplies = 0
+
     /// Records how a bulk apply ended, for the saveSectionOrder gate.
     ///
     /// A clean batch clears the arm rather than leaving it to expire: the
@@ -571,11 +582,13 @@ final class MenuBarItemManager {
     private func recordBulkApplyOutcome(unenactedMoveCount: Int) {
         guard unenactedMoveCount > 0 else {
             unfinishedMoveBatchObservedAt = nil
+            consecutiveUnfinishedBulkApplies = 0
             return
         }
         unfinishedMoveBatchObservedAt = .now
+        consecutiveUnfinishedBulkApplies += 1
         MenuBarItemManager.diagLog.warning(
-            "Profile layout: \(unenactedMoveCount) planned move(s) left unenacted; withholding the current arrangement from the saved order"
+            "Profile layout: \(unenactedMoveCount) planned move(s) left unenacted; withholding the current arrangement from the saved order (streak: \(consecutiveUnfinishedBulkApplies))"
         )
     }
 
@@ -8582,6 +8595,10 @@ extension MenuBarItemManager {
             "Profile layout: \(plannedMoves.count) item move(s) needed (\(movedCount) control move(s) preceded)"
         )
 
+        // Failures with no success between them; feeds moveBatchShouldAbandon.
+        // Backoff skips do not count — they cost nothing and say nothing new.
+        var consecutiveMoveFailures = 0
+
         for (plannedIndex, planned) in plannedMoves.enumerated() {
             // A cancelled sequence is one a newer apply replaced, and that
             // apply owns the arrangement from here on, so its own tally is
@@ -8631,14 +8648,23 @@ extension MenuBarItemManager {
             do {
                 try await move(item: item, to: dest, skipInputPause: true)
                 movedCount += 1
+                consecutiveMoveFailures = 0
                 failureLedger.recordSuccess(for: item)
                 try? await Task.sleep(for: .milliseconds(200))
             } catch {
                 unenactedMoveCount += 1
+                consecutiveMoveFailures += 1
                 failureLedger.recordFailure(for: item, kind: Self.failureKind(of: error))
                 MenuBarItemManager.diagLog.error(
                     "Profile layout: failed to move \(planned.uid): \(error)"
                 )
+                if Self.moveBatchShouldAbandon(consecutiveFailures: consecutiveMoveFailures) {
+                    unenactedMoveCount += plannedMoves.count - plannedIndex - 1
+                    MenuBarItemManager.diagLog.warning(
+                        "Profile layout: \(consecutiveMoveFailures) consecutive move failures, abandoning the remaining \(plannedMoves.count - plannedIndex - 1) move(s)"
+                    )
+                    break
+                }
             }
         }
 
@@ -8966,6 +8992,65 @@ extension MenuBarItemManager {
         return now - observedAt <= staleness
     }
 
+    /// Whether an automatic apply may dispatch given how the recent ones
+    /// ended.
+    ///
+    /// A batch that fails is allowed one retry: the failure can be
+    /// circumstantial (a menu was up, an owner was mid-relaunch) and the
+    /// retry is what the save-withhold window exists to make room for. A
+    /// second consecutive unfinished batch means the bar itself is
+    /// refusing the moves (#900's `cannotComplete` bar), and each further
+    /// pass costs the user a hidden cursor for the length of the batch
+    /// while landing yet another partial arrangement (#899). From then on
+    /// dispatch is rationed to one attempt per cooldown rather than one
+    /// per confirmed divergence, which is unbounded when the divergence
+    /// is the failed batches' own.
+    ///
+    /// User-initiated applies (a profile switch) do not consult this gate:
+    /// an explicit request is worth a fresh attempt regardless of history.
+    /// They still feed the streak through `recordBulkApplyOutcome`, so a
+    /// failed manual attempt does not hand the automatic path a clean
+    /// slate.
+    static nonisolated func automaticBulkApplyPermitted(
+        consecutiveUnfinishedBatches: Int,
+        lastUnfinishedBatchAt: ContinuousClock.Instant?,
+        now: ContinuousClock.Instant,
+        maxConsecutive: Int = 2,
+        cooldown: Duration = .seconds(60)
+    ) -> Bool {
+        if consecutiveUnfinishedBatches < maxConsecutive {
+            return true
+        }
+        guard let lastUnfinishedBatchAt else {
+            return true
+        }
+        return now - lastUnfinishedBatchAt >= cooldown
+    }
+
+    /// Whether a move batch should abandon its remaining moves after a run
+    /// of consecutive failures.
+    ///
+    /// The cursor stays hidden for the whole batch, and a failing move is
+    /// the expensive kind: it burns its full attempt budget, each attempt
+    /// with an event timeout and a settle wait, before throwing. On the
+    /// #900 bar one pass logged 15 such failures — minutes of a dead
+    /// pointer (#899) spent confirming the same conclusion. Three in a row
+    /// with no success between them is that conclusion: the bar is
+    /// refusing synthetic drags right now, and the items still queued will
+    /// fare no better. The abandoned remainder counts as unenacted, so the
+    /// arrangement is withheld from the saved order like any other partial
+    /// batch.
+    ///
+    /// Consecutive, not total: successes reset the run, so a long batch
+    /// with scattered failures — each already filed with the ledger for
+    /// per-item backoff — still completes.
+    static nonisolated func moveBatchShouldAbandon(
+        consecutiveFailures: Int,
+        threshold: Int = 3
+    ) -> Bool {
+        consecutiveFailures >= threshold
+    }
+
     func applySavedLayout(
         items: [MenuBarItem],
         previousWindowIDs: [CGWindowID],
@@ -9007,6 +9092,20 @@ extension MenuBarItemManager {
         // the drifted arrangement gets persisted over it (#881).
         guard bypassMoveCooldown || !lastMoveOperationOccurred(within: .seconds(5)) else {
             MenuBarItemManager.diagLog.debug("applySavedLayout: skipping, within 5s move cooldown")
+            return false
+        }
+        // Not bypassable: bypassMoveCooldown exempts a caller from a
+        // cooldown its own chain just stamped, whereas this gate reads a
+        // history of applies that did not complete. A launch restore is
+        // unaffected anyway — the streak is session state and starts at 0.
+        guard Self.automaticBulkApplyPermitted(
+            consecutiveUnfinishedBatches: consecutiveUnfinishedBulkApplies,
+            lastUnfinishedBatchAt: unfinishedMoveBatchObservedAt,
+            now: .now
+        ) else {
+            MenuBarItemManager.diagLog.warning(
+                "applySavedLayout: skipping, \(consecutiveUnfinishedBulkApplies) consecutive bulk applies ended with unenacted moves; cooling down before another attempt"
+            )
             return false
         }
 
@@ -9569,10 +9668,23 @@ extension MenuBarItemManager {
         // one before it and the surviving visible order is preserved.
         for uid in result.overflowUIDs {
             guard let item = items.first(where: { $0.uniqueIdentifier == uid }) else { continue }
+            // The bounce-back guard above only covers ejections that landed.
+            // A candidate whose eject keeps failing would otherwise be
+            // re-dragged on every windowID change against unchanged geometry
+            // (#900) — the ledger's growing per-item window bounds that the
+            // same way it bounds the profile-layout moves.
+            if failureLedger.isUnderBackoff(key: uid) {
+                MenuBarItemManager.diagLog.debug(
+                    "Notch overflow rebalance: \(uid) under move-failure backoff, skipping"
+                )
+                continue
+            }
             do {
                 try await move(item: item, to: .leftOfItem(controlItems.hidden))
                 notchOverflowEjectedUIDs.insert(uid)
+                failureLedger.recordSuccess(for: item)
             } catch {
+                failureLedger.recordFailure(for: item, kind: Self.failureKind(of: error))
                 MenuBarItemManager.diagLog.error(
                     "Notch overflow rebalance: failed to eject \(item.logString): \(error)"
                 )
