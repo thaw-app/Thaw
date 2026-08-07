@@ -427,6 +427,23 @@ final class MenuBarOverlayPanel: NSPanel {
         appState != nil && (alphaValue > 0 || isMissionControlActive)
     }
 
+    /// Whether WindowManager's Exposé shield is currently on screen. Mission
+    /// Control / Exposé raises this window (one per display) for their whole
+    /// duration; "click wallpaper to reveal desktop" never does, even though it
+    /// parks windows and displaces the probe the same way. Only a genuine
+    /// Mission Control should fade the overlay.
+    private static func isMissionControlShieldPresent() -> Bool {
+        WindowInfo.createWindows(option: .onScreen).contains { window in
+            isMissionControlShieldWindow(ownerName: window.ownerName, title: window.title)
+        }
+    }
+
+    /// Pure classification of the Exposé shield window, split out so it can be
+    /// unit-tested without a live window server.
+    static func isMissionControlShieldWindow(ownerName: String?, title: String?) -> Bool {
+        ownerName == "WindowManager" && title == "ExposeShieldWindow"
+    }
+
     /// Creates an overlay panel with the given app state and owning screen.
     init(appState: AppState, owningScreen: NSScreen) {
         self.appState = appState
@@ -498,7 +515,15 @@ final class MenuBarOverlayPanel: NSPanel {
                     if isActive {
                         if let displacedSince = self.missionControlDisplacedSince {
                             if now.timeIntervalSince(displacedSince) > 0.1 {
-                                self.isMissionControlActive = true
+                                // A displaced probe alone cannot tell Mission
+                                // Control from "click wallpaper to reveal
+                                // desktop": both park windows and shove the
+                                // probe aside, but only Mission Control enters
+                                // Exposé and raises a shield window. Reveal-
+                                // desktop leaves the menu bar fully visible, so
+                                // its tint/border must stay — confirm real
+                                // Mission Control before fading (#687 follow-up).
+                                self.isMissionControlActive = Self.isMissionControlShieldPresent()
                             }
                         } else {
                             self.missionControlDisplacedSince = now
