@@ -5637,6 +5637,125 @@
         }
       }
     },
+    "Always-hidden items only" : {
+      "comment" : "Toggle that opens only the always-hidden section in the Thaw Bar, leaving the hidden section to expand in the menu bar.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Pouze trvale skryté položky"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Nur immer versteckte Einträge"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Solo elementos siempre ocultos"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Éléments toujours cachés uniquement"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Csak a mindig rejtett elemek"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hanya item selalu-tersembunyi"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Solo elementi sempre nascosti"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "常に非表示の項目のみ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "항상 숨김 항목만"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Alleen altijd verborgen items"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Tylko zawsze ukryte elementy"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apenas itens sempre ocultos"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Только всегда скрытые элементы"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "เฉพาะรายการที่ซ่อนอยู่เสมอ"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Yalnızca her zaman gizli öğeler"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Лише завжди приховані об'єкти"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Chỉ các mục luôn ẩn"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "仅永久隐藏的项目"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "僅一律隱藏的項目"
+          }
+        }
+      }
+    },
     "Appearance" : {
       "comment" : "The localized string key for the \"Appearance\" section in the \"Settings\" interface.",
       "localizations" : {
@@ -31248,6 +31367,125 @@
         }
       }
     },
+    "Not available because every section already opens in the %@ Bar." : {
+      "comment" : "Annotation shown when the Always-hidden-items-only toggle is disabled because Use Thaw Bar is already on. %@ is the Thaw display name.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Není k dispozici, protože všechny sekce se již otevírají v liště %@."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Nicht verfügbar, weil bereits alle Bereiche in der %@-Leiste geöffnet werden."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "No disponible porque todas las secciones ya se abren en la barra de %@."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Non disponible, car toutes les sections s'ouvrent déjà dans la barre %@."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Nem érhető el, mert már minden szakasz a(z) %@ sávban nyílik meg."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Tidak tersedia karena semua bagian sudah dibuka di Bar %@."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Non disponibile perché tutte le sezioni si aprono già nella barra %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "すべてのセクションがすでに %@ バーで開くため、利用できません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "모든 섹션이 이미 %@ 바에서 열리므로 사용할 수 없습니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Niet beschikbaar omdat alle secties al in de %@-balk worden geopend."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Opcja niedostępna, ponieważ wszystkie sekcje otwierają się już na pasku %@."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Não disponível porque todas as seções já abrem na barra %@."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Недоступно, так как все разделы уже открываются на панели %@."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "ไม่พร้อมใช้งาน เนื่องจากทุกส่วนเปิดใน %@ Bar อยู่แล้ว"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Tüm bölümler zaten %@ Çubuğu'nda açıldığı için kullanılamıyor."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Недоступно, оскільки всі розділи вже відкриваються на панелі %@."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Không khả dụng vì mọi phần đã mở trong Thanh %@."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "由于所有分区已在 %@ 栏中打开，因此该功能不可用。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "所有區段已在 %@ 選單列中開啟，此選項不可用。"
+          }
+        }
+      }
+    },
     "Not available because the %@ Bar is enabled for this display." : {
       "comment" : "A message explaining that the \"Always show hidden items\" toggle is not available when the \"Use \\(Constants.displayName) Bar\" toggle is enabled.",
       "localizations" : {
@@ -41417,6 +41655,125 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "使用 ⌘ Command + 拖移選單列項目時顯示所有區域"
+          }
+        }
+      }
+    },
+    "Show always-hidden menu bar items in the %@ Bar, while hidden items keep expanding in the menu bar." : {
+      "comment" : "Annotation for the Always-hidden-items-only toggle in the Displays pane. %@ is the Thaw display name.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Zobrazovat trvale skryté položky řádku nabídek v liště %@, zatímco skryté položky se nadále rozbalují v řádku nabídek."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Immer versteckte Menüleisteneinträge in der %@-Leiste anzeigen, während versteckte Einträge weiterhin in der Menüleiste ausgeklappt werden."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Mostrar los elementos siempre ocultos de la barra de menús en la barra de %@, mientras que los elementos ocultos siguen expandiéndose en la barra de menús."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Afficher les éléments toujours cachés de la barre de menu dans la barre %@, tandis que les éléments cachés continuent de se déplier dans la barre de menu."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A mindig rejtett menüsorelemek megjelenítése a(z) %@ sávban, míg a rejtett elemek továbbra is a menüsorban nyílnak ki."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Tampilkan item bar menu yang selalu tersembunyi di Bar %@, sementara item tersembunyi tetap terbentang di bar menu."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Mostra gli elementi sempre nascosti della barra dei menu nella barra %@, mentre gli elementi nascosti continuano a espandersi nella barra dei menu."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "常に非表示の項目を %@ バーに表示し、非表示項目はメニューバー内で展開したままにします。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "항상 숨김 항목은 %@ 바에 표시하고, 숨겨진 항목은 메뉴 막대에서 계속 펼칩니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Toon altijd verborgen menubalk-items in de %@-balk, terwijl verborgen items in de menubalk blijven uitklappen."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Pokazuj zawsze ukryte elementy paska menu na pasku %@, podczas gdy ukryte elementy nadal rozwijają się na pasku menu."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Mostrar os itens sempre ocultos da barra de menus na barra %@, enquanto os itens ocultos continuam expandindo na barra de menus."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Показывать всегда скрытые элементы строки меню на панели %@, а скрытые элементы по-прежнему раскрывать в строке меню."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "แสดงรายการแถบเมนูที่ซ่อนอยู่เสมอใน %@ Bar ขณะที่รายการที่ซ่อนไว้ยังคงขยายในแถบเมนู"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Her zaman gizli menü çubuğu ögelerini %@ Çubuğu'nda göster, gizli ögeler menü çubuğunda açılmaya devam etsin."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Показувати завжди приховані об'єкти рядка меню на панелі %@, а приховані об'єкти й надалі розгортати в рядку меню."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hiển thị các mục thanh menu luôn ẩn trong Thanh %@, trong khi các mục ẩn vẫn mở rộng trong thanh menu."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "在 %@ 栏中显示永久隐藏的菜单栏项目，而隐藏的项目仍在菜单栏中展开。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "在 %@ 選單列中顯示一律隱藏的選單列項目，隱藏項目則仍在選單列中展開。"
           }
         }
       }

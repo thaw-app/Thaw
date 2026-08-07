@@ -342,6 +342,59 @@ struct DisplaySettingsManagerURINotificationTests {
         }
     }
 
+    // MARK: useThawBarForAlwaysHidden
+
+    @Test("A useThawBarForAlwaysHidden value is written to the named display", arguments: [true, false])
+    func useThawBarForAlwaysHiddenValueIsApplied(value: Bool) throws {
+        try withScratchDefaults { _ in
+            let manager = makeManager(.defaultConfiguration.withUseThawBarForAlwaysHidden(!value))
+
+            manager.handleExternalPerDisplaySettingsChange(perDisplayChange([
+                "key": "useThawBarForAlwaysHidden",
+                "scope": "specific:\(offscreenUUID)",
+                "value": value,
+            ]))
+
+            #expect(manager.configurations[offscreenUUID]?.useThawBarForAlwaysHidden == value)
+        }
+    }
+
+    @Test("A useThawBarForAlwaysHidden toggle flips the named display", arguments: [true, false])
+    func useThawBarForAlwaysHiddenToggleFlipsTheDisplay(initial: Bool) throws {
+        try withScratchDefaults { _ in
+            let manager = makeManager(.defaultConfiguration.withUseThawBarForAlwaysHidden(initial))
+
+            manager.handleExternalPerDisplaySettingsChange(perDisplayChange([
+                "key": "useThawBarForAlwaysHidden",
+                "scope": "specific:\(offscreenUUID)",
+                "toggle": true,
+            ]))
+
+            #expect(manager.configurations[offscreenUUID]?.useThawBarForAlwaysHidden == !initial)
+        }
+    }
+
+    @Test("A useThawBarForAlwaysHidden notification with no usable payload changes nothing")
+    func useThawBarForAlwaysHiddenWithoutAUsablePayloadIsIgnored() throws {
+        try withScratchDefaults { _ in
+            let manager = makeManager()
+            let before = manager.configurations
+
+            manager.handleExternalPerDisplaySettingsChange(perDisplayChange([
+                "key": "useThawBarForAlwaysHidden",
+                "scope": "specific:\(offscreenUUID)",
+            ]))
+            #expect(manager.configurations == before, "no payload at all")
+
+            manager.handleExternalPerDisplaySettingsChange(perDisplayChange([
+                "key": "useThawBarForAlwaysHidden",
+                "scope": "specific:\(offscreenUUID)",
+                "value": "true",
+            ]))
+            #expect(manager.configurations == before, "a stringly-typed value")
+        }
+    }
+
     // MARK: alwaysShowHiddenItems
 
     @Test("An alwaysShowHiddenItems value is written to the named display", arguments: [true, false])

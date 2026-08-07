@@ -86,6 +86,7 @@ private let enumKeys: [String] = ["rehideStrategy"]
 /// See ``booleanKeys`` for why these are copies.
 private let perDisplayKeys: [String] = [
     "useIceBar",
+    "useThawBarForAlwaysHidden",
     "iceBarLocation",
     "alwaysShowHiddenItems",
     "iceBarLayout",

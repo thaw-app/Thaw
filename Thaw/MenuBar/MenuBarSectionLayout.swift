@@ -75,6 +75,27 @@ nonisolated extension MenuBarSection {
         overflowEnabled && useThawBarOnOverflow && hasEjectedItems
     }
 
+    /// Whether the given section presents in the Thaw Bar.
+    ///
+    /// `displayUsesThawBar` sends every section there. `alwaysHiddenUsesThawBar`
+    /// sends the always-hidden section alone, leaving the hidden section to
+    /// expand inline, which is the point of the setting: reaching the
+    /// always-hidden items inline means expanding the hidden section too,
+    /// since always-hidden items sit to the left of the hidden control item.
+    ///
+    /// Notch overflow can force the Thaw Bar on top of this; see
+    /// ``forcesIceBarForNotchOverflow(overflowEnabled:useThawBarOnOverflow:hasEjectedItems:)``.
+    static func usesThawBar(
+        for name: Name,
+        displayUsesThawBar: Bool,
+        alwaysHiddenUsesThawBar: Bool
+    ) -> Bool {
+        if displayUsesThawBar {
+            return true
+        }
+        return name == .alwaysHidden && alwaysHiddenUsesThawBar
+    }
+
     /// The gap that macOS leaves to the left and right of the notch (in points).
     static let notchGap: CGFloat = 24
 

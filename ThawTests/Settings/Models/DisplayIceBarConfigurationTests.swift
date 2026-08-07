@@ -19,6 +19,7 @@ struct DisplayIceBarConfigurationTests {
         let config = DisplayIceBarConfiguration.defaultConfiguration
 
         #expect(!config.useIceBar)
+        #expect(!config.useThawBarForAlwaysHidden)
         #expect(config.iceBarLocation == .dynamic)
         #expect(!config.alwaysShowHiddenItems)
         #expect(config.iceBarLayout == .horizontal)
@@ -32,6 +33,7 @@ struct DisplayIceBarConfigurationTests {
     func customInitialization() {
         let config = DisplayIceBarConfiguration(
             useIceBar: true,
+            useThawBarForAlwaysHidden: false,
             iceBarLocation: .mousePointer,
             alwaysShowHiddenItems: true,
             iceBarLayout: .grid,
@@ -67,6 +69,43 @@ struct DisplayIceBarConfigurationTests {
         _ = original.withUseIceBar(true)
 
         #expect(!original.useIceBar)
+    }
+
+    @Test("withUseThawBarForAlwaysHidden changes only the always-hidden flag")
+    func withUseThawBarForAlwaysHidden() {
+        let original = DisplayIceBarConfiguration.defaultConfiguration
+        let modified = original.withUseThawBarForAlwaysHidden(true)
+
+        #expect(modified.useThawBarForAlwaysHidden)
+        #expect(modified.useIceBar == original.useIceBar)
+        #expect(modified.iceBarLocation == original.iceBarLocation)
+        #expect(modified.alwaysShowHiddenItems == original.alwaysShowHiddenItems)
+        #expect(modified.iceBarLayout == original.iceBarLayout)
+        #expect(modified.gridColumns == original.gridColumns)
+        #expect(modified.itemSpacingOffset == original.itemSpacingOffset)
+    }
+
+    @Test("withUseThawBarForAlwaysHidden leaves the original alone")
+    func withUseThawBarForAlwaysHiddenDoesNotMutateOriginal() {
+        let original = DisplayIceBarConfiguration.defaultConfiguration
+        _ = original.withUseThawBarForAlwaysHidden(true)
+
+        #expect(!original.useThawBarForAlwaysHidden)
+    }
+
+    /// Every other `with` method has to carry the flag along, or setting a
+    /// location or a layout afterwards would silently turn the setting back off.
+    @Test("The other with-methods carry the always-hidden flag along")
+    func otherWithMethodsPreserveUseThawBarForAlwaysHidden() {
+        let original = DisplayIceBarConfiguration.defaultConfiguration
+            .withUseThawBarForAlwaysHidden(true)
+
+        #expect(original.withUseIceBar(true).useThawBarForAlwaysHidden)
+        #expect(original.withIceBarLocation(.iceIcon).useThawBarForAlwaysHidden)
+        #expect(original.withAlwaysShowHiddenItems(true).useThawBarForAlwaysHidden)
+        #expect(original.withIceBarLayout(.grid).useThawBarForAlwaysHidden)
+        #expect(original.withGridColumns(6).useThawBarForAlwaysHidden)
+        #expect(original.withItemSpacingOffset(4).useThawBarForAlwaysHidden)
     }
 
     @Test("withIceBarLocation changes only the location")
@@ -240,6 +279,7 @@ struct DisplayIceBarConfigurationTests {
     func equatableIdentical() {
         let config1 = DisplayIceBarConfiguration(
             useIceBar: true,
+            useThawBarForAlwaysHidden: false,
             iceBarLocation: .mousePointer,
             alwaysShowHiddenItems: false,
             iceBarLayout: .vertical,
@@ -248,6 +288,7 @@ struct DisplayIceBarConfigurationTests {
         )
         let config2 = DisplayIceBarConfiguration(
             useIceBar: true,
+            useThawBarForAlwaysHidden: false,
             iceBarLocation: .mousePointer,
             alwaysShowHiddenItems: false,
             iceBarLayout: .vertical,
@@ -262,6 +303,14 @@ struct DisplayIceBarConfigurationTests {
     func equatableDifferentUseIceBar() {
         let config1 = DisplayIceBarConfiguration.defaultConfiguration
         let config2 = config1.withUseIceBar(true)
+
+        #expect(config1 != config2)
+    }
+
+    @Test("A different always-hidden flag makes configurations unequal")
+    func equatableDifferentUseThawBarForAlwaysHidden() {
+        let config1 = DisplayIceBarConfiguration.defaultConfiguration
+        let config2 = config1.withUseThawBarForAlwaysHidden(true)
 
         #expect(config1 != config2)
     }
@@ -312,6 +361,7 @@ struct DisplayIceBarConfigurationTests {
     func encodeDecode() throws {
         let original = DisplayIceBarConfiguration(
             useIceBar: true,
+            useThawBarForAlwaysHidden: true,
             iceBarLocation: .iceIcon,
             alwaysShowHiddenItems: true,
             iceBarLayout: .grid,
@@ -346,6 +396,7 @@ struct DisplayIceBarConfigurationTests {
         let json = """
         {
             "useIceBar": true,
+            "useThawBarForAlwaysHidden": true,
             "iceBarLocation": 2,
             "alwaysShowHiddenItems": false,
             "iceBarLayout": 2,
@@ -357,6 +408,7 @@ struct DisplayIceBarConfigurationTests {
         let decoded = try decoder.decode(DisplayIceBarConfiguration.self, from: json)
 
         #expect(decoded.useIceBar)
+        #expect(decoded.useThawBarForAlwaysHidden)
         #expect(decoded.iceBarLocation == .iceIcon)
         #expect(!decoded.alwaysShowHiddenItems)
         #expect(decoded.iceBarLayout == .grid)
@@ -377,6 +429,7 @@ struct DisplayIceBarConfigurationTests {
         let decoded = try decoder.decode(DisplayIceBarConfiguration.self, from: json)
 
         #expect(decoded.useIceBar)
+        #expect(!decoded.useThawBarForAlwaysHidden)
         #expect(decoded.iceBarLocation == .mousePointer)
         #expect(!decoded.alwaysShowHiddenItems)
         #expect(decoded.iceBarLayout == .horizontal)

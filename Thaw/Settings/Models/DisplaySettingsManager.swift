@@ -580,6 +580,21 @@ final class DisplaySettingsManager {
                 }
             }
 
+        case "useThawBarForAlwaysHidden":
+            if notification.userInfo?["toggle"] as? Bool == true {
+                if let uuid = specificUUID {
+                    toggleUseThawBarForAlwaysHidden(forDisplayUUID: uuid)
+                } else {
+                    toggleUseThawBarForAlwaysHidden(scope: scope)
+                }
+            } else if let value = notification.userInfo?["value"] as? Bool {
+                if let uuid = specificUUID {
+                    setUseThawBarForAlwaysHidden(value, forDisplayUUID: uuid)
+                } else {
+                    setUseThawBarForAlwaysHidden(value, scope: scope)
+                }
+            }
+
         case "iceBarLocation":
             if let rawValueString = notification.userInfo?["stringValue"] as? String,
                let rawValue = Int(rawValueString),
@@ -678,6 +693,56 @@ final class DisplaySettingsManager {
         let current = configuration(forUUID: uuid)
         updateConfiguration(forDisplayUUID: uuid) { config in
             config.withUseIceBar(!current.useIceBar)
+        }
+    }
+
+    /// Sets useThawBarForAlwaysHidden for displays based on scope.
+    private func setUseThawBarForAlwaysHidden(_ value: Bool, scope: SettingsURIHandler.PerDisplayScope) {
+        if scope == .allNonIceBarDisplays {
+            // Update all displays that do NOT have IceBar enabled; on the rest
+            // the setting is redundant, since every section already opens in
+            // the Thaw Bar there.
+            for screen in NSScreen.screens {
+                guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else { continue }
+                let config = configuration(forUUID: uuid)
+                if !config.useIceBar {
+                    updateConfiguration(forDisplayUUID: uuid) { $0.withUseThawBarForAlwaysHidden(value) }
+                }
+            }
+        } else {
+            diagLog.debug("setUseThawBarForAlwaysHidden not implemented for scope \(scope)")
+        }
+    }
+
+    /// Toggles useThawBarForAlwaysHidden for displays based on scope.
+    private func toggleUseThawBarForAlwaysHidden(scope: SettingsURIHandler.PerDisplayScope) {
+        if scope == .allNonIceBarDisplays {
+            for screen in NSScreen.screens {
+                guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else { continue }
+                let config = configuration(forUUID: uuid)
+                if !config.useIceBar {
+                    updateConfiguration(forDisplayUUID: uuid) {
+                        $0.withUseThawBarForAlwaysHidden(!$0.useThawBarForAlwaysHidden)
+                    }
+                }
+            }
+        } else {
+            diagLog.debug("toggleUseThawBarForAlwaysHidden not implemented for scope \(scope)")
+        }
+    }
+
+    /// Sets useThawBarForAlwaysHidden for a specific display UUID.
+    private func setUseThawBarForAlwaysHidden(_ value: Bool, forDisplayUUID uuid: String) {
+        updateConfiguration(forDisplayUUID: uuid) { config in
+            config.withUseThawBarForAlwaysHidden(value)
+        }
+    }
+
+    /// Toggles useThawBarForAlwaysHidden for a specific display UUID.
+    private func toggleUseThawBarForAlwaysHidden(forDisplayUUID uuid: String) {
+        let current = configuration(forUUID: uuid)
+        updateConfiguration(forDisplayUUID: uuid) { config in
+            config.withUseThawBarForAlwaysHidden(!current.useThawBarForAlwaysHidden)
         }
     }
 
@@ -830,6 +895,12 @@ final class DisplaySettingsManager {
     /// Whether the Thaw Bar is enabled for the given display.
     func useIceBar(for displayID: CGDirectDisplayID) -> Bool {
         configuration(for: displayID).useIceBar
+    }
+
+    /// Whether the always-hidden section alone opens in the Thaw Bar on the
+    /// given display.
+    func useThawBarForAlwaysHidden(for displayID: CGDirectDisplayID) -> Bool {
+        configuration(for: displayID).useThawBarForAlwaysHidden
     }
 
     /// The Thaw Bar location for the given display.

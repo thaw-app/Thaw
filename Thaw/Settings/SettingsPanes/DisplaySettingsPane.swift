@@ -163,6 +163,15 @@ struct DisplaySettingsPane: View {
             }
         )
 
+        let useThawBarForAlwaysHidden = Binding<Bool>(
+            get: { displaySettings.configuration(forUUID: display.id).useThawBarForAlwaysHidden },
+            set: { newValue in
+                displaySettings.updateConfiguration(forDisplayUUID: display.id) { config in
+                    config.withUseThawBarForAlwaysHidden(newValue)
+                }
+            }
+        )
+
         let location = Binding<IceBarLocation>(
             get: { displaySettings.configuration(forUUID: display.id).iceBarLocation },
             set: { newValue in
@@ -202,6 +211,7 @@ struct DisplaySettingsPane: View {
         IceBarConfigurationControls(
             alwaysShowHiddenItems: alwaysShowHiddenItems,
             useIceBar: useIceBar,
+            useThawBarForAlwaysHidden: useThawBarForAlwaysHidden,
             location: location,
             layout: layout,
             gridColumns: gridColumns,
@@ -450,6 +460,13 @@ struct DisplaySettingsPane: View {
             get: { displaySettings.globalConfiguration.useIceBar },
             set: { displaySettings.globalConfiguration = displaySettings.globalConfiguration.withUseIceBar($0) }
         )
+        let useThawBarForAlwaysHidden = Binding<Bool>(
+            get: { displaySettings.globalConfiguration.useThawBarForAlwaysHidden },
+            set: {
+                displaySettings.globalConfiguration = displaySettings.globalConfiguration
+                    .withUseThawBarForAlwaysHidden($0)
+            }
+        )
         let location = Binding<IceBarLocation>(
             get: { displaySettings.globalConfiguration.iceBarLocation },
             set: { displaySettings.globalConfiguration = displaySettings.globalConfiguration.withIceBarLocation($0) }
@@ -470,6 +487,7 @@ struct DisplaySettingsPane: View {
         IceBarConfigurationControls(
             alwaysShowHiddenItems: alwaysShowHiddenItems,
             useIceBar: useIceBar,
+            useThawBarForAlwaysHidden: useThawBarForAlwaysHidden,
             location: location,
             layout: layout,
             gridColumns: gridColumns,
@@ -690,6 +708,7 @@ private struct IceBarConfigurationControls<ExtraControls: View>: View {
 
     @Binding var alwaysShowHiddenItems: Bool
     @Binding var useIceBar: Bool
+    @Binding var useThawBarForAlwaysHidden: Bool
     @Binding var location: IceBarLocation
     @Binding var layout: IceBarLayout
     @Binding var gridColumns: Int
@@ -698,9 +717,16 @@ private struct IceBarConfigurationControls<ExtraControls: View>: View {
     private let extraControls: () -> ExtraControls
     @State private var maxSliderLabelWidth: CGFloat = 0
 
+    /// Whether anything opens in the Thaw Bar, and so whether its appearance
+    /// controls apply.
+    private var showsThawBar: Bool {
+        useIceBar || useThawBarForAlwaysHidden
+    }
+
     init(
         alwaysShowHiddenItems: Binding<Bool>,
         useIceBar: Binding<Bool>,
+        useThawBarForAlwaysHidden: Binding<Bool>,
         location: Binding<IceBarLocation>,
         layout: Binding<IceBarLayout>,
         gridColumns: Binding<Int>,
@@ -709,6 +735,7 @@ private struct IceBarConfigurationControls<ExtraControls: View>: View {
     ) {
         _alwaysShowHiddenItems = alwaysShowHiddenItems
         _useIceBar = useIceBar
+        _useThawBarForAlwaysHidden = useThawBarForAlwaysHidden
         _location = location
         _layout = layout
         _gridColumns = gridColumns
@@ -740,9 +767,22 @@ private struct IceBarConfigurationControls<ExtraControls: View>: View {
         Toggle("Use \(Constants.displayName) Bar", isOn: $useIceBar)
             .annotation("Show hidden menu bar items in a separate bar below the menu bar.")
 
+        Toggle("Always-hidden items only", isOn: $useThawBarForAlwaysHidden)
+            .disabled(useIceBar)
+            .annotation {
+                if useIceBar {
+                    Text("Not available because every section already opens in the \(Constants.displayName) Bar.")
+                } else {
+                    Text("""
+                    Show always-hidden menu bar items in the \(Constants.displayName) Bar, \
+                    while hidden items keep expanding in the menu bar.
+                    """)
+                }
+            }
+
         extraControls()
 
-        if useIceBar {
+        if showsThawBar {
             IcePicker("Location", selection: $location) {
                 ForEach(IceBarLocation.allCases) { location in
                     Text(location.localized).tag(location)
@@ -816,6 +856,7 @@ private extension IceBarConfigurationControls where ExtraControls == EmptyView {
     init(
         alwaysShowHiddenItems: Binding<Bool>,
         useIceBar: Binding<Bool>,
+        useThawBarForAlwaysHidden: Binding<Bool>,
         location: Binding<IceBarLocation>,
         layout: Binding<IceBarLayout>,
         gridColumns: Binding<Int>,
@@ -824,6 +865,7 @@ private extension IceBarConfigurationControls where ExtraControls == EmptyView {
         self.init(
             alwaysShowHiddenItems: alwaysShowHiddenItems,
             useIceBar: useIceBar,
+            useThawBarForAlwaysHidden: useThawBarForAlwaysHidden,
             location: location,
             layout: layout,
             gridColumns: gridColumns,

@@ -472,9 +472,17 @@ final class MenuBarManager {
                 let hiddenSection = self.section(withName: .hidden)
                 let alwaysHiddenSection = self.section(withName: .alwaysHidden)
 
-                // Use isHidden property - when section is shown, isHidden is false
-                let isShowingHiddenSection = hiddenSection.map { !$0.isHidden } ?? false
-                let isShowingAlwaysHiddenSection = alwaysHiddenSection.map { !$0.isHidden } ?? false
+                // Use isHidden property - when section is shown, isHidden is false.
+                // A section presenting in the Thaw Bar expands nothing inline,
+                // so the application menus have no items to make room for. The
+                // guard above already covers the display-wide setting; this
+                // covers useThawBarForAlwaysHidden, where the always-hidden
+                // section is in the panel while the hidden section is inline.
+                let panelSection = iceBarPanel.currentSection
+                let isShowingHiddenSection = (hiddenSection.map { !$0.isHidden } ?? false)
+                    && panelSection != .hidden
+                let isShowingAlwaysHiddenSection = (alwaysHiddenSection.map { !$0.isHidden } ?? false)
+                    && panelSection != .alwaysHidden
 
                 if isShowingHiddenSection || isShowingAlwaysHiddenSection {
                     // Use the screen with the active menu bar

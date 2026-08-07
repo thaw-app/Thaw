@@ -604,6 +604,17 @@ nonisolated enum SearchIndex {
             property: nil
         ),
         SearchEntry(
+            id: "displays.useThawBarForAlwaysHidden",
+            titleKey: "Always-hidden items only",
+            titleText: "Always-hidden items only",
+            descriptionText: "Show always-hidden menu bar items in the \(Constants.displayName) Bar, while hidden items keep expanding in the menu bar.",
+            pane: .displays,
+            sectionKey: "Global",
+            sectionText: "Global",
+            keywords: ["ice bar", "thaw bar", "always-hidden", "always hidden", "only"],
+            property: nil
+        ),
+        SearchEntry(
             id: "displays.alwaysShowHiddenItems",
             titleKey: "Always show hidden items",
             titleText: "Always show hidden items",

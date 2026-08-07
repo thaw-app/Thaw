@@ -13,6 +13,16 @@ nonisolated struct DisplayIceBarConfiguration: Codable, Equatable {
     /// Whether the Thaw Bar is enabled on this display.
     let useIceBar: Bool
 
+    /// Whether the always-hidden section alone opens in the Thaw Bar on this
+    /// display, leaving the hidden section to expand inline as usual.
+    ///
+    /// Only applicable when ``useIceBar`` is `false`, which already routes
+    /// every section to the Thaw Bar. Showing the always-hidden section inline
+    /// has to expand the hidden section along with it, because always-hidden
+    /// items sit to the left of the hidden control item; this is the way to
+    /// reach them without unfurling the rest of the menu bar.
+    let useThawBarForAlwaysHidden: Bool
+
     /// The location where the Thaw Bar appears on this display.
     let iceBarLocation: IceBarLocation
 
@@ -39,6 +49,7 @@ nonisolated struct DisplayIceBarConfiguration: Codable, Equatable {
     /// Default configuration (disabled, dynamic location, horizontal layout).
     static let defaultConfiguration = DisplayIceBarConfiguration(
         useIceBar: false,
+        useThawBarForAlwaysHidden: false,
         iceBarLocation: .dynamic,
         alwaysShowHiddenItems: false,
         iceBarLayout: .horizontal,
@@ -50,6 +61,20 @@ nonisolated struct DisplayIceBarConfiguration: Codable, Equatable {
     func withUseIceBar(_ value: Bool) -> DisplayIceBarConfiguration {
         DisplayIceBarConfiguration(
             useIceBar: value,
+            useThawBarForAlwaysHidden: useThawBarForAlwaysHidden,
+            iceBarLocation: iceBarLocation,
+            alwaysShowHiddenItems: alwaysShowHiddenItems,
+            iceBarLayout: iceBarLayout,
+            gridColumns: gridColumns,
+            itemSpacingOffset: itemSpacingOffset
+        )
+    }
+
+    /// Returns a new configuration with the `useThawBarForAlwaysHidden` flag replaced.
+    func withUseThawBarForAlwaysHidden(_ value: Bool) -> DisplayIceBarConfiguration {
+        DisplayIceBarConfiguration(
+            useIceBar: useIceBar,
+            useThawBarForAlwaysHidden: value,
             iceBarLocation: iceBarLocation,
             alwaysShowHiddenItems: alwaysShowHiddenItems,
             iceBarLayout: iceBarLayout,
@@ -62,6 +87,7 @@ nonisolated struct DisplayIceBarConfiguration: Codable, Equatable {
     func withIceBarLocation(_ value: IceBarLocation) -> DisplayIceBarConfiguration {
         DisplayIceBarConfiguration(
             useIceBar: useIceBar,
+            useThawBarForAlwaysHidden: useThawBarForAlwaysHidden,
             iceBarLocation: value,
             alwaysShowHiddenItems: alwaysShowHiddenItems,
             iceBarLayout: iceBarLayout,
@@ -74,6 +100,7 @@ nonisolated struct DisplayIceBarConfiguration: Codable, Equatable {
     func withAlwaysShowHiddenItems(_ value: Bool) -> DisplayIceBarConfiguration {
         DisplayIceBarConfiguration(
             useIceBar: useIceBar,
+            useThawBarForAlwaysHidden: useThawBarForAlwaysHidden,
             iceBarLocation: iceBarLocation,
             alwaysShowHiddenItems: value,
             iceBarLayout: iceBarLayout,
@@ -86,6 +113,7 @@ nonisolated struct DisplayIceBarConfiguration: Codable, Equatable {
     func withIceBarLayout(_ value: IceBarLayout) -> DisplayIceBarConfiguration {
         DisplayIceBarConfiguration(
             useIceBar: useIceBar,
+            useThawBarForAlwaysHidden: useThawBarForAlwaysHidden,
             iceBarLocation: iceBarLocation,
             alwaysShowHiddenItems: alwaysShowHiddenItems,
             iceBarLayout: value,
@@ -100,6 +128,7 @@ nonisolated struct DisplayIceBarConfiguration: Codable, Equatable {
     func withGridColumns(_ value: Int) -> DisplayIceBarConfiguration {
         DisplayIceBarConfiguration(
             useIceBar: useIceBar,
+            useThawBarForAlwaysHidden: useThawBarForAlwaysHidden,
             iceBarLocation: iceBarLocation,
             alwaysShowHiddenItems: alwaysShowHiddenItems,
             iceBarLayout: iceBarLayout,
@@ -114,6 +143,7 @@ nonisolated struct DisplayIceBarConfiguration: Codable, Equatable {
     func withItemSpacingOffset(_ value: Double) -> DisplayIceBarConfiguration {
         DisplayIceBarConfiguration(
             useIceBar: useIceBar,
+            useThawBarForAlwaysHidden: useThawBarForAlwaysHidden,
             iceBarLocation: iceBarLocation,
             alwaysShowHiddenItems: alwaysShowHiddenItems,
             iceBarLayout: iceBarLayout,
@@ -136,6 +166,7 @@ nonisolated struct DisplayIceBarConfiguration: Codable, Equatable {
             let enabled = onlyOnNotched ? screen.hasNotch : true
             configs[uuid] = DisplayIceBarConfiguration(
                 useIceBar: enabled,
+                useThawBarForAlwaysHidden: false,
                 iceBarLocation: location,
                 alwaysShowHiddenItems: false,
                 iceBarLayout: .horizontal,
@@ -152,6 +183,7 @@ nonisolated struct DisplayIceBarConfiguration: Codable, Equatable {
 nonisolated extension DisplayIceBarConfiguration {
     enum CodingKeys: String, CodingKey {
         case useIceBar
+        case useThawBarForAlwaysHidden
         case iceBarLocation
         case alwaysShowHiddenItems
         case iceBarLayout
@@ -162,6 +194,10 @@ nonisolated extension DisplayIceBarConfiguration {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.useIceBar = try container.decode(Bool.self, forKey: .useIceBar)
+        self.useThawBarForAlwaysHidden = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .useThawBarForAlwaysHidden
+        ) ?? false
         self.iceBarLocation = try container.decode(IceBarLocation.self, forKey: .iceBarLocation)
         self.alwaysShowHiddenItems = try container.decode(Bool.self, forKey: .alwaysShowHiddenItems)
         self.iceBarLayout = try container.decodeIfPresent(IceBarLayout.self, forKey: .iceBarLayout) ?? .horizontal

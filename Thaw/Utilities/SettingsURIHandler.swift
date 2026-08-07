@@ -68,6 +68,7 @@ enum SettingsURIHandler {
     /// Per-display settings keys (stored in DisplaySettingsManager, not Defaults)
     static let perDisplayKeys: [String] = [
         "useIceBar",
+        "useThawBarForAlwaysHidden",
         "iceBarLocation",
         "alwaysShowHiddenItems",
         "iceBarLayout",
@@ -527,6 +528,18 @@ enum SettingsURIHandler {
             diagLog.info("Settings URI: Set useIceBar = \(boolValue) on active display")
             return true
 
+        case "useThawBarForAlwaysHidden":
+            guard let boolValue = parseBool(value) else {
+                diagLog.warning("Settings URI: Invalid boolean value '\(value)' for useThawBarForAlwaysHidden")
+                return false
+            }
+            // Same scope as alwaysShowHiddenItems: the setting only means
+            // anything on displays that are not already routing every section
+            // to the Thaw Bar.
+            postPerDisplaySettingsDidChangeNotification(key: key, value: boolValue, scope: .allNonIceBarDisplays)
+            diagLog.info("Settings URI: Set useThawBarForAlwaysHidden = \(boolValue) on all non-IceBar displays")
+            return true
+
         case "iceBarLocation":
             // Parse IceBarLocation from string value
             guard let location = IceBarLocation.fromString(value) else {
@@ -608,6 +621,16 @@ enum SettingsURIHandler {
             // Post notification for specific display
             postPerDisplaySettingsDidChangeNotification(key: key, value: boolValue, scope: .specificDisplay(uuid: displayUUID))
             diagLog.info("Settings URI: Set useIceBar = \(boolValue) on display \(displayUUID)")
+            return true
+
+        case "useThawBarForAlwaysHidden":
+            guard let boolValue = parseBool(value) else {
+                diagLog.warning("Settings URI: Invalid boolean value '\(value)' for useThawBarForAlwaysHidden")
+                return false
+            }
+            // Post notification for specific display
+            postPerDisplaySettingsDidChangeNotification(key: key, value: boolValue, scope: .specificDisplay(uuid: displayUUID))
+            diagLog.info("Settings URI: Set useThawBarForAlwaysHidden = \(boolValue) on display \(displayUUID)")
             return true
 
         case "iceBarLocation":
@@ -699,7 +722,7 @@ enum SettingsURIHandler {
     }
 
     /// Handles toggling a per-display configuration value.
-    /// Currently only supports useIceBar and alwaysShowHiddenItems.
+    /// Currently only supports useIceBar, useThawBarForAlwaysHidden and alwaysShowHiddenItems.
     private static func handlePerDisplayToggle(key: String, displayUUID: String?) -> Bool {
         // If specific display UUID provided, use that
         if let uuid = displayUUID, !uuid.isEmpty {
@@ -721,6 +744,11 @@ enum SettingsURIHandler {
                 diagLog.info("Settings URI: Toggled useIceBar on display \(uuid)")
                 return true
 
+            case "useThawBarForAlwaysHidden":
+                postPerDisplaySettingsDidChangeNotification(key: key, toggle: true, scope: .specificDisplay(uuid: uuid))
+                diagLog.info("Settings URI: Toggled useThawBarForAlwaysHidden on display \(uuid)")
+                return true
+
             case "alwaysShowHiddenItems":
                 // Post notification for DisplaySettingsManager to toggle specific display
                 postPerDisplaySettingsDidChangeNotification(key: key, toggle: true, scope: .specificDisplay(uuid: uuid))
@@ -740,6 +768,12 @@ enum SettingsURIHandler {
             // Post notification for DisplaySettingsManager to toggle active display
             postPerDisplaySettingsDidChangeNotification(key: key, toggle: true, scope: .activeDisplay)
             diagLog.info("Settings URI: Toggled useIceBar on active display")
+            return true
+
+        case "useThawBarForAlwaysHidden":
+            // Post notification for DisplaySettingsManager to toggle on all non-IceBar displays
+            postPerDisplaySettingsDidChangeNotification(key: key, toggle: true, scope: .allNonIceBarDisplays)
+            diagLog.info("Settings URI: Toggled useThawBarForAlwaysHidden on all non-IceBar displays")
             return true
 
         case "alwaysShowHiddenItems":
@@ -965,6 +999,11 @@ enum SettingsURIHandler {
                     "value": config.useIceBar,
                     "type": "boolean",
                 ]
+            case "useThawBarForAlwaysHidden":
+                return [
+                    "value": config.useThawBarForAlwaysHidden,
+                    "type": "boolean",
+                ]
             case "iceBarLocation":
                 return [
                     "value": String(describing: config.iceBarLocation),
@@ -1137,6 +1176,7 @@ enum SettingsURIHandler {
             "hasNotch": screen.hasNotch,
             "resolution": "\(Int(screen.frame.width))x\(Int(screen.frame.height))",
             "useIceBar": config.useIceBar,
+            "useThawBarForAlwaysHidden": config.useThawBarForAlwaysHidden,
             "iceBarLocation": String(describing: config.iceBarLocation),
             "alwaysShowHiddenItems": config.alwaysShowHiddenItems,
             "iceBarLayout": String(describing: config.iceBarLayout),
@@ -1192,6 +1232,7 @@ enum SettingsURIHandler {
                     "name": "Disconnected Display",
                     "isConnected": false,
                     "useIceBar": config.useIceBar,
+                    "useThawBarForAlwaysHidden": config.useThawBarForAlwaysHidden,
                     "iceBarLocation": String(describing: config.iceBarLocation),
                     "alwaysShowHiddenItems": config.alwaysShowHiddenItems,
                     "iceBarLayout": String(describing: config.iceBarLayout),

@@ -46,7 +46,12 @@ final class MenuBarSection {
         guard let appState else { return false }
         let screen = screenForIceBar
         let displayID = screen?.displayID ?? CGMainDisplayID()
-        if appState.settings.displaySettings.useIceBar(for: displayID) {
+        let displaySettings = appState.settings.displaySettings
+        if Self.usesThawBar(
+            for: name,
+            displayUsesThawBar: displaySettings.useIceBar(for: displayID),
+            alwaysHiddenUsesThawBar: displaySettings.useThawBarForAlwaysHidden(for: displayID)
+        ) {
             return true
         }
         return Self.forcesIceBarForNotchOverflow(
@@ -214,7 +219,11 @@ final class MenuBarSection {
         }
 
         let displaySettings = appState.settings.displaySettings
-        let useIceBar = displaySettings.useIceBar(for: activeScreen.displayID)
+        let useIceBar = Self.usesThawBar(
+            for: name,
+            displayUsesThawBar: displaySettings.useIceBar(for: activeScreen.displayID),
+            alwaysHiddenUsesThawBar: displaySettings.useThawBarForAlwaysHidden(for: activeScreen.displayID)
+        )
             || Self.forcesIceBarForNotchOverflow(
                 settings: appState.settings.advanced,
                 hasEjectedItems: appState.itemManager.hasNotchOverflowEjectedItems
