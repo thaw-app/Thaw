@@ -2390,12 +2390,17 @@ final class MenuBarSectionController: ObservableObject {
         // they show/hide only on a real assignment change (drag to/from Hidden).
         var ccHiddenTitles = Set<String>()
         for (identifier, section) in assignmentIncludingOverflow where section != .visible {
-            // Focus and Now Playing use preferred positions, not the Control
-            // Center preference: restarting the host to apply that preference
-            // cannot overcome assessment-mode collateral hiding.
-            guard !MenuBarItemTag.isPositionManageableMenuBarAgentIdentifier(identifier) else {
-                continue
-            }
+            // Focus and Now Playing are routed here too, not only to the
+            // position backend. Preferred-position weights merely reorder on a
+            // non-overflowing bar — they don't conceal — so they cannot
+            // actually hide these modules; the Control Center preference can
+            // (write the module's key + restart the host). The earlier concern
+            // ("restarting the host cannot overcome assessment-mode collateral
+            // hiding") was about *keeping them visible* while the assertion is
+            // active — a different case that stays on the position/preserve
+            // path. For an explicit hide, the CC pref is the mechanism that
+            // works. `ccModuleManager.apply` only restarts when the set
+            // actually changes, so this never fires on the 1 Hz refresh.
             if let title = RuntimeModuleController.governableMenuExtraTitle(forItemIdentifier: identifier) {
                 ccHiddenTitles.insert(title)
             }
