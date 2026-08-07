@@ -496,6 +496,20 @@ nonisolated enum SearchIndex {
             property: .advanced("searchIncludeAlwaysHidden")
         ),
         SearchEntry(
+            id: "advanced.moveCursorToRevealedItem",
+            titleKey: "Move the pointer to revealed items",
+            titleText: "Move the pointer to revealed items",
+            descriptionText: """
+                When you open a menu bar item from the search panel, move the mouse \
+                pointer next to it, so its menu appears under the pointer.
+                """,
+            pane: .advanced,
+            sectionKey: "Menu Bar Search",
+            sectionText: "Menu Bar Search",
+            keywords: ["search", "cursor", "pointer", "mouse", "move"],
+            property: .advanced("moveCursorToRevealedItem")
+        ),
+        SearchEntry(
             id: "advanced.showMenuBarTooltips",
             titleKey: "Show tooltips in the menu bar",
             titleText: "Show tooltips in the menu bar",

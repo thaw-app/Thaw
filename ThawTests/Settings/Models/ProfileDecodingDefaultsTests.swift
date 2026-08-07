@@ -259,6 +259,7 @@ struct ProfileSnapshotLiveSettingsTests {
             settings.searchIncludeVisible = false
             settings.searchIncludeHidden = false
             settings.searchIncludeAlwaysHidden = false
+            settings.moveCursorToRevealedItem = true
 
             let snapshot = AdvancedSettingsSnapshot.capture(from: settings)
 
@@ -282,6 +283,7 @@ struct ProfileSnapshotLiveSettingsTests {
             #expect(snapshot.searchIncludeVisible == false)
             #expect(snapshot.searchIncludeHidden == false)
             #expect(snapshot.searchIncludeAlwaysHidden == false)
+            #expect(snapshot.moveCursorToRevealedItem)
             // Left at the compiled-in default; see the suite's deliberate gaps.
             #expect(snapshot.enableDiagnosticLogging == Defaults.DefaultValue.enableDiagnosticLogging)
         }
@@ -310,7 +312,8 @@ struct ProfileSnapshotLiveSettingsTests {
                 searchSectionOrder: ["alwaysHidden", "hidden", "visible"],
                 searchIncludeVisible: false,
                 searchIncludeHidden: false,
-                searchIncludeAlwaysHidden: false
+                searchIncludeAlwaysHidden: false,
+                moveCursorToRevealedItem: true
             )
 
             snapshot.apply(to: settings)
@@ -333,6 +336,7 @@ struct ProfileSnapshotLiveSettingsTests {
             #expect(settings.searchIncludeVisible == false)
             #expect(settings.searchIncludeHidden == false)
             #expect(settings.searchIncludeAlwaysHidden == false)
+            #expect(settings.moveCursorToRevealedItem)
         }
     }
 

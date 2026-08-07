@@ -19,6 +19,7 @@ struct AdvancedSettingsPane: View {
         IceForm {
             IceSection("Menu Bar Search") {
                 searchSectionOrdering
+                moveCursorToRevealedItem
             }
             IceSection("Tooltips") {
                 if appState.hasPermission(.screenRecording) {
@@ -187,6 +188,19 @@ struct AdvancedSettingsPane: View {
         case .alwaysHidden:
             return $settings.searchIncludeAlwaysHidden
         }
+    }
+
+    private var moveCursorToRevealedItem: some View {
+        Toggle(
+            "Move the pointer to revealed items",
+            isOn: $settings.moveCursorToRevealedItem
+        )
+        .annotation(
+            """
+            When you open a menu bar item from the search panel, move the mouse \
+            pointer next to it, so its menu appears under the pointer.
+            """
+        )
     }
 
     private func moveSearchSection(_ name: MenuBarSection.Name, by offset: Int) {

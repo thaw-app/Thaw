@@ -757,7 +757,27 @@ private struct MenuBarSearchContentView: View {
             // as the panel hides rather than waiting a fixed 25 ms.
             await panel.waitUntilClosed(timeout: .milliseconds(200))
             await itemManager.activate(item: item, on: displayID)
+            if appState.settings.advanced.moveCursorToRevealedItem {
+                moveCursor(to: item)
+            }
         }
+    }
+
+    /// Moves the pointer onto `item` once it has been revealed, so that the
+    /// menu it opened sits under the pointer.
+    private func moveCursor(to item: MenuBarItem) {
+        // The cached bounds predate the reveal, so read the live window
+        // bounds to find where the item actually ended up.
+        let bounds = Bridging.getWindowBounds(for: item.windowID) ?? item.bounds
+        guard
+            let point = MouseHelpers.cursorPoint(
+                overItemWithBounds: bounds,
+                displayBounds: NSScreen.screens.map { CGDisplayBounds($0.displayID) }
+            )
+        else {
+            return
+        }
+        MouseHelpers.warpCursor(to: point)
     }
 }
 

@@ -204,6 +204,28 @@ nonisolated enum MouseHelpers {
         }
     }
 
+    /// Returns the point to warp the cursor to in order to place it over a
+    /// menu bar item, or `nil` if the item isn't on any of the given displays.
+    ///
+    /// `CGWarpMouseCursorPosition` clamps an offscreen point to the leftmost
+    /// edge of a display, which sits under the Apple menu, so an item that is
+    /// offscreen has to be left alone rather than warped to.
+    ///
+    /// - Parameters:
+    ///   - bounds: The bounds of the item in global display coordinates.
+    ///   - displayBounds: The bounds of the available displays in global
+    ///     display coordinates.
+    static func cursorPoint(overItemWithBounds bounds: CGRect, displayBounds: [CGRect]) -> CGPoint? {
+        guard !bounds.isEmpty else {
+            return nil
+        }
+        let point = CGPoint(x: bounds.midX, y: bounds.midY)
+        guard displayBounds.contains(where: { $0.contains(point) }) else {
+            return nil
+        }
+        return point
+    }
+
     /// Returns the cursor to `point` after an operation that moved it.
     ///
     /// An unconditional warp, matching what these call sites did before the

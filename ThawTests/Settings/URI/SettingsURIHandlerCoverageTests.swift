@@ -70,6 +70,7 @@ private let booleanKeys: [String] = [
     "searchIncludeVisible",
     "searchIncludeHidden",
     "searchIncludeAlwaysHidden",
+    "moveCursorToRevealedItem",
 ]
 
 /// See ``booleanKeys`` for why these are copies.

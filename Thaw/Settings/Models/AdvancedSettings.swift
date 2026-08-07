@@ -206,6 +206,19 @@ final class AdvancedSettings {
         }
     }
 
+    /// A Boolean value that indicates whether the mouse pointer is moved to a
+    /// menu bar item that was opened from the search panel.
+    ///
+    /// Only the search panel warps the pointer. Opening an item from the Thaw
+    /// Bar means the pointer is already there, so moving it would only take it
+    /// somewhere the user did not put it.
+    var moveCursorToRevealedItem = Defaults.DefaultValue.moveCursorToRevealedItem {
+        didSet {
+            guard oldValue != moveCursorToRevealedItem else { return }
+            Defaults.set(moveCursorToRevealedItem, forKey: .moveCursorToRevealedItem)
+        }
+    }
+
     /// Storage for internal observers.
     @ObservationIgnored
     private var cancellables = Set<AnyCancellable>()
@@ -246,6 +259,7 @@ final class AdvancedSettings {
         Defaults.ifPresent(key: .searchIncludeVisible, assign: &searchIncludeVisible)
         Defaults.ifPresent(key: .searchIncludeHidden, assign: &searchIncludeHidden)
         Defaults.ifPresent(key: .searchIncludeAlwaysHidden, assign: &searchIncludeAlwaysHidden)
+        Defaults.ifPresent(key: .moveCursorToRevealedItem, assign: &moveCursorToRevealedItem)
 
         Defaults.ifPresent(key: .sectionDividerStyle) { rawValue in
             if let style = SectionDividerStyle(rawValue: rawValue) {
@@ -318,6 +332,8 @@ final class AdvancedSettings {
                 searchIncludeHidden = boolValue
             case "searchIncludeAlwaysHidden":
                 searchIncludeAlwaysHidden = boolValue
+            case "moveCursorToRevealedItem":
+                moveCursorToRevealedItem = boolValue
             default:
                 // Key not handled by AdvancedSettings
                 break

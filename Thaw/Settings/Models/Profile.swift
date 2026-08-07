@@ -113,6 +113,7 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
     var searchIncludeVisible: Bool
     var searchIncludeHidden: Bool
     var searchIncludeAlwaysHidden: Bool
+    var moveCursorToRevealedItem: Bool
 
     @MainActor
     static func capture(from settings: AdvancedSettings) -> AdvancedSettingsSnapshot {
@@ -135,7 +136,8 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
             searchSectionOrder: settings.searchSectionOrder.map(\.rawValue),
             searchIncludeVisible: settings.searchIncludeVisible,
             searchIncludeHidden: settings.searchIncludeHidden,
-            searchIncludeAlwaysHidden: settings.searchIncludeAlwaysHidden
+            searchIncludeAlwaysHidden: settings.searchIncludeAlwaysHidden,
+            moveCursorToRevealedItem: settings.moveCursorToRevealedItem
         )
     }
 
@@ -162,6 +164,7 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
         settings.searchIncludeVisible = searchIncludeVisible
         settings.searchIncludeHidden = searchIncludeHidden
         settings.searchIncludeAlwaysHidden = searchIncludeAlwaysHidden
+        settings.moveCursorToRevealedItem = moveCursorToRevealedItem
     }
 
     enum CodingKeys: String, CodingKey {
@@ -184,6 +187,7 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
         case searchIncludeVisible
         case searchIncludeHidden
         case searchIncludeAlwaysHidden
+        case moveCursorToRevealedItem
     }
 
     init(
@@ -205,7 +209,8 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
         searchSectionOrder: [String],
         searchIncludeVisible: Bool,
         searchIncludeHidden: Bool,
-        searchIncludeAlwaysHidden: Bool
+        searchIncludeAlwaysHidden: Bool,
+        moveCursorToRevealedItem: Bool = Defaults.DefaultValue.moveCursorToRevealedItem
     ) {
         self.enableAlwaysHiddenSection = enableAlwaysHiddenSection
         self.showAllSectionsOnUserDrag = showAllSectionsOnUserDrag
@@ -226,6 +231,7 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
         self.searchIncludeVisible = searchIncludeVisible
         self.searchIncludeHidden = searchIncludeHidden
         self.searchIncludeAlwaysHidden = searchIncludeAlwaysHidden
+        self.moveCursorToRevealedItem = moveCursorToRevealedItem
     }
 
     init(from decoder: Decoder) throws {
@@ -287,6 +293,9 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
         searchIncludeAlwaysHidden = try container.decodeIfPresent(
             Bool.self, forKey: .searchIncludeAlwaysHidden
         ) ?? Defaults.DefaultValue.searchIncludeAlwaysHidden
+        moveCursorToRevealedItem = try container.decodeIfPresent(
+            Bool.self, forKey: .moveCursorToRevealedItem
+        ) ?? Defaults.DefaultValue.moveCursorToRevealedItem
     }
 }
 
@@ -514,7 +523,8 @@ nonisolated struct Profile: Codable, Identifiable {
             searchSectionOrder: Defaults.DefaultValue.searchSectionOrder,
             searchIncludeVisible: Defaults.DefaultValue.searchIncludeVisible,
             searchIncludeHidden: Defaults.DefaultValue.searchIncludeHidden,
-            searchIncludeAlwaysHidden: Defaults.DefaultValue.searchIncludeAlwaysHidden
+            searchIncludeAlwaysHidden: Defaults.DefaultValue.searchIncludeAlwaysHidden,
+            moveCursorToRevealedItem: Defaults.DefaultValue.moveCursorToRevealedItem
         )
 
         hotkeys = try container.decodeIfPresent(

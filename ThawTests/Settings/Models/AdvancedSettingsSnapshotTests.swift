@@ -427,5 +427,17 @@ struct AdvancedSettingsSnapshotTests {
         #expect(decoded.searchIncludeVisible == Defaults.DefaultValue.searchIncludeVisible)
         #expect(decoded.searchIncludeHidden == Defaults.DefaultValue.searchIncludeHidden)
         #expect(decoded.searchIncludeAlwaysHidden == Defaults.DefaultValue.searchIncludeAlwaysHidden)
+        #expect(decoded.moveCursorToRevealedItem == Defaults.DefaultValue.moveCursorToRevealedItem)
+    }
+
+    @Test("The pointer-move setting round-trips")
+    func moveCursorToRevealedItemRoundTrip() throws {
+        var snapshot = makeDefaultSnapshot()
+        snapshot.moveCursorToRevealedItem = true
+
+        let data = try encoder.encode(snapshot)
+        let decoded = try decoder.decode(AdvancedSettingsSnapshot.self, from: data)
+
+        #expect(decoded.moveCursorToRevealedItem)
     }
 }

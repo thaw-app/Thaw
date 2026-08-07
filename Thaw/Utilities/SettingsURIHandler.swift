@@ -50,6 +50,7 @@ enum SettingsURIHandler {
         "searchIncludeVisible",
         "searchIncludeHidden",
         "searchIncludeAlwaysHidden",
+        "moveCursorToRevealedItem",
     ]
 
     /// Double/numeric settings with ranges
@@ -99,6 +100,7 @@ enum SettingsURIHandler {
         "searchIncludeVisible": .searchIncludeVisible,
         "searchIncludeHidden": .searchIncludeHidden,
         "searchIncludeAlwaysHidden": .searchIncludeAlwaysHidden,
+        "moveCursorToRevealedItem": .moveCursorToRevealedItem,
         "rehideInterval": .rehideInterval,
         "showOnHoverDelay": .showOnHoverDelay,
         "tooltipDelay": .tooltipDelay,

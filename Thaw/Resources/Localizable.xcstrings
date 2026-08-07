@@ -29820,6 +29820,125 @@
         }
       }
     },
+    "Move the pointer to revealed items" : {
+      "comment" : "Toggle in the Search section of the Advanced pane. Warps the mouse pointer to a menu bar item opened from the search panel.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Přesunout ukazatel na zobrazené ikony"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Mauszeiger zum eingeblendeten Eintrag bewegen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Mover el cursor a los elementos mostrados"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Déplacer le pointeur vers les éléments affichés"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Egérmutató a megjelenített elemhez"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Pindahkan penunjuk ke item yang ditampilkan"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sposta il puntatore sugli elementi mostrati"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "表示した項目にポインターを移動"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "표시된 항목으로 포인터 이동"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Muisaanwijzer naar getoonde items verplaatsen"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Przesuwaj kursor do pokazanych elementów"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Mover o ponteiro para os itens exibidos"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Перемещать указатель к показанным элементам"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "ย้ายตัวชี้ไปยังรายการที่แสดง"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "İmleci gösterilen ögeye taşı"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Переміщати курсор до показаних об'єктів"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Di chuyển con trỏ đến mục được hiện"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "将指针移动到显示的项目"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "將游標移至顯示的項目"
+          }
+        }
+      }
+    },
     "Move up" : {
       "comment" : "Accessibility label for the up-chevron button that reorders a row to a higher position in a list.",
       "localizations" : {
@@ -51433,6 +51552,125 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "當應用程式透過 thaw:// URL 變更設定時，Thaw 會檢查該程式是否在白名單中。"
+          }
+        }
+      }
+    },
+    "When you open a menu bar item from the search panel, move the mouse pointer next to it, so its menu appears under the pointer." : {
+      "comment" : "Annotation for the Move-the-pointer-to-revealed-items toggle.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Když otevřete ikonu řádku nabídek z vyhledávacího panelu, přesune se ukazatel myši k ní, takže se její nabídka objeví pod ukazatelem."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Wenn du einen Menüleisten-Eintrag über die Suchleiste öffnest, wird der Mauszeiger daneben bewegt, sodass sein Menü unter dem Zeiger erscheint."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Cuando abras un elemento de la barra de menús desde el panel de búsqueda, el cursor se moverá junto a él, de modo que su menú aparezca debajo del cursor."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Lorsque vous ouvrez un élément de la barre des menus depuis le panneau de recherche, le pointeur de la souris se place à côté de celui-ci, afin que son menu apparaisse sous le pointeur."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Amikor egy menüsor elemet a keresőpanelről nyitsz meg, az egérmutató mellé kerül, így a menüje a mutató alatt jelenik meg."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Saat kamu membuka item bar menu dari panel pencarian, penunjuk dipindahkan ke sebelahnya sehingga menunya muncul di bawah penunjuk."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Quando apri un elemento della barra dei menu dal pannello di ricerca, il puntatore del mouse viene spostato accanto a esso, così il suo menu compare sotto il puntatore."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "検索パネルからメニューバー項目を開くと、マウスポインターがその項目の隣に移動し、メニューがポインターの下に表示されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "검색 패널에서 메뉴 막대 항목을 열면 마우스 포인터가 그 옆으로 이동해 메뉴가 포인터 아래에 나타납니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Wanneer je een menubalkitem opent via het zoekvenster, verplaatst de muisaanwijzer zich ernaartoe, zodat het menu onder de aanwijzer verschijnt."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Gdy otworzysz element paska menu z panelu wyszukiwania, kursor myszy przesunie się obok niego, dzięki czemu jego menu pojawi się pod kursorem."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Quando você abre um item da barra de menus pelo painel de busca, o ponteiro do mouse é movido para perto dele, de modo que o menu apareça sob o ponteiro."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Когда вы открываете элемент строки меню с панели поиска, указатель мыши перемещается к нему, и его меню появляется под указателем."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "เมื่อคุณเปิดรายการในแถบเมนูจากแผงค้นหา ตัวชี้เมาส์จะย้ายไปอยู่ข้าง ๆ รายการนั้น เมนูจึงปรากฏใต้ตัวชี้"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Bir menü çubuğu ögesini arama panelinden açtığınızda, fare imleci ögenin yanına taşınır ve menüsü imlecin altında görünür."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Коли ви відкриваєте об'єкт рядка меню з панелі пошуку, курсор миші переміщується до нього, тож його меню з'являється під курсором."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Khi bạn mở một mục trên thanh menu từ bảng tìm kiếm, con trỏ chuột sẽ di chuyển đến bên cạnh mục đó, để menu của nó xuất hiện ngay dưới con trỏ."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "从搜索面板打开菜单栏项目时，鼠标指针会移动到该项目旁边，使其菜单显示在指针下方。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "從搜尋面板開啟選單列項目時，滑鼠游標會移到該項目旁邊，使其選單顯示在游標下方。"
           }
         }
       }

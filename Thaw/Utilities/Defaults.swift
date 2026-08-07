@@ -204,6 +204,7 @@ nonisolated extension Defaults {
         static let searchIncludeVisible = true
         static let searchIncludeHidden = true
         static let searchIncludeAlwaysHidden = true
+        static let moveCursorToRevealedItem = false
 
         // MARK: Hotkeys Settings
 
@@ -287,6 +288,7 @@ nonisolated extension Defaults {
         case searchIncludeVisible = "SearchIncludeVisible"
         case searchIncludeHidden = "SearchIncludeHidden"
         case searchIncludeAlwaysHidden = "SearchIncludeAlwaysHidden"
+        case moveCursorToRevealedItem = "MoveCursorToRevealedItem"
 
         // MARK: Internal
 

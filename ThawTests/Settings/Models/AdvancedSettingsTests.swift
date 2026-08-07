@@ -101,6 +101,7 @@ struct AdvancedSettingsTests {
             Defaults.set(false, forKey: .searchIncludeVisible)
             Defaults.set(false, forKey: .searchIncludeHidden)
             Defaults.set(false, forKey: .searchIncludeAlwaysHidden)
+            Defaults.set(true, forKey: .moveCursorToRevealedItem)
 
             let settings = makeSettings()
 
@@ -121,6 +122,7 @@ struct AdvancedSettingsTests {
             #expect(!settings.searchIncludeVisible)
             #expect(!settings.searchIncludeHidden)
             #expect(!settings.searchIncludeAlwaysHidden)
+            #expect(settings.moveCursorToRevealedItem)
         }
     }
 
@@ -214,7 +216,9 @@ struct AdvancedSettingsTests {
             settings.tooltipDelay = 1.25
             settings.sectionDividerStyle = .chevron
             settings.searchSectionOrder = [.alwaysHidden, .hidden, .visible]
+            settings.moveCursorToRevealedItem = true
 
+            #expect(Defaults.bool(forKey: .moveCursorToRevealedItem))
             #expect(Defaults.bool(forKey: .enableAlwaysHiddenSection))
             #expect(Defaults.double(forKey: .tooltipDelay) == 1.25)
             #expect(Defaults.integer(forKey: .sectionDividerStyle) == SectionDividerStyle.chevron.rawValue)
@@ -287,6 +291,17 @@ struct AdvancedSettingsTests {
             #expect(!settings.searchIncludeVisible)
             #expect(!settings.searchIncludeHidden)
             #expect(!settings.searchIncludeAlwaysHidden)
+        }
+    }
+
+    @Test("An external change to the pointer-move setting updates it")
+    func externalMoveCursorChangeIsApplied() async throws {
+        try await withScratchDefaults { _ in
+            let settings = makeSettings()
+
+            await postExternalChange(["key": "moveCursorToRevealedItem", "value": true])
+
+            #expect(settings.moveCursorToRevealedItem)
         }
     }
 
