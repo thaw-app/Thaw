@@ -148,4 +148,18 @@ struct ShouldPersistSavedOrderTests {
             )
         ))
     }
+
+    /// An unfinished move batch blocks the save: the bulk apply planned
+    /// moves it never enacted, so what the bar shows is where the batch
+    /// stopped rather than a layout anyone chose. Persisting it replaces
+    /// the order the batch was restoring, and the next pass then measures
+    /// against the partial result — the drift #900 describes.
+    @Test("An unfinished move batch blocks the save")
+    func unfinishedMoveBatchBlocks() {
+        #expect(!LayoutSolver.shouldPersistSavedOrder(
+            .init(
+                hasUnfinishedMoveBatch: true
+            )
+        ))
+    }
 }

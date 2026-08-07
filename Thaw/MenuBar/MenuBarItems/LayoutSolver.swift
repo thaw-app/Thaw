@@ -1342,6 +1342,15 @@ nonisolated enum LayoutSolver {
     /// the pending-divergence arm is cleared and the next cache cycle
     /// sees a settled layout safe to persist.
     ///
+    /// `hasUnfinishedMoveBatch` blocks the save when the last bulk apply
+    /// planned moves it never enacted (#900). What the bar shows then is
+    /// neither the arrangement the user chose nor the one macOS had: it
+    /// is the arrangement the batch happened to reach before it gave up.
+    /// Persisting it overwrites the layout the batch was trying to
+    /// restore, so the next pass measures against the partial result and
+    /// the bar walks a little further each time instead of converging.
+    /// Holding the old order keeps a fixed target for the retry.
+    ///
     /// Pure over its inputs so the gate can be characterized without
     /// instantiating MenuBarItemManager. Any future addition to the
     /// gate (new in-flight signal) should extend both this function
@@ -1354,12 +1363,13 @@ nonisolated enum LayoutSolver {
             gate.temporarilyShownItemContextsIsEmpty &&
             gate.alwaysHiddenSectionResolved &&
             gate.hiddenSectionHasRoom &&
-            !gate.hasPendingDivergence
+            !gate.hasPendingDivergence &&
+            !gate.hasUnfinishedMoveBatch
     }
 
     /// The signals ``shouldPersistSavedOrder(_:)`` reads.
     ///
-    /// Bundled rather than passed as eight positional flags. A new
+    /// Bundled rather than passed as nine positional flags. A new
     /// in-flight signal then extends this type instead of every call site,
     /// which is what the note above asks for, and the defaults spell out
     /// the permissive state — the one where persisting is safe — so a call
@@ -1373,6 +1383,7 @@ nonisolated enum LayoutSolver {
         var alwaysHiddenSectionResolved = true
         var hiddenSectionHasRoom = true
         var hasPendingDivergence = false
+        var hasUnfinishedMoveBatch = false
     }
 
     /// Whether the always-hidden section is resolved well enough for the

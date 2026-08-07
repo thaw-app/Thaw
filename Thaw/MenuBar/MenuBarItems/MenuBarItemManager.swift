@@ -557,6 +557,28 @@ final class MenuBarItemManager {
     /// `confirmedDivergence(divergedNow:pendingSince:now:staleness:)`.
     private var pendingDivergenceObservedAt: ContinuousClock.Instant?
 
+    /// When the most recent bulk apply finished with moves it had planned
+    /// but never enacted. `nil` when the last apply enacted everything it
+    /// planned, which is the state in which the live bar is an order of
+    /// record. See `unfinishedMoveBatchBlocksSave(observedAt:now:)`.
+    private var unfinishedMoveBatchObservedAt: ContinuousClock.Instant?
+
+    /// Records how a bulk apply ended, for the saveSectionOrder gate.
+    ///
+    /// A clean batch clears the arm rather than leaving it to expire: the
+    /// bar now matches what the apply set out to produce, and there is no
+    /// reason to keep withholding it from the saved order.
+    private func recordBulkApplyOutcome(unenactedMoveCount: Int) {
+        guard unenactedMoveCount > 0 else {
+            unfinishedMoveBatchObservedAt = nil
+            return
+        }
+        unfinishedMoveBatchObservedAt = .now
+        MenuBarItemManager.diagLog.warning(
+            "Profile layout: \(unenactedMoveCount) planned move(s) left unenacted; withholding the current arrangement from the saved order"
+        )
+    }
+
     /// How long a failed item stays excluded from bulk-apply moves.
     ///
     /// Kept as a forwarding shim so callers and tests do not have to reach
@@ -2538,6 +2560,15 @@ extension MenuBarItemManager {
 
         let hasPendingDivergence = pendingDivergenceObservedAt != nil
 
+        // The bar after a batch that gave up partway is the batch's own
+        // wreckage, not a layout anyone chose. Recording it hands the next
+        // pass a target it just moved, which is how a failed apply turns
+        // into a bar that drifts a little further on every retry (#900).
+        let hasUnfinishedMoveBatch = Self.unfinishedMoveBatchBlocksSave(
+            observedAt: unfinishedMoveBatchObservedAt,
+            now: .now
+        )
+
         if LayoutSolver.shouldPersistSavedOrder(
             LayoutSolver.SavedOrderGate(
                 isRestoringItemOrder: isRestoringItemOrder,
@@ -2547,7 +2578,8 @@ extension MenuBarItemManager {
                 temporarilyShownItemContextsIsEmpty: temporarilyShownItemContexts.isEmpty,
                 alwaysHiddenSectionResolved: alwaysHiddenSectionResolved,
                 hiddenSectionHasRoom: hiddenSectionHasRoom,
-                hasPendingDivergence: hasPendingDivergence
+                hasPendingDivergence: hasPendingDivergence,
+                hasUnfinishedMoveBatch: hasUnfinishedMoveBatch
             )
         ) {
             // Don't persist if any items are in a transient blocked state (x=-1).
@@ -2611,6 +2643,14 @@ extension MenuBarItemManager {
             // correction, after which the next cycle sees a settled layout.
             MenuBarItemManager.diagLog.warning(
                 "Skipping saveSectionOrder; layout divergence pending confirmation (applySavedLayout has not yet restored the cached layout)"
+            )
+        } else if hasUnfinishedMoveBatch {
+            // Warning level, like the two above, because a run of these is
+            // the signature of a bar that cannot be restored at all: the
+            // apply keeps failing, so the saved order keeps being withheld,
+            // and the user sees their layout never take (#900).
+            MenuBarItemManager.diagLog.warning(
+                "Skipping saveSectionOrder; the last bulk apply left planned moves unenacted, so the current arrangement is partial"
             )
         }
         MenuBarItemManager.diagLog.debug("Updated menu bar item cache: visible=\(context.cache[.visible].count), hidden=\(context.cache[.hidden].count), alwaysHidden=\(context.cache[.alwaysHidden].count)")
@@ -8072,6 +8112,11 @@ extension MenuBarItemManager {
         // a control item is cheaper than moving individual items.
         var movedCount = 0
         var didAttemptHCtrl = false
+        // Moves this batch planned for an item that is still on the bar and
+        // then did not enact. Any of these leaves the bar in an arrangement
+        // nobody asked for, which the saveSectionOrder gate must not treat
+        // as an order of record (#900).
+        var unenactedMoveCount = 0
 
         // Classify items into the two sets Phase 1 actually consults.
         // Read from the sectionByWindowID snapshot built earlier so the
@@ -8216,6 +8261,7 @@ extension MenuBarItemManager {
                         movedCount += 1
                         try? await Task.sleep(for: .milliseconds(200))
                     } catch {
+                        unenactedMoveCount += 1
                         MenuBarItemManager.diagLog.error("Profile layout: failed to move H_ctrl: \(error)")
                     }
                 }
@@ -8338,6 +8384,7 @@ extension MenuBarItemManager {
                         movedCount += 1
                         try? await Task.sleep(for: .milliseconds(200))
                     } catch {
+                        unenactedMoveCount += 1
                         MenuBarItemManager.diagLog.error("Profile layout: failed to move AH_ctrl: \(error)")
                     }
                 }
@@ -8420,6 +8467,7 @@ extension MenuBarItemManager {
                             movedCount += 1
                             try? await Task.sleep(for: .milliseconds(100))
                         } catch {
+                            unenactedMoveCount += 1
                             MenuBarItemManager.diagLog.error(
                                 "Profile layout: per-item move to AH failed for \(uid): \(error)"
                             )
@@ -8445,6 +8493,7 @@ extension MenuBarItemManager {
                             movedCount += 1
                             try? await Task.sleep(for: .milliseconds(100))
                         } catch {
+                            unenactedMoveCount += 1
                             MenuBarItemManager.diagLog.error(
                                 "Profile layout: per-item move to hidden failed for \(uid): \(error)"
                             )
@@ -8469,6 +8518,11 @@ extension MenuBarItemManager {
                 alwaysHiddenControlItemWindowID: alwaysHiddenWID
             ) else {
                 MenuBarItemManager.diagLog.error("applyProfileLayout: lost control items after phase 1")
+                // Abandoning here is itself an unenacted move: the LCS pass
+                // never ran, and without the dividers the sections read back
+                // from the bar are not the ones this apply was producing.
+                unenactedMoveCount += 1
+                recordBulkApplyOutcome(unenactedMoveCount: unenactedMoveCount)
                 clearProfileState(source: source, items: items)
                 scheduleDeferredCacheRefresh()
                 return
@@ -8514,6 +8568,11 @@ extension MenuBarItemManager {
             } else {
                 MenuBarItemManager.diagLog.info("Profile layout: all items already in correct positions")
             }
+            // A control item that refused to move counts even when the LCS
+            // pass has nothing left to plan: the divider is the boundary
+            // that decides which section every item is in, so the sections
+            // the cache reads back are not the ones this apply intended.
+            recordBulkApplyOutcome(unenactedMoveCount: unenactedMoveCount)
             concludeProfileApplyWithoutMoves(source: source, items: items)
             scheduleDeferredCacheRefresh()
             return
@@ -8523,10 +8582,14 @@ extension MenuBarItemManager {
             "Profile layout: \(plannedMoves.count) item move(s) needed (\(movedCount) control move(s) preceded)"
         )
 
-        for planned in plannedMoves {
+        for (plannedIndex, planned) in plannedMoves.enumerated() {
+            // A cancelled sequence is one a newer apply replaced, and that
+            // apply owns the arrangement from here on, so its own tally is
+            // the one the gate should read. Leave the remainder uncounted.
             guard !Task.isCancelled else { break }
 
             if failureLedger.isUnderBackoff(key: planned.uid) {
+                unenactedMoveCount += 1
                 MenuBarItemManager.diagLog.warning(
                     "Profile layout: \(planned.uid) under move-failure backoff, skipping"
                 )
@@ -8540,6 +8603,9 @@ extension MenuBarItemManager {
                 hiddenControlItemWindowID: hiddenWID,
                 alwaysHiddenControlItemWindowID: alwaysHiddenWID
             ) else {
+                // Losing the dividers abandons this move and every one
+                // after it, so the whole remainder goes unenacted.
+                unenactedMoveCount += plannedMoves.count - plannedIndex
                 break
             }
 
@@ -8568,6 +8634,7 @@ extension MenuBarItemManager {
                 failureLedger.recordSuccess(for: item)
                 try? await Task.sleep(for: .milliseconds(200))
             } catch {
+                unenactedMoveCount += 1
                 failureLedger.recordFailure(for: item, kind: Self.failureKind(of: error))
                 MenuBarItemManager.diagLog.error(
                     "Profile layout: failed to move \(planned.uid): \(error)"
@@ -8576,6 +8643,8 @@ extension MenuBarItemManager {
         }
 
         MenuBarItemManager.diagLog.info("Profile layout: completed with \(movedCount) move(s)")
+
+        recordBulkApplyOutcome(unenactedMoveCount: unenactedMoveCount)
 
         // Last move has landed; nothing below touches the cursor.
         restoreCursor()
@@ -8872,6 +8941,29 @@ extension MenuBarItemManager {
         }
         // Second consecutive observation within the staleness window: confirmed.
         return (true, nil)
+    }
+
+    /// Whether a bulk apply that left moves unenacted should still hold
+    /// the saveSectionOrder gate shut.
+    ///
+    /// The block is time-bounded rather than held until an apply finally
+    /// comes back clean. A batch can fail on an item whose owner never
+    /// responds, and the failure ledger's backoff eventually stops the
+    /// retries altogether; without a bound, one such item would freeze
+    /// the saved layout for the rest of the session and a rearrangement
+    /// the user made by hand would never be recorded. The window matches
+    /// `confirmedDivergence`'s: long enough for the retry apply, which
+    /// needs two consecutive divergence observations before it dispatches,
+    /// to run and clear the arm itself.
+    static nonisolated func unfinishedMoveBatchBlocksSave(
+        observedAt: ContinuousClock.Instant?,
+        now: ContinuousClock.Instant,
+        staleness: Duration = .seconds(30)
+    ) -> Bool {
+        guard let observedAt else {
+            return false
+        }
+        return now - observedAt <= staleness
     }
 
     func applySavedLayout(
