@@ -805,7 +805,17 @@ nonisolated extension Bridging {
             guard let screenBounds, !screenBounds.isNull else {
                 return unionBounds
             }
-            if usedRefreshedTopology, screenBounds.intersection(unionBounds).isNull {
+            // `isEmpty`, not `isNull`: CGRect.intersection only returns the
+            // null rect when the rects are fully disjoint. Rects that merely
+            // touch along an edge intersect to a zero-width or zero-height
+            // rect that reports `isNull == false`, which let a stale caller
+            // rect through as if it still overlapped. `isEmpty` covers the
+            // null rect and the zero-area ones together.
+            //
+            // The rule below is about Set; these are CGRects, and CGRect has
+            // no `isDisjoint(with:)`.
+            // swiftlint:disable:next is_disjoint
+            if usedRefreshedTopology, screenBounds.intersection(unionBounds).isEmpty {
                 diagLog.warning("captureWindowsImageSCK: caller screenBounds=\(screenBounds) no longer overlaps refreshed unionBounds=\(unionBounds); using unionBounds")
                 return unionBounds
             }
