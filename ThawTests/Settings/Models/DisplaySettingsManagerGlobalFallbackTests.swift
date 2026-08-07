@@ -92,6 +92,48 @@ final class DisplaySettingsManagerGlobalFallbackTests {
         }
     }
 
+    /// The offset behind these cases is what gets pushed into
+    /// `MenuBarItemSpacingManager.offset` at launch, on a display transition,
+    /// and on a profile apply. A profile apply used to skip the push when the
+    /// incoming configurations matched the live ones, leaving the offset at
+    /// its launch value of 0 and relaunching every menu bar app to write the
+    /// system default over the user's spacing.
+    @Test("The active display's offset comes from the global fallback")
+    func activeDisplaySpacingOffsetFallsBackToGlobalConfiguration() throws {
+        try withScratchDefaults { _ in
+            #expect(makeManager().activeDisplaySpacingOffset == -16)
+        }
+    }
+
+    @Test("The active display's offset comes from its explicit configuration")
+    func activeDisplaySpacingOffsetUsesExplicitConfiguration() throws {
+        try withScratchDefaults { _ in
+            guard let uuid = Bridging.getActiveMenuBarDisplayUUID() else {
+                return // No resolvable display in this environment.
+            }
+            let explicit = DisplayIceBarConfiguration
+                .defaultConfiguration
+                .withItemSpacingOffset(9)
+            let manager = makeManager(configurations: [uuid: explicit])
+
+            #expect(manager.activeDisplaySpacingOffset == 9)
+        }
+    }
+
+    @Test(
+        "A fractional offset rounds to the nearest whole point",
+        arguments: [(2.4, 2), (2.5, 3), (-2.4, -2), (-2.6, -3)]
+    )
+    func activeDisplaySpacingOffsetRounds(stored: Double, expected: Int) throws {
+        try withScratchDefaults { _ in
+            let manager = makeManager(
+                globalConfiguration: .defaultConfiguration.withItemSpacingOffset(stored)
+            )
+
+            #expect(manager.activeDisplaySpacingOffset == expected)
+        }
+    }
+
     @Test("A UUID lookup uses its explicit configuration")
     func uuidLookupUsesExplicitConfiguration() throws {
         try withScratchDefaults { _ in

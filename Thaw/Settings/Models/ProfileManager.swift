@@ -351,6 +351,19 @@ final class ProfileManager {
             //    app state.
             self?.applySnapshot(profile, to: appState)
 
+            // Take the offset from the configuration the snapshot just
+            // installed, rather than trusting whatever spacingManager
+            // happens to be holding. The push that normally keeps it in
+            // sync lives in configurations.didSet, which guards on
+            // oldValue != configurations, so applying a profile whose
+            // display configurations already match the live ones — the
+            // usual case, since the profile is where they came from —
+            // leaves the offset at its launch value of 0. applyOffset()
+            // below would then write the system default over the user's
+            // spacing and relaunch every menu bar app to do it.
+            appState.spacingManager.offset = appState.settings.displaySettings
+                .activeDisplaySpacingOffset
+
             // Run the spacing apply BEFORE the layout pass. Otherwise the
             // two race: applyOffset() kills and relaunches every menu bar
             // app, so any positioning the layout task did up to that

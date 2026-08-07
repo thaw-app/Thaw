@@ -146,6 +146,29 @@ final class DisplaySettingsManager {
         self.appState = appState
         configureObservers()
         captureCurrentlyConnectedDisplays()
+        seedSpacingOffsetFromActiveDisplay()
+    }
+
+    /// Copies the active display's offset into the spacing manager at launch.
+    ///
+    /// `MenuBarItemSpacingManager.offset` starts at 0 on every launch, and the
+    /// only thing that writes it is ``applyActiveDisplaySpacing(reason:)``,
+    /// which runs from a genuine display transition or from a `configurations`
+    /// change that passes the equality guard. Neither happens on a plain
+    /// launch, so the offset stays at 0 while the on-disk spacing reflects
+    /// whatever the user last applied. Anything reading the offset then reads
+    /// a value the machine isn't running: `applyProfile` pushes it back to the
+    /// system default in a relaunch wave, and the notch overflow budget in
+    /// `MenuBarItemManager` mis-measures by the difference.
+    ///
+    /// Seeding only. Calling `applyOffset()` here would fire a relaunch wave
+    /// at launch, and there is nothing to apply anyway: the seeded value is
+    /// the one already in effect.
+    private func seedSpacingOffsetFromActiveDisplay() {
+        guard let appState else { return }
+        let offset = activeDisplaySpacingOffset
+        appState.spacingManager.offset = offset
+        diagLog.debug("Seeded spacingManager.offset=\(offset) from the active display at setup")
     }
 
     /// Merges info for currently-connected displays into the knownDisplays
@@ -436,7 +459,7 @@ final class DisplaySettingsManager {
     /// moving them.
     private func applyActiveDisplaySpacing(reason: String) {
         guard let appState else { return }
-        let desired = Int(configurationForActiveDisplay().itemSpacingOffset.rounded())
+        let desired = activeDisplaySpacingOffset
         // A display transition can fire the relaunch wave with no warning.
         // When confirmations are enabled and this apply would actually
         // relaunch apps, ask the user first. Declining keeps the current
@@ -792,6 +815,16 @@ final class DisplaySettingsManager {
             return globalConfiguration
         }
         return configuration(for: displayID)
+    }
+
+    /// The spacing offset the active display's configuration calls for.
+    ///
+    /// The single source of truth for what `MenuBarItemSpacingManager.offset`
+    /// should hold. Everything that pushes into that property reads it from
+    /// here, so a launch seed, a display transition, and a profile apply can't
+    /// disagree about which value is current.
+    var activeDisplaySpacingOffset: Int {
+        Int(configurationForActiveDisplay().itemSpacingOffset.rounded())
     }
 
     /// Whether the Thaw Bar is enabled for the given display.
