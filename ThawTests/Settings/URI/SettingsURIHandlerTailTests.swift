@@ -145,7 +145,7 @@ struct SettingsURIHandlerTailTests {
         /// request that named no display, and has to be scoped like one.
         @Test(
             "An empty display identifier scopes a set the same way omitting it does",
-            arguments: ["useIceBar", "alwaysShowHiddenItems", "iceBarLocation", "iceBarLayout", "gridColumns"]
+            arguments: ["useIceBar", "alwaysShowHiddenItems", "useThawBarForAlwaysHidden", "iceBarLocation", "iceBarLayout", "gridColumns"]
         )
         func emptyDisplayIdentifierFallsBackToTheDefaultScopeOnSet(_ key: String) throws {
             let value = switch key {
@@ -156,7 +156,7 @@ struct SettingsURIHandlerTailTests {
             }
             let expectedScope = switch key {
             case "useIceBar": "active"
-            case "alwaysShowHiddenItems": "allNonIceBar"
+            case "alwaysShowHiddenItems", "useThawBarForAlwaysHidden": "allNonIceBar"
             default: "allEnabled"
             }
 
@@ -172,7 +172,11 @@ struct SettingsURIHandlerTailTests {
 
         @Test(
             "An empty display identifier scopes a toggle the same way omitting it does",
-            arguments: [("useIceBar", "active"), ("alwaysShowHiddenItems", "allNonIceBar")]
+            arguments: [
+                ("useIceBar", "active"),
+                ("alwaysShowHiddenItems", "allNonIceBar"),
+                ("useThawBarForAlwaysHidden", "allNonIceBar"),
+            ]
         )
         func emptyDisplayIdentifierFallsBackToTheDefaultScopeOnToggle(_ pair: (String, String)) throws {
             let (key, expectedScope) = pair

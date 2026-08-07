@@ -383,7 +383,7 @@ struct DisplaySettingsManagerLookupTests {
 
         /// Every field of the template differs from `.defaultConfiguration`, so
         /// a lookup that quietly returned the hardcoded default rather than the
-        /// user's template would fail on all five.
+        /// user's template would fail on all six.
         @Test("Every typed lookup falls back to the template for an unresolvable display")
         func typedLookupsFallBackToTheTemplate() throws {
             try withScratchDefaults { _ in
@@ -392,6 +392,7 @@ struct DisplaySettingsManagerLookupTests {
                     .withUseIceBar(true)
                     .withIceBarLocation(.rightAligned)
                     .withAlwaysShowHiddenItems(true)
+                    .withUseThawBarForAlwaysHidden(true)
                     .withIceBarLayout(.grid)
                     .withGridColumns(9)
                 manager.configurations = [:]
@@ -399,6 +400,7 @@ struct DisplaySettingsManagerLookupTests {
                 #expect(manager.useIceBar(for: unresolvableDisplayID))
                 #expect(manager.iceBarLocation(for: unresolvableDisplayID) == .rightAligned)
                 #expect(manager.alwaysShowHiddenItems(for: unresolvableDisplayID))
+                #expect(manager.useThawBarForAlwaysHidden(for: unresolvableDisplayID))
                 #expect(manager.iceBarLayout(for: unresolvableDisplayID) == .grid)
                 #expect(manager.gridColumns(for: unresolvableDisplayID) == 9)
             }

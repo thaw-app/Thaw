@@ -296,7 +296,7 @@ struct SettingsURIHandlerApplyTests {
         }
     }
 
-    @Test("An invalid per-display boolean is refused", arguments: ["useIceBar", "alwaysShowHiddenItems"])
+    @Test("An invalid per-display boolean is refused", arguments: ["useIceBar", "alwaysShowHiddenItems", "useThawBarForAlwaysHidden"])
     func invalidPerDisplayBooleanIsRefused(_ key: String) throws {
         try withScratchDefaults { _ in
             #expect(!SettingsURIHandler.handleSet(key: key, value: "maybe", sender: "test"))

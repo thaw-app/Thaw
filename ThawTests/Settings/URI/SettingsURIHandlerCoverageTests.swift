@@ -272,15 +272,15 @@ struct SettingsURIHandlerCoverageTests {
     @MainActor
     @Suite("Toggling a named display")
     struct TogglingANamedDisplay {
-        /// The two Boolean per-display keys reach separate arms of
+        /// The Boolean per-display keys reach separate arms of
         /// `handlePerDisplayToggle`, and the "always show" one has never been
-        /// driven with a display identifier. Both have to behave identically:
+        /// driven with a display identifier. All have to behave identically:
         /// a toggle carries the flag and neither kind of value, because the
         /// reader is being told to flip whatever it holds, not to store
         /// something.
         @Test(
-            "Either Boolean per-display key can be toggled on a named display",
-            arguments: ["useIceBar", "alwaysShowHiddenItems"]
+            "Any Boolean per-display key can be toggled on a named display",
+            arguments: ["useIceBar", "alwaysShowHiddenItems", "useThawBarForAlwaysHidden"]
         )
         func namedDisplayToggleWorksForBothBooleanKeys(_ key: String) throws {
             try withScratchDefaults { _ in
@@ -313,7 +313,7 @@ struct SettingsURIHandlerCoverageTests {
         /// exist and reported success for a toggle that never happened.
         @Test(
             "A named-display toggle refuses an unknown display, like the set path",
-            arguments: ["useIceBar", "alwaysShowHiddenItems"]
+            arguments: ["useIceBar", "alwaysShowHiddenItems", "useThawBarForAlwaysHidden"]
         )
         func namedDisplayToggleRefusesAnUnknownDisplay(_ key: String) throws {
             try withScratchDefaults { _ in
@@ -331,6 +331,47 @@ struct SettingsURIHandlerCoverageTests {
                     ),
                     "\(key)"
                 )
+            }
+        }
+    }
+
+    // MARK: - Setting a named display
+
+    @MainActor
+    @Suite("Setting a named display")
+    struct SettingANamedDisplay {
+        /// The Boolean per-display keys reach separate arms of
+        /// `handlePerDisplaySetForSpecificDisplay`, so each has to be driven
+        /// with a display identifier: a set carries the parsed value and no
+        /// toggle flag, and a value the arm cannot parse is refused before
+        /// anything is posted.
+        @Test(
+            "Any Boolean per-display key can be set on a named display",
+            arguments: ["useIceBar", "alwaysShowHiddenItems", "useThawBarForAlwaysHidden"]
+        )
+        func namedDisplaySetWorksForBooleanKeys(_ key: String) throws {
+            try withScratchDefaults { _ in
+                // The set path requires the display to be known, so persist a
+                // configuration for it.
+                let uuid = UUID().uuidString
+                let seeded = try JSONEncoder().encode([uuid: DisplayIceBarConfiguration.defaultConfiguration])
+                Defaults.set(seeded, forKey: .displayIceBarConfigurations)
+                var accepted = false
+
+                let posted = notifications(named: .perDisplaySettingsDidChangeViaURI) {
+                    accepted = SettingsURIHandler.handleSet(key: key, value: "true", sender: "test", displayUUID: uuid)
+                }
+
+                #expect(accepted, "\(key)")
+                #expect(posted.count == 1, "\(key)")
+                let userInfo = try #require(posted.first?.userInfo, "\(key)")
+                #expect(userInfo["key"] as? String == key, "\(key)")
+                #expect(userInfo["scope"] as? String == "specific:\(uuid)", "\(key)")
+                #expect(userInfo["value"] as? Bool == true, "\(key)")
+                #expect(userInfo["toggle"] == nil, "\(key)")
+
+                // The same arm refuses a value it cannot parse as a Boolean.
+                #expect(!SettingsURIHandler.handleSet(key: key, value: "maybe", sender: "test", displayUUID: uuid), "\(key)")
             }
         }
     }
