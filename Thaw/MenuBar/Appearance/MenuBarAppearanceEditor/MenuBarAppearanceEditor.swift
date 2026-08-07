@@ -376,6 +376,13 @@ private struct LabeledBackgroundEditor: View {
 private struct UnlabeledShapeEditor: View {
     @Binding var configuration: MenuBarAppearancePartialConfiguration
 
+    /// The shape the border follows.
+    ///
+    /// There is no shape to trace on the menu bar when this is `noShape`, so
+    /// the menu bar side of the border row is disabled. The Thaw Bar draws its
+    /// border around its own panel and is unaffected.
+    let shapeKind: MenuBarShapeKind
+
     var body: some View {
         // No wrapping VStack: `IceSection` is a native grouped `Section` and
         // must remain a direct child of the enclosing `IceForm` list, which
@@ -459,7 +466,16 @@ private struct UnlabeledShapeEditor: View {
     }
 
     private var borderToggle: some View {
-        Toggle("Border", isOn: $configuration.hasBorder)
+        LabeledContent("Border") {
+            HStack {
+                Toggle("Menu Bar", isOn: $configuration.borderOnMenuBar)
+                    .disabled(shapeKind == .noShape)
+
+                Toggle("\(Constants.displayName) Bar", isOn: $configuration.borderOnThawBar)
+            }
+            .toggleStyle(.checkbox)
+            .frame(height: 24)
+        }
     }
 
     @ViewBuilder
@@ -523,9 +539,15 @@ private struct LabeledShapeEditor: View {
     private var partialEditor: some View {
         switch appearance {
         case .light:
-            UnlabeledShapeEditor(configuration: $configuration.lightModeConfiguration)
+            UnlabeledShapeEditor(
+                configuration: $configuration.lightModeConfiguration,
+                shapeKind: configuration.shapeKind
+            )
         case .dark:
-            UnlabeledShapeEditor(configuration: $configuration.darkModeConfiguration)
+            UnlabeledShapeEditor(
+                configuration: $configuration.darkModeConfiguration,
+                shapeKind: configuration.shapeKind
+            )
         }
     }
 }
@@ -534,7 +556,10 @@ private struct StaticShapeEditor: View {
     @Binding var configuration: MenuBarAppearanceConfigurationV2
 
     var body: some View {
-        UnlabeledShapeEditor(configuration: $configuration.staticConfiguration)
+        UnlabeledShapeEditor(
+            configuration: $configuration.staticConfiguration,
+            shapeKind: configuration.shapeKind
+        )
     }
 }
 

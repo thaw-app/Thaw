@@ -483,7 +483,7 @@ private struct IceBarContentView: View {
             .foregroundStyle(colorManager.colorInfo?.isBright(for: screen) == true ? .black : .white)
             .clipShape(clipShape)
 
-            if configuration.current.hasBorder {
+            if configuration.current.borderOnThawBar {
                 clipShape
                     .inset(by: configuration.current.borderWidth / 2)
                     .stroke(lineWidth: configuration.current.borderWidth)

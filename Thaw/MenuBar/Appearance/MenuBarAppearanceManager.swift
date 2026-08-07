@@ -44,7 +44,7 @@ final class MenuBarAppearanceManager {
         didSet {
             if let previewConfiguration {
                 let needsPanels = previewConfiguration.hasShadow
-                    || previewConfiguration.hasBorder
+                    || previewConfiguration.borderOnMenuBar
                     || configuration.shapeKind != .noShape
                     || previewConfiguration.tintKind != .noTint
                     || previewConfiguration.backgroundKind != .none
@@ -199,7 +199,7 @@ final class MenuBarAppearanceManager {
         if current.hasShadow {
             return true
         }
-        if current.hasBorder {
+        if current.borderOnMenuBar {
             return true
         }
         if configuration.shapeKind != .noShape {

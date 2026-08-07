@@ -118,7 +118,14 @@ nonisolated extension MenuBarAppearanceConfigurationV2: Codable {
 
 nonisolated struct MenuBarAppearancePartialConfiguration: Hashable {
     var hasShadow: Bool
-    var hasBorder: Bool
+    /// Whether the shape border is drawn around the menu bar overlay.
+    var borderOnMenuBar: Bool
+    /// Whether the shape border is drawn around the Thaw Bar.
+    ///
+    /// The Thaw Bar is the panel in `IceBar.swift`, which still carries the
+    /// `iceBar` prefix from Ice on everything that is persisted under an
+    /// existing defaults key. This one is new, so it uses the current name.
+    var borderOnThawBar: Bool
     var borderColor: CGColor
     var borderWidth: Double
     var tintKind: MenuBarTintKind
@@ -135,6 +142,23 @@ nonisolated struct MenuBarAppearancePartialConfiguration: Hashable {
     var backgroundBorderWidth: Double
     var backgroundGlassStyle: MenuBarGlassStyle
     var tintGlassStyle: MenuBarGlassStyle
+
+    /// Whether the shape border is drawn anywhere.
+    ///
+    /// Setting this turns the border on or off in both places at once, which
+    /// is what every caller predating the split means by it: the Ice import
+    /// in ``MenuBarAppearanceConfigurationV2/init(migrating:)`` carries over
+    /// a single flag, and the editor uses it to decide whether the colour and
+    /// width rows apply to anything at all.
+    var hasBorder: Bool {
+        get {
+            borderOnMenuBar || borderOnThawBar
+        }
+        set {
+            borderOnMenuBar = newValue
+            borderOnThawBar = newValue
+        }
+    }
 }
 
 // MARK: Default Partial Configuration
@@ -142,7 +166,8 @@ nonisolated struct MenuBarAppearancePartialConfiguration: Hashable {
 nonisolated extension MenuBarAppearancePartialConfiguration {
     static let defaultConfiguration = MenuBarAppearancePartialConfiguration(
         hasShadow: false,
-        hasBorder: false,
+        borderOnMenuBar: false,
+        borderOnThawBar: false,
         borderColor: .black,
         borderWidth: 1,
         tintKind: .solid,
@@ -167,7 +192,13 @@ nonisolated extension MenuBarAppearancePartialConfiguration {
 nonisolated extension MenuBarAppearancePartialConfiguration: Codable {
     private enum CodingKeys: CodingKey {
         case hasShadow
+        /// The single border flag that predates the menu bar / Thaw Bar split.
+        ///
+        /// Still written on encode so that settings stay readable if the user
+        /// moves back to a build that only knows about this key.
         case hasBorder
+        case borderOnMenuBar
+        case borderOnThawBar
         case borderColor
         case borderWidth
         case tintKind
@@ -188,9 +219,13 @@ nonisolated extension MenuBarAppearancePartialConfiguration: Codable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        // Settings written before the split only carry `hasBorder`, which applied
+        // to the menu bar and the Thaw Bar at once, so it seeds both flags.
+        let legacyHasBorder = try container.decodeIfPresent(Bool.self, forKey: .hasBorder)
         try self.init(
             hasShadow: container.decodeIfPresent(Bool.self, forKey: .hasShadow) ?? Self.defaultConfiguration.hasShadow,
-            hasBorder: container.decodeIfPresent(Bool.self, forKey: .hasBorder) ?? Self.defaultConfiguration.hasBorder,
+            borderOnMenuBar: container.decodeIfPresent(Bool.self, forKey: .borderOnMenuBar) ?? legacyHasBorder ?? Self.defaultConfiguration.borderOnMenuBar,
+            borderOnThawBar: container.decodeIfPresent(Bool.self, forKey: .borderOnThawBar) ?? legacyHasBorder ?? Self.defaultConfiguration.borderOnThawBar,
             borderColor: container.decodeIfPresent(IceColor.self, forKey: .borderColor)?.cgColor ?? Self.defaultConfiguration.borderColor,
             borderWidth: container.decodeIfPresent(Double.self, forKey: .borderWidth) ?? Self.defaultConfiguration.borderWidth,
             tintKind: container.decodeIfPresent(MenuBarTintKind.self, forKey: .tintKind) ?? Self.defaultConfiguration.tintKind,
@@ -214,6 +249,8 @@ nonisolated extension MenuBarAppearancePartialConfiguration: Codable {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(hasShadow, forKey: .hasShadow)
         try container.encode(hasBorder, forKey: .hasBorder)
+        try container.encode(borderOnMenuBar, forKey: .borderOnMenuBar)
+        try container.encode(borderOnThawBar, forKey: .borderOnThawBar)
         try container.encode(IceColor(cgColor: borderColor), forKey: .borderColor)
         try container.encode(borderWidth, forKey: .borderWidth)
         try container.encode(tintKind, forKey: .tintKind)

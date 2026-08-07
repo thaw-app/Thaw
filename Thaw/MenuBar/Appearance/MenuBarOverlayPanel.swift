@@ -1250,7 +1250,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
             tintGlassContentMaskLayer.path = shapeCGPath
             tintGlassView.style = configuration.tintGlassStyle.nsGlassStyle
 
-            if configuration.hasBorder {
+            if configuration.borderOnMenuBar {
                 tintGlassBorderLayer.path = shapeCGPath
                 tintGlassBorderLayer.strokeColor = configuration.borderColor
                 tintGlassBorderLayer.lineWidth = configuration.borderWidth * 2
@@ -1398,7 +1398,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
                 )
             }
 
-            if configuration.hasBorder, configuration.tintKind != .glass {
+            if configuration.borderOnMenuBar, configuration.tintKind != .glass {
                 hasBorder = true
             }
 
