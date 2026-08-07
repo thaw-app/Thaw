@@ -596,6 +596,28 @@ final class MenuBarItemManager {
         }
     }
 
+    /// Whether the destination's target travelled far enough during a drag
+    /// that the plan no longer describes the bar.
+    ///
+    /// Landing beside the target legitimately nudges it by roughly the moved
+    /// item's own width, so the threshold has to sit well above an item width
+    /// while still catching the real failure. The display's width is that
+    /// line: a target that moves further than the whole display has not been
+    /// reflowed locally, it has crossed into another section or into the
+    /// offscreen parking space, and the plan built against its old position is
+    /// describing an arrangement that no longer exists.
+    ///
+    /// In the #881 log the target's measured `minX` went from -4222 to 794 on
+    /// a 1512 pt display between two attempts of a single move, and all eight
+    /// attempts were spent re-dragging against it (#900).
+    static nonisolated func destinationIsStale(
+        plannedTargetMinX: CGFloat,
+        currentTargetMinX: CGFloat,
+        displayWidth: CGFloat
+    ) -> Bool {
+        abs(currentTargetMinX - plannedTargetMinX) > displayWidth
+    }
+
     /// A launch-stable digest of an identifier list.
     ///
     /// FNV-1a rather than `hashValue`: Swift seeds its hasher per process,
@@ -3368,6 +3390,11 @@ extension MenuBarItemManager {
         /// window server re-resolved it against whatever sits under the
         /// clamped cursor position.
         case eventWindowMismatch(MenuBarItem)
+        /// The destination's target item moved so far during the drag that
+        /// the plan describes an arrangement the bar no longer has. Retrying
+        /// would drag the item against geometry that has already changed,
+        /// which is how a failed batch walks the bar (#900).
+        case staleDestination(MenuBarItem)
 
         var description: String {
             switch self {
@@ -3393,6 +3420,8 @@ extension MenuBarItemManager {
                 "\(Self.self).ownerUnresponsive(item: \(item.tag))"
             case let .eventWindowMismatch(item):
                 "\(Self.self).eventWindowMismatch(item: \(item.tag))"
+            case let .staleDestination(item):
+                "\(Self.self).staleDestination(item: \(item.tag))"
             }
         }
 
@@ -3420,6 +3449,8 @@ extension MenuBarItemManager {
                 "\"\(item.displayName)\" is not responding and cannot be moved"
             case let .eventWindowMismatch(item):
                 "A move event for \"\(item.displayName)\" was delivered to the wrong window"
+            case let .staleDestination(item):
+                "The menu bar rearranged while moving \"\(item.displayName)\""
             }
         }
 
@@ -3447,7 +3478,8 @@ extension MenuBarItemManager {
             case .ownerUnresponsive, .eventOperationTimeout, .itemResponseTimeout:
                 true
             case .cannotComplete, .invalidEventSource, .missingMouseLocation, .eventCreationFailure,
-                 .itemNotMovable, .missingItemBounds, .menuTrackingActive, .eventWindowMismatch:
+                 .itemNotMovable, .missingItemBounds, .menuTrackingActive, .eventWindowMismatch,
+                 .staleDestination:
                 false
             }
         }
@@ -4290,16 +4322,62 @@ extension MenuBarItemManager {
 
     /// Returns a Boolean value that indicates whether the given menu bar
     /// item has the correct position, relative to the given destination.
-    private nonisolated func itemHasCorrectPosition(
+    /// Reports whether `item` is now the immediate neighbor of the
+    /// destination's target on the requested side.
+    ///
+    /// This asks for the ordinal relationship rather than comparing
+    /// coordinates. The check used to re-read both rects independently and
+    /// compare them for exact `CGFloat` equality, which cannot succeed on a
+    /// bar that reflows: our own drag displaces the target too, so the item
+    /// lands where the target *was* and is then compared against where the
+    /// target now is. In the #881 log the target's measured `minX` swung from
+    /// -4222 to 794 between attempts while the item sat still, and all eight
+    /// attempts were spent re-dragging against a destination that had already
+    /// moved (#900).
+    ///
+    /// Reading one list fixes that: both operands come from the same snapshot,
+    /// so they cannot drift apart mid-check. It also sidesteps
+    /// ``getCurrentBounds(for:)`` mixing coordinate spaces — its windowID path
+    /// answers for parked offscreen windows while its tag-matching fallback
+    /// answers from the on-screen list, and which one runs depends on timing.
+    ///
+    /// - Note: source PIDs are deliberately left unresolved. Only tags, window
+    ///   IDs and bounds are needed here, and this runs once per attempt.
+    ///
+    /// Main-actor isolated rather than `nonisolated`: the enumeration and the
+    /// tag comparison both are, and hopping once per attempt costs nothing
+    /// next to the enumeration itself.
+    private func itemHasCorrectPosition(
         item: MenuBarItem,
         for destination: MoveDestination,
-        on _: CGDirectDisplayID
+        on displayID: CGDirectDisplayID
     ) async throws -> Bool {
-        let itemBounds = try await getCurrentBounds(for: item)
-        let targetBounds = try await getCurrentBounds(for: destination.targetItem)
+        // Not `.onScreen`: an item moved into a collapsed section is parked
+        // offscreen, and that is a landing we still have to be able to confirm.
+        let items = await MenuBarItem
+            .getMenuBarItems(on: displayID, option: .activeSpace, resolveSourcePID: false)
+            .sorted { $0.bounds.minX < $1.bounds.minX }
+
+        // Prefer the exact window, falling back to the tag, matching the
+        // preference order `getCurrentBounds(for:)` already uses.
+        func index(of needle: MenuBarItem) -> Int? {
+            items.firstIndex { $0.windowID == needle.windowID }
+                ?? items.firstIndex(matching: needle.tag)
+        }
+
+        guard
+            let itemIndex = index(of: item),
+            let targetIndex = index(of: destination.targetItem)
+        else {
+            // One of the two no longer enumerates on this display's active
+            // space, so the landing cannot be confirmed either way. Report a
+            // miss and let the caller's attempt budget decide what happens.
+            return false
+        }
+
         return switch destination {
-        case .leftOfItem: itemBounds.maxX == targetBounds.minX
-        case .rightOfItem: itemBounds.minX == targetBounds.maxX
+        case .leftOfItem: itemIndex == targetIndex - 1
+        case .rightOfItem: itemIndex == targetIndex + 1
         }
     }
 
@@ -4815,6 +4893,12 @@ extension MenuBarItemManager {
         // target externally; ordinary items skip this gate.
         var anyMoveEventsSucceeded = false
 
+        // Baseline for the stale-plan check in the retry path. The destination
+        // was chosen against the bar as it looked when this move was planned;
+        // if the target itself travels a long way while we are dragging, the
+        // plan describes an arrangement that no longer exists.
+        let plannedTargetBounds = try? await getCurrentBounds(for: destination.targetItem)
+
         let maxAttempts = max(1, maxMoveAttempts)
         for n in 1 ... maxAttempts {
             guard !Task.isCancelled else {
@@ -4876,6 +4960,29 @@ extension MenuBarItemManager {
                     await validateItemPositionAfterMove(item: item, destination: destination, on: resolvedDisplayID)
                     return
                 }
+                // Retrying against a target that has already moved re-plans
+                // each attempt against different geometry and drags the item
+                // somewhere new every time, which is what leaves a failed
+                // batch with a fresh partial arrangement on every pass (#900).
+                // Stop instead and let the next cache tick re-plan against a
+                // settled bar.
+                if let plannedTargetBounds,
+                   let currentTargetBounds = try? await getCurrentBounds(for: destination.targetItem),
+                   Self.destinationIsStale(
+                       plannedTargetMinX: plannedTargetBounds.minX,
+                       currentTargetMinX: currentTargetBounds.minX,
+                       displayWidth: CGDisplayBounds(resolvedDisplayID).width
+                   )
+                {
+                    MenuBarItemManager.diagLog.warning(
+                        """
+                        Attempt \(n): \(destination.targetItem.logString) moved from \
+                        minX=\(plannedTargetBounds.minX) to minX=\(currentTargetBounds.minX) \
+                        during the drag, abandoning the stale move
+                        """
+                    )
+                    throw EventError.staleDestination(item)
+                }
                 MenuBarItemManager.diagLog.debug("Attempt \(n) events succeeded but item not at destination, retrying")
                 if n < maxAttempts {
                     try await waitForMoveOperationBuffer()
@@ -4904,6 +5011,13 @@ extension MenuBarItemManager {
                         "Attempt \(n): \(item.logString) owner is unresponsive, aborting move"
                     )
                     failureLedger.recordFailure(for: item, kind: .unresponsiveOwner)
+                    throw error
+                }
+                // Raised by the stale-plan check above, which has already
+                // logged. Retrying is precisely what it exists to prevent, and
+                // the item's owner did nothing wrong, so no failure is filed
+                // against it.
+                if case EventError.staleDestination = error {
                     throw error
                 }
                 // An owner with a standing record of ignoring synthetic events
