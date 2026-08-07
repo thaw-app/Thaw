@@ -227,6 +227,24 @@ final class LayoutBarItemView: LayoutBarArrangedView {
                 }
                 .store(in: &c)
 
+            // Draggability of forced-visible system items (Clock, Control
+            // Center, Siri, …) depends on this toggle, but `isEnabled` is read
+            // once in init — so without this the view stays latched to whatever
+            // the flag was when it was built (e.g. still off if the persisted
+            // value hadn't loaded yet, or unchanged after the user flips it),
+            // and the items can't be dragged even though the setting is on.
+            // `@Published` re-emits the current value on subscribe, so this also
+            // corrects the init-time latch.
+            appState.settings.advanced.$enableExperimentalSystemItemHiding
+                .removeDuplicates()
+                .sink { [weak self] enabled in
+                    guard let self else { return }
+                    self.isEnabled = LayoutBarPaddingView.acceptsLayoutDrag(of: self.item) &&
+                        self.item.isMovable(experimentalSystemItemHiding: enabled)
+                    self.needsDisplay = true
+                }
+                .store(in: &c)
+
             appState.menuBarManager.$averageColorInfo
                 .map { $0?.isBright(for: nil) == true }
                 .removeDuplicates()
