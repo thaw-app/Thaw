@@ -148,4 +148,101 @@ struct MenuOpenProbePersistenceTests {
         #expect(outcome.isMenuOpen)
         #expect(outcome.ignoredPersistentWindowIDs == [50])
     }
+
+    // MARK: Display-sized overlays
+
+    private let display = CGRect(x: 0, y: 0, width: 1512, height: 982)
+
+    private func fullScreenCandidate(_ windowID: CGWindowID) -> MenuBarItemManager.MenuWindowCandidate {
+        .init(windowID: windowID, bounds: CGRect(x: 0, y: 0, width: 1512, height: 982))
+    }
+
+    /// The #899 log: a drag-catcher overlay spanning the display contains
+    /// the pointer wherever it goes, so the under-pointer rule held the
+    /// probe open for the overlay's whole lifetime and every drag the user
+    /// made in the layout bar deferred itself.
+    @Test("A display-sized window is never a menu, young and under the pointer or not")
+    func displaySizedWindowIsNeverAMenu() {
+        let outcome = MenuBarItemManager.classifyMenuWindowCandidates(
+            candidates: [fullScreenCandidate(70)],
+            pointerLocation: CGPoint(x: 700, y: 500),
+            firstSeen: [:],
+            now: start,
+            isFirstProbe: false,
+            threshold: threshold,
+            displayBounds: [display]
+        )
+        #expect(!outcome.isMenuOpen)
+        #expect(outcome.ignoredPersistentWindowIDs == [70])
+    }
+
+    /// A genuine menu next to the overlay must still be seen through it.
+    @Test("A fresh menu alongside a display-sized overlay still reports open")
+    func freshMenuAlongsideOverlayReportsOpen() {
+        let outcome = MenuBarItemManager.classifyMenuWindowCandidates(
+            candidates: [fullScreenCandidate(70), candidate(90, x: 200)],
+            pointerLocation: nil,
+            firstSeen: [:],
+            now: start,
+            isFirstProbe: false,
+            threshold: threshold,
+            displayBounds: [display]
+        )
+        #expect(outcome.isMenuOpen)
+        #expect(outcome.ignoredPersistentWindowIDs == [70])
+    }
+
+    /// Without display geometry to compare against, the size rule cannot
+    /// fire and the age/pointer rules answer as before.
+    @Test("Without display bounds a large window follows the ordinary rules")
+    func withoutDisplayBoundsSizeRuleCannotFire() {
+        let outcome = MenuBarItemManager.classifyMenuWindowCandidates(
+            candidates: [fullScreenCandidate(70)],
+            pointerLocation: nil,
+            firstSeen: [:],
+            now: start,
+            isFirstProbe: false,
+            threshold: threshold
+        )
+        #expect(outcome.isMenuOpen)
+    }
+
+    @Test("Half the display's area is the boundary of the size rule")
+    func halfDisplayAreaIsTheBoundary() {
+        // Exactly half: an overlay.
+        #expect(
+            MenuBarItemManager.isDisplaySizedWindow(
+                CGRect(x: 0, y: 0, width: 1512, height: 491),
+                displayBounds: [display]
+            )
+        )
+        // Just under half: menu-sized as far as this rule cares.
+        #expect(
+            !MenuBarItemManager.isDisplaySizedWindow(
+                CGRect(x: 0, y: 0, width: 1512, height: 400),
+                displayBounds: [display]
+            )
+        )
+    }
+
+    /// The area comparison is per display: a window the size of a small
+    /// display that sits entirely on a much larger one is not an overlay
+    /// there, and a display it does not touch has no say at all.
+    @Test("The size rule only consults displays the window touches")
+    func sizeRuleIsScopedToTouchedDisplays() {
+        let smallDisplay = CGRect(x: 1512, y: 0, width: 800, height: 600)
+        let windowOnLargeDisplay = CGRect(x: 0, y: 0, width: 800, height: 600)
+        #expect(
+            !MenuBarItemManager.isDisplaySizedWindow(
+                windowOnLargeDisplay,
+                displayBounds: [display, smallDisplay]
+            )
+        )
+        #expect(
+            MenuBarItemManager.isDisplaySizedWindow(
+                CGRect(x: 1512, y: 0, width: 800, height: 600),
+                displayBounds: [display, smallDisplay]
+            )
+        )
+    }
 }

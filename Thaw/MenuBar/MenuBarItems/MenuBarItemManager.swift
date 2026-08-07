@@ -6780,7 +6780,7 @@ extension MenuBarItemManager {
                         """
                         Found open menu window on fast path: PID \(window.ownerPID), \
                         owner: \(window.ownerName as NSObject?), title: \(window.title ?? "nil"), \
-                        isMenuRelated: \(window.isMenuRelated)
+                        isMenuRelated: \(window.isMenuRelated), bounds: \(NSStringFromRect(window.bounds))
                         """
                     )
                 }
@@ -6823,7 +6823,7 @@ extension MenuBarItemManager {
                         """
                         Found open menu window on precise fallback: PID \(window.ownerPID), \
                         owner: \(window.ownerName as NSObject?), title: \(window.title ?? "nil"), \
-                        isMenuRelated: \(window.isMenuRelated)
+                        isMenuRelated: \(window.isMenuRelated), bounds: \(NSStringFromRect(window.bounds))
                         """
                     )
                 }
@@ -6859,7 +6859,8 @@ extension MenuBarItemManager {
             firstSeen: menuWindowFirstSeen,
             now: .now,
             isFirstProbe: !hasSeededMenuWindowProbe,
-            threshold: MenuBarItemManager.menuWindowPersistenceThreshold
+            threshold: MenuBarItemManager.menuWindowPersistenceThreshold,
+            displayBounds: NSScreen.screens.map { CGDisplayBounds($0.displayID) }
         )
         menuWindowFirstSeen = outcome.updatedFirstSeen
         hasSeededMenuWindowProbe = true
@@ -6881,13 +6882,23 @@ extension MenuBarItemManager {
     /// indefinitely. Windows already on screen at the first probe are
     /// grandfathered as persistent, and entries for windows that
     /// disappeared are pruned so a reused window ID starts fresh.
+    ///
+    /// A display-sized candidate is never a menu, whatever its age and
+    /// wherever the pointer is. Drop-shelf utilities raise an invisible
+    /// menu-level drag-catcher over the whole screen during any drag
+    /// session — including the user's own drag inside the layout bar — and
+    /// a window that spans the display contains the pointer wherever it
+    /// goes, so the under-pointer rule held the probe open for as long as
+    /// the overlay stayed up and every drag the user made deferred itself
+    /// (#899's greyed-out layout bar).
     nonisolated static func classifyMenuWindowCandidates(
         candidates: [MenuWindowCandidate],
         pointerLocation: CGPoint?,
         firstSeen: [CGWindowID: ContinuousClock.Instant],
         now: ContinuousClock.Instant,
         isFirstProbe: Bool,
-        threshold: Duration
+        threshold: Duration,
+        displayBounds: [CGRect] = []
     ) -> (
         isMenuOpen: Bool,
         updatedFirstSeen: [CGWindowID: ContinuousClock.Instant],
@@ -6906,6 +6917,10 @@ extension MenuBarItemManager {
                 firstSeenAt = firstSeenForNewWindows
                 updatedFirstSeen[candidate.windowID] = firstSeenAt
             }
+            guard !Self.isDisplaySizedWindow(candidate.bounds, displayBounds: displayBounds) else {
+                ignored.insert(candidate.windowID)
+                continue
+            }
             let isYoung = firstSeenAt.duration(to: now) < threshold
             let isUnderPointer = pointerLocation.map(candidate.bounds.contains) ?? false
             if isYoung || isUnderPointer {
@@ -6915,6 +6930,23 @@ extension MenuBarItemManager {
             }
         }
         return (isMenuOpen, updatedFirstSeen, ignored)
+    }
+
+    /// Whether a window covers enough of a display it touches to be an
+    /// overlay rather than a menu.
+    ///
+    /// Half a display is far beyond any real menu — even a Wi-Fi picker
+    /// with a long network list stays a narrow column — while a
+    /// drag-catcher overlay covers all of one.
+    static nonisolated func isDisplaySizedWindow(_ bounds: CGRect, displayBounds: [CGRect]) -> Bool {
+        guard !bounds.isEmpty else {
+            return false
+        }
+        return displayBounds.contains { display in
+            !display.isEmpty
+                && display.intersects(bounds)
+                && bounds.width * bounds.height >= display.width * display.height * 0.5
+        }
     }
 
     private static nonisolated func resolveAllSourcePIDs(for windows: [WindowInfo]) async -> Set<pid_t> {
