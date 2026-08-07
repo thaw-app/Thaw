@@ -3178,8 +3178,18 @@ extension MenuBarItemManager {
             // — ~8 s on a dense bar (#881). Restricted so the items still
             // being resolved are not move targets; the settling-end pass
             // runs unrestricted and LCS leaves whatever this placed alone.
+            // The cooldown is bypassed rather than inherited from the caller.
+            // relocateThawIcon moves our own control item within the first
+            // ~100 ms of launch, so every settling poll that reaches here is
+            // inside the 5 s window that same launch just stamped, and no
+            // settling-period call site sets bypassSavedLayoutCooldown. In the
+            // #881 log the early apply was rejected at 19.457 for a cooldown
+            // stamped at 16.375 by relocateThawIcon, which left the reporter
+            // watching macOS's arrangement for the whole settling period and
+            // then the entire reorder as a visible sequence. Cascading
+            // re-applies, which is what the cooldown guards against, cannot
+            // happen here: this runs once per settling period.
             if !skipSavedLayoutApply, !didAttemptEarlySavedLayoutApply {
-                didAttemptEarlySavedLayoutApply = true
                 let didApply = await applySavedLayout(
                     items: items,
                     previousWindowIDs: previousWindowIDs,
@@ -3187,10 +3197,14 @@ extension MenuBarItemManager {
                     previousDisplayID: itemCache.displayID,
                     currentDisplayID: displayID,
                     previousCCGenericWindowIDs: previousCCGenericWindowIDs,
-                    bypassMoveCooldown: bypassSavedLayoutCooldown,
+                    bypassMoveCooldown: true,
                     resolvedIdentitiesOnly: true
                 )
+                // Spend the one attempt only on a dispatch that happened. The
+                // flag used to be set before the call, so an apply rejected by
+                // a guard consumed it and no later poll retried.
                 if didApply {
+                    didAttemptEarlySavedLayoutApply = true
                     MenuBarItemManager.diagLog.debug(
                         "cacheItemsRegardless: early saved-layout apply dispatched during settling"
                     )
