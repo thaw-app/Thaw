@@ -105,6 +105,41 @@ struct SettingsResetterTests {
         }
     }
 
+    /// Regression: `resetAdvanced()` used to omit seven persisted
+    /// `AdvancedSettings` booleans, so a reset silently left them at whatever
+    /// the user had toggled them to. Each previously-omitted boolean is flipped
+    /// off its default, reset, then checked back to `Defaults.DefaultValue`.
+    /// `hideApplicationMenus` and `showMenuBarTooltips` stay in as controls —
+    /// they already reset before the fix and must keep doing so.
+    @Test("Resetting Advanced restores every persisted boolean")
+    func resetAdvancedRestoresEveryBoolean() throws {
+        try withSettings { settings in
+            // Previously-omitted booleans — flip each off its default.
+            settings.advanced.useOptionClickToShowAlwaysHiddenSection = !Defaults.DefaultValue.useOptionClickToShowAlwaysHiddenSection
+            settings.advanced.useDoubleClickToShowAlwaysHiddenSection = !Defaults.DefaultValue.useDoubleClickToShowAlwaysHiddenSection
+            settings.advanced.enableSecondaryContextMenuQuit = !Defaults.DefaultValue.enableSecondaryContextMenuQuit
+            settings.advanced.useLCSSortingOnNotchedDisplays = !Defaults.DefaultValue.useLCSSortingOnNotchedDisplays
+            settings.advanced.enableMenuBarItemOverflow = !Defaults.DefaultValue.enableMenuBarItemOverflow
+            settings.advanced.useThawBarOnNotchOverflow = !Defaults.DefaultValue.useThawBarOnNotchOverflow
+            settings.advanced.useAXClickDelivery = !Defaults.DefaultValue.useAXClickDelivery
+            // Controls — already reset before the fix; keep them covered.
+            settings.advanced.hideApplicationMenus = !Defaults.DefaultValue.hideApplicationMenus
+            settings.advanced.showMenuBarTooltips = !Defaults.DefaultValue.showMenuBarTooltips
+
+            settings.resetAdvanced()
+
+            #expect(settings.advanced.useOptionClickToShowAlwaysHiddenSection == Defaults.DefaultValue.useOptionClickToShowAlwaysHiddenSection)
+            #expect(settings.advanced.useDoubleClickToShowAlwaysHiddenSection == Defaults.DefaultValue.useDoubleClickToShowAlwaysHiddenSection)
+            #expect(settings.advanced.enableSecondaryContextMenuQuit == Defaults.DefaultValue.enableSecondaryContextMenuQuit)
+            #expect(settings.advanced.useLCSSortingOnNotchedDisplays == Defaults.DefaultValue.useLCSSortingOnNotchedDisplays)
+            #expect(settings.advanced.enableMenuBarItemOverflow == Defaults.DefaultValue.enableMenuBarItemOverflow)
+            #expect(settings.advanced.useThawBarOnNotchOverflow == Defaults.DefaultValue.useThawBarOnNotchOverflow)
+            #expect(settings.advanced.useAXClickDelivery == Defaults.DefaultValue.useAXClickDelivery)
+            #expect(settings.advanced.hideApplicationMenus == Defaults.DefaultValue.hideApplicationMenus)
+            #expect(settings.advanced.showMenuBarTooltips == Defaults.DefaultValue.showMenuBarTooltips)
+        }
+    }
+
     // MARK: Hotkeys
 
     @Test("Resetting Hotkeys clears every binding")
