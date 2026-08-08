@@ -644,6 +644,14 @@ final class ProfileManager {
         }
         saveManifest()
 
+        // The profile's content was just captured from the running state, so
+        // it now IS the configuration in effect — mark it active. Without
+        // this the checkmark stays wherever it was and an updated profile
+        // reads as "not applied" even though applying it would change
+        // nothing (#904). Set before the re-arm below so its active-profile
+        // gate sees the freshly-updated profile as the one to re-arm for.
+        activeProfileID = id
+
         // The live arrangement is unchanged by this save, so re-capturing it
         // yields the same layout that was just persisted. Re-arm the cache from
         // it when this is the active profile so a later late-arrival re-sort
