@@ -123,4 +123,25 @@ struct SavedPositionLookupTests {
         )
         #expect(result == nil)
     }
+
+    // MARK: - baseID(forIdentifier:) extraction contract
+
+    /// The baseID helper extracts the `namespace:title` prefix used by every
+    /// saved-position and stale-instance lookup. Pin the contract so the
+    /// dedupe refactor (and any future copy) stays correct.
+    @Test("baseID(forIdentifier:) extracts the namespace:title prefix")
+    func baseIDExtractionContract() {
+        // Typical multi-instance identifier: drops the trailing instanceIndex.
+        #expect(LayoutSolver.baseID(forIdentifier: "com.example.app:Status:5")
+            == "com.example.app:Status")
+        // Long tail past maxSplits: the third component keeps its own colons.
+        #expect(LayoutSolver.baseID(forIdentifier: "a:b:c:d:e") == "a:b")
+        // Bare namespace:title: unchanged.
+        #expect(LayoutSolver.baseID(forIdentifier: "com.example.app:Status")
+            == "com.example.app:Status")
+        // No colon at all: split yields a single subsequence, prefix(2) keeps it.
+        #expect(LayoutSolver.baseID(forIdentifier: "no-colon-here") == "no-colon-here")
+        // Empty input: empty output.
+        #expect(LayoutSolver.baseID(forIdentifier: "") == "")
+    }
 }

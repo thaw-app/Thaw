@@ -988,12 +988,12 @@ nonisolated enum LayoutSolver {
         if let exact = savedPosition(for: uid, in: savedSectionOrder) {
             return exact
         }
-        let baseID = uid.split(separator: ":", maxSplits: 2).prefix(2).joined(separator: ":")
+        let baseID = baseID(forIdentifier: uid)
         guard baseID.contains(":") else { return nil }
         for (sectionKeyString, identifiers) in savedSectionOrder {
             guard let section = sectionName(forPersistedKey: sectionKeyString) else { continue }
             for (index, identifier) in identifiers.enumerated() {
-                let savedBaseID = identifier.split(separator: ":", maxSplits: 2).prefix(2).joined(separator: ":")
+                let savedBaseID = Self.baseID(forIdentifier: identifier)
                 if savedBaseID == baseID {
                     return SavedPosition(section: section, index: index)
                 }
@@ -1173,8 +1173,7 @@ nonisolated enum LayoutSolver {
             // Stale instance index: the app is back with a different
             // :N suffix. The cache already has it under its new uid;
             // drop the stale saved entry.
-            let base = savedUID.split(separator: ":", maxSplits: 2)
-                .prefix(2).joined(separator: ":")
+            let base = baseID(forIdentifier: savedUID)
             if allCurrentBaseIdentifiers.contains(base) {
                 continue
             }
@@ -1254,7 +1253,7 @@ nonisolated enum LayoutSolver {
     }
 
     /// Extracts the baseID (namespace:title) prefix from a uniqueIdentifier.
-    private static nonisolated func baseID(forIdentifier id: String) -> String {
+    static nonisolated func baseID(forIdentifier id: String) -> String {
         id.split(separator: ":", maxSplits: 2).prefix(2).joined(separator: ":")
     }
 
