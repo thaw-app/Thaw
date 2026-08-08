@@ -1428,6 +1428,12 @@
         }
       }
     },
+    "%@ Bar on" : {
+      "comment" : "Profile preview summary fragment: the Thaw Bar is enabled. %@ is the app name."
+    },
+    "%@ Bar off" : {
+      "comment" : "Profile preview summary fragment: the Thaw Bar is disabled. %@ is the app name."
+    },
     "%@ can work in a limited mode without this permission." : {
       "comment" : "A callout box that explains that the app can work in a limited mode without a particular permission.",
       "extractionState" : "stale",
@@ -8269,6 +8275,12 @@
           }
         }
       }
+    },
+    "Auto-rehide on" : {
+      "comment" : "Profile preview summary fragment: automatic rehiding is enabled in the profile."
+    },
+    "Auto-rehide off" : {
+      "comment" : "Profile preview summary fragment: automatic rehiding is disabled in the profile."
     },
     "Auto-Switch" : {
       "comment" : "Section header for the \"Auto-Switch\" settings in the profile settings pane.",
@@ -30415,6 +30427,9 @@
         }
       }
     },
+    "No items" : {
+      "comment" : "Placeholder in the profile preview for a section with no saved items."
+    },
     "No items in this section" : {
       "comment" : "A message displayed when a section of the Ice Bar has no items.",
       "localizations" : {
@@ -35108,6 +35123,9 @@
           }
         }
       }
+    },
+    "Preview this profile's saved layout and settings" : {
+      "comment" : "Help tooltip on the profile preview button."
     },
     "Profile" : {
       "comment" : "Title of the parameter in the \"Set Menu Bar Profile\" focus filter.",

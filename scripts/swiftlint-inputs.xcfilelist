@@ -119,6 +119,7 @@ $(SRCROOT)/Thaw/Settings/SettingsPanes/GeneralSettingsPane.swift
 $(SRCROOT)/Thaw/Settings/SettingsPanes/HotkeysSettingsPane.swift
 $(SRCROOT)/Thaw/Settings/SettingsPanes/MenuBarAppearanceSettingsPane.swift
 $(SRCROOT)/Thaw/Settings/SettingsPanes/MenuBarLayoutSettingsPane.swift
+$(SRCROOT)/Thaw/Settings/SettingsPanes/ProfilePreviewView.swift
 $(SRCROOT)/Thaw/Settings/SettingsPanes/ProfileSettingsPane.swift
 $(SRCROOT)/Thaw/Settings/SettingsView.swift
 $(SRCROOT)/Thaw/Settings/SettingsWindow.swift

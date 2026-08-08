@@ -21,6 +21,7 @@ struct ProfileSettingsPane: View {
     @State private var profileToDelete: UUID?
     @State private var errorMessage: String?
     @State private var showingError = false
+    @State private var previewedProfile: Profile?
 
     var body: some View {
         IceForm {
@@ -116,6 +117,29 @@ struct ProfileSettingsPane: View {
                 }
 
                 Spacer()
+
+                Button {
+                    previewProfile(id: profile.id)
+                } label: {
+                    Image(systemName: "eye")
+                }
+                .buttonStyle(.settingsGlass)
+                .help("Preview this profile's saved layout and settings")
+                .popover(
+                    isPresented: Binding(
+                        get: { previewedProfile?.id == profile.id },
+                        set: { isPresented in
+                            if !isPresented {
+                                previewedProfile = nil
+                            }
+                        }
+                    ),
+                    arrowEdge: .bottom
+                ) {
+                    if let previewedProfile {
+                        ProfilePreviewView(profile: previewedProfile)
+                    }
+                }
 
                 Button("Apply") {
                     applyProfile(id: profile.id)
@@ -286,6 +310,15 @@ struct ProfileSettingsPane: View {
             try profileManager.saveProfile(name: name, from: appState)
             profileManager.activeProfileID = profileManager.profiles.last?.id
             newProfileName = ""
+        } catch {
+            errorMessage = error.localizedDescription
+            showingError = true
+        }
+    }
+
+    private func previewProfile(id: UUID) {
+        do {
+            previewedProfile = try profileManager.loadProfile(id: id)
         } catch {
             errorMessage = error.localizedDescription
             showingError = true
