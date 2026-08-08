@@ -190,4 +190,18 @@ struct PrunedSectionOrderTests {
         #expect(pruned["visible"] == ["\(owner):CPU 12%"])
         #expect(pruned["hidden"] == ["\(owner):Network 3.4 MB/s"])
     }
+
+    /// A section key outside the known three is not part of the precedence
+    /// order and must keep its entries untouched rather than being silently
+    /// emptied by the dedupe pass.
+    @Test("An unknown section key keeps its own entries")
+    func unknownSectionKeyIsPreserved() {
+        let pruned = LayoutSolver.prunedSectionOrder([
+            "visible": ["us.zoom.xos:Item-0"],
+            "legacy": ["com.example.app:Item-0", "us.zoom.xos:Item-0"],
+        ])
+
+        #expect(pruned["visible"] == ["us.zoom.xos:Item-0"])
+        #expect(pruned["legacy"] == ["com.example.app:Item-0", "us.zoom.xos:Item-0"])
+    }
 }

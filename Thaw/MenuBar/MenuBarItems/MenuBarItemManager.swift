@@ -3574,6 +3574,9 @@ extension MenuBarItemManager {
         do {
             try await waitTask.value
         } catch {
+            // Only cancellation reaches here. Named so a log full of bare
+            // `cannotComplete` failures (#900) can tell this stage apart.
+            MenuBarItemManager.diagLog.debug("waitForUserInputPause: wait interrupted: \(error)")
             throw EventError.cannotComplete
         }
     }
@@ -3587,6 +3590,7 @@ extension MenuBarItemManager {
             do {
                 try await Task.sleep(for: buffer)
             } catch {
+                MenuBarItemManager.diagLog.debug("waitForMoveOperationBuffer: wait interrupted: \(error)")
                 throw EventError.cannotComplete
             }
         }
@@ -4157,6 +4161,10 @@ extension MenuBarItemManager {
             // failure and skip pointless retries.
             throw error
         } catch {
+            // Cancellation of a superseded operation lands here. The
+            // underlying error used to be discarded, leaving #900's log a
+            // wall of indistinguishable `cannotComplete`s.
+            MenuBarItemManager.diagLog.debug("postEvent: event wait for \(item.logString) failed: \(error)")
             throw EventError.cannotComplete
         }
     }
@@ -4481,6 +4489,7 @@ extension MenuBarItemManager {
         } catch is TaskTimeoutError {
             throw EventError.itemResponseTimeout(item)
         } catch {
+            MenuBarItemManager.diagLog.debug("waitForItemResponse: wait for \(item.logString) failed: \(error)")
             throw EventError.cannotComplete
         }
     }
@@ -4507,6 +4516,7 @@ extension MenuBarItemManager {
                 try await eventSemaphore.wait(timeout: .milliseconds(3500))
                 acquiredSemaphore = true
             } catch is SimpleSemaphore.TimeoutError {
+                MenuBarItemManager.diagLog.error("postMoveEvents: eventSemaphore retry also timed out; giving up on \(item.logString)")
                 throw EventError.cannotComplete
             }
         }
@@ -4857,9 +4867,16 @@ extension MenuBarItemManager {
             return
         }
         guard item.isMovable else {
+            // The refusal used to be silent (#905): name the gate and the
+            // identifier the decision was made on, so a report can tell a
+            // static macOS prohibition from an identity-resolution failure.
+            MenuBarItemManager.diagLog.warning(
+                "move: refusing \(item.logString): \(item.immovabilityReason?.logDescription ?? "isMovable false with no named gate"); uniqueIdentifier=\(item.uniqueIdentifier), sourcePID=\(item.sourcePID.map(String.init) ?? "nil")"
+            )
             throw EventError.itemNotMovable(item)
         }
         guard let appState else {
+            MenuBarItemManager.diagLog.error("move: no appState; cannot move \(item.logString)")
             throw EventError.cannotComplete
         }
 
@@ -4955,6 +4972,7 @@ extension MenuBarItemManager {
         let maxAttempts = max(1, maxMoveAttempts)
         for n in 1 ... maxAttempts {
             guard !Task.isCancelled else {
+                MenuBarItemManager.diagLog.debug("move: cancelled before attempt \(n) for \(item.logString)")
                 throw EventError.cannotComplete
             }
             do {
@@ -5102,6 +5120,7 @@ extension MenuBarItemManager {
                     }
                     throw error
                 }
+                MenuBarItemManager.diagLog.warning("move: final attempt for \(item.logString) failed with non-EventError: \(error)")
                 throw EventError.cannotComplete
             }
         }
@@ -8684,6 +8703,18 @@ extension MenuBarItemManager {
                 failureLedger.recordSuccess(for: item)
                 try? await Task.sleep(for: .milliseconds(200))
             } catch {
+                // The loop head's rule extends to a move that was in flight
+                // when the cancellation arrived: the failure is the newer
+                // apply's takeover, not the item's. Recording it would earn
+                // an innocent item a backoff window and re-arm the save
+                // withhold for a batch whose tally the newer apply owns
+                // (#900's cannotComplete storms during overlapping applies).
+                if Task.isCancelled {
+                    MenuBarItemManager.diagLog.debug(
+                        "Profile layout: move of \(planned.uid) interrupted by a newer apply; leaving it unrecorded"
+                    )
+                    break
+                }
                 unenactedMoveCount += 1
                 consecutiveMoveFailures += 1
                 failureLedger.recordFailure(for: item, kind: Self.failureKind(of: error))

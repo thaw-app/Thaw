@@ -32,13 +32,50 @@ nonisolated struct MenuBarItem: CustomStringConvertible {
     /// A Boolean value that indicates whether the item is on screen.
     let isOnScreen: Bool
 
+    /// The gate that refuses to move an item.
+    ///
+    /// A refusal used to be undiagnosable: the layout editor showed a
+    /// generic alert, nothing was logged, and a report could not tell a
+    /// static macOS prohibition from an identity-resolution failure (#905).
+    /// Naming the gate is what lets the refusal sites log the condition the
+    /// decision was made on.
+    enum ImmovabilityReason {
+        /// The tag is on the static list of system items macOS does not
+        /// allow to be moved (Clock, Control Center, Screen Sharing).
+        case prohibitedSystemItem
+        /// A generic Control Center slot (`Item-N`) whose source process
+        /// never resolved. The owning app is unknown this cycle, and
+        /// posting drag events to Control Center for a placeholder times
+        /// out, so the item is parked rather than offered and failed.
+        case unresolvedControlCenterPlaceholder
+
+        var logDescription: String {
+            switch self {
+            case .prohibitedSystemItem:
+                "static immovable system item"
+            case .unresolvedControlCenterPlaceholder:
+                "Control Center generic slot with unresolved source PID; owning app unknown this cycle"
+            }
+        }
+    }
+
+    /// The reason this item cannot be moved, or `nil` when it can.
+    var immovabilityReason: ImmovabilityReason? {
+        if !tag.isMovable {
+            return .prohibitedSystemItem
+        }
+        if tag.isControlCenterGenericItem, sourcePID == nil {
+            return .unresolvedControlCenterPlaceholder
+        }
+        return nil
+    }
+
     /// A Boolean value that indicates whether this item can be moved.
+    ///
+    /// Defined through ``immovabilityReason`` so the answer and the gate a
+    /// diagnostic names can never disagree.
     var isMovable: Bool {
-        // Generic Control Center slots (``Item-N``) without a resolved
-        // source process are system-owned placeholders. Posting drag events
-        // to Control Center for them always times out, so presenting them as
-        // movable in the layout editor leads to a misleading generic error.
-        tag.isMovable && !(tag.isControlCenterGenericItem && sourcePID == nil)
+        immovabilityReason == nil
     }
 
     /// A Boolean value that indicates whether this item can be hidden.

@@ -13,6 +13,8 @@ import Combine
 
 /// A view that displays an image in a menu bar layout view.
 final class LayoutBarItemView: LayoutBarArrangedView {
+    private static let diagLog = DiagLog(category: "LayoutBarItemView")
+
     private enum Metrics {
         static let minWidth: CGFloat = 14
         static let maxWidth: CGFloat = 240
@@ -142,11 +144,58 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     }
 
     /// Provides an alert to display when the item view is disabled.
-    func provideAlertForDisabledItem() -> NSAlert {
+    ///
+    /// The copy names the gate honestly. "macOS prohibits" is only true for
+    /// the static system items; an unresolved Control Center slot is Thaw's
+    /// own safety gate, and blaming macOS for it sent #905's reporter
+    /// chasing the wrong condition. When an AX correlation identified the
+    /// hosted slot's real owner, the alert names it instead of the generic
+    /// fallback the identity the decision was made on never matched.
+    func provideAlertForDisabledItem(axResolvedName: String? = nil) -> NSAlert {
         let alert = NSAlert()
         alert.messageText = String(localized: "Menu bar item is not movable.")
-        alert.informativeText = String(localized: "macOS prohibits \"\(item.displayName)\" from being moved.")
+        switch item.immovabilityReason {
+        case .unresolvedControlCenterPlaceholder:
+            let name = axResolvedName ?? item.displayName
+            alert.informativeText = String(localized: "\(Constants.displayName) can't currently tell which app owns \"\(name)\", so moving it is disabled. This usually resolves on its own; relaunching the app that owns the item can help.")
+        case .prohibitedSystemItem, nil:
+            alert.informativeText = String(localized: "macOS prohibits \"\(item.displayName)\" from being moved.")
+        }
         return alert
+    }
+
+    /// Emits the diagnostic #905 asked for: the resolved identifier and the
+    /// exact condition the refusal was decided on. Returns the app-owned
+    /// name a one-shot AX correlation found for a degraded identity, so the
+    /// alert can show it.
+    ///
+    /// The AX snapshot is bounded (500 ms worst case) and only runs on this
+    /// user-initiated refusal path, never per cycle.
+    private func logMoveRefusal() -> String? {
+        let reason = item.immovabilityReason?.logDescription ?? "isMovable false with no named gate"
+        Self.diagLog.warning(
+            "Move refused for \(item.logString): \(reason); uniqueIdentifier=\(item.uniqueIdentifier), windowID=\(item.windowID), sourcePID=\(item.sourcePID.map(String.init) ?? "nil"), ownerPID=\(item.ownerPID)"
+        )
+        guard item.immovabilityReason == .unresolvedControlCenterPlaceholder else {
+            return nil
+        }
+        let hosts = ["com.apple.controlcenter", "com.apple.systemuiserver"]
+            .flatMap { NSRunningApplication.runningApplications(withBundleIdentifier: $0) }
+        guard !hosts.isEmpty else {
+            return nil
+        }
+        let snapshot = AXIdentityCatalog.snapshot(hosts: hosts)
+        let bounds = Bridging.getWindowBounds(for: item.windowID) ?? item.bounds
+        guard let identity = AXIdentityCatalog.identity(for: bounds, in: snapshot) else {
+            Self.diagLog.warning(
+                "Move refusal: AX correlation found no confident identity for windowID \(item.windowID)"
+            )
+            return nil
+        }
+        Self.diagLog.warning(
+            "Move refusal: AX names windowID \(item.windowID) as identifier=\(identity.identifier ?? "nil"), title=\(identity.title ?? "nil"), help=\(identity.help ?? "nil")"
+        )
+        return identity.identifier ?? identity.title ?? identity.help
     }
 
     /// Provides an alert to display when a menu bar item is unresponsive.
@@ -193,12 +242,16 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         tooltipController.cancel()
 
         guard isEnabled else {
-            let alert = provideAlertForDisabledItem()
+            let axResolvedName = logMoveRefusal()
+            let alert = provideAlertForDisabledItem(axResolvedName: axResolvedName)
             alert.runModal()
             return
         }
 
         guard !Bridging.isProcessUnresponsive(item.ownerPID) else {
+            Self.diagLog.warning(
+                "Move refused for \(item.logString): owner process \(item.ownerPID) is unresponsive; uniqueIdentifier=\(item.uniqueIdentifier)"
+            )
             let alert = provideAlertForUnresponsiveItem()
             alert.runModal()
             return

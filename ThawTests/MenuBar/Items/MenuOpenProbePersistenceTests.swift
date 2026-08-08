@@ -207,6 +207,15 @@ struct MenuOpenProbePersistenceTests {
         #expect(outcome.isMenuOpen)
     }
 
+    /// A zero-area window carries no geometry to judge; the size rule
+    /// stands aside and the age/pointer rules answer.
+    @Test("An empty window is not display-sized")
+    func emptyWindowIsNotDisplaySized() {
+        #expect(
+            !MenuBarItemManager.isDisplaySizedWindow(.zero, displayBounds: [display])
+        )
+    }
+
     @Test("Half the display's area is the boundary of the size rule")
     func halfDisplayAreaIsTheBoundary() {
         // Exactly half: an overlay.
