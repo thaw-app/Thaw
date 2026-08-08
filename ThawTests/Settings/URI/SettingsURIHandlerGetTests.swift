@@ -22,21 +22,28 @@ import Testing
 /// handler would accept, precisely so the suite never opens a URL or launches
 /// another app.
 ///
-/// Two shapes of assertion appear below:
+/// Three shapes of assertion appear below:
 ///
 /// - the Boolean the handler returns, which is its contract with the URL
-///   dispatcher, and
+///   dispatcher,
 /// - the in-process notification the per-display lookups post, whose `userInfo`
-///   carries the scope and value the handler resolved.
+///   carries the scope and value the handler resolved, and
+/// - a direct call into `getSettingValue`, used once to pin the `validValues`
+///   map a `thaw://get?key=iceBarLocation` advertises after it silently
+///   dropped two enum cases.
 ///
-/// The response *body* is deliberately not asserted, because it is not
-/// observable: the full payload only ever travels down a callback URL — which
-/// would mean opening a URL and launching another app — and the broadcast
-/// alternative goes out through `distnoted`, which does not deliver back into
-/// the test host. What is asserted instead is the Boolean: a broadcast request
-/// reports success only when it produced data, the same way a callback request
-/// does, and no response, however shaped, talks its way past callback
-/// validation.
+/// The response *body* is not asserted through its delivery channels, because
+/// it is not observable that way: the full payload only ever travels down a
+/// callback URL — which would mean opening a URL and launching another app —
+/// and the broadcast alternative goes out through `distnoted`, which does not
+/// deliver back into the test host. The one body-level assertion, the
+/// `iceBarLocation valid values` test, calls `getSettingValue` directly
+/// instead: that function is a read with no delivery side effects, so pinning
+/// its return advertises the map without ever opening a URL or posting a
+/// distributed notification. Everywhere else, what is asserted is the Boolean:
+/// a broadcast request reports success only when it produced data, the same way
+/// a callback request does, and no response, however shaped, talks its way past
+/// callback validation.
 ///
 /// Every test body runs inside `withScratchDefaults`, so the handler's reads
 /// and writes go to a throwaway store rather than the real `com.stonerl.Thaw`
@@ -408,6 +415,35 @@ struct SettingsURIHandlerGetTests {
                     "\(key)"
                 )
             }
+        }
+    }
+
+    // MARK: iceBarLocation valid values
+
+    @Test("iceBarLocation advertises every IceBarLocation case, including leftAligned and rightAligned")
+    func iceBarLocationGetListsAllValidValues() throws {
+        try withScratchDefaults { _ in
+            let uuid = UUID().uuidString
+            try persistConfiguration(.defaultConfiguration, forUUID: uuid)
+
+            // The validValues map drifted to three entries when IceBarLocation
+            // grew from three to five cases, so leftAligned and rightAligned
+            // could no longer be discovered through thaw://get. Drive the
+            // expectation from IceBarLocation itself so a future case can never
+            // silently drop out of the advertised set the way these two did.
+            let value = try #require(
+                SettingsURIHandler.getSettingValue(key: "iceBarLocation", displayUUID: uuid)
+            )
+            let validValues = try #require(value["validValues"] as? [String: Int])
+
+            #expect(validValues.count == IceBarLocation.allCases.count)
+            for location in IceBarLocation.allCases {
+                #expect(validValues[String(describing: location)] == location.rawValue, "\(location)")
+            }
+
+            // Pin the two cases that were missing before the fix in plain terms.
+            #expect(validValues["leftAligned"] == 3)
+            #expect(validValues["rightAligned"] == 4)
         }
     }
 
