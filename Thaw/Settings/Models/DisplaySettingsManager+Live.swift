@@ -244,7 +244,9 @@ extension DisplaySettingsManager {
             diagLog.info("User declined the spacing relaunch confirmation for a display transition; skipping apply")
             return
         }
-        lastAppliedActiveDisplayUUID = Bridging.getActiveMenuBarDisplayUUID()
+        let previousAppliedUUID = lastAppliedActiveDisplayUUID
+        let appliedUUID = Bridging.getActiveMenuBarDisplayUUID()
+        lastAppliedActiveDisplayUUID = appliedUUID
         appState.spacingManager.offset = desired
         Task { [weak self] in
             guard let self else { return }
@@ -275,6 +277,13 @@ extension DisplaySettingsManager {
                 appState.itemManager.cancelSettlingPeriod(
                     reason: "spacingRelaunch:\(reason):error"
                 )
+                // Roll back the bookkeeping so the next screen-parameter
+                // notification is not skipped as a same-display fire and can
+                // retry the failed apply. A newer apply may have overwritten
+                // it while applyOffset was in flight; its bookkeeping wins.
+                if lastAppliedActiveDisplayUUID == appliedUUID {
+                    lastAppliedActiveDisplayUUID = previousAppliedUUID
+                }
                 diagLog.error("applyActiveDisplaySpacing(\(reason)) failed: \(error)")
             }
         }
