@@ -8,7 +8,23 @@
 
 import SwiftUI
 
+/// The process entry point.
+///
+/// Wraps ``IceApp`` so a command-line invocation can be served and the
+/// process exited before AppKit starts. ``IceApp`` cannot do this itself:
+/// its `@NSApplicationDelegateAdaptor` builds the `AppDelegate` — and with
+/// it the whole `AppState` — as the `App` value is constructed, which is
+/// already too late to decline to run.
 @main
+enum ThawMain {
+    static func main() {
+        guard !LayoutResetCommand.runIfRequested() else {
+            return
+        }
+        IceApp.main()
+    }
+}
+
 struct IceApp: App {
     @NSApplicationDelegateAdaptor var appDelegate: AppDelegate
 

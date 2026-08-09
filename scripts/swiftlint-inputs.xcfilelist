@@ -25,6 +25,7 @@ $(SRCROOT)/Thaw/Hotkeys/Modifiers.swift
 $(SRCROOT)/Thaw/Main/AppDelegate.swift
 $(SRCROOT)/Thaw/Main/AppState.swift
 $(SRCROOT)/Thaw/Main/IceApp.swift
+$(SRCROOT)/Thaw/Main/LayoutResetCommand.swift
 $(SRCROOT)/Thaw/Main/Navigation/AppNavigationState.swift
 $(SRCROOT)/Thaw/Main/Navigation/NavigationIdentifiers/NavigationIdentifier.swift
 $(SRCROOT)/Thaw/Main/Navigation/NavigationIdentifiers/SettingsNavigationIdentifier.swift
