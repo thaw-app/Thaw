@@ -232,6 +232,92 @@ struct LayoutReconcilerUnmanagedPlacementTests {
         ])
     }
 
+    // MARK: - Pass 2: multiple anchored placements sharing one anchor
+    //
+    // `LayoutSolver.planUnmanagedPlacement` gives every unmanaged item that
+    // lacks a saved position the *same* `.newItemAnchored` placement — the
+    // user's configured NewItemsPlacement anchor — so several items sharing
+    // one anchor is the common case, not an edge case. These tests pin the
+    // contract that the group keeps its unmanagedUIDs relative order, which
+    // mirrors the order-preservation guarantee Pass 3 states explicitly.
+
+    @Test("Several rightOfAnchor placements sharing one anchor keep their unmanagedUIDs order")
+    func rightOfAnchorPlacementsPreserveUnmanagedOrder() {
+        // Inserting after the anchor does not shift it, so a naive rightOf
+        // pass re-derives the same `anchorIdx + 1` slot on every iteration
+        // and reverses the group ([anchor, second, first] instead of
+        // [anchor, first, second]). The pass must advance past the items
+        // already placed right of the anchor.
+        let result = apply(
+            placements: [
+                "app:first": .newItemAnchored(
+                    section: .visible,
+                    anchorUID: "app:anchor",
+                    relation: .rightOfAnchor
+                ),
+                "app:second": .newItemAnchored(
+                    section: .visible,
+                    anchorUID: "app:anchor",
+                    relation: .rightOfAnchor
+                ),
+            ],
+            unmanagedUIDs: ["app:first", "app:second"],
+            desiredFiltered: [Self.chevron, "app:anchor", Self.hiddenControl]
+        )
+
+        #expect(result.desiredFiltered == [
+            Self.chevron, "app:anchor", "app:first", "app:second", Self.hiddenControl,
+        ])
+        #expect(result.sectionMap["app:first"] == "visible")
+        #expect(result.sectionMap["app:second"] == "visible")
+    }
+
+    @Test("Three rightOfAnchor placements sharing one anchor keep their order")
+    func rightOfAnchorPreservesOrderForThreeItems() {
+        // The offset must scale with the group size, not just the pair case.
+        let result = apply(
+            placements: [
+                "app:a": .newItemAnchored(section: .visible, anchorUID: "app:anchor", relation: .rightOfAnchor),
+                "app:b": .newItemAnchored(section: .visible, anchorUID: "app:anchor", relation: .rightOfAnchor),
+                "app:c": .newItemAnchored(section: .visible, anchorUID: "app:anchor", relation: .rightOfAnchor),
+            ],
+            unmanagedUIDs: ["app:a", "app:b", "app:c"],
+            desiredFiltered: [Self.chevron, "app:anchor", Self.hiddenControl]
+        )
+
+        #expect(result.desiredFiltered == [
+            Self.chevron, "app:anchor", "app:a", "app:b", "app:c", Self.hiddenControl,
+        ])
+    }
+
+    @Test("Several leftOfAnchor placements sharing one anchor keep their unmanagedUIDs order")
+    func leftOfAnchorPlacementsPreserveUnmanagedOrder() {
+        // Mirror of the rightOf case. leftOf already preserves order
+        // because inserting before the anchor shifts it right, advancing
+        // the resolved anchor index. Pinned here so the rightOf fix cannot
+        // silently regress the leftOf path.
+        let result = apply(
+            placements: [
+                "app:first": .newItemAnchored(
+                    section: .visible,
+                    anchorUID: "app:anchor",
+                    relation: .leftOfAnchor
+                ),
+                "app:second": .newItemAnchored(
+                    section: .visible,
+                    anchorUID: "app:anchor",
+                    relation: .leftOfAnchor
+                ),
+            ],
+            unmanagedUIDs: ["app:first", "app:second"],
+            desiredFiltered: [Self.chevron, "app:anchor", Self.hiddenControl]
+        )
+
+        #expect(result.desiredFiltered == [
+            Self.chevron, "app:first", "app:second", "app:anchor", Self.hiddenControl,
+        ])
+    }
+
     @Test("An anchored placement with the sectionDefault relation ignores its anchor and lands at the section end")
     func anchoredSectionDefaultRelationLandsAtSectionEnd() {
         // .sectionDefault means "no anchor preference", so the anchor uid

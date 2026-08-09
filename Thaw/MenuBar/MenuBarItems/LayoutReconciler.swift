@@ -372,6 +372,16 @@ nonisolated enum LayoutReconciler {
 
         // Pass 2: .newItemAnchored placements. Insert relative to
         // the anchor in desiredFiltered (left or right per relation).
+        // Track how many items have already been placed to the right of
+        // each anchor. `.leftOfAnchor` inserts *before* the anchor, which
+        // shifts the anchor right on every pass, so `firstIndex(of:)`
+        // resolves to the new position and successive leftOf items land
+        // after the previous one — preserving their unmanagedUIDs order.
+        // `.rightOfAnchor` inserts *after* the anchor, which leaves the
+        // anchor's index unchanged, so without this offset every rightOf
+        // item would re-derive the same `anchorIdx + 1` slot and reverse
+        // the group's relative order.
+        var rightOfAnchorInserted = [String: Int]()
         for uid in unmanagedUIDs {
             if case let .newItemAnchored(section, anchorUID, relation) = placements[uid] {
                 // Guards the caller invariant: see pass 1.
@@ -380,15 +390,25 @@ nonisolated enum LayoutReconciler {
                 }
                 let sectionEnd = sectionEndIndex(for: section)
                 let insertIdx: Int
+                var placedRightOfAnchor = false
                 switch relation {
                 case .leftOfAnchor, .rightOfAnchor:
                     if let anchorIdx = desiredFiltered.firstIndex(of: anchorUID) {
-                        let anchored = relation == .leftOfAnchor ? anchorIdx : anchorIdx + 1
+                        // Advance rightOf past the items already placed right
+                        // of this anchor so the group keeps its order, the way
+                        // leftOf does for free via the shifting anchor index.
+                        let offset = relation == .rightOfAnchor
+                            ? rightOfAnchorInserted[anchorUID, default: 0]
+                            : 0
+                        let anchored = relation == .leftOfAnchor
+                            ? anchorIdx
+                            : anchorIdx + 1 + offset
                         // The anchor uid is not guaranteed to live in the
                         // section this placement names, and the sectionMap
                         // entry below commits to that section regardless.
                         // Clamp so position and label cannot disagree.
                         insertIdx = min(max(anchored, sectionStartIndex(for: section)), sectionEnd)
+                        placedRightOfAnchor = (relation == .rightOfAnchor)
                     } else {
                         insertIdx = sectionEnd
                     }
@@ -399,6 +419,9 @@ nonisolated enum LayoutReconciler {
                     insertIdx = sectionEnd
                 }
                 desiredFiltered.insert(uid, at: insertIdx)
+                if placedRightOfAnchor {
+                    rightOfAnchorInserted[anchorUID, default: 0] += 1
+                }
                 sectionMap[uid] = sectionKeyString(for: section)
             }
         }
