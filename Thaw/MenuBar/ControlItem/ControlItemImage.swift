@@ -22,6 +22,16 @@ nonisolated enum ControlItemImage: Codable, Hashable {
     /// A Cocoa representation of this image.
     @MainActor
     func nsImage(for appState: AppState) -> NSImage? {
+        nsImage(customIceIconIsTemplate: appState.settings.general.customIceIconIsTemplate)
+    }
+
+    /// A Cocoa representation of this image.
+    ///
+    /// Takes the one flag the conversion actually reads — whether a `.data`
+    /// icon renders as a template — instead of the full app state, so every
+    /// case can be exercised in tests without standing up an AppState.
+    @MainActor
+    func nsImage(customIceIconIsTemplate: Bool) -> NSImage? {
         switch self {
         case let .builtin(name):
             return switch name {
@@ -43,7 +53,7 @@ nonisolated enum ControlItemImage: Codable, Hashable {
             return originalImage.resized(to: newSize)
         case let .data(data):
             let image = NSImage(data: data)
-            image?.isTemplate = appState.settings.general.customIceIconIsTemplate
+            image?.isTemplate = customIceIconIsTemplate
             return image
         }
     }
