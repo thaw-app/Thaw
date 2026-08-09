@@ -339,11 +339,23 @@ nonisolated struct MenuBarLayoutSnapshot: Codable {
     /// a plain `??` that empty dictionary shadows a perfectly good
     /// `savedSectionOrder`, and the next apply sees no layout at all. Treating
     /// it as absent also repairs profiles already written that way.
+    /// Pruned on the way out, the way ``MenuBarItemManager`` prunes the saved
+    /// section order it loads from disk. A profile is captured from the live
+    /// bar, so a capture taken while source-PID resolution was degraded bakes
+    /// in identifiers that can never match a live item again — and unlike the
+    /// saved order, nothing rewrites a profile in the background to repair it.
+    /// #881's reporter carried a profile holding both the provisional and the
+    /// resolved form of several items, and the apply planned against both.
+    ///
+    /// Every consumer reads the layout through here or through
+    /// ``resolvedItemSectionMap`` below, including the identifier set that
+    /// arrival detection matches against, so pruning once at the read covers
+    /// them all.
     var resolvedItemOrder: [String: [String]] {
         guard let itemOrder, !itemOrder.isEmpty else {
-            return savedSectionOrder
+            return LayoutSolver.prunedSectionOrder(savedSectionOrder)
         }
-        return itemOrder
+        return LayoutSolver.prunedSectionOrder(itemOrder)
     }
 
     /// Resolves per-item section assignments for both current and legacy

@@ -1228,6 +1228,25 @@ nonisolated enum LayoutSolver {
         return String(id[id.index(after: separator)...])
     }
 
+    /// Whether an identifier carries no title at all.
+    ///
+    /// ``MenuBarItem/uniqueIdentifier`` is `namespace:title` — or
+    /// `namespace:title:index` past the first instance — and it does not omit
+    /// an empty title the way ``MenuBarItemTag/description`` does. An item
+    /// whose title could not be read therefore persists as
+    /// `com.apple.controlcenter:` or `com.apple.controlcenter::1`.
+    private static nonisolated func hasEmptyTitle(identifier: String) -> Bool {
+        let title = titlePortion(forIdentifier: identifier)
+        if title.isEmpty {
+            return true
+        }
+        // All that is left is the instance-index suffix, so the title
+        // between the two colons was empty.
+        guard title.hasPrefix(":") else { return false }
+        let index = title.dropFirst()
+        return !index.isEmpty && index.allSatisfy(\.isNumber)
+    }
+
     /// Removes persisted entries that can no longer match any live item.
     ///
     /// Two fixes so far prevent their own failure from recurring but leave
@@ -1305,9 +1324,22 @@ nonisolated enum LayoutSolver {
             let kept = keptPerSection[sectionKey] ?? []
             var emitted = Set<String>()
             result[sectionKey] = identifiers.filter { identifier in
-                let isProvisionalDuplicate = namespace(forIdentifier: identifier) == controlCenter
+                let isControlCenterHosted = namespace(forIdentifier: identifier) == controlCenter
+                let isProvisionalDuplicate = isControlCenterHosted
                     && titlesWithRealOwner.contains(titlePortion(forIdentifier: identifier))
                 if isProvisionalDuplicate {
+                    return false
+                }
+                // A Control-Center-hosted entry with no title identifies
+                // nothing: the only live item it could match is one whose
+                // title was equally unreadable, and two of those are
+                // indistinguishable apart from an instance index assigned in
+                // arrival order. #881's reporter carried four of them —
+                // `com.apple.controlcenter:` through `::3` — which the apply
+                // planned against on every pass. Left to real owners, where
+                // an empty title still feeds planLeftmostRelocation's
+                // namespace fallback.
+                if isControlCenterHosted, hasEmptyTitle(identifier: identifier) {
                     return false
                 }
                 // `kept` decides which section owns a canonical form; this
