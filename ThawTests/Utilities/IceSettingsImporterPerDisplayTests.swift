@@ -6,7 +6,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import Foundation
+import Cocoa
 import Testing
 @testable import Thaw
 
@@ -49,8 +49,18 @@ struct IceSettingsImporterPerDisplayTests {
             let data = try #require(Defaults.data(forKey: .displayIceBarConfigurations))
             let configs = try JSONDecoder()
                 .decode([String: DisplayIceBarConfiguration].self, from: data)
-            #expect(!configs.isEmpty)
-            #expect(configs.values.allSatisfy { $0.useIceBar })
+            // Every connected display must come out of the migration with a
+            // configuration, keyed by its UUID — no more, no less.
+            let connectedUUIDs = Set(NSScreen.screens.compactMap {
+                Bridging.getDisplayUUIDString(for: $0.displayID)
+            })
+            #expect(!connectedUUIDs.isEmpty)
+            #expect(Set(configs.keys) == connectedUUIDs)
+            // Hoisted out of #expect: the macro cannot infer that the
+            // key-path overload of the rethrowing allSatisfy does not throw,
+            // and swiftformat's preferKeyPath rewrites the closure form.
+            let allUseIceBar = configs.values.allSatisfy(\.useIceBar)
+            #expect(allUseIceBar)
             let expectedLocation = try #require(IceBarLocation(rawValue: 1))
             #expect(configs.values.allSatisfy { $0.iceBarLocation == expectedLocation })
             #expect(Defaults.bool(forKey: .hasMigratedPerDisplayIceBar))
