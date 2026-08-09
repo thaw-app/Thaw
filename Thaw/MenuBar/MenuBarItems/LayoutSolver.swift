@@ -525,6 +525,21 @@ nonisolated enum LayoutSolver {
         return false
     }
 
+    /// Whether the given item bounds currently fall on any of the provided
+    /// screen frames. An item parked off-screen by the control item's
+    /// collapse — shoved thousands of points left of the display — does
+    /// not, and using it as a drag anchor makes the move fail every retry:
+    /// AppKit snaps the item back to its autosave position on mouse-up,
+    /// so the divider flickers on-screen then springs back once per attempt
+    /// for the full retry budget (#881: cursor seizure and icon storm).
+    ///
+    /// Pure over its inputs. Matches the center-on-screen convention used
+    /// by ``itemsSpanMultipleDisplays(itemCenters:screenFrames:)``.
+    static nonisolated func isOnScreen(bounds: CGRect, screenFrames: [CGRect]) -> Bool {
+        let center = CGPoint(x: bounds.midX, y: bounds.midY)
+        return screenFrames.contains { $0.contains(center) }
+    }
+
     // MARK: - Notch overflow
 
     /// Decides which visible items must overflow into hidden to fit the

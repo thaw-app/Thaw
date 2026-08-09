@@ -334,7 +334,7 @@ final class MenuBarItemManager {
 
     /// How long a candidate menu window may stay on screen before it is
     /// reclassified as persistent furniture rather than an open menu.
-    nonisolated static let menuWindowPersistenceThreshold: Duration = .seconds(30)
+    static nonisolated let menuWindowPersistenceThreshold: Duration = .seconds(30)
 
     /// Timer for lightweight periodic cache checks.
     private var cacheTickCancellable: AnyCancellable?
@@ -663,15 +663,15 @@ final class MenuBarItemManager {
     /// section order is logged by count today, and a permutation that keeps
     /// membership intact is invisible in a count (#885).
     static nonisolated func orderDigest(_ identifiers: [String]) -> String {
-        let prime: UInt64 = 0x100_0000_01b3
-        var hash: UInt64 = 0xcbf2_9ce4_8422_2325
+        let prime: UInt64 = 0x100_0000_01B3
+        var hash: UInt64 = 0xCBF2_9CE4_8422_2325
         for identifier in identifiers {
             for byte in identifier.utf8 {
                 hash ^= UInt64(byte)
                 hash &*= prime
             }
             // Separator, so ["ab", "c"] and ["a", "bc"] differ.
-            hash ^= 0x1f
+            hash ^= 0x1F
             hash &*= prime
         }
         return String(format: "%08x", UInt32(truncatingIfNeeded: hash))
@@ -4419,8 +4419,8 @@ extension MenuBarItemManager {
             .getMenuBarItems(on: displayID, option: .activeSpace, resolveSourcePID: false)
             .sorted { $0.bounds.minX < $1.bounds.minX }
 
-        // Prefer the exact window, falling back to the tag, matching the
-        // preference order `getCurrentBounds(for:)` already uses.
+        /// Prefer the exact window, falling back to the tag, matching the
+        /// preference order `getCurrentBounds(for:)` already uses.
         func index(of needle: MenuBarItem) -> Int? {
             items.firstIndex { $0.windowID == needle.windowID }
                 ?? items.firstIndex(matching: needle.tag)
@@ -6746,7 +6746,7 @@ extension MenuBarItemManager {
 
         if let existingTask = menuOpenCheckTask {
             MenuBarItemManager.diagLog.debug("Menu open check: joining in-flight probe")
-            return applyMenuWindowPersistenceFilter(to: await existingTask.value)
+            return await applyMenuWindowPersistenceFilter(to: existingTask.value)
         }
 
         let cachedItems = itemCache.managedItems.filter(\.isOnScreen)
@@ -6910,7 +6910,7 @@ extension MenuBarItemManager {
     /// goes, so the under-pointer rule held the probe open for as long as
     /// the overlay stayed up and every drag the user made deferred itself
     /// (#899's greyed-out layout bar).
-    nonisolated static func classifyMenuWindowCandidates(
+    static nonisolated func classifyMenuWindowCandidates(
         candidates: [MenuWindowCandidate],
         pointerLocation: CGPoint?,
         firstSeen: [CGWindowID: ContinuousClock.Instant],
@@ -8298,8 +8298,19 @@ extension MenuBarItemManager {
             )
 
             let allFreshItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+            let screenFrames = NSScreen.screens.map(\.frame)
+            // Exclude items parked off-screen from the anchor candidate set.
+            // A parked item's center falls on no screen; using it as the
+            // H_ctrl drag anchor makes the move fail every retry — AppKit
+            // snaps the divider back to its autosave position on mouse-up,
+            // one on-screen flicker per attempt for the full 8-attempt
+            // budget (#881: cursor seizure and icon storm). The per-item
+            // LCS pass handles repositioning parked items onto the bar.
             let liveMovableUIDs = Set(
-                allFreshItems.lazy.filter { $0.isMovable && isProfileItem($0) }.map(\.uniqueIdentifier)
+                allFreshItems.lazy.filter { item in
+                    guard item.isMovable, isProfileItem(item) else { return false }
+                    return LayoutSolver.isOnScreen(bounds: item.bounds, screenFrames: screenFrames)
+                }.map(\.uniqueIdentifier)
             )
             let anchor = LayoutSolver.planHiddenDividerAnchor(
                 desiredHidden: itemOrder["hidden"] ?? [],
@@ -9259,7 +9270,8 @@ extension MenuBarItemManager {
         // to the identities that *are* resolved (see effectiveSavedOrder).
         let unresolvedSourcePIDCount = items.count { $0.sourcePID == nil }
         if !resolvedIdentitiesOnly,
-           Self.majorityOfSourcePIDsUnresolved(unresolvedCount: unresolvedSourcePIDCount, itemCount: items.count) {
+           Self.majorityOfSourcePIDsUnresolved(unresolvedCount: unresolvedSourcePIDCount, itemCount: items.count)
+        {
             MenuBarItemManager.diagLog.info(
                 "applySavedLayout: skipping, \(unresolvedSourcePIDCount)/\(items.count) items have unresolved sourcePIDs (XPC resolution likely failed)"
             )
