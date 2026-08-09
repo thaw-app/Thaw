@@ -3346,15 +3346,18 @@ extension MenuBarItemManager {
                 guard profileResortTask == nil,
                       !isApplyingProfileLayout
                 else { return }
-                let currentIdentifiers = Set(
-                    items
-                        .filter { !$0.isControlItem }
-                        .map(\.uniqueIdentifier)
+                let newProfileItems = Self.lateArrivingProfileIdentifiers(
+                    items: items,
+                    profileIdentifiers: activeProfileItemIdentifiers,
+                    alreadySortedIdentifiers: profileSortedItemIdentifiers
                 )
-                let newProfileItems = currentIdentifiers
-                    .intersection(activeProfileItemIdentifiers)
-                    .subtracting(profileSortedItemIdentifiers)
                 if !newProfileItems.isEmpty {
+                    let unidentifiable = items.count { !$0.isControlItem && $0.sourcePID == nil }
+                    if unidentifiable > 0 {
+                        MenuBarItemManager.diagLog.debug(
+                            "Profile re-sort: ignoring \(unidentifiable) item(s) with an unresolved sourcePID when detecting arrivals"
+                        )
+                    }
                     MenuBarItemManager.diagLog.info("Profile re-sort: detected \(newProfileItems.count) late-arriving profile item(s): \(newProfileItems.sorted())")
                     scheduleProfileResort()
                 }
@@ -9035,6 +9038,42 @@ extension MenuBarItemManager {
     /// item-count floor keeps degenerate tiny sets from tripping the gate.
     static nonisolated func majorityOfSourcePIDsUnresolved(unresolvedCount: Int, itemCount: Int) -> Bool {
         itemCount >= 4 && unresolvedCount * 2 > itemCount
+    }
+
+    /// The profile's items that have appeared since the last profile sort,
+    /// and so warrant a re-sort.
+    ///
+    /// Items with an unresolved `sourcePID` are excluded. `uniqueIdentifier`
+    /// is derived from `sourcePID` via the tag's namespace, so an item whose
+    /// PID did not resolve carries a fallback identity — it collapses into
+    /// the Control Center host namespace or repeats its bundle ID as the
+    /// title. Counting those as arrivals turns a resolution flap into a
+    /// re-sort: the same item alternates between
+    /// `eu.exelban.Stats:CPU_bar_chart` and `eu.exelban.Stats:eu.exelban.Stats:1`,
+    /// and whichever form the last sort did not see reads as brand new.
+    ///
+    /// #881's reporter sat at 16–17 of 34 items unresolved for most of an
+    /// hour — under ``majorityOfSourcePIDsUnresolved``'s bar, which needs a
+    /// strict majority — so the applies ran and re-ran, each one landing its
+    /// moves and each one re-arming the next.
+    ///
+    /// Excluding them costs nothing real: a late arrival is an app's item
+    /// appearing after launch, and those resolve. The items that legitimately
+    /// hold a nil PID (Wi-Fi, Clock, BentoBox) are always-present system
+    /// items that never arrive late in the first place.
+    static nonisolated func lateArrivingProfileIdentifiers(
+        items: [MenuBarItem],
+        profileIdentifiers: Set<String>,
+        alreadySortedIdentifiers: Set<String>
+    ) -> Set<String> {
+        let identifiable = Set(
+            items.lazy
+                .filter { !$0.isControlItem && $0.sourcePID != nil }
+                .map(\.uniqueIdentifier)
+        )
+        return identifiable
+            .intersection(profileIdentifiers)
+            .subtracting(alreadySortedIdentifiers)
     }
 
     /// Narrows a saved order to the identifiers whose live item has a
