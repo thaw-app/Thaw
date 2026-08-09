@@ -92,12 +92,14 @@ $(SRCROOT)/Thaw/Settings/Models/AppSettings.swift
 $(SRCROOT)/Thaw/Settings/Models/AutomationHookSettings.swift
 $(SRCROOT)/Thaw/Settings/Models/AutomationSettings.swift
 $(SRCROOT)/Thaw/Settings/Models/DisplayIceBarConfiguration.swift
+$(SRCROOT)/Thaw/Settings/Models/DisplaySettingsManager+Live.swift
 $(SRCROOT)/Thaw/Settings/Models/DisplaySettingsManager.swift
 $(SRCROOT)/Thaw/Settings/Models/FocusFilterIntent.swift
 $(SRCROOT)/Thaw/Settings/Models/GeneralSettings.swift
 $(SRCROOT)/Thaw/Settings/Models/HookScript.swift
 $(SRCROOT)/Thaw/Settings/Models/HotkeysSettings.swift
 $(SRCROOT)/Thaw/Settings/Models/Profile.swift
+$(SRCROOT)/Thaw/Settings/Models/ProfileManager+Live.swift
 $(SRCROOT)/Thaw/Settings/Models/ProfileManager.swift
 $(SRCROOT)/Thaw/Settings/Models/RehideStrategy.swift
 $(SRCROOT)/Thaw/Settings/Models/SectionDividerStyle.swift

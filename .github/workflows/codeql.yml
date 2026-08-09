@@ -20,7 +20,7 @@ jobs:
   analyze:
     if: github.repository == 'thaw-app/Thaw'
     name: Analyze Swift
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: xcode-27
     timeout-minutes: 90
     permissions:
       security-events: write

@@ -18,7 +18,7 @@ permissions:
 jobs:
   changes:
     if: github.repository == 'thaw-app/Thaw'
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-slim
     outputs:
       code: ${{ steps.filter.outputs.code }}
     steps:
@@ -59,7 +59,7 @@ jobs:
   static_analysis:
     needs: changes
     if: github.repository == 'thaw-app/Thaw'
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: needs.changes.outputs.code == 'true'
@@ -102,7 +102,7 @@ jobs:
 
   build:
     if: github.repository == 'thaw-app/Thaw'
-    runs-on: blacksmith-6vcpu-macos-26
+    runs-on: xcode-27
     needs: [changes, static_analysis]
     env:
       HOMEBREW_NO_AUTO_UPDATE: 1
@@ -113,9 +113,6 @@ jobs:
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: needs.changes.outputs.code == 'true'
-      - run: sudo xcode-select -s /Applications/Xcode_26.5.app/Contents/Developer
-        if: needs.changes.outputs.code == 'true'
-
       - name: Cache SwiftPM
         if: needs.changes.outputs.code == 'true'
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -206,7 +203,7 @@ jobs:
   sonarqube:
     needs: [changes, build]
     if: github.repository == 'thaw-app/Thaw'
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     env:
       # Forks and Dependabot get no SONAR_TOKEN on pull_request.
       SONAR_ENABLED: ${{ github.actor != 'dependabot[bot]' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}

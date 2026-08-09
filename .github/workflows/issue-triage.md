@@ -50,6 +50,12 @@ Your job is to triage issue #${{ github.event.issue.number }} that was just open
 
 Start by fetching the full issue details (body, author, existing type and labels) using `gh`.
 
+## Critical duplicate safety rule
+
+Never close a new issue as a duplicate of a **closed** issue. A report that matches a closed issue may be evidence that the bug has returned or was not fully fixed.
+
+Before closing any issue as a duplicate, fetch the proposed canonical issue and verify that its current state is **OPEN**. If it is closed, do not apply the `duplicate` label and do not call `close_issue`. Instead, mention the closed issue in the single triage comment, say that the new report is being left open for investigation, and continue normal triage. If the report says the problem persists or returned after the closed issue was fixed, apply the `regression` label.
+
 ## Triage axes (important)
 
 - **Kind** is the Issue type: `Bug`, `Feature`, or `Task`. Bug **fixes** live on PRs as the `fix` label; never encode an issue's kind with `bug`, `feature`, or `enhancement` labels.
@@ -85,17 +91,19 @@ If the report is about **macOS 27** / **Golden Gate** (version field, title, or 
 - restating problems already covered by the tracking discussion
 - a feature request that is effectively “add macOS 27 support”
 
-…then **stop other triage**. Do **not** ask clarifying questions. Do **not** assign priority. Do this only:
+…then fetch #687 and verify its current state. If #687 is **open**, **stop other triage**. Do **not** ask clarifying questions. Do **not** assign priority. Do this only:
 
 1. Apply labels `duplicate` and `macos-27` using `add_labels`.
 2. Post **one** short comment with `add_comment` pointing to **#687**.
 3. Close the issue with `close_issue` (`state_reason: duplicate`, `duplicate_of: 687`).
 
-Example comment (keep it brief and firm):
+If #687 is **closed**, follow the critical duplicate safety rule instead: do not apply `duplicate`, do not close the new issue, mention #687 in the single triage comment, and continue normal triage.
+
+When #687 is open, use this example comment (keep it brief and firm):
 
 > This belongs in the macOS 27 tracking issue: **#687**. Please continue there (and read the pinned issue / README note before opening new reports). Closing as a duplicate.
 
-**Only keep the issue open** when it is a **narrow, specific, reproducible bug on macOS 27** that is clearly distinct from “27 support is incomplete” (unique steps, unique symptom). In that case apply `macos-27` and continue normal triage.
+When #687 is open, **only keep the issue open** when it is a **narrow, specific, reproducible bug on macOS 27** that is clearly distinct from “27 support is incomplete” (unique steps, unique symptom). In that case apply `macos-27` and continue normal triage. When #687 is closed, the critical duplicate safety rule takes precedence and the new issue stays open.
 
 ### 1. Support Policy Check (comment + label if unsupported)
 
@@ -171,13 +179,22 @@ Search for existing open **and** closed issues that are similar to this one. Use
 - Issues with similar titles or keywords
 - Issues describing the same error, symptom, or feature
 
-If you find a duplicate:
+Fetch the best candidate and verify its current state before taking duplicate actions.
+
+If the canonical issue is **open** and the new report is clearly a duplicate:
 
 1. Apply the **`duplicate`** label using `add_labels`
 2. Post a comment with `add_comment` pointing to the original issue.
-3. Close the issue with `close_issue` (`state_reason: duplicate`, `duplicate_of: <canonical issue number>`) when it is clearly a duplicate (especially of #687 or another tracking/canonical issue).
+3. Close the issue with `close_issue` (`state_reason: duplicate`, `duplicate_of: <canonical issue number>`).
 
-If you also need clarifying info, combine the duplicate notice and questions into a single comment — but prefer closing clear duplicates instead of leaving them open.
+If the matching issue is **closed**:
+
+1. Do **not** apply the `duplicate` label.
+2. Do **not** call `close_issue`.
+3. Mention the closed issue in the single triage comment and explicitly say the new report is being left open for investigation.
+4. Continue normal triage, including type and Priority. Apply `regression` when the report indicates a supposedly fixed problem persists or has returned.
+
+If you also need clarifying info, combine the related-issue notice and questions into a single comment. Only prefer closing clear duplicates when the canonical issue is currently open.
 
 ### 7. Ask Clarifying Questions (if needed)
 
@@ -216,4 +233,9 @@ Do not assign issues automatically. Leave assignment decisions to maintainers.
 - **Respect an existing Issue type and labels** already applied by issue templates or maintainers; update the type only when it is clearly wrong, and do not remove or duplicate labels.
 - **Only use labels from the allowed list**: `chore`, `ci`, `cd`, `docs`, `refactor`, `test`, `duplicate`, `invalid`, `needs-info`, `question`, `regression`, `upstream`, `wontfix`, `unsupported`, `macos-14`, `macos-15`, `macos-26`, `macos-27`, `menubar`, `icebar`, `layout`, `appearance`, `settings`, `onboarding`, `permissions`, `profiles`, `hotkeys`, `updates`, `ops`.
 - **One comment at a time** — combine any clarifying questions and duplicate notice into a single comment if both apply.
-- **Always complete with a safe-output call**: You must always call at least one safe-output tool (`set_issue_type`, `set_issue_field`, `add_labels`, `add_comment`, `close_issue`, `noop`, `missing_tool`, or `missing_data`) to indicate you finished.
+
+## Completing the triage
+
+Collect the full triage decision before emitting outputs. Emit metadata changes (`set_issue_type`, `set_issue_field`, and `add_labels`) first, followed by `add_comment`, then `close_issue` when applicable.
+
+A completed run has either the applicable triage outputs or one `noop` result. Use `noop` only when the issue already has every applicable type, field, and label and no comment or closure is needed. Do not emit `noop` alongside other outputs.

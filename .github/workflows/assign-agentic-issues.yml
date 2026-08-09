@@ -14,7 +14,7 @@ permissions:
 jobs:
   assign:
     if: ${{ github.repository == 'thaw-app/Thaw' && contains(github.event.issue.labels.*.name, 'agentic-workflows') }}
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-slim
     permissions:
       issues: write
     steps:
