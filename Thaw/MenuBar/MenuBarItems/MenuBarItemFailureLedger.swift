@@ -162,6 +162,17 @@ final class MenuBarItemFailureLedger {
         return now - entry.lastFailure < Self.backoffInterval(failureCount: entry.count)
     }
 
+    /// Whether the item is inside its backoff window.
+    ///
+    /// Derives the key the same way ``recordFailure(for:kind:now:)`` does, so
+    /// a caller that already holds the item cannot check one key while the
+    /// ledger records another. The key-taking overload above answers for the
+    /// raw `uniqueIdentifier`, which only matches for owners that do not
+    /// retitle themselves.
+    func isUnderBackoff(for item: MenuBarItem, now: ContinuousClock.Instant = .now) -> Bool {
+        isUnderBackoff(key: Self.key(for: item), now: now)
+    }
+
     // MARK: Unresponsive-owner mark
 
     /// Whether the item's owner has a standing record of ignoring our events.

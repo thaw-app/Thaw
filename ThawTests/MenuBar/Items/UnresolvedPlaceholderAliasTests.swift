@@ -53,12 +53,15 @@ struct UnresolvedPlaceholderAliasTests {
         #expect(bundleID == Self.littleSnitchBundleID)
     }
 
-    @Test("appBundleID rejects host bundle IDs at every attribute position")
-    func appBundleIDRejectsHosts(arguments: ["com.apple.controlcenter", "com.apple.systemuiserver"]) {
+    @Test(
+        "appBundleID rejects host bundle IDs at every attribute position",
+        arguments: ["com.apple.controlcenter", "com.apple.systemuiserver"]
+    )
+    func appBundleIDRejectsHosts(hostBundleID: String) {
         let identity = AXIdentityCatalog.AXItemIdentity(
-            identifier: arguments,
-            title: arguments,
-            help: arguments,
+            identifier: hostBundleID,
+            title: hostBundleID,
+            help: hostBundleID,
             frame: .zero
         )
         #expect(UnresolvedPlaceholderAlias.appBundleID(
@@ -161,14 +164,12 @@ struct UnresolvedPlaceholderAliasTests {
     }
 
     @Test("aliasedItem re-tags the placeholder under the app-owned namespace")
-    func aliasedItemRetagsUnderAppNamespace() {
-        let alias = UnresolvedPlaceholderAlias.aliasedItem(
+    func aliasedItemRetagsUnderAppNamespace() throws {
+        let alias = try #require(UnresolvedPlaceholderAlias.aliasedItem(
             for: Self.placeholder,
             appBundleID: Self.littleSnitchBundleID,
             hostPID: 9001
-        )
-        #expect(alias != nil)
-        let alias = try #require(alias)
+        ))
 
         // The namespace becomes the app-owned bundle ID; the generic slot title
         // (Item-N) and the instance index are preserved so the alias's UID
@@ -191,13 +192,12 @@ struct UnresolvedPlaceholderAliasTests {
     }
 
     @Test("aliasedItem is movable and persistable")
-    func aliasedItemIsMovableAndPersistable() {
-        let alias = UnresolvedPlaceholderAlias.aliasedItem(
+    func aliasedItemIsMovableAndPersistable() throws {
+        let alias = try #require(UnresolvedPlaceholderAlias.aliasedItem(
             for: Self.placeholder,
             appBundleID: Self.littleSnitchBundleID,
             hostPID: 9001
-        )
-        let alias = try #require(alias)
+        ))
 
         #expect(alias.immovabilityReason == nil)
         #expect(alias.isMovable)
@@ -206,13 +206,12 @@ struct UnresolvedPlaceholderAliasTests {
     }
 
     @Test("aliasedItem's uniqueIdentifier matches the saved-layout app-owned key")
-    func aliasedItemUniqueIdentifierMatchesSavedLayout() {
-        let alias = UnresolvedPlaceholderAlias.aliasedItem(
+    func aliasedItemUniqueIdentifierMatchesSavedLayout() throws {
+        let alias = try #require(UnresolvedPlaceholderAlias.aliasedItem(
             for: Self.placeholder,
             appBundleID: Self.littleSnitchBundleID,
             hostPID: 9001
-        )
-        let alias = try #require(alias)
+        ))
 
         // #905: savedSectionOrder/hidden[27] keyed the app-owned form
         // `at.obdev.littlesnitch.agent:Item-0`; the alias must produce the
@@ -221,7 +220,7 @@ struct UnresolvedPlaceholderAliasTests {
     }
 
     @Test("aliasedItem preserves the instance index in its uniqueIdentifier")
-    func aliasedItemPreservesInstanceIndex() {
+    func aliasedItemPreservesInstanceIndex() throws {
         let thirdWindow = MenuBarItem.fixture(
             tag: MenuBarItemTag(namespace: .controlCenter, title: "Item-0", windowID: 1234, instanceIndex: 2),
             windowID: 1234,
