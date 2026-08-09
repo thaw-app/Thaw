@@ -47,6 +47,21 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     /// The item that the view represents.
     let item: MenuBarItem
 
+    /// The app-owned identity an AX correlation promoted an
+    /// `unresolvedControlCenterPlaceholder` to during this view's lifetime, or
+    /// `nil` when no alias has been resolved. Non-nil only after
+    /// ``aliasForUnresolvedControlCenterPlaceholder()`` succeeded; once set,
+    /// it stays so the drag and the alert copy both report the app-owned form.
+    private var aliasedItem: MenuBarItem?
+
+    /// The item the view should be addressed by — the alias when one was
+    /// resolved, otherwise the captured `item`. Drag dispatch reads this so a
+    /// promoted placeholder drags as its app-owned tag, not the parked
+    /// Control Center slot.
+    private var effectiveItem: MenuBarItem {
+        aliasedItem ?? item
+    }
+
     private lazy var tooltipController = CustomTooltipController(text: item.displayName, view: self)
     private var tooltipTrackingArea: NSTrackingArea?
     private let placeholderImage: NSImage?
@@ -65,7 +80,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     }
 
     override var kind: Kind {
-        .item(item)
+        .item(effectiveItem)
     }
 
     /// Creates a view that displays the given menu bar item.
@@ -198,6 +213,68 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         return identity.identifier ?? identity.title ?? identity.help
     }
 
+    /// #905 identity-preference fallback. When the captured `item` is an
+    /// `unresolvedControlCenterPlaceholder` — `com.apple.controlcenter:Item-N`,
+    /// `sourcePID == nil` — but Control Center's AX tree already names the
+    /// owning app for the slot's frame, build a synthetic `MenuBarItem`
+    /// re-tagged under that app's bundle ID namespace and carrying the owner's
+    /// PID as `sourcePID`. `isMovable` becomes true for the alias, so the
+    /// Layout editor drag (and `MenuBarItemManager.move(...)`'s inner guard)
+    /// proceed; AppKit repositions the slot by `windowID`. The post-move
+    /// `cacheItemsRegardless` writes the app-owned identifier into
+    /// `savedSectionOrder` once the source-PID cache catches up, or AppKit's
+    /// own autosave position holds the slot in place meanwhile.
+    ///
+    /// Same bounded AX snapshot (`maxSnapshotDuration` = 500 ms) as
+    /// ``logMoveRefusal()``. Runs at most once per view: a successful alias
+    /// flips `isEnabled` to `true` so subsequent `mouseDragged` events skip
+    /// the guard, and a failed correlation returns `nil` and falls back to the
+    /// diagnostics alert path that logs the no-confident-identity outcome.
+    private func aliasForUnresolvedControlCenterPlaceholder() -> MenuBarItem? {
+        precondition(item.immovabilityReason == .unresolvedControlCenterPlaceholder)
+
+        let hosts = ["com.apple.controlcenter", "com.apple.systemuiserver"]
+            .flatMap { NSRunningApplication.runningApplications(withBundleIdentifier: $0) }
+        guard !hosts.isEmpty else { return nil }
+
+        let snapshot = AXIdentityCatalog.snapshot(hosts: hosts)
+        let bounds = Bridging.getWindowBounds(for: item.windowID) ?? item.bounds
+        guard let identity = AXIdentityCatalog.identity(for: bounds, in: snapshot) else {
+            Self.diagLog.warning(
+                "Move alias: AX correlation found no confident identity for \(item.logString) (windowID=\(item.windowID))"
+            )
+            return nil
+        }
+
+        let hostBundleIDs: Set = ["com.apple.controlcenter", "com.apple.systemuiserver"]
+        guard let bundleID = UnresolvedPlaceholderAlias.appBundleID(
+            from: identity,
+            excluding: hostBundleIDs,
+            thawBundleID: Constants.bundleIdentifier
+        ) else {
+            Self.diagLog.warning(
+                "Move alias: AX names \(item.logString) (windowID=\(item.windowID)) as identifier=\(identity.identifier ?? "nil"), title=\(identity.title ?? "nil"), help=\(identity.help ?? "nil"); none is a non-host bundle identifier"
+            )
+            return nil
+        }
+
+        guard
+            let hostApp = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).first,
+            hostApp.processIdentifier != 0
+        else {
+            Self.diagLog.warning(
+                "Move alias: AX named \(item.logString) (windowID=\(item.windowID)) as \(bundleID), but no running application matches that bundle ID"
+            )
+            return nil
+        }
+
+        return UnresolvedPlaceholderAlias.aliasedItem(
+            for: item,
+            appBundleID: bundleID,
+            hostPID: hostApp.processIdentifier
+        )
+    }
+
     /// Provides an alert to display when a menu bar item is unresponsive.
     func provideAlertForUnresponsiveItem() -> NSAlert {
         let alert = provideAlertForDisabledItem()
@@ -240,6 +317,25 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     override func mouseDragged(with event: NSEvent) {
         super.mouseDragged(with: event)
         tooltipController.cancel()
+
+        // #905 fallback: before refusing an `unresolvedControlCenterPlaceholder`
+        // drag, attempt to re-tag the slot with its app-owned identity (when
+        // Control Center's AX tree already names the owning app for the
+        // slot's frame). On a confident hit the alias becomes the view's
+        // effective item and `isEnabled` flips to `true`, so the guard below
+        // passes and `MenuBarItemManager.move(...)`'s inner `isMovable`
+        // guard (keyed off the same alias) does too. On a miss or a static
+        // prohibition the guard falls through to the alert path as before.
+        if !isEnabled,
+           item.immovabilityReason == .unresolvedControlCenterPlaceholder,
+           let alias = aliasForUnresolvedControlCenterPlaceholder()
+        {
+            Self.diagLog.info(
+                "Move enabled for \(item.logString) via AX-correlated identity: re-tagged as \(alias.uniqueIdentifier) (sourcePID=\(alias.sourcePID.map(String.init) ?? "nil")); windowID=\(item.windowID)"
+            )
+            aliasedItem = alias
+            isEnabled = true
+        }
 
         guard isEnabled else {
             let axResolvedName = logMoveRefusal()

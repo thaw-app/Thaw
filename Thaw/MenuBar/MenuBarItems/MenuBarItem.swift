@@ -250,6 +250,82 @@ nonisolated struct MenuBarItem: CustomStringConvertible {
     }
 }
 
+// MARK: - UnresolvedPlaceholderAlias
+
+/// Re-tagging an `unresolvedControlCenterPlaceholder` with an app-owned
+/// identity, so a Layout editor drag can proceed against a slot the source-PID
+/// cache has not resolved this cycle.
+///
+/// The catalog (#905) holds both the app-owned form
+/// `at.obdev.littlesnitch.agent:Item-0` and the live Control-Center-hosted
+/// slot form `com.apple.controlcenter:Item-0` for the same physical item.
+/// While the cache has not caught up, the slot is parked by the
+/// `unresolvedControlCenterPlaceholder` gate, the Layout editor's drag is
+/// refused, and the user sees a generic alert even when the AX tree already
+/// names the owning app. This alias promotes the slot to its app-owned
+/// identity for the duration of one drag: `isMovable` becomes true, the
+/// `move(...)` inner guard lets synthetic events through, and the post-move
+/// `cacheItemsRegardless` writes the app-owned identifier into
+/// `savedSectionOrder` once the cache resolves (or the drag lands AppKit-side
+/// via the slot's own autosave position while the cache catches up).
+///
+/// The pure halves below are unit-testable; the AppKit coupling lives in
+/// `LayoutBarItemView.aliasForUnresolvedControlCenterPlaceholder()`.
+nonisolated enum UnresolvedPlaceholderAlias {
+    /// The bundle identifier carried by an AX identity, when one of its
+    /// attributes names a non-host third-party app.
+    ///
+    /// Order: `AXIdentifier` (e.g. `com.apple.menuextra.wifi` for a hosted
+    /// module, `at.obdev.littlesnitch.agent` for a third-party agent), then
+    /// `AXTitle`, then `AXHelp` — the latter two carry the bundle ID when a
+    /// widget only publishes its title/help string. A candidate is rejected
+    /// when it lacks the bundle-identifier shape (no dot, following the
+    /// marker-pair convention in `MarkerPairResolver`), or names one of the
+    /// host processes or Thaw itself.
+    static nonisolated func appBundleID(
+        from identity: AXIdentityCatalog.AXItemIdentity?,
+        excluding hostBundleIDs: Set<String>,
+        thawBundleID: String
+    ) -> String? {
+        guard let identity else { return nil }
+        for candidate in [identity.identifier, identity.title, identity.help] {
+            guard let candidate, candidate.contains(".") else { continue }
+            if hostBundleIDs.contains(candidate) || candidate == thawBundleID {
+                continue
+            }
+            return candidate
+        }
+        return nil
+    }
+
+    /// An aliased `MenuBarItem` whose tag carries the app-owned namespace and
+    /// whose `sourcePID` is the resolved owner. Returns `nil` unless `item` is
+    /// exactly the gate this alias is for, so callers cannot re-tag any other
+    /// immovability case.
+    static nonisolated func aliasedItem(
+        for item: MenuBarItem,
+        appBundleID: String,
+        hostPID: pid_t
+    ) -> MenuBarItem? {
+        guard item.immovabilityReason == .unresolvedControlCenterPlaceholder else { return nil }
+        let aliasedTag = MenuBarItemTag(
+            namespace: .string(appBundleID),
+            title: item.tag.title,
+            windowID: item.windowID,
+            instanceIndex: item.tag.instanceIndex
+        )
+        return MenuBarItem(
+            tag: aliasedTag,
+            windowID: item.windowID,
+            ownerPID: item.ownerPID,
+            sourcePID: hostPID,
+            bounds: item.bounds,
+            title: item.title,
+            isOnScreen: item.isOnScreen
+        )
+    }
+}
+
 // MARK: - MenuBarItem Init
 
 //
