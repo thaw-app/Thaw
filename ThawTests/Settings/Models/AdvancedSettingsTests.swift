@@ -114,7 +114,7 @@ struct AdvancedSettingsTests {
             #expect(settings.enableSecondaryContextMenuQuit)
             #expect(settings.showOnHoverDelay == 1.5)
             #expect(settings.tooltipDelay == 2.5)
-            #expect(settings.iconRefreshInterval == 3.5)
+            #expect(settings.iconRefreshInterval == 1.0)
             #expect(settings.showMenuBarTooltips)
             #expect(!settings.useLCSSortingOnNotchedDisplays)
             #expect(!settings.enableMenuBarItemOverflow)
@@ -311,7 +311,7 @@ struct AdvancedSettingsTests {
             // synchronously by `propertyChangesArePersisted`.
             #expect(settings.showOnHoverDelay == 1.75)
             #expect(settings.tooltipDelay == 2.75)
-            #expect(settings.iconRefreshInterval == 3.75)
+            #expect(settings.iconRefreshInterval == 1.0)
         }
     }
 

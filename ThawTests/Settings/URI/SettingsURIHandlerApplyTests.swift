@@ -186,7 +186,30 @@ struct SettingsURIHandlerApplyTests {
             #expect(Defaults.double(forKey: .tooltipDelay) == 0)
 
             #expect(SettingsURIHandler.handleSet(key: "iconRefreshInterval", value: "2.5", sender: "test"))
-            #expect(Defaults.double(forKey: .iconRefreshInterval) == 2.5)
+            #expect(Defaults.double(forKey: .iconRefreshInterval) == 1.0)
+        }
+    }
+
+    @Test("iconRefreshInterval snaps onto the discrete fps grid before Defaults write")
+    func iconRefreshIntervalSnapsOntoFpsGrid() throws {
+        try withScratchDefaults { _ in
+            // 0.6 s → ~1.67 fps → nearest 2 fps → 0.5 s
+            #expect(SettingsURIHandler.handleSet(key: "iconRefreshInterval", value: "0.6", sender: "test"))
+            #expect(Defaults.double(forKey: .iconRefreshInterval) == 0.5)
+
+            // Above the 30 fps ceiling → floor interval
+            #expect(SettingsURIHandler.handleSet(key: "iconRefreshInterval", value: "0.01", sender: "test"))
+            #expect(
+                Defaults.double(forKey: .iconRefreshInterval)
+                    == MenuBarItemImageCache.minIconRefreshInterval
+            )
+
+            // On-grid 10 fps survives
+            #expect(SettingsURIHandler.handleSet(key: "iconRefreshInterval", value: "0.1", sender: "test"))
+            #expect(Defaults.double(forKey: .iconRefreshInterval) == 0.1)
+
+            #expect(SettingsURIHandler.handleSet(key: "iconRefreshInterval", value: "0", sender: "test"))
+            #expect(Defaults.double(forKey: .iconRefreshInterval) == 0)
         }
     }
 
