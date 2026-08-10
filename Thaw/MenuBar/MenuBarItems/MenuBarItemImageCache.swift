@@ -240,16 +240,21 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     /// the on-screen path the same way the offscreen one already is.
     private var lastSCKRefreshAt: ContinuousClock.Instant?
 
-    /// Minimum spacing enforced between visible-section SCK captures.
+    /// Minimum spacing enforced between visible-section SCK captures, in seconds.
     ///
-    /// The tick rate comes from the user's `iconRefreshInterval` (the "Icon
-    /// refresh rate" slider, up to 30 fps), and the consumers that ask for
-    /// every section — item search, the layout pane, the hotkey list — turned
-    /// that into up to 30 composite captures per second for as long as their
-    /// panel stayed open, which is enough to pin a core. Icon animation does
-    /// not need more than this; the slider still controls everything below the
-    /// floor.
-    private static let minSCKRefreshInterval: Duration = .milliseconds(250)
+    /// Also the reciprocal of ``maxIconRefreshRate``. The slider ceiling and
+    /// this capture floor are the same number so they cannot drift apart: the
+    /// UI never promises a rate the engine will not deliver.
+    nonisolated static let minIconRefreshInterval: TimeInterval = 0.25
+
+    /// Maximum icon refresh rate the UI may offer, in frames per second.
+    /// Derived from ``minIconRefreshInterval``.
+    nonisolated static var maxIconRefreshRate: Double {
+        1.0 / minIconRefreshInterval
+    }
+
+    /// Minimum spacing enforced between visible-section SCK captures.
+    private static let minSCKRefreshInterval: Duration = .seconds(minIconRefreshInterval)
 
     /// Tracks whether the MenuBarLayoutSettingsPane is currently open.
     /// Used to gate background cache prewarming so captures only occur while the
@@ -766,8 +771,9 @@ final class MenuBarItemImageCache: @unchecked Sendable {
                 try? await Task.sleep(for: .seconds(1))
                 continue
             }
-            let ms = Int(interval * 1000)
-            try? await Task.sleep(for: .milliseconds(ms))
+            // Floor the sleep so a sub-millisecond stored interval cannot
+            // truncate to a zero-length sleep and spin the main actor.
+            try? await Task.sleep(for: .seconds(max(interval, Self.minIconRefreshInterval)))
             guard !Task.isCancelled else { break }
 
             let nav = appState.navigationState

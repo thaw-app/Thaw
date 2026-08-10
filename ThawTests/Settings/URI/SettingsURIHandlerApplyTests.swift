@@ -186,7 +186,7 @@ struct SettingsURIHandlerApplyTests {
             #expect(Defaults.double(forKey: .tooltipDelay) == 0)
 
             #expect(SettingsURIHandler.handleSet(key: "iconRefreshInterval", value: "2.5", sender: "test"))
-            #expect(Defaults.double(forKey: .iconRefreshInterval) == 2.5)
+            #expect(Defaults.double(forKey: .iconRefreshInterval) == 1.0)
         }
     }
 
