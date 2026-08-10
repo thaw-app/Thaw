@@ -59,12 +59,28 @@ nonisolated struct MenuBarItem: CustomStringConvertible {
         }
     }
 
+    /// Whether synthetic move events are posted to the window's owner.
+    ///
+    /// Read here as well as in the manager because it decides whether an
+    /// item with an unresolved owner is movable at all, not merely where
+    /// its events go. See ``Defaults/Key/postMoveEventsToWindowOwner``.
+    static var postsMoveEventsToWindowOwner: Bool {
+        (Defaults.object(forKey: .postMoveEventsToWindowOwner) as? Bool)
+            ?? Defaults.DefaultValue.postMoveEventsToWindowOwner
+    }
+
     /// The reason this item cannot be moved, or `nil` when it can.
     var immovabilityReason: ImmovabilityReason? {
         if !tag.isMovable {
             return .prohibitedSystemItem
         }
-        if tag.isControlCenterGenericItem, sourcePID == nil {
+        // The placeholder gate exists because posting drag events to Control
+        // Center for a slot with no known owner was observed to time out. It
+        // is a statement about where the events were going: they were aimed
+        // at the owning app, and there wasn't one. Posting to the window's
+        // owner instead removes the need to know who owns the item, so the
+        // gate's premise no longer holds and the item is offered.
+        if tag.isControlCenterGenericItem, sourcePID == nil, !Self.postsMoveEventsToWindowOwner {
             return .unresolvedControlCenterPlaceholder
         }
         return nil

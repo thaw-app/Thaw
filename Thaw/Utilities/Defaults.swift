@@ -228,6 +228,7 @@ nonisolated extension Defaults {
         static let bulkApplyIdleWaitCapMs = 2000
         static let enforceConcealedSectionOrder = true
         static let automaticArrangementEnabled = true
+        static let postMoveEventsToWindowOwner = false
         static let discardStrayMoveEvents = true
         static let failFastOnEventWindowMismatch = false
         static let axMessagingTimeout = SharedConstants.axMessagingTimeout
@@ -428,6 +429,32 @@ nonisolated extension Defaults {
         ///
         /// Hidden diagnostic flag; not exposed in Settings. Default: true.
         case automaticArrangementEnabled = "automaticArrangementEnabled"
+
+        /// Whether synthetic move events are posted to the process that owns
+        /// the item's *window* rather than the app that owns the *item*.
+        ///
+        /// On macOS 26 those are different processes: Control Center hosts
+        /// every status item window, so the CG owner of the window Thaw is
+        /// dragging is Control Center, while `sourcePID` names the app whose
+        /// status item it logically is. Thaw has always preferred
+        /// `sourcePID`, which was right when the owning app really did own
+        /// the window, and on 26 targets a process that does not own the
+        /// window being dragged.
+        ///
+        /// Two consequences this flag is meant to test. Moves that fail with
+        /// `itemResponseTimeout` may be failing because the events go to the
+        /// wrong process (#900, #923, and the notch-overflow ejections in
+        /// #924). And an item whose owning app never resolved need not be
+        /// immovable at all: with the host as the target, the move does not
+        /// require knowing who owns the item, so
+        /// ``MenuBarItem/ImmovabilityReason/unresolvedControlCenterPlaceholder``
+        /// stops applying while this is on — the premise of that gate is
+        /// exactly what is under test.
+        ///
+        /// Off by default: this changes where every synthetic event goes.
+        ///
+        /// Hidden diagnostic flag; not exposed in Settings. Default: false.
+        case postMoveEventsToWindowOwner = "postMoveEventsToWindowOwner"
 
         /// Whether stray echoes of synthetic move events are discarded
         /// before they can be delivered against the wrong window.

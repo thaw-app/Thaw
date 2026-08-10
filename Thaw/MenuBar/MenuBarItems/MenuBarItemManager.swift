@@ -3796,7 +3796,31 @@ extension MenuBarItemManager {
     /// Returns the process identifier that can be used to create
     /// and post a menu bar item event.
     private nonisolated func getEventPID(for item: MenuBarItem) -> pid_t {
-        item.sourcePID ?? item.ownerPID
+        Self.eventTargetPID(
+            sourcePID: item.sourcePID,
+            ownerPID: item.ownerPID,
+            preferWindowOwner: MenuBarItem.postsMoveEventsToWindowOwner
+        )
+    }
+
+    /// The process a synthetic move event should be posted to.
+    ///
+    /// `ownerPID` is the CG owner of the window being dragged. `sourcePID`
+    /// is the app whose status item it logically is. Before macOS 26 these
+    /// were the same process; on 26 Control Center hosts every status item
+    /// window, so preferring `sourcePID` posts to a process that does not
+    /// own the window under the cursor.
+    ///
+    /// Pure over its inputs.
+    static nonisolated func eventTargetPID(
+        sourcePID: pid_t?,
+        ownerPID: pid_t,
+        preferWindowOwner: Bool
+    ) -> pid_t {
+        if preferWindowOwner {
+            return ownerPID
+        }
+        return sourcePID ?? ownerPID
     }
 
     /// Returns an event source for a menu bar item event operation.

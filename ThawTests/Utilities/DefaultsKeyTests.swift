@@ -30,6 +30,7 @@ struct DefaultsKeyTests {
         #expect(Defaults.Key.bulkApplyIdleWaitCapMs.rawValue == "bulkApplyIdleWaitCapMs")
         #expect(Defaults.Key.enforceConcealedSectionOrder.rawValue == "enforceConcealedSectionOrder")
         #expect(Defaults.Key.automaticArrangementEnabled.rawValue == "automaticArrangementEnabled")
+        #expect(Defaults.Key.postMoveEventsToWindowOwner.rawValue == "postMoveEventsToWindowOwner")
         #expect(Defaults.Key.discardStrayMoveEvents.rawValue == "discardStrayMoveEvents")
         #expect(Defaults.Key.failFastOnEventWindowMismatch.rawValue == "failFastOnEventWindowMismatch")
         #expect(Defaults.Key.axMessagingTimeout.rawValue == "axMessagingTimeout")
@@ -48,6 +49,9 @@ struct DefaultsKeyTests {
         // True keeps Thaw arranging on its own initiative; false is the
         // manual-only escape hatch.
         #expect(Defaults.DefaultValue.automaticArrangementEnabled == true)
+        // False keeps events aimed at the owning app; flipping it changes
+        // where every synthetic move event goes.
+        #expect(Defaults.DefaultValue.postMoveEventsToWindowOwner == false)
         #expect(Defaults.DefaultValue.discardStrayMoveEvents == true)
         #expect(Defaults.DefaultValue.failFastOnEventWindowMismatch == false)
         #expect(Defaults.DefaultValue.axMessagingTimeout == 1.0)

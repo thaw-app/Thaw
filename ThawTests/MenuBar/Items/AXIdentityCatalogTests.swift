@@ -230,6 +230,49 @@ struct AXIdentityCatalogTests {
         #expect(result == nil)
     }
 
+    // MARK: - MenuBarItemManager.eventTargetPID
+
+    /// Historic behaviour: aim at the app whose status item it is.
+    ///
+    /// Correct before macOS 26, when that app also owned the window. On 26
+    /// Control Center hosts every status item window, so this targets a
+    /// process that does not own the window being dragged.
+    @Test("By default a resolved source PID wins")
+    func eventTargetPrefersSourcePIDByDefault() {
+        #expect(
+            MenuBarItemManager.eventTargetPID(sourcePID: 1388, ownerPID: 492, preferWindowOwner: false) == 1388
+        )
+    }
+
+    /// The existing fallback: with no owning app known, the window's owner
+    /// is all there is — which is the host, and the target the flag makes
+    /// unconditional.
+    @Test("An unresolved source PID already falls back to the window owner")
+    func eventTargetFallsBackToOwner() {
+        #expect(
+            MenuBarItemManager.eventTargetPID(sourcePID: nil, ownerPID: 492, preferWindowOwner: false) == 492
+        )
+    }
+
+    /// The flag under test: always address the process that owns the window
+    /// being dragged, which on macOS 26 is the host rather than the app
+    /// whose status item it is.
+    @Test("Preferring the window owner overrides a resolved source PID")
+    func eventTargetPrefersWindowOwnerWhenFlagged() {
+        #expect(
+            MenuBarItemManager.eventTargetPID(sourcePID: 1388, ownerPID: 492, preferWindowOwner: true) == 492
+        )
+    }
+
+    /// With the flag on, an unresolved owner changes nothing — which is the
+    /// point: the move stops depending on identity.
+    @Test("The window owner is used whether or not the source PID resolved")
+    func eventTargetIgnoresSourcePIDWhenFlagged() {
+        #expect(
+            MenuBarItemManager.eventTargetPID(sourcePID: nil, ownerPID: 492, preferWindowOwner: true) == 492
+        )
+    }
+
     // MARK: - MenuBarItemManager.ControlItemPair.shouldRecoverOwnControlItem
 
     /// Thaw created its control items and holds their windows, so when one
