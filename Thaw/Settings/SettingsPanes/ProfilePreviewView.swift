@@ -108,7 +108,9 @@ struct ProfilePreviewView: View {
                 .foregroundStyle(.secondary)
 
             if section.items.isEmpty {
-                Text("No items")
+                // Reuses the catalog's existing, fully translated key rather
+                // than introducing "No items", which shipped untranslated.
+                Text("No items in this section")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             } else {
