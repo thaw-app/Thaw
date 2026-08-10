@@ -599,7 +599,7 @@ final class MenuBarItemManager {
     }
 
     /// When the last continuous notch-overflow rebalance ejected items. Used
-    /// only for the cooldown in ``rebalanceNotchOverflowIfNeeded(items:)``.
+    /// only for the cooldown in rebalanceNotchOverflowIfNeeded(items:controlItems:).
     private var lastNotchRebalanceTimestamp: Date?
     /// Placement preference for newly detected menu bar items.
     private(set) var newItemsPlacement = NewItemsPlacement.defaultValue
@@ -3112,7 +3112,7 @@ extension MenuBarItemManager {
         // Keep the visible row inside the beside-notch budget regardless of
         // whether a profile is active. Runs last so it sees the settled cache,
         // and self-gates on every in-flight mover.
-        await rebalanceNotchOverflowIfNeeded(items: items)
+        await rebalanceNotchOverflowIfNeeded(items: items, controlItems: controlItems)
     }
 
     /// Caches the current menu bar items, if the items have changed
@@ -8976,7 +8976,7 @@ extension MenuBarItemManager {
     /// When a profile *is* active the pass defers to
     /// ``scheduleProfileResort()``: a full apply re-runs the same planner while
     /// also honouring the saved order, so ejecting here would fight it.
-    func rebalanceNotchOverflowIfNeeded(items: [MenuBarItem]) async {
+    func rebalanceNotchOverflowIfNeeded(items: [MenuBarItem], controlItems: ControlItemPair) async {
         guard let appState else { return }
         guard appState.settings.advanced.enableMenuBarItemOverflow else { return }
 
@@ -9010,9 +9010,14 @@ extension MenuBarItemManager {
         // and the same input rule: only unparked items may feed it. Items left
         // of the hidden divider are parked at arbitrary negative x, which lands
         // inside a display positioned to the left of the main one and reads as
-        // a permanent spread. Without a hidden control item to measure against
-        // nothing can be classified, so leave the items unfiltered rather than
-        // guess.
+        // a permanent spread.
+        //
+        // The divider comes from the caller's ControlItemPair rather than a
+        // lookup in items. Building that pair strips the hidden and
+        // always-hidden control items out of the array it is given, and the
+        // caller hands us that same stripped array, so searching it for
+        // .hiddenControlItem finds nothing and the filter would silently pass
+        // every parked item straight through.
         //
         // Frames come from CGDisplayBounds, not NSScreen.frame, for the same
         // reason as the other two call sites: item bounds are CoreGraphics
@@ -9021,10 +9026,8 @@ extension MenuBarItemManager {
         // containment test wrong off the main display, which on a vertically
         // stacked arrangement reads as no spread when the items really do
         // straddle two screens.
-        var unparkedItems = items
-        if let hiddenControlItemMinX = items.first(where: { $0.tag == .hiddenControlItem })?.bounds.minX {
-            unparkedItems = items.filter { $0.bounds.minX >= hiddenControlItemMinX }
-        }
+        let hiddenControlItemMinX = controlItems.hidden.bounds.minX
+        let unparkedItems = items.filter { $0.bounds.minX >= hiddenControlItemMinX }
         guard !LayoutSolver.itemsSpanMultipleDisplays(
             itemCenters: unparkedItems.map { CGPoint(x: $0.bounds.midX, y: $0.bounds.midY) },
             screenFrames: NSScreen.screens.map { CGDisplayBounds($0.displayID) }
@@ -9043,8 +9046,6 @@ extension MenuBarItemManager {
             return
         }
 
-        var itemsCopy = items
-        guard let controlItems = ControlItemPair(items: &itemsCopy) else { return }
         let hiddenCtrlUID = controlItems.hidden.uniqueIdentifier
         let ahCtrlUID = controlItems.alwaysHidden?.uniqueIdentifier
 
