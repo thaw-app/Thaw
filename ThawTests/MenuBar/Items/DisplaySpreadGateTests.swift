@@ -68,10 +68,12 @@ struct DisplaySpreadGateTests {
         )
     }
 
-    /// Items on one screen plus intentionally off-screen parked hidden items
-    /// (the control item shoves them ~10000px left, onto no display). The
-    /// parked points must be ignored so a normal hidden layout does not read
-    /// as spread.
+    /// Items on one screen plus parked hidden items that happen to land on no
+    /// display at all, because no screen occupies that coordinate range. The
+    /// unmatched points must be ignored so a normal hidden layout does not read
+    /// as spread. Note this is the lucky arrangement: see
+    /// parkedItemInsideLeftDisplayReadsAsSpread for the case where a screen
+    /// does own the parked coordinates.
     @Test("Parked off-screen items are ignored")
     func offScreenParkedItemsAreIgnored() {
         #expect(
@@ -119,6 +121,73 @@ struct DisplaySpreadGateTests {
     func emptyItemsDoesNotSpread() {
         #expect(
             !LayoutSolver.itemsSpanMultipleDisplays(itemCenters: [], screenFrames: [main, above])
+        )
+    }
+
+    // MARK: - Displays to the left of the main one
+
+    // The arrangement from the field log: an ultrawide main display with a
+    // second screen to its right and a third to its left. The left screen owns
+    // the negative x range that parked hidden items are shoved into, so the
+    // "parked items land on no display" assumption the rest of this suite was
+    // written against does not hold here.
+
+    private let fieldMain = CGRect(x: 0, y: 0, width: 3440, height: 1440)
+    private let fieldRight = CGRect(x: 3440, y: 0, width: 2560, height: 1440)
+    private let fieldLeft = CGRect(x: -2560, y: 0, width: 2560, height: 1440)
+
+    private var fieldScreens: [CGRect] {
+        [fieldMain, fieldRight, fieldLeft]
+    }
+
+    /// A parked hidden item shoved to x ≈ -2450 lands inside the left display,
+    /// so the predicate honestly reports a spread. This is not a bug in the
+    /// predicate; it is why callers must exclude parked items before calling
+    /// it. Feeding every section in made both gates fire forever: the persist
+    /// gate then blocked every write to savedSectionOrder, the saved layout
+    /// stopped tracking the user's arrangement, and each window-ID change
+    /// re-imposed the stale order.
+    @Test("A parked item inside a left-positioned display reads as a spread")
+    func parkedItemInsideLeftDisplayReadsAsSpread() {
+        #expect(
+            LayoutSolver.itemsSpanMultipleDisplays(
+                itemCenters: [
+                    CGPoint(x: 2846, y: 15), // visible item on the main display
+                    CGPoint(x: -2450, y: 15), // parked hidden item, inside fieldLeft
+                ],
+                screenFrames: fieldScreens
+            )
+        )
+    }
+
+    /// The same settled arrangement with the parked items excluded, which is
+    /// what the callers now pass. Must not defer.
+    @Test("Unparked centers alone do not spread on a left-positioned arrangement")
+    func unparkedCentersDoNotSpreadOnFieldArrangement() {
+        #expect(
+            !LayoutSolver.itemsSpanMultipleDisplays(
+                itemCenters: [
+                    CGPoint(x: 2846, y: 15),
+                    CGPoint(x: 3201, y: 15),
+                    CGPoint(x: 3247, y: 15),
+                ],
+                screenFrames: fieldScreens
+            )
+        )
+    }
+
+    /// A real relocation still has to be caught on this arrangement: the
+    /// unparked items themselves straddle the main and right displays.
+    @Test("A relocation across a left-positioned arrangement is still a spread")
+    func relocationStillSpreadsOnFieldArrangement() {
+        #expect(
+            LayoutSolver.itemsSpanMultipleDisplays(
+                itemCenters: [
+                    CGPoint(x: 2846, y: 15), // still on the main display
+                    CGPoint(x: 4200, y: 15), // already migrated to the right display
+                ],
+                screenFrames: fieldScreens
+            )
         )
     }
 }

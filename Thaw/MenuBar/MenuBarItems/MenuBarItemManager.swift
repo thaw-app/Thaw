@@ -2408,20 +2408,28 @@ extension MenuBarItemManager {
             // capturing the section order now would bake those un-hidden items
             // into the saved layout as if the user wanted them visible. Wait for
             // the items to collapse back onto a single display.
+            //
+            // Only the visible section feeds the gate. Hidden and always-hidden
+            // items are parked left of the menu bar at arbitrary negative x, and
+            // a display positioned to the left of the main one owns that
+            // coordinate range, so parked items read as a second screen on a
+            // settled layout and this branch never stops firing. The visible
+            // section is never parked, and a genuine relocation splits it across
+            // screens just the same, so narrowing the input keeps the protection.
             let screenFrames = NSScreen.screens.map { CGDisplayBounds($0.displayID) }
-            let itemCenters = MenuBarSection.Name.allCases.flatMap { section in
-                context.cache[section].map { CGPoint(x: $0.bounds.midX, y: $0.bounds.midY) }
+            let itemCenters = context.cache[.visible].map {
+                CGPoint(x: $0.bounds.midX, y: $0.bounds.midY)
             }
             let spansDisplays = LayoutSolver.itemsSpanMultipleDisplays(
                 itemCenters: itemCenters,
                 screenFrames: screenFrames
             )
             if hasBlockedItems {
-                MenuBarItemManager.diagLog.debug(
+                MenuBarItemManager.diagLog.warning(
                     "Skipping saveSectionOrder; blocked items detected (x=-1), will retry on next cache tick"
                 )
             } else if spansDisplays {
-                MenuBarItemManager.diagLog.debug(
+                MenuBarItemManager.diagLog.warning(
                     "Skipping saveSectionOrder; menu bar items span multiple displays (relocation in progress)"
                 )
             } else {
@@ -8716,6 +8724,34 @@ extension MenuBarItemManager {
             return false
         }
 
+        // Display-spread gate. While the active menu bar relocates to another
+        // display macOS migrates the status item windows between screens
+        // asynchronously, so the items transiently straddle two displays. A
+        // bulk apply dispatched now resolves each item's move against whichever
+        // display its window currently occupies and cannot converge, stranding
+        // items on the wrong screen where they read as un-hidden. Skip; a later
+        // tick retries once the items collapse back onto the active display.
+        // Frames come from CGDisplayBounds so they share the top-left origin
+        // coordinate space of the item bounds.
+        //
+        // Only items right of the hidden divider feed the gate. Parked hidden
+        // and always-hidden items sit at arbitrary negative x, which belongs to
+        // a display positioned left of the main one, and including them reports
+        // a spread on a settled layout for as long as that display is
+        // connected. This gate and the saveSectionOrder one are a pair: both
+        // must judge the same geometry, or the layout gets applied from an
+        // order that can no longer be saved.
+        let screenFrames = NSScreen.screens.map { CGDisplayBounds($0.displayID) }
+        let unparkedCenters = items
+            .filter { $0.bounds.minX >= controlItems.hidden.bounds.minX }
+            .map { CGPoint(x: $0.bounds.midX, y: $0.bounds.midY) }
+        if LayoutSolver.itemsSpanMultipleDisplays(itemCenters: unparkedCenters, screenFrames: screenFrames) {
+            MenuBarItemManager.diagLog.warning(
+                "applySavedLayout: skipping (\(trigger)); menu bar items span multiple displays (relocation in progress)"
+            )
+            return false
+        }
+
         MenuBarItemManager.diagLog.info("applySavedLayout: dispatching bulk apply (\(trigger))")
 
         // The shared body uses itemOrder as the per-section ordered
@@ -8970,10 +9006,28 @@ extension MenuBarItemManager {
         else { return }
 
         // Mid-relocation between displays the item bounds straddle two screens
-        // and the budget cannot be trusted. Same guard the profile apply uses.
+        // and the budget cannot be trusted. Same guard the persist path uses,
+        // and the same input rule: only unparked items may feed it. Items left
+        // of the hidden divider are parked at arbitrary negative x, which lands
+        // inside a display positioned to the left of the main one and reads as
+        // a permanent spread. Without a hidden control item to measure against
+        // nothing can be classified, so leave the items unfiltered rather than
+        // guess.
+        //
+        // Frames come from CGDisplayBounds, not NSScreen.frame, for the same
+        // reason as the other two call sites: item bounds are CoreGraphics
+        // (top-left origin, y growing downward) while NSScreen.frame is AppKit
+        // (bottom-left origin, y growing upward). Mixing them made every
+        // containment test wrong off the main display, which on a vertically
+        // stacked arrangement reads as no spread when the items really do
+        // straddle two screens.
+        var unparkedItems = items
+        if let hiddenControlItemMinX = items.first(where: { $0.tag == .hiddenControlItem })?.bounds.minX {
+            unparkedItems = items.filter { $0.bounds.minX >= hiddenControlItemMinX }
+        }
         guard !LayoutSolver.itemsSpanMultipleDisplays(
-            itemCenters: items.map { CGPoint(x: $0.bounds.midX, y: $0.bounds.midY) },
-            screenFrames: NSScreen.screens.map(\.frame)
+            itemCenters: unparkedItems.map { CGPoint(x: $0.bounds.midX, y: $0.bounds.midY) },
+            screenFrames: NSScreen.screens.map { CGDisplayBounds($0.displayID) }
         ) else { return }
 
         // A profile apply is the better tool: it re-runs this same planner and
