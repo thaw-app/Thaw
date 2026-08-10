@@ -106,6 +106,93 @@ struct AutomaticBulkApplyGateTests {
     }
 }
 
+/// Characterizes the idle window an automatic bulk apply waits for before
+/// it starts issuing moves.
+///
+/// A batch holds the cursor hidden for its whole length, so one dispatched
+/// the instant a late arrival is noticed can take the pointer away
+/// mid-interaction and then contest it move by move (#899, #723). The gate
+/// waits for one real lull first — and, crucially, only defers: the cap
+/// guarantees the batch still runs, because a saved layout that is never
+/// restored is the worse failure.
+@Suite("Bulk apply idle gate")
+struct BulkApplyIdleGateTests {
+    /// Off by default. A non-positive threshold is the switch, not a
+    /// zero-length window, so the caller skips the wait loop entirely.
+    @Test("A non-positive threshold disables the gate", arguments: [0, -1, -250])
+    func nonPositiveThresholdDisables(thresholdMs: Int) {
+        #expect(
+            MenuBarItemManager.bulkApplyIdleWindow(thresholdMs: thresholdMs, capMs: 2000) == nil
+        )
+    }
+
+    /// A configured threshold produces the window the wait loop polls on.
+    @Test("A positive threshold produces a window")
+    func positiveThresholdProducesWindow() {
+        let window = MenuBarItemManager.bulkApplyIdleWindow(thresholdMs: 250, capMs: 2000)
+        #expect(window?.threshold == .milliseconds(250))
+        #expect(window?.cap == .milliseconds(2000))
+    }
+
+    /// A `defaults write` typo that lands a negative cap must degrade to
+    /// "don't wait", never to a batch that cannot start.
+    @Test("A negative cap clamps to zero rather than blocking forever")
+    func negativeCapClamps() {
+        let window = MenuBarItemManager.bulkApplyIdleWindow(thresholdMs: 250, capMs: -1)
+        #expect(window?.cap == .zero)
+    }
+
+    /// The ordinary case: the bar is idle, the first poll passes, nothing
+    /// is delayed.
+    @Test("A paused user concludes the wait immediately")
+    func pausedUserConcludesImmediately() {
+        #expect(
+            MenuBarItemManager.bulkApplyIdleWaitConcluded(
+                userHasPausedInput: true,
+                elapsed: .zero,
+                cap: .milliseconds(2000)
+            )
+        )
+    }
+
+    /// Input still in flight and time on the clock: keep waiting.
+    @Test("An active user inside the cap keeps waiting")
+    func activeUserInsideCapWaits() {
+        #expect(
+            !MenuBarItemManager.bulkApplyIdleWaitConcluded(
+                userHasPausedInput: false,
+                elapsed: .milliseconds(500),
+                cap: .milliseconds(2000)
+            )
+        )
+    }
+
+    /// The important exit: a user who never stops must not starve the
+    /// apply. At the cap the batch proceeds regardless.
+    @Test("The cap concludes the wait even with input in flight")
+    func capConcludesDespiteInput() {
+        #expect(
+            MenuBarItemManager.bulkApplyIdleWaitConcluded(
+                userHasPausedInput: false,
+                elapsed: .milliseconds(2000),
+                cap: .milliseconds(2000)
+            )
+        )
+    }
+
+    /// A clamped cap degrades to "don't wait" rather than to a stall.
+    @Test("A zero cap never defers")
+    func zeroCapNeverDefers() {
+        #expect(
+            MenuBarItemManager.bulkApplyIdleWaitConcluded(
+                userHasPausedInput: false,
+                elapsed: .zero,
+                cap: .zero
+            )
+        )
+    }
+}
+
 /// Characterizes the circuit breaker that abandons a move batch after a
 /// run of consecutive failures.
 ///

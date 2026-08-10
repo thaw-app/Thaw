@@ -809,6 +809,77 @@ nonisolated enum LayoutSolver {
     ///
     /// Pure over its inputs. Returns destinations as anchor UIDs so the
     /// orchestrator can resolve them against fresh items between moves.
+    /// Rewrites the desired sequence so that, inside concealed sections,
+    /// items keep the relative order they already have.
+    ///
+    /// A move costs the same whether or not anyone can see its result: the
+    /// cursor is hijacked, the drag is synthesised, the landing is polled.
+    /// Spending that on the order of two items parked thousands of points
+    /// off-screen buys nothing a user can perceive — the hidden and
+    /// always-hidden sections are revealed through the Thaw Bar, which
+    /// renders from the cache rather than from where the windows sit.
+    ///
+    /// Membership is still enforced. Only the ordering *within* a relaxed
+    /// section is surrendered: an item that must cross into hidden is
+    /// absent from hidden's current run, so it still plans a move; an item
+    /// already in hidden but "out of order" no longer does. Feeding the
+    /// result to ``planLCSMoveSequence(currentNoControls:desiredNoControls:sectionMap:)``
+    /// is what drops those moves — the LCS now finds those items already
+    /// in place.
+    ///
+    /// Positions are preserved, contents are permuted: the rewrite emits a
+    /// relaxed item wherever the desired sequence had one, so a caller that
+    /// interleaves sections still gets a well-formed sequence back. Items
+    /// with no live counterpart sort last within their section (stably, in
+    /// desired order), because an item that is not in the current run has
+    /// to be moved regardless of what this relaxation says.
+    ///
+    /// Pure over its inputs.
+    static nonisolated func relaxConcealedSectionOrder(
+        desiredNoControls: [String],
+        currentNoControls: [String],
+        sectionMap: [String: String],
+        relaxedSectionKeys: Set<String> = ["hidden", "alwaysHidden"]
+    ) -> [String] {
+        guard !relaxedSectionKeys.isEmpty else { return desiredNoControls }
+
+        var currentIndex = [String: Int]()
+        for (index, uid) in currentNoControls.enumerated() {
+            currentIndex[uid] = index
+        }
+
+        // Per relaxed section, the desired members re-sorted into the order
+        // they currently sit in. Sorting on (rank, desiredIndex) keeps the
+        // comparison total, so the sort is deterministic without relying on
+        // Swift's `sort` being stable.
+        var queues = [String: [String]]()
+        for key in relaxedSectionKeys {
+            let members = desiredNoControls.enumerated().filter { _, uid in
+                (sectionMap[uid] ?? "visible") == key
+            }
+            queues[key] = members
+                .sorted { lhs, rhs in
+                    let lhsRank = currentIndex[lhs.element] ?? Int.max
+                    let rhsRank = currentIndex[rhs.element] ?? Int.max
+                    if lhsRank != rhsRank {
+                        return lhsRank < rhsRank
+                    }
+                    return lhs.offset < rhs.offset
+                }
+                .map(\.element)
+        }
+
+        var cursors = [String: Int]()
+        return desiredNoControls.map { uid in
+            let key = sectionMap[uid] ?? "visible"
+            guard let queue = queues[key] else { return uid }
+            let cursor = cursors[key] ?? 0
+            guard cursor < queue.count else { return uid }
+            cursors[key] = cursor + 1
+            return queue[cursor]
+        }
+    }
+
     static nonisolated func planLCSMoveSequence(
         currentNoControls: [String],
         desiredNoControls: [String],
@@ -1226,6 +1297,49 @@ nonisolated enum LayoutSolver {
     private static nonisolated func titlePortion(forIdentifier id: String) -> String {
         guard let separator = id.firstIndex(of: ":") else { return "" }
         return String(id[id.index(after: separator)...])
+    }
+
+    /// Rewrites a persisted identifier so its namespace matches what a live
+    /// item now reports.
+    ///
+    /// ``MenuBarItemTag/Namespace/canonicalBundleID(_:)`` renames items
+    /// hosted by a nested helper after the app the user installed. That
+    /// changes `uniqueIdentifier`, so an entry persisted before the rename
+    /// — `at.obdev.littlesnitch.agent:Item-0` — can no longer match the
+    /// live item, which now reports `at.obdev.littlesnitch:Item-0`. Left
+    /// alone it is pruned as unmatchable and the item loses its saved
+    /// position; worse, Little Snitch is precisely the item whose saved
+    /// position users already struggle to keep (#372, #575, #643, #651,
+    /// #709), so silently orphaning it would land on the least forgiving
+    /// case in the tracker.
+    ///
+    /// Only the namespace is touched. The title and any instance index are
+    /// carried through verbatim, so this cannot merge two distinct items
+    /// or reorder anything.
+    ///
+    /// Pure over its inputs, and the identity function for the
+    /// overwhelming majority of identifiers.
+    static nonisolated func canonicalIdentifier(_ identifier: String) -> String {
+        let namespaceValue = namespace(forIdentifier: identifier)
+        let canonical = MenuBarItemTag.Namespace.canonicalBundleID(namespaceValue)
+        guard canonical != namespaceValue else { return identifier }
+        guard identifier.firstIndex(of: ":") != nil else { return canonical }
+        return "\(canonical):\(titlePortion(forIdentifier: identifier))"
+    }
+
+    /// Applies ``canonicalIdentifier(_:)`` across a saved section order.
+    ///
+    /// Runs before pruning at load, so an entry that only looks unmatchable
+    /// because of the rename is migrated rather than discarded. Order is
+    /// preserved — entries are rewritten in place, never rearranged.
+    ///
+    /// Pure over its inputs.
+    static nonisolated func canonicalizedSectionOrder(
+        _ savedSectionOrder: [String: [String]]
+    ) -> [String: [String]] {
+        savedSectionOrder.mapValues { identifiers in
+            identifiers.map(canonicalIdentifier)
+        }
     }
 
     /// Whether an identifier carries no title at all.

@@ -95,6 +95,7 @@ struct MenuBarLayoutSettingsPane: View {
     private var advancedLayoutControlsCard: some View {
         IceSection {
             DisclosureGroup("Advanced layout controls", isExpanded: $isAdvancedExpanded) {
+                automaticArrangementEnabled
                 enableMenuBarItemOverflow
                 if advancedSettings.enableMenuBarItemOverflow {
                     useThawBarOnNotchOverflow
@@ -108,6 +109,23 @@ struct MenuBarLayoutSettingsPane: View {
             ) {
                 isAdvancedExpanded = true
             }
+        }
+    }
+
+    // Both strings are reused verbatim from the existing catalog so this
+    // control ships fully translated: "Arrange menu bar items." and the
+    // ⌘ Command + drag line already carry all 19 localizations. The
+    // trailing period in the toggle label is the catalog's, not a slip —
+    // matching the existing key exactly is what avoids a new translation
+    // round.
+    private var automaticArrangementEnabled: some View {
+        Toggle(
+            "Arrange menu bar items.",
+            isOn: $advancedSettings.automaticArrangementEnabled
+        )
+        .annotation {
+            Text("Items can also be arranged by ⌘ Command + dragging them in the menu bar.")
+                .padding(.trailing, 75)
         }
     }
 

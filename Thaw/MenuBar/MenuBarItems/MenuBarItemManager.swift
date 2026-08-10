@@ -817,7 +817,11 @@ final class MenuBarItemManager {
             // Repair entries that can never match a live item again before
             // anything plans against them. Earlier fixes stopped these from
             // being written but left what was already on disk (#788, #815).
-            let pruned = LayoutSolver.prunedSectionOrder(stored)
+            // Migrate helper-hosted namespaces before pruning, so an entry
+            // that is only unmatchable because the item was renamed after
+            // its app (Little Snitch) is rewritten rather than discarded.
+            let migrated = LayoutSolver.canonicalizedSectionOrder(stored)
+            let pruned = LayoutSolver.prunedSectionOrder(migrated)
             savedSectionOrder = pruned
             if pruned != stored {
                 let removed = stored.reduce(into: 0) { total, entry in
@@ -3581,6 +3585,63 @@ extension MenuBarItemManager {
             // `cannotComplete` failures (#900) can tell this stage apart.
             MenuBarItemManager.diagLog.debug("waitForUserInputPause: wait interrupted: \(error)")
             throw EventError.cannotComplete
+        }
+    }
+
+    /// Waits for a lull in user input before an automatic bulk apply
+    /// begins issuing its move sequence.
+    ///
+    /// `waitForUserToPauseInput` gates each move; this gates the batch. The
+    /// distinction matters because a batch hides the cursor for its entire
+    /// length: dispatched the moment a late arrival is noticed, it can take
+    /// the pointer away mid-interaction and then contest it move by move
+    /// for the length of the sequence (#899, #723). Waiting for one real
+    /// lull up front costs nothing on an idle bar — the common case, where
+    /// the first poll already passes — and sidesteps the collision when the
+    /// bar is not idle.
+    ///
+    /// Deferring only. The cap guarantees the batch still runs, and
+    /// cancellation exits promptly so a newer apply can replace this one;
+    /// the caller re-checks `Task.isCancelled` immediately afterwards.
+    ///
+    /// Off by default; enable with:
+    ///   defaults write com.stonerl.Thaw bulkApplyIdleThresholdMs -int <milliseconds>
+    private nonisolated func waitForBulkApplyIdleWindow() async {
+        let thresholdMs = (Defaults.object(forKey: .bulkApplyIdleThresholdMs) as? Int)
+            ?? Defaults.DefaultValue.bulkApplyIdleThresholdMs
+        let capMs = (Defaults.object(forKey: .bulkApplyIdleWaitCapMs) as? Int)
+            ?? Defaults.DefaultValue.bulkApplyIdleWaitCapMs
+        guard let window = MenuBarItemManager.bulkApplyIdleWindow(
+            thresholdMs: thresholdMs,
+            capMs: capMs
+        ) else {
+            return
+        }
+
+        let start = ContinuousClock.now
+        while !Task.isCancelled {
+            let elapsed = ContinuousClock.now - start
+            if MenuBarItemManager.bulkApplyIdleWaitConcluded(
+                userHasPausedInput: hasUserPausedInput(for: window.threshold),
+                elapsed: elapsed,
+                cap: window.cap
+            ) {
+                if elapsed >= window.cap {
+                    MenuBarItemManager.diagLog.debug(
+                        "Bulk apply idle gate: cap reached after \(elapsed.milliseconds) ms without a lull; proceeding anyway"
+                    )
+                } else if elapsed > .zero {
+                    MenuBarItemManager.diagLog.debug(
+                        "Bulk apply idle gate: waited \(elapsed.milliseconds) ms for input to settle"
+                    )
+                }
+                return
+            }
+            do {
+                try await Task.sleep(for: .milliseconds(50))
+            } catch {
+                return // Cancelled; the caller's Task.isCancelled check handles it.
+            }
         }
     }
 
@@ -7435,7 +7496,8 @@ extension MenuBarItemManager {
                 pinnedAlwaysHidden: layout.pinnedAlwaysHidden,
                 sectionOrder: layout.sectionOrder,
                 itemSectionMap: layout.itemSectionMap,
-                itemOrder: layout.itemOrder
+                itemOrder: layout.itemOrder,
+                automatic: true
             )
         }
     }
@@ -7704,11 +7766,24 @@ extension MenuBarItemManager {
     func applyProfileLayout(
         pinnedHidden: Set<String>,
         pinnedAlwaysHidden: Set<String>,
-        sectionOrder: [String: [String]],
-        itemSectionMap: [String: String],
-        itemOrder: [String: [String]],
-        source: ApplySource = .profile
+        sectionOrder rawSectionOrder: [String: [String]],
+        itemSectionMap rawItemSectionMap: [String: String],
+        itemOrder rawItemOrder: [String: [String]],
+        source: ApplySource = .profile,
+        automatic: Bool = false
     ) async {
+        // A profile saved before an item was renamed after its app still
+        // names it by its helper (`at.obdev.littlesnitch.agent:Item-0`).
+        // Migrate on the way in so the plan is built against identifiers
+        // the live bar can actually produce; the profile on disk is
+        // rewritten the next time the layout is persisted. Keyed maps are
+        // migrated too, or the section lookup misses the renamed entry.
+        let sectionOrder = LayoutSolver.canonicalizedSectionOrder(rawSectionOrder)
+        let itemOrder = LayoutSolver.canonicalizedSectionOrder(rawItemOrder)
+        let itemSectionMap = Dictionary(
+            rawItemSectionMap.map { (LayoutSolver.canonicalIdentifier($0.key), $0.value) },
+            uniquingKeysWith: { first, _ in first }
+        )
         // MARK: Phase 0: gate on startup settling
 
         //
@@ -7718,6 +7793,30 @@ extension MenuBarItemManager {
         // late-arrival re-sort path is broken for items that appeared
         // inside the window.
         await waitForStartupSettlingToEnd()
+
+        // Automatic applies additionally wait for the user to stop
+        // interacting. `automatic` is the same distinction
+        // `automaticBulkApplyPermitted` already draws at the two dispatch
+        // sites: a late-arrival re-sort or a saved-layout restore is
+        // something Thaw decided to do, and it can afford to wait for a
+        // lull. A profile the user just picked cannot — they are watching
+        // for it to happen, and their hand is still on the mouse that
+        // picked it.
+        if automatic {
+            // The escape hatch. Checked before the idle wait so a bar in
+            // manual mode spends nothing at all on an apply it will not
+            // perform, and before armProfileState so no profile state is
+            // armed for a sequence that never runs.
+            let automaticArrangementEnabled = (Defaults.object(forKey: .automaticArrangementEnabled) as? Bool)
+                ?? Defaults.DefaultValue.automaticArrangementEnabled
+            guard automaticArrangementEnabled else {
+                MenuBarItemManager.diagLog.info(
+                    "Profile layout: skipping automatic apply; automaticArrangementEnabled is false (manual arrangement only)"
+                )
+                return
+            }
+            await waitForBulkApplyIdleWindow()
+        }
 
         // Bail before arming any profile state if cancellation arrived
         // during the settling wait (a newer apply has replaced us via
@@ -8696,7 +8795,23 @@ extension MenuBarItemManager {
         // instead of leaving them wherever macOS detected them)
         // and respect notch-overflow's section reassignments.
         let currentNoControls = currentFlat.filter { $0 != hiddenCtrlUID && $0 != ahCtrlUID }
-        let desiredNoControls = desiredFiltered.filter { $0 != hiddenCtrlUID && $0 != ahCtrlUID }
+        var desiredNoControls = desiredFiltered.filter { $0 != hiddenCtrlUID && $0 != ahCtrlUID }
+
+        // Optionally surrender ordering inside the concealed sections. The
+        // relaxation runs on the desired sequence rather than on the
+        // planned moves so the LCS itself sees those items as already in
+        // place: filtering moves out afterwards would leave the surviving
+        // moves anchored against items the plan assumed had shifted.
+        let enforceConcealedOrder = (Defaults.object(forKey: .enforceConcealedSectionOrder) as? Bool)
+            ?? Defaults.DefaultValue.enforceConcealedSectionOrder
+        if !enforceConcealedOrder {
+            desiredNoControls = LayoutSolver.relaxConcealedSectionOrder(
+                desiredNoControls: desiredNoControls,
+                currentNoControls: currentNoControls,
+                sectionMap: sectionMap
+            )
+        }
+
         let plannedMoves = LayoutSolver.planLCSMoveSequence(
             currentNoControls: currentNoControls,
             desiredNoControls: desiredNoControls,
@@ -9227,6 +9342,41 @@ extension MenuBarItemManager {
         consecutiveFailures >= threshold
     }
 
+    /// The idle window an automatic bulk apply should wait for, or `nil`
+    /// when the gate is switched off.
+    ///
+    /// Splitting the sanitising out of the wait loop keeps the two things
+    /// that can be got wrong — "is the gate on" and "when does waiting
+    /// stop" — testable without a clock. A non-positive threshold is the
+    /// off switch rather than a zero-length window, so the caller can skip
+    /// the loop entirely; a negative cap is clamped rather than rejected,
+    /// because a `defaults write` typo should degrade to "don't wait", not
+    /// to a batch that never starts.
+    static nonisolated func bulkApplyIdleWindow(
+        thresholdMs: Int,
+        capMs: Int
+    ) -> (threshold: Duration, cap: Duration)? {
+        guard thresholdMs > 0 else { return nil }
+        return (.milliseconds(thresholdMs), .milliseconds(max(0, capMs)))
+    }
+
+    /// Whether an automatic bulk apply has waited long enough to start
+    /// issuing moves.
+    ///
+    /// Two exits, and the second is the important one: the wait defers a
+    /// batch, it never cancels it. A user who never stops moving the mouse
+    /// would otherwise starve the apply indefinitely, and a saved layout
+    /// that is never restored is a worse failure than one restored while
+    /// the pointer is in motion — the per-move pause still applies once the
+    /// batch is under way.
+    static nonisolated func bulkApplyIdleWaitConcluded(
+        userHasPausedInput: Bool,
+        elapsed: Duration,
+        cap: Duration
+    ) -> Bool {
+        userHasPausedInput || elapsed >= cap
+    }
+
     func applySavedLayout(
         items: [MenuBarItem],
         previousWindowIDs: [CGWindowID],
@@ -9490,7 +9640,8 @@ extension MenuBarItemManager {
             sectionOrder: effectiveSavedOrder,
             itemSectionMap: itemSectionMap,
             itemOrder: effectiveSavedOrder,
-            source: .savedOrder
+            source: .savedOrder,
+            automatic: true
         )
         return true
     }

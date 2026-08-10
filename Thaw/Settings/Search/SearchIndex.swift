@@ -77,6 +77,7 @@ nonisolated struct SearchEntry: Identifiable, @unchecked Sendable {
     var disclosure: AppNavigationState.SettingsDisclosure? {
         switch id {
         case "advanced.alwaysUseAppIconForMenuBarItems",
+             "advanced.automaticArrangementEnabled",
              "advanced.enableMenuBarItemOverflow",
              "advanced.useThawBarOnNotchOverflow",
              "advanced.menuBarOrderFulfillmentTimeout":
@@ -530,6 +531,19 @@ nonisolated enum SearchIndex {
             sectionText: "Tooltips",
             keywords: ["tooltip", "delay", "hover", "seconds"],
             property: .advanced("tooltipDelay")
+        ),
+        SearchEntry(
+            id: "advanced.automaticArrangementEnabled",
+            // Reuses catalog strings that are already fully translated, so
+            // the entry ships localized without a new Crowdin round.
+            titleKey: "Arrange menu bar items.",
+            titleText: "Arrange menu bar items.",
+            descriptionText: "Items can also be arranged by ⌘ Command + dragging them in the menu bar.",
+            pane: .menuBarLayout,
+            sectionKey: "Advanced layout controls",
+            sectionText: "Advanced layout controls",
+            keywords: ["arrange", "automatic", "manual", "reorder", "layout"],
+            property: .advanced("automaticArrangementEnabled")
         ),
         SearchEntry(
             id: "advanced.enableMenuBarItemOverflow",

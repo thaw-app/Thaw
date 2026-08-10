@@ -26,6 +26,10 @@ struct DefaultsKeyTests {
     @Test("Hidden flag keys preserve their historical raw values")
     func hiddenFlagKeysPreserveTheirHistoricalRawValues() {
         #expect(Defaults.Key.inputPauseThresholdMs.rawValue == "inputPauseThresholdMs")
+        #expect(Defaults.Key.bulkApplyIdleThresholdMs.rawValue == "bulkApplyIdleThresholdMs")
+        #expect(Defaults.Key.bulkApplyIdleWaitCapMs.rawValue == "bulkApplyIdleWaitCapMs")
+        #expect(Defaults.Key.enforceConcealedSectionOrder.rawValue == "enforceConcealedSectionOrder")
+        #expect(Defaults.Key.automaticArrangementEnabled.rawValue == "automaticArrangementEnabled")
         #expect(Defaults.Key.discardStrayMoveEvents.rawValue == "discardStrayMoveEvents")
         #expect(Defaults.Key.failFastOnEventWindowMismatch.rawValue == "failFastOnEventWindowMismatch")
         #expect(Defaults.Key.axMessagingTimeout.rawValue == "axMessagingTimeout")
@@ -34,6 +38,16 @@ struct DefaultsKeyTests {
     @Test("Hidden flag default values are unchanged")
     func hiddenFlagDefaultValuesAreUnchanged() {
         #expect(Defaults.DefaultValue.inputPauseThresholdMs == 50)
+        // 0 keeps the bulk idle gate off: enabling it by default would
+        // change when every automatic apply starts.
+        #expect(Defaults.DefaultValue.bulkApplyIdleThresholdMs == 0)
+        #expect(Defaults.DefaultValue.bulkApplyIdleWaitCapMs == 2000)
+        // True keeps concealed-section ordering enforced: surrendering it
+        // silently would change what restoring a saved layout means.
+        #expect(Defaults.DefaultValue.enforceConcealedSectionOrder == true)
+        // True keeps Thaw arranging on its own initiative; false is the
+        // manual-only escape hatch.
+        #expect(Defaults.DefaultValue.automaticArrangementEnabled == true)
         #expect(Defaults.DefaultValue.discardStrayMoveEvents == true)
         #expect(Defaults.DefaultValue.failFastOnEventWindowMismatch == false)
         #expect(Defaults.DefaultValue.axMessagingTimeout == 1.0)

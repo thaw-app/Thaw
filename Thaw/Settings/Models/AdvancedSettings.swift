@@ -141,6 +141,23 @@ final class AdvancedSettings {
         }
     }
 
+    /// A Boolean value that controls whether Thaw rearranges the menu bar on
+    /// its own initiative.
+    ///
+    /// The escape hatch for bars where the automatic paths misbehave. When
+    /// off, the late-arrival re-sort and the saved-layout restore both stand
+    /// down; applying a profile still works, and items can still be arranged
+    /// by ⌘ Command + dragging them in the menu bar. Read at the single
+    /// choke point in `MenuBarItemManager.applyProfileLayout`, which is also
+    /// where the graduated responses (the idle gate, concealed-order
+    /// relaxation, unfinished-batch rationing) live.
+    var automaticArrangementEnabled = Defaults.DefaultValue.automaticArrangementEnabled {
+        didSet {
+            guard oldValue != automaticArrangementEnabled else { return }
+            Defaults.set(automaticArrangementEnabled, forKey: .automaticArrangementEnabled)
+        }
+    }
+
     /// A Boolean value that controls whether the Thaw Bar is used to reveal
     /// hidden items while notch overflow has items ejected.
     ///
@@ -254,6 +271,7 @@ final class AdvancedSettings {
         Defaults.ifPresent(key: .iconRefreshInterval, assign: &iconRefreshInterval)
         Defaults.ifPresent(key: .enableDiagnosticLogging, assign: &enableDiagnosticLogging)
         Defaults.ifPresent(key: .enableMenuBarItemOverflow, assign: &enableMenuBarItemOverflow)
+        Defaults.ifPresent(key: .automaticArrangementEnabled, assign: &automaticArrangementEnabled)
         Defaults.ifPresent(key: .useThawBarOnNotchOverflow, assign: &useThawBarOnNotchOverflow)
         Defaults.ifPresent(key: .useAXClickDelivery, assign: &useAXClickDelivery)
         Defaults.ifPresent(key: .searchIncludeVisible, assign: &searchIncludeVisible)
@@ -322,6 +340,8 @@ final class AdvancedSettings {
                 enableDiagnosticLogging = boolValue
             case "enableMenuBarItemOverflow":
                 enableMenuBarItemOverflow = boolValue
+            case "automaticArrangementEnabled":
+                automaticArrangementEnabled = boolValue
             case "useThawBarOnNotchOverflow":
                 useThawBarOnNotchOverflow = boolValue
             case "useAXClickDelivery":

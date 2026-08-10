@@ -452,4 +452,49 @@ nonisolated extension MenuBarItemTag.Namespace {
 
     /// The namespace for the "WeatherMenu" process.
     static let weather = string("com.apple.weather.menu")
+
+    /// Bundle identifiers of helper processes that own a menu bar item on
+    /// behalf of a user-facing app, mapped to that app's identifier.
+    ///
+    /// Some apps put their status item in a nested helper rather than in
+    /// the app the user installed. The window's owner is then the helper,
+    /// so the namespace — and with it `uniqueIdentifier`, the saved
+    /// position, and the name shown in the layout editor — is named after
+    /// a process the user has never heard of. Worse, a helper that is
+    /// relaunched under a different build (or a user who switches between
+    /// the App Store and direct-download builds of the same app) reads as
+    /// a different item entirely.
+    ///
+    /// Deliberately a short, explicit list rather than a heuristic. A rule
+    /// like "strip the last dot-component" would fold genuinely distinct
+    /// items together — `com.apple.controlcenter` hosts many — and the
+    /// cost of being wrong here is a mis-restored layout.
+    ///
+    /// Changing an item's namespace changes its `uniqueIdentifier`, so an
+    /// entry already persisted under the helper's identifier no longer
+    /// matches. It is pruned as unmatchable and the item re-persists under
+    /// its canonical identifier: a one-time loss of that item's saved
+    /// position, not a permanent one.
+    /// Every entry must be verified against a live bar. OneDrive is the
+    /// cautionary case: it looks like it belongs here, and does not. The
+    /// installed app's *own* bundle identifier is
+    /// `com.microsoft.OneDrive-mac`, so "normalising" that to
+    /// `com.microsoft.OneDrive` renames a real app to an identifier no
+    /// process reports. Its status item is owned by the main app; there is
+    /// no helper to alias away.
+    static let helperBundleIDAliases: [String: String] = [
+        // Verified: /Applications/Little Snitch.app/Contents/Components/
+        // Little Snitch Agent.app owns the status item and reports this
+        // identifier, while the app the user installed is at.obdev.littlesnitch.
+        "at.obdev.littlesnitch.agent": "at.obdev.littlesnitch",
+    ]
+
+    /// Returns the user-facing app's bundle identifier for a bundle
+    /// identifier that may belong to one of its helpers.
+    ///
+    /// The identity function for everything not in
+    /// ``helperBundleIDAliases``, which is the overwhelming majority.
+    static func canonicalBundleID(_ bundleID: String) -> String {
+        helperBundleIDAliases[bundleID] ?? bundleID
+    }
 }
