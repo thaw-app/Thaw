@@ -41,12 +41,23 @@ struct PermissionsWindow: Scene {
 
     /// During first launch, permissions are requested as the final step of
     /// onboarding. Later on — say, if permissions get revoked — this window
-    /// shows the standalone permissions view instead, so re-granting access
-    /// doesn't send the user through the whole tour again.
+    /// shows the permissions step on its own, so re-granting access doesn't
+    /// send the user through the whole tour again.
+    ///
+    /// Both branches render the same view, so the screen a user meets when
+    /// permissions are revoked is the one they were onboarded with. Quit is
+    /// supplied only here: this window hides its close, minimize and zoom
+    /// buttons, and Continue is disabled until the required permissions are
+    /// granted, so it is the only way out for a user who declines.
     @ViewBuilder
     private var permissionsContent: some View {
         if Defaults.bool(forKey: .hasCompletedFirstLaunch) {
-            PermissionsView(manager: appState.permissions)
+            ThawPermissionsView(
+                onContinue: { appState.completeFirstLaunchSetup() },
+                onQuit: { NSApp.terminate(nil) }
+            )
+            .frame(width: ThawOnboardingWindowMetrics.width, height: ThawOnboardingWindowMetrics.height)
+            .environment(appState.permissions)
         } else {
             ThawOnboardingView {
                 Defaults.set(true, forKey: .hasSeenOnboarding)

@@ -8,11 +8,24 @@
 
 import SwiftUI
 
-/// The permissions step shown at the end of the glass onboarding tour.
+/// The permissions step shown at the end of the glass onboarding tour, and
+/// again on its own whenever permissions are missing on a later launch.
+///
+/// One view serves both so the second encounter looks like the first.
 struct ThawPermissionsView: View {
     @Environment(AppPermissions.self) private var permissions
 
     var onContinue: () -> Void
+
+    /// Shows a Quit button beside Continue when non-nil.
+    ///
+    /// Absent during onboarding, where the tour precedes this step and the
+    /// app menu is available. Supplied when the view is presented standalone:
+    /// that window hides its close, minimize and zoom buttons, and Continue
+    /// stays disabled until the required permissions are granted, so without
+    /// this there is no way out of the window for a user who does not want
+    /// to grant them.
+    var onQuit: (() -> Void)?
 
     @State private var appeared = false
 
@@ -53,16 +66,30 @@ struct ThawPermissionsView: View {
             .padding(.horizontal, 30)
 
             VStack(spacing: 12) {
-                Button {
-                    onContinue()
-                } label: {
-                    Text(requiredGranted && !allGranted ? "Continue in Limited Mode" : "Continue")
-                        .font(.subheadline.weight(.semibold))
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 36)
+                HStack(spacing: 12) {
+                    if let onQuit {
+                        Button {
+                            onQuit()
+                        } label: {
+                            Text("Quit")
+                                .font(.subheadline.weight(.semibold))
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 36)
+                        }
+                        .buttonStyle(.glass)
+                    }
+
+                    Button {
+                        onContinue()
+                    } label: {
+                        Text(requiredGranted && !allGranted ? "Continue in Limited Mode" : "Continue")
+                            .font(.subheadline.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 36)
+                    }
+                    .buttonStyle(.glassProminent)
+                    .disabled(!requiredGranted)
                 }
-                .buttonStyle(.glassProminent)
-                .disabled(!requiredGranted)
             }
             .padding(.horizontal, 30)
             .padding(.bottom, 24)
