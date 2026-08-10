@@ -230,6 +230,129 @@ struct AXIdentityCatalogTests {
         #expect(result == nil)
     }
 
+    // MARK: - MenuBarItemManager.ControlItemPair.shouldRecoverOwnControlItem
+
+    /// Thaw created its control items and holds their windows, so when one
+    /// goes missing from the enumerated list it can be rebuilt from its own
+    /// window instead of guessed at. The gate is deliberately narrow: an
+    /// authoritative ID in hand, and that window absent from the list.
+    @Test("A known control window missing from the list is recovered")
+    func recoversAuthoritativeWindowAbsentFromList() {
+        #expect(
+            MenuBarItemManager.ControlItemPair.shouldRecoverOwnControlItem(
+                authoritativeWindowID: 120,
+                itemWindowIDs: [118, 122, 200]
+            )
+        )
+    }
+
+    /// Present in the list means the primary lookup already claimed it;
+    /// rebuilding would duplicate an item the caller expects to have been
+    /// removed from `items`.
+    @Test("A control window present in the list is left to the primary lookup")
+    func doesNotRecoverWindowPresentInList() {
+        #expect(
+            !MenuBarItemManager.ControlItemPair.shouldRecoverOwnControlItem(
+                authoritativeWindowID: 120,
+                itemWindowIDs: [118, 120, 122]
+            )
+        )
+    }
+
+    /// Without an authoritative ID there is nothing to be authoritative
+    /// about — at startup the status item may not exist yet, and the tag and
+    /// title fallbacks are the right answer.
+    @Test("No authoritative window ID means no recovery")
+    func doesNotRecoverWithoutAuthoritativeID() {
+        #expect(
+            !MenuBarItemManager.ControlItemPair.shouldRecoverOwnControlItem(
+                authoritativeWindowID: nil,
+                itemWindowIDs: [118, 120]
+            )
+        )
+    }
+
+    /// An empty list is the degenerate form of the case this exists for:
+    /// enumeration returned nothing, and the fallbacks have nothing to work
+    /// with either.
+    @Test("An empty item list still recovers a known window")
+    func recoversFromEmptyList() {
+        #expect(
+            MenuBarItemManager.ControlItemPair.shouldRecoverOwnControlItem(
+                authoritativeWindowID: 120,
+                itemWindowIDs: []
+            )
+        )
+    }
+
+    /// Regression for #923 / #924 / #927.
+    ///
+    /// The visible control item is own-process, so it qualifies on frame
+    /// alone. When the hidden divider is missing from the candidate list —
+    /// parked far offscreen, or dropped by the active-space filter — it can
+    /// be the only own-process candidate left, and the hidden AX frame
+    /// correlates onto it. Returned as the hidden divider, every section
+    /// boundary downstream is then measured from the wrong window: the
+    /// hidden section reads as zero width, and both the save and the apply
+    /// refuse (the latter since c3317dfd), so the layout stops persisting
+    /// and every item lands visible after a restart.
+    ///
+    /// Refusing to match is the correct outcome. The caller logs "missing
+    /// control items" and bails, which is recoverable; returning the wrong
+    /// window is not.
+    @Test("AX frame selection never returns the visible control item")
+    func selectViaAXFrameRejectsVisibleControlItem() {
+        let frame = CGRect(x: 100, y: 0, width: 20, height: 20)
+        let candidates = [
+            CandidateFrame(index: 0, bounds: frame, isOwnProcess: true, isVisibleControlItem: true),
+        ]
+
+        let result = MenuBarItemManager.ControlItemPair.selectViaAXFrame(candidates: candidates, axFrames: [frame])
+
+        #expect(result == nil)
+    }
+
+    /// The exclusion must not cost a legitimate match: with the hidden
+    /// divider present, it still wins even though the visible control item
+    /// is sitting in the list too.
+    @Test("The visible control item is skipped in favour of the real divider")
+    func selectViaAXFrameSkipsVisibleAndMatchesHidden() {
+        let visibleFrame = CGRect(x: 100, y: 0, width: 20, height: 20)
+        let hiddenFrame = CGRect(x: 200, y: 0, width: 20, height: 20)
+
+        let candidates = [
+            CandidateFrame(index: 0, bounds: visibleFrame, isOwnProcess: true, isVisibleControlItem: true),
+            CandidateFrame(index: 1, bounds: hiddenFrame, isOwnProcess: true),
+        ]
+
+        let result = MenuBarItemManager.ControlItemPair.selectViaAXFrame(
+            candidates: candidates,
+            axFrames: [hiddenFrame]
+        )
+
+        #expect(result == [1])
+    }
+
+    /// The visible item must not be able to absorb the always-hidden slot
+    /// either — the pair is selected by the same loop.
+    @Test("The visible control item cannot take the always-hidden slot")
+    func selectViaAXFrameRejectsVisibleForAlwaysHidden() {
+        let hiddenFrame = CGRect(x: 100, y: 0, width: 20, height: 20)
+        let visibleFrame = CGRect(x: 200, y: 0, width: 20, height: 20)
+
+        let candidates = [
+            CandidateFrame(index: 0, bounds: hiddenFrame, isOwnProcess: true),
+            CandidateFrame(index: 1, bounds: visibleFrame, isOwnProcess: true, isVisibleControlItem: true),
+        ]
+
+        let result = MenuBarItemManager.ControlItemPair.selectViaAXFrame(
+            candidates: candidates,
+            axFrames: [hiddenFrame, visibleFrame]
+        )
+
+        #expect(result == [0])
+    }
+
     @Test("AX frame selection returns the only matching control item")
     func selectViaAXFrameReturnsOnlyHiddenWhenNoSecondMatch() {
         let hiddenFrame = CGRect(x: 100, y: 0, width: 20, height: 20)

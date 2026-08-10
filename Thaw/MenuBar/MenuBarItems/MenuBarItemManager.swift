@@ -2141,6 +2141,49 @@ extension MenuBarItemManager {
                 } else {
                     self.alwaysHidden = items.removeFirst(matching: .alwaysHiddenControlItem)
                 }
+                MenuBarItemManager.diagLog.debug("ControlItemPair: resolved via window ID")
+                return
+            }
+
+            // Authoritative recovery: ask the window server about the windows
+            // this process created, instead of searching the enumerated list
+            // for them.
+            //
+            // The primary lookup above can only match a control item that is
+            // *in* `items`, and it drops out whenever the window is parked
+            // far offscreen or filtered off the active space. The two
+            // fallbacks below then need identity channels — namespace, or a
+            // resolved sourcePID — that fail together exactly when the item
+            // service's PID resolution degrades, which is the same failure
+            // that stranded the window in the first place. That left frame
+            // correlation guessing at Thaw's own dividers (#923, #924, #927).
+            //
+            // Thaw holds these windows, so it does not have to guess. Only
+            // attempted when the caller supplied an authoritative ID, and
+            // only for a window the window server still knows.
+            if let hiddenWID = hiddenControlItemWindowID,
+               Self.shouldRecoverOwnControlItem(
+                   authoritativeWindowID: hiddenWID,
+                   itemWindowIDs: Set(items.map(\.windowID))
+               ),
+               let hidden = MenuBarItem.ownControlItem(windowID: hiddenWID)
+            {
+                self.hidden = hidden
+                if let alwaysHiddenWID = alwaysHiddenControlItemWindowID {
+                    if let alwaysHiddenIndex = items.firstIndex(where: { $0.windowID == alwaysHiddenWID }) {
+                        self.alwaysHidden = items.remove(at: alwaysHiddenIndex)
+                    } else {
+                        // Same reasoning for the partner; a nil always-hidden
+                        // is a legitimate state (the section can be disabled),
+                        // so failure here is not fatal to the pair.
+                        self.alwaysHidden = MenuBarItem.ownControlItem(windowID: alwaysHiddenWID)
+                    }
+                } else {
+                    self.alwaysHidden = items.removeFirst(matching: .alwaysHiddenControlItem)
+                }
+                MenuBarItemManager.diagLog.info(
+                    "ControlItemPair: recovered hidden control item \(hiddenWID) from its own window; it was absent from the \(items.count)-item list"
+                )
                 return
             }
 
@@ -2148,6 +2191,7 @@ extension MenuBarItemManager {
             if let hidden = items.removeFirst(matching: .hiddenControlItem) {
                 self.hidden = hidden
                 self.alwaysHidden = items.removeFirst(matching: .alwaysHiddenControlItem)
+                MenuBarItemManager.diagLog.debug("ControlItemPair: resolved via tag")
                 return
             }
 
@@ -2163,6 +2207,7 @@ extension MenuBarItemManager {
                 } else {
                     self.alwaysHidden = nil
                 }
+                MenuBarItemManager.diagLog.debug("ControlItemPair: resolved via sourcePID and title")
                 return
             }
 
@@ -2180,7 +2225,31 @@ extension MenuBarItemManager {
                 return
             }
 
+            MenuBarItemManager.diagLog.warning(
+                "ControlItemPair: unresolved; no strategy identified the hidden control item among \(items.count) item(s)"
+            )
             return nil
+        }
+
+        /// Whether to rebuild one of Thaw's own control items directly from
+        /// its window rather than continuing down the identity fallbacks.
+        ///
+        /// Only when the caller supplied an authoritative window ID *and*
+        /// that window is missing from the enumerated list. Present means the
+        /// primary lookup already claimed it; absent with an ID in hand is
+        /// precisely the case the fallbacks handle badly, because the
+        /// channels they depend on — namespace, resolved sourcePID — fail in
+        /// the same conditions that strand the window.
+        ///
+        /// Pure over its inputs.
+        static nonisolated func shouldRecoverOwnControlItem(
+            authoritativeWindowID: CGWindowID?,
+            itemWindowIDs: Set<CGWindowID>
+        ) -> Bool {
+            guard let authoritativeWindowID else {
+                return false
+            }
+            return !itemWindowIDs.contains(authoritativeWindowID)
         }
 
         /// Strategy 4: correlates Thaw's own AX element frames (from its own
@@ -2225,8 +2294,29 @@ extension MenuBarItemManager {
             }
 
             let ourPID = ProcessInfo.processInfo.processIdentifier
+            let visibleTitle = ControlItem.Identifier.visible.rawValue
             let candidates = items.indexed().map { index, item in
-                CandidateFrame(index: index, bounds: item.bounds, isOwnProcess: item.sourcePID == ourPID)
+                CandidateFrame(
+                    index: index,
+                    bounds: item.bounds,
+                    isOwnProcess: item.sourcePID == ourPID,
+                    // The visible control item is own-process, so it is an
+                    // eligible candidate on frame alone. When the hidden
+                    // divider is absent from `items` — parked far offscreen,
+                    // or dropped by the active-space filter — it can be the
+                    // only own-process candidate left, and the hidden AX
+                    // frame correlates onto it. It is then returned AS the
+                    // hidden divider, and every section boundary downstream
+                    // is measured from the wrong window (#923, #924, #927).
+                    //
+                    // The filter on `axFrames` below excludes the visible
+                    // item from the frames being matched *against*; this
+                    // excludes it from the windows that can be *selected*.
+                    // Matched by title rather than window ID because title
+                    // survives the identity degradation that got us here:
+                    // it comes off the CG window, not from sourcePID.
+                    isVisibleControlItem: item.title == visibleTitle
+                )
             }
             // Exclude the visible control item's AX child before correlation
             // so its frame can never confidently match a candidate and be
@@ -2272,6 +2362,10 @@ extension MenuBarItemManager {
             let index: Int
             let bounds: CGRect
             let isOwnProcess: Bool
+            /// Whether this candidate is Thaw's *visible* control item, which
+            /// must never be selected as the hidden or always-hidden divider
+            /// however well its frame correlates.
+            var isVisibleControlItem = false
         }
 
         /// Pure selection helper: correlates each of our own control items
@@ -2297,6 +2391,7 @@ extension MenuBarItemManager {
                     let candidate = candidates.first(where: { candidate in
                         !matchedIndices.contains(candidate.index)
                             && candidate.isOwnProcess
+                            && !candidate.isVisibleControlItem
                             && AXIdentityCatalog.identity(for: candidate.bounds, in: identity) != nil
                     })
                 else { continue }
@@ -2647,7 +2742,7 @@ extension MenuBarItemManager {
             // collapsed and the menu bar is visibly wrong to the user, not
             // merely at risk of a bad save.
             MenuBarItemManager.diagLog.warning(
-                "Skipping saveSectionOrder; hidden section has zero width between the dividers (hidden.minX=\(context.hiddenControlItemBounds.minX), alwaysHidden.maxX=\(context.alwaysHiddenControlItemBounds.first?.maxX.description ?? "nil"))"
+                "Skipping saveSectionOrder; hidden section has zero width between the dividers (hidden.minX=\(context.hiddenControlItemBounds.minX) windowID=\(context.controlItems.hidden.windowID), alwaysHidden.maxX=\(context.alwaysHiddenControlItemBounds.first?.maxX.description ?? "nil") windowID=\(context.controlItems.alwaysHidden?.windowID.description ?? "nil"))"
             )
         } else if hasPendingDivergence {
             // applySavedLayout observed a layout divergence on this cycle
@@ -8248,7 +8343,7 @@ extension MenuBarItemManager {
            )
         {
             MenuBarItemManager.diagLog.warning(
-                "applyProfileLayout: skipping (savedOrder); hidden section has zero width between the dividers (hidden.minX=\(controlItems.hidden.bounds.minX), alwaysHidden.maxX=\(controlItems.alwaysHidden?.bounds.maxX.description ?? "nil"))"
+                "applyProfileLayout: skipping (savedOrder); hidden section has zero width between the dividers (hidden.minX=\(controlItems.hidden.bounds.minX) windowID=\(controlItems.hidden.windowID), alwaysHidden.maxX=\(controlItems.alwaysHidden?.bounds.maxX.description ?? "nil") windowID=\(controlItems.alwaysHidden?.windowID.description ?? "nil"))"
             )
             clearProfileState(source: source, items: items)
             return
@@ -9622,7 +9717,7 @@ extension MenuBarItemManager {
         )
         guard hiddenSectionHasRoom else {
             MenuBarItemManager.diagLog.warning(
-                "applySavedLayout: skipping (\(trigger)); hidden section has zero width between the dividers (hidden.minX=\(controlItems.hidden.bounds.minX), alwaysHidden.maxX=\(controlItems.alwaysHidden?.bounds.maxX.description ?? "nil"))"
+                "applySavedLayout: skipping (\(trigger)); hidden section has zero width between the dividers (hidden.minX=\(controlItems.hidden.bounds.minX) windowID=\(controlItems.hidden.windowID), alwaysHidden.maxX=\(controlItems.alwaysHidden?.bounds.maxX.description ?? "nil") windowID=\(controlItems.alwaysHidden?.windowID.description ?? "nil"))"
             )
             return false
         }

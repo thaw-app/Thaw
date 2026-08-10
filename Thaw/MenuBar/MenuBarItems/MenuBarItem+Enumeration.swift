@@ -59,6 +59,42 @@ private nonisolated extension MenuBarItem {
     }
 }
 
+// MARK: - Own Control Items
+
+@MainActor
+extension MenuBarItem {
+    /// Builds a menu bar item for one of Thaw's own control item windows
+    /// from the window ID Thaw itself holds.
+    ///
+    /// Every other route to a control item goes through the enumerated item
+    /// list and can lose it: the primary lookup needs the window to be
+    /// present in that list, tag matching needs an intact namespace, and
+    /// title matching needs a resolved `sourcePID`. All three fail together
+    /// whenever the item service's PID resolution degrades, and the window
+    /// itself drops out of the list when it is parked far offscreen or
+    /// filtered off the active space. What is left is frame correlation,
+    /// which guesses.
+    ///
+    /// None of that is necessary. Thaw created these `NSStatusItem`s and
+    /// holds their windows, so their IDs are known first-hand. This asks the
+    /// window server about one specific window rather than searching a list,
+    /// and stamps our own PID so the namespace resolves to Thaw even when
+    /// nothing else about the item's identity does.
+    ///
+    /// Returns `nil` when the window server no longer knows the ID, which is
+    /// the honest answer: the status item has been torn down or rebuilt, and
+    /// a stale ID must not be dressed up as a live item.
+    static func ownControlItem(windowID: CGWindowID) -> MenuBarItem? {
+        guard let window = WindowInfo(windowID: windowID) else {
+            return nil
+        }
+        return MenuBarItem(
+            uncheckedItemWindow: window,
+            sourcePID: ProcessInfo.processInfo.processIdentifier
+        )
+    }
+}
+
 // MARK: - MenuBarItem List
 
 nonisolated extension MenuBarItem {
