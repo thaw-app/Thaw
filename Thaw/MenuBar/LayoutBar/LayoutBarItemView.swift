@@ -95,7 +95,9 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         super.init(frame: CGRect(origin: .zero, size: Self.preferredSize(for: item, image: initialImage)))
         unregisterDraggedTypes()
 
-        isEnabled = item.isMovable
+        // Addressing the window's owner lifts the unresolved-placeholder
+        // reason, so the panel offers items it can actually move.
+        isEnabled = item.isMovableAddressingWindowOwner
 
         configureCancellables()
     }

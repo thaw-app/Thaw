@@ -70,20 +70,42 @@ nonisolated struct MenuBarItem: CustomStringConvertible {
     }
 
     /// The reason this item cannot be moved, or `nil` when it can.
+    ///
+    /// Pure: derived from the item alone, never from user defaults, so it
+    /// answers the same way in a test as on a bar. Callers that can lift a
+    /// reason by changing *how* they move consult
+    /// ``isMovableAddressingWindowOwner`` instead.
     var immovabilityReason: ImmovabilityReason? {
         if !tag.isMovable {
             return .prohibitedSystemItem
         }
-        // The placeholder gate exists because posting drag events to Control
-        // Center for a slot with no known owner was observed to time out. It
-        // is a statement about where the events were going: they were aimed
-        // at the owning app, and there wasn't one. Posting to the window's
-        // owner instead removes the need to know who owns the item, so the
-        // gate's premise no longer holds and the item is offered.
-        if tag.isControlCenterGenericItem, sourcePID == nil, !Self.postsMoveEventsToWindowOwner {
+        if tag.isControlCenterGenericItem, sourcePID == nil {
             return .unresolvedControlCenterPlaceholder
         }
         return nil
+    }
+
+    /// Whether this item can be moved given where its events will be sent.
+    ///
+    /// ``ImmovabilityReason/unresolvedControlCenterPlaceholder`` exists
+    /// because posting drag events to Control Center for a slot with no
+    /// known owner was observed to time out — a statement about events aimed
+    /// at an owning app that did not exist. When events address the window's
+    /// owner instead, the move no longer needs to know who owns the item, so
+    /// that reason stops applying. Every other reason still does: a
+    /// prohibited system item is prohibited wherever the events go.
+    ///
+    /// Separate from ``isMovable`` so the pure answer stays pure and only
+    /// the two gates that actually dispatch a move read the flag.
+    var isMovableAddressingWindowOwner: Bool {
+        switch immovabilityReason {
+        case nil:
+            true
+        case .unresolvedControlCenterPlaceholder:
+            Self.postsMoveEventsToWindowOwner
+        case .prohibitedSystemItem:
+            false
+        }
     }
 
     /// A Boolean value that indicates whether this item can be moved.

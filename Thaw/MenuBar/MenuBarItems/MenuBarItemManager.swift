@@ -5049,7 +5049,7 @@ extension MenuBarItemManager {
             MenuBarItemManager.diagLog.warning("Skipping move for \(item.logString) - system status item clone")
             return
         }
-        guard item.isMovable else {
+        guard item.isMovableAddressingWindowOwner else {
             // The refusal used to be silent (#905): name the gate and the
             // identifier the decision was made on, so a report can tell a
             // static macOS prohibition from an identity-resolution failure.
