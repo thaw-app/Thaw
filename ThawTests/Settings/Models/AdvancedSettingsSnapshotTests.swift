@@ -40,7 +40,6 @@ struct AdvancedSettingsSnapshotTests {
             tooltipDelay: 1.0,
             showMenuBarTooltips: true,
             iconRefreshInterval: 3.0,
-            enableDiagnosticLogging: false,
             useDoubleClickToShowAlwaysHiddenSection: false,
             useOptionClickToShowAlwaysHiddenSection: false,
             enableMenuBarItemOverflow: false,
@@ -63,7 +62,6 @@ struct AdvancedSettingsSnapshotTests {
             tooltipDelay: 2.0,
             showMenuBarTooltips: false,
             iconRefreshInterval: 5.0,
-            enableDiagnosticLogging: true,
             useDoubleClickToShowAlwaysHiddenSection: true,
             useOptionClickToShowAlwaysHiddenSection: true,
             enableMenuBarItemOverflow: true,
@@ -89,7 +87,6 @@ struct AdvancedSettingsSnapshotTests {
         #expect(snapshot.tooltipDelay == 1.0)
         #expect(snapshot.showMenuBarTooltips)
         #expect(snapshot.iconRefreshInterval == 3.0)
-        #expect(!snapshot.enableDiagnosticLogging)
         #expect(!snapshot.useDoubleClickToShowAlwaysHiddenSection)
     }
 
@@ -106,7 +103,6 @@ struct AdvancedSettingsSnapshotTests {
         #expect(snapshot.tooltipDelay == 2.0)
         #expect(!snapshot.showMenuBarTooltips)
         #expect(snapshot.iconRefreshInterval == 5.0)
-        #expect(snapshot.enableDiagnosticLogging)
         #expect(snapshot.useDoubleClickToShowAlwaysHiddenSection)
     }
 
@@ -128,7 +124,6 @@ struct AdvancedSettingsSnapshotTests {
         #expect(decoded.tooltipDelay == original.tooltipDelay)
         #expect(decoded.showMenuBarTooltips == original.showMenuBarTooltips)
         #expect(decoded.iconRefreshInterval == original.iconRefreshInterval)
-        #expect(decoded.enableDiagnosticLogging == original.enableDiagnosticLogging)
         #expect(decoded.useDoubleClickToShowAlwaysHiddenSection == original.useDoubleClickToShowAlwaysHiddenSection)
     }
 
@@ -148,7 +143,6 @@ struct AdvancedSettingsSnapshotTests {
         #expect(decoded.tooltipDelay == 2.0)
         #expect(decoded.showMenuBarTooltips == false)
         #expect(decoded.iconRefreshInterval == 5.0)
-        #expect(decoded.enableDiagnosticLogging == true)
         #expect(decoded.useDoubleClickToShowAlwaysHiddenSection == true)
     }
 
@@ -321,7 +315,6 @@ struct AdvancedSettingsSnapshotTests {
             tooltipDelay: 0,
             showMenuBarTooltips: false,
             iconRefreshInterval: 0,
-            enableDiagnosticLogging: false,
             useDoubleClickToShowAlwaysHiddenSection: false,
             useOptionClickToShowAlwaysHiddenSection: false,
             enableMenuBarItemOverflow: false,
@@ -340,7 +333,6 @@ struct AdvancedSettingsSnapshotTests {
         #expect(!decoded.enableSecondaryContextMenu)
         #expect(!decoded.enableSecondaryContextMenuQuit)
         #expect(!decoded.showMenuBarTooltips)
-        #expect(!decoded.enableDiagnosticLogging)
         #expect(!decoded.useDoubleClickToShowAlwaysHiddenSection)
         #expect(!decoded.searchIncludeVisible)
         #expect(!decoded.searchIncludeHidden)
@@ -360,7 +352,6 @@ struct AdvancedSettingsSnapshotTests {
             tooltipDelay: 0,
             showMenuBarTooltips: true,
             iconRefreshInterval: 0,
-            enableDiagnosticLogging: true,
             useDoubleClickToShowAlwaysHiddenSection: true,
             useOptionClickToShowAlwaysHiddenSection: true,
             enableMenuBarItemOverflow: true,
@@ -379,7 +370,6 @@ struct AdvancedSettingsSnapshotTests {
         #expect(decoded.enableSecondaryContextMenu)
         #expect(decoded.enableSecondaryContextMenuQuit)
         #expect(decoded.showMenuBarTooltips)
-        #expect(decoded.enableDiagnosticLogging)
         #expect(decoded.useDoubleClickToShowAlwaysHiddenSection)
         #expect(decoded.searchIncludeVisible)
         #expect(decoded.searchIncludeHidden)
@@ -439,5 +429,53 @@ struct AdvancedSettingsSnapshotTests {
         let decoded = try decoder.decode(AdvancedSettingsSnapshot.self, from: data)
 
         #expect(decoded.moveCursorToRevealedItem)
+    }
+
+    // MARK: - Diagnostic Logging Exclusion
+
+    /// `enableDiagnosticLogging` is deliberately not part of a profile.
+    ///
+    /// It is a diagnostic control, not a preference. While it was in the
+    /// snapshot, applying a profile restored whatever the switch had been
+    /// when that profile was saved — off, for every profile that already
+    /// existed — so logging stopped at the exact moment a user had turned it
+    /// on to capture a profile switch, and the switch looked like it flipped
+    /// itself back (#899).
+    @Test("A profile written before the removal still decodes, ignoring the key")
+    func legacyDiagnosticLoggingKeyIsIgnored() throws {
+        let json = """
+        {
+            "enableAlwaysHiddenSection": true,
+            "showAllSectionsOnUserDrag": false,
+            "sectionDividerStyle": 0,
+            "hideApplicationMenus": true,
+            "enableSecondaryContextMenu": true,
+            "showOnHoverDelay": 0.2,
+            "tooltipDelay": 1.0,
+            "showMenuBarTooltips": false,
+            "iconRefreshInterval": 3.0,
+            "enableDiagnosticLogging": true
+        }
+        """.data(using: .utf8)!
+
+        // Decoding must not throw on the now-unknown key, and the rest of the
+        // snapshot must come through intact.
+        let decoded = try decoder.decode(AdvancedSettingsSnapshot.self, from: json)
+
+        #expect(decoded.enableAlwaysHiddenSection)
+        #expect(decoded.hideApplicationMenus)
+        #expect(decoded.iconRefreshInterval == 3.0)
+    }
+
+    /// The key must not come back on the way out either: a profile saved by
+    /// this build carries no diagnostic-logging state, so applying it on any
+    /// build — including an older one, which decodes with `decodeIfPresent`
+    /// and a default — cannot disturb the switch.
+    @Test("An encoded snapshot no longer writes the key")
+    func encodedSnapshotOmitsDiagnosticLogging() throws {
+        let data = try encoder.encode(makeCustomSnapshot())
+        let json = try #require(String(data: data, encoding: .utf8))
+
+        #expect(!json.contains("enableDiagnosticLogging"))
     }
 }

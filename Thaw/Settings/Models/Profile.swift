@@ -104,7 +104,21 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
     var tooltipDelay: TimeInterval
     var showMenuBarTooltips: Bool
     var iconRefreshInterval: TimeInterval
-    var enableDiagnosticLogging: Bool
+    // enableDiagnosticLogging is deliberately NOT part of a profile.
+    //
+    // It is a diagnostic control, not a preference: a user turns it on to
+    // capture a log, and the thing they most often need to capture is a
+    // profile switch. Carrying it in the snapshot meant applying a profile
+    // restored whatever the switch was when that profile was saved — off,
+    // for every profile that already exists — so the logging stopped at
+    // the exact moment it was wanted, and the switch appeared to flip
+    // itself back (reported on #899). Leaving it out means it stays where
+    // the user put it, for the whole session, across every profile.
+    //
+    // Removing the field is safe in both directions: every property here
+    // decodes with `decodeIfPresent` and a default, so a new build ignores
+    // the key still present in old profiles, and an older build reading a
+    // newly-written profile falls back to the default rather than failing.
     var useDoubleClickToShowAlwaysHiddenSection: Bool
     var useOptionClickToShowAlwaysHiddenSection: Bool
     var enableMenuBarItemOverflow: Bool
@@ -128,7 +142,6 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
             tooltipDelay: settings.tooltipDelay,
             showMenuBarTooltips: settings.showMenuBarTooltips,
             iconRefreshInterval: settings.iconRefreshInterval,
-            enableDiagnosticLogging: settings.enableDiagnosticLogging,
             useDoubleClickToShowAlwaysHiddenSection: settings.useDoubleClickToShowAlwaysHiddenSection,
             useOptionClickToShowAlwaysHiddenSection: settings.useOptionClickToShowAlwaysHiddenSection,
             enableMenuBarItemOverflow: settings.enableMenuBarItemOverflow,
@@ -155,7 +168,7 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
         settings.tooltipDelay = tooltipDelay
         settings.showMenuBarTooltips = showMenuBarTooltips
         settings.iconRefreshInterval = iconRefreshInterval
-        settings.enableDiagnosticLogging = enableDiagnosticLogging
+        // enableDiagnosticLogging intentionally untouched — see the property list.
         settings.useDoubleClickToShowAlwaysHiddenSection = useDoubleClickToShowAlwaysHiddenSection
         settings.useOptionClickToShowAlwaysHiddenSection = useOptionClickToShowAlwaysHiddenSection
         settings.enableMenuBarItemOverflow = enableMenuBarItemOverflow
@@ -178,7 +191,6 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
         case tooltipDelay
         case showMenuBarTooltips
         case iconRefreshInterval
-        case enableDiagnosticLogging
         case useDoubleClickToShowAlwaysHiddenSection
         case useOptionClickToShowAlwaysHiddenSection
         case enableMenuBarItemOverflow
@@ -201,7 +213,6 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
         tooltipDelay: TimeInterval,
         showMenuBarTooltips: Bool,
         iconRefreshInterval: TimeInterval,
-        enableDiagnosticLogging: Bool,
         useDoubleClickToShowAlwaysHiddenSection: Bool,
         useOptionClickToShowAlwaysHiddenSection: Bool,
         enableMenuBarItemOverflow: Bool,
@@ -222,7 +233,6 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
         self.tooltipDelay = tooltipDelay
         self.showMenuBarTooltips = showMenuBarTooltips
         self.iconRefreshInterval = iconRefreshInterval
-        self.enableDiagnosticLogging = enableDiagnosticLogging
         self.useDoubleClickToShowAlwaysHiddenSection = useDoubleClickToShowAlwaysHiddenSection
         self.useOptionClickToShowAlwaysHiddenSection = useOptionClickToShowAlwaysHiddenSection
         self.enableMenuBarItemOverflow = enableMenuBarItemOverflow
@@ -266,9 +276,8 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
         iconRefreshInterval = try container.decodeIfPresent(
             TimeInterval.self, forKey: .iconRefreshInterval
         ) ?? Defaults.DefaultValue.iconRefreshInterval
-        enableDiagnosticLogging = try container.decodeIfPresent(
-            Bool.self, forKey: .enableDiagnosticLogging
-        ) ?? Defaults.DefaultValue.enableDiagnosticLogging
+        // No enableDiagnosticLogging decode: the key may still be present in
+        // profiles written by earlier builds and is ignored on purpose.
         useDoubleClickToShowAlwaysHiddenSection = try container.decodeIfPresent(
             Bool.self, forKey: .useDoubleClickToShowAlwaysHiddenSection
         ) ?? Defaults.DefaultValue.useDoubleClickToShowAlwaysHiddenSection
@@ -527,7 +536,6 @@ nonisolated struct Profile: Codable, Identifiable {
             tooltipDelay: Defaults.DefaultValue.tooltipDelay,
             showMenuBarTooltips: Defaults.DefaultValue.showMenuBarTooltips,
             iconRefreshInterval: Defaults.DefaultValue.iconRefreshInterval,
-            enableDiagnosticLogging: Defaults.DefaultValue.enableDiagnosticLogging,
             useDoubleClickToShowAlwaysHiddenSection: Defaults.DefaultValue.useDoubleClickToShowAlwaysHiddenSection,
             useOptionClickToShowAlwaysHiddenSection: Defaults.DefaultValue.useOptionClickToShowAlwaysHiddenSection,
             enableMenuBarItemOverflow: Defaults.DefaultValue.enableMenuBarItemOverflow,

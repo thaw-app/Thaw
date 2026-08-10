@@ -51,7 +51,6 @@ func makeTestAdvancedSettings() -> AdvancedSettingsSnapshot {
         tooltipDelay: 1.0,
         showMenuBarTooltips: true,
         iconRefreshInterval: 3.0,
-        enableDiagnosticLogging: false,
         useDoubleClickToShowAlwaysHiddenSection: false,
         useOptionClickToShowAlwaysHiddenSection: false,
         enableMenuBarItemOverflow: false,

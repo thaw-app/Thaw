@@ -29,11 +29,11 @@ import Testing
 /// is process-wide.
 ///
 /// Deliberate gaps:
-/// - `enableDiagnosticLogging` is always left at its compiled-in default. Its
-///   `didSet` reaches into the shared `DiagnosticLogger`, and in a debug build
-///   it unconditionally enables logging, which mints a file in the developer's
-///   real `~/Library/Logs/Thaw`. Holding it equal on both sides makes the
-///   `guard oldValue != newValue` short-circuit fire instead.
+/// - `enableDiagnosticLogging` is no longer part of the snapshot at all, so
+///   there is nothing here to hold equal. It was removed because a profile
+///   apply restored it, switching diagnostic logging off in the middle of the
+///   capture a user had turned it on to take (#899). The key may still appear
+///   in profiles written by earlier builds and is ignored on decode.
 /// - The models are built bare rather than through `performSetup()`, which
 ///   would load `Defaults` and subscribe to the Settings-URI notification.
 ///   `GeneralSettingsTests` and `AdvancedSettingsTests` own that path.
@@ -285,7 +285,6 @@ struct ProfileSnapshotLiveSettingsTests {
             #expect(snapshot.searchIncludeAlwaysHidden == false)
             #expect(snapshot.moveCursorToRevealedItem)
             // Left at the compiled-in default; see the suite's deliberate gaps.
-            #expect(snapshot.enableDiagnosticLogging == Defaults.DefaultValue.enableDiagnosticLogging)
         }
     }
 
@@ -304,7 +303,6 @@ struct ProfileSnapshotLiveSettingsTests {
                 tooltipDelay: 1.25,
                 showMenuBarTooltips: true,
                 iconRefreshInterval: 2.5,
-                enableDiagnosticLogging: Defaults.DefaultValue.enableDiagnosticLogging,
                 useDoubleClickToShowAlwaysHiddenSection: true,
                 useOptionClickToShowAlwaysHiddenSection: true,
                 enableMenuBarItemOverflow: false,
