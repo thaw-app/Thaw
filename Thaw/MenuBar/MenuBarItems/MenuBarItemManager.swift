@@ -3026,6 +3026,20 @@ extension MenuBarItemManager {
                    let currentPID = item.sourcePID,
                    currentPID != prevPID
                 {
+                    // Only a live previous PID is more trustworthy than a
+                    // fresh resolution. When the app behind it has exited —
+                    // an item's owner relaunching, or Control Center itself
+                    // respawning and recreating every status item, both seen
+                    // in the #854 logs — reverting pins the item to a dead
+                    // process, and every event addressed to it goes nowhere.
+                    // Take the new PID in that case; there is nothing left to
+                    // protect.
+                    guard Self.previousPIDIsLive(prevPID) else {
+                        MenuBarItemManager.diagLog.info(
+                            "SourcePID changed for windowID \(item.windowID): \(prevPID) -> \(currentPID); previous PID is dead, accepting the new one"
+                        )
+                        continue
+                    }
                     MenuBarItemManager.diagLog.warning(
                         "SourcePID changed for windowID \(item.windowID): \(prevPID) -> \(currentPID), reverting to previous PID"
                     )
@@ -3801,6 +3815,22 @@ extension MenuBarItemManager {
             ownerPID: item.ownerPID,
             preferWindowOwner: MenuBarItem.postsMoveEventsToWindowOwner
         )
+    }
+
+    /// Whether a previously cached source PID still belongs to a live
+    /// process.
+    ///
+    /// `kill(pid, 0)` is the same liveness probe `postMoveEvents` already
+    /// makes before addressing a target, kept in one named place so the
+    /// reconciliation guard and the event path agree about what "alive"
+    /// means. `ESRCH` is the only answer that means gone; `EPERM` says the
+    /// process exists but is not ours to signal, which still counts as
+    /// alive.
+    static nonisolated func previousPIDIsLive(_ pid: pid_t) -> Bool {
+        if kill(pid, 0) == 0 {
+            return true
+        }
+        return errno != ESRCH
     }
 
     /// The process a synthetic move event should be posted to.

@@ -230,6 +230,32 @@ struct AXIdentityCatalogTests {
         #expect(result == nil)
     }
 
+    // MARK: - MenuBarItemManager.previousPIDIsLive
+
+    /// The reconciliation guard prefers a cached PID over a fresh
+    /// resolution, because AX spatial matching can mis-match. That only
+    /// holds while the cached process exists: once it has exited — an
+    /// item's owner relaunching, or Control Center respawning and
+    /// recreating every status item, both in the #854 logs — reverting
+    /// pins the item to a dead process.
+    @Test("This process is live")
+    func currentProcessIsLive() {
+        #expect(MenuBarItemManager.previousPIDIsLive(ProcessInfo.processInfo.processIdentifier))
+    }
+
+    /// launchd always exists and is never ours to signal, so it exercises
+    /// the EPERM branch: exists, but not signalable, which still counts.
+    @Test("A process we may not signal still counts as live")
+    func unsignalableProcessIsLive() {
+        #expect(MenuBarItemManager.previousPIDIsLive(1))
+    }
+
+    /// A PID that cannot be allocated is the unambiguous dead answer.
+    @Test("An impossible PID is not live")
+    func impossiblePIDIsNotLive() {
+        #expect(!MenuBarItemManager.previousPIDIsLive(Int32.max))
+    }
+
     // MARK: - MenuBarItemManager.eventTargetPID
 
     /// Historic behaviour: aim at the app whose status item it is.

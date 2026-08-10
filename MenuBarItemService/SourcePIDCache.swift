@@ -544,6 +544,57 @@ actor SourcePIDCache {
         // Empirically the furthest correct owner-corroborated match across
         // captured logs is ~15pt; 20 leaves margin while staying well inside
         // a neighbor's slot. The owner check is the real guard.
+        // Exact-title PID resolution.
+        //
+        // Runs BEFORE the hosted-extras pass because it is the strongest
+        // signal available: a window whose title is the complete bundle
+        // identifier of a running application is naming its owner outright.
+        // The pass below finds the same app by title but then requires
+        // spatial confirmation against the app's AX children — and an item
+        // hosted by Control Center publishes no AXExtrasMenuBar of its own,
+        // which is why it is unresolved in the first place. The confirmation
+        // can never arrive, so those items fell through every pass (#854:
+        // com.microsoft.OneDrive, com.apple.TextInputMenuAgent, us.zoom.xos
+        // and seven more, all with a nil source PID in one log).
+        //
+        // Thaw and Control Center are excluded: attributing a widget to
+        // either is the misattribution every other pass is careful to avoid.
+        let attributableBundleIDs = apps.compactMap { app -> String? in
+            guard let bundleID = app.bundleIdentifier,
+                  bundleID != thawBundleID,
+                  bundleID != ccBundleID
+            else {
+                return nil
+            }
+            return bundleID
+        }
+        if !unresolvedWindows.isEmpty, !attributableBundleIDs.isEmpty {
+            let pidsByBundleID = Dictionary(
+                apps.compactMap { app -> (String, pid_t)? in
+                    guard let bundleID = app.bundleIdentifier else { return nil }
+                    return (bundleID, app.processIdentifier)
+                },
+                uniquingKeysWith: { first, _ in first }
+            )
+            for window in allWindows where unresolvedWindows.contains(window.windowID) {
+                guard
+                    let bundleID = HostedItemOwnership.exactlyNamedOwner(
+                        window.title,
+                        runningBundleIDs: attributableBundleIDs
+                    ),
+                    let pid = pidsByBundleID[bundleID]
+                else {
+                    continue
+                }
+                totalMatchesFound += 1
+                unresolvedWindows.remove(window.windowID)
+                state.withLock { $0.pids[window.windowID] = pid }
+                SourcePIDCache.diagLog.info(
+                    "SourcePIDCache exact-title resolution: windowID=\(window.windowID) → PID \(pid) via title=\(bundleID)"
+                )
+            }
+        }
+
         let hostedExtrasMatchRadius: CGFloat = 20
         for app in apps {
             if unresolvedWindows.isEmpty {

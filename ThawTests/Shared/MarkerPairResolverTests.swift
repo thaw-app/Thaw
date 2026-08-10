@@ -609,4 +609,81 @@ struct HostedItemOwnershipTests {
         #expect(!HostedItemOwnership.titleIndicatesOwner("Clock", bundleID: "com.fabriceleyne.theclock"))
         #expect(!HostedItemOwnership.titleIndicatesOwner("Sound", bundleID: "com.rogueamoeba.soundsource"))
     }
+
+    // MARK: - HostedItemOwnership.exactlyNamedOwner
+
+    /// The #854 cluster: ten items whose title *is* their owner's bundle
+    /// identifier, every one with a nil source PID. The hosted-extras pass
+    /// finds the right app by title and then demands spatial confirmation
+    /// against its AX children — which an item hosted by Control Center
+    /// cannot supply, that being why it is unresolved. Exact equality needs
+    /// no confirmation.
+    @Test(
+        "A title that is exactly a running bundle identifier names its owner",
+        arguments: [
+            "com.microsoft.OneDrive",
+            "com.apple.TextInputMenuAgent",
+            "us.zoom.xos",
+            "theboringteam.boringnotch",
+            "CalDigit.CalDigit-Docking-Station-Utility",
+        ]
+    )
+    func exactTitleNamesOwner(bundleID: String) {
+        #expect(
+            HostedItemOwnership.exactlyNamedOwner(
+                bundleID,
+                runningBundleIDs: ["com.other.app", bundleID, "com.third.app"]
+            ) == bundleID
+        )
+    }
+
+    /// Case-insensitive, matching titleIndicatesOwner.
+    @Test("Matching ignores case")
+    func exactTitleIgnoresCase() {
+        #expect(
+            HostedItemOwnership.exactlyNamedOwner(
+                "COM.MICROSOFT.ONEDRIVE",
+                runningBundleIDs: ["com.microsoft.OneDrive"]
+            ) == "com.microsoft.OneDrive"
+        )
+    }
+
+    /// Near-misses are the relation's job, not this one's. Resolving
+    /// without corroboration is only safe because the match is total.
+    @Test(
+        "A title that merely resembles an identifier does not qualify",
+        arguments: ["com.microsoft.OneDrive-mac", "com.microsoft", "OneDrive", "com.microsoft.OneDrive.FinderSync"]
+    )
+    func nearMissesDoNotQualify(title: String) {
+        #expect(
+            HostedItemOwnership.exactlyNamedOwner(
+                title,
+                runningBundleIDs: ["com.microsoft.OneDrive"]
+            ) == nil
+        )
+    }
+
+    /// Generic and empty slot titles never resolve anything.
+    @Test("Generic titles never qualify", arguments: ["Item-0", "", "Clock"])
+    func genericTitlesNeverQualify(title: String) {
+        #expect(
+            HostedItemOwnership.exactlyNamedOwner(
+                title,
+                runningBundleIDs: ["com.microsoft.OneDrive", "Item-0"]
+            ) == nil
+        )
+    }
+
+    /// Two processes claiming one identifier is ambiguous; attributing the
+    /// item to whichever was enumerated first is the misattribution every
+    /// other pass avoids.
+    @Test("An ambiguous identifier resolves to nothing")
+    func ambiguousIdentifierDoesNotResolve() {
+        #expect(
+            HostedItemOwnership.exactlyNamedOwner(
+                "com.microsoft.OneDrive",
+                runningBundleIDs: ["com.microsoft.OneDrive", "com.microsoft.OneDrive"]
+            ) == nil
+        )
+    }
 }

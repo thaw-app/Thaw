@@ -265,6 +265,39 @@ nonisolated enum HostedItemOwnership {
     /// exactly the bundle's final component — BetterTouchTool's slot titles
     /// itself "BetterTouchTool" and belongs to com.hegenberg.BetterTouchTool.
     /// Vendor components and generic titles (Item-0, empty) never qualify.
+    /// Returns the single running bundle identifier a window title names
+    /// outright, or `nil`.
+    ///
+    /// ``titleIndicatesOwner(_:bundleID:)`` is a *relation* — it accepts
+    /// prefixes and near-misses, so a caller must corroborate it, which the
+    /// hosted-extras pass does spatially against the app's AX children.
+    /// Items hosted by Control Center have no `AXExtrasMenuBar` of their
+    /// own, which is precisely why they are unresolved, so that
+    /// corroboration can never arrive and they fall through every pass —
+    /// observed as `com.apple.controlcenter:com.microsoft.OneDrive`,
+    /// `:com.apple.TextInputMenuAgent`, `:us.zoom.xos` and seven more in a
+    /// single log, each with a nil source PID (#854).
+    ///
+    /// Exact equality needs no corroboration. A window titled with the
+    /// complete bundle identifier of a running application is naming its
+    /// owner, not resembling it. Requiring a unique match keeps the
+    /// degenerate case — two processes claiming one identifier — out.
+    ///
+    /// Case-insensitive, matching ``titleIndicatesOwner(_:bundleID:)``.
+    /// Pure over its inputs.
+    static func exactlyNamedOwner(_ title: String?, runningBundleIDs: [String]) -> String? {
+        guard let title, !title.isEmpty else { return nil }
+        let needle = title.lowercased()
+        // A bundle identifier has at least two components; without this a
+        // one-word slot title could match a malformed identifier.
+        guard needle.split(separator: ".", omittingEmptySubsequences: false).count >= 2 else {
+            return nil
+        }
+        let matches = runningBundleIDs.filter { $0.lowercased() == needle }
+        guard matches.count == 1 else { return nil }
+        return matches[0]
+    }
+
     static func titleIndicatesOwner(_ title: String?, bundleID: String) -> Bool {
         guard let title, !title.isEmpty else { return false }
         let titleParts = title.lowercased().split(separator: ".", omittingEmptySubsequences: false)
