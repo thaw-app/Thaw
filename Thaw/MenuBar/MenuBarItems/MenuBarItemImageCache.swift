@@ -240,18 +240,18 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     /// the on-screen path the same way the offscreen one already is.
     private var lastSCKRefreshAt: ContinuousClock.Instant?
 
-    /// Minimum spacing enforced between visible-section SCK captures, in seconds.
-    ///
-    /// Also the reciprocal of ``maxIconRefreshRate``. The slider ceiling and
-    /// this capture floor are the same number so they cannot drift apart: the
-    /// UI never promises a rate the engine will not deliver.
-    nonisolated static let minIconRefreshInterval: TimeInterval = 0.25
-
     /// Maximum icon refresh rate the UI may offer, in frames per second.
-    /// Derived from ``minIconRefreshInterval``.
-    nonisolated static var maxIconRefreshRate: Double {
-        1.0 / minIconRefreshInterval
-    }
+    ///
+    /// The slider ceiling and the SCK capture floor are the same number so
+    /// they cannot drift apart: the UI never promises a rate the engine will
+    /// not deliver. 30 matches the historical slider top. Higher rates pin a
+    /// core while Search / Layout / Thaw Bar stay open (composite SCK +
+    /// per-item crop); leave the SkyLight offscreen floor at 1 s separately.
+    nonisolated static let maxIconRefreshRate: Double = 30
+
+    /// Minimum spacing enforced between visible-section SCK captures, in seconds.
+    /// Reciprocal of ``maxIconRefreshRate``.
+    nonisolated static let minIconRefreshInterval: TimeInterval = 1.0 / maxIconRefreshRate
 
     /// Minimum spacing enforced between visible-section SCK captures.
     private static let minSCKRefreshInterval: Duration = .seconds(minIconRefreshInterval)
