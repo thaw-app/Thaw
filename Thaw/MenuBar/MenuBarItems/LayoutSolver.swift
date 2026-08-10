@@ -883,7 +883,8 @@ nonisolated enum LayoutSolver {
     static nonisolated func planLCSMoveSequence(
         currentNoControls: [String],
         desiredNoControls: [String],
-        sectionMap: [String: String]
+        sectionMap: [String: String],
+        unanchorableUIDs: Set<String> = []
     ) -> [LCSPlannedMove] {
         let currentSetNow = Set(currentNoControls)
         let desiredSetNow = Set(desiredNoControls)
@@ -909,10 +910,21 @@ nonisolated enum LayoutSolver {
             var destination: LCSPlannedDestination?
 
             // Scan forward for a stable anchor in the same section.
+            //
+            // Skips anchors the caller marked unanchorable — Thaw's own
+            // section dividers. They stay in the sequence because their
+            // position is part of the layout, but a move that anchors on one
+            // and fails pushes it: the bar lays out right to left, so an
+            // insertion on the wrong side shoves the anchor further left, and
+            // the next attempt shoves it again. Walking a divider that way is
+            // what ends in a zero-width hidden section (#924, #927). A
+            // neighbouring app item is an equally good insertion point and
+            // costs nothing when it goes wrong.
             for scanIdx in (desiredIdx + 1) ..< lcsDesired.count {
                 let candidateUID = lcsDesired[scanIdx]
                 let candidateKey = sectionMap[candidateUID] ?? "visible"
                 guard candidateKey == targetKey else { break }
+                if unanchorableUIDs.contains(candidateUID) { continue }
                 if lcsItems.contains(candidateUID) || movedItems.contains(candidateUID) {
                     destination = .leftOfUID(candidateUID)
                     break
@@ -925,6 +937,7 @@ nonisolated enum LayoutSolver {
                     let candidateUID = lcsDesired[scanIdx]
                     let candidateKey = sectionMap[candidateUID] ?? "visible"
                     guard candidateKey == targetKey else { break }
+                    if unanchorableUIDs.contains(candidateUID) { continue }
                     if lcsItems.contains(candidateUID) || movedItems.contains(candidateUID) {
                         destination = .rightOfUID(candidateUID)
                         break

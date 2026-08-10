@@ -224,11 +224,11 @@ nonisolated extension Defaults {
         // MARK: Hidden Diagnostic Flags
 
         static let inputPauseThresholdMs = 50
-        static let bulkApplyIdleThresholdMs = 0
+        static let bulkApplyIdleThresholdMs = 300
         static let bulkApplyIdleWaitCapMs = 2000
-        static let enforceConcealedSectionOrder = true
+        static let enforceConcealedSectionOrder = false
         static let automaticArrangementEnabled = true
-        static let postMoveEventsToWindowOwner = false
+        static let postMoveEventsToWindowOwner = true
         static let discardStrayMoveEvents = true
         static let failFastOnEventWindowMismatch = false
         static let axMessagingTimeout = SharedConstants.axMessagingTimeout

@@ -645,4 +645,28 @@ struct LayoutReconcilerUnmanagedPlacementTests {
             Self.chevron, "app:other", "app:dup", Self.hiddenControl,
         ])
     }
+
+    /// The rightOf offset counts insertions, but the computed slot is then
+    /// clamped into the named section. When the anchor lives left of that
+    /// section, every slot clamps to the same section start, and counting
+    /// does not help: the second item is inserted at the start again, ahead
+    /// of the first, reversing exactly the group order #919 set out to
+    /// preserve.
+    @Test("rightOf items keep their order even when the anchor is outside their section")
+    func rightOfAnchorOutsideSectionKeepsOrder() {
+        let anchor = "vis1"
+        let result = apply(
+            placements: [
+                "newA": .newItemAnchored(section: .alwaysHidden, anchorUID: anchor, relation: .rightOfAnchor),
+                "newB": .newItemAnchored(section: .alwaysHidden, anchorUID: anchor, relation: .rightOfAnchor),
+            ],
+            unmanagedUIDs: ["newA", "newB"],
+            desiredFiltered: [Self.chevron, anchor, Self.hiddenControl, Self.alwaysHiddenControl]
+        )
+
+        let a = result.desiredFiltered.firstIndex(of: "newA")
+        let b = result.desiredFiltered.firstIndex(of: "newB")
+        #expect(a != nil && b != nil)
+        #expect(a! < b!, "newA was listed first in unmanagedUIDs, so it must stay left of newB")
+    }
 }

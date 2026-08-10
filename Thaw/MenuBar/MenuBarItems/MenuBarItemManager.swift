@@ -653,6 +653,48 @@ final class MenuBarItemManager {
         abs(currentTargetMinX - plannedTargetMinX) > displayWidth
     }
 
+    /// Whether the destination's target has been retreating in one direction
+    /// across attempts of a single move.
+    ///
+    /// ``destinationIsStale(plannedTargetMinX:currentTargetMinX:displayWidth:)``
+    /// measures one attempt against a display-width threshold, which catches
+    /// a target that jumped sections but nothing smaller. A move can fail a
+    /// different way: the item inserts on the wrong side of its anchor, the
+    /// ordinal landing check quite correctly refuses it, and — because the
+    /// menu bar lays out right to left — the insertion shoves the anchor
+    /// further left. The next attempt re-plans against the anchor's new
+    /// position and shoves it again. Each step is far too small to be stale,
+    /// and the item never lands, so the whole attempt budget is spent walking
+    /// the anchor across the bar.
+    ///
+    /// Observed on a live bar: an anchor at minX 1682 driven to 1650 over
+    /// five attempts (−5, −13, −11, −3) while the moved item sat at 1683
+    /// throughout. When the anchor is one of Thaw's own dividers, repeating
+    /// that across cycles walks it offscreen until the hidden section reads
+    /// as zero width, at which point saves and applies are both refused and
+    /// the layout stops persisting entirely (#924, #927).
+    ///
+    /// A single legitimate nudge is expected — landing beside a target moves
+    /// it by roughly the moved item's width — so one step proves nothing.
+    /// A run of them in the same direction, with no landing in between, is
+    /// not reflow: it is the move pushing its own anchor.
+    ///
+    /// Pure over its inputs.
+    static nonisolated func targetIsRetreating(
+        recentTargetMinX: [CGFloat],
+        runLength: Int = 3
+    ) -> Bool {
+        guard runLength >= 1, recentTargetMinX.count > runLength else {
+            return false
+        }
+        let deltas = zip(recentTargetMinX, recentTargetMinX.dropFirst()).map { $1 - $0 }
+        let run = deltas.suffix(runLength)
+        guard run.count == runLength else {
+            return false
+        }
+        return run.allSatisfy { $0 > 0 } || run.allSatisfy { $0 < 0 }
+    }
+
     /// A launch-stable digest of an identifier list.
     ///
     /// FNV-1a rather than `hashValue`: Swift seeds its hasher per process,
@@ -5182,6 +5224,11 @@ extension MenuBarItemManager {
         // plan describes an arrangement that no longer exists.
         let plannedTargetBounds = try? await getCurrentBounds(for: destination.targetItem)
 
+        // Where the target has sat at the end of each failed attempt. A
+        // single nudge is expected; a run of them in one direction is the
+        // move pushing its own anchor. See `targetIsRetreating`.
+        var targetMinXHistory: [CGFloat] = plannedTargetBounds.map { [$0.minX] } ?? []
+
         let maxAttempts = max(1, maxMoveAttempts)
         for n in 1 ... maxAttempts {
             guard !Task.isCancelled else {
@@ -5250,8 +5297,12 @@ extension MenuBarItemManager {
                 // batch with a fresh partial arrangement on every pass (#900).
                 // Stop instead and let the next cache tick re-plan against a
                 // settled bar.
+                let currentTargetBounds = try? await getCurrentBounds(for: destination.targetItem)
+                if let currentTargetBounds {
+                    targetMinXHistory.append(currentTargetBounds.minX)
+                }
                 if let plannedTargetBounds,
-                   let currentTargetBounds = try? await getCurrentBounds(for: destination.targetItem),
+                   let currentTargetBounds,
                    Self.destinationIsStale(
                        plannedTargetMinX: plannedTargetBounds.minX,
                        currentTargetMinX: currentTargetBounds.minX,
@@ -5263,6 +5314,21 @@ extension MenuBarItemManager {
                         Attempt \(n): \(destination.targetItem.logString) moved from \
                         minX=\(plannedTargetBounds.minX) to minX=\(currentTargetBounds.minX) \
                         during the drag, abandoning the stale move
+                        """
+                    )
+                    throw EventError.staleDestination(item)
+                }
+                // Small steps that never trip the stale threshold still walk
+                // the anchor across the bar if they all go the same way, and
+                // when the anchor is one of Thaw's dividers that ends in a
+                // zero-width hidden section (#924, #927). Stop and let the
+                // next cache tick re-plan against a settled bar.
+                if Self.targetIsRetreating(recentTargetMinX: targetMinXHistory) {
+                    MenuBarItemManager.diagLog.warning(
+                        """
+                        Attempt \(n): \(destination.targetItem.logString) has retreated on every \
+                        recent attempt (minX \(targetMinXHistory.map { String(format: "%.0f", $0) }.joined(separator: " → "))) \
+                        while \(item.logString) did not land; abandoning rather than pushing it further
                         """
                     )
                     throw EventError.staleDestination(item)
@@ -8961,10 +9027,21 @@ extension MenuBarItemManager {
             )
         }
 
+        // The hidden and always-hidden dividers were filtered out of the
+        // sequences above, but the chevron stays in: its position within
+        // visible is part of the layout and is persisted. That also makes it
+        // selectable as a move anchor, and anchoring a failing move on one of
+        // Thaw's own dividers is what walks it across the bar (#924, #927).
+        // Keep it in the order, bar it from being an anchor.
+        let unanchorableUIDs = Set(
+            items.lazy.filter(\.isControlItem).map(\.uniqueIdentifier)
+        )
+
         let plannedMoves = LayoutSolver.planLCSMoveSequence(
             currentNoControls: currentNoControls,
             desiredNoControls: desiredNoControls,
-            sectionMap: sectionMap
+            sectionMap: sectionMap,
+            unanchorableUIDs: unanchorableUIDs
         )
 
         guard !plannedMoves.isEmpty else {

@@ -159,4 +159,76 @@ struct PlanLCSMoveSequenceTests {
         #expect(result[1].uid == "a")
         #expect(result[1].destination == .rightOfUID("b"))
     }
+
+    // MARK: - Unanchorable anchors
+
+    /// Thaw's chevron stays in the sequence — its position within visible is
+    /// part of the layout and is persisted — which also made it selectable
+    /// as a move anchor. Anchoring a failing move on one of Thaw's own
+    /// dividers is what walks it across the bar: the insertion lands on the
+    /// wrong side, the ordinal check refuses it, and because the bar lays
+    /// out right to left the divider is shoved further left on every attempt
+    /// (#924, #927). A neighbouring app item is an equally good insertion
+    /// point and costs nothing when the move goes wrong.
+    @Test("A control item is not chosen as an anchor when an app item is available")
+    func controlItemIsNotChosenAsAnchor() {
+        // current: [a, chevron, b, c] → desired: [a, chevron, c, b]
+        // `b` must move; scanning forward from its desired slot the first
+        // stable candidate is `chevron` going backward, `nil` going forward.
+        let sectionMap = ["a": "visible", "chevron": "visible", "b": "visible", "c": "visible"]
+        let result = LayoutSolver.planLCSMoveSequence(
+            currentNoControls: ["a", "chevron", "b", "c"],
+            desiredNoControls: ["a", "chevron", "c", "b"],
+            sectionMap: sectionMap,
+            unanchorableUIDs: ["chevron"]
+        )
+
+        for move in result {
+            if case let .leftOfUID(uid) = move.destination {
+                #expect(uid != "chevron", "planned a move anchored on the chevron")
+            }
+            if case let .rightOfUID(uid) = move.destination {
+                #expect(uid != "chevron", "planned a move anchored on the chevron")
+            }
+        }
+    }
+
+    /// Barring the chevron must not bar the move itself: with no other
+    /// stable item in the section the planner falls back to the section
+    /// boundary rather than giving up.
+    @Test("With no app-item anchor available the move falls back to the boundary")
+    func fallsBackToBoundaryWhenOnlyControlItemRemains() {
+        // Only the chevron is stable, and it is unanchorable.
+        let result = LayoutSolver.planLCSMoveSequence(
+            currentNoControls: ["chevron", "b"],
+            desiredNoControls: ["b", "chevron"],
+            sectionMap: ["chevron": "visible", "b": "visible"],
+            unanchorableUIDs: ["chevron"]
+        )
+
+        #expect(!result.isEmpty, "the move must still be planned")
+        for move in result {
+            if case .sectionBoundary = move.destination { continue }
+            if case let .leftOfUID(uid) = move.destination { #expect(uid != "chevron") }
+            if case let .rightOfUID(uid) = move.destination { #expect(uid != "chevron") }
+        }
+    }
+
+    /// Default argument keeps every existing caller and every existing
+    /// expectation in this suite unchanged.
+    @Test("With no unanchorable set the planner behaves exactly as before")
+    func emptyUnanchorableSetIsUnchanged() {
+        let current = ["a", "b", "c"]
+        let desired = ["b", "a", "c"]
+        let map = ["a": "visible", "b": "visible", "c": "visible"]
+
+        #expect(
+            LayoutSolver.planLCSMoveSequence(
+                currentNoControls: current, desiredNoControls: desired, sectionMap: map
+            ) == LayoutSolver.planLCSMoveSequence(
+                currentNoControls: current, desiredNoControls: desired, sectionMap: map,
+                unanchorableUIDs: []
+            )
+        )
+    }
 }

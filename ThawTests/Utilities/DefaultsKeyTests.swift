@@ -41,17 +41,15 @@ struct DefaultsKeyTests {
         #expect(Defaults.DefaultValue.inputPauseThresholdMs == 50)
         // 0 keeps the bulk idle gate off: enabling it by default would
         // change when every automatic apply starts.
-        #expect(Defaults.DefaultValue.bulkApplyIdleThresholdMs == 0)
+        #expect(Defaults.DefaultValue.bulkApplyIdleThresholdMs == 300)
         #expect(Defaults.DefaultValue.bulkApplyIdleWaitCapMs == 2000)
-        // True keeps concealed-section ordering enforced: surrendering it
-        // silently would change what restoring a saved layout means.
-        #expect(Defaults.DefaultValue.enforceConcealedSectionOrder == true)
+        // TEST BUILD: relaxed so testers exercise the shorter batches.
+        #expect(Defaults.DefaultValue.enforceConcealedSectionOrder == false)
         // True keeps Thaw arranging on its own initiative; false is the
         // manual-only escape hatch.
         #expect(Defaults.DefaultValue.automaticArrangementEnabled == true)
-        // False keeps events aimed at the owning app; flipping it changes
-        // where every synthetic move event goes.
-        #expect(Defaults.DefaultValue.postMoveEventsToWindowOwner == false)
+        // TEST BUILD: events addressed to the window's owner by default.
+        #expect(Defaults.DefaultValue.postMoveEventsToWindowOwner == true)
         #expect(Defaults.DefaultValue.discardStrayMoveEvents == true)
         #expect(Defaults.DefaultValue.failFastOnEventWindowMismatch == false)
         #expect(Defaults.DefaultValue.axMessagingTimeout == 1.0)

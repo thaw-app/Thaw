@@ -119,4 +119,58 @@ struct StaleDestinationGateTests {
             )
         )
     }
+
+    // MARK: - MenuBarItemManager.targetIsRetreating
+
+    /// The live #924/#927 sequence: an anchor driven from 1682 to 1650 over
+    /// five attempts while the moved item sat at 1683 the whole time. Every
+    /// step is far too small for the display-width staleness threshold, so
+    /// the budget was spent walking the anchor across the bar. When the
+    /// anchor is one of Thaw's dividers, repeating that across cycles ends
+    /// in a zero-width hidden section and a layout that stops persisting.
+    @Test("An anchor retreating on every attempt is caught")
+    func retreatingAnchorIsCaught() {
+        #expect(MenuBarItemManager.targetIsRetreating(recentTargetMinX: [1682, 1677, 1664, 1653, 1650]))
+    }
+
+    /// Landing beside a target legitimately nudges it by roughly the moved
+    /// item's width. One step proves nothing and must not abandon the move.
+    @Test("A single nudge is not a retreat")
+    func singleNudgeIsNotARetreat() {
+        #expect(!MenuBarItemManager.targetIsRetreating(recentTargetMinX: [1682, 1648]))
+    }
+
+    /// Two steps are still short of the run length; the guard waits for
+    /// evidence rather than abandoning on the second attempt.
+    @Test("Two steps are below the run length")
+    func twoStepsAreBelowRunLength() {
+        #expect(!MenuBarItemManager.targetIsRetreating(recentTargetMinX: [1682, 1677, 1664]))
+    }
+
+    /// Direction is what matters, not distance: an anchor jittering back and
+    /// forth is reflow, not a move pushing it.
+    @Test("A jittering anchor is not retreating")
+    func jitteringAnchorIsNotRetreating() {
+        #expect(!MenuBarItemManager.targetIsRetreating(recentTargetMinX: [1682, 1677, 1684, 1679, 1686]))
+    }
+
+    /// Rightward is equally a retreat — a left-to-right bar, or an anchor
+    /// being pushed the other way, fails the same way.
+    @Test("Retreat is direction-agnostic")
+    func retreatIsDirectionAgnostic() {
+        #expect(MenuBarItemManager.targetIsRetreating(recentTargetMinX: [100, 110, 125, 140]))
+    }
+
+    /// A stationary anchor is the healthy case: zero deltas are neither
+    /// direction, so a move that simply needs another attempt gets one.
+    @Test("A stationary anchor is not retreating")
+    func stationaryAnchorIsNotRetreating() {
+        #expect(!MenuBarItemManager.targetIsRetreating(recentTargetMinX: [1682, 1682, 1682, 1682]))
+    }
+
+    /// Degenerate inputs never abandon a move.
+    @Test("Short histories never trip the guard", arguments: [[CGFloat](), [1682], [1682, 1677]])
+    func shortHistoriesNeverTrip(history: [CGFloat]) {
+        #expect(!MenuBarItemManager.targetIsRetreating(recentTargetMinX: history))
+    }
 }
