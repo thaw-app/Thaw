@@ -106,6 +106,26 @@ struct CGImageAnalysisTests {
         #expect(image.averageColor(alphaThreshold: 0) != nil)
     }
 
+    @Test("A pixel just below the alpha threshold is excluded (round up, not to nearest)")
+    func pixelJustBelowThresholdIsExcluded() throws {
+        // A fill alpha of 0.334 quantises to the alpha byte round(0.334 * 255) = 85,
+        // i.e. a normalised alpha of 85 / 255 ≈ 0.3333 — strictly below 0.334.
+        let image = try makeCanvas(width: 4, height: 4) { context in
+            context.setFillColor(red: 1, green: 0, blue: 0, alpha: 0.334)
+            context.fill(CGRect(x: 0, y: 0, width: 4, height: 4))
+        }
+
+        // By the documented contract — "pixels with an alpha component greater
+        // than or equal to this value contribute" — every pixel is below the
+        // threshold, so the average must be nil. The byte threshold is therefore
+        // ceil(0.334 * 255) = 86; rounding to nearest would give 85 and wrongly
+        // admit these pixels, returning a spurious non-nil color.
+        #expect(image.averageColor(alphaThreshold: 0.334) == nil)
+
+        // Control: the pixels really do exist — a threshold of 0 admits them.
+        #expect(image.averageColor(alphaThreshold: 0) != nil)
+    }
+
     @Test("An explicit RGB color space is honored")
     func explicitColorSpaceIsUsed() throws {
         let image = try makeCanvas(width: 4, height: 4) { context in

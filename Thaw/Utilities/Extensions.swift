@@ -139,8 +139,13 @@ nonisolated extension CGImage {
             return nil
         }
 
-        // Convert the alpha threshold to a valid component for comparison.
-        let alphaThreshold = UInt64((alphaThreshold.clamped(to: 0 ... 1) * 255).rounded(.toNearestOrAwayFromZero))
+        // Convert the normalised [0, 1] threshold to an 8-bit component for the
+        // byte-wise comparison below. A pixel contributes when its alpha is
+        // greater than or equal to the threshold, so the smallest byte that can
+        // satisfy `byte >= 255 * threshold` is its ceiling; rounding to nearest
+        // would drop the boundary pixel whenever the fractional part of
+        // `255 * threshold` is below one half.
+        let alphaThreshold = UInt64((alphaThreshold.clamped(to: 0 ... 1) * 255).rounded(.up))
 
         var count = UInt64(width * height)
         var totals: (r: UInt64, g: UInt64, b: UInt64, a: UInt64) = (0, 0, 0, 0)
