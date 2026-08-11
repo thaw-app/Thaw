@@ -5792,9 +5792,23 @@ extension MenuBarItemManager {
         /// The tag associated with the item.
         let tag: MenuBarItemTag
 
-        /// The PID of the application that owns this item, used to detect
-        /// nonstandard popup windows that ``shownInterfaceWindow`` may miss.
+        /// The PID used to match this item back on the bar at rehide time.
         let sourcePID: pid_t
+
+        /// Every process that could plausibly own this item's interface.
+        ///
+        /// The process that owns an item's *window* and the one that owns the
+        /// *menu* that window opens are not always the same. On macOS 26
+        /// Control Center hosts the status item while the app draws the menu,
+        /// so a lookup keyed on either PID alone misses. It matters most for
+        /// an item whose `sourcePID` never resolved, where collapsing to a
+        /// single PID via `?? ownerPID` yields Control Center's — and the
+        /// app's open menu can then never be found, so the rehide tears it
+        /// down (#924).
+        ///
+        /// ``ClickReactionVerifier/Snapshot/pids`` accepts both for the same
+        /// reason; this keeps the two in agreement.
+        let interfacePIDs: Set<pid_t>
 
         /// The display identifier where the item was shown.
         let displayID: CGDirectDisplayID
@@ -5829,6 +5843,22 @@ extension MenuBarItemManager {
         /// or temporarily invisible).
         var notFoundAttempts = 0
 
+        /// The number of rehide checks that have found the interface
+        /// ``InterfaceState/unknown``.
+        ///
+        /// Bounded by ``maxUndetectedInterfaceChecks`` so an item whose
+        /// interface can never be identified still goes home rather than
+        /// sitting in the visible section forever.
+        var undetectedInterfaceChecks = 0
+
+        /// How many `unknown` readings to sit through before rehiding anyway.
+        ///
+        /// The checks are three seconds apart, so this trades roughly the
+        /// length of the ordinary rehide timer against tearing down a menu
+        /// that is open but unidentifiable. An item that lingers too long is
+        /// a far cheaper failure than a menu that closes underneath the user.
+        static let maxUndetectedInterfaceChecks = 4
+
         /// Timestamp for when the item was first shown so we can honor
         /// a short grace period for menus that use nonstandard windows.
         private let firstShownDate = Date.now
@@ -5837,9 +5867,33 @@ extension MenuBarItemManager {
         /// detect a popup window (helps apps with unusual window levels).
         private let graceInterval: TimeInterval = 2
 
+        /// What is known about the item's interface.
+        enum InterfaceState {
+            /// A window belonging to the item was observed on screen.
+            case showing
+
+            /// The interface was identified and is no longer on screen, so it
+            /// has been closed or dismissed. Positive evidence.
+            case absent
+
+            /// The interface was never identified: nothing was captured when
+            /// the item was clicked and nothing can be found now.
+            ///
+            /// Distinct from ``absent`` because it is an admission of
+            /// ignorance rather than an observation. Rehiding on it is a
+            /// guess, and when the guess is wrong the user loses the menu
+            /// they just opened (#924).
+            case unknown
+        }
+
         /// A Boolean value that indicates whether the menu bar item's
         /// interface is showing.
         var isShowingInterface: Bool {
+            interfaceState == .showing
+        }
+
+        /// What is currently known about the item's interface.
+        var interfaceState: InterfaceState {
             // First check the tracked popup window; this is the most
             // reliable signal when available.
             if let window = shownInterfaceWindow,
@@ -5850,7 +5904,7 @@ extension MenuBarItemManager {
                     || current.layer == CGWindowLevelForKey(.statusWindow)
                     || current.layer == CGWindowLevelForKey(.mainMenuWindow)
                 {
-                    return current.isOnScreen
+                    return current.isOnScreen ? .showing : .absent
                 }
                 if let app = current.owningApplication {
                     // The captured window is the popup we just opened, so trust its
@@ -5865,63 +5919,49 @@ extension MenuBarItemManager {
                     //     not frontmost. A menu-sized window distinguishes this
                     //     from an incidental small window.
                     if app.activationPolicy == .accessory || current.bounds.height > 40 {
-                        return current.isOnScreen
+                        return current.isOnScreen ? .showing : .absent
                     }
-                    return app.isActive && current.isOnScreen
+                    return app.isActive && current.isOnScreen ? .showing : .absent
                 }
-                return current.isOnScreen
+                return current.isOnScreen ? .showing : .absent
             }
 
             // The tracked window is gone or was never captured. During the
             // grace period, assume the interface is still showing to give
             // apps with nonstandard windows time to create them.
             if Date.now.timeIntervalSince(firstShownDate) < graceInterval {
-                return true
+                return .showing
             }
 
             // Grace period expired and no tracked window. Check whether the
             // app has any visible popup or overlay window that we missed.
-            return appHasVisiblePopup()
+            //
+            // A miss here is not evidence the menu closed — we never found it
+            // in the first place — so it reports `unknown` and the caller
+            // decides how long to keep looking.
+            return appHasVisiblePopup() ? .showing : .unknown
         }
 
-        /// Checks whether the item's owning application has any visible
-        /// menu window on screen.
+        /// Checks whether any process that could own this item's interface has
+        /// a visible menu window on screen.
         ///
-        /// Matches the pop-up menu level (the level macOS uses for menus opened
-        /// from menu bar items). Some apps (e.g. DisplayLink) instead draw their
-        /// menu as a status- or main-menu-level window owned by the app rather
-        /// than at pop-up level, so those levels are also matched, but only when
-        /// the window is taller than a menu bar item, so the status item itself
-        /// (which sits in the menu bar) is not mistaken for an open menu. A
-        /// liberal "above normal" match was previously used as a catch-all, but
-        /// it matched floating panels, modal levels, and other unrelated app
-        /// windows, keeping `isShowingInterface` true indefinitely and
-        /// preventing rehide.
+        /// See ``MenuBarItemManager/windowIsOpenInterface(ownerPID:layer:height:interfacePIDs:)``
+        /// for what counts.
         private func appHasVisiblePopup() -> Bool {
-            let windows = WindowInfo.createWindows(option: .onScreen)
-            let popUpLevel = CGWindowLevelForKey(.popUpMenuWindow)
-            let statusLevel = CGWindowLevelForKey(.statusWindow)
-            let mainMenuLevel = CGWindowLevelForKey(.mainMenuWindow)
-            return windows.contains { window in
-                guard window.ownerPID == sourcePID else {
-                    return false
-                }
-                let level = CGWindowLevel(Int32(window.layer))
-                if level == popUpLevel || level == popUpLevel - 1 {
-                    return true
-                }
-                // Menu bar items are at most ~menu-bar height; a real menu drawn
-                // at status/main-menu level is taller, which distinguishes it.
-                if level == statusLevel || level == mainMenuLevel {
-                    return window.bounds.height > 40
-                }
-                return false
+            WindowInfo.createWindows(option: .onScreen).contains { window in
+                MenuBarItemManager.windowIsOpenInterface(
+                    ownerPID: window.ownerPID,
+                    layer: window.layer,
+                    height: window.bounds.height,
+                    interfacePIDs: interfacePIDs
+                )
             }
         }
 
         init(
             tag: MenuBarItemTag,
             sourcePID: pid_t,
+            interfacePIDs: Set<pid_t>,
             displayID: CGDirectDisplayID,
             returnDestination: MoveDestination,
             fallbackNeighborTag: MenuBarItemTag?,
@@ -5930,12 +5970,54 @@ extension MenuBarItemManager {
         ) {
             self.tag = tag
             self.sourcePID = sourcePID
+            self.interfacePIDs = interfacePIDs
             self.displayID = displayID
             self.returnDestination = returnDestination
             self.fallbackNeighborTag = fallbackNeighborTag
             self.fallbackNeighborPID = fallbackNeighborPID
             self.originalSection = originalSection
         }
+    }
+
+    /// Whether an on-screen window counts as the interface a temporarily shown
+    /// item opened.
+    ///
+    /// Matches the pop-up menu level (the level macOS uses for menus opened
+    /// from menu bar items). Some apps (e.g. DisplayLink) instead draw their
+    /// menu as a status- or main-menu-level window owned by the app rather
+    /// than at pop-up level, so those levels are also matched, but only when
+    /// the window is taller than a menu bar item, so the status item itself
+    /// (which sits in the menu bar) is not mistaken for an open menu. A
+    /// liberal "above normal" match was previously used as a catch-all, but
+    /// it matched floating panels, modal levels, and other unrelated app
+    /// windows, keeping the interface reading positive indefinitely and
+    /// preventing rehide.
+    ///
+    /// `interfacePIDs` is a set rather than one PID because the process that
+    /// owns the item's window and the one that owns the menu it opens are not
+    /// always the same — see
+    /// ``TemporarilyShownItemContext/interfacePIDs``.
+    static nonisolated func windowIsOpenInterface(
+        ownerPID: pid_t,
+        layer: Int,
+        height: CGFloat,
+        interfacePIDs: Set<pid_t>
+    ) -> Bool {
+        guard interfacePIDs.contains(ownerPID) else {
+            return false
+        }
+        let level = CGWindowLevel(Int32(layer))
+        if level == CGWindowLevelForKey(.popUpMenuWindow)
+            || level == CGWindowLevelForKey(.popUpMenuWindow) - 1
+        {
+            return true
+        }
+        // Menu bar items are at most ~menu-bar height; a real menu drawn
+        // at status/main-menu level is taller, which distinguishes it.
+        if level == CGWindowLevelForKey(.statusWindow) || level == CGWindowLevelForKey(.mainMenuWindow) {
+            return height > 40
+        }
+        return false
     }
 
     /// Gets the destination to return the given item to after it is
@@ -6295,6 +6377,7 @@ extension MenuBarItemManager {
         let context = TemporarilyShownItemContext(
             tag: item.tag,
             sourcePID: item.sourcePID ?? item.ownerPID,
+            interfacePIDs: Set([item.ownerPID, item.sourcePID].compactMap(\.self)),
             displayID: resolvedDisplayID,
             returnDestination: returnInfo.destination,
             fallbackNeighborTag: returnInfo.fallbackNeighbor?.tag,
@@ -6405,8 +6488,13 @@ extension MenuBarItemManager {
             await eventSleep(for: .milliseconds(100))
             let windowsAfterClick = WindowInfo.createWindows(option: .onScreen)
 
+            // Either PID counts, for the reason ``interfacePIDs`` documents:
+            // the item's window and the menu it opens can belong to different
+            // processes, and `clickPID` alone is Control Center's whenever the
+            // item's source never resolved.
             context.shownInterfaceWindow = windowsAfterClick.first { window in
-                window.ownerPID == clickPID && !idsBeforeClick.contains(window.windowID)
+                context.interfacePIDs.contains(window.ownerPID)
+                    && !idsBeforeClick.contains(window.windowID)
             }
         }
 
@@ -6503,6 +6591,31 @@ extension MenuBarItemManager {
                 MenuBarItemManager.diagLog.debug("Menu bar item interface is shown, so waiting to rehide")
                 runRehideTimer(for: 3)
                 return
+            }
+
+            // No context reports a showing interface, but some may report that
+            // they never identified one. Rehiding on that is a guess, and the
+            // cost of guessing wrong is the user's open menu being dragged off
+            // the bar (#924). Spend a bounded number of further checks looking
+            // before treating it as closed.
+            let undetected = temporarilyShownItemContexts.filter { $0.interfaceState == .unknown }
+            let stillWorthChecking = undetected.filter {
+                $0.undetectedInterfaceChecks < TemporarilyShownItemContext.maxUndetectedInterfaceChecks
+            }
+            if !stillWorthChecking.isEmpty {
+                for context in stillWorthChecking {
+                    context.undetectedInterfaceChecks += 1
+                }
+                MenuBarItemManager.diagLog.debug(
+                    "Interface never identified for \(stillWorthChecking.count) temporarily shown item(s); waiting to rehide rather than assuming it closed"
+                )
+                runRehideTimer(for: 3)
+                return
+            }
+            if !undetected.isEmpty {
+                MenuBarItemManager.diagLog.info(
+                    "Interface still unidentified for \(undetected.count) temporarily shown item(s) after \(TemporarilyShownItemContext.maxUndetectedInterfaceChecks) checks; rehiding anyway"
+                )
             }
             guard hasUserPausedInput(for: .milliseconds(250)) else {
                 MenuBarItemManager.diagLog.debug("Found recent user input, so waiting to rehide")
