@@ -10,8 +10,10 @@
 
 /// Field weights for a fuzzy-search `Searchable` conformance.
 ///
-/// Fuse's diff score gets *worse* (higher) as weight increases, so a lower
-/// weight value means a match in that field ranks the result higher. Not
+/// Fuse scales a field's diff score by `(1 - weight)` (a weight of `1`
+/// leaves it unchanged), and a lower diff score ranks the result higher —
+/// so a *higher* weight value means a match in that field ranks the result
+/// higher. Not
 /// every search surface has all three fields — menu bar item search, for
 /// example, has no keywords or description — so callers simply omit the
 /// `FuseProp` for any field they don't have.
@@ -23,7 +25,7 @@ nonisolated struct SearchWeights {
     /// The weighting used by the settings sidebar search
     /// (``SearchModel``): a title match ranks above a keywords
     /// match, which ranks above a description match.
-    static let settings = SearchWeights(title: 0.3, keywords: 0.6, description: 1.0)
+    static let settings = SearchWeights(title: 0.6, keywords: 0.3, description: 1.0)
 
     /// The weighting used by menu bar item search (``MenuBarSearchPanel``),
     /// which only matches on the item's display name. `1.0` is Ifrit's

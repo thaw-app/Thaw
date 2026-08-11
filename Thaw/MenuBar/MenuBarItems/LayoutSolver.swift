@@ -473,17 +473,25 @@ nonisolated enum LayoutSolver {
     /// Each center is matched to the screen frame that contains it. Frames and
     /// centers are expected in the global CoreGraphics coordinate space
     /// (top-left origin), so a secondary display above the main one has a
-    /// negative y origin. Centers that fall on no screen are intentionally
-    /// parked off-screen hidden items (the control item shoves them thousands
-    /// of points to the left) and are ignored. When the remaining on-screen
-    /// items resolve to more than one distinct screen the active menu bar is
-    /// relocating between displays: macOS migrates the status item windows
-    /// asynchronously, so for a window of time some items sit on the old screen
-    /// and some on the new one. A bulk apply dispatched then resolves each
-    /// move against a different display and cannot converge, leaving items
-    /// stranded where they read as un-hidden; a section order persisted then
-    /// bakes that transition artifact into the saved layout. Both callers defer
-    /// until the items collapse back onto a single display.
+    /// negative y origin. When the centers resolve to more than one distinct
+    /// screen the active menu bar is relocating between displays: macOS
+    /// migrates the status item windows asynchronously, so for a window of time
+    /// some items sit on the old screen and some on the new one. A bulk apply
+    /// dispatched then resolves each move against a different display and
+    /// cannot converge, leaving items stranded where they read as un-hidden; a
+    /// section order persisted then bakes that transition artifact into the
+    /// saved layout. Every caller defers until the items collapse back onto a
+    /// single display.
+    ///
+    /// Callers must pass only unparked items. Parked hidden and always-hidden
+    /// items are shoved left of the menu bar and land at arbitrary negative x,
+    /// which is a real display's coordinate space whenever the user has a
+    /// screen positioned to the left of the main one. Feeding those centers in
+    /// makes the predicate report a spread on a perfectly settled layout, and
+    /// it never recovers: the persist gate then blocks every write to
+    /// savedSectionOrder for as long as that arrangement is connected. Centers
+    /// that land on no screen are still ignored, but that is a fallback, not
+    /// the filter; do not rely on it to exclude parked items.
     static nonisolated func itemsSpanMultipleDisplays(
         itemCenters: [CGPoint],
         screenFrames: [CGRect]
