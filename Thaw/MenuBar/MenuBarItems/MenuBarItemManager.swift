@@ -2705,6 +2705,11 @@ extension MenuBarItemManager {
                 .section(withName: .alwaysHidden)?.isEnabled ?? false
         )
 
+        // Item bounds come from the window server in CoreGraphics space, so
+        // the frames they are tested against have to be CGDisplayBounds and
+        // not NSScreen.frame — the two disagree by a vertical flip.
+        let screenFrames = NSScreen.screens.map { CGDisplayBounds($0.displayID) }
+
         // The hidden section is the span between the two dividers. When it
         // closes to zero, findSection can no longer classify anything as
         // .hidden by the strict test and the midpoint tie-break resolves
@@ -2712,7 +2717,17 @@ extension MenuBarItemManager {
         let hiddenSectionHasRoom = LayoutSolver.hiddenSectionHasRoom(
             hiddenControlItemMinX: context.hiddenControlItemBounds.minX,
             alwaysHiddenControlItemMaxX: context.alwaysHiddenControlItemBounds.first?.maxX,
-            savedHiddenItemCount: savedSectionOrder[sectionKey(for: .hidden)]?.count ?? 0
+            savedHiddenItemCount: savedSectionOrder[sectionKey(for: .hidden)]?.count ?? 0,
+            // The cache's own reading, because the cache's own reading is what
+            // this path is deciding whether to persist.
+            liveHiddenItemCount: context.cache[.hidden].count,
+            hasVisibleItemParkedOffBar: LayoutSolver.hasVisibleItemParkedOffBar(
+                itemBounds: MenuBarSection.Name.allCases.flatMap { section in
+                    context.cache[section].map(\.bounds)
+                },
+                hiddenControlItemMinX: context.hiddenControlItemBounds.minX,
+                screenFrames: screenFrames
+            )
         )
 
         let hasPendingDivergence = pendingDivergenceObservedAt != nil
@@ -2761,7 +2776,6 @@ extension MenuBarItemManager {
             // settled layout and this branch never stops firing. The visible
             // section is never parked, and a genuine relocation splits it across
             // screens just the same, so narrowing the input keeps the protection.
-            let screenFrames = NSScreen.screens.map { CGDisplayBounds($0.displayID) }
             let itemCenters = context.cache[.visible].map {
                 CGPoint(x: $0.bounds.midX, y: $0.bounds.midY)
             }
@@ -8488,7 +8502,17 @@ extension MenuBarItemManager {
            !LayoutSolver.hiddenSectionHasRoom(
                hiddenControlItemMinX: controlItems.hidden.bounds.minX,
                alwaysHiddenControlItemMaxX: controlItems.alwaysHidden?.bounds.maxX,
-               savedHiddenItemCount: itemOrder[sectionKey(for: .hidden)]?.count ?? 0
+               savedHiddenItemCount: itemOrder[sectionKey(for: .hidden)]?.count ?? 0,
+               liveHiddenItemCount: LayoutSolver.liveHiddenItemCount(
+                   itemBounds: items.map(\.bounds),
+                   hiddenControlItemMinX: controlItems.hidden.bounds.minX,
+                   alwaysHiddenControlItemMaxX: controlItems.alwaysHidden?.bounds.maxX
+               ),
+               hasVisibleItemParkedOffBar: LayoutSolver.hasVisibleItemParkedOffBar(
+                   itemBounds: items.map(\.bounds),
+                   hiddenControlItemMinX: controlItems.hidden.bounds.minX,
+                   screenFrames: NSScreen.screens.map { CGDisplayBounds($0.displayID) }
+               )
            )
         {
             MenuBarItemManager.diagLog.warning(
@@ -9873,7 +9897,19 @@ extension MenuBarItemManager {
         let hiddenSectionHasRoom = LayoutSolver.hiddenSectionHasRoom(
             hiddenControlItemMinX: controlItems.hidden.bounds.minX,
             alwaysHiddenControlItemMaxX: controlItems.alwaysHidden?.bounds.maxX,
-            savedHiddenItemCount: effectiveSavedOrder[sectionKey(for: .hidden)]?.count ?? 0
+            savedHiddenItemCount: effectiveSavedOrder[sectionKey(for: .hidden)]?.count ?? 0,
+            // Read off the bar this apply was handed, not the cache: this path
+            // is entered with `items` and runs before any recache.
+            liveHiddenItemCount: LayoutSolver.liveHiddenItemCount(
+                itemBounds: items.map(\.bounds),
+                hiddenControlItemMinX: controlItems.hidden.bounds.minX,
+                alwaysHiddenControlItemMaxX: controlItems.alwaysHidden?.bounds.maxX
+            ),
+            hasVisibleItemParkedOffBar: LayoutSolver.hasVisibleItemParkedOffBar(
+                itemBounds: items.map(\.bounds),
+                hiddenControlItemMinX: controlItems.hidden.bounds.minX,
+                screenFrames: NSScreen.screens.map { CGDisplayBounds($0.displayID) }
+            )
         )
         guard hiddenSectionHasRoom else {
             MenuBarItemManager.diagLog.warning(

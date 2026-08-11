@@ -1689,24 +1689,109 @@ nonisolated enum LayoutSolver {
     ///   persist. Only a saved layout that *expects* hidden items makes a
     ///   closed span evidence of a misread.
     ///
+    /// **The saved count alone deadlocks (#924).** A user who drags every
+    /// hidden item into visible leaves the dividers correctly adjacent, but
+    /// the saved order still lists the old hidden entries — and it cannot stop
+    /// listing them, because this gate is what blocks the write that would
+    /// clear them. The gate's own effect preserves its trigger, so Thaw goes
+    /// permanently read-only on that bar: no save, and no apply either, since
+    /// `applySavedLayout` consults the same answer. Reinstalling does not help;
+    /// the frozen order is on disk.
+    ///
+    /// `liveHiddenItemCount` cannot break the tie by itself, because a
+    /// collapse *also* reads as zero live hidden items — that misclassification
+    /// is the whole problem (#868). What separates the two is where the items
+    /// went. A collapse leaves them parked thousands of points off every
+    /// display while the cache calls them visible, which is a position no
+    /// genuinely visible item can hold. An emptied section leaves every visible
+    /// item on the bar. So an empty live section is trusted only when nothing
+    /// the cache calls visible is parked off-screen.
+    ///
     /// - Parameters:
     ///   - hiddenControlItemMinX: Leading edge of the hidden divider.
     ///   - alwaysHiddenControlItemMaxX: Trailing edge of the always-hidden
     ///     divider, or `nil` when the section has no divider.
     ///   - savedHiddenItemCount: How many items the saved layout assigns to
     ///     the hidden section.
+    ///   - liveHiddenItemCount: How many items the current reading of the bar
+    ///     places in the hidden section.
+    ///   - hasVisibleItemParkedOffBar: Whether any item the current reading
+    ///     calls visible is parked off every display. See
+    ///     ``hasVisibleItemParkedOffBar(visibleItemBounds:screenFrames:)``.
     static nonisolated func hiddenSectionHasRoom(
         hiddenControlItemMinX: CGFloat,
         alwaysHiddenControlItemMaxX: CGFloat?,
-        savedHiddenItemCount: Int
+        savedHiddenItemCount: Int,
+        liveHiddenItemCount: Int,
+        hasVisibleItemParkedOffBar: Bool
     ) -> Bool {
         guard let alwaysHiddenControlItemMaxX else {
+            return true
+        }
+        if liveHiddenItemCount == 0, !hasVisibleItemParkedOffBar {
             return true
         }
         guard savedHiddenItemCount > 0 else {
             return true
         }
         return hiddenControlItemMinX - alwaysHiddenControlItemMaxX > 0
+    }
+
+    /// Whether any item the current reading calls visible is parked off every
+    /// display.
+    ///
+    /// This is the tell that separates a collapsed hidden section from an
+    /// emptied one, and it is only meaningful for items classified `.visible`:
+    /// hidden and always-hidden items are parked off-screen whenever their
+    /// section is closed, which is ordinary rather than evidence of anything.
+    /// An item the cache calls visible has no such excuse — a visible item is
+    /// on the bar by definition, so one that is not is a misread.
+    ///
+    /// With no screen frames to test against the answer is unknowable, and the
+    /// conservative answer is the one that preserves the older behaviour: say
+    /// the items are parked, leaving the saved-count branch to decide.
+    ///
+    /// Membership is decided by geometry rather than by asking the cache,
+    /// because the callers that need this answer include the apply path, which
+    /// is handed a bar directly and has no populated cache to consult. Anything
+    /// at or right of the hidden divider is what the visible section holds;
+    /// hidden and always-hidden items sit left of it and are excluded, so a
+    /// closed always-hidden section full of legitimately parked items does not
+    /// read as a fault.
+    ///
+    /// Pure over its inputs. Matches the center-on-screen convention used by
+    /// ``isOnScreen(bounds:screenFrames:)``.
+    static nonisolated func hasVisibleItemParkedOffBar(
+        itemBounds: [CGRect],
+        hiddenControlItemMinX: CGFloat,
+        screenFrames: [CGRect]
+    ) -> Bool {
+        guard !screenFrames.isEmpty else {
+            return true
+        }
+        return itemBounds.contains { bounds in
+            bounds.minX >= hiddenControlItemMinX
+                && !isOnScreen(bounds: bounds, screenFrames: screenFrames)
+        }
+    }
+
+    /// How many items the given bar places strictly between the two dividers.
+    ///
+    /// The geometric counterpart to the cache's `.hidden` section, for the
+    /// callers that have a bar but no cache.
+    ///
+    /// Pure over its inputs.
+    static nonisolated func liveHiddenItemCount(
+        itemBounds: [CGRect],
+        hiddenControlItemMinX: CGFloat,
+        alwaysHiddenControlItemMaxX: CGFloat?
+    ) -> Int {
+        guard let alwaysHiddenControlItemMaxX else {
+            return itemBounds.count { $0.maxX <= hiddenControlItemMinX }
+        }
+        return itemBounds.count {
+            $0.minX >= alwaysHiddenControlItemMaxX && $0.maxX <= hiddenControlItemMinX
+        }
     }
 
     // MARK: - Pending rehide identifiers
