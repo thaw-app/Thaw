@@ -9349,13 +9349,6 @@ extension MenuBarItemManager {
         items: [MenuBarItem],
         controlItems: ControlItemPair
     ) -> Bool {
-        let sectionLookup = Self.savedLayoutSectionLookup(savedSectionOrder: savedSectionOrder)
-        guard !sectionLookup.exact.isEmpty || !sectionLookup.unambiguousBase.isEmpty else { return false }
-
-        let hiddenMinX = controlItems.hidden.bounds.minX
-        let hiddenMaxX = controlItems.hidden.bounds.maxX
-        let ahBounds = controlItems.alwaysHidden?.bounds
-
         // While the overflow feature is enabled and the active menu bar is
         // on a notched display, items the overflow rebalance ejected into
         // hidden diverge from the saved layout by design — reporting them
@@ -9368,8 +9361,65 @@ extension MenuBarItemManager {
         let overflowSkipActive = (appState?.settings.advanced.enableMenuBarItemOverflow ?? false)
             && ((NSScreen.screenWithActiveMenuBar ?? NSScreen.main)?.hasNotch ?? false)
 
-        for item in items where !item.isControlItem && item.canBeHidden && item.isMovable {
-            let identifier = item.uniqueIdentifier
+        return Self.layoutDivergesFromSaved(
+            candidates: items
+                .filter { !$0.isControlItem && $0.canBeHidden && $0.isMovable }
+                .map { item in
+                    DivergenceCandidate(
+                        tagIdentifier: item.tag.tagIdentifier,
+                        uniqueIdentifier: item.uniqueIdentifier,
+                        bounds: item.bounds
+                    )
+                },
+            sectionLookup: Self.savedLayoutSectionLookup(savedSectionOrder: savedSectionOrder),
+            hiddenBounds: controlItems.hidden.bounds,
+            alwaysHiddenBounds: controlItems.alwaysHidden?.bounds,
+            overflowExemptUIDs: overflowSkipActive ? notchOverflowEjectedUIDs : [],
+            activelyShownTags: Set(temporarilyShownItemContexts.map(\.tag.tagIdentifier))
+        )
+    }
+
+    /// One item of a bar reading, reduced to what the divergence rule reads.
+    struct DivergenceCandidate {
+        let tagIdentifier: String
+        let uniqueIdentifier: String
+        let bounds: CGRect
+    }
+
+    /// Whether any item sits in a different section than `savedSectionOrder`
+    /// records for it.
+    ///
+    /// This is the second of `applySavedLayout`'s two triggers, and the one
+    /// that fires on ambient drift rather than on items coming and going. Both
+    /// exemptions are passed in rather than derived so the rule stays pure:
+    ///
+    /// - `overflowExemptUIDs` carries the notch-overflow ejections, and is
+    ///   empty unless the caller has already established that the feature is
+    ///   on and the active display is notched.
+    /// - `activelyShownTags` carries the items Thaw is temporarily showing. One
+    ///   of those sits outside its saved section because Thaw put it there, and
+    ///   it stays there until the rehide runs. Reading that as drift arms a
+    ///   bulk apply whose only remaining brake is the open-menu probe, and a
+    ///   false negative from the probe then drags the item home underneath the
+    ///   menu the user just opened, tearing the menu down (#924). The rehide is
+    ///   what returns these items; this pass has no business racing it.
+    static nonisolated func layoutDivergesFromSaved(
+        candidates: [DivergenceCandidate],
+        sectionLookup: (exact: [String: MenuBarSection.Name], unambiguousBase: [String: MenuBarSection.Name]),
+        hiddenBounds: CGRect,
+        alwaysHiddenBounds: CGRect?,
+        overflowExemptUIDs: Set<String>,
+        activelyShownTags: Set<String>
+    ) -> Bool {
+        guard !sectionLookup.exact.isEmpty || !sectionLookup.unambiguousBase.isEmpty else { return false }
+
+        let hiddenMinX = hiddenBounds.minX
+        let hiddenMaxX = hiddenBounds.maxX
+        let ahBounds = alwaysHiddenBounds
+
+        for candidate in candidates {
+            guard !activelyShownTags.contains(candidate.tagIdentifier) else { continue }
+            let identifier = candidate.uniqueIdentifier
             let baseID = Self.baseIdentifier(forSavedIdentifier: identifier)
             guard let expectedSection = sectionLookup.exact[identifier]
                 ?? sectionLookup.unambiguousBase[baseID]
@@ -9377,23 +9427,20 @@ extension MenuBarItemManager {
                 continue
             }
 
-            let currentSection: MenuBarSection.Name? = if item.bounds.minX >= hiddenMaxX {
+            let currentSection: MenuBarSection.Name? = if candidate.bounds.minX >= hiddenMaxX {
                 .visible
-            } else if let ahBounds, item.bounds.maxX <= ahBounds.minX {
+            } else if let ahBounds, candidate.bounds.maxX <= ahBounds.minX {
                 .alwaysHidden
-            } else if let ahBounds, item.bounds.minX >= ahBounds.maxX, item.bounds.maxX <= hiddenMinX {
+            } else if let ahBounds, candidate.bounds.minX >= ahBounds.maxX, candidate.bounds.maxX <= hiddenMinX {
                 .hidden
-            } else if ahBounds == nil, item.bounds.maxX <= hiddenMinX {
+            } else if ahBounds == nil, candidate.bounds.maxX <= hiddenMinX {
                 .hidden
             } else {
                 nil
             }
 
             guard let currentSection else { continue }
-            if overflowSkipActive,
-               currentSection == .hidden,
-               notchOverflowEjectedUIDs.contains(item.uniqueIdentifier)
-            {
+            if currentSection == .hidden, overflowExemptUIDs.contains(identifier) {
                 continue
             }
             if currentSection != expectedSection {
