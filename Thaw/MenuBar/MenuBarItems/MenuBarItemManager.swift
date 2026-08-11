@@ -6431,7 +6431,6 @@ extension MenuBarItemManager {
         }
 
         let idsBeforeClick = Set(Bridging.getWindowList(option: .onScreen))
-        let clickPID = clickItem.sourcePID ?? clickItem.ownerPID
 
         // Electron/Chromium tray items ignore the synthetic click, so open their
         // menu via an Accessibility press once revealed, mirroring the on-screen
@@ -8300,6 +8299,33 @@ extension MenuBarItemManager {
               )
         else {
             MenuBarItemManager.diagLog.error("applyProfileLayout: missing control items")
+            clearProfileState(source: source, items: items)
+            return
+        }
+
+        // The always-hidden divider is what tells always-hidden items apart
+        // from hidden ones. Without it findSection collapses the two sections,
+        // so Phase 1 reads every always-hidden item as sitting in hidden and
+        // plans a cross-section move for each one. Those moves land — the
+        // mover finds the divider by tag even when the pair could not — and
+        // change nothing, so the next pass plans the same set again.
+        //
+        // #881's 08:41 log dragged the same six items 69 times over four
+        // minutes on `ahCtrlUID=nil, crossSectionMoves=8`, the always-hidden
+        // divider having gone unresolved in 552 of 578 cycles.
+        //
+        // `saveSectionOrder` already refuses to persist this reading (#849).
+        // Refusing to move on it is the same judgement one step earlier: an
+        // apply that cannot see the boundary cannot plan across it. The state
+        // is unwound so the next cache tick retries once the pair resolves.
+        guard LayoutSolver.isAlwaysHiddenSectionResolved(
+            hasAlwaysHiddenControlItem: controlItems.alwaysHidden != nil,
+            isAlwaysHiddenSectionEnabled: appState.menuBarManager
+                .section(withName: .alwaysHidden)?.isEnabled ?? false
+        ) else {
+            MenuBarItemManager.diagLog.warning(
+                "applyProfileLayout: skipping, always-hidden divider unresolved while its section is enabled"
+            )
             clearProfileState(source: source, items: items)
             return
         }
@@ -10346,7 +10372,10 @@ extension MenuBarItemManager {
     ///
     /// When a profile *is* active the pass defers to
     /// ``scheduleProfileResort()``: a full apply re-runs the same planner while
-    /// also honouring the saved order, so ejecting here would fight it.
+    /// also honouring the saved order, so ejecting here would fight it. That
+    /// handoff waits until the planner has actually found overflow — a pass
+    /// with nothing to do must return without arming anything, or it drives
+    /// the apply on every cache tick forever (#881).
     func rebalanceNotchOverflowIfNeeded(items: [MenuBarItem], controlItems: ControlItemPair) async {
         guard let appState else { return }
         guard appState.settings.advanced.enableMenuBarItemOverflow else { return }
@@ -10403,13 +10432,6 @@ extension MenuBarItemManager {
             itemCenters: unparkedItems.map { CGPoint(x: $0.bounds.midX, y: $0.bounds.midY) },
             screenFrames: NSScreen.screens.map { CGDisplayBounds($0.displayID) }
         ) else { return }
-
-        // A profile apply is the better tool: it re-runs this same planner and
-        // restores the saved order at the same time.
-        if activeProfileLayout != nil {
-            scheduleProfileResort()
-            return
-        }
 
         if let last = lastNotchRebalanceTimestamp,
            Date.now.timeIntervalSince(last) < Self.notchRebalanceCooldown
@@ -10469,9 +10491,12 @@ extension MenuBarItemManager {
             availableWidth -= chevron.bounds.width
         }
 
-        // No profile is active, so every visible item is unmanaged as far as
-        // the planner is concerned: none of them has a saved position to
-        // protect, and the tiered rule degenerates to leftmost-first.
+        // Every visible item counts as unmanaged here: with no profile active
+        // none of them has a saved position to protect, and the tiered rule
+        // degenerates to leftmost-first. With a profile active the tiering is
+        // wrong, but this call is only read for whether the set is empty, and
+        // that answer is the total footprint against the budget either way —
+        // the tiers decide which items are chosen, not whether any are.
         let result = LayoutSolver.planNotchOverflow(
             desiredFiltered: flat,
             unmanagedUIDs: visibleUIDs.filter { $0 != visibleCtrlUID },
@@ -10485,6 +10510,28 @@ extension MenuBarItemManager {
             availableWidth: availableWidth
         )
         guard !result.overflowUIDs.isEmpty else { return }
+
+        // A profile apply is the better tool: it re-runs this same planner and
+        // restores the saved order at the same time.
+        //
+        // This hands off only once the planner has found real overflow. The
+        // handoff used to happen at the top of this method, before the
+        // cooldown and before the budget was ever computed, so a bar with a
+        // profile and a notch re-armed a full profile apply on every cache
+        // tick — and each apply recaches, which runs this pass again. #881's
+        // 08:41 log turned over 73 applies in four minutes on a bar that
+        // never once overflowed: the pass returned before reaching
+        // `computeNotchOverflowBudget`, so not one ejection was ever planned.
+        // The apply moved six items per pass on unrelated grounds, each move
+        // a synthetic drag that takes the cursor.
+        if activeProfileLayout != nil {
+            lastNotchRebalanceTimestamp = .now
+            MenuBarItemManager.diagLog.info(
+                "Notch overflow rebalance: deferring \(result.overflowUIDs.count) item(s) to the profile apply"
+            )
+            scheduleProfileResort()
+            return
+        }
 
         // Bounce-back guard. Every UID the planner wants to eject is one this
         // pass already ejected, yet they are back in visible — the move is not

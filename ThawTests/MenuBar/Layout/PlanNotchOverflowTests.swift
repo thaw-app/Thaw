@@ -659,4 +659,74 @@ struct PlanNotchOverflowTests {
             "rebuild must not trap and control items are reinserted even though absent from input"
         )
     }
+
+    // MARK: - Tiering does not decide whether anything overflows (#881)
+
+    /// `rebalanceNotchOverflowIfNeeded` calls this planner with every visible
+    /// item marked unmanaged, then reads only whether the result is empty in
+    /// order to decide whether to hand off to a profile apply. That reading is
+    /// only sound if the unmanaged/profile split changes *which* items are
+    /// chosen and not *whether* any are — the tiers are a priority order over
+    /// one budget, not two budgets.
+    ///
+    /// Pinned because the gate is what stops #881's storm: the pass used to
+    /// hand off before computing a budget at all, re-arming a full apply on
+    /// every cache tick for a bar that never overflowed.
+    @Test("A row that fits overflows nothing under either tiering")
+    func fittingRowOverflowsNothingRegardlessOfTiering() {
+        // chevron(24) + a(24) + b(24) + c(24) = 96
+        let desired = makeSequence(
+            chevron: chevron,
+            visible: ["a", "b", "c"],
+            hiddenCtrl: hiddenCtrl,
+            ahCtrl: ahCtrl
+        )
+        let widths: [String: CGFloat] = [chevron: 24, "a": 24, "b": 24, "c": 24]
+        let sectionMap = ["a": "visible", "b": "visible", "c": "visible"]
+
+        func overflow(unmanagedUIDs: [String]) -> [String] {
+            LayoutSolver.planNotchOverflow(
+                desiredFiltered: desired,
+                unmanagedUIDs: unmanagedUIDs,
+                controlUIDs: ControlUIDs(visible: chevron, hidden: hiddenCtrl, alwaysHidden: ahCtrl),
+                sectionMap: sectionMap,
+                uidWidths: widths,
+                availableWidth: 100 // fits 96
+            ).overflowUIDs
+        }
+
+        #expect(overflow(unmanagedUIDs: []) == [], "all profile items")
+        #expect(overflow(unmanagedUIDs: ["a", "b", "c"]) == [], "all unmanaged, as the rebalance pass calls it")
+        #expect(overflow(unmanagedUIDs: ["b"]) == [], "mixed")
+    }
+
+    /// The other direction: a row over budget is seen as over budget whichever
+    /// tier its items are in, so the gate cannot swallow a real ejection.
+    @Test("A row over budget overflows something under either tiering")
+    func overflowingRowIsSeenRegardlessOfTiering() {
+        // chevron(24) + a(24) + b(24) + c(24) = 96, budget 70
+        let desired = makeSequence(
+            chevron: chevron,
+            visible: ["a", "b", "c"],
+            hiddenCtrl: hiddenCtrl,
+            ahCtrl: ahCtrl
+        )
+        let widths: [String: CGFloat] = [chevron: 24, "a": 24, "b": 24, "c": 24]
+        let sectionMap = ["a": "visible", "b": "visible", "c": "visible"]
+
+        func overflow(unmanagedUIDs: [String]) -> [String] {
+            LayoutSolver.planNotchOverflow(
+                desiredFiltered: desired,
+                unmanagedUIDs: unmanagedUIDs,
+                controlUIDs: ControlUIDs(visible: chevron, hidden: hiddenCtrl, alwaysHidden: ahCtrl),
+                sectionMap: sectionMap,
+                uidWidths: widths,
+                availableWidth: 70
+            ).overflowUIDs
+        }
+
+        #expect(!overflow(unmanagedUIDs: []).isEmpty, "all profile items")
+        #expect(!overflow(unmanagedUIDs: ["a", "b", "c"]).isEmpty, "all unmanaged, as the rebalance pass calls it")
+        #expect(!overflow(unmanagedUIDs: ["b"]).isEmpty, "mixed")
+    }
 }
