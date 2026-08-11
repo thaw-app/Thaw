@@ -5918,7 +5918,9 @@ extension MenuBarItemManager {
                     //     trigger, not the user, that opened it, so the app is
                     //     not frontmost. A menu-sized window distinguishes this
                     //     from an incidental small window.
-                    if app.activationPolicy == .accessory || current.bounds.height > 40 {
+                    if app.activationPolicy == .accessory
+                        || current.bounds.height > MenuBarItemManager.maxMenuBarItemHeight
+                    {
                         return current.isOnScreen ? .showing : .absent
                     }
                     return app.isActive && current.isOnScreen ? .showing : .absent
@@ -6015,9 +6017,48 @@ extension MenuBarItemManager {
         // Menu bar items are at most ~menu-bar height; a real menu drawn
         // at status/main-menu level is taller, which distinguishes it.
         if level == CGWindowLevelForKey(.statusWindow) || level == CGWindowLevelForKey(.mainMenuWindow) {
-            return height > 40
+            return height > maxMenuBarItemHeight
         }
         return false
+    }
+
+    /// The tallest a window can be and still be a menu bar item rather than
+    /// something the item opened.
+    static nonisolated let maxMenuBarItemHeight: CGFloat = 40
+
+    /// Picks the window to track as the interface a temporarily shown item
+    /// just opened, out of the windows that appeared around its click.
+    ///
+    /// Picking wrong is worse than picking nothing. A tracked window
+    /// short-circuits ``TemporarilyShownItemContext/interfaceState``: the grace
+    /// period and the `unknown` budget are both skipped, and the instant the
+    /// tracked window goes away the reading is a confident `absent`. So
+    /// latching onto an incidental window that lives for a moment — and
+    /// Control Center, which is in `interfacePIDs` for every item it hosts,
+    /// opens them around a click — hands the rehide the same false negative
+    /// those two mechanisms exist to prevent, only sooner and with more
+    /// conviction. The menu goes down inside a second (#924).
+    ///
+    /// A candidate therefore has to look like an interface: a menu-level
+    /// window first, then any window too tall to be a status item, which is how
+    /// ``TemporarilyShownItemContext/interfaceState`` recognizes the popovers
+    /// and non-standard-level menus that never reach pop-up level. Nothing
+    /// qualifying means nothing is tracked, which leaves the reading `unknown`
+    /// and the menu alone.
+    static nonisolated func interfaceWindowToTrack(
+        among candidates: [WindowInfo],
+        interfacePIDs: Set<pid_t>
+    ) -> WindowInfo? {
+        let owned = candidates.filter { interfacePIDs.contains($0.ownerPID) }
+        let menu = owned.first { window in
+            windowIsOpenInterface(
+                ownerPID: window.ownerPID,
+                layer: window.layer,
+                height: window.bounds.height,
+                interfacePIDs: interfacePIDs
+            )
+        }
+        return menu ?? owned.first { $0.bounds.height > maxMenuBarItemHeight }
     }
 
     /// Gets the destination to return the given item to after it is
@@ -6150,6 +6191,17 @@ extension MenuBarItemManager {
         }
     }
 
+    /// How long to wait before looking again while a temporarily shown item's
+    /// menu is still open, or while the user is still mid-interaction.
+    ///
+    /// The item sits in the visible section until a check passes, so this is
+    /// also how long it lingers there after the user dismisses the menu. The
+    /// check itself is cheap in the common case — a single window lookup — and
+    /// the expensive full enumeration only runs for an item whose interface was
+    /// never identified, which is spaced further apart by the `unknown` branch
+    /// of ``rehideTemporarilyShownItems(force:isCalledFromTemporarilyShow:)``.
+    private static let rehidePollInterval: TimeInterval = 1
+
     /// Schedules a timer for the given interval that rehides the
     /// temporarily shown items when fired.
     private func runRehideTimer(for interval: TimeInterval? = nil) {
@@ -6168,10 +6220,22 @@ extension MenuBarItemManager {
             }
         }
         // Also rehide when frontmost app changes (smart-ish).
+        //
+        // `dropFirst` because the KVO publisher's default options include
+        // `.initial`, so subscribing replays the app that is already frontmost.
+        // Every call to this method re-subscribes — including the retry calls
+        // from `rehideTemporarilyShownItems` — so that replay turned each
+        // "look again in `interval` seconds" into "look again in 200 ms". The
+        // intervals below were reasoned about as seconds and were really a
+        // fifth of one: the four `unknown` checks that read as twelve seconds
+        // of grace for a menu we cannot identify were spending eight hundred
+        // milliseconds (#924). Only a real app switch belongs here.
+        //
         // Debounce so rapid app switches (Cmd-Tab spam) collapse to one
         // rehide attempt instead of queuing a separate Task per change ;
         // each rehide call can do an expensive on-screen window enumeration.
         rehideCancellable = NSWorkspace.shared.publisher(for: \.frontmostApplication)
+            .dropFirst()
             .debounce(for: .milliseconds(200), scheduler: DispatchQueue.main)
             .sink { [weak self] _ in
                 guard let self else { return }
@@ -6388,7 +6452,14 @@ extension MenuBarItemManager {
 
         rehideTimer?.invalidate()
         defer {
-            runRehideTimer()
+            // A poll, not the fifteen-second ceiling. Nothing else re-arms a
+            // check until the frontmost app changes, and dismissing a menu with
+            // Escape changes nothing, so scheduling the ceiling here would park
+            // the item in the visible section for fifteen seconds every time
+            // the user closed its menu without picking anything. Each check
+            // reschedules itself, so the ceiling still arrives on time for an
+            // item that opened nothing at all.
+            runRehideTimer(for: Self.rehidePollInterval)
         }
 
         let clickItem: MenuBarItem
@@ -6481,21 +6552,29 @@ extension MenuBarItemManager {
         // The synthetic-click paths already waited for it and told us which
         // one it was; only the AX press path, which posts nothing and so has
         // nothing to verify, still has to look for itself.
-        if let observedInterfaceWindowID {
-            context.shownInterfaceWindow = WindowInfo(windowID: observedInterfaceWindowID)
+        let interfaceCandidates: [WindowInfo]
+        if let observedInterfaceWindowID, let observed = WindowInfo(windowID: observedInterfaceWindowID) {
+            interfaceCandidates = [observed]
         } else {
             await eventSleep(for: .milliseconds(100))
-            let windowsAfterClick = WindowInfo.createWindows(option: .onScreen)
-
-            // Either PID counts, for the reason ``interfacePIDs`` documents:
-            // the item's window and the menu it opens can belong to different
-            // processes, and `clickPID` alone is Control Center's whenever the
-            // item's source never resolved.
-            context.shownInterfaceWindow = windowsAfterClick.first { window in
-                context.interfacePIDs.contains(window.ownerPID)
-                    && !idsBeforeClick.contains(window.windowID)
-            }
+            interfaceCandidates = WindowInfo.createWindows(option: .onScreen)
+                .filter { !idsBeforeClick.contains($0.windowID) }
         }
+
+        // Either PID counts, for the reason ``interfacePIDs`` documents: the
+        // item's window and the menu it opens can belong to different
+        // processes, and the item's own owner is Control Center's for every
+        // item it hosts.
+        //
+        // What the click path saw goes through the same test as what a scan
+        // finds. ``ClickReactionVerifier`` is answering a different question —
+        // did the owner react at all — and settles for any new window of the
+        // owner's when no menu-level one appeared, which is sound evidence of a
+        // reaction and a poor guess at the menu.
+        context.shownInterfaceWindow = MenuBarItemManager.interfaceWindowToTrack(
+            among: interfaceCandidates,
+            interfacePIDs: context.interfacePIDs
+        )
 
         return .movedAndClicked
     }
@@ -6588,7 +6667,7 @@ extension MenuBarItemManager {
         if !force {
             guard !temporarilyShownItemContexts.contains(where: \.isShowingInterface) else {
                 MenuBarItemManager.diagLog.debug("Menu bar item interface is shown, so waiting to rehide")
-                runRehideTimer(for: 3)
+                runRehideTimer(for: Self.rehidePollInterval)
                 return
             }
 
@@ -6618,7 +6697,7 @@ extension MenuBarItemManager {
             }
             guard hasUserPausedInput(for: .milliseconds(250)) else {
                 MenuBarItemManager.diagLog.debug("Found recent user input, so waiting to rehide")
-                runRehideTimer(for: 1)
+                runRehideTimer(for: Self.rehidePollInterval)
                 return
             }
         }
