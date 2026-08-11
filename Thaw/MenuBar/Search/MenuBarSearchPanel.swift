@@ -510,6 +510,13 @@ private struct MenuBarSearchContentView: View {
                 selectFirstDisplayedItem()
             }
             .onChange(of: itemManager.itemCache, initial: true) {
+                // The memo's inputs are the cached items, so a new cache is the
+                // one moment it can be wrong. It matters for an item whose
+                // source process resolved late: the row was built while the
+                // item had no owner to be named after, and the recache that
+                // finally supplies one arrives here. Keystrokes, which is what
+                // the memo is actually there to absorb, don't reach this.
+                ItemNameCache.clear()
                 updateDisplayedItems()
                 if model.selection == nil {
                     selectFirstDisplayedItem()

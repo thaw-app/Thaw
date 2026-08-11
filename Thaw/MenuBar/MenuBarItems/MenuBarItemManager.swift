@@ -3606,6 +3606,98 @@ extension MenuBarItemManager {
         if cachedIDs != itemWindowIDs {
             MenuBarItemManager.diagLog.debug("cacheItemsIfNeeded: window IDs changed (\(cachedIDs.count) cached vs \(itemWindowIDs.count) current), triggering recache")
             await cacheItemsRegardless(itemWindowIDs)
+            return
+        }
+
+        await recacheIfSourceProcessesResolved(itemWindowIDs)
+    }
+
+    /// Recaches when an item that had no source process last cycle has one now.
+    ///
+    /// The window ID comparison above asks whether the *set* of items changed.
+    /// It cannot see a change in what is known *about* an item, and an item's
+    /// source process is not read off its window — it is resolved by an AX scan
+    /// in the XPC service that routinely misses on the first cold pass, because
+    /// other apps' accessibility trees are still warming up seconds after login.
+    ///
+    /// A miss is not cosmetic. ``MenuBarItem/hasProvisionalIdentity`` spells out
+    /// what an item is without its source: the namespace falls back to the owner
+    /// of the window, which on macOS 26 is Control Center for every hosted status
+    /// item, and the display name falls back to "Menu Bar Item". Both are wrong,
+    /// and both were permanent — the item's window never goes anywhere, so no
+    /// window ID ever changed, so nothing recached it, and a relaunch was the only
+    /// way to get the real name back.
+    ///
+    /// ``SourcePIDNegativeCachePolicy`` was built for exactly this: it shortens
+    /// the first retry deadlines so a warmer scan can land, and its own reasoning
+    /// names the failure it cannot fix from that side — "the app stops requesting
+    /// once settled". This is the app not stopping. The probe costs one XPC round
+    /// trip per tick while anything is still unresolved and nothing at all once
+    /// everything has resolved; the ladder is what bounds how often a request
+    /// behind it becomes a real scan.
+    private func recacheIfSourceProcessesResolved(_ itemWindowIDs: [CGWindowID]) async {
+        let probeWindowIDs = Self.windowIDsNeedingSourceResolution(
+            cachedItems: itemCache.managedItems,
+            currentWindowIDs: itemWindowIDs
+        )
+        guard !probeWindowIDs.isEmpty else {
+            return
+        }
+
+        // Second guard on the same rule as the filter above, against a title
+        // this side can see and a cached item cannot: a duplicate Thaw process
+        // can leave control-item windows behind under foreign window IDs.
+        let windows = WindowInfo.createWindows(from: probeWindowIDs)
+            .filter { !($0.title?.hasPrefix("Thaw.ControlItem.") ?? false) }
+        guard !windows.isEmpty else {
+            return
+        }
+
+        let resolved = await MenuBarItemService.Connection.shared.sourcePIDs(for: windows).count { $0 != nil }
+        guard resolved > 0 else {
+            return
+        }
+
+        MenuBarItemManager.diagLog.info(
+            """
+            cacheItemsIfNeeded: \(resolved) of \(windows.count) item(s) cached without a \
+            source process can now be resolved; recaching to give them their real identity
+            """
+        )
+        await cacheItemsRegardless(itemWindowIDs)
+    }
+
+    /// The item windows worth asking the service about: the ones the cache is
+    /// holding without a source process.
+    ///
+    /// Read from the cache rather than by differencing window IDs against the
+    /// resolved-PID map, because these are the items actually on display under a
+    /// provisional identity, and because the set can only shrink as they resolve
+    /// — a probe can never talk the cache into recaching what it just cached.
+    ///
+    /// Control items are excluded for the reason
+    /// ``MenuBarItem/getMenuBarItems(on:option:resolveSourcePID:)`` excludes them
+    /// from resolution in the first place: their AX children are disabled
+    /// dividers, so a request for one is a guaranteed miss that can start a full
+    /// scan of every running app, and their PID is known locally anyway.
+    ///
+    /// Restricted to `currentWindowIDs` so an item the cache is still holding
+    /// after its window is gone cannot keep the probe alive on its own.
+    static nonisolated func windowIDsNeedingSourceResolution(
+        cachedItems: [MenuBarItem],
+        currentWindowIDs: [CGWindowID]
+    ) -> [CGWindowID] {
+        let current = Set(currentWindowIDs)
+        var seen = Set<CGWindowID>()
+        return cachedItems.compactMap { item in
+            guard item.sourcePID == nil,
+                  !item.isControlItem,
+                  current.contains(item.windowID),
+                  seen.insert(item.windowID).inserted
+            else {
+                return nil
+            }
+            return item.windowID
         }
     }
 }
