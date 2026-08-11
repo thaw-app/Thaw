@@ -3074,6 +3074,22 @@ extension MenuBarItemManager {
         // unmanaged items or make the normal window-ID comparison churn.
         let ghostControlWindowIDs = dropGhostControlItemWindows(from: &items)
 
+        // A reading whose items are titled after their own owners identifies
+        // nothing, and caching it rewrites the whole bar under a second set of
+        // identifiers that no later reading will match (#881, #927). Same
+        // treatment as the empty reading above: this is a failed observation,
+        // not the bar changing, so hold the last known good cache and read
+        // again next cycle. Only once there is a cache to hold — on a first
+        // launch there is nothing better to fall back to.
+        if !itemCache.managedItems.isEmpty,
+           LayoutSolver.liveIdentitiesAreDegraded(items.map { ($0.tag.namespace.description, $0.tag.title) })
+        {
+            MenuBarItemManager.diagLog.warning(
+                "cacheItemsRegardless: reading titles items after their own owners (\(items.count) item(s)); keeping last-known-good cache of \(itemCache.managedItems.count) item(s)"
+            )
+            return
+        }
+
         // Recorded only after clones and ghost windows are dropped, so their
         // throwaway windowIDs never enter the continuity history.
         let recentWindowIDs = recordRecentItemWindowIDs(items)

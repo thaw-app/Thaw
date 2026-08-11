@@ -1417,6 +1417,31 @@ nonisolated enum LayoutSolver {
         return ControlItem.Identifier(rawValue: title) == nil
     }
 
+    /// Whether an identifier's title is a copy of its own namespace.
+    ///
+    /// `kCGWindowName` occasionally reports an item's title as its owner's
+    /// bundle identifier — for the whole bar at once, Thaw's own control
+    /// items included. The tag built from that reading is
+    /// `com.steipete.codexbar:com.steipete.codexbar`, which carries no more
+    /// identity than the namespace alone and does not match the same item's
+    /// normal reading (`com.steipete.codexbar:codexbar-claude`). #881's
+    /// reporter carried 21 of these and #927's 23, on unrelated machines.
+    ///
+    /// ``liveIdentitiesAreDegraded(namespaces:titles:)`` keeps new ones out
+    /// of the saved order; this clears what earlier builds already wrote.
+    ///
+    /// Both sides are canonicalized because pruning runs after
+    /// ``canonicalizedSectionOrder(_:)``, which rewrites the namespace of a
+    /// nested-helper item but carries its title through verbatim — leaving
+    /// `at.obdev.littlesnitch:at.obdev.littlesnitch.agent`, whose halves are
+    /// no longer literally equal.
+    private static nonisolated func isSelfTitledEntry(identifier: String) -> Bool {
+        let title = titleWithoutInstanceIndex(titlePortion(forIdentifier: identifier))
+        guard !title.isEmpty else { return false }
+        return MenuBarItemTag.Namespace.canonicalBundleID(title)
+            == MenuBarItemTag.Namespace.canonicalBundleID(namespace(forIdentifier: identifier))
+    }
+
     /// Whether an identifier names a WindowServer clone rather than a real
     /// item.
     ///
@@ -1425,6 +1450,68 @@ nonisolated enum LayoutSolver {
     /// #927's reporter carried six under a single owner.
     private static nonisolated func isSystemCloneEntry(identifier: String) -> Bool {
         titleWithoutInstanceIndex(titlePortion(forIdentifier: identifier)) == "System Status Item Clone"
+    }
+
+    /// The smallest bar the proportional half of
+    /// ``liveIdentitiesAreDegraded(_:)`` will judge.
+    ///
+    /// One app whose window really is named after its own bundle identifier
+    /// reaches half of a two- or three-item bar on its own. It cannot reach
+    /// half of four.
+    private static let minimumDegradationSample = 4
+
+    /// Whether a reading of the bar titled its items after their own owners
+    /// rather than after themselves.
+    ///
+    /// `kCGWindowName` degrades bar-wide: in #881's 12:38 log the live hidden
+    /// section came back as `com.rogueamoeba.soundsource:com.rogueamoeba.soundsource`,
+    /// `leits.MeetingBar:leits.MeetingBar` and nine more, and two minutes
+    /// earlier the same items had read normally. Caching that reading is what
+    /// makes the damage self-sustaining: every item looks new, so the whole
+    /// bar is persisted under a second set of identifiers, and every
+    /// subsequent flip between the two spellings presents a bar's worth of
+    /// late arrivals to ``MenuBarItemManager/lateArrivingProfileIdentifiers(items:profileIdentifiers:alreadySortedIdentifiers:)``,
+    /// which schedules a re-sort, which posts moves and captures the cursor.
+    /// #881's reporter rode that loop to a streak of nine consecutive bulk
+    /// applies with unenacted moves.
+    ///
+    /// Two signals, either of which is enough:
+    ///
+    /// - **A control item lost its name.** Thaw titles its own items
+    ///   `Thaw.ControlItem.*`, so one in our namespace titled with our bundle
+    ///   identifier can only be a degraded read. This is also the signal with
+    ///   consequences of its own — ``MenuBarItem/init(uncheckedItemWindow:instanceIndex:)``
+    ///   recognizes control items by that title prefix, so a degraded reading
+    ///   arrives with the dividers missing.
+    /// - **Half the bar is self-titled.** Covers the case where our own items
+    ///   happen to read correctly, subject to ``minimumDegradationSample``.
+    ///
+    /// A partial degradation that trips neither signal still reaches the
+    /// cache; ``prunedSectionOrder(_:)`` clears those entries at the next
+    /// load rather than leaving them to accumulate.
+    ///
+    /// - Parameter identities: The namespace and title of every non-control
+    ///   item in the reading, plus any window that *should* have been a
+    ///   control item. Clones and ghost windows are expected to be dropped
+    ///   already, so their throwaway titles cannot skew the proportion.
+    ///
+    /// Pure over its inputs.
+    static nonisolated func liveIdentitiesAreDegraded(
+        _ identities: [(namespace: String, title: String)]
+    ) -> Bool {
+        let own = MenuBarItemTag.Namespace.thaw.description
+        let isSelfTitled = { (identity: (namespace: String, title: String)) in
+            !identity.title.isEmpty
+                && MenuBarItemTag.Namespace.canonicalBundleID(identity.title)
+                == MenuBarItemTag.Namespace.canonicalBundleID(identity.namespace)
+        }
+
+        if identities.contains(where: { $0.namespace == own && isSelfTitled($0) }) {
+            return true
+        }
+
+        guard identities.count >= minimumDegradationSample else { return false }
+        return identities.count(where: isSelfTitled) * 2 >= identities.count
     }
 
     /// Removes persisted entries that can no longer match any live item.
@@ -1461,6 +1548,11 @@ nonisolated enum LayoutSolver {
     /// windows are refused by the cache, but layouts captured before that gate
     /// existed hold one entry per clone.
     ///
+    /// **Self-titled entries (#881, #927).** A bar-wide `kCGWindowName`
+    /// degradation titles every item with its own owner's bundle identifier,
+    /// and the resulting `com.steipete.codexbar:com.steipete.codexbar` never
+    /// matches the same item's normal reading. See ``isSelfTitledEntry(identifier:)``.
+    ///
     /// Order is preserved: entries are dropped, never rearranged, so pruning
     /// cannot itself permute a section (#885).
     ///
@@ -1481,7 +1573,10 @@ nonisolated enum LayoutSolver {
         var titlesWithRealOwner = Set<String>()
         for identifiers in savedSectionOrder.values {
             for identifier in identifiers where namespace(forIdentifier: identifier) != controlCenter {
-                guard !isForeignEntryUnderOwnNamespace(identifier: identifier) else {
+                guard
+                    !isForeignEntryUnderOwnNamespace(identifier: identifier),
+                    !isSelfTitledEntry(identifier: identifier)
+                else {
                     continue
                 }
                 titlesWithRealOwner.insert(titlePortion(forIdentifier: identifier))
@@ -1549,6 +1644,9 @@ nonisolated enum LayoutSolver {
                     return false
                 }
                 if isSystemCloneEntry(identifier: identifier) {
+                    return false
+                }
+                if isSelfTitledEntry(identifier: identifier) {
                     return false
                 }
                 // `kept` decides which section owns a canonical form; this

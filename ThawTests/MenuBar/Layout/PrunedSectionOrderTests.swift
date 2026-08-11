@@ -281,4 +281,59 @@ struct PrunedSectionOrderTests {
         let pruned = LayoutSolver.prunedSectionOrder(["visible": [entry]])
         #expect(pruned["visible"] == [entry])
     }
+
+    // MARK: Self-titled entries (#881, #927)
+
+    /// Four of #881's twenty-one, verbatim. The degradation hits siblings
+    /// together, so they arrive carrying instance indexes.
+    @Test("Entries titled after their own namespace are dropped")
+    func dropsSelfTitledEntries() {
+        let pruned = LayoutSolver.prunedSectionOrder([
+            "hidden": [
+                "com.steipete.codexbar:codexbar-claude",
+                "com.steipete.codexbar:com.steipete.codexbar",
+                "com.steipete.codexbar:com.steipete.codexbar:2",
+                "eu.exelban.Stats:eu.exelban.Stats:3",
+                "leits.MeetingBar:Item-0",
+            ],
+        ])
+        #expect(pruned["hidden"] == ["com.steipete.codexbar:codexbar-claude", "leits.MeetingBar:Item-0"])
+    }
+
+    /// Pruning runs after ``LayoutSolver/canonicalizedSectionOrder(_:)``, which
+    /// rewrites a nested helper's namespace and leaves the title alone. The two
+    /// halves no longer match literally, and the entry is just as dead.
+    @Test("A canonicalized helper namespace still reads as self-titled")
+    func dropsSelfTitledEntryAfterNamespaceCanonicalization() {
+        let degraded = ["hidden": ["at.obdev.littlesnitch.agent:at.obdev.littlesnitch.agent"]]
+        let pruned = LayoutSolver.prunedSectionOrder(LayoutSolver.canonicalizedSectionOrder(degraded))
+        #expect(pruned["hidden"] == [])
+    }
+
+    /// The ordering trap the misattribution rule already had. A self-titled
+    /// entry is not a real owner, so it must not license the #788 rule to
+    /// delete the genuine Control Center item of the same title.
+    @Test("A self-titled entry does not condemn a Control Center twin")
+    func selfTitledEntryDoesNotCondemnControlCenterTwin() {
+        let pruned = LayoutSolver.prunedSectionOrder([
+            "visible": [
+                "com.microsoft.OneDrive:com.microsoft.OneDrive",
+                "com.apple.controlcenter:com.microsoft.OneDrive",
+            ],
+        ])
+        #expect(pruned["visible"] == ["com.apple.controlcenter:com.microsoft.OneDrive"])
+    }
+
+    /// A title that starts with the bundle identifier still carries identity
+    /// past it — BetterTouchTool's UUID-suffixed item is the shape in the
+    /// tracker — so only exact equality counts.
+    @Test("A title that merely begins with its namespace survives")
+    func keepsTitleThatOnlyBeginsWithNamespace() {
+        let entries = [
+            "com.hegenberg.BetterTouchTool:com.hegenberg.BetterTouchTool (449CF8DD-A814-4D62-99D1-85D3F400F8B3)",
+            "com.apple.TextInputMenuAgent:com.apple.TextInputMenuAgent.Extra",
+        ]
+        let pruned = LayoutSolver.prunedSectionOrder(["visible": entries])
+        #expect(pruned["visible"] == entries)
+    }
 }
