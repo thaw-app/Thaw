@@ -244,6 +244,103 @@ final class ProfileManager {
         return try decoder.decode(Profile.self, from: data)
     }
 
+    // MARK: - Persisted layout repair
+
+    /// Rewrites every profile on disk with its layout pruned.
+    ///
+    /// ``MenuBarItemManager`` repairs the saved section order it loads and
+    /// writes the result straight back, so a fix for a class of unmatchable
+    /// identifier reaches that store on the next launch. Profiles have only
+    /// ever been pruned on the way *out*, through
+    /// ``MenuBarLayoutSnapshot/resolvedItemOrder``, which leaves the damage on
+    /// disk and lets `armProfileState` seed the in-memory saved order from it
+    /// again at every startup. A profile is also the one copy the user can
+    /// re-apply by hand, so an unrepaired one reintroduces the entries a
+    /// repaired saved order just dropped.
+    ///
+    /// ``MenuBarLayoutSnapshot/itemSectionMap`` is filtered by the same
+    /// verdict rather than pruned independently: it is a second spelling of
+    /// the same layout, and `resolvedItemSectionMap` returns it verbatim when
+    /// present, so an entry pruned from the order but left in the map would
+    /// still be planned against.
+    ///
+    /// Files that fail to decode are left untouched and logged. A profile we
+    /// cannot read is not a profile we should overwrite.
+    ///
+    /// Runs ``repairPersistedLayouts()`` once per app build.
+    ///
+    /// The stamp is the build rather than a one-shot flag: a later build that
+    /// recognizes a new class of unmatchable identifier has to get another
+    /// pass over files an earlier build already declared clean.
+    func repairPersistedLayoutsIfNeeded() {
+        let currentBuild = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "unknown"
+        guard Defaults.string(forKey: .profileLayoutRepairBuild) != currentBuild else {
+            return
+        }
+        repairPersistedLayouts()
+        Defaults.set(currentBuild, forKey: .profileLayoutRepairBuild)
+    }
+
+    /// - Returns: The number of profiles rewritten.
+    @discardableResult
+    func repairPersistedLayouts() -> Int {
+        var repaired = 0
+
+        for metadata in profiles {
+            let url = profileURL(for: metadata.id)
+            let profile: Profile
+            do {
+                profile = try decoder.decode(Profile.self, from: Data(contentsOf: url))
+            } catch {
+                diagLog.error("repairPersistedLayouts: skipping \(metadata.id), cannot decode: \(error)")
+                continue
+            }
+
+            var layout = profile.menuBarLayout
+            let originalOrder = layout.itemOrder
+            let originalSavedOrder = layout.savedSectionOrder
+            let originalMap = layout.itemSectionMap
+
+            layout.savedSectionOrder = LayoutSolver.prunedSectionOrder(
+                LayoutSolver.canonicalizedSectionOrder(layout.savedSectionOrder)
+            )
+            if let itemOrder = layout.itemOrder {
+                layout.itemOrder = LayoutSolver.prunedSectionOrder(
+                    LayoutSolver.canonicalizedSectionOrder(itemOrder)
+                )
+            }
+
+            if let map = layout.itemSectionMap {
+                let surviving = Set((layout.itemOrder ?? layout.savedSectionOrder).values.joined())
+                layout.itemSectionMap = map.filter { surviving.contains($0.key) }
+            }
+
+            guard
+                layout.savedSectionOrder != originalSavedOrder ||
+                layout.itemOrder != originalOrder ||
+                layout.itemSectionMap != originalMap
+            else {
+                continue
+            }
+
+            var updated = profile
+            updated.menuBarLayout = layout
+            do {
+                let data = try encoder.encode(updated)
+                try data.write(to: url, options: .atomic)
+                repaired += 1
+                diagLog.info("repairPersistedLayouts: rewrote profile \(metadata.name)")
+            } catch {
+                diagLog.error("repairPersistedLayouts: failed to write \(metadata.id): \(error)")
+            }
+        }
+
+        if repaired > 0 {
+            diagLog.info("repairPersistedLayouts: repaired \(repaired) profile(s)")
+        }
+        return repaired
+    }
+
     /// Deletes a profile by its identifier.
     ///
     /// A profile file that is already absent is treated as success: the

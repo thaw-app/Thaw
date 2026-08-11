@@ -27,6 +27,12 @@ extension ProfileManager {
         lastActiveDisplayUUID = Bridging.getActiveMenuBarDisplayUUID()
         rebuildProfileHotkeys()
 
+        // Before anything can apply a profile. Once per build, because each
+        // build is the only thing that can widen what pruning recognizes as
+        // unmatchable — repeating it within a build would rewrite the same
+        // files to the same bytes on every launch.
+        repairPersistedLayoutsIfNeeded()
+
         // Note: profiles' didSet already calls rebuildProfileHotkeys() for
         // every assignment after this class's own init, so no explicit
         // subscription is needed here (see the doc comment on `profiles`).

@@ -279,6 +279,9 @@ final class MenuBarItemManager {
     /// The single record of which items have been failing, and how.
     let failureLedger = MenuBarItemFailureLedger()
 
+    /// The record of which saved identifiers no longer match anything.
+    let staleIdentifierLedger = StaleIdentifierLedger()
+
     /// Actor for managing menu bar item cache operations.
     private let cacheActor = CacheActor()
 
@@ -8007,6 +8010,7 @@ extension MenuBarItemManager {
             rawItemSectionMap.map { (LayoutSolver.canonicalIdentifier($0.key), $0.value) },
             uniquingKeysWith: { first, _ in first }
         )
+
         // MARK: Phase 0: gate on startup settling
 
         //
@@ -8249,6 +8253,19 @@ extension MenuBarItemManager {
         let currentSet = Set(currentFlat)
         var desiredFiltered = desiredFlat.filter { currentSet.contains($0) }
 
+        // Record which of the profile's identifiers still correspond to
+        // something on the bar. This is the one place in the apply that knows
+        // both halves at once, and it sits past every early return, so an
+        // apply that never looked at the bar cannot be counted as evidence
+        // that an item is gone. Only the profile's own entries are sampled —
+        // control items are always present and would dilute the ratio the
+        // ledger uses to throw out a degraded pass.
+        let plannedIdentifiers = Set(itemOrder.values.joined())
+        staleIdentifierLedger.recordApply(
+            planned: plannedIdentifiers,
+            matched: plannedIdentifiers.intersection(currentSet)
+        )
+
         // MARK: Phase 3: place unmanaged items via planUnmanagedPlacement
 
         // Items present in the menu bar but not in the profile are
@@ -8281,8 +8298,12 @@ extension MenuBarItemManager {
             // items; NewItemsPlacement is the fallback for unseen ones.
             // Pinning is left empty here because this code path only
             // positions unmanaged items, not the profile spec items.
+            // Retired identifiers are dropped before the lookup, not after:
+            // the saved position is an *index* into these arrays, so a ghost
+            // ahead of a live entry pushes a returning item one slot right of
+            // where the user left it, every time, forever.
             let desiredForUnmanaged = DesiredLayout.fromSavedSectionOrder(
-                savedSectionOrder,
+                staleIdentifierLedger.pruning(savedSectionOrder),
                 newItemsPlacement: newItemsPlacement
             )
             let placements = LayoutReconciler.unmanagedPlacementPlan(

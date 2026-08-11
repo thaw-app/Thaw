@@ -317,6 +317,26 @@ nonisolated extension Defaults {
         /// mark lifetime. Managed by ``MenuBarItemFailureLedger``.
         case unresponsiveMenuBarItemsBuild = "UnresponsiveMenuBarItemsBuild"
 
+        // MARK: Internal (Layout Identity)
+
+        /// How many consecutive applies each saved identifier has been
+        /// planned for without matching a live item, keyed by canonical
+        /// identifier. Managed by ``StaleIdentifierLedger``; not exposed in
+        /// Settings.
+        case staleIdentifierMissCounts = "StaleIdentifierMissCounts"
+
+        /// The app build the persisted miss counts were accumulated under. A
+        /// change drops them, so an improvement to identity resolution is not
+        /// hidden behind counts earned against the old behavior. Managed by
+        /// ``StaleIdentifierLedger``.
+        case staleIdentifierMissCountsBuild = "StaleIdentifierMissCountsBuild"
+
+        /// The app build whose pruning rules were last applied to the profile
+        /// files on disk. Managed by
+        /// ``ProfileManager/repairPersistedLayoutsIfNeeded()``; not exposed in
+        /// Settings.
+        case profileLayoutRepairBuild = "ProfileLayoutRepairBuild"
+
         // MARK: Appearance Settings
 
         case menuBarAppearanceConfigurationV2 = "MenuBarAppearanceConfigurationV2"

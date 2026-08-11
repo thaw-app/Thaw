@@ -932,7 +932,9 @@ nonisolated enum LayoutSolver {
                 let candidateUID = lcsDesired[scanIdx]
                 let candidateKey = sectionMap[candidateUID] ?? "visible"
                 guard candidateKey == targetKey else { break }
-                if unanchorableUIDs.contains(candidateUID) { continue }
+                if unanchorableUIDs.contains(candidateUID) {
+                    continue
+                }
                 if lcsItems.contains(candidateUID) || movedItems.contains(candidateUID) {
                     destination = .leftOfUID(candidateUID)
                     break
@@ -945,7 +947,9 @@ nonisolated enum LayoutSolver {
                     let candidateUID = lcsDesired[scanIdx]
                     let candidateKey = sectionMap[candidateUID] ?? "visible"
                     guard candidateKey == targetKey else { break }
-                    if unanchorableUIDs.contains(candidateUID) { continue }
+                    if unanchorableUIDs.contains(candidateUID) {
+                        continue
+                    }
                     if lcsItems.contains(candidateUID) || movedItems.contains(candidateUID) {
                         destination = .rightOfUID(candidateUID)
                         break
@@ -1382,6 +1386,47 @@ nonisolated enum LayoutSolver {
         return !index.isEmpty && index.allSatisfy(\.isNumber)
     }
 
+    /// The title portion with any trailing `:<digits>` instance index
+    /// removed, for the checks that compare against a fixed title.
+    private static nonisolated func titleWithoutInstanceIndex(_ title: String) -> String {
+        guard
+            let separator = title.lastIndex(of: ":"),
+            Int(title[title.index(after: separator)...]) != nil
+        else {
+            return title
+        }
+        return String(title[..<separator])
+    }
+
+    /// Whether an identifier claims Thaw's own namespace while naming an item
+    /// Thaw does not own.
+    ///
+    /// The only items legitimately persisted under this namespace are the
+    /// control items and the spacers, which is the same pair
+    /// ``MenuBarItemTag/isControlItem`` recognizes. Anything else is a
+    /// misattribution written when source-PID resolution handed a foreign
+    /// window our own PID, and it can never match a live item again.
+    private static nonisolated func isForeignEntryUnderOwnNamespace(identifier: String) -> Bool {
+        guard namespace(forIdentifier: identifier) == MenuBarItemTag.Namespace.thaw.description else {
+            return false
+        }
+        let title = titleWithoutInstanceIndex(titlePortion(forIdentifier: identifier))
+        if title.contains(".Spacer.") {
+            return false
+        }
+        return ControlItem.Identifier(rawValue: title) == nil
+    }
+
+    /// Whether an identifier names a WindowServer clone rather than a real
+    /// item.
+    ///
+    /// ``MenuBarItemTag/isSystemClone`` keeps these out of the cache, but
+    /// layouts captured before that gate existed hold one entry per clone —
+    /// #927's reporter carried six under a single owner.
+    private static nonisolated func isSystemCloneEntry(identifier: String) -> Bool {
+        titleWithoutInstanceIndex(titlePortion(forIdentifier: identifier)) == "System Status Item Clone"
+    }
+
     /// Removes persisted entries that can no longer match any live item.
     ///
     /// Two fixes so far prevent their own failure from recurring but leave
@@ -1406,6 +1451,16 @@ nonisolated enum LayoutSolver {
     /// saved entry, so the accumulated history disables the very remedy that
     /// would have prevented the churn.
     ///
+    /// **Misattributed own-namespace entries (#927).** Source-PID resolution
+    /// occasionally hands a foreign window Thaw's own PID, and the layout then
+    /// holds e.g. `com.stonerl.Thaw:WiFi` for an item Control Center owns.
+    /// Only the control items and spacers belong under this namespace, so
+    /// everything else is dropped.
+    ///
+    /// **System clones (#927).** WindowServer's `System Status Item Clone`
+    /// windows are refused by the cache, but layouts captured before that gate
+    /// existed hold one entry per clone.
+    ///
     /// Order is preserved: entries are dropped, never rearranged, so pruning
     /// cannot itself permute a section (#885).
     ///
@@ -1416,9 +1471,19 @@ nonisolated enum LayoutSolver {
         let controlCenter = MenuBarItemTag.Namespace.controlCenter.description
 
         // Titles claimed by a real owner somewhere in the saved layout.
+        //
+        // A misattributed entry under our own namespace is not a real owner,
+        // and counting it as one is worse than leaving it alone: it makes the
+        // provisional-duplicate rule below delete the *genuine* Control Center
+        // twin. #927's reporter lost `com.apple.controlcenter:WiFi` that way
+        // and kept `com.stonerl.Thaw:WiFi`, so the live WiFi item was planned
+        // as unmanaged on every apply.
         var titlesWithRealOwner = Set<String>()
         for identifiers in savedSectionOrder.values {
             for identifier in identifiers where namespace(forIdentifier: identifier) != controlCenter {
+                guard !isForeignEntryUnderOwnNamespace(identifier: identifier) else {
+                    continue
+                }
                 titlesWithRealOwner.insert(titlePortion(forIdentifier: identifier))
             }
         }
@@ -1475,6 +1540,15 @@ nonisolated enum LayoutSolver {
                 // an empty title still feeds planLeftmostRelocation's
                 // namespace fallback.
                 if isControlCenterHosted, hasEmptyTitle(identifier: identifier) {
+                    return false
+                }
+                // Nothing live will ever carry these names again: the first
+                // is a foreign item wearing our namespace, the second a
+                // WindowServer clone that the cache already refuses.
+                if isForeignEntryUnderOwnNamespace(identifier: identifier) {
+                    return false
+                }
+                if isSystemCloneEntry(identifier: identifier) {
                     return false
                 }
                 // `kept` decides which section owns a canonical form; this

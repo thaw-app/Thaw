@@ -204,4 +204,81 @@ struct PrunedSectionOrderTests {
         #expect(pruned["visible"] == ["us.zoom.xos:Item-0"])
         #expect(pruned["legacy"] == ["com.example.app:Item-0", "us.zoom.xos:Item-0"])
     }
+
+    // MARK: Misattributed own-namespace entries (#927)
+
+    /// Source-PID resolution handed Control Center's WiFi item Thaw's own PID,
+    /// and the layout kept the result. Nothing live will carry that name.
+    @Test("A foreign item saved under Thaw's namespace is dropped")
+    func dropsForeignEntryUnderOwnNamespace() {
+        let own = Constants.bundleIdentifier
+        let pruned = LayoutSolver.prunedSectionOrder([
+            "visible": ["\(own):WiFi", "us.zoom.xos:Item-0"],
+        ])
+        #expect(pruned["visible"] == ["us.zoom.xos:Item-0"])
+    }
+
+    /// The reason this rule has to run before the provisional-duplicate check
+    /// rather than after it. Left in place, the misattributed entry counts as a
+    /// "real owner" of the title `WiFi`, which makes the genuine Control Center
+    /// item look like the poisoned copy and deletes the wrong one — the exact
+    /// state #927's reporter was in.
+    @Test("The genuine Control Center twin survives its misattributed copy")
+    func keepsGenuineTwinOfMisattributedEntry() {
+        let own = Constants.bundleIdentifier
+        let pruned = LayoutSolver.prunedSectionOrder([
+            "visible": ["\(own):WiFi", "com.apple.controlcenter:WiFi"],
+        ])
+        #expect(pruned["visible"] == ["com.apple.controlcenter:WiFi"])
+    }
+
+    /// Thaw's own items are the point of the namespace and must survive.
+    @Test("Thaw's own control items and spacers survive")
+    func keepsOwnControlItemsAndSpacers() {
+        let own = Constants.bundleIdentifier
+        let entries = [
+            "\(own):Thaw.ControlItem.Visible",
+            "\(own):Thaw.ControlItem.Hidden",
+            "\(own):Thaw.ControlItem.AlwaysHidden",
+            "\(own):Thaw.ControlItem.Visible.Spacer.0",
+        ]
+        let pruned = LayoutSolver.prunedSectionOrder(["visible": entries])
+        #expect(pruned["visible"] == entries)
+    }
+
+    /// An instance index does not make a control item foreign.
+    @Test("An indexed control item is not treated as foreign")
+    func keepsIndexedControlItem() {
+        let own = Constants.bundleIdentifier
+        let pruned = LayoutSolver.prunedSectionOrder([
+            "visible": ["\(own):Thaw.ControlItem.Visible:1"],
+        ])
+        #expect(pruned["visible"] == ["\(own):Thaw.ControlItem.Visible:1"])
+    }
+
+    // MARK: System clones (#927)
+
+    /// The reporter carried six clones under one owner, all planned against on
+    /// every apply.
+    @Test("System clone entries are dropped under any namespace")
+    func dropsSystemClones() {
+        let owner = "info.marcel-dierkes.KeepingYouAwake"
+        let pruned = LayoutSolver.prunedSectionOrder([
+            "visible": [
+                "\(owner):Item-0",
+                "\(owner):System Status Item Clone",
+                "\(owner):System Status Item Clone:1",
+                "\(owner):System Status Item Clone:6",
+            ],
+        ])
+        #expect(pruned["visible"] == ["\(owner):Item-0"])
+    }
+
+    /// An item that merely mentions the clone name is not one.
+    @Test("A title that only resembles a clone name survives")
+    func keepsLookalikeCloneTitle() {
+        let entry = "com.example.app:System Status Item Clone Manager"
+        let pruned = LayoutSolver.prunedSectionOrder(["visible": [entry]])
+        #expect(pruned["visible"] == [entry])
+    }
 }
