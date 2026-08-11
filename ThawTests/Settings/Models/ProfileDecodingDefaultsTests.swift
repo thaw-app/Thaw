@@ -328,6 +328,7 @@ struct ProfileSnapshotLiveSettingsTests {
             #expect(settings.tooltipDelay == 1.25)
             #expect(settings.showMenuBarTooltips)
             #expect(settings.iconRefreshInterval == 1.0)
+            #expect(Defaults.double(forKey: .iconRefreshInterval) == 1.0)
             #expect(settings.useDoubleClickToShowAlwaysHiddenSection)
             #expect(settings.useOptionClickToShowAlwaysHiddenSection)
             #expect(settings.useLCSSortingOnNotchedDisplays == false)

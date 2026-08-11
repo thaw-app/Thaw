@@ -115,6 +115,7 @@ struct AdvancedSettingsTests {
             #expect(settings.showOnHoverDelay == 1.5)
             #expect(settings.tooltipDelay == 2.5)
             #expect(settings.iconRefreshInterval == 1.0)
+            #expect(Defaults.double(forKey: .iconRefreshInterval) == 1.0)
             #expect(settings.showMenuBarTooltips)
             #expect(!settings.useLCSSortingOnNotchedDisplays)
             #expect(!settings.enableMenuBarItemOverflow)

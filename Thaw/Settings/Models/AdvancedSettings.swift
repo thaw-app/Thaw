@@ -117,11 +117,11 @@ final class AdvancedSettings {
     var iconRefreshInterval = Defaults.DefaultValue.iconRefreshInterval {
         didSet {
             let normalized = Self.normalizedIconRefreshInterval(iconRefreshInterval)
-            if iconRefreshInterval != normalized {
+            let didNormalize = iconRefreshInterval != normalized
+            if didNormalize {
                 iconRefreshInterval = normalized
-                return
             }
-            guard oldValue != iconRefreshInterval else { return }
+            guard didNormalize || oldValue != iconRefreshInterval else { return }
             Defaults.set(iconRefreshInterval, forKey: .iconRefreshInterval)
         }
     }
