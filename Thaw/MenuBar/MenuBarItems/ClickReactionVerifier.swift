@@ -148,6 +148,22 @@ nonisolated enum ClickReactionVerifier {
         }
     }
 
+    /// One look at the world, right now, without spending the budget.
+    ///
+    /// For a caller that has already waited — an accessibility action that
+    /// blocked until its messaging timeout expired, say — the question is not
+    /// "will the owner react" but "did it react while I was blocked", and that
+    /// is answerable immediately. Waiting again would only add the budget to a
+    /// latency the caller has already paid.
+    ///
+    /// - Returns: What the owner has been seen doing, or `nil` when nothing
+    ///   has been seen yet. Unlike ``verify(against:)`` this does not settle
+    ///   for ``Reaction/unobserved`` — it has not waited long enough to say
+    ///   that.
+    static func reactionSoFar(against snapshot: Snapshot) -> Reaction? {
+        observe(snapshot)
+    }
+
     /// One look at the world. Returns `nil` when it is still too early to
     /// say, and a reaction once there is something to report.
     private static func observe(_ snapshot: Snapshot) -> Reaction? {

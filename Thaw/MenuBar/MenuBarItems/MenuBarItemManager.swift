@@ -5797,6 +5797,18 @@ extension MenuBarItemManager {
                 MenuBarItemManager.diagLog.debug("Activated \(item.logString) via AX click delivery")
                 return await ClickReactionVerifier.verify(against: snapshot)
             } catch {
+                // Last check before the fallback, because the fallback is a
+                // click and a click on an item that already opened its menu
+                // shuts it. The activator makes the same check between its own
+                // attempts; this covers the errors raised before it gets that
+                // far, where an action may still have landed.
+                let reaction = await ClickReactionVerifier.verify(against: snapshot)
+                if reaction.didReact {
+                    MenuBarItemManager.diagLog.debug(
+                        "AX activation reported \(error) but \(item.logString) reacted; not clicking on top of it"
+                    )
+                    return reaction
+                }
                 MenuBarItemManager.diagLog.debug("AX activation failed (\(error)), falling back to synthetic click")
             }
         }

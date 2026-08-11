@@ -46,9 +46,11 @@ enum AXItemActivator {
     /// Activates `item` via an accessibility action.
     ///
     /// - Throws: ``ActivationError`` when the item's AX element can't be
-    ///   resolved and verified, or when neither AXShowMenu nor AXPress
-    ///   succeeds. Callers should fall back to the synthetic click path on
-    ///   any error.
+    ///   resolved and verified, or when neither AXShowMenu nor AXPress had any
+    ///   effect — an action the element refused *and* no sign of the owner
+    ///   reacting. Callers should fall back to the synthetic click path on any
+    ///   error; ``ActivationError/actionFailed`` in particular now means the
+    ///   item was left alone, so clicking it is safe.
     static func activate(item: MenuBarItem) async throws {
         guard let element = resolveElement(for: item) else {
             throw ActivationError.elementNotFound
@@ -64,13 +66,50 @@ enum AXItemActivator {
             throw ActivationError.frameMismatch
         }
 
-        if (try? element.performAction(.showMenu)) != nil {
-            return
+        let snapshot = ClickReactionVerifier.snapshot(for: item)
+        let worked = Self.performFirstEffectiveAction(
+            [.showMenu, .press],
+            perform: { (try? element.performAction($0)) != nil },
+            didReact: { ClickReactionVerifier.reactionSoFar(against: snapshot)?.didReact == true }
+        )
+        guard worked else {
+            throw ActivationError.actionFailed
         }
-        if (try? element.performAction(.press)) != nil {
-            return
+    }
+
+    /// Performs `actions` in order, stopping at the first one that has an
+    /// effect.
+    ///
+    /// An action has an effect when the element accepts it **or** when the item
+    /// is observed reacting to it. The second half is the whole point. A
+    /// thrown action is not a no-op: `AXShowMenu` on a status item opens the
+    /// menu and then blocks, because the menu runs a modal tracking loop and
+    /// the app cannot answer the accessibility message while it does, so
+    /// ``messagingTimeout`` expires on precisely the calls that worked.
+    ///
+    /// Reading that as failure escalates, and every escalation from here is a
+    /// second activation of an item whose menu is already open: `AXPress`
+    /// toggles it shut, and the synthetic click the caller falls back to after
+    /// that toggles it again. The user sees the menu they asked for appear and
+    /// vanish within the same second, which is what happens for third-party
+    /// items whose menus block the reply (#924).
+    ///
+    /// Generic over the action so the rule can be exercised without an
+    /// accessibility server.
+    static nonisolated func performFirstEffectiveAction<A>(
+        _ actions: [A],
+        perform: (A) -> Bool,
+        didReact: () -> Bool
+    ) -> Bool {
+        for action in actions {
+            if perform(action) {
+                return true
+            }
+            if didReact() {
+                return true
+            }
         }
-        throw ActivationError.actionFailed
+        return false
     }
 
     /// Resolves the AX element for `item`.

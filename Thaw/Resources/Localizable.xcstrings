@@ -1,958 +1,6 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "Active profile" : {
-      "comment" : "Picker option: save spacing changes to the active profile only when relaunch confirmations are disabled.",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aktivní profil"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aktives Profil"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Perfil activo"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Profil actif"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Active profile"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Profil aktif"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Profilo Attivo"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Active profile"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "활성 프로파일"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Actief profiel"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aktywny profil"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Active profile"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Активный профиль"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "โปรไฟล์ที่ใช้งานอยู่"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aktif profil"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Активний профіль"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hồ sơ hoạt động"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "当前配置文件"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "目前設定檔"
-          }
-        }
-      }
-    },
-    "All profiles" : {
-      "comment" : "Picker option: save spacing changes to every profile when relaunch confirmations are disabled.",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Všechny profily"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Alle Profile"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Todos los perfiles"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tous les profils"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "All profiles"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Semua profil"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tutti i profili"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "All profiles"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "모든 프로필"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Alle profielen"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wszystkie profile"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "All profiles"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Все профили"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "โปรไฟล์ทั้งหมด"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tüm Profiller"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Всі профілі"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tất cả hồ sơ"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "所有配置"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "所有設定檔"
-          }
-        }
-      }
-    },
-    "Apply menu bar spacing change?" : {
-      "comment" : "Title of the just-in-time confirmation shown before a display transition relaunches menu bar apps to apply new spacing.",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Použít změnu nastavení rozestupů?"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Änderung der Menüleisten-Abstände anwenden?"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "¿Aplicar cambios a la barra de menús?"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Appliquer les changements d'espacement de barre de menu ?"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply menu bar spacing change?"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Terapkan perubahan jarak pada bar menu?"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Applicare la modifica alla spaziatura della barra dei menu?"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply menu bar spacing change?"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "메뉴 바 간격 변경을 적용하시겠습니까?"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "De wijziging in de afstand tussen de menubalken toepassen?"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zastosować zmianę odstępów?"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply menu bar spacing change?"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Применить изменение интервалов в строке меню?"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ปรับเปลี่ยนระยะห่างแถบเมนู?"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Menü çubuğundaki boşluk ayarını uygulamak ister misiniz?"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Apply menu bar spacing change?"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Áp dụng thay đổi khoảng cách thanh menu?"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "确定应用菜单栏间隔变动吗？"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "確定套用選單列間距變更？"
-          }
-        }
-      }
-    },
-    "Before a display change or spacing edit relaunches your menu bar apps, Thaw asks you to confirm. Turn this off to apply spacing changes and relaunch apps without confirmation." : {
-      "comment" : "Annotation for the Confirm before relaunching apps toggle in the Displays pane.",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Předtím, než přepnutí monitorů nebo změna rozestupů restartuje aplikace ve vašem řádku nabídek, Thaw vás požádá o potvrzení. Vypněte tuto volbu, pokud chcete, aby se aplikace restartovaly bez vašeho potvrzení."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bevor eine Bildschirm- oder Abstandsänderung die Menüleisten-Anwendungen neustartet, fragt Thaw nach einer Bestätigung."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Antes de que un cambio de presentación o espaciado reinicie sus apps de la barra de menús, Thaw te pedirá que confirmes. Desactiva esto para aplicar cambios de espaciado y reiniciar apps sin confirmar."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Avant qu’un changement d’affichage ou une modification de l’espacement ne redémarre vos applications de la barre de menus, Thaw vous demande de confirmer. Désactivez cette option pour appliquer les modifications d’espacement et redémarrer les applications sans confirmation."
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Before a display change or spacing edit relaunches your menu bar apps, Thaw asks you to confirm. Turn this off to apply spacing changes and relaunch apps without confirmation."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Thaw akan meminta konfirmasi sebelum perubahan layar atau pengaturan jarak memulai ulang aplikasi pada bar menu. Nonaktifkan opsi ini untuk menerapkan perubahan tanpa konfirmasi."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Prima che una modifica alla visualizzazione o alla spaziatura provochi il riavvio delle app nella barra dei menu, Thaw richiede una conferma. Disattiva questa opzione per applicare le modifiche alla spaziatura e riavviare le app senza conferma."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Before a display change or spacing edit relaunches your menu bar apps, Thaw asks you to confirm. Turn this off to apply spacing changes and relaunch apps without confirmation."
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Before a display change or spacing edit relaunches your menu bar apps, Thaw asks you to confirm. Turn this off to apply spacing changes and relaunch apps without confirmation."
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Voordat een wijziging in de weergave of aanpassing van de spatiëring ervoor zorgt dat de apps in je menubalk opnieuw worden gestart, vraagt Thaw je om bevestiging. Schakel deze optie uit om wijzigingen in de spatiëring toe te passen en apps opnieuw te starten zonder bevestiging."
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Przed zrestartowaniem aplikacji paska menu w wyniku zmiany wyświetlacza lub odstępów, Thaw wymaga potwierdzenia. Odznacz tę opcję, by wprowadzać zmiany i restartować aplikacje bez dodatkowych komunikatów."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Before a display change or spacing edit relaunches your menu bar apps, Thaw asks you to confirm. Turn this off to apply spacing changes and relaunch apps without confirmation."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Прежде чем изменение дисплея или правка интервалов перезапустит приложения в строке меню, Thaw запрашивает подтверждение. Отключите эту опцию, чтобы применять изменения интервалов, и перезапускать приложения без подтверждения."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ก่อนที่การเปลี่ยนแปลงจอแสดงผลหรือการแก้ไขระยะห่างจะรีสตาร์ทแอปในแถบเมนูของคุณ Thaw จะขอให้คุณยืนยันก่อน ปิดตัวเลือกนี้เพื่อนำการเปลี่ยนแปลงระยะห่างไปใช้และรีสตาร์ทแอปโดยไม่ต้องยืนยัน"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bir ekran değişikliği veya aralık düzenlemesi menü çubuğu uygulamalarınızı yeniden başlatmadan önce Thaw sizden onay ister. Aralık değişikliklerini uygulamak ve uygulamaları onay istemeden yeniden başlatmak için bu seçeneği kapatın."
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Before a display change or spacing edit relaunches your menu bar apps, Thaw asks you to confirm. Turn this off to apply spacing changes and relaunch apps without confirmation."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Trước khi thay đổi hiển thị hoặc chỉnh sửa khoảng cách khởi chạy lại ứng dụng trên thanh menu của bạn, Thaw sẽ yêu cầu bạn xác nhận. Tắt tính năng này để áp dụng các thay đổi về khoảng cách và khởi chạy lại ứng dụng mà không cần xác nhận."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在显示设置变更或调整间距导致菜单栏应用重新启动之前，Thaw 会先请求你的确认。关闭此选项后，调整间距时将直接应用更改并重新启动相关应用，无需再次确认。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在 Thaw 因顯示器變更或間距變更而需要重新啟動選單列圖示對應的應用程式時，Thaw 會與您確認。若您希望套用新間距設定時直接重啟對應應用程式，請關閉此選項。"
-          }
-        }
-      }
-    },
-    "Confirm before relaunching apps" : {
-      "comment" : "Toggle in the Displays pane controlling whether spacing changes ask for confirmation before relaunching menu bar apps.",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Potvrzovat před restartováním aplikací"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bestätigen bevor Anwendungen neu gestartet werden"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Confirmar antes de relanzar apps"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Confirmez avant de relancer les applications"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Confirm before relaunching apps"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Konfirmasi sebelum memulai ulang aplikasi"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Confermare prima di riavviare le app"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Confirm before relaunching apps"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Confirm before relaunching apps"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bevestig voordat je apps opnieuw start"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Potwierdź przed ponownym uruchomieniem aplikacji"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Confirm before relaunching apps"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Подтверждать перед перезапуском приложений"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ยืนยันก่อนรีสตาร์ทแอป"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Confirm before relaunching apps"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Confirm before relaunching apps"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Xác nhận trước khi khởi chạy ứng dụng"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在重新启动应用程序之前确认"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "重啟應用程式前先詢問"
-          }
-        }
-      }
-    },
-    "Don't ask again" : {
-      "comment" : "Suppression checkbox on the spacing relaunch confirmation; disables future confirmations.",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Příště se neptat"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nicht nochmal fragen"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No preguntar de nuevo"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ne plus demander"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Don't ask again"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Jangan tanya lagi"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Non chiederlo di nuovo"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Don't ask again"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "다시 묻지 않기"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Niet opnieuw vragen"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ne pytaj ponownie"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Don't ask again"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Больше не спрашивать"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ไม่ต้องถามอีก"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Uygulamaları yeniden başlatmadan önce onay iste"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Не запитувати знову"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Không hỏi lại"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "不再询问"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "之後不再詢問"
-          }
-        }
-      }
-    },
-    "When a profile is active, choose whether spacing changes save to just the active profile or to every profile." : {
-      "comment" : "Annotation for the profile-target picker shown when relaunch confirmations are disabled.",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Když je profil aktivní, vyberte, zda chcete změnu rozestupů uložit pouze do aktivního profilu, nebo do všech."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wenn ein Profil aktiv ist, auswählen ob die Änderung nur für das dieses oder für alle Profile gespeichert werden soll."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cuando un perfil está activo, elige si los cambios de espaciamiento se guardan al perfil activo o a todos los perfiles."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Quand un profil est actif, choisissez si les modifications d'espacement doivent être enregistrées uniquement dans le profil actif ou dans tous les profils."
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "When a profile is active, choose whether spacing changes save to just the active profile or to every profile."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ketika profil aktif, pilih apakah perubahan jarak akan disimpan hanya untuk profil tersebut atau untuk semua profil."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Quando un profilo è attivo, scegli se salvare le modifiche alla spaziatura solo nel profilo attuale o in tutti i profili."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "When a profile is active, choose whether spacing changes save to just the active profile or to every profile."
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "When a profile is active, choose whether spacing changes save to just the active profile or to every profile."
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Als een profiel actief is, kun je kiezen of wijzigingen in de spatiëring alleen in het actieve profiel worden opgeslagen of in alle profielen."
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gdy profil jest aktywny, wybierz, czy zmiany odstępów mają być zapisywane tylko dla aktywnego profilu, czy dla wszystkich profili."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "When a profile is active, choose whether spacing changes save to just the active profile or to every profile."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Когда профиль активен, выберите, сохранять изменения интервалов только в активный профиль или во все профили."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "เมื่อมีโปรไฟล์ที่ใช้งานอยู่ ให้เลือกว่าการเปลี่ยนแปลงระยะห่างจะบันทึกไว้เฉพาะในโปรไฟล์ที่ใช้งานอยู่ หรือบันทึกไว้ในทุกโปรไฟล์"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "When a profile is active, choose whether spacing changes save to just the active profile or to every profile."
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "When a profile is active, choose whether spacing changes save to just the active profile or to every profile."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Khi một cấu hình đang hoạt động, hãy chọn xem các thay đổi về khoảng cách chỉ lưu vào cấu hình đang hoạt động hay vào mọi cấu hình."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "当某个配置文件处于活动状态时，可选择将间距更改仅保存到当前配置文件，还是保存到所有配置文件。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "當有設定檔啟用時，請選擇將間距設定儲存至僅目前啟用的設定檔或所有設定檔。"
-          }
-        }
-      }
-    },
-    "Without confirmation, save spacing to" : {
-      "comment" : "Label for the picker choosing which profiles receive a spacing change when relaunch confirmations are disabled.",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bez potvrzení ukládat rozestupy do"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Speichere Abstände ohne Bestätigung in"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sin confirmar, guardar espaciado a"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sans confirmation, sauvegarder les espacements à"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Without confirmation, save spacing to"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tanpa konfirmasi, simpan perubahan jarak ke"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Senza conferma, salva la spaziatura in"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Without confirmation, save spacing to"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Without confirmation, save spacing to"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zonder bevestiging de spatiëring opslaan in"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bez potwierdzenia zapisz odstępy do"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Without confirmation, save spacing to"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Without confirmation, save spacing to"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "บันทึกระยะห่างโดยไม่ต้องยืนยันไปยัง"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Without confirmation, save spacing to"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Without confirmation, save spacing to"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nếu không có xác nhận, hãy lưu khoảng cách vào"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无需确认，直接将间距保存到"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在沒有詢問的狀況下，將設定檔儲存至"
-          }
-        }
-      }
-    },
     "(no script selected)" : {
       "comment" : "A placeholder displayed in the \"Path\" column of a hook row when no script is selected.",
       "localizations" : {
@@ -1068,6 +116,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "（未選擇腳本）"
+          }
+        }
+      }
+    },
+    "%@ %@ %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ %2$@ %3$@"
           }
         }
       }
@@ -1310,6 +368,12 @@
         }
       }
     },
+    "%@ Bar off" : {
+      "comment" : "Profile preview summary fragment: the Thaw Bar is disabled. %@ is the app name."
+    },
+    "%@ Bar on" : {
+      "comment" : "Profile preview summary fragment: the Thaw Bar is enabled. %@ is the app name."
+    },
     "%@ can work in a limited mode without Screen Recording." : {
       "localizations" : {
         "cs" : {
@@ -1427,12 +491,6 @@
           }
         }
       }
-    },
-    "%@ Bar on" : {
-      "comment" : "Profile preview summary fragment: the Thaw Bar is enabled. %@ is the app name."
-    },
-    "%@ Bar off" : {
-      "comment" : "Profile preview summary fragment: the Thaw Bar is disabled. %@ is the app name."
     },
     "%@ can work in a limited mode without this permission." : {
       "comment" : "A callout box that explains that the app can work in a limited mode without a particular permission.",
@@ -1553,6 +611,19 @@
           }
         }
       }
+    },
+    "%@ can't currently tell which app owns \"%@\", so moving it is disabled. This usually resolves on its own; relaunching the app that owns the item can help." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ can't currently tell which app owns \"%2$@\", so moving it is disabled. This usually resolves on its own; relaunching the app that owns the item can help."
+          }
+        }
+      }
+    },
+    "%@ can't locate its hidden-section divider right now. It is attempting recovery in the background — try again in a few seconds." : {
+
     },
     "%@ cannot arrange menu bar items in automatically hidden menu bars." : {
       "comment" : "A view that shows a message when the menu bar layout can't be arranged in automatically hidden menu bars.",
@@ -2395,6 +1466,9 @@
         }
       }
     },
+    "%@ seconds" : {
+
+    },
     "%@ Settings…" : {
       "comment" : "The title of the menu item that opens the settings window.",
       "localizations" : {
@@ -2516,6 +1590,7 @@
     },
     "%lf seconds" : {
       "comment" : "A localized string key that represents a duration in seconds. The argument is a number of seconds.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "variations" : {
@@ -3006,6 +2081,7 @@
     },
     "%lld seconds" : {
       "comment" : "Text that describes the rehide interval, in seconds. The argument is the number of seconds.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "variations" : {
@@ -3374,6 +2450,9 @@
           }
         }
       }
+    },
+    "+%lld" : {
+
     },
     "A new update is available" : {
       "comment" : "Title of a notification when a new update is available.",
@@ -3971,6 +3050,125 @@
         }
       }
     },
+    "Active profile" : {
+      "comment" : "Picker option: save spacing changes to the active profile only when relaunch confirmations are disabled.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktivní profil"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktives Profil"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perfil activo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Profil actif"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Active profile"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Profil aktif"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Profilo Attivo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Active profile"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "활성 프로파일"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Actief profiel"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktywny profil"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Active profile"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Активный профиль"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "โปรไฟล์ที่ใช้งานอยู่"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktif profil"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Активний профіль"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hồ sơ hoạt động"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当前配置文件"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "目前設定檔"
+          }
+        }
+      }
+    },
     "Adaptive" : {
       "comment" : "Text for the adaptive background option in the menu bar.",
       "localizations" : {
@@ -4328,8 +3526,12 @@
         }
       }
     },
+    "Add Application" : {
+
+    },
     "Add Application Manually" : {
       "comment" : "A heading for the section where users can add apps manually.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -4562,6 +3764,131 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "進階設定"
+          }
+        }
+      }
+    },
+    "Advanced layout controls" : {
+
+    },
+    "After revealing" : {
+
+    },
+    "All profiles" : {
+      "comment" : "Picker option: save spacing changes to every profile when relaunch confirmations are disabled.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Všechny profily"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle Profile"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Todos los perfiles"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tous les profils"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "All profiles"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Semua profil"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tutti i profili"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "All profiles"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "모든 프로필"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle profielen"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wszystkie profile"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "All profiles"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Все профили"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "โปรไฟล์ทั้งหมด"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tüm Profiller"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Всі профілі"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tất cả hồ sơ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "所有配置"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "所有設定檔"
           }
         }
       }
@@ -6476,6 +5803,125 @@
         }
       }
     },
+    "Apply menu bar spacing change?" : {
+      "comment" : "Title of the just-in-time confirmation shown before a display transition relaunches menu bar apps to apply new spacing.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Použít změnu nastavení rozestupů?"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Änderung der Menüleisten-Abstände anwenden?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Aplicar cambios a la barra de menús?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Appliquer les changements d'espacement de barre de menu ?"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply menu bar spacing change?"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terapkan perubahan jarak pada bar menu?"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Applicare la modifica alla spaziatura della barra dei menu?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply menu bar spacing change?"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "메뉴 바 간격 변경을 적용하시겠습니까?"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De wijziging in de afstand tussen de menubalken toepassen?"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zastosować zmianę odstępów?"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply menu bar spacing change?"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Применить изменение интервалов в строке меню?"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ปรับเปลี่ยนระยะห่างแถบเมนู?"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menü çubuğundaki boşluk ayarını uygulamak ister misiniz?"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apply menu bar spacing change?"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Áp dụng thay đổi khoảng cách thanh menu?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "确定应用菜单栏间隔变动吗？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "確定套用選單列間距變更？"
+          }
+        }
+      }
+    },
     "Apply spacing change?" : {
       "comment" : "Title of the alert shown before applying a menu bar item spacing change.",
       "localizations" : {
@@ -7680,6 +7126,9 @@
         }
       }
     },
+    "Apps may relaunch" : {
+
+    },
     "Apps that request settings access will appear here after you approve them." : {
       "comment" : "A description of the whitelisted apps section.",
       "localizations" : {
@@ -7920,7 +7369,6 @@
     },
     "Arrange menu bar items." : {
       "comment" : "A detail about the \"Accessibility\" permission, describing the app's ability to rearrange menu bar items.",
-      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -8037,6 +7485,9 @@
           }
         }
       }
+    },
+    "Arrangement" : {
+
     },
     "Arrow" : {
       "comment" : "Localized string key for each case in the `Name` enum.",
@@ -8276,11 +7727,11 @@
         }
       }
     },
-    "Auto-rehide on" : {
-      "comment" : "Profile preview summary fragment: automatic rehiding is enabled in the profile."
-    },
     "Auto-rehide off" : {
       "comment" : "Profile preview summary fragment: automatic rehiding is disabled in the profile."
+    },
+    "Auto-rehide on" : {
+      "comment" : "Profile preview summary fragment: automatic rehiding is enabled in the profile."
     },
     "Auto-Switch" : {
       "comment" : "Section header for the \"Auto-Switch\" settings in the profile settings pane.",
@@ -9468,6 +8919,125 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "背景 - 淺色外觀"
+          }
+        }
+      }
+    },
+    "Before a display change or spacing edit relaunches your menu bar apps, Thaw asks you to confirm. Turn this off to apply spacing changes and relaunch apps without confirmation." : {
+      "comment" : "Annotation for the Confirm before relaunching apps toggle in the Displays pane.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Předtím, než přepnutí monitorů nebo změna rozestupů restartuje aplikace ve vašem řádku nabídek, Thaw vás požádá o potvrzení. Vypněte tuto volbu, pokud chcete, aby se aplikace restartovaly bez vašeho potvrzení."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bevor eine Bildschirm- oder Abstandsänderung die Menüleisten-Anwendungen neustartet, fragt Thaw nach einer Bestätigung."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Antes de que un cambio de presentación o espaciado reinicie sus apps de la barra de menús, Thaw te pedirá que confirmes. Desactiva esto para aplicar cambios de espaciado y reiniciar apps sin confirmar."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avant qu’un changement d’affichage ou une modification de l’espacement ne redémarre vos applications de la barre de menus, Thaw vous demande de confirmer. Désactivez cette option pour appliquer les modifications d’espacement et redémarrer les applications sans confirmation."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Before a display change or spacing edit relaunches your menu bar apps, Thaw asks you to confirm. Turn this off to apply spacing changes and relaunch apps without confirmation."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thaw akan meminta konfirmasi sebelum perubahan layar atau pengaturan jarak memulai ulang aplikasi pada bar menu. Nonaktifkan opsi ini untuk menerapkan perubahan tanpa konfirmasi."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prima che una modifica alla visualizzazione o alla spaziatura provochi il riavvio delle app nella barra dei menu, Thaw richiede una conferma. Disattiva questa opzione per applicare le modifiche alla spaziatura e riavviare le app senza conferma."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Before a display change or spacing edit relaunches your menu bar apps, Thaw asks you to confirm. Turn this off to apply spacing changes and relaunch apps without confirmation."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Before a display change or spacing edit relaunches your menu bar apps, Thaw asks you to confirm. Turn this off to apply spacing changes and relaunch apps without confirmation."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voordat een wijziging in de weergave of aanpassing van de spatiëring ervoor zorgt dat de apps in je menubalk opnieuw worden gestart, vraagt Thaw je om bevestiging. Schakel deze optie uit om wijzigingen in de spatiëring toe te passen en apps opnieuw te starten zonder bevestiging."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Przed zrestartowaniem aplikacji paska menu w wyniku zmiany wyświetlacza lub odstępów, Thaw wymaga potwierdzenia. Odznacz tę opcję, by wprowadzać zmiany i restartować aplikacje bez dodatkowych komunikatów."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Before a display change or spacing edit relaunches your menu bar apps, Thaw asks you to confirm. Turn this off to apply spacing changes and relaunch apps without confirmation."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Прежде чем изменение дисплея или правка интервалов перезапустит приложения в строке меню, Thaw запрашивает подтверждение. Отключите эту опцию, чтобы применять изменения интервалов, и перезапускать приложения без подтверждения."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ก่อนที่การเปลี่ยนแปลงจอแสดงผลหรือการแก้ไขระยะห่างจะรีสตาร์ทแอปในแถบเมนูของคุณ Thaw จะขอให้คุณยืนยันก่อน ปิดตัวเลือกนี้เพื่อนำการเปลี่ยนแปลงระยะห่างไปใช้และรีสตาร์ทแอปโดยไม่ต้องยืนยัน"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bir ekran değişikliği veya aralık düzenlemesi menü çubuğu uygulamalarınızı yeniden başlatmadan önce Thaw sizden onay ister. Aralık değişikliklerini uygulamak ve uygulamaları onay istemeden yeniden başlatmak için bu seçeneği kapatın."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Before a display change or spacing edit relaunches your menu bar apps, Thaw asks you to confirm. Turn this off to apply spacing changes and relaunch apps without confirmation."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trước khi thay đổi hiển thị hoặc chỉnh sửa khoảng cách khởi chạy lại ứng dụng trên thanh menu của bạn, Thaw sẽ yêu cầu bạn xác nhận. Tắt tính năng này để áp dụng các thay đổi về khoảng cách và khởi chạy lại ứng dụng mà không cần xác nhận."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在显示设置变更或调整间距导致菜单栏应用重新启动之前，Thaw 会先请求你的确认。关闭此选项后，调整间距时将直接应用更改并重新启动相关应用，无需再次确认。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 Thaw 因顯示器變更或間距變更而需要重新啟動選單列圖示對應的應用程式時，Thaw 會與您確認。若您希望套用新間距設定時直接重啟對應應用程式，請關閉此選項。"
           }
         }
       }
@@ -10662,6 +10232,9 @@
           }
         }
       }
+    },
+    "Changing menu bar spacing for a display can relaunch apps with menu bar items. Unsaved input, progress, or transient app state may be lost." : {
+
     },
     "Check Automatically" : {
       "comment" : "A button that enables automatic update checking.",
@@ -12448,6 +12021,9 @@
         }
       }
     },
+    "Clear search" : {
+
+    },
     "Click an empty area of the menu bar to show hidden menu bar items." : {
       "comment" : "Toggle that allows the user to enable or disable the feature of showing hidden menu bar items by clicking on an empty area of the menu bar.",
       "localizations" : {
@@ -13042,6 +12618,125 @@
         }
       }
     },
+    "Confirm before relaunching apps" : {
+      "comment" : "Toggle in the Displays pane controlling whether spacing changes ask for confirmation before relaunching menu bar apps.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Potvrzovat před restartováním aplikací"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bestätigen bevor Anwendungen neu gestartet werden"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confirmar antes de relanzar apps"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confirmez avant de relancer les applications"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Confirm before relaunching apps"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Konfirmasi sebelum memulai ulang aplikasi"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confermare prima di riavviare le app"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Confirm before relaunching apps"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Confirm before relaunching apps"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bevestig voordat je apps opnieuw start"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Potwierdź przed ponownym uruchomieniem aplikacji"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Confirm before relaunching apps"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Подтверждать перед перезапуском приложений"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ยืนยันก่อนรีสตาร์ทแอป"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Confirm before relaunching apps"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Confirm before relaunching apps"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Xác nhận trước khi khởi chạy ứng dụng"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在重新启动应用程序之前确认"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重啟應用程式前先詢問"
+          }
+        }
+      }
+    },
     "Conflicting Menu Bar Manager Detected" : {
       "comment" : "Title of an alert that appears when a conflicting menu bar manager is detected.",
       "localizations" : {
@@ -13157,131 +12852,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "檢測到選單列管理工具衝突"
-          }
-        }
-      }
-    },
-    "When a display transition requires Thaw to apply a different menu bar spacing, Thaw relaunches apps with menu bar items. Relaunching apps may cause unsaved input, progress, or transient app state to be lost." : {
-      "comment" : "A warning that a display transition requiring a different menu bar spacing relaunches menu bar apps, which can lose unsaved state.",
-      "localizations" : {
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Když změna monitorů zapříčiní aktivaci jiného nastavení rozestupů, Thaw restartuje aplikace s položkami v řádku nabídek. Restartování aplikací může zapříčinit ztrátu neuložených dat, postupu nebo dočasného stavu."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wenn eine Bildschirmänderung Thaw zur Anwendung anderer Menüleisten-Abstände zwingt, startet Thaw Anwendungen mit Menüleisten-Einträgen neu. Der Neustart von Anwendungen kann zu ungespeicherten Eingaben führen, der Fortschritt oder Zustand von Anwendungen kann verloren gehen."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "When a display transition requires Thaw to apply a different menu bar spacing, Thaw relaunches apps with menu bar items. Relaunching apps may cause unsaved input, progress, or transient app state to be lost."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cuando una transición de presentación requiere que Thaw aplique un espaciado de barra de menús distinto, Thaw reinicia apps con iconos en la barra de menús. Reiniciar apps puede causar que se pierda información, progreso o estado no guardado."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lorsqu'une transition d'affichage nécessite que Thaw applique un espacement différent pour la barre de menus, Thaw relance les applications comportant des éléments dans la barre de menus. Le redémarrage des applications peut entraîner la perte des données non enregistrées, de la progression ou de l'état temporaire de l'application."
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "When a display transition requires Thaw to apply a different menu bar spacing, Thaw relaunches apps with menu bar items. Relaunching apps may cause unsaved input, progress, or transient app state to be lost."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Saat perpindahan layar mengharuskan Thaw menerapkan jarak bar menu yang berbeda, Thaw akan memulai ulang aplikasi yang memiliki item di bar menu. Tindakan ini dapat menyebabkan input yang belum disimpan, progres yang sedang berjalan atau status sementara aplikasi hilang."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "When a display transition requires Thaw to apply a different menu bar spacing, Thaw relaunches apps with menu bar items. Relaunching apps may cause unsaved input, progress, or transient app state to be lost."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "When a display transition requires Thaw to apply a different menu bar spacing, Thaw relaunches apps with menu bar items. Relaunching apps may cause unsaved input, progress, or transient app state to be lost."
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "When a display transition requires Thaw to apply a different menu bar spacing, Thaw relaunches apps with menu bar items. Relaunching apps may cause unsaved input, progress, or transient app state to be lost."
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wanneer een schermovergang vereist dat Thaw een andere spatiëring voor de menubalk toepast, start Thaw apps met menubalkitems opnieuw op. Door het opnieuw opstarten van apps kunnen niet-opgeslagen invoer, voortgang of tijdelijke app-statussen verloren gaan."
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Jeśli zmiana wyświetlacza wymusza na programie Thaw zmianę odstępów na pasku menu, Thaw restartuje aplikacje posiadające tam swoje ikony. Restart aplikacji grozi utratą niezapisanych danych, postępów pracy lub tymczasowego stanu programu."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "When a display transition requires Thaw to apply a different menu bar spacing, Thaw relaunches apps with menu bar items. Relaunching apps may cause unsaved input, progress, or transient app state to be lost."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "При изменении настроек разделителя Thaw перезапустит приложения, размещающие иконки в строке меню, что может привести к потере не сохраненного результата."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "เมื่อการเปลี่ยนแปลงจอแสดงผลต้องให้ Thaw ใช้ระยะห่างแถบเมนูที่แตกต่างออกไป Thaw จะรีสตาร์ทแอปที่มีรายการในแถบเมนู การรีสตาร์ทแอปอาจทำให้ข้อมูลที่ยังไม่ได้บันทึก ความคืบหน้า หรือสถานะชั่วคราวของแอปสูญหายได้"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "When a display transition requires Thaw to apply a different menu bar spacing, Thaw relaunches apps with menu bar items. Relaunching apps may cause unsaved input, progress, or transient app state to be lost."
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "When a display transition requires Thaw to apply a different menu bar spacing, Thaw relaunches apps with menu bar items. Relaunching apps may cause unsaved input, progress, or transient app state to be lost."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Khi quá trình chuyển đổi hiển thị yêu cầu Thaw áp dụng khoảng cách thanh menu khác, Thaw sẽ khởi chạy lại các ứng dụng có mục trên thanh menu. Việc khởi chạy lại ứng dụng có thể khiến dữ liệu đầu vào, tiến trình hoặc trạng thái ứng dụng tạm thời chưa được lưu bị mất."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "当显示状态切换需要 Thaw 应用不同的菜单栏间距时，Thaw 会重新启动带有菜单栏项目的应用。重新启动应用可能会导致尚未保存的输入、进行中的进度或应用的临时状态丢失。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "當顯示器切換需要 Thaw 套用不同的選單列間距時,Thaw 會重新啟動具有選單列項目的應用程式。重新啟動應用程式可能導致尚未儲存的輸入、進度或暫存狀態遺失。"
           }
         }
       }
@@ -13762,6 +13332,9 @@
         }
       }
     },
+    "Copied" : {
+
+    },
     "Copy" : {
       "comment" : "Suffix to be appended to a profile name to indicate that it is a copy of another profile.",
       "localizations" : {
@@ -13999,6 +13572,15 @@
           }
         }
       }
+    },
+    "Couldn't move %@ to the always-hidden section." : {
+
+    },
+    "Couldn't move %@ to the hidden section." : {
+
+    },
+    "Couldn't move the item right now." : {
+
     },
     "Created: %@" : {
       "comment" : "A sublabel within the profile list showing when a profile was created.",
@@ -15904,6 +15486,125 @@
         }
       }
     },
+    "Don't ask again" : {
+      "comment" : "Suppression checkbox on the spacing relaunch confirmation; disables future confirmations.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Příště se neptat"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nicht nochmal fragen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No preguntar de nuevo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ne plus demander"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Don't ask again"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jangan tanya lagi"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Non chiederlo di nuovo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Don't ask again"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다시 묻지 않기"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Niet opnieuw vragen"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ne pytaj ponownie"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Don't ask again"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Больше не спрашивать"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ไม่ต้องถามอีก"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uygulamaları yeniden başlatmadan önce onay iste"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не запитувати знову"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không hỏi lại"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不再询问"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "之後不再詢問"
+          }
+        }
+      }
+    },
     "Don't Check" : {
       "comment" : "A button that disables automatic update checking.",
       "localizations" : {
@@ -16858,6 +16559,7 @@
     },
     "Due to a bug in a previous version of the app, the data for %@'s menu bar sections was corrupted and had to be reset." : {
       "comment" : "Text in an alert that informs the user that the preferred positions of some menu bar controls have been reset because they were corrupted.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -17807,6 +17509,9 @@
           }
         }
       }
+    },
+    "Empty menu bar area" : {
+
     },
     "Enable diagnostic logging" : {
       "comment" : "A toggle that enables or disables diagnostic logging.",
@@ -18760,6 +18465,9 @@
         }
       }
     },
+    "Enable the always-hidden section in Layout to configure icon gestures for that section." : {
+
+    },
     "Enabled" : {
       "comment" : "A checkbox that enables or disables a hook.",
       "localizations" : {
@@ -19593,6 +19301,9 @@
         }
       }
     },
+    "External apps cannot read or modify %@ settings." : {
+
+    },
     "Failed to encode profiles for export." : {
       "comment" : "A message displayed when the user fails to export all profiles.",
       "localizations" : {
@@ -19714,6 +19425,7 @@
     },
     "Failed to update configuration on %lld profile(s)." : {
       "comment" : "A message that indicates that the configuration update failed for some profiles.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -19830,6 +19542,9 @@
           }
         }
       }
+    },
+    "Failed to update configuration on ^[%lld profiles](inflect: true)." : {
+
     },
     "File does not exist." : {
       "comment" : "Error message when the file specified in the hook does not exist.",
@@ -20186,6 +19901,9 @@
           }
         }
       }
+    },
+    "Focus Filters" : {
+
     },
     "Forward" : {
       "comment" : "A button that navigates to the next settings pane.",
@@ -22329,6 +22047,9 @@
         }
       }
     },
+    "Hide menu bar items" : {
+
+    },
     "Hide or show menu bar items on demand. Drag items between sections, keep your favorites always visible, and tuck the rest away in the always-hidden section." : {
       "comment" : "Description of the menu bar management onboarding slide.",
       "localizations" : {
@@ -22569,6 +22290,7 @@
     },
     "Hooks" : {
       "comment" : "A heading for the hooks section.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -23757,6 +23479,9 @@
           }
         }
       }
+    },
+    "Icon previews" : {
+
     },
     "Icon refresh rate" : {
       "comment" : "A label displayed above a slider that controls how often animated menu bar icons are refreshed in panels. Higher values are smoother but use more CPU.",
@@ -25072,6 +24797,18 @@
           }
         }
       }
+    },
+    "Include always-hidden section in search" : {
+
+    },
+    "Include hidden section in search" : {
+
+    },
+    "Include visible section in search" : {
+
+    },
+    "Inset on notched displays" : {
+
     },
     "Items are arranged in a grid with multiple columns." : {
       "comment" : "A description of the grid layout.",
@@ -26977,6 +26714,9 @@
         }
       }
     },
+    "macOS draws a solid menu bar while Reduce Transparency is on, so %@ cannot tint or reshape it. Turn the setting off to see these effects." : {
+
+    },
     "macOS prohibits \"%@\" from being moved." : {
       "comment" : "The text that appears below the main message text in the alert displayed when a menu bar item is not movable.",
       "localizations" : {
@@ -27334,8 +27074,12 @@
         }
       }
     },
+    "Maximum number of items per row in the grid arrangement." : {
+
+    },
     "Maximum number of items per row in the grid layout." : {
       "comment" : "Label for the maximum number of items per row in the grid layout.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -27690,6 +27434,12 @@
           }
         }
       }
+    },
+    "Menu bar behavior" : {
+
+    },
+    "Menu bar effects are hidden by Reduce Transparency" : {
+
     },
     "Menu bar item is not movable." : {
       "comment" : "Message text in an alert that appears when a menu bar item is not movable.",
@@ -28881,6 +28631,9 @@
         }
       }
     },
+    "Menu Bar Search" : {
+
+    },
     "Menu Bar Sections" : {
       "comment" : "Section header for advanced settings related to menu bar sections.",
       "localizations" : {
@@ -29238,6 +28991,15 @@
         }
       }
     },
+    "More" : {
+
+    },
+    "More profile actions" : {
+
+    },
+    "More project links" : {
+
+    },
     "Mouse pointer" : {
       "comment" : "Localized string key for the \"Mouse pointer\" option in the Ice Bar location picker.",
       "localizations" : {
@@ -29475,6 +29237,9 @@
           }
         }
       }
+    },
+    "Move items that don't fit into Hidden" : {
+
     },
     "Move menu bar items from the visible section into the hidden section when they don't fit beside the notch on a notched display. Disable to keep the saved profile layout exactly as authored even when items would otherwise be pushed under the notch." : {
       "comment" : "A tooltip that describes the effect of enabling or disabling the overflow.",
@@ -30427,9 +30192,6 @@
         }
       }
     },
-    "No items" : {
-      "comment" : "Placeholder in the profile preview for a section with no saved items."
-    },
     "No items in this section" : {
       "comment" : "A message displayed when a section of the Ice Bar has no items.",
       "localizations" : {
@@ -31024,6 +30786,9 @@
           }
         }
       }
+    },
+    "No settings found" : {
+
     },
     "No shape kind selected" : {
       "comment" : "A message displayed when the user hasn't selected a shape kind for the menu bar.",
@@ -34167,6 +33932,9 @@
         }
       }
     },
+    "Open Settings" : {
+
+    },
     "Other" : {
       "comment" : "Section title for advanced settings related to other functionality.",
       "localizations" : {
@@ -35124,6 +34892,9 @@
         }
       }
     },
+    "Press ⌃ Space" : {
+
+    },
     "Preview this profile's saved layout and settings" : {
       "comment" : "Help tooltip on the profile preview button."
     },
@@ -36078,6 +35849,9 @@
           }
         }
       }
+    },
+    "Rehide interval" : {
+
     },
     "Remove %@ from whitelist" : {
       "comment" : "A label for a button that removes an app from the whitelist. The argument is the name of the app.",
@@ -37149,6 +36923,9 @@
           }
         }
       }
+    },
+    "Reset Appearance" : {
+
     },
     "Reset completed with %lld item(s) that could not be moved. Check the menu bar and try again if needed." : {
       "comment" : "A message describing the result of a menu bar layout reset, including the number of items that could not be moved.",
@@ -38339,6 +38116,9 @@
           }
         }
       }
+    },
+    "Reveal hidden items through the Thaw Bar while overflow has items ejected. The visible row has no room left beside the notch at that point, so expanding the hidden section inline cannot show them. Disable to always follow the per-display Thaw Bar setting." : {
+
     },
     "Right aligned" : {
       "comment" : "Localized string key for the right-aligned Thaw Bar location.",
@@ -40124,6 +39904,9 @@
         }
       }
     },
+    "Script Environment" : {
+
+    },
     "Scroll or swipe in the menu bar to show hidden menu bar items." : {
       "comment" : "Label for a toggle that enables or disables showing hidden menu bar items when scrolling or swiping in the menu bar.",
       "localizations" : {
@@ -40719,6 +40502,9 @@
         }
       }
     },
+    "Search section ordering" : {
+
+    },
     "Section divider style" : {
       "comment" : "Label for a picker that lets the user choose the style of divider to use between menu bar sections.",
       "localizations" : {
@@ -40837,6 +40623,9 @@
           }
         }
       }
+    },
+    "Sections" : {
+
     },
     "Set Menu Bar Profile" : {
       "comment" : "Title and description of the Focus Filter.",
@@ -40957,8 +40746,12 @@
         }
       }
     },
+    "Settings URI disabled" : {
+
+    },
     "Settings URI is disabled. External apps cannot read or modify %@ settings." : {
       "comment" : "A callout box that describes the security implications of disabling the Settings URI scheme.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -41194,6 +40987,12 @@
           }
         }
       }
+    },
+    "Shape" : {
+
+    },
+    "Shape fill" : {
+
     },
     "Shape Kind" : {
       "comment" : "Label for the picker that lets the user select the shape kind for the menu bar.",
@@ -42155,6 +41954,7 @@
     },
     "Show hidden menu bar items in a separate bar below the menu bar on this display." : {
       "comment" : "Label for a toggle that allows the user to enable or disable the display bar on a specific display.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -42865,6 +42665,9 @@
           }
         }
       }
+    },
+    "Show menu bar items" : {
+
     },
     "Show on click" : {
       "comment" : "A toggle that enables or disables showing hidden menu bar items when the menu bar is clicked.",
@@ -43701,6 +43504,7 @@
     },
     "Skip" : {
       "comment" : "Label for the button that skips ahead to the final onboarding slide.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -45010,6 +44814,7 @@
     },
     "Supported Settings" : {
       "comment" : "A label displayed under the list of whitelisted apps.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -45248,6 +45053,7 @@
     },
     "Thaw needs a couple of permissions to manage your menu bar. You can grant them now, or skip and grant them later from Settings." : {
       "comment" : "Description of the permissions onboarding slide.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -46436,6 +46242,9 @@
         }
       }
     },
+    "The item was left in the visible section so it isn't stuck offscreen. Try dragging it again in a moment." : {
+
+    },
     "These hooks run only when this profile is applied, after the global pre-hook and before the global post-hook." : {
       "comment" : "A description of the hooks that run only when a profile is applied.",
       "localizations" : {
@@ -46676,6 +46485,7 @@
     },
     "This will overwrite the settings of %lld display with the global template. If the active display's spacing changes, Thaw will relaunch each app with a menu bar item. Relaunching apps may cause unsaved input, progress, or transient app state to be lost." : {
       "comment" : "A confirmation message that appears when the user is prompted to apply a global template. The argument is the number of displays that will be affected.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "variations" : {
@@ -47044,6 +46854,9 @@
           }
         }
       }
+    },
+    "This will overwrite the settings of ^[%lld displays](inflect: true) with the global template. If the active display's spacing changes, Thaw will relaunch each app with a menu bar item. Relaunching apps may cause unsaved input, progress, or transient app state to be lost." : {
+
     },
     "This will reset all settings to their default values. This action cannot be undone." : {
       "comment" : "A message displayed in an alert when the user confirms resetting all settings.",
@@ -50145,6 +49958,9 @@
         }
       }
     },
+    "Updates" : {
+
+    },
     "Use %@ Bar" : {
       "comment" : "A toggle that lets the user enable or disable the use of the \\(Constants.displayName) Bar. The argument is the name of the \\(Constants.displayName) Bar.",
       "localizations" : {
@@ -50263,6 +50079,9 @@
           }
         }
       }
+    },
+    "Use different settings for Light and Dark Mode" : {
+
     },
     "Use dynamic appearance" : {
       "comment" : "A toggle that lets the user choose whether to use different appearance settings based on the current system appearance.",
@@ -50620,6 +50439,9 @@
           }
         }
       }
+    },
+    "Use the Thaw Bar while items are overflowed" : {
+
     },
     "Version %@ (%@)" : {
       "comment" : "A label displaying the current version and build number of the app. The first argument is the version string. The second argument is the build string.",
@@ -51455,6 +51277,250 @@
         }
       }
     },
+    "When a display transition requires Thaw to apply a different menu bar spacing, Thaw relaunches apps with menu bar items. Relaunching apps may cause unsaved input, progress, or transient app state to be lost." : {
+      "comment" : "A warning that a display transition requiring a different menu bar spacing relaunches menu bar apps, which can lose unsaved state.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Když změna monitorů zapříčiní aktivaci jiného nastavení rozestupů, Thaw restartuje aplikace s položkami v řádku nabídek. Restartování aplikací může zapříčinit ztrátu neuložených dat, postupu nebo dočasného stavu."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wenn eine Bildschirmänderung Thaw zur Anwendung anderer Menüleisten-Abstände zwingt, startet Thaw Anwendungen mit Menüleisten-Einträgen neu. Der Neustart von Anwendungen kann zu ungespeicherten Eingaben führen, der Fortschritt oder Zustand von Anwendungen kann verloren gehen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "When a display transition requires Thaw to apply a different menu bar spacing, Thaw relaunches apps with menu bar items. Relaunching apps may cause unsaved input, progress, or transient app state to be lost."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cuando una transición de presentación requiere que Thaw aplique un espaciado de barra de menús distinto, Thaw reinicia apps con iconos en la barra de menús. Reiniciar apps puede causar que se pierda información, progreso o estado no guardado."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lorsqu'une transition d'affichage nécessite que Thaw applique un espacement différent pour la barre de menus, Thaw relance les applications comportant des éléments dans la barre de menus. Le redémarrage des applications peut entraîner la perte des données non enregistrées, de la progression ou de l'état temporaire de l'application."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "When a display transition requires Thaw to apply a different menu bar spacing, Thaw relaunches apps with menu bar items. Relaunching apps may cause unsaved input, progress, or transient app state to be lost."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saat perpindahan layar mengharuskan Thaw menerapkan jarak bar menu yang berbeda, Thaw akan memulai ulang aplikasi yang memiliki item di bar menu. Tindakan ini dapat menyebabkan input yang belum disimpan, progres yang sedang berjalan atau status sementara aplikasi hilang."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "When a display transition requires Thaw to apply a different menu bar spacing, Thaw relaunches apps with menu bar items. Relaunching apps may cause unsaved input, progress, or transient app state to be lost."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "When a display transition requires Thaw to apply a different menu bar spacing, Thaw relaunches apps with menu bar items. Relaunching apps may cause unsaved input, progress, or transient app state to be lost."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "When a display transition requires Thaw to apply a different menu bar spacing, Thaw relaunches apps with menu bar items. Relaunching apps may cause unsaved input, progress, or transient app state to be lost."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wanneer een schermovergang vereist dat Thaw een andere spatiëring voor de menubalk toepast, start Thaw apps met menubalkitems opnieuw op. Door het opnieuw opstarten van apps kunnen niet-opgeslagen invoer, voortgang of tijdelijke app-statussen verloren gaan."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jeśli zmiana wyświetlacza wymusza na programie Thaw zmianę odstępów na pasku menu, Thaw restartuje aplikacje posiadające tam swoje ikony. Restart aplikacji grozi utratą niezapisanych danych, postępów pracy lub tymczasowego stanu programu."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "When a display transition requires Thaw to apply a different menu bar spacing, Thaw relaunches apps with menu bar items. Relaunching apps may cause unsaved input, progress, or transient app state to be lost."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "При изменении настроек разделителя Thaw перезапустит приложения, размещающие иконки в строке меню, что может привести к потере не сохраненного результата."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เมื่อการเปลี่ยนแปลงจอแสดงผลต้องให้ Thaw ใช้ระยะห่างแถบเมนูที่แตกต่างออกไป Thaw จะรีสตาร์ทแอปที่มีรายการในแถบเมนู การรีสตาร์ทแอปอาจทำให้ข้อมูลที่ยังไม่ได้บันทึก ความคืบหน้า หรือสถานะชั่วคราวของแอปสูญหายได้"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "When a display transition requires Thaw to apply a different menu bar spacing, Thaw relaunches apps with menu bar items. Relaunching apps may cause unsaved input, progress, or transient app state to be lost."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "When a display transition requires Thaw to apply a different menu bar spacing, Thaw relaunches apps with menu bar items. Relaunching apps may cause unsaved input, progress, or transient app state to be lost."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Khi quá trình chuyển đổi hiển thị yêu cầu Thaw áp dụng khoảng cách thanh menu khác, Thaw sẽ khởi chạy lại các ứng dụng có mục trên thanh menu. Việc khởi chạy lại ứng dụng có thể khiến dữ liệu đầu vào, tiến trình hoặc trạng thái ứng dụng tạm thời chưa được lưu bị mất."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当显示状态切换需要 Thaw 应用不同的菜单栏间距时，Thaw 会重新启动带有菜单栏项目的应用。重新启动应用可能会导致尚未保存的输入、进行中的进度或应用的临时状态丢失。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "當顯示器切換需要 Thaw 套用不同的選單列間距時,Thaw 會重新啟動具有選單列項目的應用程式。重新啟動應用程式可能導致尚未儲存的輸入、進度或暫存狀態遺失。"
+          }
+        }
+      }
+    },
+    "When a profile is active, choose whether spacing changes save to just the active profile or to every profile." : {
+      "comment" : "Annotation for the profile-target picker shown when relaunch confirmations are disabled.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Když je profil aktivní, vyberte, zda chcete změnu rozestupů uložit pouze do aktivního profilu, nebo do všech."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wenn ein Profil aktiv ist, auswählen ob die Änderung nur für das dieses oder für alle Profile gespeichert werden soll."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cuando un perfil está activo, elige si los cambios de espaciamiento se guardan al perfil activo o a todos los perfiles."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quand un profil est actif, choisissez si les modifications d'espacement doivent être enregistrées uniquement dans le profil actif ou dans tous les profils."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "When a profile is active, choose whether spacing changes save to just the active profile or to every profile."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ketika profil aktif, pilih apakah perubahan jarak akan disimpan hanya untuk profil tersebut atau untuk semua profil."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quando un profilo è attivo, scegli se salvare le modifiche alla spaziatura solo nel profilo attuale o in tutti i profili."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "When a profile is active, choose whether spacing changes save to just the active profile or to every profile."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "When a profile is active, choose whether spacing changes save to just the active profile or to every profile."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Als een profiel actief is, kun je kiezen of wijzigingen in de spatiëring alleen in het actieve profiel worden opgeslagen of in alle profielen."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gdy profil jest aktywny, wybierz, czy zmiany odstępów mają być zapisywane tylko dla aktywnego profilu, czy dla wszystkich profili."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "When a profile is active, choose whether spacing changes save to just the active profile or to every profile."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Когда профиль активен, выберите, сохранять изменения интервалов только в активный профиль или во все профили."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เมื่อมีโปรไฟล์ที่ใช้งานอยู่ ให้เลือกว่าการเปลี่ยนแปลงระยะห่างจะบันทึกไว้เฉพาะในโปรไฟล์ที่ใช้งานอยู่ หรือบันทึกไว้ในทุกโปรไฟล์"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "When a profile is active, choose whether spacing changes save to just the active profile or to every profile."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "When a profile is active, choose whether spacing changes save to just the active profile or to every profile."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Khi một cấu hình đang hoạt động, hãy chọn xem các thay đổi về khoảng cách chỉ lưu vào cấu hình đang hoạt động hay vào mọi cấu hình."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当某个配置文件处于活动状态时，可选择将间距更改仅保存到当前配置文件，还是保存到所有配置文件。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "當有設定檔啟用時，請選擇將間距設定儲存至僅目前啟用的設定檔或所有設定檔。"
+          }
+        }
+      }
+    },
     "When an app sends a thaw:// URL to change settings, Thaw checks if that app is whitelisted." : {
       "comment" : "A step in the process of how to use Thaw.",
       "localizations" : {
@@ -51692,6 +51758,9 @@
           }
         }
       }
+    },
+    "While rearranging" : {
+
     },
     "Whitelisted Applications" : {
       "comment" : "A heading for the list of whitelisted apps.",
@@ -51933,6 +52002,125 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "白名單應用程式可以讀取設定、切換布林值選項、設定數值（計時器、延遲）、更改列舉設定（重新隱藏策略、%1$@ 列位置），並修改個別顯示器的配置。這包括自動重新隱藏、透過點擊/懸停/捲動/雙擊顯示、%2$@ 列、隱藏應用程式選單、啟用「始終隱藏」區塊、顯示工具提示以及診斷記錄。"
+          }
+        }
+      }
+    },
+    "Without confirmation, save spacing to" : {
+      "comment" : "Label for the picker choosing which profiles receive a spacing change when relaunch confirmations are disabled.",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bez potvrzení ukládat rozestupy do"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Speichere Abstände ohne Bestätigung in"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sin confirmar, guardar espaciado a"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sans confirmation, sauvegarder les espacements à"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Without confirmation, save spacing to"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tanpa konfirmasi, simpan perubahan jarak ke"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Senza conferma, salva la spaziatura in"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Without confirmation, save spacing to"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Without confirmation, save spacing to"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zonder bevestiging de spatiëring opslaan in"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bez potwierdzenia zapisz odstępy do"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Without confirmation, save spacing to"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Without confirmation, save spacing to"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "บันทึกระยะห่างโดยไม่ต้องยืนยันไปยัง"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Without confirmation, save spacing to"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Without confirmation, save spacing to"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nếu không có xác nhận, hãy lưu khoảng cách vào"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无需确认，直接将间距保存到"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在沒有詢問的狀況下，將設定檔儲存至"
           }
         }
       }
