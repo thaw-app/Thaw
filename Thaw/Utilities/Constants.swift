@@ -58,6 +58,9 @@ nonisolated enum Constants {
     /// The URL for filing issues.
     static let issuesURL = repositoryURL.appendingPathComponent("issues")
 
+    /// The URL for downloading preview builds.
+    static let releasesURL = repositoryURL.appendingPathComponent("releases")
+
     /// The URL for sponsoring/donating.
     static let donateURL: URL = requiredInfoPlistURL(donateURLInfoPlistKey)
 

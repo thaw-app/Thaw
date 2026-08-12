@@ -178,7 +178,7 @@ extension UpdatesManager: SPUUpdaterDelegate {
     /// Determines which update channels are allowed.
     func allowedChannels(for _: SPUUpdater) -> Set<String> {
         if Defaults.store.bool(forKey: "AllowsBetaUpdates") {
-            return ["beta"]
+            return ["alpha", "beta"]
         }
         return []
     }
