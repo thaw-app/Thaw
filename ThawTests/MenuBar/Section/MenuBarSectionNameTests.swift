@@ -180,8 +180,8 @@ struct MenuBarSectionNameTests {
         #expect(mode == .iceBar)
     }
 
-    @Test("The usable inline width subtracts the notch gap on both sides")
-    func usableInlineWidthAccountsForNotchGapOnBothSides() {
+    @Test("The usable inline width is the region right of the notch")
+    func usableInlineWidthUsesContiguousRightSide() {
         let width = MenuBarSection.usableInlineWidth(
             from: 200,
             screenFrameMinX: 0,
@@ -189,6 +189,6 @@ struct MenuBarSectionNameTests {
             notchFrame: CGRect(x: 700, y: 0, width: 200, height: 30)
         )
 
-        #expect(width == 1152)
+        #expect(width == 676)
     }
 }

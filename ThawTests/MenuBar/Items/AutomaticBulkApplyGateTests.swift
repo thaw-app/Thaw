@@ -77,12 +77,12 @@ struct AutomaticBulkApplyGateTests {
     }
 
     /// Inside the cooldown the streak keeps blocking, however long it is.
-    @Test("A long streak inside the cooldown stays blocked")
-    func longStreakInsideCooldownBlocks() {
+    @Test("A streak inside the cooldown stays blocked")
+    func streakInsideCooldownBlocks() {
         let failedAt = clock.now
         #expect(
             !MenuBarItemManager.automaticBulkApplyPermitted(
-                consecutiveUnfinishedBatches: 7,
+                consecutiveUnfinishedBatches: 5,
                 lastUnfinishedBatchAt: failedAt,
                 now: failedAt.advanced(by: .seconds(59)),
                 cooldown: .seconds(60)
@@ -101,6 +101,39 @@ struct AutomaticBulkApplyGateTests {
                 consecutiveUnfinishedBatches: 3,
                 lastUnfinishedBatchAt: nil,
                 now: clock.now
+            )
+        )
+    }
+
+    /// After the hard cap, the gate stops dispatching entirely — even past
+    /// the cooldown. The cooldown only spaces out attempts; it never
+    /// terminates. Without a cap, a bar that systematically refuses drags
+    /// re-fires a full cursor-hijacking batch every 60 s for the rest of
+    /// the session (#881 logged streaks 1–6 over an hour). The cap is
+    /// cleared only by a successful batch (manual profile switch).
+    @Test("The hard cap blocks dispatch permanently, even after the cooldown")
+    func hardCapBlocksAfterCooldown() {
+        let failedAt = clock.now
+        let wayPast = failedAt.advanced(by: .seconds(3600))
+        #expect(
+            !MenuBarItemManager.automaticBulkApplyPermitted(
+                consecutiveUnfinishedBatches: 6,
+                lastUnfinishedBatchAt: failedAt,
+                now: wayPast,
+                cooldown: .seconds(60)
+            )
+        )
+    }
+
+    @Test("Below the hard cap the cooldown still allows a retry")
+    func belowHardCapCooldownAllowsRetry() {
+        let failedAt = clock.now
+        #expect(
+            MenuBarItemManager.automaticBulkApplyPermitted(
+                consecutiveUnfinishedBatches: 5,
+                lastUnfinishedBatchAt: failedAt,
+                now: failedAt.advanced(by: .seconds(60)),
+                cooldown: .seconds(60)
             )
         )
     }

@@ -285,7 +285,8 @@ final class ControlItem {
             .store(in: &c)
 
         $window.removeNil()
-            .flatMap { $0.publisher(for: \.frame) }
+            .map { $0.publisher(for: \.frame) }
+            .switchToLatest()
             .removeDuplicates()
             .debounce(for: 0.05, scheduler: DispatchQueue.main)
             .receive(on: DispatchQueue.main)
@@ -295,7 +296,8 @@ final class ControlItem {
             .store(in: &c)
 
         $window.removeNil()
-            .flatMap { $0.publisher(for: \.screen) }
+            .map { $0.publisher(for: \.screen) }
+            .switchToLatest()
             .debounce(for: 0.05, scheduler: DispatchQueue.main)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] screen in
@@ -304,7 +306,8 @@ final class ControlItem {
             .store(in: &c)
 
         $screen.removeNil()
-            .flatMap { $0.publisher(for: \.frame) }
+            .map { $0.publisher(for: \.frame) }
+            .switchToLatest()
             .combineLatest($frame.removeNil())
             .removeDuplicates()
             .debounce(for: 0.05, scheduler: DispatchQueue.main)
@@ -407,7 +410,8 @@ final class ControlItem {
             .store(in: &c)
 
         statusItem.publisher(for: \.button).removeNil()
-            .flatMap { $0.publisher(for: \.window) }
+            .map { $0.publisher(for: \.window) }
+            .switchToLatest()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] window in
                 self?.window = window
@@ -540,8 +544,9 @@ final class ControlItem {
 
     /// Rebuilds the control item's underlying `NSStatusItem` from scratch.
     ///
-    /// Used as a bounded recovery step (#754) when `ControlItemPair` lookup
-    /// keeps failing across multiple independently triggered cache cycles —
+    /// Used as a bounded recovery step when `ControlItemPair` lookup keeps
+    /// failing across multiple independently triggered cache cycles (#754),
+    /// or when a confirmed collapsed divider must discard its stale position.
     /// a state that means the existing status item's `windowNumber` no
     /// longer matches any enumerated CG window ID, which is otherwise
     /// terminal since `storage` is normally created once and never
@@ -560,8 +565,15 @@ final class ControlItem {
     /// re-subscribed against the new instance since Combine's KVO
     /// publishers don't follow object identity changes on their own.
     @MainActor
-    func recreateStatusItem() {
+    func recreateStatusItem(preferredPosition: CGFloat? = nil) {
         storage.dispose()
+        if let preferredPosition {
+            ControlItemDefaults.setIgnoringSectionDividerGuard(
+                .preferredPosition,
+                identifier.rawValue,
+                to: preferredPosition
+            )
+        }
         storage = StatusItemStorage(controlItem: self)
         configureStatusItemCancellables()
         updateStatusItem()

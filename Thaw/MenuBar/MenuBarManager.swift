@@ -198,55 +198,55 @@ final class MenuBarManager {
         }
 
         // Handle the `focusedApp` and `smart` rehide strategies.
-        NSWorkspace.shared.publisher(for: \.frontmostApplication)
-            // Ignore the initial value during app startup. Treating the
-            // current frontmost app as a "focus change" immediately on launch
-            // triggers an expensive menu-open scan before the item manager
-            // has even finished its first cache pass.
-            .dropFirst()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                if
-                    let self,
-                    let appState,
-                    let hiddenSection = section(withName: .hidden),
+        NSWorkspace.shared.notificationCenter.publisher(
+            for: NSWorkspace.didActivateApplicationNotification
+        )
+        .receive(on: DispatchQueue.main)
+        .sink { [weak self] notification in
+            let activatedApplication = notification.userInfo?[NSWorkspace.applicationUserInfoKey]
+                as? NSRunningApplication
+            guard
+                let self,
+                let appState,
+                appState.settings.general.autoRehide,
+                Self.shouldHandleAutoRehideActivation(
+                    activatedProcessIdentifier: activatedApplication?.processIdentifier,
+                    currentProcessIdentifier: ProcessInfo.processInfo.processIdentifier
+                )
+            else {
+                return
+            }
+
+            switch appState.settings.general.rehideStrategy {
+            case .focusedApp:
+                hideVisibleSections()
+            case .smart:
+                guard
                     let screen = appState.hidEventManager.bestScreen(appState: appState),
                     !appState.hidEventManager.isMouseInsideMenuBar(appState: appState, screen: screen),
-                    !appState.hidEventManager.isMouseInsideIceBar(appState: appState),
-                    appState.settings.general.autoRehide
-                {
-                    // Handle both focusedApp and smart strategies for focus changes
-                    switch appState.settings.general.rehideStrategy {
-                    case .focusedApp, .smart:
-                        Task {
-                            // Add delay for smart strategy to allow app focus to settle.
-                            // A cancelled sleep aborts the rehide instead of firing early.
-                            let delay: TimeInterval = appState.settings.general.rehideStrategy == .smart ? 0.25 : 0.1
-                            guard await (try? Task.sleep(for: .seconds(delay))) != nil else { return }
-
-                            // Ignore rehide requests for a short grace period after showing.
-                            if let lastShow = self.lastShowTimestamp,
-                               lastShow.duration(to: .now) < .milliseconds(500)
-                            {
-                                self.diagLog.debug("Skipping rehide due to grace period")
-                                return
-                            }
-
-                            // Check if any menu bar item has a menu open (for smart strategy)
-                            if appState.settings.general.rehideStrategy == .smart,
-                               await appState.itemManager.isAnyMenuBarItemMenuOpen()
-                            {
-                                return
-                            }
-
-                            hiddenSection.hide()
-                        }
-                    default:
-                        break
-                    }
+                    !appState.hidEventManager.isMouseInsideIceBar(appState: appState)
+                else {
+                    return
                 }
+                Task {
+                    // Wait for focus to settle and carry an activation
+                    // inside the reveal grace period to its end instead
+                    // of dropping that activation permanently.
+                    let delay = Self.smartRehideDelay(since: self.lastShowTimestamp)
+                    guard await (try? Task.sleep(for: delay)) != nil else { return }
+
+                    guard appState.settings.general.rehideStrategy == .smart else { return }
+                    if await appState.itemManager.isAnyMenuBarItemMenuOpen() {
+                        return
+                    }
+
+                    self.hideVisibleSections()
+                }
+            default:
+                break
             }
-            .store(in: &c)
+        }
+        .store(in: &c)
 
         appState?.publisherForWindow(.settings)
             .sink { [weak self] window in
@@ -910,6 +910,34 @@ final class MenuBarManager {
     /// Updates the ``lastShowTimestamp`` property.
     func updateLastShowTimestamp() {
         lastShowTimestamp = .now
+    }
+
+    /// Delay for smart focus-change rehide. A focus change during the reveal
+    /// grace period is deferred to the end of that period rather than lost.
+    static nonisolated func smartRehideDelay(
+        since lastShow: ContinuousClock.Instant?,
+        now: ContinuousClock.Instant = .now
+    ) -> Duration {
+        let focusSettleDelay = Duration.milliseconds(250)
+        guard let lastShow else { return focusSettleDelay }
+        let remainingGrace = Duration.milliseconds(500) - lastShow.duration(to: now)
+        return max(focusSettleDelay, remainingGrace)
+    }
+
+    /// Thaw temporarily activates itself when it must hide application menus.
+    /// That internal activation is not a user focus change and must not rehide
+    /// the section that caused it.
+    static nonisolated func shouldHandleAutoRehideActivation(
+        activatedProcessIdentifier: pid_t?,
+        currentProcessIdentifier: pid_t
+    ) -> Bool {
+        activatedProcessIdentifier != currentProcessIdentifier
+    }
+
+    private func hideVisibleSections() {
+        for section in sections where !section.isHidden {
+            section.hide()
+        }
     }
 
     /// Updates the control item states for all sections.

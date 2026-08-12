@@ -74,8 +74,9 @@ private enum PlainScreen {
     static let appMenuRightEdge: CGFloat = 300
 }
 
-/// A notched 1512-point screen with a 200-point notch centred at 656. Usable
-/// inline width is 964 with the menus in place and 1264 without them.
+/// A notched 1512-point screen with a 200-point notch centred at 656. Status
+/// items have 632 contiguous points right of the notch; hiding application
+/// menus cannot make macOS place them on the left side.
 private enum NotchedScreen {
     static let minX: CGFloat = 0
     static let maxX: CGFloat = 1512
@@ -146,12 +147,12 @@ private let usableWidthCases: [UsableWidthCase] = [
         expected: 0
     ),
     UsableWidthCase(
-        name: "a notch splits the bar in two",
+        name: "a notch leaves only its contiguous right side",
         appMenuRightEdge: 300,
         screenFrameMinX: 0,
         screenVisibleMaxX: 1512,
         notchFrame: CGRect(x: 656, y: 0, width: 200, height: 32),
-        expected: 964
+        expected: 632
     ),
     UsableWidthCase(
         name: "menus that reach the notch's left gap leave only the right side",
@@ -183,7 +184,7 @@ private let usableWidthCases: [UsableWidthCase] = [
         screenFrameMinX: 1000,
         screenVisibleMaxX: 2000,
         notchFrame: CGRect(x: 1400, y: 0, width: 200, height: 32),
-        expected: 752
+        expected: 376
     ),
 ]
 
@@ -279,8 +280,8 @@ private let presentationCases: [PresentationCase] = [
         expected: .inline
     ),
     PresentationCase(
-        name: "notched screen with room to spare",
-        totalItemsWidth: 964,
+        name: "notched screen exactly filling the right side",
+        totalItemsWidth: 632,
         appMenuRightEdge: NotchedScreen.appMenuRightEdge,
         screenFrameMinX: NotchedScreen.minX,
         screenVisibleMaxX: NotchedScreen.maxX,
@@ -289,14 +290,14 @@ private let presentationCases: [PresentationCase] = [
         expected: .inline
     ),
     PresentationCase(
-        name: "notched screen needing the menus out of the way",
-        totalItemsWidth: 965,
+        name: "notched screen cannot recover left-side space by hiding menus",
+        totalItemsWidth: 633,
         appMenuRightEdge: NotchedScreen.appMenuRightEdge,
         screenFrameMinX: NotchedScreen.minX,
         screenVisibleMaxX: NotchedScreen.maxX,
         notchFrame: CGRect(x: 656, y: 0, width: 200, height: 32),
         allowHidingApplicationMenus: true,
-        expected: .inlineHidingApplicationMenus
+        expected: .iceBar
     ),
     PresentationCase(
         name: "notched screen filled exactly once the menus are gone",
@@ -306,7 +307,7 @@ private let presentationCases: [PresentationCase] = [
         screenVisibleMaxX: NotchedScreen.maxX,
         notchFrame: CGRect(x: 656, y: 0, width: 200, height: 32),
         allowHidingApplicationMenus: true,
-        expected: .inlineHidingApplicationMenus
+        expected: .iceBar
     ),
     PresentationCase(
         name: "notched screen overflowing even without the menus",
@@ -385,14 +386,8 @@ struct MenuBarSectionGeometryTests {
             #expect(testCase.measured >= 0)
         }
 
-        @Test("A notch costs its own width plus a gap on each side")
-        func aNotchCostsItsWidthAndBothGaps() {
-            let withoutNotch = MenuBarSection.usableInlineWidth(
-                from: NotchedScreen.appMenuRightEdge,
-                screenFrameMinX: NotchedScreen.minX,
-                screenVisibleMaxX: NotchedScreen.maxX,
-                notchFrame: nil
-            )
+        @Test("A notch exposes only the contiguous region on its right")
+        func aNotchUsesOnlyItsRightSide() {
             let withNotch = MenuBarSection.usableInlineWidth(
                 from: NotchedScreen.appMenuRightEdge,
                 screenFrameMinX: NotchedScreen.minX,
@@ -400,7 +395,10 @@ struct MenuBarSectionGeometryTests {
                 notchFrame: NotchedScreen.notch
             )
 
-            #expect(withoutNotch - withNotch == NotchedScreen.notch.width + (2 * MenuBarSection.notchGap))
+            #expect(
+                withNotch
+                    == NotchedScreen.maxX - NotchedScreen.notch.maxX - MenuBarSection.notchGap
+            )
         }
 
         @Test("Hiding the application menus can only ever add space")
@@ -419,6 +417,24 @@ struct MenuBarSectionGeometryTests {
 
                 #expect(withoutMenus >= testCase.measured, "\(testCase.name)")
             }
+        }
+
+        @Test("Hiding application menus adds no inline status-item space around a notch")
+        func droppingMenusDoesNotAddNotchCapacity() {
+            let withMenus = MenuBarSection.usableInlineWidth(
+                from: NotchedScreen.appMenuRightEdge,
+                screenFrameMinX: NotchedScreen.minX,
+                screenVisibleMaxX: NotchedScreen.maxX,
+                notchFrame: NotchedScreen.notch
+            )
+            let withoutMenus = MenuBarSection.usableInlineWidth(
+                from: NotchedScreen.minX,
+                screenFrameMinX: NotchedScreen.minX,
+                screenVisibleMaxX: NotchedScreen.maxX,
+                notchFrame: NotchedScreen.notch
+            )
+
+            #expect(withMenus == withoutMenus)
         }
 
         @Test("An absent application menu frame is measured like one at the screen's left edge")

@@ -185,6 +185,34 @@ struct AXIdentityCatalogTests {
 
     private typealias CandidateFrame = MenuBarItemManager.ControlItemPair.CandidateFrame
 
+    @Test("AX-frame control pairs cannot reposition dividers")
+    func axFrameControlPairCannotRepositionDividers() {
+        let hidden = MenuBarItem.fixture(
+            tag: .hiddenControlItem,
+            windowID: 100,
+            bounds: CGRect(x: 100, y: 0, width: 20, height: 20)
+        )
+        let pair = MenuBarItemManager.ControlItemPair(
+            hidden: hidden,
+            alwaysHidden: nil,
+            resolution: .axFrameCorrelation
+        )
+
+        #expect(!pair.canRepositionControlItems)
+    }
+
+    @Test("Identity-resolved control pairs can reposition dividers")
+    func identityControlPairCanRepositionDividers() {
+        let hidden = MenuBarItem.fixture(
+            tag: .hiddenControlItem,
+            windowID: 100,
+            bounds: CGRect(x: 100, y: 0, width: 20, height: 20)
+        )
+        let pair = MenuBarItemManager.ControlItemPair(hidden: hidden, alwaysHidden: nil)
+
+        #expect(pair.canRepositionControlItems)
+    }
+
     @Test("AX frames select hidden control items among distractors")
     func selectViaAXFrameMatchesHiddenAndAlwaysHiddenAmongDistractors() {
         let hiddenFrame = CGRect(x: 100, y: 0, width: 20, height: 20)

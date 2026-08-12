@@ -160,6 +160,71 @@ struct PlanLCSMoveSequenceTests {
         #expect(result[1].destination == .rightOfUID("b"))
     }
 
+    // MARK: - Preferred movers
+
+    /// #885's minimal shape. The new item and `b` are interchangeable in a
+    /// length-two LCS, and the ordinary backtrack keeps the new item stable,
+    /// needlessly moving the established item instead.
+    @Test("An unmanaged arrival moves instead of an established item")
+    func unmanagedArrivalIsPreferredMover() {
+        let result = LayoutSolver.planLCSMoveSequence(
+            currentNoControls: ["a", "b", "new"],
+            desiredNoControls: ["a", "new", "b"],
+            sectionMap: ["a": "hidden", "b": "hidden", "new": "hidden"],
+            preferredMoveUIDs: ["new"]
+        )
+
+        #expect(result.count == 1)
+        #expect(result.first?.uid == "new")
+        #expect(result.first?.destination == .leftOfUID("b"))
+    }
+
+    /// The weighting is only a tie-break. If the unmanaged item already sits
+    /// correctly, it remains in the LCS and no move is invented.
+    @Test("A correctly placed unmanaged item remains stable")
+    func correctlyPlacedUnmanagedItemDoesNotMove() {
+        let result = LayoutSolver.planLCSMoveSequence(
+            currentNoControls: ["a", "new", "b"],
+            desiredNoControls: ["a", "new", "b"],
+            sectionMap: ["a": "hidden", "b": "hidden", "new": "hidden"],
+            preferredMoveUIDs: ["new"]
+        )
+
+        #expect(result.isEmpty)
+    }
+
+    /// Preferred movers only resolve ties between equally long subsequences.
+    /// They must not trade one established move for two unmanaged moves.
+    @Test("Preferred movers never shorten the LCS")
+    func preferredMoversDoNotShortenLCS() {
+        let result = LayoutSolver.planLCSMoveSequence(
+            currentNoControls: ["a", "b", "c", "n1", "n2"],
+            desiredNoControls: ["a", "b", "n1", "n2", "c"],
+            sectionMap: [
+                "a": "hidden", "b": "hidden", "c": "hidden",
+                "n1": "hidden", "n2": "hidden",
+            ],
+            preferredMoveUIDs: ["n1", "n2"]
+        )
+
+        #expect(result.count == 1)
+        #expect(result.first?.uid == "c")
+    }
+
+    /// Existing callers pass no preferred set and retain the historical LCS
+    /// tie-break, keeping the change local to unmanaged-arrival applies.
+    @Test("Without preferred movers the historical tie-break is unchanged")
+    func noPreferredMoversKeepsHistoricalTieBreak() {
+        let result = LayoutSolver.planLCSMoveSequence(
+            currentNoControls: ["a", "b", "new"],
+            desiredNoControls: ["a", "new", "b"],
+            sectionMap: ["a": "hidden", "b": "hidden", "new": "hidden"]
+        )
+
+        #expect(result.count == 1)
+        #expect(result.first?.uid == "b")
+    }
+
     // MARK: - Unanchorable anchors
 
     /// Thaw's chevron stays in the sequence — its position within visible is

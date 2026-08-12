@@ -6,7 +6,6 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import os
 import SwiftUI
 
 /// A representation of a section in a menu bar.
@@ -23,19 +22,6 @@ final class MenuBarSection {
 
     /// A task that manages rehiding the section.
     private var rehideTask: Task<Void, Never>?
-
-    /// An event monitor that handles starting the rehide task when the mouse
-    /// is outside of the menu bar.
-    private var rehideMonitor: EventMonitor?
-
-    /// The timestamp of the last processed mouse-moved event in the timed
-    /// rehide monitor, used to throttle event handling to ~20 fps.
-    ///
-    /// Stored per-instance rather than as a `static let`: a process-global
-    /// slot would let two concurrently shown sections steal each other's
-    /// throttle window, so each would only see roughly half the events it
-    /// should have.
-    private let timedRehideThrottleClock = OSAllocatedUnfairLock(initialState: TimeInterval(0))
 
     /// The section's diagnostic logger.
     private nonisolated let diagLog = DiagLog(category: "MenuBarSection")
@@ -397,7 +383,6 @@ final class MenuBarSection {
     private func startRehideChecks() {
         rehideTask?.cancel()
         rehideTask = nil
-        rehideMonitor?.stop()
 
         guard
             let appState,
@@ -429,92 +414,28 @@ final class MenuBarSection {
                 self.hide()
             }
         case .timed:
-            rehideMonitor = EventMonitor.universal(for: .mouseMoved) { [weak self, weak appState, timedRehideThrottleClock] event in
-                // Throttle: process at most ~20fps regardless of mouse polling rate.
-                let now = CACurrentMediaTime()
-                guard now - timedRehideThrottleClock.withLock({ $0 }) > 0.05 else { return event }
-                timedRehideThrottleClock.withLock { $0 = now }
-
-                guard
-                    let self,
-                    let appState,
-                    let screen = NSScreen.main
-                else {
-                    return event
+            let interval = appState.settings.general.rehideInterval
+            rehideTask = Task { [weak self, weak appState] in
+                try? await Task.sleep(for: .seconds(interval))
+                guard !Task.isCancelled, let self, let appState else { return }
+                // Don't rehide while a menu bar item menu is open; the hide
+                // would yank it out from under the user. The timer itself is
+                // not gated — the interval must be respected — but the actual
+                // hide defers until the menu closes.
+                if await appState.itemManager.isAnyMenuBarItemMenuOpen() {
+                    self.startRehideChecks()
+                    return
                 }
-                let mouseInActiveArea =
-                    NSEvent.mouseLocation.y >= screen.visibleFrame.maxY ||
-                    appState.hidEventManager.isMouseInsideIceBar(appState: appState)
-
-                if !mouseInActiveArea {
-                    if rehideTask == nil {
-                        let interval = appState.settings.general.rehideInterval
-                        rehideTask = Task { @MainActor [weak self, weak appState] in
-                            try? await Task.sleep(for: .seconds(interval))
-                            guard !Task.isCancelled, let self, let appState else { return }
-                            // Don't rehide while the mouse is inside the menu bar or IceBar.
-                            if self.isMouseInsideActiveArea() {
-                                await self.restartTimedRehideTimer()
-                                return
-                            }
-                            // Check if any menu bar item has a menu open before hiding.
-                            if await appState.itemManager.isAnyMenuBarItemMenuOpen() {
-                                self.diagLog.debug("Open menu detected - restarting timed rehide task")
-                                await self.restartTimedRehideTimer()
-                                return
-                            }
-                            self.hide()
-                        }
-                    }
-                } else {
-                    rehideTask?.cancel()
-                    rehideTask = nil
-                }
-                return event
+                self.hide()
             }
-
-            rehideMonitor?.start()
         case .focusedApp:
             break
-        }
-    }
-
-    /// Restarts the timed rehide task (used when a menu is detected).
-    @MainActor
-    private func restartTimedRehideTimer() async {
-        guard
-            let appState,
-            appState.settings.general.autoRehide,
-            case .timed = appState.settings.general.rehideStrategy
-        else {
-            return
-        }
-
-        rehideTask?.cancel()
-        let interval = appState.settings.general.rehideInterval
-        rehideTask = Task { [weak self, weak appState] in
-            try? await Task.sleep(for: .seconds(interval))
-            guard !Task.isCancelled, let self, let appState else { return }
-            // Don't rehide while the mouse is inside the menu bar or IceBar.
-            if self.isMouseInsideActiveArea() {
-                self.startRehideChecks()
-                return
-            }
-            // Check if any menu bar item has a menu open before hiding.
-            if await appState.itemManager.isAnyMenuBarItemMenuOpen() {
-                self.diagLog.debug("Open menu still detected - restarting timed rehide task again")
-                await self.restartTimedRehideTimer()
-                return
-            }
-            self.hide()
         }
     }
 
     /// Stops running checks to determine when to rehide the section.
     private func stopRehideChecks() {
         rehideTask?.cancel()
-        rehideMonitor?.stop()
         rehideTask = nil
-        rehideMonitor = nil
     }
 }

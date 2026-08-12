@@ -62,19 +62,22 @@ struct ControlItemRecoveryTests {
         #expect(MenuBarItemManager.shouldRebuildControlItems(consecutiveFailures: 2, threshold: 2))
     }
 
-    /// Models the manager's own counter usage: increments on failure, reset
-    /// to zero on success and immediately after a rebuild fires, so a
-    /// rebuild happens at most once per failure streak.
-    @Test("A counter reset prevents repeat rebuilds within one failure streak")
-    func counterResetPreventsRepeatRebuildsWithinAStreak() {
+    /// Models the manager's own episode latch: failures continue to be counted
+    /// after rebuilding, but no second rebuild is allowed until a lookup works.
+    @Test("A persistent failure episode rebuilds only once")
+    func persistentFailureEpisodeRebuildsOnlyOnce() {
         var consecutiveFailures = 0
+        var alreadyRebuilt = false
         var rebuildCount = 0
 
         func recordFailure() {
             consecutiveFailures += 1
-            if MenuBarItemManager.shouldRebuildControlItems(consecutiveFailures: consecutiveFailures) {
+            if MenuBarItemManager.shouldRebuildControlItems(
+                consecutiveFailures: consecutiveFailures,
+                alreadyRebuilt: alreadyRebuilt
+            ) {
                 rebuildCount += 1
-                consecutiveFailures = 0
+                alreadyRebuilt = true
             }
         }
 
@@ -82,6 +85,59 @@ struct ControlItemRecoveryTests {
             recordFailure()
         }
 
-        #expect(rebuildCount == 3)
+        #expect(rebuildCount == 1)
+    }
+
+    @Test("A successful lookup re-arms recovery")
+    func successfulLookupRearmsRecovery() {
+        let threshold = MenuBarItemManager.controlItemRebuildThreshold
+
+        #expect(MenuBarItemManager.shouldRebuildControlItems(consecutiveFailures: threshold))
+        #expect(
+            !MenuBarItemManager.shouldRebuildControlItems(
+                consecutiveFailures: threshold * 2,
+                alreadyRebuilt: true
+            )
+        )
+        #expect(MenuBarItemManager.shouldRebuildControlItems(consecutiveFailures: threshold))
+    }
+}
+
+@Suite("Collapsed hidden section recovery")
+struct CollapsedHiddenSectionRecoveryTests {
+    @Test("Transient collapse readings do not reset the divider")
+    func transientCollapseDoesNotRecover() {
+        for count in 0 ..< MenuBarItemManager.hiddenSectionCollapseRecoveryThreshold {
+            #expect(!MenuBarItemManager.shouldRecoverCollapsedHiddenSection(
+                consecutiveCollapsedReadings: count
+            ))
+        }
+    }
+
+    @Test("A persistent collapse resets the divider")
+    func persistentCollapseRecovers() {
+        #expect(MenuBarItemManager.shouldRecoverCollapsedHiddenSection(
+            consecutiveCollapsedReadings: MenuBarItemManager.hiddenSectionCollapseRecoveryThreshold
+        ))
+    }
+
+    @Test("A collapse episode recovers only once")
+    func collapseEpisodeRecoversOnce() {
+        #expect(!MenuBarItemManager.shouldRecoverCollapsedHiddenSection(
+            consecutiveCollapsedReadings: MenuBarItemManager.hiddenSectionCollapseRecoveryThreshold + 10,
+            alreadyRecovered: true
+        ))
+    }
+
+    @Test("A custom collapse threshold is respected")
+    func customThresholdIsRespected() {
+        #expect(!MenuBarItemManager.shouldRecoverCollapsedHiddenSection(
+            consecutiveCollapsedReadings: 1,
+            threshold: 2
+        ))
+        #expect(MenuBarItemManager.shouldRecoverCollapsedHiddenSection(
+            consecutiveCollapsedReadings: 2,
+            threshold: 2
+        ))
     }
 }

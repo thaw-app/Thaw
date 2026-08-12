@@ -892,14 +892,19 @@ nonisolated enum LayoutSolver {
         currentNoControls: [String],
         desiredNoControls: [String],
         sectionMap: [String: String],
-        unanchorableUIDs: Set<String> = []
+        unanchorableUIDs: Set<String> = [],
+        preferredMoveUIDs: Set<String> = []
     ) -> [LCSPlannedMove] {
         let currentSetNow = Set(currentNoControls)
         let desiredSetNow = Set(desiredNoControls)
         let lcsCurrent = currentNoControls.filter { desiredSetNow.contains($0) }
         let lcsDesired = desiredNoControls.filter { currentSetNow.contains($0) }
 
-        let lcsItems = longestCommonSubsequence(lcsCurrent, lcsDesired)
+        let lcsItems = longestCommonSubsequence(
+            lcsCurrent,
+            lcsDesired,
+            preferredMoveUIDs: preferredMoveUIDs
+        )
         let itemsToMove = lcsDesired.filter { !lcsItems.contains($0) }
 
         if itemsToMove.isEmpty {
@@ -1266,17 +1271,45 @@ nonisolated enum LayoutSolver {
     /// Computes the Longest Common Subsequence of two string arrays.
     /// Returns the set of items that appear in both arrays in the same
     /// relative order: these items don't need to be moved.
-    static nonisolated func longestCommonSubsequence(_ a: [String], _ b: [String]) -> Set<String> {
+    static nonisolated func longestCommonSubsequence(
+        _ a: [String],
+        _ b: [String],
+        preferredMoveUIDs: Set<String> = []
+    ) -> Set<String> {
         let m = a.count
         let n = b.count
         guard m > 0, n > 0 else { return [] }
 
-        // DP table.
-        var dp = Array(repeating: Array(repeating: 0, count: n + 1), count: m + 1)
+        struct Score: Comparable {
+            let establishedCount: Int
+            let totalCount: Int
+
+            static func < (lhs: Self, rhs: Self) -> Bool {
+                if lhs.totalCount != rhs.totalCount {
+                    return lhs.totalCount < rhs.totalCount
+                }
+                return lhs.establishedCount < rhs.establishedCount
+            }
+
+            func adding(isEstablished: Bool) -> Self {
+                Score(
+                    establishedCount: establishedCount + (isEstablished ? 1 : 0),
+                    totalCount: totalCount + 1
+                )
+            }
+        }
+
+        // Prefer subsequences that preserve the most established items, then
+        // the greatest total length. This makes an unmanaged arrival the mover
+        // when keeping it would displace an existing item (#885).
+        let zero = Score(establishedCount: 0, totalCount: 0)
+        var dp = Array(repeating: Array(repeating: zero, count: n + 1), count: m + 1)
         for i in 1 ... m {
             for j in 1 ... n {
                 if a[i - 1] == b[j - 1] {
-                    dp[i][j] = dp[i - 1][j - 1] + 1
+                    dp[i][j] = dp[i - 1][j - 1].adding(
+                        isEstablished: !preferredMoveUIDs.contains(a[i - 1])
+                    )
                 } else {
                     dp[i][j] = max(dp[i - 1][j], dp[i][j - 1])
                 }

@@ -109,7 +109,10 @@ nonisolated extension MenuBarSection {
         case iceBar
     }
 
-    /// Calculates the usable inline width for menu bar items on a screen.
+    /// Calculates the contiguous width where status items can render inline.
+    /// On a notched display, macOS does not relocate an expanded status-item
+    /// run into the application-menu region left of the notch, so counting
+    /// both sides promises capacity that `ControlItem` cannot expose (#924).
     static func usableInlineWidth(
         from appMenuRightEdge: CGFloat?,
         screenFrameMinX: CGFloat,
@@ -119,11 +122,8 @@ nonisolated extension MenuBarSection {
         let clampedAppMenuRightEdge = max(screenFrameMinX, appMenuRightEdge ?? screenFrameMinX)
 
         if let notchFrame {
-            let usableLeftOfNotch = notchFrame.minX - notchGap
             let usableRightOfNotchStart = notchFrame.maxX + notchGap
-            let leftWidth = max(0, usableLeftOfNotch - clampedAppMenuRightEdge)
-            let rightWidth = max(0, screenVisibleMaxX - usableRightOfNotchStart)
-            return leftWidth + rightWidth
+            return max(0, screenVisibleMaxX - usableRightOfNotchStart)
         }
 
         return max(0, screenVisibleMaxX - clampedAppMenuRightEdge)

@@ -178,16 +178,29 @@ final class MenuBarItemManager {
     /// Number of consecutive `ControlItemPair` lookup failures seen by
     /// `cacheItemsRegardless`. Reset to zero on the first successful lookup.
     /// Once this reaches `controlItemRebuildThreshold`, the hidden and
-    /// always-hidden control items' underlying status items are rebuilt from
-    /// scratch (see `recreateStatusItem()`), since a lookup that keeps
-    /// failing across multiple independently-triggered cache cycles means
-    /// the backing `NSStatusItem`s themselves are gone, not that this one
-    /// cycle raced a transient WindowServer update.
+    /// always-hidden control items' underlying status items are rebuilt once
+    /// for that uninterrupted failure episode (see `recreateStatusItem()`).
     private var controlItemLookupFailureStreak = 0
+
+    /// Whether the current uninterrupted lookup-failure episode has already
+    /// rebuilt the control items. Re-armed only after a successful lookup.
+    private var didRebuildControlItemsForCurrentFailureEpisode = false
+
+    /// Consecutive authoritative cache readings in which the hidden section
+    /// has no geometric span despite a populated saved hidden section.
+    private var hiddenSectionCollapseStreak = 0
+
+    /// Prevents repeated divider recreation until healthy geometry re-arms
+    /// recovery for a later collapse episode.
+    private var didRecoverHiddenSectionForCurrentCollapse = false
 
     /// Number of consecutive `ControlItemPair` lookup failures required
     /// before the control items' status items are rebuilt.
     static nonisolated let controlItemRebuildThreshold = 3
+
+    /// Number of consecutive collapsed readings required before discarding a
+    /// hidden divider's stale autosave position.
+    static nonisolated let hiddenSectionCollapseRecoveryThreshold = 3
 
     /// Supplementary AX-derived identity for items whose CG-side identity is
     /// degraded (a Control-Center generic `Item-N` placeholder title, or a
@@ -2134,8 +2147,20 @@ extension MenuBarItemManager {
     /// A pair of control items, taken from a list of menu bar items
     /// during a menu bar item cache operation.
     struct ControlItemPair {
+        nonisolated enum Resolution: Equatable, Sendable {
+            case identity
+            case axFrameCorrelation
+        }
+
         nonisolated let hidden: MenuBarItem
         nonisolated let alwaysHidden: MenuBarItem?
+        nonisolated let resolution: Resolution
+
+        /// AX-frame correlation identifies likely controls geometrically, but
+        /// that evidence is not strong enough to reposition section dividers.
+        nonisolated var canRepositionControlItems: Bool {
+            resolution != .axFrameCorrelation
+        }
 
         /// Creates a control item pair from already-known control items.
         ///
@@ -2148,9 +2173,14 @@ extension MenuBarItemManager {
         /// construct a pair from already-resolved items without a hop; the
         /// failable `init?` below stays implicitly `@MainActor` since it
         /// performs AX-frame correlation.
-        nonisolated init(hidden: MenuBarItem, alwaysHidden: MenuBarItem?) {
+        nonisolated init(
+            hidden: MenuBarItem,
+            alwaysHidden: MenuBarItem?,
+            resolution: Resolution = .identity
+        ) {
             self.hidden = hidden
             self.alwaysHidden = alwaysHidden
+            self.resolution = resolution
         }
 
         /// Creates a control item pair from a list of menu bar items.
@@ -2186,6 +2216,7 @@ extension MenuBarItemManager {
                 } else {
                     self.alwaysHidden = items.removeFirst(matching: .alwaysHiddenControlItem)
                 }
+                self.resolution = .identity
                 MenuBarItemManager.diagLog.debug("ControlItemPair: resolved via window ID")
                 return
             }
@@ -2226,6 +2257,7 @@ extension MenuBarItemManager {
                 } else {
                     self.alwaysHidden = items.removeFirst(matching: .alwaysHiddenControlItem)
                 }
+                self.resolution = .identity
                 MenuBarItemManager.diagLog.info(
                     "ControlItemPair: recovered hidden control item \(hiddenWID) from its own window; it was absent from the \(items.count)-item list"
                 )
@@ -2236,6 +2268,7 @@ extension MenuBarItemManager {
             if let hidden = items.removeFirst(matching: .hiddenControlItem) {
                 self.hidden = hidden
                 self.alwaysHidden = items.removeFirst(matching: .alwaysHiddenControlItem)
+                self.resolution = .identity
                 MenuBarItemManager.diagLog.debug("ControlItemPair: resolved via tag")
                 return
             }
@@ -2252,6 +2285,7 @@ extension MenuBarItemManager {
                 } else {
                     self.alwaysHidden = nil
                 }
+                self.resolution = .identity
                 MenuBarItemManager.diagLog.debug("ControlItemPair: resolved via sourcePID and title")
                 return
             }
@@ -2267,6 +2301,7 @@ extension MenuBarItemManager {
             if let pair = Self.matchViaAXFrame(items: &items) {
                 self.hidden = pair.hidden
                 self.alwaysHidden = pair.alwaysHidden
+                self.resolution = .axFrameCorrelation
                 return
             }
 
@@ -2669,29 +2704,19 @@ extension MenuBarItemManager {
             context.cache.insert(item, at: destination)
         }
 
-        guard itemCache != context.cache else {
-            MenuBarItemManager.diagLog.debug("Not updating menu bar item cache, as items haven't changed")
-            return
-        }
+        let cacheChanged = itemCache != context.cache
 
         // Discard a pass whose divider geometry disagrees with the section's
         // logical state. Keeping the previous cache costs one cycle; accepting
         // the mixture reclassifies a whole section (#851).
-        if !itemCache.managedItems.isEmpty, let section = await midTransitionSection(in: context) {
+        if cacheChanged,
+           !itemCache.managedItems.isEmpty,
+           let section = await midTransitionSection(in: context)
+        {
             MenuBarItemManager.diagLog.debug(
                 "Not updating menu bar item cache: \(section.logString) is mid expand/collapse, keeping last-known-good cache"
             )
             return
-        }
-
-        itemCache = context.cache
-
-        // Reset isRestoringItemOrder if it's been stuck for too long (10 seconds).
-        // This prevents stale flags from blocking saves after user manual moves.
-        if isRestoringItemOrder, let timestamp = isRestoringItemOrderTimestamp, Date().timeIntervalSince(timestamp) > 10 {
-            MenuBarItemManager.diagLog.debug("Resetting stale isRestoringItemOrder flag (timeout)")
-            isRestoringItemOrder = false
-            isRestoringItemOrderTimestamp = nil
         }
 
         // The always-hidden divider is what tells always-hidden items apart
@@ -2730,6 +2755,28 @@ extension MenuBarItemManager {
             )
         )
 
+        if recoverCollapsedHiddenSectionIfNeeded(
+            hiddenSectionHasRoom: hiddenSectionHasRoom,
+            controlItems: context.controlItems
+        ) {
+            return
+        }
+
+        guard cacheChanged else {
+            MenuBarItemManager.diagLog.debug("Not updating menu bar item cache, as items haven't changed")
+            return
+        }
+
+        itemCache = context.cache
+
+        // Reset isRestoringItemOrder if it's been stuck for too long (10 seconds).
+        // This prevents stale flags from blocking saves after user manual moves.
+        if isRestoringItemOrder, let timestamp = isRestoringItemOrderTimestamp, Date().timeIntervalSince(timestamp) > 10 {
+            MenuBarItemManager.diagLog.debug("Resetting stale isRestoringItemOrder flag (timeout)")
+            isRestoringItemOrder = false
+            isRestoringItemOrderTimestamp = nil
+        }
+
         let hasPendingDivergence = pendingDivergenceObservedAt != nil
 
         // The bar after a batch that gave up partway is the batch's own
@@ -2741,7 +2788,8 @@ extension MenuBarItemManager {
             now: .now
         )
 
-        if LayoutSolver.shouldPersistSavedOrder(
+        if context.controlItems.canRepositionControlItems,
+           LayoutSolver.shouldPersistSavedOrder(
             LayoutSolver.SavedOrderGate(
                 isRestoringItemOrder: isRestoringItemOrder,
                 isResettingLayout: isResettingLayout,
@@ -2794,6 +2842,10 @@ extension MenuBarItemManager {
             } else {
                 saveSectionOrder(from: context.cache)
             }
+        } else if !context.controlItems.canRepositionControlItems {
+            MenuBarItemManager.diagLog.warning(
+                "Skipping saveSectionOrder; control items resolved only by provisional AX-frame correlation"
+            )
         } else if !alwaysHiddenSectionResolved {
             // Logged at warning level, and separately from the gate's other
             // inputs, because this is the one that silently rewrites the
@@ -2833,6 +2885,49 @@ extension MenuBarItemManager {
             )
         }
         MenuBarItemManager.diagLog.debug("Updated menu bar item cache: visible=\(context.cache[.visible].count), hidden=\(context.cache[.hidden].count), alwaysHidden=\(context.cache[.alwaysHidden].count)")
+    }
+
+    /// Recreates the hidden divider at its seeded position after repeated,
+    /// authoritative evidence that stale geometry closed the hidden span.
+    /// The saved order remains untouched, so the next cache pass can restore
+    /// section membership through the normal saved-layout apply.
+    private func recoverCollapsedHiddenSectionIfNeeded(
+        hiddenSectionHasRoom: Bool,
+        controlItems: ControlItemPair
+    ) -> Bool {
+        // A provisional reading must not advance, reset, or re-arm the
+        // recovery episode. Only authoritative observations may mutate it.
+        guard controlItems.canRepositionControlItems else {
+            return false
+        }
+
+        guard !hiddenSectionHasRoom else {
+            hiddenSectionCollapseStreak = 0
+            didRecoverHiddenSectionForCurrentCollapse = false
+            return false
+        }
+
+        hiddenSectionCollapseStreak += 1
+        guard Self.shouldRecoverCollapsedHiddenSection(
+            consecutiveCollapsedReadings: hiddenSectionCollapseStreak,
+            alreadyRecovered: didRecoverHiddenSectionForCurrentCollapse
+        ),
+            let hiddenControlItem = appState?.menuBarManager.controlItem(withName: .hidden)
+        else {
+            return false
+        }
+
+        didRecoverHiddenSectionForCurrentCollapse = true
+        MenuBarItemManager.diagLog.warning(
+            "Hidden section remained collapsed for \(hiddenSectionCollapseStreak) authoritative cache passes; recreating H_ctrl at its seeded position"
+        )
+        hiddenControlItem.recreateStatusItem(preferredPosition: 1)
+
+        Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(100))
+            await self?.cacheItemsRegardless(skipRecentMoveCheck: true)
+        }
+        return true
     }
 
     /// Whether bundleID owns a menu bar item Thaw already tracks: an entry
@@ -3204,12 +3299,12 @@ extension MenuBarItemManager {
         // Obtain window IDs from the actual ControlItem objects so the
         // fallback lookup in ControlItemPair can match by window ID when
         // the tag-based and title-based lookups fail (macOS 26+).
-        let hiddenControlItemWID: CGWindowID? = appState?.menuBarManager
-            .controlItem(withName: .hidden)?.window
-            .flatMap { CGWindowID(exactly: $0.windowNumber) }
-        let alwaysHiddenControlItemWID: CGWindowID? = appState?.menuBarManager
-            .controlItem(withName: .alwaysHidden)?.window
-            .flatMap { CGWindowID(exactly: $0.windowNumber) }
+        let hiddenControlItemWindowNumber = appState?.menuBarManager
+            .controlItem(withName: .hidden)?.window?.windowNumber
+        let alwaysHiddenControlItemWindowNumber = appState?.menuBarManager
+            .controlItem(withName: .alwaysHidden)?.window?.windowNumber
+        let hiddenControlItemWID = hiddenControlItemWindowNumber.flatMap { CGWindowID(exactly: $0) }
+        let alwaysHiddenControlItemWID = alwaysHiddenControlItemWindowNumber.flatMap { CGWindowID(exactly: $0) }
 
         guard let controlItems = ControlItemPair(
             items: &items,
@@ -3234,18 +3329,21 @@ extension MenuBarItemManager {
             // transient WindowServer update.
             controlItemLookupFailureStreak += 1
             let failureStreak = controlItemLookupFailureStreak
-            MenuBarItemManager.diagLog.warning("cacheItemsRegardless: Missing control item for hidden section (expected tag: \(MenuBarItemTag.hiddenControlItem)), keeping last-known-good cache. Items remaining: \(items.count), windowIDs: \(itemWindowIDs.count). hiddenControlItemWID=\(hiddenControlItemWID.map { "\($0)" } ?? "nil"), alwaysHiddenControlItemWID=\(alwaysHiddenControlItemWID.map { "\($0)" } ?? "nil"). consecutiveFailures=\(failureStreak)")
+            MenuBarItemManager.diagLog.warning("cacheItemsRegardless: Missing control item for hidden section (expected tag: \(MenuBarItemTag.hiddenControlItem)), keeping last-known-good cache. Items remaining: \(items.count), windowIDs: \(itemWindowIDs.count). hiddenWindowNumber=\(hiddenControlItemWindowNumber.map(String.init) ?? "nil"), hiddenControlItemWID=\(hiddenControlItemWID.map(String.init) ?? "nil"), alwaysHiddenWindowNumber=\(alwaysHiddenControlItemWindowNumber.map(String.init) ?? "nil"), alwaysHiddenControlItemWID=\(alwaysHiddenControlItemWID.map(String.init) ?? "nil"). consecutiveFailures=\(failureStreak)")
             await MainActor.run {
                 self.areControlItemsMissing = true
             }
 
-            if MenuBarItemManager.shouldRebuildControlItems(consecutiveFailures: failureStreak) {
+            if MenuBarItemManager.shouldRebuildControlItems(
+                consecutiveFailures: failureStreak,
+                alreadyRebuilt: didRebuildControlItemsForCurrentFailureEpisode
+            ) {
                 MenuBarItemManager.diagLog.warning("cacheItemsRegardless: \(failureStreak) consecutive control item lookup failures, rebuilding hidden/always-hidden status items")
                 await MainActor.run {
                     appState?.menuBarManager.controlItem(withName: .hidden)?.recreateStatusItem()
                     appState?.menuBarManager.controlItem(withName: .alwaysHidden)?.recreateStatusItem()
                 }
-                controlItemLookupFailureStreak = 0
+                didRebuildControlItemsForCurrentFailureEpisode = true
                 // Schedule one immediate recache so the freshly rebuilt
                 // status items are picked up right away rather than waiting
                 // for the next externally triggered cache cycle. Briefly wait
@@ -3260,12 +3358,15 @@ extension MenuBarItemManager {
             return
         }
 
-        controlItemLookupFailureStreak = 0
-        cacheActor.updateCachedItemWindowIDs(itemWindowIDs)
-        cacheActor.updateCachedCloneWindowIDs(cloneWindowIDs.union(ghostControlWindowIDs))
-        cacheActor.updateCachedControlCenterGenericWindowIDs(
-            Set(items.filter(\.tag.isControlCenterGenericItem).map(\.windowID))
-        )
+        if controlItems.canRepositionControlItems {
+            controlItemLookupFailureStreak = 0
+            didRebuildControlItemsForCurrentFailureEpisode = false
+            cacheActor.updateCachedItemWindowIDs(itemWindowIDs)
+            cacheActor.updateCachedCloneWindowIDs(cloneWindowIDs.union(ghostControlWindowIDs))
+            cacheActor.updateCachedControlCenterGenericWindowIDs(
+                Set(items.filter(\.tag.isControlCenterGenericItem).map(\.windowID))
+            )
+        }
 
         await MainActor.run {
             self.areControlItemsMissing = false
@@ -6978,6 +7079,12 @@ extension MenuBarItemManager {
         recentWindowIDs: Set<CGWindowID>
     ) async -> Bool {
         guard appState != nil else { return false }
+        guard controlItems.canRepositionControlItems else {
+            MenuBarItemManager.diagLog.debug(
+                "relocateNewLeftmostItems: skipping for provisional AX-frame correlation"
+            )
+            return false
+        }
 
         if suppressNextNewLeftmostItemRelocation {
             // Seed known identifiers so these baseline items won't be treated as "new"
@@ -7166,6 +7273,13 @@ extension MenuBarItemManager {
         _ items: [MenuBarItem],
         controlItems: ControlItemPair
     ) async -> Bool {
+        guard controlItems.canRepositionControlItems else {
+            MenuBarItemManager.diagLog.debug(
+                "relocatePendingItems: skipping for provisional AX-frame correlation"
+            )
+            return false
+        }
+
         guard !pendingRelocations.isEmpty else {
             return false
         }
@@ -7329,6 +7443,13 @@ extension MenuBarItemManager {
     /// control item for the always-hidden section is positioned to the
     /// left of control item for the hidden section.
     private func enforceControlItemOrder(controlItems: ControlItemPair) async {
+        guard controlItems.canRepositionControlItems else {
+            MenuBarItemManager.diagLog.debug(
+                "Skipping control item order enforcement for provisional AX-frame correlation"
+            )
+            return
+        }
+
         let hidden = controlItems.hidden
 
         guard
@@ -7727,38 +7848,6 @@ extension MenuBarItemManager {
             throw LayoutResetError.missingAppState
         }
 
-        // Reset persisted state so macOS treats section dividers like new.
-        ControlItemDefaults[.preferredPosition, ControlItem.Identifier.visible.rawValue] = 0
-        ControlItemDefaults.resetChevronPositions()
-
-        // Forget previously seen/pinned items so we treat everything as new.
-        knownItemIdentifiers.removeAll()
-        pinnedHiddenBundleIDs.removeAll()
-        pinnedAlwaysHiddenBundleIDs.removeAll()
-        pendingRelocations.removeAll()
-        pendingReturnDestinations.removeAll()
-        savedSectionOrder.removeAll()
-
-        // Clear active profile layout cache.
-        activeProfileLayout = nil
-        activeProfileItemIdentifiers.removeAll()
-        profileSortedItemIdentifiers.removeAll()
-        profileResortTask?.cancel()
-        profileResortTask = nil
-        persistKnownItemIdentifiers()
-        persistPinnedBundleIDs()
-        persistPendingRelocations()
-        persistSavedSectionOrder()
-        temporarilyShownItemContexts.removeAll()
-
-        // Reset new items placement to default.
-        newItemsPlacement = NewItemsPlacement.defaultValue
-        Defaults.removeObject(forKey: .newItemsSection)
-        Defaults.removeObject(forKey: .newItemsPlacementData)
-
-        // Prevent the first post-reset cache pass from treating the freshly reset items as "new".
-        suppressNextNewLeftmostItemRelocation = true
-
         var items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
 
         let hiddenWID: CGWindowID? = appState.menuBarManager
@@ -7788,7 +7877,7 @@ extension MenuBarItemManager {
                     items: &items,
                     hiddenControlItemWindowID: hiddenWID,
                     alwaysHiddenControlItemWindowID: alwaysHiddenWID
-                ) {
+                ), retryControlItems.canRepositionControlItems {
                     MenuBarItemManager.diagLog.info("Recovered hidden section control item after re-enabling always-hidden section")
                     return try await resetLayoutWithControlItems(controlItems: retryControlItems, items: items)
                 }
@@ -7796,6 +7885,40 @@ extension MenuBarItemManager {
 
             throw LayoutResetError.missingControlItems
         }
+
+        guard controlItems.canRepositionControlItems else {
+            MenuBarItemManager.diagLog.error(
+                "Layout reset aborted: control items resolved only by provisional AX-frame correlation"
+            )
+            throw LayoutResetError.missingControlItems
+        }
+
+        // Mutate authoritative layout state only after divider identity is
+        // authoritative; a provisional lookup must leave the saved layout intact.
+        ControlItemDefaults[.preferredPosition, ControlItem.Identifier.visible.rawValue] = 0
+        ControlItemDefaults.resetChevronPositions()
+
+        knownItemIdentifiers.removeAll()
+        pinnedHiddenBundleIDs.removeAll()
+        pinnedAlwaysHiddenBundleIDs.removeAll()
+        pendingRelocations.removeAll()
+        pendingReturnDestinations.removeAll()
+        savedSectionOrder.removeAll()
+        activeProfileLayout = nil
+        activeProfileItemIdentifiers.removeAll()
+        profileSortedItemIdentifiers.removeAll()
+        profileResortTask?.cancel()
+        profileResortTask = nil
+        persistKnownItemIdentifiers()
+        persistPinnedBundleIDs()
+        persistPendingRelocations()
+        persistSavedSectionOrder()
+        temporarilyShownItemContexts.removeAll()
+
+        newItemsPlacement = NewItemsPlacement.defaultValue
+        Defaults.removeObject(forKey: .newItemsSection)
+        Defaults.removeObject(forKey: .newItemsPlacementData)
+        suppressNextNewLeftmostItemRelocation = true
 
         await enforceControlItemOrder(controlItems: controlItems)
 
@@ -7862,7 +7985,7 @@ extension MenuBarItemManager {
             items: &refreshedItems,
             hiddenControlItemWindowID: refreshHiddenWID,
             alwaysHiddenControlItemWindowID: refreshAlwaysHiddenWID
-        ) {
+        ), refreshedControls.canRepositionControlItems {
             let hiddenControlBounds = Bridging.getWindowBounds(for: refreshedControls.hidden.windowID)
                 ?? refreshedControls.hidden.bounds
             let alwaysHiddenControlBounds = refreshedControls.alwaysHidden.flatMap {
@@ -8171,7 +8294,7 @@ extension MenuBarItemManager {
     /// newer arm bumps the token, so the late-arriving cancellation of
     /// the displaced apply leaves the newer apply's state — including
     /// its in-flight flag — untouched.
-    private func restoreProfileStateAfterCancelledApply(token: Int) {
+    private func restoreProfileStateAfterAbortedApply(token: Int) {
         guard token == profileApplyToken,
               let snapshot = priorProfileApplySnapshot,
               snapshot.token == token
@@ -8189,7 +8312,7 @@ extension MenuBarItemManager {
         priorProfileApplySnapshot = nil
         isApplyingProfileLayout = false
         MenuBarItemManager.diagLog.info(
-            "applyProfileLayout: cancelled mid-apply, rolled back in-memory profile state to the last committed profile"
+            "applyProfileLayout: aborted apply rolled back in-memory profile state to the last committed profile"
         )
     }
 
@@ -8510,6 +8633,20 @@ extension MenuBarItemManager {
                 "applyProfileLayout: skipping, always-hidden divider unresolved while its section is enabled"
             )
             clearProfileState(source: source, items: items)
+            return
+        }
+
+        // AX-frame correlation is sufficient for a read-only cache snapshot,
+        // but not for any synthetic drag. Even ordinary-item LCS destinations
+        // depend on section classification and may fall back to one of these
+        // dividers, so restricting only direct divider moves is not enough.
+        guard controlItems.canRepositionControlItems else {
+            MenuBarItemManager.diagLog.warning(
+                "applyProfileLayout: skipping, control items resolved only by provisional AX-frame correlation"
+            )
+            if case .profile = source {
+                restoreProfileStateAfterAbortedApply(token: applyToken)
+            }
             return
         }
 
@@ -8908,6 +9045,7 @@ extension MenuBarItemManager {
         // a control item is cheaper than moving individual items.
         var movedCount = 0
         var didAttemptHCtrl = false
+        var canRepositionControlItems = controlItems.canRepositionControlItems
         // Moves this batch planned for an item that is still on the bar and
         // then did not enact. Any of these leaves the bar in an arrangement
         // nobody asked for, which the saveSectionOrder gate must not treat
@@ -9024,12 +9162,27 @@ extension MenuBarItemManager {
         // items. Both dividers move by the same mechanism: one drag that
         // re-sections everything it crosses, which is why neither is left
         // to the per-item LCS pass.
-        if hiddenBoundaryMismatch > 0, !Task.isCancelled {
+        if hiddenBoundaryMismatch > 0, canRepositionControlItems, !Task.isCancelled {
             MenuBarItemManager.diagLog.debug(
                 "Profile layout: \(hiddenBoundaryMismatch) item(s) on the wrong side of H_ctrl, moving H_ctrl to the boundary"
             )
 
             let allFreshItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+            var allFreshItemsCopy = allFreshItems
+            guard let freshControl = ControlItemPair(
+                items: &allFreshItemsCopy,
+                hiddenControlItemWindowID: hiddenWID,
+                alwaysHiddenControlItemWindowID: alwaysHiddenWID
+            ), freshControl.canRepositionControlItems else {
+                unenactedMoveCount += 1
+                MenuBarItemManager.diagLog.warning(
+                    "applyProfileLayout: control items degraded before moving H_ctrl; abandoning the remaining apply"
+                )
+                recordBulkApplyOutcome(unenactedMoveCount: unenactedMoveCount)
+                clearProfileState(source: source, items: allFreshItems)
+                scheduleDeferredCacheRefresh()
+                return
+            }
             let screenFrames = NSScreen.screens.map(\.frame)
             // Exclude items parked off-screen from the anchor candidate set.
             // A parked item's center falls on no screen; using it as the
@@ -9050,9 +9203,8 @@ extension MenuBarItemManager {
                 liveMovableUIDs: liveMovableUIDs
             )
 
-            if let hItem = allFreshItems.first(where: { $0.uniqueIdentifier == hiddenCtrlUID }),
-               let anchor
-            {
+            if let anchor {
+                let hItem = freshControl.hidden
                 let anchorUID = switch anchor {
                 case let .rightOf(uid), let .leftOf(uid): uid
                 }
@@ -9134,6 +9286,17 @@ extension MenuBarItemManager {
                 hiddenControlItemWindowID: hiddenWID,
                 alwaysHiddenControlItemWindowID: alwaysHiddenWID
             ) {
+                canRepositionControlItems = postMoveControl.canRepositionControlItems
+                guard canRepositionControlItems else {
+                    unenactedMoveCount += 1
+                    MenuBarItemManager.diagLog.warning(
+                        "applyProfileLayout: control items degraded to provisional AX-frame correlation after moving H_ctrl; abandoning the remaining apply"
+                    )
+                    recordBulkApplyOutcome(unenactedMoveCount: unenactedMoveCount)
+                    clearProfileState(source: source, items: postMoveItems)
+                    scheduleDeferredCacheRefresh()
+                    return
+                }
                 var postMoveContext = CacheContext(
                     controlItems: postMoveControl,
                     displayID: Bridging.getActiveMenuBarDisplayID()
@@ -9187,7 +9350,10 @@ extension MenuBarItemManager {
             }
         }
 
-        if crossSectionMoves > 0 || totalSectionMismatch > 0, let ahCtrlUID {
+        if crossSectionMoves > 0 || totalSectionMismatch > 0,
+           canRepositionControlItems,
+           let ahCtrlUID
+        {
             // Moving AH_ctrl to the correct position is 1 move that
             // fixes all hidden↔alwaysHidden assignments.
             MenuBarItemManager.diagLog.debug(
@@ -9195,6 +9361,23 @@ extension MenuBarItemManager {
             )
 
             let allFreshItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+            var allFreshItemsCopy = allFreshItems
+            guard let freshControl = ControlItemPair(
+                items: &allFreshItemsCopy,
+                hiddenControlItemWindowID: hiddenWID,
+                alwaysHiddenControlItemWindowID: alwaysHiddenWID
+            ), freshControl.canRepositionControlItems,
+                let ahItem = freshControl.alwaysHidden
+            else {
+                unenactedMoveCount += 1
+                MenuBarItemManager.diagLog.warning(
+                    "applyProfileLayout: control items degraded before moving AH_ctrl; abandoning the remaining apply"
+                )
+                recordBulkApplyOutcome(unenactedMoveCount: unenactedMoveCount)
+                clearProfileState(source: source, items: allFreshItems)
+                scheduleDeferredCacheRefresh()
+                return
+            }
 
             // Place AH_ctrl so that desired hidden items are to its
             // RIGHT and desired AH items are to its LEFT (screen coords).
@@ -9208,31 +9391,27 @@ extension MenuBarItemManager {
             // If AH is empty, AH_ctrl also goes next to H_ctrl (no
             // boundary needed).
             let desiredHiddenUIDs = itemOrder["hidden"] ?? []
-            if let ahItem = allFreshItems.first(where: { $0.uniqueIdentifier == ahCtrlUID }) {
-                let dest: MoveDestination? = if let firstHiddenUID = desiredHiddenUIDs.first,
-                                                let firstHidden = allFreshItems.first(where: { $0.uniqueIdentifier == firstHiddenUID && $0.isMovable })
-                {
-                    // Place AH_ctrl to the LEFT of the rightmost hidden
-                    // item. This puts AH_ctrl between AH items and
-                    // hidden items.
-                    .leftOfItem(firstHidden)
-                } else if let hItem = allFreshItems.first(where: { $0.uniqueIdentifier == hiddenCtrlUID }) {
-                    // Hidden is empty; AH_ctrl goes next to H_ctrl.
-                    .leftOfItem(hItem)
-                } else {
-                    nil
-                }
+            let dest: MoveDestination? = if let firstHiddenUID = desiredHiddenUIDs.first,
+                                            let firstHidden = allFreshItems.first(where: { $0.uniqueIdentifier == firstHiddenUID && $0.isMovable })
+            {
+                // Place AH_ctrl to the LEFT of the rightmost hidden
+                // item. This puts AH_ctrl between AH items and
+                // hidden items.
+                .leftOfItem(firstHidden)
+            } else {
+                // Hidden is empty; AH_ctrl goes next to H_ctrl.
+                .leftOfItem(freshControl.hidden)
+            }
 
-                if let dest, !Task.isCancelled {
-                    MenuBarItemManager.diagLog.debug("Profile layout: moving AH_ctrl → \(dest.logString)")
-                    do {
-                        try await move(item: ahItem, to: dest, skipInputPause: true)
-                        movedCount += 1
-                        try? await Task.sleep(for: .milliseconds(200))
-                    } catch {
-                        unenactedMoveCount += 1
-                        MenuBarItemManager.diagLog.error("Profile layout: failed to move AH_ctrl: \(error)")
-                    }
+            if let dest, !Task.isCancelled {
+                MenuBarItemManager.diagLog.debug("Profile layout: moving AH_ctrl → \(dest.logString)")
+                do {
+                    try await move(item: ahItem, to: dest, skipInputPause: true)
+                    movedCount += 1
+                    try? await Task.sleep(for: .milliseconds(200))
+                } catch {
+                    unenactedMoveCount += 1
+                    MenuBarItemManager.diagLog.error("Profile layout: failed to move AH_ctrl: \(error)")
                 }
             }
 
@@ -9257,9 +9436,24 @@ extension MenuBarItemManager {
                 items: &freshItemsCopy,
                 hiddenControlItemWindowID: hiddenWID,
                 alwaysHiddenControlItemWindowID: alwaysHiddenWID
-            ),
-                let ahItem = freshItems.first(where: { $0.uniqueIdentifier == ahCtrlUID })
-            {
+            ) {
+                guard freshControl.canRepositionControlItems else {
+                    unenactedMoveCount += 1
+                    MenuBarItemManager.diagLog.warning(
+                        "applyProfileLayout: control items degraded to provisional AX-frame correlation after moving AH_ctrl; abandoning the remaining apply"
+                    )
+                    recordBulkApplyOutcome(unenactedMoveCount: unenactedMoveCount)
+                    clearProfileState(source: source, items: freshItems)
+                    scheduleDeferredCacheRefresh()
+                    return
+                }
+                guard let ahItem = freshControl.alwaysHidden else {
+                    unenactedMoveCount += 1
+                    recordBulkApplyOutcome(unenactedMoveCount: unenactedMoveCount)
+                    clearProfileState(source: source, items: freshItems)
+                    scheduleDeferredCacheRefresh()
+                    return
+                }
                 var verifyContext = CacheContext(
                     controlItems: freshControl,
                     displayID: Bridging.getActiveMenuBarDisplayID()
@@ -9362,7 +9556,7 @@ extension MenuBarItemManager {
                 items: &itemsCopy2,
                 hiddenControlItemWindowID: hiddenWID,
                 alwaysHiddenControlItemWindowID: alwaysHiddenWID
-            ) else {
+            ), freshControl.canRepositionControlItems else {
                 MenuBarItemManager.diagLog.error("applyProfileLayout: lost control items after phase 1")
                 // Abandoning here is itself an unenacted move: the LCS pass
                 // never ran, and without the dividers the sections read back
@@ -9432,7 +9626,8 @@ extension MenuBarItemManager {
             currentNoControls: currentNoControls,
             desiredNoControls: desiredNoControls,
             sectionMap: sectionMap,
-            unanchorableUIDs: unanchorableUIDs
+            unanchorableUIDs: unanchorableUIDs,
+            preferredMoveUIDs: Set(unmanagedUIDs)
         )
 
         guard !plannedMoves.isEmpty else {
@@ -9479,7 +9674,7 @@ extension MenuBarItemManager {
                 items: &freshItemsCopy,
                 hiddenControlItemWindowID: hiddenWID,
                 alwaysHiddenControlItemWindowID: alwaysHiddenWID
-            ) else {
+            ), freshControl.canRepositionControlItems else {
                 // Losing the dividers abandons this move and every one
                 // after it, so the whole remainder goes unenacted.
                 unenactedMoveCount += plannedMoves.count - plannedIndex
@@ -9568,7 +9763,7 @@ extension MenuBarItemManager {
         // rollback is token-guarded: if the newer apply has already
         // re-armed the state, it is left untouched.
         if Task.isCancelled, case .profile = source {
-            restoreProfileStateAfterCancelledApply(token: applyToken)
+            restoreProfileStateAfterAbortedApply(token: applyToken)
             return
         }
         // Commit profile state to disk only if we weren't cancelled
@@ -9624,14 +9819,24 @@ extension MenuBarItemManager {
     /// items' underlying status items should be triggered, given the
     /// number of consecutive `ControlItemPair` lookup failures seen so far.
     /// Extracted so the escalation threshold can be unit-tested without a
-    /// live `NSStatusItem`. The counter resets to zero both on the first
-    /// successful lookup and immediately after a rebuild is triggered, so
-    /// this fires at most once per failure streak.
+    /// live `NSStatusItem`. The episode latch resets only after a successful
+    /// lookup, so a permanent failure can trigger at most one rebuild.
     static nonisolated func shouldRebuildControlItems(
         consecutiveFailures: Int,
+        alreadyRebuilt: Bool = false,
         threshold: Int = MenuBarItemManager.controlItemRebuildThreshold
     ) -> Bool {
-        consecutiveFailures >= threshold
+        !alreadyRebuilt && consecutiveFailures >= threshold
+    }
+
+    /// Whether a persistent zero-width hidden span has enough trustworthy
+    /// observations to reset the hidden divider once for this episode.
+    static nonisolated func shouldRecoverCollapsedHiddenSection(
+        consecutiveCollapsedReadings: Int,
+        alreadyRecovered: Bool = false,
+        threshold: Int = MenuBarItemManager.hiddenSectionCollapseRecoveryThreshold
+    ) -> Bool {
+        !alreadyRecovered && consecutiveCollapsedReadings >= threshold
     }
 
     static nonisolated func baseIdentifier(forSavedIdentifier identifier: String) -> String {
@@ -9971,10 +10176,14 @@ extension MenuBarItemManager {
         lastUnfinishedBatchAt: ContinuousClock.Instant?,
         now: ContinuousClock.Instant,
         maxConsecutive: Int = 2,
-        cooldown: Duration = .seconds(60)
+        cooldown: Duration = .seconds(60),
+        hardCap: Int = 6
     ) -> Bool {
         if consecutiveUnfinishedBatches < maxConsecutive {
             return true
+        }
+        if consecutiveUnfinishedBatches >= hardCap {
+            return false
         }
         guard let lastUnfinishedBatchAt else {
             return true
@@ -10058,6 +10267,12 @@ extension MenuBarItemManager {
         // don't compute sets when an earlier guard would reject anyway.
         guard !savedSectionOrder.isEmpty else {
             MenuBarItemManager.diagLog.debug("applySavedLayout: skipping, savedSectionOrder is empty")
+            return false
+        }
+        guard controlItems.canRepositionControlItems else {
+            MenuBarItemManager.diagLog.debug(
+                "applySavedLayout: skipping for provisional AX-frame correlation"
+            )
             return false
         }
         guard !suppressNextNewLeftmostItemRelocation else {
@@ -10395,7 +10610,7 @@ extension MenuBarItemManager {
             items: &items,
             hiddenControlItemWindowID: hiddenWID,
             alwaysHiddenControlItemWindowID: alwaysHiddenWID
-        ) else {
+        ), controlItems.canRepositionControlItems else {
             MenuBarItemManager.diagLog.error("Cannot restore items: unable to find hidden control item")
             return blockedItems.count
         }
@@ -10562,6 +10777,12 @@ extension MenuBarItemManager {
     func rebalanceNotchOverflowIfNeeded(items: [MenuBarItem], controlItems: ControlItemPair) async {
         guard let appState else { return }
         guard appState.settings.advanced.enableMenuBarItemOverflow else { return }
+        guard controlItems.canRepositionControlItems else {
+            MenuBarItemManager.diagLog.debug(
+                "Notch overflow rebalance: skipping for provisional AX-frame correlation"
+            )
+            return
+        }
 
         // Never fight another mover. Each of these owns the layout while it
         // runs and re-drives the cache when it finishes, so the next tick
@@ -10576,6 +10797,25 @@ extension MenuBarItemManager {
         // long as the user is interacting with it. Ejecting it would cancel
         // the reveal the user just asked for.
         guard temporarilyShownItemContexts.isEmpty else { return }
+
+        // If the bar just refused synthetic drags in a profile apply, the
+        // rebalance's own drags will fare no better — and each eject is a
+        // full move() with its own cursor hijack. Without this gate the
+        // rebalance fires on the very next cache tick after a failed apply,
+        // trying 10–17 items one by one, each failing the same way, for tens
+        // of seconds of dead pointer (#881, #907). The per-item failure-ledger
+        // backoff cannot help because the rebalance's items are typically
+        // different from the ones that failed in the batch.
+        guard Self.automaticBulkApplyPermitted(
+            consecutiveUnfinishedBatches: consecutiveUnfinishedBulkApplies,
+            lastUnfinishedBatchAt: unfinishedMoveBatchObservedAt,
+            now: .now
+        ) else {
+            MenuBarItemManager.diagLog.debug(
+                "Notch overflow rebalance: skipping, \(consecutiveUnfinishedBulkApplies) consecutive bulk applies ended with unenacted moves"
+            )
+            return
+        }
 
         let activeMenuBarScreen = NSScreen.screenWithActiveMenuBar
         guard LayoutSolver.shouldManageNotchOverflow(
