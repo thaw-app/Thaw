@@ -1961,6 +1961,52 @@ final class MenuBarItemManager {
 // MARK: - Cache Gate
 
 extension MenuBarItemManager {
+    enum LayoutResetTarget: Sendable {
+        case visible
+        case hidden
+        case alwaysHidden
+
+        nonisolated func contains(
+            itemBounds: CGRect,
+            hiddenBounds: CGRect,
+            alwaysHiddenBounds: CGRect?
+        ) -> Bool {
+            switch self {
+            case .visible:
+                return itemBounds.minX >= hiddenBounds.maxX
+            case .hidden:
+                guard itemBounds.maxX <= hiddenBounds.minX else { return false }
+                guard let alwaysHiddenBounds else { return true }
+                return itemBounds.minX >= alwaysHiddenBounds.maxX
+            case .alwaysHidden:
+                guard let alwaysHiddenBounds else { return false }
+                return itemBounds.maxX <= alwaysHiddenBounds.minX
+            }
+        }
+
+        var logString: String {
+            switch self {
+            case .visible: "visible"
+            case .hidden: "hidden"
+            case .alwaysHidden: "always-hidden"
+            }
+        }
+
+        nonisolated var movesAllCandidatesInFirstPass: Bool {
+            switch self {
+            case .hidden: true
+            case .visible, .alwaysHidden: false
+            }
+        }
+
+        nonisolated var requiresAlwaysHiddenDivider: Bool {
+            switch self {
+            case .alwaysHidden: true
+            case .visible, .hidden: false
+            }
+        }
+    }
+
     /// Serializes cache operations to prevent races between concurrent
     /// `cacheItemsRegardless` calls. When a relocation move is in flight,
     /// a concurrent call could snapshot item positions before the move
@@ -7827,12 +7873,26 @@ extension MenuBarItemManager {
     ///
     /// - Returns: The number of items that failed to move.
     func resetLayoutToFreshState() async throws -> Int {
+        try await resetLayout(to: .hidden)
+    }
+
+    /// Moves every movable, hideable item except the Thaw icon to Visible.
+    func resetLayoutToVisible() async throws -> Int {
+        try await resetLayout(to: .visible)
+    }
+
+    /// Moves every movable, hideable item except the Thaw icon to Always Hidden.
+    func resetLayoutToAlwaysHidden() async throws -> Int {
+        try await resetLayout(to: .alwaysHidden)
+    }
+
+    private func resetLayout(to target: LayoutResetTarget) async throws -> Int {
         guard !isResettingLayout else {
-            MenuBarItemManager.diagLog.warning("resetLayoutToFreshState: already in progress, rejecting concurrent reset")
+            MenuBarItemManager.diagLog.warning("resetLayout: already in progress, rejecting concurrent reset")
             throw LayoutResetError.alreadyInProgress
         }
 
-        MenuBarItemManager.diagLog.info("Resetting menu bar layout to fresh state")
+        MenuBarItemManager.diagLog.info("Resetting menu bar layout to \(target.logString)")
         // A user-initiated reset is authoritative: end the startup settling period
         // immediately so that the post-reset cache is not blocked from running restore
         // and saveSectionOrder by an in-flight settling task.
@@ -7878,8 +7938,17 @@ extension MenuBarItemManager {
                     hiddenControlItemWindowID: hiddenWID,
                     alwaysHiddenControlItemWindowID: alwaysHiddenWID
                 ), retryControlItems.canRepositionControlItems {
+                    guard !target.requiresAlwaysHiddenDivider || retryControlItems.alwaysHidden != nil else {
+                        throw LayoutResetError.missingControlItems
+                    }
                     MenuBarItemManager.diagLog.info("Recovered hidden section control item after re-enabling always-hidden section")
-                    return try await resetLayoutWithControlItems(controlItems: retryControlItems, items: items)
+                    prepareLayoutStateForReset()
+                    await enforceControlItemOrder(controlItems: retryControlItems)
+                    return try await resetLayoutWithControlItems(
+                        controlItems: retryControlItems,
+                        items: items,
+                        target: target
+                    )
                 }
             }
 
@@ -7892,9 +7961,27 @@ extension MenuBarItemManager {
             )
             throw LayoutResetError.missingControlItems
         }
+        guard !target.requiresAlwaysHiddenDivider || controlItems.alwaysHidden != nil else {
+            MenuBarItemManager.diagLog.error(
+                "Layout reset aborted: always-hidden section divider is unavailable"
+            )
+            throw LayoutResetError.missingControlItems
+        }
 
         // Mutate authoritative layout state only after divider identity is
         // authoritative; a provisional lookup must leave the saved layout intact.
+        prepareLayoutStateForReset()
+
+        await enforceControlItemOrder(controlItems: controlItems)
+
+        return try await resetLayoutWithControlItems(
+            controlItems: controlItems,
+            items: items,
+            target: target
+        )
+    }
+
+    private func prepareLayoutStateForReset() {
         ControlItemDefaults[.preferredPosition, ControlItem.Identifier.visible.rawValue] = 0
         ControlItemDefaults.resetChevronPositions()
 
@@ -7919,13 +8006,13 @@ extension MenuBarItemManager {
         Defaults.removeObject(forKey: .newItemsSection)
         Defaults.removeObject(forKey: .newItemsPlacementData)
         suppressNextNewLeftmostItemRelocation = true
-
-        await enforceControlItemOrder(controlItems: controlItems)
-
-        return try await resetLayoutWithControlItems(controlItems: controlItems, items: items)
     }
 
-    private func resetLayoutWithControlItems(controlItems: ControlItemPair, items: [MenuBarItem]) async throws -> Int {
+    private func resetLayoutWithControlItems(
+        controlItems: ControlItemPair,
+        items: [MenuBarItem],
+        target: LayoutResetTarget
+    ) async throws -> Int {
         guard let appState else {
             throw LayoutResetError.missingAppState
         }
@@ -7937,7 +8024,42 @@ extension MenuBarItemManager {
             appState.hidEventManager.startAll()
         }
 
-        func movePass(_ items: [MenuBarItem], anchor: MenuBarItem) async -> Int {
+        func destination(for controls: ControlItemPair) -> MoveDestination? {
+            switch target {
+            case .visible:
+                .rightOfItem(controls.hidden)
+            case .hidden:
+                .leftOfItem(controls.hidden)
+            case .alwaysHidden:
+                controls.alwaysHidden.map(MoveDestination.leftOfItem)
+            }
+        }
+
+        func itemsOutsideTarget(_ items: [MenuBarItem], controls: ControlItemPair) -> [MenuBarItem] {
+            let hiddenBounds = Bridging.getWindowBounds(for: controls.hidden.windowID)
+                ?? controls.hidden.bounds
+            let alwaysHiddenBounds = controls.alwaysHidden.flatMap {
+                Bridging.getWindowBounds(for: $0.windowID) ?? $0.bounds
+            }
+            return items.filter { item in
+                guard item.isMovable, item.canBeHidden, !item.isControlItem,
+                      item.tag != .visibleControlItem
+                else {
+                    return false
+                }
+                let itemBounds = Bridging.getWindowBounds(for: item.windowID) ?? item.bounds
+                return !target.contains(
+                    itemBounds: itemBounds,
+                    hiddenBounds: hiddenBounds,
+                    alwaysHiddenBounds: alwaysHiddenBounds
+                )
+            }
+        }
+
+        func movePass(_ items: [MenuBarItem], controls: ControlItemPair) async -> Int {
+            guard let destination = destination(for: controls) else {
+                return items.count
+            }
             var failed = 0
             for item in items {
                 if item.tag == .visibleControlItem {
@@ -7951,7 +8073,7 @@ extension MenuBarItemManager {
                 do {
                     try await move(
                         item: item,
-                        to: .leftOfItem(anchor),
+                        to: destination,
                         skipInputPause: true,
                         watchdogTimeout: Self.layoutWatchdogTimeout
                     )
@@ -7963,16 +8085,15 @@ extension MenuBarItemManager {
             return failed
         }
 
-        _ = await movePass(items, anchor: controlItems.hidden)
+        let firstPassItems = target.movesAllCandidatesInFirstPass
+            ? items
+            : itemsOutsideTarget(items, controls: controlItems)
+        _ = await movePass(firstPassItems, controls: controlItems)
 
         // Give macOS a moment to settle after the first pass.
         try? await Task.sleep(for: .milliseconds(200))
 
-        // Re-fetch and retry only items that are NOT yet in the hidden
-        // section. This covers items still in the visible section (to the
-        // right of the hidden control item) as well as items stuck in the
-        // always-hidden section (to the left of the always-hidden control
-        // item) when that section is enabled.
+        // Re-fetch and retry only items that are not yet in the target section.
         var refreshedItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
         var failedMoves = 0
         let refreshHiddenWID: CGWindowID? = appState.menuBarManager
@@ -7981,41 +8102,25 @@ extension MenuBarItemManager {
         let refreshAlwaysHiddenWID: CGWindowID? = appState.menuBarManager
             .controlItem(withName: .alwaysHidden)?.window
             .flatMap { CGWindowID(exactly: $0.windowNumber) }
-        if let refreshedControls = ControlItemPair(
+        guard let refreshedControls = ControlItemPair(
             items: &refreshedItems,
             hiddenControlItemWindowID: refreshHiddenWID,
             alwaysHiddenControlItemWindowID: refreshAlwaysHiddenWID
-        ), refreshedControls.canRepositionControlItems {
-            let hiddenControlBounds = Bridging.getWindowBounds(for: refreshedControls.hidden.windowID)
-                ?? refreshedControls.hidden.bounds
-            let alwaysHiddenControlBounds = refreshedControls.alwaysHidden.flatMap {
-                Bridging.getWindowBounds(for: $0.windowID) ?? $0.bounds
-            }
+        ), refreshedControls.canRepositionControlItems,
+            !target.requiresAlwaysHiddenDivider || refreshedControls.alwaysHidden != nil
+        else {
+            MenuBarItemManager.diagLog.error(
+                "Layout reset aborted before pass 2: authoritative section dividers are unavailable"
+            )
+            throw LayoutResetError.missingControlItems
+        }
 
-            let notYetInHidden = refreshedItems.filter { item in
-                guard item.isMovable, item.canBeHidden, !item.isControlItem,
-                      item.tag != .visibleControlItem
-                else {
-                    return false
-                }
-                let bounds = Bridging.getWindowBounds(for: item.windowID) ?? item.bounds
-
-                // Still in the visible section (to the right of hidden control item).
-                if bounds.minX >= hiddenControlBounds.maxX {
-                    return true
-                }
-                // Still in the always-hidden section (to the left of always-hidden control item).
-                if let ahBounds = alwaysHiddenControlBounds,
-                   bounds.maxX <= ahBounds.minX
-                {
-                    return true
-                }
-                return false
-            }
-            if !notYetInHidden.isEmpty {
-                MenuBarItemManager.diagLog.debug("Layout reset pass 2: \(notYetInHidden.count) items not yet in hidden section")
-                failedMoves = await movePass(notYetInHidden, anchor: refreshedControls.hidden)
-            }
+        let notYetInTarget = itemsOutsideTarget(refreshedItems, controls: refreshedControls)
+        if !notYetInTarget.isEmpty {
+            MenuBarItemManager.diagLog.debug(
+                "Layout reset pass 2: \(notYetInTarget.count) items not yet in \(target.logString)"
+            )
+            failedMoves = await movePass(notYetInTarget, controls: refreshedControls)
         }
 
         cacheActor.clearCachedItemWindowIDs()
@@ -8037,7 +8142,7 @@ extension MenuBarItemManager {
                 try? await Task.sleep(for: MenuBarItemManager.layoutWatchdogTimeout)
                 guard let self, self.backgroundCacheWaiters[token] != nil else { return }
                 MenuBarItemManager.diagLog.warning(
-                    "resetLayoutToFreshState: background cache wait timed out after \(MenuBarItemManager.layoutWatchdogTimeout); resuming via watchdog"
+                    "resetLayout: background cache wait timed out after \(MenuBarItemManager.layoutWatchdogTimeout); resuming via watchdog"
                 )
                 self.resumeBackgroundCacheWaiter(token)
             }
@@ -9352,7 +9457,7 @@ extension MenuBarItemManager {
 
         if crossSectionMoves > 0 || totalSectionMismatch > 0,
            canRepositionControlItems,
-           let ahCtrlUID
+           ahCtrlUID != nil
         {
             // Moving AH_ctrl to the correct position is 1 move that
             // fixes all hidden↔alwaysHidden assignments.
