@@ -388,10 +388,12 @@ nonisolated enum LayoutReconciler {
         // names, it does not: every slot clamps to the same section start,
         // counting insertions changes nothing, and each item is inserted
         // ahead of the last — reversing the very group order this pass
-        // exists to preserve. Holding the previous landing site and
-        // requiring the next to follow it makes the guarantee independent
-        // of whether the clamp fired.
-        var lastRightOfAnchorIndex = [String: Int]()
+        // exists to preserve. Holding the previously placed *uid* and
+        // requiring the next to land after its current position makes the
+        // guarantee independent of whether the clamp fired — an index
+        // recorded at insert time goes stale as soon as a later leftOf
+        // insertion at or before it shifts the placed item right.
+        var lastRightOfAnchorUID = [String: String]()
         var rightOfAnchorInserted = [String: Int]()
         for uid in unmanagedUIDs {
             if case let .newItemAnchored(section, anchorUID, relation) = placements[uid] {
@@ -429,13 +431,16 @@ nonisolated enum LayoutReconciler {
                     // same section-default position a missing anchor uses.
                     insertIdx = sectionEnd
                 }
-                if placedRightOfAnchor, let previous = lastRightOfAnchorIndex[anchorUID] {
-                    insertIdx = min(max(insertIdx, previous + 1), sectionEnd)
+                if placedRightOfAnchor,
+                   let previousUID = lastRightOfAnchorUID[anchorUID],
+                   let previousIdx = desiredFiltered.firstIndex(of: previousUID)
+                {
+                    insertIdx = min(max(insertIdx, previousIdx + 1), sectionEnd)
                 }
                 desiredFiltered.insert(uid, at: insertIdx)
                 if placedRightOfAnchor {
                     rightOfAnchorInserted[anchorUID, default: 0] += 1
-                    lastRightOfAnchorIndex[anchorUID] = insertIdx
+                    lastRightOfAnchorUID[anchorUID] = uid
                 }
                 sectionMap[uid] = sectionKeyString(for: section)
             }

@@ -669,4 +669,28 @@ struct LayoutReconcilerUnmanagedPlacementTests {
         #expect(a != nil && b != nil)
         #expect(a! < b!, "newA was listed first in unmanagedUIDs, so it must stay left of newB")
     }
+
+    /// A leftOf insertion at the clamped section start shifts every item
+    /// already placed there one slot right. A landing site recorded as an
+    /// *index* goes stale at that moment: the next rightOf item's floor is
+    /// one slot low and it lands ahead of its predecessor, reversing the
+    /// group. The floor must follow the placed item, not its old index.
+    @Test("rightOf items keep their order when a leftOf insertion shifts the clamped section start")
+    func rightOfAnchorKeepsOrderAcrossInterleavedLeftOfInsertion() {
+        let anchor = "vis1"
+        let result = apply(
+            placements: [
+                "newA": .newItemAnchored(section: .alwaysHidden, anchorUID: anchor, relation: .rightOfAnchor),
+                "newB": .newItemAnchored(section: .alwaysHidden, anchorUID: anchor, relation: .leftOfAnchor),
+                "newC": .newItemAnchored(section: .alwaysHidden, anchorUID: anchor, relation: .rightOfAnchor),
+            ],
+            unmanagedUIDs: ["newA", "newB", "newC"],
+            desiredFiltered: [Self.chevron, anchor, Self.hiddenControl, Self.alwaysHiddenControl]
+        )
+
+        let a = result.desiredFiltered.firstIndex(of: "newA")
+        let c = result.desiredFiltered.firstIndex(of: "newC")
+        #expect(a != nil && c != nil)
+        #expect(a! < c!, "newA was listed first in unmanagedUIDs, so it must stay left of newC")
+    }
 }
