@@ -184,40 +184,32 @@ extension DisplaySettingsManager {
         // flap window). One second coalesces a single docking event into
         // one apply.
         //
-        // First swift-async-algorithms adoption site: a NotificationCenter
-        // observer feeds an AsyncStream that `.debounce(for:)` coalesces,
-        // replacing Combine's `.debounce(for:scheduler:)`. Behaviour is
-        // identical — the two per-event skips are `continue` (skip this
-        // notification), not loop exit.
-        let (screenParameterEvents, screenParameterContinuation) = AsyncStream<Void>.makeStream()
+        // `debouncedNotificationTask` registers the observer before it
+        // returns, so a notification posted during task startup cannot slip
+        // past, and the task's defer removes it — the non-Sendable observer
+        // token stays off the class and the nonisolated deinit only needs
+        // to cancel the task.
+        //
         // A repeated setup must not leave the previous task — and the
         // NotificationCenter observer its defer owns — running.
         screenParametersTask?.cancel()
-        screenParametersTask = Task { @MainActor [weak self] in
-            // The observer is owned by this task: added when it starts and
-            // removed when it ends (cancellation ends the for-await loop, which
-            // runs the defer). This keeps the non-Sendable observer token off
-            // the class so the nonisolated deinit only needs to cancel the task.
-            let observer = NotificationCenter.default.addObserver(
-                forName: NSApplication.didChangeScreenParametersNotification,
-                object: nil,
-                queue: .main
-            ) { _ in screenParameterContinuation.yield(()) }
-            defer { NotificationCenter.default.removeObserver(observer) }
-            for await _ in screenParameterEvents.debounce(for: .seconds(1)) {
-                guard let self else { break }
-                diagLog.info("Screen parameters changed — \(NSScreen.screens.count) screen(s) connected")
-                captureCurrentlyConnectedDisplays()
-                let currentUUID = Bridging.getActiveMenuBarDisplayUUID()
-                if Self.shouldSkipSpacingApply(
-                    currentActiveDisplayUUID: currentUUID,
-                    lastAppliedActiveDisplayUUID: lastAppliedActiveDisplayUUID
-                ) {
-                    diagLog.info("Active menu bar display unchanged (\(currentUUID ?? "nil")); skipping spacing apply")
-                    continue
-                }
-                applyActiveDisplaySpacing(reason: "screenParametersChanged")
+        screenParametersTask = debouncedNotificationTask(
+            center: .default,
+            name: NSApplication.didChangeScreenParametersNotification,
+            interval: .seconds(1)
+        ) { [weak self] in
+            guard let self else { return }
+            diagLog.info("Screen parameters changed — \(NSScreen.screens.count) screen(s) connected")
+            captureCurrentlyConnectedDisplays()
+            let currentUUID = Bridging.getActiveMenuBarDisplayUUID()
+            if Self.shouldSkipSpacingApply(
+                currentActiveDisplayUUID: currentUUID,
+                lastAppliedActiveDisplayUUID: lastAppliedActiveDisplayUUID
+            ) {
+                diagLog.info("Active menu bar display unchanged (\(currentUUID ?? "nil")); skipping spacing apply")
+                return
             }
+            applyActiveDisplaySpacing(reason: "screenParametersChanged")
         }
 
         // Re-deriving the active display's spacing whenever per-display

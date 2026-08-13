@@ -8684,6 +8684,19 @@ extension MenuBarItemManager {
                 )
                 return
             }
+            // The dispatch sites check this too, but every automatic caller
+            // funnels through here, so enforcing it at the funnel keeps a
+            // future dispatch site from bypassing the breaker unknowingly.
+            guard Self.automaticBulkApplyPermitted(
+                consecutiveUnfinishedBatches: consecutiveUnfinishedBulkApplies,
+                lastUnfinishedBatchAt: unfinishedMoveBatchObservedAt,
+                now: .now
+            ) else {
+                MenuBarItemManager.diagLog.warning(
+                    "Profile layout: skipping automatic apply; \(consecutiveUnfinishedBulkApplies) consecutive bulk applies ended with unenacted moves; cooling down before another attempt"
+                )
+                return
+            }
             await waitForBulkApplyIdleWindow()
         }
 
