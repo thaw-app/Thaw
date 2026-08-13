@@ -11,12 +11,15 @@ import Testing
 
 @Suite("Auto-rehide policy")
 struct AutoRehidePolicyTests {
-    @Test("Smart focus changes wait out the remaining reveal grace period")
-    func smartFocusChangeWaitsOutRevealGrace() {
+    @Test(
+        "Focus changes wait out the remaining reveal grace period",
+        arguments: [RehideStrategy.smart, .focusedApp]
+    )
+    func focusChangeWaitsOutRevealGrace(strategy: RehideStrategy) {
         let now = ContinuousClock.now
         let shownAt = now - .milliseconds(100)
 
-        #expect(MenuBarManager.smartRehideDelay(since: shownAt, now: now) == .milliseconds(400))
+        #expect(MenuBarManager.rehideDelay(for: strategy, since: shownAt, now: now) == .milliseconds(400))
     }
 
     @Test("Smart focus changes retain their focus-settling delay after grace")
@@ -24,8 +27,17 @@ struct AutoRehidePolicyTests {
         let now = ContinuousClock.now
         let shownAt = now - .seconds(2)
 
-        #expect(MenuBarManager.smartRehideDelay(since: shownAt, now: now) == .milliseconds(250))
-        #expect(MenuBarManager.smartRehideDelay(since: nil, now: now) == .milliseconds(250))
+        #expect(MenuBarManager.rehideDelay(for: .smart, since: shownAt, now: now) == .milliseconds(250))
+        #expect(MenuBarManager.rehideDelay(for: .smart, since: nil, now: now) == .milliseconds(250))
+    }
+
+    @Test("Focused-app changes retain their shorter settling delay after grace")
+    func focusedAppChangeRetainsSettlingDelay() {
+        let now = ContinuousClock.now
+        let shownAt = now - .seconds(2)
+
+        #expect(MenuBarManager.rehideDelay(for: .focusedApp, since: shownAt, now: now) == .milliseconds(100))
+        #expect(MenuBarManager.rehideDelay(for: .focusedApp, since: nil, now: now) == .milliseconds(100))
     }
 
     @Test("External app activation triggers auto-rehide")

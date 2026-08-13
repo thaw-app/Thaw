@@ -392,36 +392,23 @@ final class MenuBarSection {
         }
 
         switch appState.settings.general.rehideStrategy {
-        case .smart:
-            // Smart rehide strategy uses the rehide interval as a fallback
-            // to the click-based rehide checks. Task.sleep replaces Timer so
-            // cancellation is automatic when the task is reassigned or cancelled.
+        case .smart, .timed:
+            // Smart uses the rehide interval as a fallback to the click-based
+            // rehide checks; timed uses it as the rule. The interval itself is
+            // never gated, but the hide at its end is: hiding under a cursor
+            // that is still over the bar or the Thaw Bar is the #924 bug, and
+            // hiding while a menu bar item's menu is open would yank the menu
+            // out from under the user. Both defer by restarting the checks.
+            // Task.sleep replaces Timer so cancellation is automatic when the
+            // task is reassigned or cancelled.
             let interval = appState.settings.general.rehideInterval
             rehideTask = Task { [weak self, weak appState] in
                 try? await Task.sleep(for: .seconds(interval))
                 guard !Task.isCancelled, let self, let appState else { return }
-                // Don't rehide while the mouse is inside the menu bar or IceBar.
                 if self.isMouseInsideActiveArea() {
                     self.startRehideChecks()
                     return
                 }
-                // Check if any menu bar item has a menu open before hiding.
-                if await appState.itemManager.isAnyMenuBarItemMenuOpen() {
-                    // Restart the task to check again later.
-                    self.startRehideChecks()
-                    return
-                }
-                self.hide()
-            }
-        case .timed:
-            let interval = appState.settings.general.rehideInterval
-            rehideTask = Task { [weak self, weak appState] in
-                try? await Task.sleep(for: .seconds(interval))
-                guard !Task.isCancelled, let self, let appState else { return }
-                // Don't rehide while a menu bar item menu is open; the hide
-                // would yank it out from under the user. The timer itself is
-                // not gated — the interval must be respected — but the actual
-                // hide defers until the menu closes.
                 if await appState.itemManager.isAnyMenuBarItemMenuOpen() {
                     self.startRehideChecks()
                     return

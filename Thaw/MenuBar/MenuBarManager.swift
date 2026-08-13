@@ -222,10 +222,9 @@ final class MenuBarManager {
                 return
             }
 
-            switch appState.settings.general.rehideStrategy {
-            case .focusedApp:
-                hideVisibleSections()
-            case .smart:
+            let strategy = appState.settings.general.rehideStrategy
+            switch strategy {
+            case .focusedApp, .smart:
                 guard
                     let screen = appState.hidEventManager.bestScreen(appState: appState),
                     !appState.hidEventManager.isMouseInsideMenuBar(appState: appState, screen: screen),
@@ -237,12 +236,12 @@ final class MenuBarManager {
                     // Wait for focus to settle and carry an activation
                     // inside the reveal grace period to its end instead
                     // of dropping that activation permanently.
-                    let delay = Self.smartRehideDelay(since: self?.lastShowTimestamp)
+                    let delay = Self.rehideDelay(for: strategy, since: self?.lastShowTimestamp)
                     guard await (try? Task.sleep(for: delay)) != nil else { return }
 
                     guard let self else { return }
-                    guard appState.settings.general.rehideStrategy == .smart else { return }
-                    if await appState.itemManager.isAnyMenuBarItemMenuOpen() {
+                    guard appState.settings.general.rehideStrategy == strategy else { return }
+                    if strategy == .smart, await appState.itemManager.isAnyMenuBarItemMenuOpen() {
                         return
                     }
 
@@ -918,13 +917,18 @@ final class MenuBarManager {
         lastShowTimestamp = .now
     }
 
-    /// Delay for smart focus-change rehide. A focus change during the reveal
+    /// Delay for a focus-change rehide. A focus change during the reveal
     /// grace period is deferred to the end of that period rather than lost.
-    static nonisolated func smartRehideDelay(
+    /// Smart waits longer for focus to settle than focusedApp because it
+    /// re-checks state (open menus) that a fresh activation can still churn.
+    static nonisolated func rehideDelay(
+        for strategy: RehideStrategy,
         since lastShow: ContinuousClock.Instant?,
         now: ContinuousClock.Instant = .now
     ) -> Duration {
-        let focusSettleDelay = Duration.milliseconds(250)
+        let focusSettleDelay: Duration = strategy == .smart
+            ? .milliseconds(250)
+            : .milliseconds(100)
         guard let lastShow else { return focusSettleDelay }
         let remainingGrace = Duration.milliseconds(500) - lastShow.duration(to: now)
         return max(focusSettleDelay, remainingGrace)
