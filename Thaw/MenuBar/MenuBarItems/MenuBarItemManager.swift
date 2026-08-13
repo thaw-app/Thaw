@@ -8080,6 +8080,9 @@ extension MenuBarItemManager {
         persistPinnedBundleIDs()
         persistPendingRelocations()
         persistSavedSectionOrder()
+        // A reset starts from no verdicts: surviving retirements would keep
+        // pruning identifiers out of a layout the user just asked to rebuild.
+        staleIdentifierLedger.removeAll()
         temporarilyShownItemContexts.removeAll()
 
         newItemsPlacement = NewItemsPlacement.defaultValue
@@ -8975,9 +8978,12 @@ extension MenuBarItemManager {
             // Retired identifiers are dropped before the lookup, not after:
             // the saved position is an *index* into these arrays, so a ghost
             // ahead of a live entry pushes a returning item one slot right of
-            // where the user left it, every time, forever.
+            // where the user left it, every time, forever. The same pruned
+            // order must feed the application below — a saved index only
+            // means anything in the space it was computed in.
+            let prunedSavedOrder = staleIdentifierLedger.pruning(savedSectionOrder)
             let desiredForUnmanaged = DesiredLayout.fromSavedSectionOrder(
-                staleIdentifierLedger.pruning(savedSectionOrder),
+                prunedSavedOrder,
                 newItemsPlacement: newItemsPlacement
             )
             let placements = LayoutReconciler.unmanagedPlacementPlan(
@@ -9013,7 +9019,7 @@ extension MenuBarItemManager {
                 unmanagedUIDs: unmanagedUIDs,
                 desiredFiltered: desiredFiltered,
                 sectionMap: sectionMap,
-                savedSectionOrder: savedSectionOrder,
+                savedSectionOrder: prunedSavedOrder,
                 controlUIDs: ControlUIDs(
                     visible: visibleCtrlUID,
                     hidden: hiddenCtrlUID,

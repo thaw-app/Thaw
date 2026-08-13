@@ -36,7 +36,8 @@ enum LayoutResetCommand {
     ///
     /// Mirrors what `resetLayoutToFreshState()` clears in memory before
     /// persisting: the saved order, the "seen this item before" set, the
-    /// pinning sets, and the in-flight relocation bookkeeping. Removed
+    /// pinning sets, the in-flight relocation bookkeeping, the new-items
+    /// placement, and the stale-identifier retirement verdicts. Removed
     /// rather than zeroed so the loaders fall back to their own defaults.
     static let layoutDefaultsKeys = [
         "MenuBarItemManager.savedSectionOrder",
@@ -45,6 +46,10 @@ enum LayoutResetCommand {
         "MenuBarItemManager.pinnedAlwaysHiddenBundleIDs",
         "MenuBarItemManager.pendingRelocations",
         "MenuBarItemManager.pendingReturnDestinations",
+        "NewItemsSection",
+        "NewItemsPlacementData",
+        "StaleIdentifierMissCounts",
+        "StaleIdentifierMissCountsBuild",
     ]
 
     /// Whether the given process arguments select this command.
