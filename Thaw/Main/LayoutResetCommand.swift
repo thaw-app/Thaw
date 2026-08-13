@@ -39,17 +39,11 @@ enum LayoutResetCommand {
     /// pinning sets, the in-flight relocation bookkeeping, the new-items
     /// placement, and the stale-identifier retirement verdicts. Removed
     /// rather than zeroed so the loaders fall back to their own defaults.
-    static let layoutDefaultsKeys = [
-        "MenuBarItemManager.savedSectionOrder",
-        "MenuBarItemManager.knownItemIdentifiers",
-        "MenuBarItemManager.pinnedHiddenBundleIDs",
-        "MenuBarItemManager.pinnedAlwaysHiddenBundleIDs",
-        "MenuBarItemManager.pendingRelocations",
-        "MenuBarItemManager.pendingReturnDestinations",
-        "NewItemsSection",
-        "NewItemsPlacementData",
-        "StaleIdentifierMissCounts",
-        "StaleIdentifierMissCountsBuild",
+    static let layoutDefaultsKeys = MenuBarItemManager.LayoutStateKey.all + [
+        Defaults.Key.newItemsSection.rawValue,
+        Defaults.Key.newItemsPlacementData.rawValue,
+        Defaults.Key.staleIdentifierMissCounts.rawValue,
+        Defaults.Key.staleIdentifierMissCountsBuild.rawValue,
     ]
 
     /// Whether the given process arguments select this command.

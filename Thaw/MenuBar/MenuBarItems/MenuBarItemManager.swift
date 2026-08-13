@@ -620,6 +620,31 @@ final class MenuBarItemManager {
         )
     }
 
+    /// The instance reading of the bulk-apply circuit breaker: feeds the
+    /// session streak and latch into the pure gate and logs a refusal
+    /// under the caller's name.
+    ///
+    /// - Parameter quietly: `true` logs the refusal at debug instead of
+    ///   warning, for a caller that retries on every cache tick and would
+    ///   otherwise flood the log with an expected refusal.
+    private func isAutomaticBulkApplyPermitted(caller: String, quietly: Bool = false) -> Bool {
+        if Self.automaticBulkApplyPermitted(
+            consecutiveUnfinishedBatches: consecutiveUnfinishedBulkApplies,
+            lastUnfinishedBatchAt: unfinishedMoveBatchObservedAt,
+            now: .now
+        ) {
+            return true
+        }
+        let message = "\(caller): skipping, \(consecutiveUnfinishedBulkApplies) consecutive bulk applies " +
+            "ended with unenacted moves; cooling down before another attempt"
+        if quietly {
+            MenuBarItemManager.diagLog.debug(message)
+        } else {
+            MenuBarItemManager.diagLog.warning(message)
+        }
+        return false
+    }
+
     /// How long a failed item stays excluded from bulk-apply moves.
     ///
     /// Kept as a forwarding shim so callers and tests do not have to reach
@@ -715,7 +740,7 @@ final class MenuBarItemManager {
         guard runLength >= 1, recentTargetMinX.count > runLength else {
             return false
         }
-        let deltas = zip(recentTargetMinX, recentTargetMinX.dropFirst()).map { $1 - $0 }
+        let deltas = recentTargetMinX.adjacentPairs().map { $1 - $0 }
         let run = deltas.suffix(runLength)
         guard run.count == runLength else {
             return false
@@ -825,9 +850,31 @@ final class MenuBarItemManager {
     /// Placement preference for newly detected menu bar items.
     private(set) var newItemsPlacement = NewItemsPlacement.defaultValue
 
+    /// One home for the defaults keys holding the manager's persisted
+    /// layout state, shared with ProfileManager's capture path and the
+    /// `--reset-layout` escape hatch so the three can never drift apart.
+    nonisolated enum LayoutStateKey {
+        static let savedSectionOrder = "MenuBarItemManager.savedSectionOrder"
+        static let knownItemIdentifiers = "MenuBarItemManager.knownItemIdentifiers"
+        static let pinnedHiddenBundleIDs = "MenuBarItemManager.pinnedHiddenBundleIDs"
+        static let pinnedAlwaysHiddenBundleIDs = "MenuBarItemManager.pinnedAlwaysHiddenBundleIDs"
+        static let pendingRelocations = "MenuBarItemManager.pendingRelocations"
+        static let pendingReturnDestinations = "MenuBarItemManager.pendingReturnDestinations"
+
+        /// Every key above, in declaration order.
+        static let all = [
+            savedSectionOrder,
+            knownItemIdentifiers,
+            pinnedHiddenBundleIDs,
+            pinnedAlwaysHiddenBundleIDs,
+            pendingRelocations,
+            pendingReturnDestinations,
+        ]
+    }
+
     /// Loads persisted known item identifiers.
     private func loadKnownItemIdentifiers() {
-        let key = "MenuBarItemManager.knownItemIdentifiers"
+        let key = LayoutStateKey.knownItemIdentifiers
         let defaults = Defaults.store
         if let stored = defaults.array(forKey: key) as? [String] {
             knownItemIdentifiers = Set(stored)
@@ -836,7 +883,7 @@ final class MenuBarItemManager {
 
     /// Persists known item identifiers.
     private func persistKnownItemIdentifiers() {
-        let key = "MenuBarItemManager.knownItemIdentifiers"
+        let key = LayoutStateKey.knownItemIdentifiers
         let defaults = Defaults.store
         defaults.set(Array(knownItemIdentifiers), forKey: key)
     }
@@ -844,10 +891,10 @@ final class MenuBarItemManager {
     /// Loads persisted pinned bundle identifiers.
     private func loadPinnedBundleIDs() {
         let defaults = Defaults.store
-        if let hidden = defaults.array(forKey: "MenuBarItemManager.pinnedHiddenBundleIDs") as? [String] {
+        if let hidden = defaults.array(forKey: LayoutStateKey.pinnedHiddenBundleIDs) as? [String] {
             pinnedHiddenBundleIDs = Set(hidden)
         }
-        if let alwaysHidden = defaults.array(forKey: "MenuBarItemManager.pinnedAlwaysHiddenBundleIDs") as? [String] {
+        if let alwaysHidden = defaults.array(forKey: LayoutStateKey.pinnedAlwaysHiddenBundleIDs) as? [String] {
             pinnedAlwaysHiddenBundleIDs = Set(alwaysHidden)
         }
     }
@@ -855,18 +902,18 @@ final class MenuBarItemManager {
     /// Persists pinned bundle identifiers.
     private func persistPinnedBundleIDs() {
         let defaults = Defaults.store
-        defaults.set(Array(pinnedHiddenBundleIDs), forKey: "MenuBarItemManager.pinnedHiddenBundleIDs")
-        defaults.set(Array(pinnedAlwaysHiddenBundleIDs), forKey: "MenuBarItemManager.pinnedAlwaysHiddenBundleIDs")
+        defaults.set(Array(pinnedHiddenBundleIDs), forKey: LayoutStateKey.pinnedHiddenBundleIDs)
+        defaults.set(Array(pinnedAlwaysHiddenBundleIDs), forKey: LayoutStateKey.pinnedAlwaysHiddenBundleIDs)
     }
 
     /// Loads persisted pending relocations for temporarily shown items
     /// whose apps quit before they could be rehidden.
     private func loadPendingRelocations() {
-        let key = "MenuBarItemManager.pendingRelocations"
+        let key = LayoutStateKey.pendingRelocations
         if let stored = Defaults.store.dictionary(forKey: key) as? [String: String] {
             pendingRelocations = stored
         }
-        let destKey = "MenuBarItemManager.pendingReturnDestinations"
+        let destKey = LayoutStateKey.pendingReturnDestinations
         if let stored = Defaults.store.dictionary(forKey: destKey) as? [String: [String: String]] {
             pendingReturnDestinations = stored
         }
@@ -874,15 +921,15 @@ final class MenuBarItemManager {
 
     /// Persists pending relocations.
     private func persistPendingRelocations() {
-        let key = "MenuBarItemManager.pendingRelocations"
+        let key = LayoutStateKey.pendingRelocations
         Defaults.store.set(pendingRelocations, forKey: key)
-        let destKey = "MenuBarItemManager.pendingReturnDestinations"
+        let destKey = LayoutStateKey.pendingReturnDestinations
         Defaults.store.set(pendingReturnDestinations, forKey: destKey)
     }
 
     /// Loads persisted section order.
     private func loadSavedSectionOrder() {
-        let key = "MenuBarItemManager.savedSectionOrder"
+        let key = LayoutStateKey.savedSectionOrder
         if let stored = Defaults.store.dictionary(forKey: key) as? [String: [String]] {
             // Repair entries that can never match a live item again before
             // anything plans against them. Earlier fixes stopped these from
@@ -959,8 +1006,7 @@ final class MenuBarItemManager {
 
     /// Persists the current saved section order.
     private func persistSavedSectionOrder() {
-        let key = "MenuBarItemManager.savedSectionOrder"
-        Defaults.store.set(savedSectionOrder, forKey: key)
+        Defaults.store.set(savedSectionOrder, forKey: LayoutStateKey.savedSectionOrder)
     }
 
     /// Extracts the current per-section item order from the given cache and
@@ -3892,17 +3938,12 @@ extension MenuBarItemManager {
         currentWindowIDs: [CGWindowID]
     ) -> [CGWindowID] {
         let current = Set(currentWindowIDs)
-        var seen = Set<CGWindowID>()
-        return cachedItems.compactMap { item in
-            guard item.sourcePID == nil,
-                  !item.isControlItem,
-                  current.contains(item.windowID),
-                  seen.insert(item.windowID).inserted
-            else {
-                return nil
-            }
-            return item.windowID
-        }
+        return Array(
+            cachedItems.lazy
+                .filter { $0.sourcePID == nil && !$0.isControlItem && current.contains($0.windowID) }
+                .map(\.windowID)
+                .uniqued()
+        )
     }
 }
 
@@ -8341,14 +8382,7 @@ extension MenuBarItemManager {
             // gate. User-initiated applies still bypass it: `applyProfile`
             // calls `applyProfileLayout` directly and never comes through
             // here.
-            guard Self.automaticBulkApplyPermitted(
-                consecutiveUnfinishedBatches: self.consecutiveUnfinishedBulkApplies,
-                lastUnfinishedBatchAt: self.unfinishedMoveBatchObservedAt,
-                now: .now
-            ) else {
-                MenuBarItemManager.diagLog.warning(
-                    "Profile re-sort: skipping, \(self.consecutiveUnfinishedBulkApplies) consecutive bulk applies ended with unenacted moves; cooling down before another attempt"
-                )
+            guard self.isAutomaticBulkApplyPermitted(caller: "Profile re-sort") else {
                 self.profileResortTask = nil
                 return
             }
@@ -8687,14 +8721,7 @@ extension MenuBarItemManager {
             // The dispatch sites check this too, but every automatic caller
             // funnels through here, so enforcing it at the funnel keeps a
             // future dispatch site from bypassing the breaker unknowingly.
-            guard Self.automaticBulkApplyPermitted(
-                consecutiveUnfinishedBatches: consecutiveUnfinishedBulkApplies,
-                lastUnfinishedBatchAt: unfinishedMoveBatchObservedAt,
-                now: .now
-            ) else {
-                MenuBarItemManager.diagLog.warning(
-                    "Profile layout: skipping automatic apply; \(consecutiveUnfinishedBulkApplies) consecutive bulk applies ended with unenacted moves; cooling down before another attempt"
-                )
+            guard isAutomaticBulkApplyPermitted(caller: "Profile layout") else {
                 return
             }
             await waitForBulkApplyIdleWindow()
@@ -9262,6 +9289,23 @@ extension MenuBarItemManager {
         // as an order of record (#900).
         var unenactedMoveCount = 0
 
+        // Every abandon exits the same way: the abandoned remainder is one
+        // more unenacted move, the outcome feeds the circuit breaker, and
+        // in-flight profile state is torn down before the deferred cache
+        // refresh reconciles against reality. Callers with their own log
+        // line pass nil.
+        func abandonApply(reason: String?, items: [MenuBarItem]) {
+            unenactedMoveCount += 1
+            if let reason {
+                MenuBarItemManager.diagLog.warning(
+                    "applyProfileLayout: \(reason); abandoning the remaining apply"
+                )
+            }
+            recordBulkApplyOutcome(unenactedMoveCount: unenactedMoveCount)
+            clearProfileState(source: source, items: items)
+            scheduleDeferredCacheRefresh()
+        }
+
         // Classify items into the two sets Phase 1 actually consults.
         // Read from the sectionByWindowID snapshot built earlier so the
         // classification here matches what the cache-log loop reported
@@ -9388,13 +9432,10 @@ extension MenuBarItemManager {
                 hiddenControlItemWindowID: hiddenWID,
                 alwaysHiddenControlItemWindowID: alwaysHiddenWID
             ), freshControl.canRepositionControlItems else {
-                unenactedMoveCount += 1
-                MenuBarItemManager.diagLog.warning(
-                    "applyProfileLayout: control items degraded before moving H_ctrl; abandoning the remaining apply"
+                abandonApply(
+                    reason: "control items degraded before moving H_ctrl",
+                    items: allFreshItems
                 )
-                recordBulkApplyOutcome(unenactedMoveCount: unenactedMoveCount)
-                clearProfileState(source: source, items: allFreshItems)
-                scheduleDeferredCacheRefresh()
                 return
             }
             // CGDisplayBounds returns the Core Graphics display frame,
@@ -9520,13 +9561,10 @@ extension MenuBarItemManager {
             ) {
                 canRepositionControlItems = postMoveControl.canRepositionControlItems
                 guard canRepositionControlItems else {
-                    unenactedMoveCount += 1
-                    MenuBarItemManager.diagLog.warning(
-                        "applyProfileLayout: control items degraded to provisional AX-frame correlation after moving H_ctrl; abandoning the remaining apply"
+                    abandonApply(
+                        reason: "control items degraded to provisional AX-frame correlation after moving H_ctrl",
+                        items: postMoveItems
                     )
-                    recordBulkApplyOutcome(unenactedMoveCount: unenactedMoveCount)
-                    clearProfileState(source: source, items: postMoveItems)
-                    scheduleDeferredCacheRefresh()
                     return
                 }
                 var postMoveContext = CacheContext(
@@ -9601,13 +9639,10 @@ extension MenuBarItemManager {
             ), freshControl.canRepositionControlItems,
                 let ahItem = freshControl.alwaysHidden
             else {
-                unenactedMoveCount += 1
-                MenuBarItemManager.diagLog.warning(
-                    "applyProfileLayout: control items degraded before moving AH_ctrl; abandoning the remaining apply"
+                abandonApply(
+                    reason: "control items degraded before moving AH_ctrl",
+                    items: allFreshItems
                 )
-                recordBulkApplyOutcome(unenactedMoveCount: unenactedMoveCount)
-                clearProfileState(source: source, items: allFreshItems)
-                scheduleDeferredCacheRefresh()
                 return
             }
 
@@ -9670,20 +9705,14 @@ extension MenuBarItemManager {
                 alwaysHiddenControlItemWindowID: alwaysHiddenWID
             ) {
                 guard freshControl.canRepositionControlItems else {
-                    unenactedMoveCount += 1
-                    MenuBarItemManager.diagLog.warning(
-                        "applyProfileLayout: control items degraded to provisional AX-frame correlation after moving AH_ctrl; abandoning the remaining apply"
+                    abandonApply(
+                        reason: "control items degraded to provisional AX-frame correlation after moving AH_ctrl",
+                        items: freshItems
                     )
-                    recordBulkApplyOutcome(unenactedMoveCount: unenactedMoveCount)
-                    clearProfileState(source: source, items: freshItems)
-                    scheduleDeferredCacheRefresh()
                     return
                 }
                 guard let ahItem = freshControl.alwaysHidden else {
-                    unenactedMoveCount += 1
-                    recordBulkApplyOutcome(unenactedMoveCount: unenactedMoveCount)
-                    clearProfileState(source: source, items: freshItems)
-                    scheduleDeferredCacheRefresh()
+                    abandonApply(reason: nil, items: freshItems)
                     return
                 }
                 var verifyContext = CacheContext(
@@ -9793,10 +9822,7 @@ extension MenuBarItemManager {
                 // Abandoning here is itself an unenacted move: the LCS pass
                 // never ran, and without the dividers the sections read back
                 // from the bar are not the ones this apply was producing.
-                unenactedMoveCount += 1
-                recordBulkApplyOutcome(unenactedMoveCount: unenactedMoveCount)
-                clearProfileState(source: source, items: items)
-                scheduleDeferredCacheRefresh()
+                abandonApply(reason: nil, items: items)
                 return
             }
 
@@ -10545,14 +10571,7 @@ extension MenuBarItemManager {
         // cooldown its own chain just stamped, whereas this gate reads a
         // history of applies that did not complete. A launch restore is
         // unaffected anyway — the streak is session state and starts at 0.
-        guard Self.automaticBulkApplyPermitted(
-            consecutiveUnfinishedBatches: consecutiveUnfinishedBulkApplies,
-            lastUnfinishedBatchAt: unfinishedMoveBatchObservedAt,
-            now: .now
-        ) else {
-            MenuBarItemManager.diagLog.warning(
-                "applySavedLayout: skipping, \(consecutiveUnfinishedBulkApplies) consecutive bulk applies ended with unenacted moves; cooling down before another attempt"
-            )
+        guard isAutomaticBulkApplyPermitted(caller: "applySavedLayout") else {
             return false
         }
 
@@ -11048,14 +11067,7 @@ extension MenuBarItemManager {
         // of seconds of dead pointer (#881, #907). The per-item failure-ledger
         // backoff cannot help because the rebalance's items are typically
         // different from the ones that failed in the batch.
-        guard Self.automaticBulkApplyPermitted(
-            consecutiveUnfinishedBatches: consecutiveUnfinishedBulkApplies,
-            lastUnfinishedBatchAt: unfinishedMoveBatchObservedAt,
-            now: .now
-        ) else {
-            MenuBarItemManager.diagLog.debug(
-                "Notch overflow rebalance: skipping, \(consecutiveUnfinishedBulkApplies) consecutive bulk applies ended with unenacted moves"
-            )
+        guard isAutomaticBulkApplyPermitted(caller: "Notch overflow rebalance", quietly: true) else {
             return
         }
 

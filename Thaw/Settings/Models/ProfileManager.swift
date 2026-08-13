@@ -518,13 +518,13 @@ final class ProfileManager {
     /// paths can be exercised in tests without standing up an AppState.
     private func captureCurrentLayout(from itemManager: MenuBarItemManager) -> MenuBarLayoutSnapshot {
         let savedSectionOrder = Defaults.store.dictionary(
-            forKey: "MenuBarItemManager.savedSectionOrder"
+            forKey: MenuBarItemManager.LayoutStateKey.savedSectionOrder
         ) as? [String: [String]] ?? [:]
         let pinnedHiddenBundleIDs = Defaults.store.array(
-            forKey: "MenuBarItemManager.pinnedHiddenBundleIDs"
+            forKey: MenuBarItemManager.LayoutStateKey.pinnedHiddenBundleIDs
         ) as? [String] ?? []
         let pinnedAlwaysHiddenBundleIDs = Defaults.store.array(
-            forKey: "MenuBarItemManager.pinnedAlwaysHiddenBundleIDs"
+            forKey: MenuBarItemManager.LayoutStateKey.pinnedAlwaysHiddenBundleIDs
         ) as? [String] ?? []
         let customNames = Defaults.dictionary(
             forKey: .menuBarItemCustomNames
