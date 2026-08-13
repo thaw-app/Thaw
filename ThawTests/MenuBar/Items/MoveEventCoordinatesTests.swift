@@ -41,7 +41,61 @@ struct MoveEventCoordinatesTests {
         )
     }
 
-    /// The safe vertical coordinate is derived from the target rather than a
+    /// #923: dropping onto the exact coordinate of a zero-width section
+    /// divider leaves AppKit free to choose either side. The field log showed
+    /// `.leftOfItem(AH_ctrl)` repeatedly landing one point to its right.
+    @Test("A control-item destination biases the drop into the requested section")
+    func controlItemTargetPointUsesRequestedSide() {
+        let displayBounds = CGRect(x: 0, y: 0, width: 1470, height: 956)
+        let bounds = CGRect(x: -9465, y: 0, width: 0, height: 33)
+        let target = MenuBarItem.fixture(
+            tag: .alwaysHiddenControlItem,
+            windowID: 32278,
+            bounds: bounds,
+            isOnScreen: false
+        )
+
+        #expect(
+            MenuBarItemManager.MoveDestination.leftOfItem(target).targetPoint(
+                in: bounds,
+                on: displayBounds
+            ) == CGPoint(x: bounds.minX - 1, y: bounds.midY)
+        )
+        #expect(
+            MenuBarItemManager.MoveDestination.rightOfItem(target).targetPoint(
+                in: bounds,
+                on: displayBounds
+            ) == CGPoint(x: bounds.maxX + 1, y: bounds.midY)
+        )
+    }
+
+    /// A control item with actual width (e.g. an expanded divider) already
+    /// gives AppKit enough hit-test span to disambiguate the side, so the
+    /// ±1 bias must not fire and shift the drop point away from the edge.
+    @Test("A wide control-item destination gets no section bias")
+    func wideControlItemTargetPointGetsNoBias() {
+        let displayBounds = CGRect(x: 0, y: 0, width: 1470, height: 956)
+        let bounds = CGRect(x: -9465, y: 0, width: 10, height: 33)
+        let target = MenuBarItem.fixture(
+            tag: .alwaysHiddenControlItem,
+            windowID: 32279,
+            bounds: bounds,
+            isOnScreen: false
+        )
+
+        #expect(
+            MenuBarItemManager.MoveDestination.leftOfItem(target).targetPoint(
+                in: bounds,
+                on: displayBounds
+            ) == CGPoint(x: bounds.minX, y: bounds.midY)
+        )
+        #expect(
+            MenuBarItemManager.MoveDestination.rightOfItem(target).targetPoint(
+                in: bounds,
+                on: displayBounds
+            ) == CGPoint(x: bounds.maxX, y: bounds.midY)
+        )
+    }
     /// hard-coded primary-display inset.
     @Test("The safe vertical coordinate comes from the target on a vertically offset display")
     func targetPointUsesMidpointOnVerticallyOffsetDisplay() {

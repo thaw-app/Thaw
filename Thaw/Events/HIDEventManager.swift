@@ -1490,6 +1490,19 @@ extension HIDEventManager {
             pendingHoverAction = .hide
             let taskToken = UUID()
             hoverTaskToken = taskToken
+            // When the Thaw Bar (Ice Bar) is the active presentation, the
+            // rehide interval — not the hover delay — should govern how
+            // long the panel stays open after the cursor leaves. The start
+            // rehide checks already use rehideInterval; a 0.2 s hover
+            // delay always wins that race and snaps the panel shut before
+            // the user can click an icon.
+            let hideDelay: TimeInterval = if let activeDisplay = appState.hidEventManager.bestScreen(appState: appState),
+                appState.settings.displaySettings.useIceBar(for: activeDisplay.displayID)
+            {
+                appState.settings.general.rehideInterval
+            } else {
+                delay
+            }
             hoverTask = Task {
                 defer {
                     if hoverTaskToken == taskToken {
@@ -1500,8 +1513,7 @@ extension HIDEventManager {
                         }
                     }
                 }
-                try await Task.sleep(for: .seconds(delay))
-                // Make sure the manager is still enabled and the mouse is still outside.
+                try await Task.sleep(for: .seconds(hideDelay))
                 guard
                     isEnabled,
                     !isMouseInsideMenuBar(appState: appState, screen: screen),

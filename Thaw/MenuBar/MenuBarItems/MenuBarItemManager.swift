@@ -194,6 +194,14 @@ final class MenuBarItemManager {
     /// recovery for a later collapse episode.
     private var didRecoverHiddenSectionForCurrentCollapse = false
 
+    /// Consecutive authoritative layout applies that need to move a hidden
+    /// divider which macOS has parked off every display.
+    private var parkedHiddenDividerMismatchStreak = 0
+
+    /// Prevents repeated divider recreation until the mismatch or parked
+    /// geometry clears and re-arms recovery for a later episode.
+    private var didRecoverParkedHiddenDividerForCurrentMismatch = false
+
     /// Number of consecutive `ControlItemPair` lookup failures required
     /// before the control items' status items are rebuilt.
     static nonisolated let controlItemRebuildThreshold = 3
@@ -201,6 +209,10 @@ final class MenuBarItemManager {
     /// Number of consecutive collapsed readings required before discarding a
     /// hidden divider's stale autosave position.
     static nonisolated let hiddenSectionCollapseRecoveryThreshold = 3
+
+    /// Number of authoritative mismatch applies required before discarding a
+    /// parked hidden divider's stale autosave position.
+    static nonisolated let parkedHiddenDividerRecoveryThreshold = 2
 
     /// Supplementary AX-derived identity for items whose CG-side identity is
     /// degraded (a Control-Center generic `Item-N` placeholder title, or a
@@ -2976,6 +2988,51 @@ extension MenuBarItemManager {
         return true
     }
 
+    /// Recreates an authoritatively identified hidden divider after it remains
+    /// parked through repeated layout applies that need it on the bar.
+    private func recoverParkedHiddenDividerIfNeeded(
+        hiddenBoundaryMismatch: Int,
+        hiddenControlItem: MenuBarItem,
+        screenFrames: [CGRect]
+    ) -> Bool {
+        guard hiddenBoundaryMismatch > 0,
+              !LayoutSolver.isOnScreen(bounds: hiddenControlItem.bounds, screenFrames: screenFrames)
+        else {
+            parkedHiddenDividerMismatchStreak = 0
+            didRecoverParkedHiddenDividerForCurrentMismatch = false
+            return false
+        }
+
+        parkedHiddenDividerMismatchStreak += 1
+        guard Self.shouldRecoverParkedHiddenDivider(
+            consecutiveMismatchReadings: parkedHiddenDividerMismatchStreak,
+            alreadyRecovered: didRecoverParkedHiddenDividerForCurrentMismatch
+        ),
+            let hiddenControl = appState?.menuBarManager.controlItem(withName: .hidden)
+        else {
+            return false
+        }
+
+        didRecoverParkedHiddenDividerForCurrentMismatch = true
+        MenuBarItemManager.diagLog.warning(
+            "H_ctrl remained parked through \(parkedHiddenDividerMismatchStreak) authoritative mismatch applies; recreating it at its seeded position"
+        )
+        hiddenControl.recreateStatusItem(preferredPosition: 1)
+
+        Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(100))
+            // The unfinished batch that exposed the parked divider may have
+            // stamped the move cooldown. This recovery owns its retry, so let
+            // the fresh divider reach applySavedLayout instead of committing
+            // its new window ID without verifying the saved boundary.
+            await self?.cacheItemsRegardless(
+                skipRecentMoveCheck: true,
+                bypassSavedLayoutCooldown: true
+            )
+        }
+        return true
+    }
+
     /// Whether bundleID owns a menu bar item Thaw already tracks: an entry
     /// in identifiers (each formatted "namespace:title") whose namespace is
     /// exactly bundleID. The trailing ":" anchors the match so one bundle ID
@@ -4785,11 +4842,19 @@ extension MenuBarItemManager {
         func targetPoint(in targetBounds: CGRect, on displayBounds: CGRect) -> CGPoint {
             let targetIsParkedOffscreen = targetBounds.maxX <= displayBounds.minX
             let targetY = targetIsParkedOffscreen ? targetBounds.midY : targetBounds.minY
+            // A zero-width control-item divider (#923) gives AppKit no
+            // hit-test width to disambiguate which side the drop should
+            // land on. Bias one point into the requested section so the
+            // synthetic event's target X is unambiguous. On a normal-width
+            // divider the ±1 nudge is harmless but unnecessary; gate it to
+            // zero-width to avoid shifting the drop point away from a
+            // divider that already has span to resolve the side.
+            let sectionBias: CGFloat = (targetItem.isControlItem && targetBounds.width == 0) ? 1 : 0
             return switch self {
             case .leftOfItem:
-                CGPoint(x: targetBounds.minX, y: targetY)
+                CGPoint(x: targetBounds.minX - sectionBias, y: targetY)
             case .rightOfItem:
-                CGPoint(x: targetBounds.maxX, y: targetY)
+                CGPoint(x: targetBounds.maxX + sectionBias, y: targetY)
             }
         }
 
@@ -6971,9 +7036,24 @@ extension MenuBarItemManager {
 
         MenuBarItemManager.diagLog.debug("Rehiding temporarily shown items")
 
-        MouseHelpers.hideCursor()
+        // Use the same 30 s watchdog as the bulk-apply path so the 1 s
+        // default cursor-watchdog cannot force-show the cursor mid-batch
+        // (#899). Without this, a rehide that takes longer than 1 s
+        // (eventSleep + moves) lets the watchdog fire, flash the cursor,
+        // and reset hideCount to 0 — observed as cursor flicker.
+        MouseHelpers.hideCursor(watchdogTimeout: .seconds(30))
         defer {
             MouseHelpers.showCursor()
+        }
+
+        // Suppress per-item cursor hide/show inside the move loop so the
+        // outer pair owns visibility for the whole batch. Without this,
+        // each move() does its own hide/show and the cursor oscillates
+        // per item — observed as flicker during rehide.
+        let wasBulkApplyInProgress = isBulkApplyInProgress
+        isBulkApplyInProgress = true
+        defer {
+            isBulkApplyInProgress = wasBulkApplyInProgress
         }
 
         while let context = currentContexts.popLast() {
@@ -9259,6 +9339,10 @@ extension MenuBarItemManager {
         MenuBarItemManager.diagLog.debug(
             "Profile layout Phase 1: hiddenBoundaryMismatch=\(hiddenBoundaryMismatch)"
         )
+        if hiddenBoundaryMismatch == 0 {
+            parkedHiddenDividerMismatchStreak = 0
+            didRecoverParkedHiddenDividerForCurrentMismatch = false
+        }
 
         // ── Sub-phase 1: Move H_ctrl to the visible/hidden boundary ──
         //
@@ -9288,7 +9372,25 @@ extension MenuBarItemManager {
                 scheduleDeferredCacheRefresh()
                 return
             }
-            let screenFrames = NSScreen.screens.map(\.frame)
+            // CGDisplayBounds returns the Core Graphics display frame,
+            // which is the coordinate space MenuBarItem.bounds and the
+            // drag target points operate in. NSScreen.screens.map(\.frame)
+            // is in AppKit's flipped coordinate space and can diverge for
+            // mirrored or transitioning displays.
+            let screenFrames = NSScreen.screens.map { CGDisplayBounds($0.displayID) }
+            if case .savedOrder = source,
+               recoverParkedHiddenDividerIfNeeded(
+                hiddenBoundaryMismatch: hiddenBoundaryMismatch,
+                hiddenControlItem: freshControl.hidden,
+                screenFrames: screenFrames
+            ) {
+                // Keep the prior unfinished-batch arm intact without counting
+                // the rebuild as another failed apply. That leaves the one
+                // permitted retry available to verify the fresh divider.
+                clearProfileState(source: source, items: allFreshItems)
+                scheduleDeferredCacheRefresh()
+                return
+            }
             // Exclude items parked off-screen from the anchor candidate set.
             // A parked item's center falls on no screen; using it as the
             // H_ctrl drag anchor makes the move fail every retry — AppKit
@@ -9942,6 +10044,16 @@ extension MenuBarItemManager {
         threshold: Int = MenuBarItemManager.hiddenSectionCollapseRecoveryThreshold
     ) -> Bool {
         !alreadyRecovered && consecutiveCollapsedReadings >= threshold
+    }
+
+    /// Whether repeated authoritative mismatch applies should reset a hidden
+    /// divider that remains parked off every display.
+    static nonisolated func shouldRecoverParkedHiddenDivider(
+        consecutiveMismatchReadings: Int,
+        alreadyRecovered: Bool = false,
+        threshold: Int = MenuBarItemManager.parkedHiddenDividerRecoveryThreshold
+    ) -> Bool {
+        !alreadyRecovered && consecutiveMismatchReadings >= threshold
     }
 
     static nonisolated func baseIdentifier(forSavedIdentifier identifier: String) -> String {
@@ -10833,7 +10945,7 @@ extension MenuBarItemManager {
             else { continue }
             if transientTags.contains(where: {
                 $0.namespace == item.tag.namespace && $0.title == item.tag.title
-            }) || item.isTransientControlCenterItem {
+            }) || item.isTransientControlCenterItem || item.hasProvisionalIdentity {
                 continue
             }
             unmanagedFootprint += item.bounds.width

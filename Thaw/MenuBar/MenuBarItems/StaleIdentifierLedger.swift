@@ -88,7 +88,7 @@ final class StaleIdentifierLedger {
     /// release starts resolving under the next. Counts earned against the
     /// old behaviour would retire identifiers the new build can match, so an
     /// update clears the slate.
-    private static var currentBuildVersion: String {
+    private static nonisolated var currentBuildVersion: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "unknown"
     }
 

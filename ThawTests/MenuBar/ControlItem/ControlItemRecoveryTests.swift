@@ -141,3 +141,101 @@ struct CollapsedHiddenSectionRecoveryTests {
         ))
     }
 }
+
+@Suite("Parked hidden divider recovery")
+struct ParkedHiddenDividerRecoveryTests {
+    @Test("The first parked mismatch is left alone")
+    func firstMismatchDoesNotRecover() {
+        #expect(!MenuBarItemManager.shouldRecoverParkedHiddenDivider(
+            consecutiveMismatchReadings: 1
+        ))
+    }
+
+    @Test("A repeated parked mismatch resets the divider")
+    func repeatedMismatchRecovers() {
+        #expect(MenuBarItemManager.shouldRecoverParkedHiddenDivider(
+            consecutiveMismatchReadings: MenuBarItemManager.parkedHiddenDividerRecoveryThreshold
+        ))
+    }
+
+    @Test("A parked mismatch episode resets the divider only once")
+    func mismatchEpisodeRecoversOnce() {
+        #expect(!MenuBarItemManager.shouldRecoverParkedHiddenDivider(
+            consecutiveMismatchReadings: MenuBarItemManager.parkedHiddenDividerRecoveryThreshold + 10,
+            alreadyRecovered: true
+        ))
+    }
+
+    /// Models the manager's own episode latch for the parked-divider
+    /// recovery: mismatches accumulate, recovery fires once at the
+    /// threshold, and no second recovery is allowed until a mismatch=0
+    /// reading re-arms the streak.
+    @Test("A persistent parked-mismatch episode recovers only once, then re-arms on zero")
+    func mismatchEpisodeRearmsOnZero() {
+        var consecutiveMismatches = 0
+        var alreadyRecovered = false
+        var recoverCount = 0
+
+        func recordMismatch() {
+            consecutiveMismatches += 1
+            if MenuBarItemManager.shouldRecoverParkedHiddenDivider(
+                consecutiveMismatchReadings: consecutiveMismatches,
+                alreadyRecovered: alreadyRecovered
+            ) {
+                recoverCount += 1
+                alreadyRecovered = true
+            }
+        }
+
+        func recordZero() {
+            consecutiveMismatches = 0
+            alreadyRecovered = false
+        }
+
+        // Accumulate well past the threshold: only one recovery.
+        for _ in 0..<(MenuBarItemManager.parkedHiddenDividerRecoveryThreshold * 3) {
+            recordMismatch()
+        }
+        #expect(recoverCount == 1)
+
+        // A mismatch=0 reading re-arms the episode.
+        recordZero()
+        #expect(!alreadyRecovered)
+        #expect(consecutiveMismatches == 0)
+
+        // The next episode can recover again.
+        for _ in 0..<MenuBarItemManager.parkedHiddenDividerRecoveryThreshold {
+            recordMismatch()
+        }
+        #expect(recoverCount == 2)
+    }
+
+    /// Below the threshold the streak accumulates without triggering
+    /// recovery, so a single transient mismatch does not recreate the
+    /// divider.
+    @Test("Below the threshold, mismatches accumulate without recovery")
+    func belowThresholdMismatchesAccumulate() {
+        for count in 1..<(MenuBarItemManager.parkedHiddenDividerRecoveryThreshold) {
+            #expect(
+                !MenuBarItemManager.shouldRecoverParkedHiddenDivider(
+                    consecutiveMismatchReadings: count
+                ),
+                "consecutiveMismatchReadings=\(count) should not yet trigger recovery"
+            )
+        }
+    }
+
+    /// A custom threshold is respected, so the recovery can be tuned
+    /// independently of the collapsed-section threshold.
+    @Test("A custom parked-mismatch threshold is respected")
+    func customThresholdIsRespected() {
+        #expect(!MenuBarItemManager.shouldRecoverParkedHiddenDivider(
+            consecutiveMismatchReadings: 2,
+            threshold: 3
+        ))
+        #expect(MenuBarItemManager.shouldRecoverParkedHiddenDivider(
+            consecutiveMismatchReadings: 3,
+            threshold: 3
+        ))
+    }
+}

@@ -388,4 +388,56 @@ struct SectionGeometryApplyGateTests {
             )
         }
     }
+
+    /// A divider rebuild is initiated by an unfinished apply, which may have
+    /// just stamped the move cooldown. The recovery-owned recache that follows
+    /// `recreateStatusItem` passes `bypassSavedLayoutCooldown: true` through
+    /// `cacheItemsRegardless`, which carries into `applySavedLayout` as
+    /// `bypassMoveCooldown: true`. This test exercises that contract: a fresh
+    /// move cooldown blocks an ordinary apply, but the bypass flag — the same
+    /// one the recovery recache uses — lets the verification dispatch through.
+    ///
+    /// `recoverParkedHiddenDividerIfNeeded` itself is private and requires a
+    /// live `AppState` with real `NSStatusItem`s, so it cannot be exercised
+    /// at this seam. The pure gate (`shouldRecoverParkedHiddenDivider`) and
+    /// the episode latch are covered in `ControlItemRecoveryTests`.
+    @Test("A recovery retry can bypass a fresh move cooldown", .timeLimit(.minutes(1)))
+    func recoveryRetryBypassesMoveCooldown() async throws {
+        try await withScratchDefaults { _ in
+            let items = Self.makeItems()
+            let manager = makeManager(savingAllOf: items)
+            let healthy = MenuBarItemManager.ControlItemPair.fixture(
+                hiddenAt: CGRect(x: -5743, y: 0, width: 10, height: 22),
+                alwaysHiddenAt: CGRect(x: -6000, y: 0, width: 10, height: 22)
+            )
+            manager.recordExternalMoveOperation()
+
+            let blocked = await manager.applySavedLayout(
+                items: items,
+                previousWindowIDs: [Self.departedWindowID],
+                controlItems: healthy
+            )
+            let retried = await manager.applySavedLayout(
+                items: items,
+                previousWindowIDs: [Self.departedWindowID],
+                controlItems: healthy,
+                bypassMoveCooldown: true
+            )
+
+            #expect(!blocked)
+            #expect(retried)
+        }
+    }
+
+    /// The hard-cap gate (`automaticBulkApplyPermitted`) blocks dispatch
+    /// before `applyProfileLayout` — and therefore before
+    /// `recoverParkedHiddenDividerIfNeeded` — can run. The recovery recache
+    /// uses `scheduleDeferredCacheRefresh` with `skipSavedLayoutApply: true`,
+    /// which skips `applySavedLayout` entirely, so it is unaffected by the
+    /// cap. This invariant is structural: the `automaticBulkApplyPermitted`
+    /// check at the top of `applySavedLayout` returns `false` before the
+    /// dispatch to `applyProfileLayout` where the recovery lives, so the
+    /// recovery cannot fire when the cap has tripped. No test is needed
+    /// because the call ordering cannot be inverted without moving the
+    /// recovery outside the apply dispatch.
 }

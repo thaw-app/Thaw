@@ -214,6 +214,11 @@ final class MenuBarManager {
                     currentProcessIdentifier: ProcessInfo.processInfo.processIdentifier
                 )
             else {
+                if self?.appState?.settings.general.autoRehide == false {
+                    // Auto-rehide is off; no strategy fires. Not an error,
+                    // but the user may expect focus/timed to work without
+                    // the master toggle.
+                }
                 return
             }
 
@@ -228,13 +233,14 @@ final class MenuBarManager {
                 else {
                     return
                 }
-                Task {
+                Task { [weak self] in
                     // Wait for focus to settle and carry an activation
                     // inside the reveal grace period to its end instead
                     // of dropping that activation permanently.
-                    let delay = Self.smartRehideDelay(since: self.lastShowTimestamp)
+                    let delay = Self.smartRehideDelay(since: self?.lastShowTimestamp)
                     guard await (try? Task.sleep(for: delay)) != nil else { return }
 
+                    guard let self else { return }
                     guard appState.settings.general.rehideStrategy == .smart else { return }
                     if await appState.itemManager.isAnyMenuBarItemMenuOpen() {
                         return
