@@ -160,6 +160,7 @@ $(SRCROOT)/Thaw/Utilities/HookRunner.swift
 $(SRCROOT)/Thaw/Utilities/IceSettingsImporter.swift
 $(SRCROOT)/Thaw/Utilities/IconResource.swift
 $(SRCROOT)/Thaw/Utilities/LocalizedErrorWrapper.swift
+$(SRCROOT)/Thaw/Utilities/MacOSCompatibilityWarning.swift
 $(SRCROOT)/Thaw/Utilities/Migration.swift
 $(SRCROOT)/Thaw/Utilities/MouseHelpers.swift
 $(SRCROOT)/Thaw/Utilities/ObjectStorage.swift

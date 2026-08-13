@@ -65,7 +65,8 @@ nonisolated struct MenuBarItem: CustomStringConvertible {
     /// item with an unresolved owner is movable at all, not merely where
     /// its events go. See ``Defaults/Key/postMoveEventsToWindowOwner``.
     static var postsMoveEventsToWindowOwner: Bool {
-        Defaults.bool(forKey: .postMoveEventsToWindowOwner)
+        (Defaults.object(forKey: .postMoveEventsToWindowOwner) as? Bool)
+            ?? Defaults.DefaultValue.postMoveEventsToWindowOwner
     }
 
     /// The reason this item cannot be moved, or `nil` when it can.
