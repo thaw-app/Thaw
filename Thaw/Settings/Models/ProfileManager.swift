@@ -311,8 +311,29 @@ final class ProfileManager {
             }
 
             if let map = layout.itemSectionMap {
-                let surviving = Set((layout.itemOrder ?? layout.savedSectionOrder).values.joined())
-                layout.itemSectionMap = map.filter { surviving.contains($0.key) }
+                // Same empty-means-absent rule as `resolvedItemOrder`: a
+                // present-but-empty itemOrder is a mistimed capture, not a
+                // layout, and filtering against it would empty the map and
+                // permanently shadow the savedSectionOrder fallback.
+                let survivingOrder: [String: [String]] = {
+                    guard let itemOrder = layout.itemOrder, !itemOrder.isEmpty else {
+                        return layout.savedSectionOrder
+                    }
+                    return itemOrder
+                }()
+                let surviving = Set(survivingOrder.values.joined())
+                // The orders above were canonicalized; map keys must be
+                // compared (and stored) in the same form or a pre-canonical
+                // entry is dropped even though its item survived.
+                var filteredMap = [String: String]()
+                for (key, section) in map {
+                    let canonicalKey = LayoutSolver.canonicalIdentifier(key)
+                    guard surviving.contains(canonicalKey) else { continue }
+                    if filteredMap[canonicalKey] == nil || key == canonicalKey {
+                        filteredMap[canonicalKey] = section
+                    }
+                }
+                layout.itemSectionMap = filteredMap
             }
 
             guard

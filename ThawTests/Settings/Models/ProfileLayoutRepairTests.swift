@@ -74,6 +74,52 @@ struct ProfileLayoutRepairTests {
         }
     }
 
+    /// `resolvedItemOrder` treats a present-but-empty `itemOrder` as absent:
+    /// a capture taken while the bar was still settling writes `[:]`, not
+    /// `nil`. Filtering the map against that empty order would erase every
+    /// section assignment and persist the loss.
+    @Test("An empty itemOrder does not empty the section map")
+    func emptyItemOrderDoesNotEmptySectionMap() throws {
+        let keeper = "us.zoom.xos:Item-0"
+
+        var profile = makeProfile(
+            named: "Mistimed",
+            savedSectionOrder: ["visible": [keeper]]
+        )
+        profile.menuBarLayout.itemOrder = [:]
+        profile.menuBarLayout.itemSectionMap = [keeper: "visible"]
+
+        try withTemporaryDirectory { tmp in
+            try seedManifest(with: [profile], into: tmp)
+            #expect(ProfileManager(profilesDirectory: tmp).repairPersistedLayouts() == 0)
+
+            let reloaded = try ProfileManager(profilesDirectory: tmp).loadProfile(id: profile.id)
+            #expect(reloaded.menuBarLayout.itemSectionMap == [keeper: "visible"])
+        }
+    }
+
+    /// Map keys written before canonicalization existed must be compared in
+    /// canonical form, or the entry is dropped even though its item survives
+    /// the repair under the rewritten identifier.
+    @Test("A pre-canonical map key survives under its canonical form")
+    func preCanonicalMapKeySurvives() throws {
+        let helper = "at.obdev.littlesnitch.agent:Item-0"
+        let canonical = LayoutSolver.canonicalIdentifier(helper)
+
+        var profile = makeProfile(named: "PreCanonical")
+        profile.menuBarLayout.itemOrder = ["hidden": [helper]]
+        profile.menuBarLayout.itemSectionMap = [helper: "hidden"]
+
+        try withTemporaryDirectory { tmp in
+            try seedManifest(with: [profile], into: tmp)
+            #expect(ProfileManager(profilesDirectory: tmp).repairPersistedLayouts() == 1)
+
+            let reloaded = try ProfileManager(profilesDirectory: tmp).loadProfile(id: profile.id)
+            #expect(reloaded.menuBarLayout.itemOrder?["hidden"] == [canonical])
+            #expect(reloaded.menuBarLayout.itemSectionMap == [canonical: "hidden"])
+        }
+    }
+
     /// Profiles written before `itemOrder` existed carry the layout in
     /// `savedSectionOrder`, and that copy has to be repaired too.
     @Test("A legacy profile without itemOrder is repaired through savedSectionOrder")
