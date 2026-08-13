@@ -183,12 +183,17 @@ final class LayoutBarItemView: LayoutBarArrangedView {
 
     /// Emits the diagnostic #905 asked for: the resolved identifier and the
     /// exact condition the refusal was decided on. Returns the app-owned
-    /// name a one-shot AX correlation found for a degraded identity, so the
-    /// alert can show it.
+    /// name AX correlation found for a degraded identity, so the alert can
+    /// show it.
     ///
-    /// The AX snapshot is bounded (500 ms worst case) and only runs on this
-    /// user-initiated refusal path, never per cycle.
-    private func logMoveRefusal() -> String? {
+    /// Takes the identity the alias attempt already correlated rather than
+    /// running its own snapshot: the refusal path reaches here right after
+    /// ``aliasForUnresolvedControlCenterPlaceholder()`` paid for the same
+    /// bounded AX work, and paying twice is a visible main-thread hitch
+    /// mid-drag.
+    private func logMoveRefusal(
+        correlatedIdentity: AXIdentityCatalog.AXItemIdentity?
+    ) -> String? {
         let reason = item.immovabilityReason?.logDescription ?? "isMovable false with no named gate"
         Self.diagLog.warning(
             "Move refused for \(item.logString): \(reason); uniqueIdentifier=\(item.uniqueIdentifier), windowID=\(item.windowID), sourcePID=\(item.sourcePID.map(String.init) ?? "nil"), ownerPID=\(item.ownerPID)"
@@ -196,14 +201,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         guard item.immovabilityReason == .unresolvedControlCenterPlaceholder else {
             return nil
         }
-        let hosts = ["com.apple.controlcenter", "com.apple.systemuiserver"]
-            .flatMap { NSRunningApplication.runningApplications(withBundleIdentifier: $0) }
-        guard !hosts.isEmpty else {
-            return nil
-        }
-        let snapshot = AXIdentityCatalog.snapshot(hosts: hosts)
-        let bounds = Bridging.getWindowBounds(for: item.windowID) ?? item.bounds
-        guard let identity = AXIdentityCatalog.identity(for: bounds, in: snapshot) else {
+        guard let identity = correlatedIdentity else {
             Self.diagLog.warning(
                 "Move refusal: AX correlation found no confident identity for windowID \(item.windowID)"
             )
@@ -227,17 +225,19 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     /// `savedSectionOrder` once the source-PID cache catches up, or AppKit's
     /// own autosave position holds the slot in place meanwhile.
     ///
-    /// Same bounded AX snapshot (`maxSnapshotDuration` = 500 ms) as
-    /// ``logMoveRefusal()``. Runs at most once per view: a successful alias
-    /// flips `isEnabled` to `true` so subsequent `mouseDragged` events skip
-    /// the guard, and a failed correlation returns `nil` and falls back to the
-    /// diagnostics alert path that logs the no-confident-identity outcome.
-    private func aliasForUnresolvedControlCenterPlaceholder() -> MenuBarItem? {
+    /// The bounded AX snapshot (`maxSnapshotDuration` = 500 ms) runs at most
+    /// once per drag: a successful alias flips `isEnabled` to `true` so
+    /// subsequent `mouseDragged` events skip the guard, and a failed attempt
+    /// hands its correlated identity (when it found one) to
+    /// ``logMoveRefusal(correlatedIdentity:)`` so the refusal path does not
+    /// pay for the same snapshot again.
+    private func aliasForUnresolvedControlCenterPlaceholder(
+    ) -> (alias: MenuBarItem?, correlatedIdentity: AXIdentityCatalog.AXItemIdentity?) {
         precondition(item.immovabilityReason == .unresolvedControlCenterPlaceholder)
 
         let hosts = ["com.apple.controlcenter", "com.apple.systemuiserver"]
             .flatMap { NSRunningApplication.runningApplications(withBundleIdentifier: $0) }
-        guard !hosts.isEmpty else { return nil }
+        guard !hosts.isEmpty else { return (nil, nil) }
 
         let snapshot = AXIdentityCatalog.snapshot(hosts: hosts)
         let bounds = Bridging.getWindowBounds(for: item.windowID) ?? item.bounds
@@ -245,7 +245,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
             Self.diagLog.warning(
                 "Move alias: AX correlation found no confident identity for \(item.logString) (windowID=\(item.windowID))"
             )
-            return nil
+            return (nil, nil)
         }
 
         let hostBundleIDs: Set = ["com.apple.controlcenter", "com.apple.systemuiserver"]
@@ -257,7 +257,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
             Self.diagLog.warning(
                 "Move alias: AX names \(item.logString) (windowID=\(item.windowID)) as identifier=\(identity.identifier ?? "nil"), title=\(identity.title ?? "nil"), help=\(identity.help ?? "nil"); none is a non-host bundle identifier"
             )
-            return nil
+            return (nil, identity)
         }
 
         guard
@@ -267,14 +267,15 @@ final class LayoutBarItemView: LayoutBarArrangedView {
             Self.diagLog.warning(
                 "Move alias: AX named \(item.logString) (windowID=\(item.windowID)) as \(bundleID), but no running application matches that bundle ID"
             )
-            return nil
+            return (nil, identity)
         }
 
-        return UnresolvedPlaceholderAlias.aliasedItem(
+        let alias = UnresolvedPlaceholderAlias.aliasedItem(
             for: item,
             appBundleID: bundleID,
             hostPID: hostApp.processIdentifier
         )
+        return (alias, identity)
     }
 
     /// Provides an alert to display when a menu bar item is unresponsive.
@@ -328,19 +329,23 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         // passes and `MenuBarItemManager.move(...)`'s inner `isMovable`
         // guard (keyed off the same alias) does too. On a miss or a static
         // prohibition the guard falls through to the alert path as before.
+        var correlatedIdentity: AXIdentityCatalog.AXItemIdentity?
         if !isEnabled,
-           item.immovabilityReason == .unresolvedControlCenterPlaceholder,
-           let alias = aliasForUnresolvedControlCenterPlaceholder()
+           item.immovabilityReason == .unresolvedControlCenterPlaceholder
         {
-            Self.diagLog.info(
-                "Move enabled for \(item.logString) via AX-correlated identity: re-tagged as \(alias.uniqueIdentifier) (sourcePID=\(alias.sourcePID.map(String.init) ?? "nil")); windowID=\(item.windowID)"
-            )
-            aliasedItem = alias
-            isEnabled = true
+            let attempt = aliasForUnresolvedControlCenterPlaceholder()
+            correlatedIdentity = attempt.correlatedIdentity
+            if let alias = attempt.alias {
+                Self.diagLog.info(
+                    "Move enabled for \(item.logString) via AX-correlated identity: re-tagged as \(alias.uniqueIdentifier) (sourcePID=\(alias.sourcePID.map(String.init) ?? "nil")); windowID=\(item.windowID)"
+                )
+                aliasedItem = alias
+                isEnabled = true
+            }
         }
 
         guard isEnabled else {
-            let axResolvedName = logMoveRefusal()
+            let axResolvedName = logMoveRefusal(correlatedIdentity: correlatedIdentity)
             let alert = provideAlertForDisabledItem(axResolvedName: axResolvedName)
             alert.runModal()
             return

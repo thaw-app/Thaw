@@ -6981,7 +6981,13 @@ extension MenuBarItemManager {
         MenuBarItemManager.diagLog.debug("rehideTemporarilyShownItems: started (force=\(force), isCalledFromTemporarilyShow=\(isCalledFromTemporarilyShow))")
 
         if !force {
-            guard !temporarilyShownItemContexts.contains(where: \.isShowingInterface) else {
+            // interfaceState is computed, and its terminal case enumerates
+            // every on-screen window; on a 1-second poll, evaluate it once
+            // per context per check and answer both questions from that.
+            let interfaceStates = temporarilyShownItemContexts.map {
+                ($0, $0.interfaceState)
+            }
+            guard !interfaceStates.contains(where: { $0.1 == .showing }) else {
                 MenuBarItemManager.diagLog.debug("Menu bar item interface is shown, so waiting to rehide")
                 runRehideTimer(for: Self.rehidePollInterval)
                 return
@@ -6992,7 +6998,7 @@ extension MenuBarItemManager {
             // cost of guessing wrong is the user's open menu being dragged off
             // the bar (#924). Spend a bounded number of further checks looking
             // before treating it as closed.
-            let undetected = temporarilyShownItemContexts.filter { $0.interfaceState == .unknown }
+            let undetected = interfaceStates.filter { $0.1 == .unknown }.map(\.0)
             let stillWorthChecking = undetected.filter {
                 $0.undetectedInterfaceChecks < TemporarilyShownItemContext.maxUndetectedInterfaceChecks
             }
