@@ -130,6 +130,16 @@
         }
       }
     },
+    "%@ %@ pt" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ %2$@ pt"
+          }
+        }
+      }
+    },
     "%@ %@ Section" : {
       "comment" : "A menu item title that toggles the visibility of a section in the menu bar. The argument is the name of the section.",
       "localizations" : {
@@ -3050,6 +3060,9 @@
         }
       }
     },
+    "Active display: %@" : {
+
+    },
     "Active profile" : {
       "comment" : "Picker option: save spacing changes to the active profile only when relaunch confirmations are disabled.",
       "localizations" : {
@@ -4374,6 +4387,9 @@
           }
         }
       }
+    },
+    "Always Hidden" : {
+
     },
     "Always show hidden items" : {
       "comment" : "A toggle that allows users to configure whether hidden menu bar items should always be visible in the native menu bar on a particular display.",
@@ -11663,6 +11679,9 @@
           }
         }
       }
+    },
+    "Choose where to move the menu bar items:" : {
+
     },
     "Choose which menu bar sections appear in the search panel, and in what order. Use the up and down buttons to reorder, and turn off a section to exclude its items from search results." : {
       "comment" : "Description for the Search section in the Advanced settings pane that controls which menu bar sections appear in the menu bar search panel and in what order.",
@@ -20976,6 +20995,9 @@
         }
       }
     },
+    "Global %@ pt" : {
+
+    },
     "Global Hooks" : {
       "comment" : "A heading for the global hooks section.",
       "localizations" : {
@@ -25286,6 +25308,9 @@
         }
       }
     },
+    "Items were moved to the Visible section." : {
+
+    },
     "Keep search" : {
       "comment" : "A toggle to keep a search query open.",
       "localizations" : {
@@ -25761,6 +25786,9 @@
           }
         }
       }
+    },
+    "Layout reset. Items were moved to the Always Hidden section." : {
+
     },
     "Layout reset. Items were moved to the Hidden section." : {
       "comment" : "A message displayed after successfully resetting the menu bar layout.",
@@ -26713,6 +26741,9 @@
           }
         }
       }
+    },
+    "macOS 27 Is Not Yet Supported" : {
+
     },
     "macOS draws a solid menu bar while Reduce Transparency is on, so %@ cannot tint or reshape it. Turn the setting off to see these effects." : {
 
@@ -37167,6 +37198,7 @@
     },
     "Reset Layout" : {
       "comment" : "A button label that resets the menu bar layout.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -37283,6 +37315,9 @@
           }
         }
       }
+    },
+    "Reset Layout…" : {
+
     },
     "Reset Menu Bar Appearance" : {
       "comment" : "The title of an alert that appears when the user chooses to reset the appearance of the menu bar.",
@@ -37524,6 +37559,7 @@
     },
     "Reset menu bar layout?" : {
       "comment" : "An alert title that asks the user to confirm resetting the menu bar layout.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -37762,6 +37798,7 @@
     },
     "Resets dividers and moves every movable item except the %@ icon to hidden — just like a fresh install." : {
       "comment" : "A description of what resetting the menu bar layout does.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -37878,6 +37915,9 @@
           }
         }
       }
+    },
+    "Resets dividers and moves every movable item except the %@ icon to the selected section." : {
+
     },
     "Restart %@" : {
       "comment" : "A button that restarts the app.",
@@ -38000,6 +38040,7 @@
     },
     "Restores divider defaults and moves every movable item except the %@ icon to Hidden. Use this if the layout looks broken or items won’t load." : {
       "comment" : "A message displayed in an alert when the user confirms resetting the menu bar layout.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {
@@ -43860,6 +43901,9 @@
         }
       }
     },
+    "Spacing: %@" : {
+
+    },
     "Split" : {
       "comment" : "Localized string key for a menu bar shape kind that splits the menu bar between its leading and trailing sides.",
       "localizations" : {
@@ -46482,6 +46526,9 @@
           }
         }
       }
+    },
+    "This version of Thaw is not yet compatible with macOS 27. Preview builds are available on GitHub Releases, and macOS 27 support will be delivered through the alpha update channel." : {
+
     },
     "This will overwrite the settings of %lld display with the global template. If the active display's spacing changes, Thaw will relaunch each app with a menu bar item. Relaunching apps may cause unsaved input, progress, or transient app state to be lost." : {
       "comment" : "A confirmation message that appears when the user is prompted to apply a global template. The argument is the number of displays that will be affected.",
@@ -50799,6 +50846,9 @@
           }
         }
       }
+    },
+    "View Preview Builds" : {
+
     },
     "Visible" : {
       "comment" : "Localized string key for the display string of a menu bar section.",
