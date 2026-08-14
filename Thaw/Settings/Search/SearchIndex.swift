@@ -501,9 +501,9 @@ nonisolated enum SearchIndex {
             titleKey: "Move the pointer to revealed items",
             titleText: "Move the pointer to revealed items",
             descriptionText: """
-                When you open a menu bar item from the search panel, move the mouse \
-                pointer next to it, so its menu appears under the pointer.
-                """,
+            When you open a menu bar item from the search panel, move the mouse \
+            pointer next to it, so its menu appears under the pointer.
+            """,
             pane: .advanced,
             sectionKey: "Menu Bar Search",
             sectionText: "Menu Bar Search",

@@ -596,11 +596,11 @@ struct HostedItemOwnershipTests {
         // windowID 3511 in the rc2 log: title "BetterTouchTool", AX child 15pt
         // // away in com.hegenberg.BetterTouchTool, refused for lack of shape.
         #expect(HostedItemOwnership.titleIndicatesOwner("BetterTouchTool", bundleID: "com.hegenberg.BetterTouchTool"))
-        }
+    }
 
     @Test("A bare vendor component never matches")
     func bareVendorComponentNeverMatches() {
-            #expect(!HostedItemOwnership.titleIndicatesOwner("hegenberg", bundleID: "com.hegenberg.BetterTouchTool"))
+        #expect(!HostedItemOwnership.titleIndicatesOwner("hegenberg", bundleID: "com.hegenberg.BetterTouchTool"))
     }
 
     @Test("A bare title must equal the app component exactly")

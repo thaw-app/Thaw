@@ -706,13 +706,13 @@ nonisolated extension Bridging {
             return nil
         }
 
-        /// Everything derived from one shareable-content snapshot.
-        ///
-        /// Grouped so a refresh re-derives all of it together. The windows,
-        /// their union, and the host display all come from the same snapshot,
-        /// so recomputing only the display against a fresh one would match a
-        /// current display set against stale window frames — and hand stale
-        /// `SCWindow` objects to a filter built from a fresh `SCDisplay`.
+        // Everything derived from one shareable-content snapshot.
+        //
+        // Grouped so a refresh re-derives all of it together. The windows,
+        // their union, and the host display all come from the same snapshot,
+        // so recomputing only the display against a fresh one would match a
+        // current display set against stale window frames — and hand stale
+        // `SCWindow` objects to a filter built from a fresh `SCDisplay`.
         struct Resolved {
             let windows: [SCWindow]
             let unionBounds: CGRect

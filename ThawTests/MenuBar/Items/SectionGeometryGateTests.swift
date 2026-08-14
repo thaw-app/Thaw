@@ -429,15 +429,15 @@ struct SectionGeometryApplyGateTests {
         }
     }
 
-    /// The hard-cap gate (`automaticBulkApplyPermitted`) blocks dispatch
-    /// before `applyProfileLayout` — and therefore before
-    /// `recoverParkedHiddenDividerIfNeeded` — can run. The recovery recache
-    /// uses `scheduleDeferredCacheRefresh` with `skipSavedLayoutApply: true`,
-    /// which skips `applySavedLayout` entirely, so it is unaffected by the
-    /// cap. This invariant is structural: the `automaticBulkApplyPermitted`
-    /// check at the top of `applySavedLayout` returns `false` before the
-    /// dispatch to `applyProfileLayout` where the recovery lives, so the
-    /// recovery cannot fire when the cap has tripped. No test is needed
-    /// because the call ordering cannot be inverted without moving the
-    /// recovery outside the apply dispatch.
+    // The hard-cap gate (`automaticBulkApplyPermitted`) blocks dispatch
+    // before `applyProfileLayout` — and therefore before
+    // `recoverParkedHiddenDividerIfNeeded` — can run. The recovery recache
+    // uses `scheduleDeferredCacheRefresh` with `skipSavedLayoutApply: true`,
+    // which skips `applySavedLayout` entirely, so it is unaffected by the
+    // cap. This invariant is structural: the `automaticBulkApplyPermitted`
+    // check at the top of `applySavedLayout` returns `false` before the
+    // dispatch to `applyProfileLayout` where the recovery lives, so the
+    // recovery cannot fire when the cap has tripped. No test is needed
+    // because the call ordering cannot be inverted without moving the
+    // recovery outside the apply dispatch.
 }

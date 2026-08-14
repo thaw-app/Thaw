@@ -96,6 +96,7 @@ struct MoveEventCoordinatesTests {
             ) == CGPoint(x: bounds.maxX, y: bounds.midY)
         )
     }
+
     /// hard-coded primary-display inset.
     @Test("The safe vertical coordinate comes from the target on a vertically offset display")
     func targetPointUsesMidpointOnVerticallyOffsetDisplay() {

@@ -196,7 +196,7 @@ struct PlanUnmanagedPlacementTests {
     @Test("A changed metric reading reuses its saved position")
     func changedMetricReusesSavedPosition() {
         let owner = MenuBarItemTag.iStatMenusStatusBundleID
-        let saved: [String: [String]] = ["hidden": ["\(owner):CPU 12%"]]
+        let saved = ["hidden": ["\(owner):CPU 12%"]]
         let placement = MenuBarItemManager.NewItemsPlacement(
             sectionKey: "visible",
             anchorIdentifier: nil,

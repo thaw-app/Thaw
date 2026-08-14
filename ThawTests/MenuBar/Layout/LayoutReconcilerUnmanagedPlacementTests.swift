@@ -233,6 +233,7 @@ struct LayoutReconcilerUnmanagedPlacementTests {
     }
 
     // MARK: - Pass 2: multiple anchored placements sharing one anchor
+
     //
     // `LayoutSolver.planUnmanagedPlacement` gives every unmanaged item that
     // lacks a saved position the *same* `.newItemAnchored` placement — the
@@ -653,7 +654,7 @@ struct LayoutReconcilerUnmanagedPlacementTests {
     /// of the first, reversing exactly the group order #919 set out to
     /// preserve.
     @Test("rightOf items keep their order even when the anchor is outside their section")
-    func rightOfAnchorOutsideSectionKeepsOrder() {
+    func rightOfAnchorOutsideSectionKeepsOrder() throws {
         let anchor = "vis1"
         let result = apply(
             placements: [
@@ -667,7 +668,7 @@ struct LayoutReconcilerUnmanagedPlacementTests {
         let a = result.desiredFiltered.firstIndex(of: "newA")
         let b = result.desiredFiltered.firstIndex(of: "newB")
         #expect(a != nil && b != nil)
-        #expect(a! < b!, "newA was listed first in unmanagedUIDs, so it must stay left of newB")
+        #expect(try #require(a) < b!, "newA was listed first in unmanagedUIDs, so it must stay left of newB")
     }
 
     /// A leftOf insertion at the clamped section start shifts every item
@@ -676,7 +677,7 @@ struct LayoutReconcilerUnmanagedPlacementTests {
     /// one slot low and it lands ahead of its predecessor, reversing the
     /// group. The floor must follow the placed item, not its old index.
     @Test("rightOf items keep their order when a leftOf insertion shifts the clamped section start")
-    func rightOfAnchorKeepsOrderAcrossInterleavedLeftOfInsertion() {
+    func rightOfAnchorKeepsOrderAcrossInterleavedLeftOfInsertion() throws {
         let anchor = "vis1"
         let result = apply(
             placements: [
@@ -691,6 +692,6 @@ struct LayoutReconcilerUnmanagedPlacementTests {
         let a = result.desiredFiltered.firstIndex(of: "newA")
         let c = result.desiredFiltered.firstIndex(of: "newC")
         #expect(a != nil && c != nil)
-        #expect(a! < c!, "newA was listed first in unmanagedUIDs, so it must stay left of newC")
+        #expect(try #require(a) < c!, "newA was listed first in unmanagedUIDs, so it must stay left of newC")
     }
 }

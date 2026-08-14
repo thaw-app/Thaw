@@ -193,7 +193,7 @@ struct ParkedHiddenDividerRecoveryTests {
         }
 
         // Accumulate well past the threshold: only one recovery.
-        for _ in 0..<(MenuBarItemManager.parkedHiddenDividerRecoveryThreshold * 3) {
+        for _ in 0 ..< (MenuBarItemManager.parkedHiddenDividerRecoveryThreshold * 3) {
             recordMismatch()
         }
         #expect(recoverCount == 1)
@@ -204,7 +204,7 @@ struct ParkedHiddenDividerRecoveryTests {
         #expect(consecutiveMismatches == 0)
 
         // The next episode can recover again.
-        for _ in 0..<MenuBarItemManager.parkedHiddenDividerRecoveryThreshold {
+        for _ in 0 ..< MenuBarItemManager.parkedHiddenDividerRecoveryThreshold {
             recordMismatch()
         }
         #expect(recoverCount == 2)
@@ -215,7 +215,7 @@ struct ParkedHiddenDividerRecoveryTests {
     /// divider.
     @Test("Below the threshold, mismatches accumulate without recovery")
     func belowThresholdMismatchesAccumulate() {
-        for count in 1..<(MenuBarItemManager.parkedHiddenDividerRecoveryThreshold) {
+        for count in 1 ..< (MenuBarItemManager.parkedHiddenDividerRecoveryThreshold) {
             #expect(
                 !MenuBarItemManager.shouldRecoverParkedHiddenDivider(
                     consecutiveMismatchReadings: count

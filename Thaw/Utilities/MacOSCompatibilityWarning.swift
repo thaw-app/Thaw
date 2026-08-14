@@ -9,7 +9,7 @@
 import AppKit
 
 enum MacOSCompatibilityWarning {
-    nonisolated static func shouldShow(for version: OperatingSystemVersion) -> Bool {
+    static nonisolated func shouldShow(for version: OperatingSystemVersion) -> Bool {
         version.majorVersion >= 27
     }
 

@@ -273,9 +273,15 @@ struct PlanLCSMoveSequenceTests {
 
         #expect(!result.isEmpty, "the move must still be planned")
         for move in result {
-            if case .sectionBoundary = move.destination { continue }
-            if case let .leftOfUID(uid) = move.destination { #expect(uid != "chevron") }
-            if case let .rightOfUID(uid) = move.destination { #expect(uid != "chevron") }
+            if case .sectionBoundary = move.destination {
+                continue
+            }
+            if case let .leftOfUID(uid) = move.destination {
+                #expect(uid != "chevron")
+            }
+            if case let .rightOfUID(uid) = move.destination {
+                #expect(uid != "chevron")
+            }
         }
     }
 

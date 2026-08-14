@@ -50,7 +50,7 @@ struct MouseHelpersCursorPointTests {
     /// The offscreen parking spot Thaw uses for items it has hidden.
     @Test("An offscreen item resolves to no point")
     func offscreenItemResolvesToNoPoint() {
-        let bounds = CGRect(x: -25_000, y: 0, width: 30, height: 24)
+        let bounds = CGRect(x: -25000, y: 0, width: 30, height: 24)
 
         let point = MouseHelpers.cursorPoint(overItemWithBounds: bounds, displayBounds: displays)
 

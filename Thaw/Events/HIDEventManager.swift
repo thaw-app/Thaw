@@ -1497,7 +1497,7 @@ extension HIDEventManager {
             // delay always wins that race and snaps the panel shut before
             // the user can click an icon.
             let hideDelay: TimeInterval = if let activeDisplay = appState.hidEventManager.bestScreen(appState: appState),
-                appState.settings.displaySettings.useIceBar(for: activeDisplay.displayID)
+                                             appState.settings.displaySettings.useIceBar(for: activeDisplay.displayID)
             {
                 appState.settings.general.rehideInterval
             } else {

@@ -30,12 +30,14 @@ struct StaleIdentifierLedgerTests {
         "eu.exelban.Stats:CPU_bar_chart",
     ]
 
-    private var planned: Set<String> { Set(Self.live + [Self.dead]) }
+    private var planned: Set<String> {
+        Set(Self.live + [Self.dead])
+    }
 
     /// Runs `count` applies in which every live identifier matched and the
     /// dead one did not.
     private func missDead(_ ledger: StaleIdentifierLedger, times count: Int) {
-        for _ in 0..<count {
+        for _ in 0 ..< count {
             ledger.recordApply(planned: planned, matched: Set(Self.live))
         }
     }
@@ -103,7 +105,7 @@ struct StaleIdentifierLedgerTests {
     func missesDoNotAccumulateAcrossAMatch() throws {
         try withScratchDefaults { _ in
             let ledger = StaleIdentifierLedger()
-            for _ in 0..<5 {
+            for _ in 0 ..< 5 {
                 missDead(ledger, times: StaleIdentifierLedger.retirementThreshold - 1)
                 ledger.recordApply(planned: planned, matched: planned)
             }
@@ -122,7 +124,7 @@ struct StaleIdentifierLedgerTests {
         try withScratchDefaults { _ in
             let ledger = StaleIdentifierLedger()
             let mostlyUnmatched = Set(Self.live.prefix(1))
-            for _ in 0..<(StaleIdentifierLedger.retirementThreshold * 3) {
+            for _ in 0 ..< (StaleIdentifierLedger.retirementThreshold * 3) {
                 ledger.recordApply(planned: planned, matched: mostlyUnmatched)
             }
             #expect(ledger.retiredIdentifiers.isEmpty)
@@ -159,7 +161,7 @@ struct StaleIdentifierLedgerTests {
             let ledger = StaleIdentifierLedger()
             let uuidUID = "\(UUID().uuidString):Item-0"
             let planned = Set(Self.live + [uuidUID])
-            for _ in 0..<(StaleIdentifierLedger.retirementThreshold * 2) {
+            for _ in 0 ..< (StaleIdentifierLedger.retirementThreshold * 2) {
                 ledger.recordApply(planned: planned, matched: Set(Self.live))
             }
             #expect(ledger.retiredIdentifiers.isEmpty)
