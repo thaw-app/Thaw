@@ -278,6 +278,10 @@ final class ControlItem {
         var c = Set<AnyCancellable>()
 
         $state
+            // Deduplicated: a same-value reassignment must not rewrite the
+            // button and commit a status-item scene update — on macOS 26
+            // every scene commit costs Core Animation fence ports (#933).
+            .removeDuplicates()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 self?.updateStatusItem()
