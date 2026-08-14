@@ -239,3 +239,71 @@ struct ParkedHiddenDividerRecoveryTests {
         ))
     }
 }
+
+/// Covers the retry backoff #933 asked for: a permanently failing lookup
+/// left the window-ID snapshot uncommitted, so the change detector re-ran
+/// a full recache on every 3-second poll for 27 hours straight. The
+/// backoff keeps startup transients fast, then decays the retry cadence
+/// toward a bounded ceiling so recovery stays automatic without the churn.
+@Suite("Control item lookup retry backoff")
+struct ControlItemLookupRetryBackoffTests {
+    @Test("Below the rebuild threshold there is no backoff")
+    func belowThresholdHasNoBackoff() {
+        for count in 0 ..< MenuBarItemManager.controlItemRebuildThreshold {
+            #expect(
+                MenuBarItemManager.controlItemLookupRetryBackoff(consecutiveFailures: count) == nil,
+                "consecutiveFailures=\(count) should not yet delay retries"
+            )
+        }
+    }
+
+    @Test("Past the threshold the backoff doubles per failure")
+    func backoffDoublesPerFailure() {
+        let threshold = MenuBarItemManager.controlItemRebuildThreshold
+        #expect(MenuBarItemManager.controlItemLookupRetryBackoff(
+            consecutiveFailures: threshold
+        ) == .seconds(6))
+        #expect(MenuBarItemManager.controlItemLookupRetryBackoff(
+            consecutiveFailures: threshold + 1
+        ) == .seconds(12))
+        #expect(MenuBarItemManager.controlItemLookupRetryBackoff(
+            consecutiveFailures: threshold + 2
+        ) == .seconds(24))
+        #expect(MenuBarItemManager.controlItemLookupRetryBackoff(
+            consecutiveFailures: threshold + 3
+        ) == .seconds(48))
+    }
+
+    /// The ceiling is what turns a permanent failure into one bounded
+    /// retry per minute instead of an ever-rarer one: the bar can still
+    /// heal itself (display reattached, WindowServer settled) without the
+    /// user relaunching.
+    @Test("The backoff is capped so retries never stop")
+    func backoffIsCapped() {
+        let threshold = MenuBarItemManager.controlItemRebuildThreshold
+        for extra in [4, 5, 10, 1000] {
+            #expect(
+                MenuBarItemManager.controlItemLookupRetryBackoff(
+                    consecutiveFailures: threshold + extra
+                ) == .seconds(60),
+                "consecutiveFailures=threshold+\(extra) should sit at the cap"
+            )
+        }
+    }
+
+    @Test("Custom delays are respected")
+    func customDelaysAreRespected() {
+        #expect(MenuBarItemManager.controlItemLookupRetryBackoff(
+            consecutiveFailures: 5,
+            threshold: 5,
+            baseDelay: .seconds(1),
+            maxDelay: .seconds(3)
+        ) == .seconds(1))
+        #expect(MenuBarItemManager.controlItemLookupRetryBackoff(
+            consecutiveFailures: 7,
+            threshold: 5,
+            baseDelay: .seconds(1),
+            maxDelay: .seconds(3)
+        ) == .seconds(3))
+    }
+}

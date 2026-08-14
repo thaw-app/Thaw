@@ -186,6 +186,13 @@ final class MenuBarItemManager {
     /// rebuilt the control items. Re-armed only after a successful lookup.
     private var didRebuildControlItemsForCurrentFailureEpisode = false
 
+    /// When the most recent `ControlItemPair` lookup failure was recorded.
+    /// Feeds ``controlItemLookupRetryBackoff(consecutiveFailures:threshold:baseDelay:maxDelay:)``
+    /// so the change-detector poll stops re-running a full recache every
+    /// tick against a failure that is not going away (#933). Cleared on
+    /// the first successful lookup.
+    private var lastControlItemLookupFailureAt: ContinuousClock.Instant?
+
     /// Consecutive authoritative cache readings in which the hidden section
     /// has no geometric span despite a populated saved hidden section.
     private var hiddenSectionCollapseStreak = 0
@@ -3477,6 +3484,7 @@ extension MenuBarItemManager {
             // enumerated CG window ID), not that this one cycle raced a
             // transient WindowServer update.
             controlItemLookupFailureStreak += 1
+            lastControlItemLookupFailureAt = .now
             let failureStreak = controlItemLookupFailureStreak
             MenuBarItemManager.diagLog.warning("cacheItemsRegardless: Missing control item for hidden section (expected tag: \(MenuBarItemTag.hiddenControlItem)), keeping last-known-good cache. Items remaining: \(items.count), windowIDs: \(itemWindowIDs.count). hiddenWindowNumber=\(hiddenControlItemWindowNumber.map(String.init) ?? "nil"), hiddenControlItemWID=\(hiddenControlItemWID.map(String.init) ?? "nil"), alwaysHiddenWindowNumber=\(alwaysHiddenControlItemWindowNumber.map(String.init) ?? "nil"), alwaysHiddenControlItemWID=\(alwaysHiddenControlItemWID.map(String.init) ?? "nil"). consecutiveFailures=\(failureStreak)")
             await MainActor.run {
@@ -3510,6 +3518,7 @@ extension MenuBarItemManager {
         if controlItems.canRepositionControlItems {
             controlItemLookupFailureStreak = 0
             didRebuildControlItemsForCurrentFailureEpisode = false
+            lastControlItemLookupFailureAt = nil
             cacheActor.updateCachedItemWindowIDs(itemWindowIDs)
             cacheActor.updateCachedCloneWindowIDs(cloneWindowIDs.union(ghostControlWindowIDs))
             cacheActor.updateCachedControlCenterGenericWindowIDs(
@@ -3854,6 +3863,20 @@ extension MenuBarItemManager {
         }
 
         if cachedIDs != itemWindowIDs {
+            // While control-item lookups keep failing, the uncommitted
+            // snapshot makes this branch fire on every poll; #933 measured
+            // 27 hours of full recaches every 3 seconds against a failure
+            // that was not going away. Skip silently inside the backoff
+            // window — each attempt that does run logs its failure with the
+            // streak count, so the lengthening gaps stay visible in the log.
+            if let backoff = Self.controlItemLookupRetryBackoff(
+                consecutiveFailures: controlItemLookupFailureStreak
+            ),
+                let lastFailure = lastControlItemLookupFailureAt,
+                lastFailure.duration(to: .now) < backoff
+            {
+                return
+            }
             MenuBarItemManager.diagLog.debug("cacheItemsIfNeeded: window IDs changed (\(cachedIDs.count) cached vs \(itemWindowIDs.count) current), triggering recache")
             await cacheItemsRegardless(itemWindowIDs)
             return
@@ -10085,6 +10108,33 @@ extension MenuBarItemManager {
         threshold: Int = MenuBarItemManager.controlItemRebuildThreshold
     ) -> Bool {
         !alreadyRebuilt && consecutiveFailures >= threshold
+    }
+
+    /// The wait a change-detector recache must respect while control-item
+    /// lookups keep failing, or `nil` while no backoff applies.
+    ///
+    /// A lookup failure leaves the window-ID snapshot uncommitted so the
+    /// change detector re-fires — which is right for a transient race and
+    /// wrong for a failure that is not going away: #933's process spent 27
+    /// hours running a full recache every poll against a permanently
+    /// missing control item. Below the rebuild threshold there is no wait,
+    /// so startup transients recover at full speed; past it the wait
+    /// doubles per failure and caps, keeping recovery automatic (a retry
+    /// still runs every `maxDelay`) without the constant churn. Real
+    /// changes are unaffected — event-driven recaches bypass the detector.
+    static nonisolated func controlItemLookupRetryBackoff(
+        consecutiveFailures: Int,
+        threshold: Int = MenuBarItemManager.controlItemRebuildThreshold,
+        baseDelay: Duration = .seconds(6),
+        maxDelay: Duration = .seconds(60)
+    ) -> Duration? {
+        guard consecutiveFailures >= threshold else {
+            return nil
+        }
+        // Cap the exponent before shifting so a long-running streak cannot
+        // overflow; 1 << 6 * baseDelay already exceeds every realistic cap.
+        let exponent = min(consecutiveFailures - threshold, 6)
+        return min(baseDelay * (1 << exponent), maxDelay)
     }
 
     /// Whether a persistent zero-width hidden span has enough trustworthy
