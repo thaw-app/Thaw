@@ -137,7 +137,10 @@ struct ProfileSettingsPane: View {
                     arrowEdge: .bottom
                 ) {
                     if let previewedProfile {
-                        ProfilePreviewView(profile: previewedProfile)
+                        ProfilePreviewView(
+                            profile: previewedProfile,
+                            displayNames: appState.settings.displaySettings.knownDisplays.mapValues(\.name)
+                        )
                     }
                 }
 

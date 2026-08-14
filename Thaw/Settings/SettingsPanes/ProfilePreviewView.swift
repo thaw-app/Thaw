@@ -65,6 +65,39 @@ nonisolated enum ProfilePreviewModel {
             return Section(key: key, items: items)
         }
     }
+
+    struct SpacingRow: Identifiable, Equatable {
+        /// `"global"` for the profile-wide value, otherwise the display UUID.
+        let id: String
+        /// The resolved display name; nil for the global row.
+        let displayName: String?
+        /// The stored `itemSpacingOffset`, in points.
+        let offset: Double
+    }
+
+    /// Assembles the spacing summary #887 asked the preview to include: the
+    /// profile-wide offset first, then each stored display override, sorted
+    /// by resolved name so the order is stable no matter how the dictionary
+    /// iterates. Zero is the default and changes nothing, so zero offsets
+    /// add no row.
+    static func spacingRows(
+        for profile: Profile,
+        displayNames: [String: String]
+    ) -> [SpacingRow] {
+        var rows: [SpacingRow] = []
+        let global = profile.globalDisplayConfiguration.itemSpacingOffset
+        if global != 0 {
+            rows.append(SpacingRow(id: "global", displayName: nil, offset: global))
+        }
+        let overrides = profile.displayConfigurations
+            .filter { $0.value.itemSpacingOffset != 0 }
+            .map { (id: $0.key, name: displayNames[$0.key] ?? $0.key, offset: $0.value.itemSpacingOffset) }
+            .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+        for override in overrides {
+            rows.append(SpacingRow(id: override.id, displayName: override.name, offset: override.offset))
+        }
+        return rows
+    }
 }
 
 // MARK: - ProfilePreviewView
@@ -73,6 +106,10 @@ nonisolated enum ProfilePreviewModel {
 /// rendered as app icons, plus the profile's key behavior settings.
 struct ProfilePreviewView: View {
     let profile: Profile
+
+    /// Display UUID → user-facing name, for labeling per-display spacing
+    /// overrides. Rows for displays not in the map fall back to the UUID.
+    var displayNames: [String: String] = [:]
 
     /// How many icons a section row shows before collapsing into "+N".
     private let maxIconsPerSection = 12
@@ -96,6 +133,13 @@ struct ProfilePreviewView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
+
+            if let spacingSummary {
+                Text(spacingSummary)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .padding(14)
         .frame(width: 360, alignment: .leading)
@@ -160,6 +204,23 @@ struct ProfilePreviewView: View {
             parts.append(String(localized: "Show on scroll"))
         }
         return parts.joined(separator: " · ")
+    }
+
+    /// One caption line for the saved spacing, or nil when every offset is
+    /// at its default and the profile carries no spacing to preview.
+    private var spacingSummary: String? {
+        let rows = ProfilePreviewModel.spacingRows(for: profile, displayNames: displayNames)
+        guard !rows.isEmpty else {
+            return nil
+        }
+        let parts = rows.map { row in
+            let value = row.offset.formatted(.number.sign(strategy: .always()))
+            if let name = row.displayName {
+                return String(localized: "\(name) \(value) pt")
+            }
+            return String(localized: "Global \(value) pt")
+        }
+        return String(localized: "Spacing: \(parts.joined(separator: " · "))")
     }
 }
 

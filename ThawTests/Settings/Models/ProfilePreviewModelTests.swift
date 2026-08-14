@@ -105,4 +105,26 @@ struct ProfilePreviewModelTests {
         #expect(sections.map(\.key) == ["visible", "hidden", "alwaysHidden"])
         #expect(sections.flatMap(\.items).isEmpty)
     }
+
+    // MARK: - spacing
+
+    @Test("Spacing rows include the global value and named display overrides")
+    func spacingRowsIncludeGlobalAndDisplayOverrides() {
+        var profile = makeProfile(displayConfigurations: [
+            "DISPLAY-B": .defaultConfiguration.withItemSpacingOffset(-3),
+            "DISPLAY-A": .defaultConfiguration.withItemSpacingOffset(8),
+        ])
+        profile.globalDisplayConfiguration = .defaultConfiguration.withItemSpacingOffset(4)
+
+        let rows = ProfilePreviewModel.spacingRows(
+            for: profile,
+            displayNames: ["DISPLAY-A": "Studio Display"]
+        )
+
+        #expect(rows == [
+            .init(id: "global", displayName: nil, offset: 4),
+            .init(id: "DISPLAY-B", displayName: "DISPLAY-B", offset: -3),
+            .init(id: "DISPLAY-A", displayName: "Studio Display", offset: 8),
+        ])
+    }
 }
