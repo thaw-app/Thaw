@@ -109,11 +109,34 @@ final class AdvancedSettings {
     }
 
     /// The interval between icon image refreshes in panels (Thaw Bar, search, layout).
+    ///
+    /// Always held on the discrete grid the "Icon refresh rate" slider can
+    /// express: `0` (Off) or `1/n` for `n` in `1...maxIconRefreshRate`. Writes
+    /// from the slider, URI, profiles, and Defaults load are all snapped here
+    /// so the UI and the live-refresh loop never disagree.
     var iconRefreshInterval = Defaults.DefaultValue.iconRefreshInterval {
         didSet {
-            guard oldValue != iconRefreshInterval else { return }
+            let normalized = Self.normalizedIconRefreshInterval(iconRefreshInterval)
+            let didNormalize = iconRefreshInterval != normalized
+            if didNormalize {
+                iconRefreshInterval = normalized
+            }
+            guard didNormalize || oldValue != iconRefreshInterval else { return }
             Defaults.set(iconRefreshInterval, forKey: .iconRefreshInterval)
         }
+    }
+
+    /// Snaps an icon-refresh interval onto the values the slider can express.
+    ///
+    /// - `<= 0` stays Off (`0`).
+    /// - Otherwise snaps to `1 / clamp(round(1 / interval), 1, ceiling)`,
+    ///   where the ceiling is ``MenuBarItemImageCache/maxIconRefreshRate``.
+    /// - Idempotent: already-on-grid values round-trip unchanged.
+    nonisolated static func normalizedIconRefreshInterval(_ interval: TimeInterval) -> TimeInterval {
+        guard interval > 0 else { return 0 }
+        let ceiling = MenuBarItemImageCache.maxIconRefreshRate
+        let fps = min(max((1.0 / interval).rounded(), 1), ceiling)
+        return 1.0 / fps
     }
 
     /// A Boolean value that indicates whether diagnostic logging to file is enabled.

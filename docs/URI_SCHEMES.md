@@ -153,9 +153,9 @@ Thaw supports programmatic settings manipulation via the `thaw://` URL scheme wi
 | `rehideInterval`         | Double | 1-300 seconds | Time before auto-rehide (default: 15) |
 | `showOnHoverDelay`       | Double | 0-5 seconds | Delay before hover reveals items (default: 0.2) |
 | `tooltipDelay`           | Double | 0-5 seconds | Delay before showing tooltips (default: 0.5) |
-| `iconRefreshInterval`    | Double | 0.1-5 seconds | Interval between icon refreshes (default: 0.1) |
+| `iconRefreshInterval`    | Double | 0-1 seconds | Interval between icon refreshes in panels; `0` means Off; positive values snap to `1/n` seconds for integer `n` in 1–30 (default: 0.25 ≈ 4 fps) |
 
-**Note:** Values outside the valid range are automatically clamped to the nearest boundary.
+**Note:** Values outside the valid range are automatically clamped to the nearest boundary. `iconRefreshInterval` is additionally snapped onto the discrete fps grid above before it is stored.
 
 #### Enum Settings
 
