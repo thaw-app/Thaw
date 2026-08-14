@@ -6198,13 +6198,10 @@ extension MenuBarItemManager {
         /// target item has moved or disappeared by the time we rehide.
         let returnDestination: MoveDestination
 
-        /// The tag of the neighbor on the opposite side of
-        /// ``returnDestination``, used as a secondary fallback to preserve
-        /// relative ordering when the primary target is gone.
-        let fallbackNeighborTag: MenuBarItemTag?
-
-        /// The PID of the neighbor on the opposite side.
-        let fallbackNeighborPID: pid_t?
+        /// The neighbor on the opposite side of the ``returnDestination``,
+        /// used as a secondary fallback to preserve relative ordering when
+        /// the primary target is gone.
+        let fallbackNeighbor: (tag: MenuBarItemTag, pid: pid_t)?
 
         /// The original section the item belonged to before being temporarily
         /// shown. Used as a last-resort fallback when both neighbor-based
@@ -6346,8 +6343,7 @@ extension MenuBarItemManager {
             interfacePIDs: Set<pid_t>,
             displayID: CGDirectDisplayID,
             returnDestination: MoveDestination,
-            fallbackNeighborTag: MenuBarItemTag?,
-            fallbackNeighborPID: pid_t?,
+            fallbackNeighbor: (tag: MenuBarItemTag, pid: pid_t)?,
             originalSection: MenuBarSection.Name
         ) {
             self.tag = tag
@@ -6355,8 +6351,7 @@ extension MenuBarItemManager {
             self.interfacePIDs = interfacePIDs
             self.displayID = displayID
             self.returnDestination = returnDestination
-            self.fallbackNeighborTag = fallbackNeighborTag
-            self.fallbackNeighborPID = fallbackNeighborPID
+            self.fallbackNeighbor = fallbackNeighbor
             self.originalSection = originalSection
         }
     }
@@ -6824,8 +6819,7 @@ extension MenuBarItemManager {
             interfacePIDs: Set([item.ownerPID, item.sourcePID].compactMap(\.self)),
             displayID: resolvedDisplayID,
             returnDestination: returnInfo.destination,
-            fallbackNeighborTag: returnInfo.fallbackNeighbor?.tag,
-            fallbackNeighborPID: returnInfo.fallbackNeighbor?.pid,
+            fallbackNeighbor: returnInfo.fallbackNeighbor,
             originalSection: originalSection
         )
         temporarilyShownItemContexts.append(context)
@@ -6965,7 +6959,7 @@ extension MenuBarItemManager {
     /// Tries destinations in order of preference:
     /// 1. The captured ``TemporarilyShownItemContext/returnDestination``
     ///    (primary neighbor, refreshed with current bounds).
-    /// 2. The ``TemporarilyShownItemContext/fallbackNeighborTag`` (the
+    /// 2. The ``TemporarilyShownItemContext/fallbackNeighbor`` (the
     ///    neighbor on the opposite side, to preserve relative ordering).
     /// 3. The control item for the item's original section (guarantees
     ///    the item ends up in the correct section, though ordering within
@@ -6991,11 +6985,10 @@ extension MenuBarItemManager {
         }
 
         // 2. Try the fallback neighbor (opposite side).
-        if let fallbackTag = context.fallbackNeighborTag,
-           let fallbackPID = context.fallbackNeighborPID,
+        if let fallbackNeighbor = context.fallbackNeighbor,
            let freshFallback = items.first(where: {
-               $0.tag.matchesIgnoringWindowID(fallbackTag) &&
-                   ($0.sourcePID ?? $0.ownerPID) == fallbackPID
+               $0.tag.matchesIgnoringWindowID(fallbackNeighbor.tag) &&
+                   ($0.sourcePID ?? $0.ownerPID) == fallbackNeighbor.pid
            })
         {
             switch context.returnDestination {
@@ -7500,7 +7493,7 @@ extension MenuBarItemManager {
         // signature with private state.
         var fallbackNeighborByTagIdentifier = [String: MenuBarItemTag]()
         for context in temporarilyShownItemContexts {
-            if let neighbor = context.fallbackNeighborTag {
+            if let neighbor = context.fallbackNeighbor?.tag {
                 fallbackNeighborByTagIdentifier[context.tag.tagIdentifier] = neighbor
             }
         }
