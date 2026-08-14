@@ -15,9 +15,8 @@ import Testing
 /// A batch that fails leaves the bar wherever it stopped. Recording that as
 /// the user's layout replaces the order the batch was restoring, so the next
 /// pass plans against the partial result and shifts things a little further
-/// again (#900). The arm expires rather than holding until an apply finally
-/// comes back clean, because an item whose owner never responds would
-/// otherwise freeze the saved layout for the rest of the session.
+/// again (#900). The arm is cleared only by a clean apply or an explicit user
+/// move; elapsed time cannot make a partial result authoritative.
 @Suite("Unfinished move batch gate")
 struct UnfinishedMoveBatchGateTests {
     private let clock = ContinuousClock()
@@ -28,8 +27,7 @@ struct UnfinishedMoveBatchGateTests {
     func noArmDoesNotBlock() {
         #expect(
             !MenuBarItemManager.unfinishedMoveBatchBlocksSave(
-                observedAt: nil,
-                now: clock.now
+                observedAt: nil
             )
         )
     }
@@ -41,51 +39,45 @@ struct UnfinishedMoveBatchGateTests {
         let now = clock.now
         #expect(
             MenuBarItemManager.unfinishedMoveBatchBlocksSave(
-                observedAt: now,
-                now: now
+                observedAt: now
             )
         )
     }
 
-    /// The window has to outlast the retry apply, which needs two
-    /// consecutive divergence observations before it dispatches.
-    @Test("An arm inside the window still blocks")
-    func armInsideWindowBlocks() {
+    /// A recent failure remains non-authoritative while its retry is pending.
+    @Test("A recent unfinished batch blocks the save")
+    func recentUnfinishedBatchBlocks() {
         let armedAt = clock.now
         #expect(
             MenuBarItemManager.unfinishedMoveBatchBlocksSave(
-                observedAt: armedAt,
-                now: armedAt.advanced(by: .seconds(20)),
-                staleness: .seconds(30)
+                observedAt: armedAt
             )
         )
     }
 
-    /// Past the window the user's own rearrangements matter more than a
-    /// batch that is evidently not going to succeed.
-    @Test("An arm beyond the window stops blocking")
-    func armBeyondWindowStopsBlocking() {
-        let armedAt = clock.now
-        #expect(
-            !MenuBarItemManager.unfinishedMoveBatchBlocksSave(
-                observedAt: armedAt,
-                now: armedAt.advanced(by: .seconds(31)),
-                staleness: .seconds(30)
-            )
-        )
-    }
-
-    /// The boundary is inclusive, matching `confirmedDivergence`. Pinned
-    /// because the two windows are meant to stay comparable.
-    @Test("An arm exactly at the window boundary still blocks")
-    func armAtBoundaryBlocks() {
+    /// A failed batch is not an order of record merely because time passed.
+    /// The latch is cleared only by a clean apply or an explicit user move.
+    @Test("An old unfinished batch still blocks the save")
+    func oldUnfinishedBatchStillBlocks() {
         let armedAt = clock.now
         #expect(
             MenuBarItemManager.unfinishedMoveBatchBlocksSave(
-                observedAt: armedAt,
-                now: armedAt.advanced(by: .seconds(30)),
-                staleness: .seconds(30)
+                observedAt: armedAt
             )
         )
+    }
+
+    /// A direct Cmd-drag or a successful Layout editor drag is an explicit
+    /// choice to make the current arrangement authoritative.
+    @Test("An explicit user move clears the unfinished-batch latch")
+    @MainActor
+    func explicitUserMoveClearsLatch() {
+        let manager = MenuBarItemManager()
+        manager.recordBulkApplyOutcome(unenactedMoveCount: 1)
+        #expect(manager.hasUnfinishedMoveBatch)
+
+        manager.recordExternalMoveOperation()
+
+        #expect(!manager.hasUnfinishedMoveBatch)
     }
 }

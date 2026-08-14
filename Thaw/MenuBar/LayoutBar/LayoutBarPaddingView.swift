@@ -237,7 +237,14 @@ final class LayoutBarPaddingView: NSView {
                     watchdogTimeout: MenuBarItemManager.layoutWatchdogTimeout
                 )
                 appState.itemManager.removeTemporarilyShownItemFromCache(with: item.tag)
-                await stabilizePlacement(of: item, to: destination, expectedSection: container.section, appState: appState)
+                if await stabilizePlacement(
+                    of: item,
+                    to: destination,
+                    expectedSection: container.section,
+                    appState: appState
+                ) {
+                    appState.itemManager.recordExternalMoveOperation()
+                }
             } catch MenuBarItemManager.EventError.menuTrackingActive {
                 // A menu bar item's menu (Wi-Fi picker, input method panel,
                 // etc.) was open and the move was deferred to avoid tearing
@@ -275,6 +282,7 @@ final class LayoutBarPaddingView: NSView {
                 switch action {
                 case .suppress:
                     Self.diagLog.info("Move verification failed but \(item.logString) reached intended position in \(container.section.logString); suppressing alert")
+                    appState.itemManager.recordExternalMoveOperation()
                 case .rescueAndRetry:
                     // The item is stuck at the x=-1 sentinel. Rescue it to
                     // the visible section, let macOS settle, then retry the
@@ -294,7 +302,14 @@ final class LayoutBarPaddingView: NSView {
                             watchdogTimeout: MenuBarItemManager.layoutWatchdogTimeout
                         )
                         appState.itemManager.removeTemporarilyShownItemFromCache(with: item.tag)
-                        await stabilizePlacement(of: item, to: destination, expectedSection: container.section, appState: appState)
+                        if await stabilizePlacement(
+                            of: item,
+                            to: destination,
+                            expectedSection: container.section,
+                            appState: appState
+                        ) {
+                            appState.itemManager.recordExternalMoveOperation()
+                        }
                     } catch MenuBarItemManager.EventError.menuTrackingActive {
                         // Same deferral the outer catch handles: the user
                         // opened a menu bar item's menu while the retry was
@@ -443,7 +458,7 @@ final class LayoutBarPaddingView: NSView {
         to destination: MenuBarItemManager.MoveDestination,
         expectedSection: MenuBarSection.Name,
         appState: AppState
-    ) async {
+    ) async -> Bool {
         // First refresh caches and verify placement.
         await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
 
@@ -472,6 +487,7 @@ final class LayoutBarPaddingView: NSView {
             appState.imageCache.performCacheCleanup()
         }
         await appState.imageCache.updateCacheWithoutChecks(sections: MenuBarSection.Name.allCases)
+        return isInExpectedSection()
     }
 
     override func viewDidMoveToWindow() {

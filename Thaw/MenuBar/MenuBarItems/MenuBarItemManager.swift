@@ -614,7 +614,7 @@ final class MenuBarItemManager {
     /// A clean batch clears the arm rather than leaving it to expire: the
     /// bar now matches what the apply set out to produce, and there is no
     /// reason to keep withholding it from the saved order.
-    private func recordBulkApplyOutcome(unenactedMoveCount: Int) {
+    func recordBulkApplyOutcome(unenactedMoveCount: Int) {
         guard unenactedMoveCount > 0 else {
             unfinishedMoveBatchObservedAt = nil
             consecutiveUnfinishedBulkApplies = 0
@@ -625,6 +625,12 @@ final class MenuBarItemManager {
         MenuBarItemManager.diagLog.warning(
             "Profile layout: \(unenactedMoveCount) planned move(s) left unenacted; withholding the current arrangement from the saved order (streak: \(consecutiveUnfinishedBulkApplies))"
         )
+    }
+
+    /// Whether the latest bulk apply left a partial arrangement that must not
+    /// replace the saved order.
+    var hasUnfinishedMoveBatch: Bool {
+        Self.unfinishedMoveBatchBlocksSave(observedAt: unfinishedMoveBatchObservedAt)
     }
 
     /// The instance reading of the bulk-apply circuit breaker: feeds the
@@ -2016,10 +2022,15 @@ final class MenuBarItemManager {
         return timestamp.duration(to: .now) <= duration
     }
 
-    /// Records that a move operation occurred outside of Thaw's own `move()` function
-    /// (e.g. the user cmd+dragged an item directly on the menu bar).
+    /// Records an explicit user move, either a direct Cmd-drag or a completed
+    /// drag in the Layout editor.
+    ///
+    /// A user-chosen arrangement is authoritative, so it clears both the
+    /// failed-batch save latch and any pending automatic-divergence reading.
     func recordExternalMoveOperation() {
         lastMoveOperationTimestamp = .now
+        pendingDivergenceObservedAt = nil
+        recordBulkApplyOutcome(unenactedMoveCount: 0)
     }
 }
 
@@ -2894,25 +2905,21 @@ extension MenuBarItemManager {
         // wreckage, not a layout anyone chose. Recording it hands the next
         // pass a target it just moved, which is how a failed apply turns
         // into a bar that drifts a little further on every retry (#900).
-        let hasUnfinishedMoveBatch = Self.unfinishedMoveBatchBlocksSave(
-            observedAt: unfinishedMoveBatchObservedAt,
-            now: .now
-        )
-
         if context.controlItems.canRepositionControlItems,
            LayoutSolver.shouldPersistSavedOrder(
-            LayoutSolver.SavedOrderGate(
-                isRestoringItemOrder: isRestoringItemOrder,
-                isResettingLayout: isResettingLayout,
-                isInStartupSettling: isInStartupSettling,
-                isApplyingProfileLayout: isApplyingProfileLayout,
-                temporarilyShownItemContextsIsEmpty: temporarilyShownItemContexts.isEmpty,
-                alwaysHiddenSectionResolved: alwaysHiddenSectionResolved,
-                hiddenSectionHasRoom: hiddenSectionHasRoom,
-                hasPendingDivergence: hasPendingDivergence,
-                hasUnfinishedMoveBatch: hasUnfinishedMoveBatch
-            )
-        ) {
+               LayoutSolver.SavedOrderGate(
+                   isRestoringItemOrder: isRestoringItemOrder,
+                   isResettingLayout: isResettingLayout,
+                   isInStartupSettling: isInStartupSettling,
+                   isApplyingProfileLayout: isApplyingProfileLayout,
+                   temporarilyShownItemContextsIsEmpty: temporarilyShownItemContexts.isEmpty,
+                   alwaysHiddenSectionResolved: alwaysHiddenSectionResolved,
+                   hiddenSectionHasRoom: hiddenSectionHasRoom,
+                   hasPendingDivergence: hasPendingDivergence,
+                   hasUnfinishedMoveBatch: hasUnfinishedMoveBatch
+               )
+           )
+        {
             // Don't persist if any items are in a transient blocked state (x=-1).
             // Wait for the next cache cycle when bounds are reliable.
             let hasBlockedItems = MenuBarSection.Name.allCases.contains { section in
@@ -8253,7 +8260,7 @@ extension MenuBarItemManager {
             hiddenControlItemWindowID: refreshHiddenWID,
             alwaysHiddenControlItemWindowID: refreshAlwaysHiddenWID
         ), refreshedControls.canRepositionControlItems,
-            !target.requiresAlwaysHiddenDivider || refreshedControls.alwaysHidden != nil
+        !target.requiresAlwaysHiddenDivider || refreshedControls.alwaysHidden != nil
         else {
             MenuBarItemManager.diagLog.error(
                 "Layout reset aborted before pass 2: authoritative section dividers are unavailable"
@@ -9305,11 +9312,11 @@ extension MenuBarItemManager {
         // as an order of record (#900).
         var unenactedMoveCount = 0
 
-        // Every abandon exits the same way: the abandoned remainder is one
-        // more unenacted move, the outcome feeds the circuit breaker, and
-        // in-flight profile state is torn down before the deferred cache
-        // refresh reconciles against reality. Callers with their own log
-        // line pass nil.
+        /// Every abandon exits the same way: the abandoned remainder is one
+        /// more unenacted move, the outcome feeds the circuit breaker, and
+        /// in-flight profile state is torn down before the deferred cache
+        /// refresh reconciles against reality. Callers with their own log
+        /// line pass nil.
         func abandonApply(reason: String?, items: [MenuBarItem]) {
             unenactedMoveCount += 1
             if let reason {
@@ -9462,10 +9469,11 @@ extension MenuBarItemManager {
             let screenFrames = NSScreen.screens.map { CGDisplayBounds($0.displayID) }
             if case .savedOrder = source,
                recoverParkedHiddenDividerIfNeeded(
-                hiddenBoundaryMismatch: hiddenBoundaryMismatch,
-                hiddenControlItem: freshControl.hidden,
-                screenFrames: screenFrames
-            ) {
+                   hiddenBoundaryMismatch: hiddenBoundaryMismatch,
+                   hiddenControlItem: freshControl.hidden,
+                   screenFrames: screenFrames
+               )
+            {
                 // Keep the prior unfinished-batch arm intact without counting
                 // the rebuild as another failed apply. That leaves the one
                 // permitted retry available to verify the fresh divider.
@@ -9653,7 +9661,7 @@ extension MenuBarItemManager {
                 hiddenControlItemWindowID: hiddenWID,
                 alwaysHiddenControlItemWindowID: alwaysHiddenWID
             ), freshControl.canRepositionControlItems,
-                let ahItem = freshControl.alwaysHidden
+            let ahItem = freshControl.alwaysHidden
             else {
                 abandonApply(
                     reason: "control items degraded before moving AH_ctrl",
@@ -10443,24 +10451,15 @@ extension MenuBarItemManager {
     /// Whether a bulk apply that left moves unenacted should still hold
     /// the saveSectionOrder gate shut.
     ///
-    /// The block is time-bounded rather than held until an apply finally
-    /// comes back clean. A batch can fail on an item whose owner never
-    /// responds, and the failure ledger's backoff eventually stops the
-    /// retries altogether; without a bound, one such item would freeze
-    /// the saved layout for the rest of the session and a rearrangement
-    /// the user made by hand would never be recorded. The window matches
-    /// `confirmedDivergence`'s: long enough for the retry apply, which
-    /// needs two consecutive divergence observations before it dispatches,
-    /// to run and clear the arm itself.
+    /// Time alone cannot make the partial result authoritative: allowing this
+    /// latch to expire rewrites the saved order with the failed batch's own
+    /// wreckage on the next cache change (#900). A clean apply clears the
+    /// latch through `recordBulkApplyOutcome`; an explicit user move clears it
+    /// through `recordExternalMoveOperation`.
     static nonisolated func unfinishedMoveBatchBlocksSave(
-        observedAt: ContinuousClock.Instant?,
-        now: ContinuousClock.Instant,
-        staleness: Duration = .seconds(30)
+        observedAt: ContinuousClock.Instant?
     ) -> Bool {
-        guard let observedAt else {
-            return false
-        }
-        return now - observedAt <= staleness
+        observedAt != nil
     }
 
     /// Whether an automatic apply may dispatch given how the recent ones
