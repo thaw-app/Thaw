@@ -112,12 +112,12 @@ struct MenuBarLayoutSettingsPane: View {
         }
     }
 
-    // Both strings are reused verbatim from the existing catalog so this
-    // control ships fully translated: "Arrange menu bar items." and the
-    // ⌘ Command + drag line already carry all 19 localizations. The
-    // trailing period in the toggle label is the catalog's, not a slip —
-    // matching the existing key exactly is what avoids a new translation
-    // round.
+    /// Both strings are reused verbatim from the existing catalog so this
+    /// control ships fully translated: "Arrange menu bar items." and the
+    /// ⌘ Command + drag line already carry all 19 localizations. The
+    /// trailing period in the toggle label is the catalog's, not a slip —
+    /// matching the existing key exactly is what avoids a new translation
+    /// round.
     private var automaticArrangementEnabled: some View {
         Toggle(
             "Arrange menu bar items.",
@@ -224,7 +224,7 @@ struct MenuBarLayoutSettingsPane: View {
     private var layoutBarsSection: some View {
         IceSection {
             if let editingDisplayName {
-                Text(editingDisplayName)
+                Text("Active display: \(editingDisplayName)")
                     // Redrawn on the same signals LayoutBarPaddingView uses to
                     // re-evaluate the notch indicator, so the title and the
                     // bars below it can never disagree about which screen
