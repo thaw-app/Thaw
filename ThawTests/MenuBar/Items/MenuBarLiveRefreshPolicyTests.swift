@@ -80,10 +80,14 @@ struct MenuBarLiveRefreshPolicyTests {
         #expect(deadline == now + .milliseconds(33))
     }
 
-    @Test("Hidden wins when Hidden and Always Hidden are both due")
-    func hiddenWinsOverAlwaysHidden() {
+    @Test("When both are due, Always Hidden goes first so Hidden cannot starve it")
+    func alwaysHiddenNotStarvedWhenBothDue() {
         #expect(
             MenuBarLiveRefreshPolicy.nextOffscreenSection(hiddenDue: true, alwaysHiddenDue: true)
+                == .alwaysHidden
+        )
+        #expect(
+            MenuBarLiveRefreshPolicy.nextOffscreenSection(hiddenDue: true, alwaysHiddenDue: false)
                 == .hidden
         )
         #expect(
@@ -94,6 +98,29 @@ struct MenuBarLiveRefreshPolicyTests {
             MenuBarLiveRefreshPolicy.nextOffscreenSection(hiddenDue: false, alwaysHiddenDue: false)
                 == nil
         )
+    }
+
+    @Test("Sustained Hidden due-ticks still serve Always Hidden once per cycle")
+    func sustainedHiddenStillServesAlwaysHidden() {
+        var hiddenCaptures = 0
+        var alwaysCaptures = 0
+        var alwaysHiddenDue = true
+        for _ in 0 ..< 30 {
+            switch MenuBarLiveRefreshPolicy.nextOffscreenSection(
+                hiddenDue: true,
+                alwaysHiddenDue: alwaysHiddenDue
+            ) {
+            case .alwaysHidden:
+                alwaysCaptures += 1
+                alwaysHiddenDue = false
+            case .hidden:
+                hiddenCaptures += 1
+            case .visible, nil:
+                break
+            }
+        }
+        #expect(alwaysCaptures == 1)
+        #expect(hiddenCaptures == 29)
     }
 
     @Test("A fast capture waits out the remainder of the interval")

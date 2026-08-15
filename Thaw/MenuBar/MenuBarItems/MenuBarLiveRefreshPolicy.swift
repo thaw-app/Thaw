@@ -36,11 +36,12 @@ nonisolated enum MenuBarLiveRefreshPolicy {
         section == .visible ? .screenCaptureKit : .captureService
     }
 
-    /// One offscreen request in flight. Hidden at the slider rate wins so a
-    /// Search/Layout tick cannot pull Always Hidden above 1 fps.
+    /// One offscreen request in flight. When both are due, Always Hidden goes
+    /// first: `isDue` already caps it at 1 fps, so this cannot raise its rate,
+    /// and Hidden retries on the next wake instead of starving it.
     static func nextOffscreenSection(hiddenDue: Bool, alwaysHiddenDue: Bool) -> MenuBarSection.Name? {
-        if hiddenDue { return .hidden }
         if alwaysHiddenDue { return .alwaysHidden }
+        if hiddenDue { return .hidden }
         return nil
     }
 

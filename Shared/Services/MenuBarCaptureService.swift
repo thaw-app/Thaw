@@ -193,10 +193,8 @@ nonisolated extension MenuBarCaptureService {
             }
             for row in 0 ..< height {
                 let rowBase = base + row * bytesPerRow
-                for column in 0 ..< width {
-                    if rowBase[column * 4 + 3] != 0 {
-                        return false
-                    }
+                for column in 0 ..< width where rowBase[column * 4 + 3] != 0 {
+                    return false
                 }
             }
             return true

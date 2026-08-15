@@ -742,6 +742,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
                 self.liveRefreshTask = nil
                 task.cancel()
                 await task.value
+                guard self.liveRefreshTask == nil else { return }
                 await MenuBarCaptureService.Connection.shared.recycle()
             }
         }
@@ -871,9 +872,8 @@ final class MenuBarItemImageCache: @unchecked Sendable {
                 }
             }
 
-            // One offscreen request in flight: Hidden at the slider rate wins
-            // over Always Hidden so a Search/Layout tick cannot pull Always
-            // Hidden above 1 fps.
+            // One offscreen request in flight. Always Hidden goes first when
+            // both are due so Hidden at 30 fps cannot starve its 1 fps slot.
             let hiddenInterval = MenuBarLiveRefreshPolicy.refreshInterval(for: .hidden, target: interval)
             let alwaysInterval = MenuBarLiveRefreshPolicy.refreshInterval(for: .alwaysHidden, target: interval)
             let hiddenDue = !hiddenItems.isEmpty

@@ -108,8 +108,13 @@ extension MenuBarCaptureService {
 extension MenuBarCaptureService {
     private final nonisolated class Session: Sendable {
         private final nonisolated class Storage: @unchecked Sendable {
+            private struct Slot {
+                var session: XPCSession?
+                var generation: UInt64 = 0
+            }
+
             private let name = MenuBarCaptureService.name
-            private var session: XPCSession?
+            private let slot = OSAllocatedUnfairLock(initialState: Slot())
             private let queue: DispatchQueue
             private let diagLog: DiagLog
 
@@ -119,26 +124,46 @@ extension MenuBarCaptureService {
             }
 
             func getSession() throws -> XPCSession {
-                if let session {
+                if let session = slot.withLock({ $0.session }) {
                     return session
+                }
+                let generation = slot.withLock { state -> UInt64 in
+                    state.generation += 1
+                    return state.generation
                 }
                 let session = try XPCSession(xpcService: name, options: .inactive) { [weak self] error in
                     guard let self else { return }
-                    diagLog.warning("Capture session was cancelled with error \(error.localizedDescription)")
-                    self.session = nil
+                    self.diagLog.warning(
+                        "Capture session was cancelled with error \(error.localizedDescription)"
+                    )
+                    self.slot.withLock { state in
+                        if state.generation == generation {
+                            state.session = nil
+                        }
+                    }
                 }
                 if CodeSigningInfo.processTeamIdentifier != nil {
                     session.setPeerRequirement(.isFromSameTeam())
                 }
                 session.setTargetQueue(queue)
                 try session.activate()
-                self.session = session
+                let superseded = slot.withLock { state -> Bool in
+                    guard state.generation == generation else { return true }
+                    state.session = session
+                    return false
+                }
+                if superseded {
+                    session.cancel(reason: "superseded")
+                }
                 return session
             }
 
             func cancel(reason: String) {
-                guard let session = session.take() else { return }
-                session.cancel(reason: reason)
+                let session = slot.withLock { state -> XPCSession? in
+                    state.generation += 1
+                    return state.session.take()
+                }
+                session?.cancel(reason: reason)
             }
         }
 
