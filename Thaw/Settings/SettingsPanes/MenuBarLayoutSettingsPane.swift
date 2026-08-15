@@ -178,10 +178,9 @@ struct MenuBarLayoutSettingsPane: View {
         let maxFPS = MenuBarItemImageCache.maxIconRefreshRate
         let fpsBinding = Binding<Double>(
             get: {
-                let interval = advancedSettings.iconRefreshInterval
-                return interval > 0 ? 1.0 / interval : 0
+                AdvancedSettings.iconRefreshRate(fromInterval: advancedSettings.iconRefreshInterval)
             },
-            set: { advancedSettings.iconRefreshInterval = $0 > 0 ? 1.0 / $0 : 0 }
+            set: { advancedSettings.iconRefreshInterval = AdvancedSettings.iconRefreshInterval(fromRate: $0) }
         )
         return LabeledContent {
             IceSlider(

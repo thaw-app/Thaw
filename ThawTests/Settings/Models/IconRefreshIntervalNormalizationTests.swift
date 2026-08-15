@@ -65,10 +65,27 @@ struct IconRefreshIntervalNormalizationTests {
         for fps in 0 ... ceiling {
             let interval: TimeInterval = fps == 0 ? 0 : 1.0 / Double(fps)
             let normalized = AdvancedSettings.normalizedIconRefreshInterval(interval)
-            let displayedFPS = normalized > 0 ? (1.0 / normalized).rounded() : 0
-            let restored: TimeInterval = displayedFPS > 0 ? 1.0 / displayedFPS : 0
+            let displayedFPS = AdvancedSettings.iconRefreshRate(fromInterval: normalized)
+            let restored = AdvancedSettings.iconRefreshInterval(fromRate: displayedFPS)
             #expect(AdvancedSettings.normalizedIconRefreshInterval(restored) == normalized)
             #expect(Int(displayedFPS) == fps)
         }
+    }
+
+    @Test("Slider fps is an integer even when 1/n is not binary-exact")
+    func sliderShowsIntegerFPS() {
+        #expect(AdvancedSettings.iconRefreshRate(fromInterval: 0) == 0)
+        #expect(AdvancedSettings.iconRefreshRate(fromInterval: 0.25) == 4)
+        #expect(AdvancedSettings.iconRefreshRate(fromInterval: 1.0 / 3.0) == 3)
+        #expect(AdvancedSettings.iconRefreshRate(fromInterval: 1.0 / 30.0) == 30)
+    }
+
+    @Test("Slider writes snap to integer fps before storage")
+    func sliderWritesSnapToIntegerFPS() {
+        #expect(AdvancedSettings.iconRefreshInterval(fromRate: 0) == 0)
+        #expect(AdvancedSettings.iconRefreshInterval(fromRate: 4) == 0.25)
+        #expect(AdvancedSettings.iconRefreshInterval(fromRate: 29.6) == 1.0 / 30.0)
+        #expect(AdvancedSettings.iconRefreshInterval(fromRate: 0.4) == 0)
+        #expect(AdvancedSettings.iconRefreshInterval(fromRate: 0.6) == 1.0)
     }
 }

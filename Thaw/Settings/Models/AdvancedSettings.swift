@@ -126,6 +126,26 @@ final class AdvancedSettings {
         }
     }
 
+    /// Integer fps the slider should show for a stored interval.
+    ///
+    /// `1/n` is not always binary-exact, so `1.0 / interval` can land just
+    /// below the intended integer (29.999… at 30 fps). The slider and its
+    /// `Int(...)` label both truncate that to the next step down and the thumb
+    /// will not stay on the value the user picked.
+    nonisolated static func iconRefreshRate(fromInterval interval: TimeInterval) -> Double {
+        guard interval > 0 else { return 0 }
+        let ceiling = MenuBarItemImageCache.maxIconRefreshRate
+        return min(max((1.0 / interval).rounded(), 1), ceiling)
+    }
+
+    /// Interval to store for a slider fps value. `<= 0` is Off.
+    nonisolated static func iconRefreshInterval(fromRate fps: Double) -> TimeInterval {
+        let ceiling = MenuBarItemImageCache.maxIconRefreshRate
+        let snapped = min(max(fps.rounded(), 0), ceiling)
+        guard snapped > 0 else { return 0 }
+        return 1.0 / snapped
+    }
+
     /// Snaps an icon-refresh interval onto the values the slider can express.
     ///
     /// - `<= 0` stays Off (`0`).
@@ -133,10 +153,7 @@ final class AdvancedSettings {
     ///   where the ceiling is ``MenuBarItemImageCache/maxIconRefreshRate``.
     /// - Idempotent: already-on-grid values round-trip unchanged.
     nonisolated static func normalizedIconRefreshInterval(_ interval: TimeInterval) -> TimeInterval {
-        guard interval > 0 else { return 0 }
-        let ceiling = MenuBarItemImageCache.maxIconRefreshRate
-        let fps = min(max((1.0 / interval).rounded(), 1), ceiling)
-        return 1.0 / fps
+        iconRefreshInterval(fromRate: iconRefreshRate(fromInterval: interval))
     }
 
     /// A Boolean value that indicates whether diagnostic logging to file is enabled.
