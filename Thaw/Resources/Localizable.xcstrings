@@ -23144,8 +23144,12 @@
         }
       }
     },
+    "How often animated icons refresh in the visible section, Hidden Thaw Bar, Search, and Layout. Always Hidden stays at 1 fps. Higher values use more CPU." : {
+      "comment" : "Description of the icon refresh rate setting in the layout settings pane."
+    },
     "How often animated menu bar icons are refreshed in panels. Higher values are smoother but use more CPU." : {
       "comment" : "Description of the icon refresh rate setting in the advanced settings pane.",
+      "extractionState" : "stale",
       "localizations" : {
         "cs" : {
           "stringUnit" : {

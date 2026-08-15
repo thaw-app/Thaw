@@ -1,8 +1,11 @@
+$(SRCROOT)/MenuBarCaptureService/Listener.swift
+$(SRCROOT)/MenuBarCaptureService/main.swift
 $(SRCROOT)/MenuBarItemService/Listener.swift
 $(SRCROOT)/MenuBarItemService/SourcePIDCache.swift
 $(SRCROOT)/MenuBarItemService/main.swift
 $(SRCROOT)/Shared/Bridging/Bridging.swift
 $(SRCROOT)/Shared/Bridging/Shims.swift
+$(SRCROOT)/Shared/Services/MenuBarCaptureService.swift
 $(SRCROOT)/Shared/Services/MenuBarItemService.swift
 $(SRCROOT)/Shared/Utilities/AXHelpers.swift
 $(SRCROOT)/Shared/Utilities/CodeSigningInfo.swift
@@ -61,6 +64,7 @@ $(SRCROOT)/Thaw/MenuBar/MenuBarItems/AXItemActivator.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/ClickReactionVerifier.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/LayoutReconciler.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/LayoutSolver.swift
+$(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarCaptureServiceConnection.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItem+Enumeration.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItem+Ordering.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItem.swift
@@ -69,6 +73,7 @@ $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemImageCache.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemManager.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemServiceConnection.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemTag.swift
+$(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarLiveRefreshPolicy.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/PendingLedger.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/StaleIdentifierLedger.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarManager.swift
