@@ -9,12 +9,14 @@ and the Sparkle appcast, unless overridden with the `release_notes` input.
 
 ## [Unreleased]
 
+## [2.0.0-rc.4]
+
 Please report issues at
 [github.com/thaw-app/Thaw/issues](https://github.com/thaw-app/Thaw/issues).
 
-This release closes the field report against rc.3 — hidden items dead
-for the first minute after launch — and pays down the debt that made it
-possible: the item manager's 11,500-line file, the hand-rolled identity
+This release closes the field reports against rc.3 — hidden items dead
+for the first minute after launch, and a cache stall with no deadline at
+all — and pays down the debt that made them possible: the item manager's 11,500-line file, the hand-rolled identity
 matching that drifted, and a test suite that wrote into the real settings
 of whoever ran it.
 
@@ -22,7 +24,9 @@ of whoever ran it.
 
 ### Highlights
 
-- **Hidden items work from launch** — on a cold start the item cache froze for a full minute on unresolved identities: every Thaw Bar tooltip read "Menu Bar Item" and every click silently did nothing until the settling deadline expired (#943).
+- **Hidden items work from launch, and the cache can no longer stall for good** — on a cold start the item cache froze for a full minute on unresolved identities: every Thaw Bar tooltip read "Menu Bar Item" and every click silently did nothing until the settling deadline expired (#943). In the worse interleaving the settling task deadlocked awaiting itself, past every deadline — one report had the cache rejecting every refresh for 20+ hours, with the Visible row in Settings → Layout permanently empty (#945).
+- **The Thaw icon stops drifting left across restarts** — the stalled early apply executed a minute late with the desired order it had narrowed at launch, when only a handful of identities had resolved. Everything that resolved during the stall was re-inserted as "unmanaged" at saved indices, which changed the chevron's planned neighbors and moved it left of the leftmost item; macOS remembers the new position, so each restart ratcheted it further (#947).
+- **Items stop shuffling mid-session on localized systems** — saved-order ghosts namespaced by a localized app name (`Control Centre:WiFi`, minted while a bundle ID transiently read nil) counted as "real owners" and deleted their genuine `com.apple.controlcenter` twins from the saved order on every load. The live items then planned as unmanaged and were repositioned by every apply, with the cursor contested for each synthetic drag (#949).
 - **Spanish onboarding restored** — two strings shipped as translated-but-empty, so Spanish systems rendered a blank tour slide description and a blank New Items badge hint.
 - **XPC session race closed** — a stale cancellation handler could tear down a healthy, newer session and race the lock every other access went through.
 
@@ -30,8 +34,11 @@ of whoever ran it.
 
 ### Menu bar & layout
 
-- The settling-period early apply no longer waits for settling to end while holding the serial cache gate. The wait deadlocked the pair: settling's early exit needs a cache cycle the held gate rejects, so it always ran the full 60 s deadline with the item cache frozen on fallback tags — generic names in Thaw Bar and Search, and every click aborted with no return destination (#943).
+- The settling-period early apply no longer waits for settling to end while holding the serial cache gate. The wait deadlocked the pair both ways: when the launch cache cycle owned the gate, settling's early exit needed a cache cycle the held gate rejects, so it ran the full 60 s deadline with the item cache frozen on fallback tags — generic names in Thaw Bar and Search, and every click aborted with no return destination (#943). When the settling task's own poll owned the gate, the apply awaited the very task it was running on, and the deadline check inside that blocked loop could never fire — the gate stayed held indefinitely and every later recache was rejected (#945).
 - Clicking an item whose cached tag predates source-PID resolution re-maps it onto its freshly fetched counterpart by windowID, so the click survives a stale cache snapshot instead of dying in the return-destination lookup (#943).
+- Because the early apply now runs the moment it is dispatched, it plans against the bar it narrowed itself to. Executed at the deadline instead, its restriction inverted: identities that resolved during the stall were no longer provisional (which excludes them) but "unmanaged" (which re-inserts them at saved indices), and the re-insertion handed the chevron a move to the far left of the bar (#947).
+- Saved-order pruning no longer counts a localized display-name namespace as a real owner, and drops such a ghost when its canonical twin exists — the Control Center entry sharing its title, Thaw's own control items by their reserved titles, or a real owner claiming the same non-generic title. A display-name entry with no twin survives, since it may be the only identity a bundle-ID-less app ever got (#949).
+- The namespace fallback recovers a transiently nil bundle ID through the app's bundle URL before reaching for the window's owner name, so localized ghosts stop being minted in the first place (#949).
 
 ### XPC service
 
