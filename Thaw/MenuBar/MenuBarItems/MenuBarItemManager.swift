@@ -6443,6 +6443,27 @@ extension MenuBarItemManager {
         return menu ?? owned.first { $0.bounds.height > maxMenuBarItemHeight }
     }
 
+    /// Returns the item `temporarilyShow` should operate on, re-mapping the
+    /// caller's item onto its freshly fetched counterpart when their tags
+    /// have diverged.
+    ///
+    /// The caller's item can carry a fallback tag from a cache snapshot taken
+    /// before sourcePID resolution succeeded — on a cold start, hidden items
+    /// resolve only once the MenuBarItemService has warmed, and until then a
+    /// third-party item is tagged `com.apple.controlcenter:Item-0:N`. A fresh
+    /// fetch resolves real tags, so a tag lookup on the stale item finds
+    /// nothing and the click dies in `getReturnDestination` (#943). The
+    /// window itself is stable across resolution: match by windowID so the
+    /// tag lookup, the rehide metadata, and the context all carry the
+    /// resolved identity. An item whose tag is present in `items`, or whose
+    /// window is gone entirely, is returned unchanged.
+    static nonisolated func remappedItem(for item: MenuBarItem, in items: [MenuBarItem]) -> MenuBarItem {
+        guard !items.contains(where: { $0.tag == item.tag }) else {
+            return item
+        }
+        return items.first { $0.windowID == item.windowID } ?? item
+    }
+
     /// Gets the destination to return the given item to after it is
     /// temporarily shown, along with the tag and PID of the neighbor on the
     /// opposite side (if any) for fallback ordering.
@@ -6674,9 +6695,10 @@ extension MenuBarItemManager {
 
         // Determine the item's original section early so we can persist it
         // and use it as a fallback if the neighbor-based return destination
-        // becomes stale by the time we rehide.
+        // becomes stale by the time we rehide. Resolved against the same
+        // cache snapshot the caller's tag came from, so it must happen
+        // before the item is re-mapped to a freshly resolved tag below.
         let originalSection = itemCache.address(for: item.tag)?.section ?? .hidden
-        let tagIdentifier = item.tag.tagIdentifier
 
         // Rehide any previously temporarily shown items before showing a new one.
         // This prevents stale contexts from accumulating when the user opens multiple
@@ -6718,6 +6740,16 @@ extension MenuBarItemManager {
 
         // Fetch items specifically for the display where the item lives.
         let items = await MenuBarItem.getMenuBarItems(on: resolvedDisplayID, option: .activeSpace)
+
+        var item = item
+        let remappedItem = MenuBarItemManager.remappedItem(for: item, in: items)
+        if remappedItem.tag != item.tag {
+            MenuBarItemManager.diagLog.info(
+                "temporarilyShow: re-mapped stale \(item.logString) to \(remappedItem.logString) via windowID"
+            )
+            item = remappedItem
+        }
+        let tagIdentifier = item.tag.tagIdentifier
 
         guard let returnInfo = getReturnDestination(for: item, in: items, section: originalSection) else {
             MenuBarItemManager.diagLog.error("No return destination for \(item.logString) on display \(resolvedDisplayID)")
@@ -8695,7 +8727,8 @@ extension MenuBarItemManager {
         itemSectionMap rawItemSectionMap: [String: String],
         itemOrder rawItemOrder: [String: [String]],
         source: ApplySource = .profile,
-        automatic: Bool = false
+        automatic: Bool = false,
+        duringSettling: Bool = false
     ) async {
         // A profile saved before an item was renamed after its app still
         // names it by its helper (`at.obdev.littlesnitch.agent:Item-0`).
@@ -8718,7 +8751,17 @@ extension MenuBarItemManager {
         // a layout applied here has its moves silently shadowed and the
         // late-arrival re-sort path is broken for items that appeared
         // inside the window.
-        await waitForStartupSettlingToEnd()
+        //
+        // The settling-period early apply (duringSettling) is exempt: it
+        // exists to run inside the window, and its caller is the cache
+        // cycle that holds the serial cacheGate. Waiting here deadlocks
+        // that pair — the settling task's early exit needs a cache cycle
+        // the held gate rejects — so the wait always lasts the full
+        // settling deadline and the item cache is frozen with unresolved
+        // identities for the whole minute (#943).
+        if !duringSettling {
+            await waitForStartupSettlingToEnd()
+        }
 
         // Automatic applies additionally wait for the user to stop
         // interacting. `automatic` is the same distinction
@@ -10856,6 +10899,11 @@ extension MenuBarItemManager {
         // savedSectionOrder. Pass the saved order through unchanged.
         // Pinning is preserved from existing state, not derived from
         // savedSectionOrder (savedSectionOrder has no pinning concept).
+        // resolvedIdentitiesOnly is set by exactly one caller: the early
+        // restricted apply inside the settling branch of the cache cycle.
+        // Passing it through as duringSettling exempts that apply from
+        // Phase 0's settling wait, which its gate-holding caller cannot
+        // survive (#943).
         await applyProfileLayout(
             pinnedHidden: pinnedHiddenBundleIDs,
             pinnedAlwaysHidden: pinnedAlwaysHiddenBundleIDs,
@@ -10863,7 +10911,8 @@ extension MenuBarItemManager {
             itemSectionMap: itemSectionMap,
             itemOrder: effectiveSavedOrder,
             source: .savedOrder,
-            automatic: true
+            automatic: true,
+            duringSettling: resolvedIdentitiesOnly
         )
         return true
     }
