@@ -511,8 +511,6 @@ extension MenuBarItemManager {
 
     private nonisolated func makeContinuationTask(
         eventTaps: [EventTap],
-        state _: EventContinuationState,
-        continuation _: CheckedContinuation<Void, any Error>,
         entryEvent: CGEvent,
         firstLocation: EventTap.Location
     ) -> Task<Void, Never> {
@@ -767,8 +765,6 @@ extension MenuBarItemManager {
 
             let innerTask = makeContinuationTask(
                 eventTaps: continuationEventTaps,
-                state: state,
-                continuation: continuation,
                 entryEvent: context.entryEvent,
                 firstLocation: context.firstLocation
             )

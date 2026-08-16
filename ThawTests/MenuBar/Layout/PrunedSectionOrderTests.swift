@@ -112,6 +112,22 @@ struct PrunedSectionOrderTests {
         #expect(pruned["hidden"] == entries)
     }
 
+    /// Some languages localize Control Center without any whitespace
+    /// (German: Kontrollzentrum), which the whitespace heuristic cannot
+    /// see. The caller passes the live localized name as an alias so the
+    /// classification stays locale-independent for the current locale.
+    @Test("A whitespace-free localized alias is recognized via the alias set")
+    func whitespaceFreeAliasIsRecognized() {
+        let ghost = "Kontrollzentrum:WiFi"
+        let genuine = "com.apple.controlcenter:WiFi"
+
+        let withAlias = LayoutSolver.prunedSectionOrder(
+            ["visible": [ghost, genuine]],
+            displayNameAliases: ["Kontrollzentrum"]
+        )
+        #expect(withAlias["visible"] == [genuine])
+    }
+
     /// The #949 follow-up logs carried `Control Centre:Alcove` next to
     /// `com.henrikruscon.Alcove:Alcove` — a third-party twin, reachable
     /// only through the claimed-title rule since the genuine Control

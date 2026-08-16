@@ -31,10 +31,13 @@ struct DefaultsIsolationTests {
 
     @Test("A write through the facade never lands in the standard store")
     func writesDoNotReachStandardStore() {
+        // Captured once: a parallel test inside withScratchDefaults can swap
+        // the process-wide store between the write and the cleanup.
+        let store = Defaults.store
         let key = "DefaultsIsolationTests.sentinel.\(UUID().uuidString)"
-        Defaults.store.set(true, forKey: key)
+        store.set(true, forKey: key)
         defer {
-            Defaults.store.removeObject(forKey: key)
+            store.removeObject(forKey: key)
         }
 
         #expect(UserDefaults.standard.object(forKey: key) == nil)

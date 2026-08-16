@@ -301,12 +301,15 @@ final class ProfileManager {
             let originalSavedOrder = layout.savedSectionOrder
             let originalMap = layout.itemSectionMap
 
+            let displayNameAliases = MenuBarItemManager.controlCenterDisplayNameAliases()
             layout.savedSectionOrder = LayoutSolver.prunedSectionOrder(
-                LayoutSolver.canonicalizedSectionOrder(layout.savedSectionOrder)
+                LayoutSolver.canonicalizedSectionOrder(layout.savedSectionOrder),
+                displayNameAliases: displayNameAliases
             )
             if let itemOrder = layout.itemOrder {
                 layout.itemOrder = LayoutSolver.prunedSectionOrder(
-                    LayoutSolver.canonicalizedSectionOrder(itemOrder)
+                    LayoutSolver.canonicalizedSectionOrder(itemOrder),
+                    displayNameAliases: displayNameAliases
                 )
             }
 

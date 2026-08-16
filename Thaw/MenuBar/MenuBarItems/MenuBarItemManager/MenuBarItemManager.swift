@@ -95,9 +95,12 @@ final class MenuBarItemManager {
     /// Gates the AX enrichment pass in `cacheItemsRegardless`. No consumer of
     /// `degradedItemAXIdentities` exists yet (see its declaration), so the
     /// per-cycle `AXIdentityCatalog.snapshot` and per-item window bounds
-    /// lookups run only when explicitly enabled for diagnostics.
-    static nonisolated let isDegradedIdentityEnrichmentEnabled =
+    /// lookups run only when explicitly enabled for diagnostics. Computed so
+    /// a runtime `defaults write` (and a test's scratch store) is observed
+    /// rather than frozen at first access.
+    static nonisolated var isDegradedIdentityEnrichmentEnabled: Bool {
         Defaults.store.bool(forKey: "EnableDegradedItemAXEnrichment")
+    }
 
     /// Widest a control item can be while still counting as a marker rather
     /// than a collapsed section's stretched divider.
@@ -256,6 +259,13 @@ final class MenuBarItemManager {
     /// cache cycle concurrently, and a shared slot let an unrelated caller's
     /// early bail resume — or permanently strand — someone else's waiter.
     var backgroundCacheWaiters: [Int: CheckedContinuation<Void, Never>] = [:]
+
+    /// Count of cache cycles that actually rebuilt the item cache.
+    ///
+    /// The settling loop compares it across a poll to tell an observed pass
+    /// from one the serial gate or a drag guard dropped; a dropped pass
+    /// leaves the cache untouched, which must not count as stability.
+    var completedCacheCycles = 0
 
     /// Source of tokens for ``backgroundCacheWaiters``.
     private var nextBackgroundCacheWaiterToken = 0
@@ -802,6 +812,21 @@ final class MenuBarItemManager {
     }
 
     /// Loads persisted section order.
+    /// The display names Control Center is currently known by, used to
+    /// recognize localized-namespace ghosts in the saved order (#949).
+    ///
+    /// The whitespace heuristic in `LayoutSolver` misses languages whose
+    /// display name has none (Kontrollzentrum); the live localized name
+    /// covers the current locale, and ghosts minted under a previous
+    /// system language still fall to the whitespace test where they can.
+    static func controlCenterDisplayNameAliases() -> Set<String> {
+        Set(
+            NSRunningApplication.runningApplications(
+                withBundleIdentifier: "com.apple.controlcenter"
+            ).compactMap(\.localizedName)
+        )
+    }
+
     private func loadSavedSectionOrder() {
         let key = LayoutStateKey.savedSectionOrder
         if let stored = Defaults.store.dictionary(forKey: key) as? [String: [String]] {
@@ -812,7 +837,10 @@ final class MenuBarItemManager {
             // that is only unmatchable because the item was renamed after
             // its app (Little Snitch) is rewritten rather than discarded.
             let migrated = LayoutSolver.canonicalizedSectionOrder(stored)
-            let pruned = LayoutSolver.prunedSectionOrder(migrated)
+            let pruned = LayoutSolver.prunedSectionOrder(
+                migrated,
+                displayNameAliases: Self.controlCenterDisplayNameAliases()
+            )
             savedSectionOrder = pruned
             if pruned != stored {
                 let removed = stored.reduce(into: 0) { total, entry in
@@ -1633,6 +1661,7 @@ final class MenuBarItemManager {
                     break
                 }
 
+                let cyclesBefore = completedCacheCycles
                 await cacheItemsRegardless(skipRecentMoveCheck: true, resolveSourcePID: true)
                 let managedCount = itemCache.managedItems.count
                 let unresolved = itemCache.managedItems.count(where: { $0.sourcePID == nil })
@@ -1657,7 +1686,11 @@ final class MenuBarItemManager {
                     MenuBarItemManager.diagLog.debug(
                         "\(reason): \(stillMissing.count) bundle ID(s) still missing: \(stillMissing.sorted().joined(separator: ", "))"
                     )
-                } else {
+                } else if completedCacheCycles != cyclesBefore {
+                    // Only an observed cache pass is evidence. A dropped one
+                    // (gate busy, drag in progress) leaves the cache exactly
+                    // as it was, which would read as "stable" and could end
+                    // settling on nothing.
                     if pidsOK, managedCount == lastSeenCount {
                         stablePolls += 1
                         if stablePolls >= stableTarget {

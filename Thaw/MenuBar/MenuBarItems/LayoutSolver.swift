@@ -1415,9 +1415,16 @@ nonisolated enum LayoutSolver {
     /// display name, which macOS localizes for system processes — an
     /// en-GB machine writes `Control Centre:Battery` next to the
     /// canonical `com.apple.controlcenter:Battery` (#949). Bundle IDs and
-    /// executable names never contain whitespace; display names do.
-    private static nonisolated func isDisplayNameNamespace(identifier: String) -> Bool {
-        namespace(forIdentifier: identifier).contains(where: \.isWhitespace)
+    /// executable names never contain whitespace; display names usually
+    /// do, and `aliases` carries the ones that do not — the caller passes
+    /// Control Center's current localized name (Kontrollzentrum), which
+    /// no heuristic can recognize locale-independently.
+    private static nonisolated func isDisplayNameNamespace(
+        identifier: String,
+        aliases: Set<String>
+    ) -> Bool {
+        let namespace = namespace(forIdentifier: identifier)
+        return namespace.contains(where: \.isWhitespace) || aliases.contains(namespace)
     }
 
     private static nonisolated func hasEmptyTitle(identifier: String) -> Bool {
@@ -1604,7 +1611,8 @@ nonisolated enum LayoutSolver {
     ///
     /// Pure over its inputs.
     static nonisolated func prunedSectionOrder(
-        _ savedSectionOrder: [String: [String]]
+        _ savedSectionOrder: [String: [String]],
+        displayNameAliases: Set<String> = []
     ) -> [String: [String]] {
         let controlCenter = MenuBarItemTag.Namespace.controlCenter.description
 
@@ -1633,7 +1641,7 @@ nonisolated enum LayoutSolver {
                     // live WiFi item then plans as unmanaged on every apply —
                     // the same failure #927 documents, through a vector its
                     // guards did not cover (#949).
-                    !isDisplayNameNamespace(identifier: identifier)
+                    !isDisplayNameNamespace(identifier: identifier, aliases: displayNameAliases)
                 else {
                     continue
                 }
@@ -1694,7 +1702,7 @@ nonisolated enum LayoutSolver {
                 // twin is left alone entirely: it may be the only identity
                 // a bundle-ID-less app ever got, and deleting it would
                 // lose the user's placement (#949).
-                if isDisplayNameNamespace(identifier: identifier) {
+                if isDisplayNameNamespace(identifier: identifier, aliases: displayNameAliases) {
                     let title = titlePortion(forIdentifier: identifier)
                     if controlCenterTitles.contains(title) {
                         return false

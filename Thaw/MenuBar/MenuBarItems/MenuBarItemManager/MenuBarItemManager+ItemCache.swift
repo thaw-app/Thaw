@@ -12,11 +12,12 @@ import Cocoa
 // MARK: - Item Cache
 
 extension MenuBarItemManager {
-    /// An actor that manages menu bar item cache operations.
+    /// Owns the menu bar item cache's cycle-to-cycle state.
+    ///
+    /// A `final class`, not an actor, despite the historical name: every
+    /// access is confined to the manager's `@MainActor` isolation, which is
+    /// the only thing making the unsynchronized stored properties safe.
     final class CacheActor {
-        /// Stored task for the current cache operation.
-        private var cacheTask: Task<Void, Never>?
-
         /// A list of the menu bar item window identifiers at the time
         /// of the previous cache.
         private(set) var cachedItemWindowIDs = [CGWindowID]()
@@ -39,18 +40,6 @@ extension MenuBarItemManager {
         /// stable — so applySavedLayout's windowID-change gate ignores their
         /// disappearance instead of dispatching a full bulk apply (#736).
         private(set) var cachedControlCenterGenericWindowIDs = Set<CGWindowID>()
-
-        /// Runs the given async closure as a task and waits for it to
-        /// complete before returning.
-        ///
-        /// If a task from a previous call to this method is currently
-        /// running, that task is cancelled and replaced.
-        func runCacheTask(_ operation: @escaping () async -> Void) async {
-            cacheTask?.cancel()
-            _ = await cacheTask?.value
-            cacheTask = nil
-            await operation()
-        }
 
         /// Updates the list of cached menu bar item window identifiers.
         func updateCachedItemWindowIDs(_ itemWindowIDs: [CGWindowID]) {
@@ -907,6 +896,7 @@ extension MenuBarItemManager {
             )
         }
         MenuBarItemManager.diagLog.debug("Updated menu bar item cache: visible=\(context.cache[.visible].count), hidden=\(context.cache[.hidden].count), alwaysHidden=\(context.cache[.alwaysHidden].count)")
+        completedCacheCycles += 1
     }
 
     /// Recreates the hidden divider at its seeded position after repeated,
@@ -1700,10 +1690,14 @@ extension MenuBarItemManager {
         // Only update when sourcePIDs were actually resolved; the settle-end
         // fast restore (resolveSourcePID=false) must not overwrite the baseline.
         if resolveSourcePID {
+            // Keyed by first occurrence: macOS can briefly report the same
+            // window twice around a move, and trapping on the duplicate
+            // would take the whole cache cycle down with it.
             let newPIDs = Dictionary(
-                uniqueKeysWithValues: items.compactMap { item in
+                items.compactMap { item in
                     item.sourcePID.map { (item.windowID, $0) }
-                }
+                },
+                uniquingKeysWith: { first, _ in first }
             )
             cacheActor.updateCachedItemPIDs(newPIDs)
         }

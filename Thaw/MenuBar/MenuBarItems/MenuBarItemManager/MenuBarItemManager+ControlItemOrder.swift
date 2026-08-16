@@ -400,7 +400,7 @@ extension MenuBarItemManager {
 
         guard
             let alwaysHidden = controlItems.alwaysHidden,
-            hidden.bounds.maxX <= alwaysHidden.bounds.minX
+            bestBounds(for: hidden).maxX <= bestBounds(for: alwaysHidden).minX
         else {
             return
         }
