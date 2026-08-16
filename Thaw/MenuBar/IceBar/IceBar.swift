@@ -808,10 +808,7 @@ private struct IceBarItemView: View {
     /// cause `isWindowOnScreen` to return a false positive for an unrelated window.
     private func liveOnScreenItem(matching item: MenuBarItem, on displayID: CGDirectDisplayID) async -> MenuBarItem? {
         let liveItems = await MenuBarItem.getMenuBarItems(on: displayID, option: .onScreen)
-        guard let liveItem = liveItems.first(where: {
-            $0.tag.matchesIgnoringWindowID(item.tag) &&
-                ($0.sourcePID ?? $0.ownerPID) == (item.sourcePID ?? item.ownerPID)
-        }) else { return nil }
+        guard let liveItem = liveItems.first(matchingTag: item.tag, pid: item.sourcePID ?? item.ownerPID) else { return nil }
         return Bridging.isWindowOnScreen(liveItem.windowID) ? liveItem : nil
     }
 

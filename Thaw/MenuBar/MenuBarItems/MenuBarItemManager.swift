@@ -2668,7 +2668,7 @@ extension MenuBarItemManager {
         }
 
         private static func bestBounds(for item: MenuBarItem) -> CGRect {
-            Bridging.getWindowBounds(for: item.windowID) ?? item.bounds
+            item.liveBounds
         }
 
         func isValidForCaching(_ item: MenuBarItem) -> Bool {
@@ -2802,7 +2802,7 @@ extension MenuBarItemManager {
             }
 
             noSectionCount += 1
-            let currentBounds = Bridging.getWindowBounds(for: item.windowID) ?? item.bounds
+            let currentBounds = item.liveBounds
             if currentBounds.origin.x == -1 {
                 MenuBarItemManager.diagLog.warning(
                     "Skipping \(item.logString); blocked (x=-1), will retry on next cache tick"
@@ -2924,7 +2924,7 @@ extension MenuBarItemManager {
             // Wait for the next cache cycle when bounds are reliable.
             let hasBlockedItems = MenuBarSection.Name.allCases.contains { section in
                 context.cache[section].contains { item in
-                    let bounds = Bridging.getWindowBounds(for: item.windowID) ?? item.bounds
+                    let bounds = item.liveBounds
                     return bounds.origin.x == -1
                 }
             }
@@ -3144,7 +3144,7 @@ extension MenuBarItemManager {
         let snapshot = AXIdentityCatalog.snapshot(hosts: hosts)
         var enrichment = [CGWindowID: AXIdentityCatalog.AXItemIdentity]()
         for item in degradedItems {
-            let bounds = Bridging.getWindowBounds(for: item.windowID) ?? item.bounds
+            let bounds = item.liveBounds
             guard let identity = AXIdentityCatalog.identity(for: bounds, in: snapshot) else { continue }
             enrichment[item.windowID] = identity
         }
@@ -6027,7 +6027,7 @@ extension MenuBarItemManager {
             // Use the item's live window bounds so the nearest-child match is not
             // thrown off by a stale cached position (which would make an Electron
             // item fall back to the synthetic click it ignores).
-            let itemCenter = (Bridging.getWindowBounds(for: item.windowID) ?? item.bounds).center
+            let itemCenter = (item.liveBounds).center
             guard
                 let best = children.min(by: { lhs, rhs in
                     let lhsDistance = AXHelpers.frame(for: lhs)?.center.distance(to: itemCenter) ?? .greatestFiniteMagnitude
@@ -6464,6 +6464,19 @@ extension MenuBarItemManager {
         return items.first { $0.windowID == item.windowID } ?? item
     }
 
+    /// Re-fetches an item from the given display's live window list so a
+    /// click targets current windowID and bounds rather than a stale
+    /// pre-move struct.
+    ///
+    /// Prefers an exact windowID match, then tag plus PID, then returns the
+    /// caller's struct unchanged.
+    private func refreshedClickTarget(for item: MenuBarItem, on displayID: CGDirectDisplayID) async -> MenuBarItem {
+        let refreshedItems = await MenuBarItem.getMenuBarItems(on: displayID, option: .onScreen)
+        return refreshedItems.first(where: { $0.windowID == item.windowID })
+            ?? refreshedItems.first(matchingTag: item.tag, pid: item.sourcePID ?? item.ownerPID)
+            ?? item
+    }
+
     /// Gets the destination to return the given item to after it is
     /// temporarily shown, along with the tag and PID of the neighbor on the
     /// opposite side (if any) for fallback ordering.
@@ -6688,7 +6701,7 @@ extension MenuBarItemManager {
         if let displayID {
             resolvedDisplayID = displayID
         } else {
-            let itemBounds = Bridging.getWindowBounds(for: item.windowID) ?? item.bounds
+            let itemBounds = item.liveBounds
             let screen = NSScreen.screens.first { $0.frame.intersects(itemBounds) }
             resolvedDisplayID = screen?.displayID ?? Bridging.getActiveMenuBarDisplayID() ?? CGMainDisplayID()
         }
@@ -6784,10 +6797,11 @@ extension MenuBarItemManager {
         case .leftOfItem: "left"
         case .rightOfItem: "right"
         }
-        pendingReturnDestinations[tagIdentifier] = [
+        let returnDestinationRecord = [
             "neighbor": neighborTag.tagIdentifier,
             "position": position,
         ]
+        pendingReturnDestinations[tagIdentifier] = returnDestinationRecord
         persistPendingRelocations()
 
         appState.hidEventManager.stopAll()
@@ -6837,10 +6851,7 @@ extension MenuBarItemManager {
                 MenuBarItemManager.diagLog.warning("move() threw but item \(item.logString) is no longer in \(originalSection); preserving pending rehide metadata")
                 // pendingRelocations already set above; re-assert return destination
                 // in case it was not yet written (guard-exit paths above this block).
-                pendingReturnDestinations[tagIdentifier] = [
-                    "neighbor": neighborTag.tagIdentifier,
-                    "position": position,
-                ]
+                pendingReturnDestinations[tagIdentifier] = returnDestinationRecord
                 persistPendingRelocations()
             } else {
                 // Item never moved; safe to discard the speculative metadata.
@@ -6875,7 +6886,6 @@ extension MenuBarItemManager {
             runRehideTimer(for: Self.rehidePollInterval)
         }
 
-        let clickItem: MenuBarItem
         if fastPath {
             // Fast path: lightweight settle (max 150 ms, 15 ms poll) so the
             // click target coordinates are live rather than the pre-move bounds.
@@ -6884,30 +6894,18 @@ extension MenuBarItemManager {
             if let preMoveOrigin {
                 await waitForItemToLeaveOrigin(item: item, previousOrigin: preMoveOrigin, timeout: .milliseconds(150))
             }
-
-            // Re-fetch the item so getCurrentBounds inside postClickEvents
-            // uses a fresh window reference rather than the stale pre-move struct.
-            let refreshedItems = await MenuBarItem.getMenuBarItems(on: resolvedDisplayID, option: .onScreen)
-            clickItem = refreshedItems.first(where: { $0.windowID == item.windowID }) ??
-                refreshedItems.first(where: {
-                    $0.tag.matchesIgnoringWindowID(item.tag) &&
-                        ($0.sourcePID ?? $0.ownerPID) == (item.sourcePID ?? item.ownerPID)
-                }) ?? item
         } else {
             // Wait for the item's position to stabilize after the move. Some
             // apps need time to process the window relocation before they can
             // correctly position their popup in response to a click.
             await waitForItemPositionToSettle(item: item)
+        }
 
-            // Re-fetch the item from the live window list specifically for this display.
-            // Prefer an exact windowID match, then fall back to namespace+title with PID matching.
-            let refreshedItems = await MenuBarItem.getMenuBarItems(on: resolvedDisplayID, option: .onScreen)
-            clickItem = refreshedItems.first(where: { $0.windowID == item.windowID }) ??
-                refreshedItems.first(where: {
-                    $0.tag.matchesIgnoringWindowID(item.tag) &&
-                        ($0.sourcePID ?? $0.ownerPID) == (item.sourcePID ?? item.ownerPID)
-                }) ?? item
+        // Re-fetch the item so getCurrentBounds inside postClickEvents uses
+        // a fresh window reference rather than the stale pre-move struct.
+        let clickItem = await refreshedClickTarget(for: item, on: resolvedDisplayID)
 
+        if !fastPath {
             // Give the owning app a little extra time to finish processing the
             // move internally. Some apps (e.g. OneDrive) need more than just a
             // stable window position before they can respond to clicks.
@@ -6939,12 +6937,7 @@ extension MenuBarItemManager {
                 // Fallback: re-fetch the item from the live window list so the
                 // click targets a fresh MenuBarItem with current windowID and
                 // bounds, rather than the potentially stale pre-click struct.
-                let fallbackItems = await MenuBarItem.getMenuBarItems(on: resolvedDisplayID, option: .onScreen)
-                let fallbackItem = fallbackItems.first(where: { $0.windowID == clickItem.windowID }) ??
-                    fallbackItems.first(where: {
-                        $0.tag.matchesIgnoringWindowID(clickItem.tag) &&
-                            ($0.sourcePID ?? $0.ownerPID) == (clickItem.sourcePID ?? clickItem.ownerPID)
-                    }) ?? clickItem
+                let fallbackItem = await refreshedClickTarget(for: clickItem, on: resolvedDisplayID)
 
                 // We stay inside temporarilyShow so that idsBeforeClick and context
                 // remain in scope; shownInterfaceWindow can still be captured if
@@ -7011,10 +7004,7 @@ extension MenuBarItemManager {
         //    Re-wrap with the fresh item so the move uses current bounds.
         let targetTag = context.returnDestination.targetItem.tag
         let targetPID = context.returnDestination.targetItem.sourcePID ?? context.returnDestination.targetItem.ownerPID
-        if let freshTarget = items.first(where: {
-            $0.tag.matchesIgnoringWindowID(targetTag) &&
-                ($0.sourcePID ?? $0.ownerPID) == targetPID
-        }) {
+        if let freshTarget = items.first(matchingTag: targetTag, pid: targetPID) {
             switch context.returnDestination {
             case .leftOfItem:
                 return .leftOfItem(freshTarget)
@@ -7025,10 +7015,7 @@ extension MenuBarItemManager {
 
         // 2. Try the fallback neighbor (opposite side).
         if let fallbackNeighbor = context.fallbackNeighbor,
-           let freshFallback = items.first(where: {
-               $0.tag.matchesIgnoringWindowID(fallbackNeighbor.tag) &&
-                   ($0.sourcePID ?? $0.ownerPID) == fallbackNeighbor.pid
-           })
+           let freshFallback = items.first(matchingTag: fallbackNeighbor.tag, pid: fallbackNeighbor.pid)
         {
             switch context.returnDestination {
             case .leftOfItem:
@@ -7159,10 +7146,7 @@ extension MenuBarItemManager {
         }
 
         while let context = currentContexts.popLast() {
-            guard let item = items.first(where: {
-                $0.tag.matchesIgnoringWindowID(context.tag) &&
-                    ($0.sourcePID ?? $0.ownerPID) == context.sourcePID
-            }) else {
+            guard let item = items.first(matchingTag: context.tag, pid: context.sourcePID) else {
                 context.notFoundAttempts += 1
                 MenuBarItemManager.diagLog.debug(
                     """
@@ -7664,7 +7648,7 @@ extension MenuBarItemManager {
 
     /// Returns the best-known bounds for a menu bar item.
     private func bestBounds(for item: MenuBarItem) -> CGRect {
-        Bridging.getWindowBounds(for: item.windowID) ?? item.bounds
+        item.liveBounds
     }
 
     /// Enforces the order of the given control items, ensuring that the
@@ -8232,7 +8216,7 @@ extension MenuBarItemManager {
                 else {
                     return false
                 }
-                let itemBounds = Bridging.getWindowBounds(for: item.windowID) ?? item.bounds
+                let itemBounds = item.liveBounds
                 return !target.contains(
                     itemBounds: itemBounds,
                     hiddenBounds: hiddenBounds,
@@ -10938,7 +10922,7 @@ extension MenuBarItemManager {
         // Find items that are blocked (at x=-1)
         let blockedItems = items.filter { item in
             guard item.isMovable, !item.isControlItem else { return false }
-            let bounds = Bridging.getWindowBounds(for: item.windowID) ?? item.bounds
+            let bounds = item.liveBounds
             return bounds.origin.x == -1
         }
 

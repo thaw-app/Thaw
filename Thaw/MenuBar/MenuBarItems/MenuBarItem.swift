@@ -32,6 +32,13 @@ nonisolated struct MenuBarItem: CustomStringConvertible {
     /// A Boolean value that indicates whether the item is on screen.
     let isOnScreen: Bool
 
+    /// The item's current bounds read from the Window Server, falling back
+    /// to the snapshot taken when this struct was created if the window is
+    /// gone or the query fails.
+    var liveBounds: CGRect {
+        Bridging.getWindowBounds(for: windowID) ?? bounds
+    }
+
     /// The gate that refuses to move an item.
     ///
     /// A refusal used to be undiagnosable: the layout editor showed a
