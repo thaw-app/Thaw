@@ -77,7 +77,6 @@ $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemManager/MenuBarItemManager+Move.
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemManager/MenuBarItemManager+NotchOverflow.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemManager/MenuBarItemManager+TemporaryShow.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemManager/MenuBarItemManager.swift
-$(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemManager/SimpleSemaphore.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemServiceConnection.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemTag.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/PendingLedger.swift
@@ -179,6 +178,7 @@ $(SRCROOT)/Thaw/Utilities/Predicates.swift
 $(SRCROOT)/Thaw/Utilities/ScreenCapture.swift
 $(SRCROOT)/Thaw/Utilities/SettingsURIHandler.swift
 $(SRCROOT)/Thaw/Utilities/SettingsURIParser.swift
+$(SRCROOT)/Thaw/Utilities/SimpleSemaphore.swift
 $(SRCROOT)/Thaw/Utilities/SpaceInfo.swift
 $(SRCROOT)/Thaw/Utilities/Swizzling.swift
 $(SRCROOT)/Thaw/Utilities/SystemAppearance.swift
