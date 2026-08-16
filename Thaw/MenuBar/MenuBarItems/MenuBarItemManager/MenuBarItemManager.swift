@@ -260,11 +260,14 @@ final class MenuBarItemManager {
     /// early bail resume — or permanently strand — someone else's waiter.
     var backgroundCacheWaiters: [Int: CheckedContinuation<Void, Never>] = [:]
 
-    /// Count of cache cycles that actually rebuilt the item cache.
+    /// Count of cache cycles that observed the bar — rebuilding the cache
+    /// or confirming it unchanged.
     ///
     /// The settling loop compares it across a poll to tell an observed pass
     /// from one the serial gate or a drag guard dropped; a dropped pass
-    /// leaves the cache untouched, which must not count as stability.
+    /// leaves the cache untouched without having looked, which must not
+    /// count as stability. The stable no-op reads must, or a settled bar
+    /// would produce no evidence and settling would run to its deadline.
     var completedCacheCycles = 0
 
     /// Source of tokens for ``backgroundCacheWaiters``.

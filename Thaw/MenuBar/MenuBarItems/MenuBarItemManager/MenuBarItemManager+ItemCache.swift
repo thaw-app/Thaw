@@ -779,6 +779,11 @@ extension MenuBarItemManager {
 
         guard cacheChanged else {
             MenuBarItemManager.diagLog.debug("Not updating menu bar item cache, as items haven't changed")
+            // Still an observed cycle: the settling stability check needs
+            // exactly these stable, no-op reads to count toward its early
+            // exit, or a bar that has settled reads as "no evidence" and
+            // settling runs to its full deadline.
+            completedCacheCycles += 1
             return
         }
 

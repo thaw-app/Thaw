@@ -137,9 +137,14 @@ extension MenuBarItemService {
                         diagLog.notice("getOrCreateSession: no team identifier (ad-hoc build), skipping peer requirement")
                     }
                     newSession.setTargetQueue(queue)
+                    // Populated before activate(): a session cancelled right
+                    // after activation would otherwise race the box write,
+                    // find it empty, and leave the dead session stored. If
+                    // activate() throws, the handler firing against the
+                    // populated box is a no-op — nothing was stored to drop.
+                    createdSession.withLock { $0 = newSession }
                     try newSession.activate()
                     diagLog.debug("getOrCreateSession: XPC session activated successfully")
-                    createdSession.withLock { $0 = newSession }
                     session = newSession
                     return newSession
                 }

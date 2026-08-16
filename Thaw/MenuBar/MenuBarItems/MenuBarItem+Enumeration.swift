@@ -479,7 +479,7 @@ nonisolated extension MenuBarItemTag.Namespace {
             // This covers cases where the source PID doesn't resolve
             // (e.g. helper processes) but the owner is known.
             self = .optional(
-                app.bundleIdentifier.map(Self.canonicalBundleID) ?? itemWindow.ownerName ?? app.localizedName
+                Self.canonicalBundleIdentifier(of: app) ?? itemWindow.ownerName ?? app.localizedName
             )
         } else if let ownerName = itemWindow.ownerName {
             // Last resort: use the process name as a stable identifier.
