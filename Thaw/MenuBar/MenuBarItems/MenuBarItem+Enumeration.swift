@@ -421,12 +421,18 @@ nonisolated extension MenuBarItemTag.Namespace {
         // that don't. We should also be able to handle daemons and helpers,
         // which are more likely not to have a bundle ID.
         //
-        // Use the name of the owning process as a fallback. The non-localized
-        // name seems less likely to change, so let's prefer it as a (somewhat)
-        // stable identifier.
+        // `bundleIdentifier` can also read nil transiently for an app that
+        // has one (login and launch races), and the owner-name fallback is
+        // the window's process display name, which macOS localizes for
+        // system processes: an en-GB machine minted `Control Centre:WiFi`
+        // there, persisted it, and the ghost then shadowed the canonical
+        // `com.apple.controlcenter:WiFi` in the saved order (#949). Recover
+        // the bundle ID through the bundle URL before touching names.
         if let app = itemWindow.owningApplication {
             self = .optional(
-                app.bundleIdentifier.map(Self.canonicalBundleID) ?? itemWindow.ownerName ?? app.localizedName
+                app.bundleIdentifier.map(Self.canonicalBundleID)
+                    ?? app.bundleURL.flatMap { Bundle(url: $0)?.bundleIdentifier }.map(Self.canonicalBundleID)
+                    ?? itemWindow.ownerName ?? app.localizedName
             )
         } else {
             self = .optional(itemWindow.ownerName)
