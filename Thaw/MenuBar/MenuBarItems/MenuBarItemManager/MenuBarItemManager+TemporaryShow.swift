@@ -296,7 +296,7 @@ extension MenuBarItemManager {
     /// resolved identity. An item whose tag is present in `items`, or whose
     /// window is gone entirely, is returned unchanged.
     static nonisolated func remappedItem(for item: MenuBarItem, in items: [MenuBarItem]) -> MenuBarItem {
-        guard !items.contains(where: { $0.tag == item.tag }) else {
+        guard items.first(matching: item.tag) == nil else {
             return item
         }
         return items.first { $0.windowID == item.windowID } ?? item

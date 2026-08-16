@@ -567,7 +567,7 @@ nonisolated extension CGImage {
 
 // MARK: - Collection where Element == MenuBarItem
 
-extension Collection<MenuBarItem> {
+nonisolated extension Collection<MenuBarItem> {
     /// Returns the first index where the menu bar item matching the specified
     /// tag appears in the collection.
     func firstIndex(matching tag: MenuBarItemTag) -> Index? {
@@ -1052,7 +1052,7 @@ extension Publisher {
 
 // MARK: - RangeReplaceableCollection where Element == MenuBarItem
 
-extension RangeReplaceableCollection where Element == MenuBarItem {
+nonisolated extension RangeReplaceableCollection where Element == MenuBarItem {
     /// Removes and returns the first menu bar item that matches
     /// the specified tag.
     mutating func removeFirst(matching tag: MenuBarItemTag) -> MenuBarItem? {
@@ -1065,7 +1065,7 @@ extension RangeReplaceableCollection where Element == MenuBarItem {
 
 // MARK: - Sequence where Element == MenuBarItem
 
-extension Sequence<MenuBarItem> {
+nonisolated extension Sequence<MenuBarItem> {
     /// Returns the first menu bar item that matches the specified tag.
     func first(matching tag: MenuBarItemTag) -> MenuBarItem? {
         first { $0.tag == tag }
