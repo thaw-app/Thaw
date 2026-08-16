@@ -6,15 +6,10 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import Algorithms
-import AXSwift6
 import Cocoa
-import Collections
-import Combine
 
 // @preconcurrency: see the note in MenuBarItemManager.swift.
 @preconcurrency import CoreGraphics
-import Observation
 import os.lock
 
 // MARK: - Event Helpers
