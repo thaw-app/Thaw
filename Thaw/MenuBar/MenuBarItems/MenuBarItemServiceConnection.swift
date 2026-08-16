@@ -125,11 +125,7 @@ extension MenuBarItemService {
                     // before the created instance exists to capture.
                     let createdSession = OSAllocatedUnfairLock<XPCSession?>(initialState: nil)
                     let newSession = try XPCSession(xpcService: name, options: .inactive) { [weak self] error in
-                        guard let self else {
-                            return
-                        }
-                        diagLog.warning("Session was cancelled with error \(error.localizedDescription)")
-                        self.invalidate(createdSession.withLock { $0 })
+                        self?.handleCancellation(error, of: createdSession)
                     }
                     // Same-team peer validation can never pass in a build signed
                     // without a team identifier (ad-hoc/personal builds) — every
@@ -147,6 +143,16 @@ extension MenuBarItemService {
                     session = newSession
                     return newSession
                 }
+            }
+
+            /// Handles the XPC cancellation callback for the session stored
+            /// in `sessionBox`. Arrives on an arbitrary thread.
+            private func handleCancellation(
+                _ error: XPCRichError,
+                of sessionBox: OSAllocatedUnfairLock<XPCSession?>
+            ) {
+                diagLog.warning("Session was cancelled with error \(error.localizedDescription)")
+                invalidate(sessionBox.withLock { $0 })
             }
 
             /// Drops the stored session if it is the one the cancellation

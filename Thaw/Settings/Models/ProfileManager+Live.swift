@@ -249,11 +249,13 @@ extension ProfileManager {
                 appState.itemManager.cancelSettlingPeriod(reason: "spacingRelaunch:noOp")
             }
             await appState.itemManager.applyProfileLayout(
-                pinnedHidden: pinnedHidden,
-                pinnedAlwaysHidden: pinnedAlwaysHidden,
-                sectionOrder: sectionOrder,
-                itemSectionMap: itemSectionMap,
-                itemOrder: itemOrder
+                MenuBarItemManager.ProfileLayoutSpec(
+                    pinnedHidden: pinnedHidden,
+                    pinnedAlwaysHidden: pinnedAlwaysHidden,
+                    sectionOrder: sectionOrder,
+                    itemSectionMap: itemSectionMap,
+                    itemOrder: itemOrder
+                )
             )
 
             // 3. Post-hooks. Profile runs first (mirror of the pre order),

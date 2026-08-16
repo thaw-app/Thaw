@@ -1633,11 +1633,13 @@ extension MenuBarItemManager {
             if !skipSavedLayoutApply, !didAttemptEarlySavedLayoutApply {
                 let didApply = await applySavedLayout(
                     items: items,
-                    previousWindowIDs: previousWindowIDs,
+                    previousCycle: PreviousCacheCycle(
+                        windowIDs: previousWindowIDs,
+                        displayID: itemCache.displayID,
+                        ccGenericWindowIDs: previousCCGenericWindowIDs
+                    ),
                     controlItems: controlItems,
-                    previousDisplayID: itemCache.displayID,
                     currentDisplayID: displayID,
-                    previousCCGenericWindowIDs: previousCCGenericWindowIDs,
                     bypassMoveCooldown: true,
                     resolvedIdentitiesOnly: true
                 )
@@ -1677,11 +1679,13 @@ extension MenuBarItemManager {
         if !skipSavedLayoutApply {
             let didApplySavedLayout = await applySavedLayout(
                 items: items,
-                previousWindowIDs: previousWindowIDs,
+                previousCycle: PreviousCacheCycle(
+                    windowIDs: previousWindowIDs,
+                    displayID: itemCache.displayID,
+                    ccGenericWindowIDs: previousCCGenericWindowIDs
+                ),
                 controlItems: controlItems,
-                previousDisplayID: itemCache.displayID,
                 currentDisplayID: displayID,
-                previousCCGenericWindowIDs: previousCCGenericWindowIDs,
                 bypassMoveCooldown: bypassSavedLayoutCooldown
             )
             if didApplySavedLayout {

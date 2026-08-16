@@ -433,11 +433,13 @@ extension MenuBarItemManager {
             // and cause the move loop to exit via Task.isCancelled.
             self.profileResortTask = nil
             await self.applyProfileLayout(
-                pinnedHidden: layout.pinnedHidden,
-                pinnedAlwaysHidden: layout.pinnedAlwaysHidden,
-                sectionOrder: layout.sectionOrder,
-                itemSectionMap: layout.itemSectionMap,
-                itemOrder: layout.itemOrder,
+                ProfileLayoutSpec(
+                    pinnedHidden: layout.pinnedHidden,
+                    pinnedAlwaysHidden: layout.pinnedAlwaysHidden,
+                    sectionOrder: layout.sectionOrder,
+                    itemSectionMap: layout.itemSectionMap,
+                    itemOrder: layout.itemOrder
+                ),
                 automatic: true
             )
         }
@@ -497,6 +499,17 @@ extension MenuBarItemManager {
     ///   truth and is not overwritten; pinning is preserved;
     ///   activeProfileLayout is not touched. Only isRestoringItemOrder
     ///   is armed.
+    /// The five pieces of a layout spec that every apply carries together:
+    /// the pinning sets, the per-section order, and the two identifier maps
+    /// derived from it.
+    nonisolated struct ProfileLayoutSpec {
+        let pinnedHidden: Set<String>
+        let pinnedAlwaysHidden: Set<String>
+        let sectionOrder: [String: [String]]
+        let itemSectionMap: [String: String]
+        let itemOrder: [String: [String]]
+    }
+
     enum ApplySource {
         case profile
         case savedOrder
@@ -705,15 +718,16 @@ extension MenuBarItemManager {
     }
 
     func applyProfileLayout(
-        pinnedHidden: Set<String>,
-        pinnedAlwaysHidden: Set<String>,
-        sectionOrder rawSectionOrder: [String: [String]],
-        itemSectionMap rawItemSectionMap: [String: String],
-        itemOrder rawItemOrder: [String: [String]],
+        _ spec: ProfileLayoutSpec,
         source: ApplySource = .profile,
         automatic: Bool = false,
         duringSettling: Bool = false
     ) async {
+        let pinnedHidden = spec.pinnedHidden
+        let pinnedAlwaysHidden = spec.pinnedAlwaysHidden
+        let rawSectionOrder = spec.sectionOrder
+        let rawItemSectionMap = spec.itemSectionMap
+        let rawItemOrder = spec.itemOrder
         // A profile saved before an item was renamed after its app still
         // names it by its helper (`at.obdev.littlesnitch.agent:Item-0`).
         // Migrate on the way in so the plan is built against identifiers
@@ -2587,13 +2601,19 @@ extension MenuBarItemManager {
         userHasPausedInput || elapsed >= cap
     }
 
+    /// The previous cache cycle's state that ``applySavedLayout`` diffs
+    /// the current bar against to decide whether a restore is warranted.
+    nonisolated struct PreviousCacheCycle {
+        var windowIDs: [CGWindowID]
+        var displayID: CGDirectDisplayID?
+        var ccGenericWindowIDs: Set<CGWindowID> = []
+    }
+
     func applySavedLayout(
         items: [MenuBarItem],
-        previousWindowIDs: [CGWindowID],
+        previousCycle: PreviousCacheCycle,
         controlItems: ControlItemPair,
-        previousDisplayID: CGDirectDisplayID? = nil,
         currentDisplayID: CGDirectDisplayID? = nil,
-        previousCCGenericWindowIDs: Set<CGWindowID> = [],
         bypassMoveCooldown: Bool = false,
         resolvedIdentitiesOnly: Bool = false
     ) async -> Bool {
@@ -2680,7 +2700,7 @@ extension MenuBarItemManager {
         // subject to this confirmation — it stays immediate and never
         // arms/consumes the pending-divergence state below.
         let currentWindowIDSet = Set(items.map(\.windowID))
-        let previousWindowIDSet = Set(previousWindowIDs)
+        let previousWindowIDSet = Set(previousCycle.windowIDs)
         // Control-Center-generic (`Item-N`) windows churn windowIDs while
         // the visible item count stays stable (Live Activities, transient
         // CC widgets). Their disappearance is not an app quit/relaunch and
@@ -2689,9 +2709,9 @@ extension MenuBarItemManager {
         // never part of a saved layout (saveSectionOrder excludes them), so
         // ignoring them here can't miss a restorable change.
         let windowIDsChanged = Self.windowIDsChanged(
-            previous: previousWindowIDSet.subtracting(previousCCGenericWindowIDs),
+            previous: previousWindowIDSet.subtracting(previousCycle.ccGenericWindowIDs),
             current: currentWindowIDSet,
-            previousDisplayID: previousDisplayID,
+            previousDisplayID: previousCycle.displayID,
             currentDisplayID: currentDisplayID
         )
         let layoutDiverged: Bool
@@ -2889,11 +2909,13 @@ extension MenuBarItemManager {
         // Phase 0's settling wait, which its gate-holding caller cannot
         // survive (#943).
         await applyProfileLayout(
-            pinnedHidden: pinnedHiddenBundleIDs,
-            pinnedAlwaysHidden: pinnedAlwaysHiddenBundleIDs,
-            sectionOrder: effectiveSavedOrder,
-            itemSectionMap: itemSectionMap,
-            itemOrder: effectiveSavedOrder,
+            ProfileLayoutSpec(
+                pinnedHidden: pinnedHiddenBundleIDs,
+                pinnedAlwaysHidden: pinnedAlwaysHiddenBundleIDs,
+                sectionOrder: effectiveSavedOrder,
+                itemSectionMap: itemSectionMap,
+                itemOrder: effectiveSavedOrder
+            ),
             source: .savedOrder,
             automatic: true,
             duringSettling: resolvedIdentitiesOnly
