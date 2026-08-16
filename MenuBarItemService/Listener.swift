@@ -61,11 +61,6 @@ final nonisolated class Listener: @unchecked Sendable {
                 DiagnosticLogger.shared.attachToFile(at: requested)
                 diagLog.debug("Listener attached diagnostic logging to \(requested.path)")
                 return .configureLogging
-            case let .sourcePID(window):
-                diagLog.debug("Listener: sourcePID request for windowID=\(window.windowID) title=\(window.title ?? "nil")")
-                let pid = SourcePIDCache.shared.pid(for: window)
-                diagLog.debug("Listener: sourcePID response for windowID=\(window.windowID) -> pid=\(pid.map { "\($0)" } ?? "nil")")
-                return .sourcePID(pid)
             case let .sourcePIDs(windows):
                 diagLog.debug("Listener: sourcePIDs batch request for \(windows.count) windows")
                 let pids = SourcePIDCache.shared.pids(for: windows)
@@ -78,33 +73,23 @@ final nonisolated class Listener: @unchecked Sendable {
         }
     }
 
-    /// Activates the listener without checking if it is already active,
-    /// with the requirement that session peers must be signed with the
-    /// same team identifier as the service process.
-    private func uncheckedActivateWithSameTeamRequirement() throws {
-        xpcListener = try XPCListener(service: name, requirement: .isFromSameTeam()) { request in
-            request.accept { [self] message in
-                self.handleMessage(message)
-            }
+    /// Accepts an incoming session request, routing its messages to
+    /// ``handleMessage(_:)``.
+    private func acceptSession(
+        _ request: XPCListener.IncomingSessionRequest
+    ) -> XPCListener.IncomingSessionRequest.Decision {
+        request.accept { [self] message in
+            self.handleMessage(message)
         }
-    }
-
-    /// Activates the listener without a peer requirement. Used for builds
-    /// signed without a team identifier (ad-hoc/personal builds), where
-    /// `.isFromSameTeam()` can never be satisfied and every session is
-    /// cancelled before the first message.
-    private func uncheckedActivateWithoutPeerRequirement() throws {
-        xpcListener = try XPCListener(service: name) { request in
-            request.accept { [self] message in
-                self.handleMessage(message)
-            }
-        }
-        diagLog.warning(
-            "Listener is active WITHOUT peer validation (ad-hoc/teamless build): any local process may connect"
-        )
     }
 
     /// Activates the listener.
+    ///
+    /// Session peers must be signed with the same team identifier as the
+    /// service process. Builds signed without a team identifier
+    /// (ad-hoc/personal builds) activate without a peer requirement, since
+    /// `.isFromSameTeam()` can never be satisfied there and every session
+    /// would be cancelled before the first message.
     func activate() {
         guard xpcListener == nil else {
             diagLog.notice("Listener is already active")
@@ -116,9 +101,12 @@ final nonisolated class Listener: @unchecked Sendable {
         do {
             if CodeSigningInfo.processTeamIdentifier == nil {
                 diagLog.notice("Listener: no team identifier (ad-hoc build), activating without peer requirement")
-                try uncheckedActivateWithoutPeerRequirement()
+                xpcListener = try XPCListener(service: name) { self.acceptSession($0) }
+                diagLog.warning(
+                    "Listener is active WITHOUT peer validation (ad-hoc/teamless build): any local process may connect"
+                )
             } else {
-                try uncheckedActivateWithSameTeamRequirement()
+                xpcListener = try XPCListener(service: name, requirement: .isFromSameTeam()) { self.acceptSession($0) }
             }
         } catch {
             diagLog.error("Failed to activate listener with error \(error)")

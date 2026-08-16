@@ -66,13 +66,13 @@ struct MenuBarItemServiceTests {
             }
         }
 
-        // MARK: - SourcePID Request
+        // MARK: - SourcePIDs Request
 
-        @Test("A sourcePID request keeps its window info across a round trip")
-        func sourcePIDRequestRoundTrip() throws {
+        @Test("A sourcePIDs request keeps its window info across a round trip")
+        func sourcePIDsRequestRoundTrip() throws {
             // Create a WindowInfo manually for testing
             let windowInfo = try createTestWindowInfo()
-            let original = MenuBarItemService.Request.sourcePID(windowInfo)
+            let original = MenuBarItemService.Request.sourcePIDs([windowInfo])
 
             let encoder = JSONEncoder()
             let decoder = JSONDecoder()
@@ -80,10 +80,12 @@ struct MenuBarItemServiceTests {
             let data = try encoder.encode(original)
             let decoded = try decoder.decode(MenuBarItemService.Request.self, from: data)
 
-            guard case let .sourcePID(decodedWindow) = decoded else {
-                Issue.record("Expected .sourcePID request after round trip")
+            guard case let .sourcePIDs(decodedWindows) = decoded else {
+                Issue.record("Expected .sourcePIDs request after round trip")
                 return
             }
+            let decodedWindow = try #require(decodedWindows.first)
+            #expect(decodedWindows.count == 1)
             #expect(decodedWindow.windowID == windowInfo.windowID)
             #expect(decodedWindow.ownerPID == windowInfo.ownerPID)
         }
@@ -139,48 +141,34 @@ struct MenuBarItemServiceTests {
             }
         }
 
-        // MARK: - SourcePID Response
+        // MARK: - SourcePIDs Response
 
-        @Test("A sourcePID response keeps its pid across a round trip")
-        func sourcePIDResponseWithPID() throws {
-            let original = MenuBarItemService.Response.sourcePID(1234)
+        @Test("A sourcePIDs response keeps resolved and nil pids across a round trip")
+        func sourcePIDsResponseRoundTrip() throws {
+            let original = MenuBarItemService.Response.sourcePIDs([1234, nil])
             let encoder = JSONEncoder()
             let decoder = JSONDecoder()
 
             let data = try encoder.encode(original)
             let decoded = try decoder.decode(MenuBarItemService.Response.self, from: data)
 
-            guard case let .sourcePID(pid) = decoded else {
-                Issue.record("Expected .sourcePID response")
+            guard case let .sourcePIDs(pids) = decoded else {
+                Issue.record("Expected .sourcePIDs response")
                 return
             }
-            #expect(pid == 1234)
+            #expect(pids.count == 2)
+            #expect(pids[0] == 1234)
+            #expect(pids[1] == nil)
         }
 
-        @Test("A sourcePID response keeps a nil pid across a round trip")
-        func sourcePIDResponseWithNil() throws {
-            let original = MenuBarItemService.Response.sourcePID(nil)
-            let encoder = JSONEncoder()
-            let decoder = JSONDecoder()
-
-            let data = try encoder.encode(original)
-            let decoded = try decoder.decode(MenuBarItemService.Response.self, from: data)
-
-            guard case let .sourcePID(pid) = decoded else {
-                Issue.record("Expected .sourcePID response with nil")
-                return
-            }
-            #expect(pid == nil)
-        }
-
-        @Test("A sourcePID response encodes both the case name and the pid")
-        func sourcePIDResponseEncodesCorrectly() throws {
-            let response = MenuBarItemService.Response.sourcePID(5678)
+        @Test("A sourcePIDs response encodes both the case name and the pids")
+        func sourcePIDsResponseEncodesCorrectly() throws {
+            let response = MenuBarItemService.Response.sourcePIDs([5678])
             let encoder = JSONEncoder()
             let data = try encoder.encode(response)
             let json = try #require(String(data: data, encoding: .utf8))
 
-            #expect(json.contains("sourcePID"))
+            #expect(json.contains("sourcePIDs"))
             #expect(json.contains("5678"))
         }
     }

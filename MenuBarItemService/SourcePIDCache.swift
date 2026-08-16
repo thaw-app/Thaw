@@ -337,23 +337,16 @@ actor SourcePIDCache {
         _ = cancellable
     }
 
-    /// Returns the cached process identifier for the given window,
-    /// updating the cache if needed.
-    nonisolated func pid(for window: WindowInfo) -> pid_t? {
-        // Wrap the entire request in an autoreleasepool. This XPC service
-        // has no NSApplication, so autoreleased ObjC/CF objects from
-        // WindowInfo creation, AX API calls, and CGS bridging would
-        // otherwise accumulate on the GCD thread until process exit.
-        autoreleasepool {
-            pidBody(for: window)
-        }
-    }
-
     /// Returns the cached process identifiers for the given windows,
     /// performing a single batch resolution if any are missing.
     ///
     /// `pidBody` already caches **all** matched windows during its full
     /// AX scan, so after one call all resolvable PIDs are available.
+    ///
+    /// The entire request is wrapped in an autoreleasepool. This XPC
+    /// service has no NSApplication, so autoreleased ObjC/CF objects from
+    /// WindowInfo creation, AX API calls, and CGS bridging would otherwise
+    /// accumulate on the GCD thread until process exit.
     nonisolated func pids(for windows: [WindowInfo]) -> [pid_t?] {
         autoreleasepool {
             pidsBody(for: windows)
