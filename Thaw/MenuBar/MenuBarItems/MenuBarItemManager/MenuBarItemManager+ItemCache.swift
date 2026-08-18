@@ -787,6 +787,11 @@ extension MenuBarItemManager {
             return
         }
 
+        // Read before the assignment below overwrites it: the save gate needs
+        // to know whether the menu bar changed display between the cycle that
+        // produced the standing cache and this one (#958).
+        let previousCacheDisplayID = itemCache.displayID
+
         itemCache = context.cache
 
         // Remember what the resolved items are called, so the next launch can
@@ -803,6 +808,30 @@ extension MenuBarItemManager {
 
         let hasPendingDivergence = pendingDivergenceObservedAt != nil
 
+        // Mirrors applySavedLayout's own cooldown. Whatever stops the restore
+        // has to stop the save, or the cycle that skips one and takes the
+        // other writes down a bar nobody arranged (#958).
+        //
+        // A move the user made themselves is exempt, and the exemption is
+        // load-bearing rather than a nicety: after a Layout-editor drag the
+        // live bar diverges from the saved order, and it is the save winning
+        // inside the cooldown that makes the drag the new saved order. Hold
+        // it back and the restore, once the cooldown lapses, reads the drag
+        // as drift and reverts it.
+        let isWithinMoveCooldown = lastMoveOperationOccurred(within: .seconds(5)) &&
+            !lastUserMoveOperationOccurred(within: .seconds(5))
+
+        // A relocation in progress. Both displays have to be known for the
+        // comparison to mean anything: a nil on either side is the ordinary
+        // first cycle, not a change.
+        let menuBarDisplayChanged: Bool = if let previousCacheDisplayID,
+                                            let currentDisplayID = context.cache.displayID
+        {
+            previousCacheDisplayID != currentDisplayID
+        } else {
+            false
+        }
+
         // The bar after a batch that gave up partway is the batch's own
         // wreckage, not a layout anyone chose. Recording it hands the next
         // pass a target it just moved, which is how a failed apply turns
@@ -818,7 +847,9 @@ extension MenuBarItemManager {
                    alwaysHiddenSectionResolved: alwaysHiddenSectionResolved,
                    hiddenSectionHasRoom: hiddenSectionHasRoom,
                    hasPendingDivergence: hasPendingDivergence,
-                   hasUnfinishedMoveBatch: hasUnfinishedMoveBatch
+                   hasUnfinishedMoveBatch: hasUnfinishedMoveBatch,
+                   isWithinMoveCooldown: isWithinMoveCooldown,
+                   menuBarDisplayChanged: menuBarDisplayChanged
                )
            )
         {
@@ -894,6 +925,18 @@ extension MenuBarItemManager {
             // correction, after which the next cycle sees a settled layout.
             MenuBarItemManager.diagLog.warning(
                 "Skipping saveSectionOrder; layout divergence pending confirmation (applySavedLayout has not yet restored the cached layout)"
+            )
+        } else if isWithinMoveCooldown {
+            // Warning level like the rest: a run of these means the bar is
+            // being moved often enough that the save never gets a settled
+            // cycle, which is its own problem — but it is no longer the
+            // problem of a save landing on an unsettled bar (#958).
+            MenuBarItemManager.diagLog.warning(
+                "Skipping saveSectionOrder; within the 5s move cooldown that applySavedLayout also honours"
+            )
+        } else if menuBarDisplayChanged {
+            MenuBarItemManager.diagLog.warning(
+                "Skipping saveSectionOrder; menu bar moved display since the standing cache (\(previousCacheDisplayID.map { "\($0)" } ?? "nil") -> \(context.cache.displayID.map { "\($0)" } ?? "nil")), relocation in progress"
             )
         } else if hasUnfinishedMoveBatch {
             // Warning level, like the two above, because a run of these is

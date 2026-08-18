@@ -162,4 +162,32 @@ struct ShouldPersistSavedOrderTests {
             )
         ))
     }
+
+    /// The move cooldown blocks the save, because `applySavedLayout` honours
+    /// the same window: for five seconds after a move it declines to restore.
+    /// A save allowed inside that window writes the bar as it stands while
+    /// the only thing that would have corrected it is standing down, so the
+    /// interrupted arrangement becomes the saved one (#958).
+    @Test("The move cooldown blocks the save")
+    func moveCooldownBlocks() {
+        #expect(!LayoutSolver.shouldPersistSavedOrder(
+            .init(
+                isWithinMoveCooldown: true
+            )
+        ))
+    }
+
+    /// The menu bar changing display blocks the save. The multi-display gate
+    /// can only see items still classified as visible, so a relocation that
+    /// strands items in the wrong section removes its own evidence: in the
+    /// #958 log it fired correctly with sixteen visible items and then passed
+    /// two and a half minutes later when only four were left.
+    @Test("The menu bar changing display blocks the save")
+    func displayChangeBlocks() {
+        #expect(!LayoutSolver.shouldPersistSavedOrder(
+            .init(
+                menuBarDisplayChanged: true
+            )
+        ))
+    }
 }

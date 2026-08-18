@@ -1809,7 +1809,9 @@ nonisolated enum LayoutSolver {
             gate.alwaysHiddenSectionResolved &&
             gate.hiddenSectionHasRoom &&
             !gate.hasPendingDivergence &&
-            !gate.hasUnfinishedMoveBatch
+            !gate.hasUnfinishedMoveBatch &&
+            !gate.isWithinMoveCooldown &&
+            !gate.menuBarDisplayChanged
     }
 
     /// The signals ``shouldPersistSavedOrder(_:)`` reads.
@@ -1829,6 +1831,34 @@ nonisolated enum LayoutSolver {
         var hiddenSectionHasRoom = true
         var hasPendingDivergence = false
         var hasUnfinishedMoveBatch = false
+
+        /// Whether a move landed recently enough that `applySavedLayout`
+        /// would decline to run.
+        ///
+        /// The two paths have to agree. `applySavedLayout` holds a five
+        /// second cooldown after any move so a wave of relaunching apps
+        /// cannot cascade into re-applies; this gate did not, so a cycle
+        /// inside the cooldown skipped the restore and took the save,
+        /// which is the one ordering that writes an unsettled bar down as
+        /// the user's layout. In the #958 log that pairing is a single
+        /// millisecond apart, and it moved twelve items out of the
+        /// visible section for good.
+        var isWithinMoveCooldown = false
+
+        /// Whether the menu bar is on a different display than it was on
+        /// the cycle that produced the current cache.
+        ///
+        /// macOS moves status items to the new screen one at a time, so a
+        /// snapshot taken during the relocation reads a bar that is
+        /// partly on each. `itemsSpanMultipleDisplays` is meant to catch
+        /// exactly that, but it can only see the items still classified
+        /// visible — and misclassification is the fault, so by the time
+        /// it matters the evidence has already been moved out of its
+        /// input. It correctly stopped a save 2.5 minutes earlier in the
+        /// #958 log with sixteen visible items, then passed the one that
+        /// mattered with four. This signal is derived from the displays
+        /// themselves and does not thin out as items are misread.
+        var menuBarDisplayChanged = false
     }
 
     /// Whether the always-hidden section is resolved well enough for the
