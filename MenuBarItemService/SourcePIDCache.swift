@@ -393,13 +393,24 @@ actor SourcePIDCache {
         }
     }
 
-    /// Whether `window` still needs the full AX traversal: no PID has been
-    /// cached for it, and any negative-cache entry has expired by `now`.
+    /// Whether `window` still needs the full AX traversal: it has area to
+    /// match on, no PID has been cached for it, and any negative-cache entry
+    /// has expired by `now`.
     ///
     /// Split out of `pidsBody` so the search predicate, the lock, and the
     /// deadline comparison are not three closures deep.
     private nonisolated func needsScan(_ window: WindowInfo, asOf now: ContinuousClock.Instant) -> Bool {
-        state.withLock { state in
+        // A window with no area cannot be matched to an accessibility
+        // element, so it must not start a scan on its own behalf: allowed to,
+        // it wakes a full traversal of every running app once per
+        // negative-cache TTL for the life of the session and never resolves.
+        // It is still resolved by a scan another window starts, and bounds
+        // are re-read on every request, so one that gains area later stops
+        // being skipped.
+        guard !window.isDegenerate else {
+            return false
+        }
+        return state.withLock { state in
             guard state.pids[window.windowID] == nil else {
                 return false
             }
