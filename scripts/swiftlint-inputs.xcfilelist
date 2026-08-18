@@ -7,6 +7,7 @@ $(SRCROOT)/Shared/Services/MenuBarItemService.swift
 $(SRCROOT)/Shared/Utilities/AXHelpers.swift
 $(SRCROOT)/Shared/Utilities/CodeSigningInfo.swift
 $(SRCROOT)/Shared/Utilities/DiagnosticLogger.swift
+$(SRCROOT)/Shared/Utilities/ExtrasMenuBarNegativeCachePolicy.swift
 $(SRCROOT)/Shared/Utilities/MarkerPairResolver.swift
 $(SRCROOT)/Shared/Utilities/SharedConstants.swift
 $(SRCROOT)/Shared/Utilities/SharedExtensions.swift

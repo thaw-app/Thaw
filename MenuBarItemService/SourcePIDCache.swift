@@ -49,7 +49,15 @@ actor SourcePIDCache {
 
         private struct State {
             var extrasMenuBar: UIElement?
-            var checkedWithNoResult = false
+
+            /// Consecutive checks that found no extras menu bar. Drives the
+            /// TTL ladder in ``ExtrasMenuBarNegativeCachePolicy``.
+            var consecutiveMisses = 0
+
+            /// The instant after which a missing extras menu bar may be
+            /// probed again, or `nil` when this app has never come back
+            /// empty. Only meaningful while `extrasMenuBar` is `nil`.
+            var retryAfter: ContinuousClock.Instant?
         }
 
         private let lock = OSAllocatedUnfairLock(initialState: State())
@@ -77,6 +85,23 @@ actor SourcePIDCache {
             lock.withLock { $0.extrasMenuBar != nil }
         }
 
+        /// Whether an unexpired negative deadline would make
+        /// ``getOrCreateExtrasMenuBar()`` skip its accessibility calls.
+        ///
+        /// Diagnostics only, and sampled outside the lock that
+        /// ``getOrCreateExtrasMenuBar()`` takes, so it is a count rather
+        /// than a guarantee. It exists because a field log that reports
+        /// only "checked N apps" cannot distinguish a scan that probed the
+        /// whole system from one the negative cache spared.
+        var isSkippingExtrasMenuBarProbe: Bool {
+            lock.withLock { state in
+                guard state.extrasMenuBar == nil, let retryAfter = state.retryAfter else {
+                    return false
+                }
+                return retryAfter > ContinuousClock.now
+            }
+        }
+
         /// A Boolean value indicating whether the app is in a valid
         /// state for making accessibility calls.
         private var isValidForAccessibility: Bool {
@@ -100,13 +125,20 @@ actor SourcePIDCache {
         /// access on subsequent calls.
         func getOrCreateExtrasMenuBar() -> UIElement? {
             // Fast path: check cached state under the lock first.
-            let (hasCached, isNegative) = lock.withLock {
-                ($0.extrasMenuBar, $0.checkedWithNoResult)
+            let now = ContinuousClock.now
+            let (hasCached, isBarred) = lock.withLock { state -> (UIElement?, Bool) in
+                guard state.extrasMenuBar == nil else {
+                    return (state.extrasMenuBar, false)
+                }
+                guard let retryAfter = state.retryAfter else {
+                    return (nil, false)
+                }
+                return (nil, retryAfter > now)
             }
             if let bar = hasCached {
                 return bar
             }
-            if isNegative {
+            if isBarred {
                 return nil
             }
 
@@ -122,28 +154,26 @@ actor SourcePIDCache {
                 let app = AXHelpers.application(for: runningApp),
                 let bar = AXHelpers.extrasMenuBar(for: app)
             else {
-                // App is reachable but has no extras menu bar.
+                // App is reachable but has no extras menu bar. Bar it from
+                // the next scans rather than flagging it permanently: it may
+                // still register a status item later, so the deadline grows
+                // with each empty check instead of never expiring.
                 lock.withLock {
                     if $0.extrasMenuBar == nil {
-                        $0.checkedWithNoResult = true
+                        $0.consecutiveMisses += 1
+                        $0.retryAfter = ContinuousClock.now + ExtrasMenuBarNegativeCachePolicy.ttl(
+                            afterConsecutiveMisses: $0.consecutiveMisses
+                        )
                     }
                 }
                 return nil
             }
-            lock.withLock { $0.extrasMenuBar = bar }
-            return bar
-        }
-
-        /// Resets the negative cache so the app will be re-checked
-        /// on the next scan. Called during cleanup to discover apps
-        /// that register status items after launch. Preserves a
-        /// valid `extrasMenuBar` to avoid unnecessary AX re-queries.
-        func resetNegativeCache() {
             lock.withLock {
-                if $0.extrasMenuBar == nil {
-                    $0.checkedWithNoResult = false
-                }
+                $0.extrasMenuBar = bar
+                $0.consecutiveMisses = 0
+                $0.retryAfter = nil
             }
+            return bar
         }
     }
 
@@ -254,7 +284,7 @@ actor SourcePIDCache {
         let windowIDs = Bridging.getMenuBarWindowList(option: .itemsOnly)
         let currentAppPids = Set(runningApps.map(\.processIdentifier))
 
-        let reusedApps = state.withLock { state -> [CachedApplication] in
+        state.withLock { state in
             // Clean up entries for terminated apps to prevent memory leaks
             let oldAppPids = Set(state.apps.map(\.processIdentifier))
             let terminatedPids = oldAppPids.subtracting(currentAppPids)
@@ -275,10 +305,6 @@ actor SourcePIDCache {
                 }
             }
 
-            // Collect reused apps to reset their negative caches after
-            // releasing the lock.
-            var reused = [CachedApplication]()
-
             // Preserve unexpired negative entries across cleanup. Dropping
             // them would let a known-unresolvable window start a full scan
             // immediately after every application-list update.
@@ -292,8 +318,11 @@ actor SourcePIDCache {
 
                 if let app = appMappings[pid] {
                     // Prefer the cached app, as it may have already done
-                    // the work to initialize its extras menu bar.
-                    reused.append(app)
+                    // the work to initialize its extras menu bar. Its
+                    // extras-bar negative deadline rides along: it expires on
+                    // its own schedule, so a status item registered after
+                    // launch is still discovered without re-probing every
+                    // app on the system each time this list changes.
                     result.apps.append(app)
                 } else {
                     // App wasn't in the cache, so it must be new.
@@ -320,14 +349,6 @@ actor SourcePIDCache {
             if !terminatedPids.isEmpty {
                 SourcePIDCache.diagLog.info("Cleaned up PID cache entries for terminated processes: \(terminatedPids)")
             }
-
-            return reused
-        }
-
-        // Reset negative caches outside the state lock so we don't
-        // hold the unfair lock while acquiring per-app locks.
-        for app in reusedApps {
-            app.resetNegativeCache()
         }
     }
 
@@ -445,6 +466,7 @@ actor SourcePIDCache {
         let thawBundleID = "com.stonerl.Thaw"
         var appsChecked = 0
         var appsWithBar = 0
+        var appsSkipped = 0
         var totalChildrenChecked = 0
         var totalMatchesFound = 0
         var unresolvedWindows = Set(allWindows.map(\.windowID))
@@ -454,6 +476,9 @@ actor SourcePIDCache {
                 break
             }
             appsChecked += 1
+            if app.isSkippingExtrasMenuBarProbe {
+                appsSkipped += 1
+            }
             autoreleasepool {
                 guard let bar = app.getOrCreateExtrasMenuBar() else {
                     return
@@ -731,7 +756,7 @@ actor SourcePIDCache {
         }
 
         let finalPID = state.withLock { $0.pids[window.windowID] }
-        SourcePIDCache.diagLog.debug("SourcePIDCache.pid: batch resolution finished. Found \(totalMatchesFound) matches. Requested windowID \(window.windowID) -> PID \(finalPID.map { "\($0)" } ?? "nil") (checked \(appsChecked) apps, \(appsWithBar) with extras bar, \(totalChildrenChecked) children)")
+        SourcePIDCache.diagLog.debug("SourcePIDCache.pid: batch resolution finished. Found \(totalMatchesFound) matches. Requested windowID \(window.windowID) -> PID \(finalPID.map { "\($0)" } ?? "nil") (checked \(appsChecked) apps, \(appsSkipped) skipped by negative cache, \(appsWithBar) with extras bar, \(totalChildrenChecked) children)")
 
         // Negative-cache every window that survived the full scan unresolved,
         // with a deadline that backs off as consecutive failures accumulate:
