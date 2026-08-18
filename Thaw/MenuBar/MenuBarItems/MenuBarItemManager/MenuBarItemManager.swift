@@ -191,6 +191,19 @@ final class MenuBarItemManager {
     /// Timestamp of the most recent menu bar item move operation.
     var lastMoveOperationTimestamp: ContinuousClock.Instant?
 
+    /// When the user last moved an item themselves, as opposed to Thaw
+    /// moving one on their behalf.
+    ///
+    /// Both kinds stamp ``lastMoveOperationTimestamp``, and for the restore
+    /// cooldown that is right — a bar that just moved should be left alone
+    /// whoever moved it. The save gate needs to tell them apart. Thaw's own
+    /// moves mean the bar is mid-restore and must not be written down; a
+    /// user's move is the one thing that *must* be written down, and
+    /// promptly, because the restore will otherwise revert it on the next
+    /// cycle. Suppressing the save for both would make a Layout-editor drag
+    /// undo itself (#958).
+    var lastUserMoveOperationTimestamp: ContinuousClock.Instant?
+
     /// Cached timeouts for move operations.
     var moveOperationTimeouts = [MenuBarItemTag: Duration]()
 
@@ -545,6 +558,30 @@ final class MenuBarItemManager {
     /// move. Only `EventError` carries enough detail to blame the owner.
     static nonisolated func failureKind(of error: any Error) -> MenuBarItemFailureLedger.FailureKind {
         (error as? EventError)?.failureKind ?? .other
+    }
+
+    /// Whether ``move(item:to:on:skipInputPause:maxMoveAttempts:)`` already
+    /// filed this error against the item before throwing it.
+    ///
+    /// `move` files every unresponsive-owner failure itself, so a caller that
+    /// also files one on catching the throw counts a single failed move
+    /// twice. That is not a cosmetic tally: the ledger deliberately waits for
+    /// a run of unresponsive-owner failures before writing a persisted mark,
+    /// and double-filing consumed the whole run in the same instant — the
+    /// #687 log marks 1Password one millisecond after logging that it was
+    /// still waiting. Every item that failed a single bulk-apply move was
+    /// marked immediately, and marked items get one attempt instead of eight
+    /// thereafter.
+    ///
+    /// Callers still file the failures `move` does not, so the backoff window
+    /// keeps counting vanished items and stale destinations.
+    static nonisolated func moveAlreadyFiledFailure(for error: any Error) -> Bool {
+        // Pattern-matched rather than compared: `FailureKind`'s `Equatable`
+        // conformance is main-actor isolated and this runs nonisolated.
+        if case .unresponsiveOwner = failureKind(of: error) {
+            return true
+        }
+        return false
     }
 
     /// The move-operation budget the next attempt should use, given how the
@@ -1919,6 +1956,15 @@ final class MenuBarItemManager {
         return timestamp.duration(to: .now) <= duration
     }
 
+    /// Returns a Boolean value that indicates whether the user moved an item
+    /// themselves within the given duration.
+    func lastUserMoveOperationOccurred(within duration: Duration) -> Bool {
+        guard let timestamp = lastUserMoveOperationTimestamp else {
+            return false
+        }
+        return timestamp.duration(to: .now) <= duration
+    }
+
     /// Records an explicit user move, either a direct Cmd-drag or a completed
     /// drag in the Layout editor.
     ///
@@ -1926,6 +1972,7 @@ final class MenuBarItemManager {
     /// failed-batch save latch and any pending automatic-divergence reading.
     func recordExternalMoveOperation() {
         lastMoveOperationTimestamp = .now
+        lastUserMoveOperationTimestamp = .now
         pendingDivergenceObservedAt = nil
         recordBulkApplyOutcome(unenactedMoveCount: 0)
     }

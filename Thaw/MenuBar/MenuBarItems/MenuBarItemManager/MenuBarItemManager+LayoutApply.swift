@@ -1595,7 +1595,9 @@ extension MenuBarItemManager {
                                     "Profile layout: H_ctrl move interrupted by a newer apply; leaving it unrecorded"
                                 )
                             } else {
-                                failureLedger.recordFailure(for: hItem, kind: Self.failureKind(of: error))
+                                if !Self.moveAlreadyFiledFailure(for: error) {
+                                    failureLedger.recordFailure(for: hItem, kind: Self.failureKind(of: error))
+                                }
                                 MenuBarItemManager.diagLog.error("Profile layout: failed to move H_ctrl: \(error)")
                             }
                         }
@@ -2044,7 +2046,9 @@ extension MenuBarItemManager {
                 }
                 unenactedMoveCount += 1
                 consecutiveMoveFailures += 1
-                failureLedger.recordFailure(for: item, kind: Self.failureKind(of: error))
+                if !Self.moveAlreadyFiledFailure(for: error) {
+                    failureLedger.recordFailure(for: item, kind: Self.failureKind(of: error))
+                }
                 MenuBarItemManager.diagLog.error(
                     "Profile layout: failed to move \(planned.uid): \(error)"
                 )

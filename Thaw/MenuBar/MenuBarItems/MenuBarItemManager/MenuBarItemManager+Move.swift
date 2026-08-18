@@ -76,13 +76,27 @@ extension MenuBarItemManager {
 
     /// Returns the default timeout for move operations associated
     /// with the given item.
+    ///
+    /// A budget, not a cost. `waitForMoveEventResponse` polls the item's
+    /// origin every 10ms and returns the instant it changes, so an owner that
+    /// answers promptly is charged what it takes and nothing more. Raising
+    /// these values cannot slow a move that works; it only buys time for one
+    /// that would otherwise have been abandoned while it was still going to
+    /// succeed.
+    ///
+    /// 100ms was too little to survive contention. In the #687 log, of the
+    /// twelve moves that landed, five needed a second or third attempt — the
+    /// owners were answering, just not inside the budget — and only twelve of
+    /// thirty-two moves landed at all. Startup is the worst case for this:
+    /// the source-PID scan and the restore wave compete for the same
+    /// main threads the AX and event round-trips have to be serviced on.
     private func getDefaultMoveOperationTimeout(for item: MenuBarItem) -> Duration {
         if item.isBentoBox {
             // Bento Boxes (i.e. Control Center groups) generally
             // take a little longer to respond.
-            return .milliseconds(200)
+            return .milliseconds(350)
         }
-        return .milliseconds(100)
+        return .milliseconds(250)
     }
 
     /// Returns the cached timeout for move operations associated
@@ -94,16 +108,41 @@ extension MenuBarItemManager {
         return getDefaultMoveOperationTimeout(for: item)
     }
 
+    /// Merges a newly computed timeout with the one currently cached for an
+    /// item.
+    ///
+    /// Growth is adopted as computed; only shrinkage is smoothed against the
+    /// standing value. Averaging both directions halved every escalation step
+    /// and so undid the one `nextMoveOperationTimeout` had just decided on:
+    /// a budget escalating by half from 100ms reaches the ceiling in four
+    /// attempts, but smoothed it only reaches 476ms in eight, which is the
+    /// exact ladder the #687 log walks before giving up on 1Password
+    /// (0.1 → 0.125 → 0.156 → 0.195 → 0.244 → 0.305 → 0.381 → 0.476). The
+    /// attempts meant to be spent trying a bigger budget were spent creeping
+    /// toward one instead. Decay stays smoothed, because there the caution is
+    /// the point: one fast answer should not commit an owner to a budget it
+    /// cannot meet again.
+    ///
+    /// The floor is 75ms: `waitForMoveEventResponse` polls every 10ms, so a
+    /// budget below that leaves too little margin for system event latency and
+    /// causes `itemResponseTimeout` → retry cascades. The ceiling is a second,
+    /// which is what an escalating budget is allowed to cost before the item is
+    /// better classified as unresponsive than as slow.
+    static nonisolated func mergedMoveOperationTimeout(
+        proposed: Duration,
+        current: Duration
+    ) -> Duration {
+        let next = proposed > current ? proposed : (proposed + current) / 2
+        return next.clamped(min: .milliseconds(75), max: .seconds(1))
+    }
+
     /// Updates the cached timeout for move operations associated
     /// with the given item.
     private func updateMoveOperationTimeout(_ timeout: Duration, for item: MenuBarItem) {
-        let current = getMoveOperationTimeout(for: item)
-        let average = (timeout + current) / 2
-        // Minimum of 75ms: waitForMoveEventResponse polls every 10ms, so a
-        // timeout below ~75ms leaves too little margin for system event latency
-        // and causes itemResponseTimeout → retry cascades.
-        let clamped = average.clamped(min: .milliseconds(75), max: .milliseconds(500))
-        moveOperationTimeouts[item.tag] = clamped
+        moveOperationTimeouts[item.tag] = Self.mergedMoveOperationTimeout(
+            proposed: timeout,
+            current: getMoveOperationTimeout(for: item)
+        )
     }
 
     /// Prunes the move operation timeouts cache, keeping only the entries

@@ -78,6 +78,23 @@ final class MenuBarItemFailureLedgerTests {
         )
     }
 
+    /// Records exactly as many unresponsive-owner failures as it takes to
+    /// earn a mark, for tests where being marked is setup rather than the
+    /// thing under test.
+    ///
+    /// The threshold itself is pinned by ``aSecondFailureStillDoesNotMark``
+    /// and ``aThirdFailureMarksTheItem``, so it lives as a literal in
+    /// exactly one place here.
+    private func failUntilMarked(
+        _ ledger: MenuBarItemFailureLedger,
+        _ item: MenuBarItem,
+        now: ContinuousClock.Instant = .now
+    ) {
+        for _ in 0..<3 {
+            ledger.recordFailure(for: item, kind: .unresponsiveOwner, now: now)
+        }
+    }
+
     @Test("An item the ledger has never seen is not unresponsive")
     func unknownItemIsNotUnresponsive() {
         let ledger = MenuBarItemFailureLedger()
@@ -94,24 +111,39 @@ final class MenuBarItemFailureLedgerTests {
         #expect(Defaults.object(forKey: .unresponsiveMenuBarItems) == nil)
     }
 
-    @Test("A second failure marks the item")
-    func aSecondFailureMarksTheItem() {
+    @Test("A second failure still does not mark an item")
+    func aSecondFailureStillDoesNotMark() {
+        // Two failed moves is thin evidence during a startup restore wave,
+        // where contention alone can cost an item its budget twice (#687).
         let item = item("at.obdev.littlesnitch", "Item-0")
         let ledger = MenuBarItemFailureLedger()
+        ledger.recordFailure(for: item, kind: .unresponsiveOwner)
+        ledger.recordFailure(for: item, kind: .unresponsiveOwner)
+
+        #expect(!ledger.isUnresponsive(item))
+        #expect(Defaults.object(forKey: .unresponsiveMenuBarItems) == nil)
+    }
+
+    @Test("A third failure marks the item")
+    func aThirdFailureMarksTheItem() {
+        let item = item("at.obdev.littlesnitch", "Item-0")
+        let ledger = MenuBarItemFailureLedger()
+        ledger.recordFailure(for: item, kind: .unresponsiveOwner)
         ledger.recordFailure(for: item, kind: .unresponsiveOwner)
         ledger.recordFailure(for: item, kind: .unresponsiveOwner)
 
         #expect(ledger.isUnresponsive(item))
     }
 
-    @Test("A success between two failures resets the provisional failure")
+    @Test("A success resets the run of failures rather than decrementing it")
     func aSuccessResetsTheProvisionalFailure() {
-        // Two failures separated by a success are two unrelated blips, not
-        // an owner that never answers.
+        // Failures separated by a success are unrelated blips, not an owner
+        // that never answers, so the count starts over rather than carrying.
         let item = item("at.obdev.littlesnitch", "Item-0")
         let ledger = MenuBarItemFailureLedger()
-        ledger.recordFailure(for: item, kind: .unresponsiveOwner)
+        failUntilMarked(ledger, item)
         ledger.recordSuccess(for: item)
+        ledger.recordFailure(for: item, kind: .unresponsiveOwner)
         ledger.recordFailure(for: item, kind: .unresponsiveOwner)
 
         #expect(!ledger.isUnresponsive(item))
@@ -121,8 +153,7 @@ final class MenuBarItemFailureLedgerTests {
     func markSurvivesANewStore() {
         let item = item("at.obdev.littlesnitch", "Item-0")
         let first = MenuBarItemFailureLedger()
-        first.recordFailure(for: item, kind: .unresponsiveOwner)
-        first.recordFailure(for: item, kind: .unresponsiveOwner)
+        failUntilMarked(first, item)
 
         // A second instance reads only what was persisted, which is what a
         // relaunch does.
@@ -144,8 +175,7 @@ final class MenuBarItemFailureLedgerTests {
     @Test("Records are scoped to the exact item")
     func recordsAreScopedToTheExactItem() {
         let ledger = MenuBarItemFailureLedger()
-        ledger.recordFailure(for: item("at.obdev.littlesnitch", "Item-0"), kind: .unresponsiveOwner)
-        ledger.recordFailure(for: item("at.obdev.littlesnitch", "Item-0"), kind: .unresponsiveOwner)
+        failUntilMarked(ledger, item("at.obdev.littlesnitch", "Item-0"))
 
         #expect(!ledger.isUnresponsive(item("at.obdev.littlesnitch", "Item-1")))
         #expect(!ledger.isUnresponsive(item("com.example.other", "Item-0")))
@@ -157,8 +187,7 @@ final class MenuBarItemFailureLedgerTests {
         // would persist a key that can never match again.
         let ephemeral = ephemeralItem()
         let ledger = MenuBarItemFailureLedger()
-        ledger.recordFailure(for: ephemeral, kind: .unresponsiveOwner)
-        ledger.recordFailure(for: ephemeral, kind: .unresponsiveOwner)
+        failUntilMarked(ledger, ephemeral)
 
         #expect(!ledger.isUnresponsive(ephemeral))
         #expect(Defaults.object(forKey: .unresponsiveMenuBarItems) == nil)
@@ -168,8 +197,7 @@ final class MenuBarItemFailureLedgerTests {
     func removeAllForgetsEverything() {
         let item = item("at.obdev.littlesnitch", "Item-0")
         let ledger = MenuBarItemFailureLedger()
-        ledger.recordFailure(for: item, kind: .unresponsiveOwner)
-        ledger.recordFailure(for: item, kind: .unresponsiveOwner)
+        failUntilMarked(ledger, item)
         ledger.removeAll()
 
         #expect(!ledger.isUnresponsive(item))
@@ -237,8 +265,7 @@ final class MenuBarItemFailureLedgerTests {
         let item = item("at.obdev.littlesnitch", "Item-0")
         let ledger = MenuBarItemFailureLedger()
         let now = ContinuousClock.Instant.now
-        ledger.recordFailure(for: item, kind: .unresponsiveOwner, now: now)
-        ledger.recordFailure(for: item, kind: .unresponsiveOwner, now: now)
+        failUntilMarked(ledger, item, now: now)
         #expect(ledger.isUnderBackoff(key: item.uniqueIdentifier, now: now))
         #expect(ledger.isUnresponsive(item))
 
