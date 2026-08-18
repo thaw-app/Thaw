@@ -222,6 +222,14 @@ actor SourcePIDCache {
     // SourcePIDNegativeCachePolicy (Shared/), so the ladder is unit-testable
     // from ThawTests.
 
+    /// How long a single app's extras-bar probe may take before the scan
+    /// names it in the log.
+    ///
+    /// Low enough that a handful of slow apps stand out inside a scan that
+    /// takes a few hundred milliseconds in total, high enough that a healthy
+    /// scan says nothing at all.
+    private static let slowProbeThreshold: Duration = .milliseconds(50)
+
     /// Minimum interval between unresolved-diagnostic dumps for an unchanged
     /// unresolved set. The dump re-walks every app's AX tree, so repeating it
     /// can add seconds of IPC without yielding new information.
@@ -461,6 +469,7 @@ actor SourcePIDCache {
         }
 
         SourcePIDCache.diagLog.debug("SourcePIDCache.pid: performing batch resolution via AX API")
+        let scanStart = ContinuousClock.now
 
         // Fetch all current menu bar item windows to perform a single batch resolution.
         // This avoids doing the O(W*A*C) work (Windows * Apps * Children) for every request.
@@ -491,7 +500,25 @@ actor SourcePIDCache {
                 appsSkipped += 1
             }
             autoreleasepool {
-                guard let bar = app.getOrCreateExtrasMenuBar() else {
+                // Accessibility reads are serviced by the *target* process,
+                // normally on its main thread, and are bounded only by the
+                // unresponsive timeout set in `init`. One busy app can
+                // therefore account for most of a scan's wall time. Naming
+                // the slow ones is what separates "the app list is too long"
+                // from "two apps are wedged" — the first calls for a
+                // narrower scan, the second for a shorter timeout, and a
+                // total alone cannot tell them apart.
+                let probeStart = ContinuousClock.now
+                let bar = app.getOrCreateExtrasMenuBar()
+                let probeDuration = ContinuousClock.now - probeStart
+                if probeDuration >= SourcePIDCache.slowProbeThreshold {
+                    let label = app.bundleIdentifier ?? app.localizedName ?? "pid \(app.processIdentifier)"
+                    SourcePIDCache.diagLog.debug(
+                        "SourcePIDCache.pid: slow extras-bar probe: \(label) took \(probeDuration)"
+                    )
+                }
+
+                guard let bar else {
                     return
                 }
                 appsWithBar += 1
@@ -767,7 +794,7 @@ actor SourcePIDCache {
         }
 
         let finalPID = state.withLock { $0.pids[window.windowID] }
-        SourcePIDCache.diagLog.debug("SourcePIDCache.pid: batch resolution finished. Found \(totalMatchesFound) matches. Requested windowID \(window.windowID) -> PID \(finalPID.map { "\($0)" } ?? "nil") (checked \(appsChecked) apps, \(appsSkipped) skipped by negative cache, \(appsWithBar) with extras bar, \(totalChildrenChecked) children)")
+        SourcePIDCache.diagLog.debug("SourcePIDCache.pid: batch resolution finished. Found \(totalMatchesFound) matches. Requested windowID \(window.windowID) -> PID \(finalPID.map { "\($0)" } ?? "nil") (checked \(appsChecked) apps, \(appsSkipped) skipped by negative cache, \(appsWithBar) with extras bar, \(totalChildrenChecked) children, took \(ContinuousClock.now - scanStart))")
 
         // Negative-cache every window that survived the full scan unresolved,
         // with a deadline that backs off as consecutive failures accumulate:
