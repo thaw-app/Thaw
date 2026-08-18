@@ -85,6 +85,16 @@ actor SourcePIDCache {
             lock.withLock { $0.extrasMenuBar != nil }
         }
 
+        /// How many consecutive checks have found no extras menu bar.
+        ///
+        /// Zero once one is found, so this doubles as what
+        /// ``ExtrasMenuBarProbeMemory`` wants to remember: a positive count
+        /// is an application worth skipping next launch, and zero is one
+        /// whose entry must be dropped.
+        var consecutiveExtrasMenuBarMisses: Int {
+            lock.withLock { $0.consecutiveMisses }
+        }
+
         /// Whether an unexpired negative deadline would make
         /// ``getOrCreateExtrasMenuBar()`` skip its accessibility calls.
         ///
@@ -114,8 +124,22 @@ actor SourcePIDCache {
 
         /// Creates a `CachedApplication` instance with the given running
         /// application.
-        init(_ runningApp: NSRunningApplication) {
+        ///
+        /// - Parameter seed: What earlier sessions learned about this
+        ///   application, from ``ExtrasMenuBarProbeMemory``. Starting on a
+        ///   rung of the ladder rather than at the bottom is what keeps a
+        ///   cold start from re-probing the whole system; a seeded deadline
+        ///   still expires within seconds, so the memory is confirmed rather
+        ///   than believed.
+        init(_ runningApp: NSRunningApplication, seed: (misses: Int, initialTTL: Duration)? = nil) {
             self.runningApp = runningApp
+            guard let seed else {
+                return
+            }
+            lock.withLock {
+                $0.consecutiveMisses = seed.misses
+                $0.retryAfter = ContinuousClock.now + seed.initialTTL
+            }
         }
 
         /// Returns the accessibility element representing the app's extras
@@ -252,6 +276,16 @@ actor SourcePIDCache {
     /// (which remain actor-isolated) are in flight.
     private nonisolated let state = OSAllocatedUnfairLock(initialState: State())
 
+    /// What earlier sessions learned about which applications have an extras
+    /// menu bar, read once at init and rewritten as this session revises it.
+    ///
+    /// `nonisolated` and separately locked for the same reason as `state`:
+    /// it is touched from `performCleanupBody`, which is `nonisolated` and
+    /// cannot reach actor-isolated storage.
+    private nonisolated let probeMemory = OSAllocatedUnfairLock(
+        initialState: ExtrasMenuBarProbeStore.load()
+    )
+
     /// Lock to prevent multiple concurrent full scans of all applications.
     ///
     /// `nonisolated` for the same reason as `state` above — it is the
@@ -291,6 +325,7 @@ actor SourcePIDCache {
 
         let windowIDs = Bridging.getMenuBarWindowList(option: .itemsOnly)
         let currentAppPids = Set(runningApps.map(\.processIdentifier))
+        let remembered = probeMemory.withLock { $0 }
 
         state.withLock { state in
             // Clean up entries for terminated apps to prevent memory leaks
@@ -333,8 +368,18 @@ actor SourcePIDCache {
                     // app on the system each time this list changes.
                     result.apps.append(app)
                 } else {
-                    // App wasn't in the cache, so it must be new.
-                    result.apps.append(CachedApplication(app))
+                    // App wasn't in the cache, so it must be new. An app the
+                    // memory has an opinion about starts partway up the
+                    // negative-cache ladder instead of at the bottom, which
+                    // is what keeps the first scan of a session off the ~155
+                    // of ~170 applications that have never had an extras
+                    // menu bar (#956).
+                    let seed = app.bundleIdentifier.flatMap { bundleID in
+                        ExtrasMenuBarProbeMemory.seed(
+                            forRememberedMisses: remembered[bundleID]
+                        )
+                    }
+                    result.apps.append(CachedApplication(app, seed: seed))
                 }
 
                 if let pids = pidMappings[pid] {
@@ -358,6 +403,39 @@ actor SourcePIDCache {
                 SourcePIDCache.diagLog.info("Cleaned up PID cache entries for terminated processes: \(terminatedPids)")
             }
         }
+
+        recordExtrasMenuBarProbeResults(startingFrom: remembered)
+    }
+
+    /// Folds what this session has learned about extras menu bars back into
+    /// the memory the next launch starts from.
+    ///
+    /// Runs after every cleanup rather than at exit because the service has
+    /// no orderly shutdown: it is an on-demand XPC service that is killed
+    /// when the system decides it is idle, so anything not already written is
+    /// lost.
+    private nonisolated func recordExtrasMenuBarProbeResults(
+        startingFrom remembered: [String: Int]
+    ) {
+        let apps = state.withLock { $0.apps }
+        let observed = apps.reduce(into: [String: Int]()) { result, app in
+            guard let bundleID = app.bundleIdentifier else {
+                return
+            }
+            // Several processes can share a bundle identifier. The lowest
+            // count wins, so one instance publishing an extras menu bar
+            // speaks for the identifier — the direction that costs a probe
+            // rather than an unresolved item.
+            result[bundleID] = min(result[bundleID] ?? .max, app.consecutiveExtrasMenuBarMisses)
+        }
+
+        let merged = ExtrasMenuBarProbeMemory.merged(
+            persisted: remembered,
+            observed: observed,
+            runningBundleIDs: Set(observed.keys)
+        )
+        probeMemory.withLock { $0 = merged }
+        ExtrasMenuBarProbeStore.save(merged)
     }
 
     /// Starts the observers for the cache.
