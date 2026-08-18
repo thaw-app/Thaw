@@ -789,6 +789,10 @@ extension MenuBarItemManager {
 
         itemCache = context.cache
 
+        // Remember what the resolved items are called, so the next launch can
+        // label them before its own source-PID scan lands (#956).
+        MenuBarItemNameMemory.remember(itemCache.managedItems)
+
         // Reset isRestoringItemOrder if it's been stuck for too long (10 seconds).
         // This prevents stale flags from blocking saves after user manual moves.
         if isRestoringItemOrder, let timestamp = isRestoringItemOrderTimestamp, Date().timeIntervalSince(timestamp) > 10 {

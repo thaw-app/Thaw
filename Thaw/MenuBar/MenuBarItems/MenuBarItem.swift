@@ -201,7 +201,11 @@ nonisolated struct MenuBarItem: CustomStringConvertible {
         lazy var fallbackName = "Menu Bar Item"
 
         guard let sourceApplication else {
-            return fallbackName
+            // The source process has not resolved yet. Fall back to the name
+            // this item resolved to on an earlier pass or launch rather than
+            // labelling everything on the bar "Menu Bar Item" for the few
+            // seconds the accessibility scan takes (#956).
+            return MenuBarItemNameMemory.rememberedName(for: self) ?? fallbackName
         }
 
         lazy var sourceName = sourceApplication.localizedName ?? sourceApplication.bundleIdentifier
