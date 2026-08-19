@@ -713,6 +713,20 @@ final class MenuBarItemManager {
     /// `uniqueIdentifier` strings (right-to-left, matching cache array order).
     var savedSectionOrder = [String: [String]]()
 
+    /// Items whose section is temporarily owned by an active trigger. Their
+    /// live placement must not overwrite the user's saved layout, and the
+    /// saved-layout reconciler must not move them back while the trigger owns
+    /// them. The trigger manager clears this set when an item is no longer
+    /// controlled, at which point the normal saved-layout restore returns it
+    /// to the user's pre-trigger position.
+    var triggerControlledItemIdentifiers = Set<String>()
+
+    /// Items released by a trigger that still need their full saved position
+    /// (including order within a section) restored. They remain excluded from
+    /// persistence until that replay finishes, so an intervening cache cycle
+    /// cannot capture their temporary trigger placement as a user edit.
+    var triggerLayoutRestorationItemIdentifiers = Set<String>()
+
     /// Identifiers most recently moved from visible to hidden by the
     /// notch-overflow rebalance (Phase 4 of the layout apply). The ejection
     /// is a transient, per-display accommodation — these items must not be
