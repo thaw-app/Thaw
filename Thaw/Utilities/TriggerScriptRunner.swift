@@ -242,6 +242,14 @@ enum TriggerScriptRunner {
             process.interrupt()
             try? await Task.sleep(for: .milliseconds(100))
             process.kill()
+            // `kill` returns before the kernel tears the group down. Wait for
+            // the group to drain so a returning timeout really does mean no
+            // descendant outlived the script.
+            var groupDrainAttempts = 0
+            while process.hasLiveProcessGroup, groupDrainAttempts < 40 {
+                groupDrainAttempts += 1
+                try? await Task.sleep(for: .milliseconds(25))
+            }
             diagLog.warning("Force-killed trigger script process group after timeout: \(trimmed)")
         }
 

@@ -11,6 +11,7 @@ import Foundation
 @testable import Thaw
 import XCTest
 
+@MainActor
 final class TriggerScriptRunnerTests: XCTestCase {
     func testRunCapturesCombinedOutputWhenHostStdoutWasClosed() async throws {
         let scriptURL = FileManager.default.temporaryDirectory

@@ -154,6 +154,15 @@ extension HookRunner {
             exitedStatus() ?? -1
         }
 
+        /// Whether any member of the child's process group is still alive.
+        ///
+        /// A group-directed `kill` returns before the kernel has torn the
+        /// members down, so callers that promise "no descendants survive"
+        /// must poll this rather than trust the `kill` return value.
+        var hasLiveProcessGroup: Bool {
+            Darwin.kill(-processIdentifier, 0) == 0
+        }
+
         func terminate() {
             signal(SIGTERM)
         }

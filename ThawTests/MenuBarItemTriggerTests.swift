@@ -9,10 +9,10 @@
 @testable import Thaw
 import XCTest
 
+@MainActor
 final class MenuBarItemTriggerTests: XCTestCase {
     // MARK: - Helpers
 
-    @MainActor
     private func makeManager() -> MenuBarItemTriggersManager {
         MenuBarItemTriggersManager(persistenceEnabled: false)
     }
