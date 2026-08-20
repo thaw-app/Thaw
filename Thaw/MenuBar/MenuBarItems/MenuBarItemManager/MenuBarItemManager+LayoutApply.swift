@@ -1512,7 +1512,13 @@ extension MenuBarItemManager {
                recoverParkedHiddenDividerIfNeeded(
                    hiddenBoundaryMismatch: hiddenBoundaryMismatch,
                    hiddenControlItem: freshControl.hidden,
-                   screenFrames: screenFrames
+                   screenFrames: screenFrames,
+                   // Counted from the fresh read rather than the Phase 1 sets,
+                   // which are keyed by identifier and would fold items that
+                   // share one across displays into a single entry.
+                   managedItemCount: allFreshItems.count(where: {
+                       isProfileItem($0) && !$0.isControlItem
+                   })
                )
             {
                 // Keep the prior unfinished-batch arm intact without counting
@@ -2201,6 +2207,50 @@ extension MenuBarItemManager {
         threshold: Int = MenuBarItemManager.parkedHiddenDividerRecoveryThreshold
     ) -> Bool {
         !alreadyRecovered && consecutiveMismatchReadings >= threshold
+    }
+
+    /// Whether a divider rebuild may also re-stamp the first-launch seed
+    /// position.
+    ///
+    /// Both rebuild paths exist to discard a stale autosave position, and both
+    /// discard it by writing the seed `preflightSetup` uses on a fresh install.
+    /// That value describes a bar Thaw has never arranged. Writing it onto a
+    /// bar that already holds managed items drops the rebuilt divider on one
+    /// side of all of them, and the next cache pass reads the entire bar into a
+    /// single section — the collapse `preflightSetup` documents for #895,
+    /// reached through the same guard-bypassing write that reopened it for
+    /// #890.
+    ///
+    /// #958's log is the direct evidence: one rebuild in five hours, and the
+    /// visible section goes from 12 items to 1 within three seconds of it,
+    /// while three earlier parkings that never rebuilt leave the bar intact.
+    ///
+    /// Skipping the stamp does not cost the recovery its purpose. Discarding
+    /// the old `NSStatusItem` is what gives the divider a window on the current
+    /// bar again; the follow-up apply the caller schedules is what walks it to
+    /// the saved boundary.
+    static nonisolated func canSeedRebuiltDividerPosition(managedItemCount: Int) -> Bool {
+        managedItemCount == 0
+    }
+
+    /// The preferred position a divider rebuild should stamp, or `nil` to
+    /// rebuild without touching the stored position.
+    ///
+    /// The value matches the one `ControlItem.preflightSetup` seeds for the
+    /// hidden divider, so an empty bar still lands where a fresh install puts
+    /// it.
+    static nonisolated func seedPositionForRebuiltDivider(managedItemCount: Int) -> CGFloat? {
+        canSeedRebuiltDividerPosition(managedItemCount: managedItemCount) ? 1 : nil
+    }
+
+    /// Log fragment naming what a divider rebuild did with the stored
+    /// position, so a field log says which branch ran without the reader
+    /// having to infer it from the collapse that follows.
+    static nonisolated func seedDescription(_ seedPosition: CGFloat?) -> String {
+        guard let seedPosition else {
+            return " and keeping its stored position (the bar holds managed items)"
+        }
+        return " at its seeded position (\(seedPosition))"
     }
 
     static nonisolated func baseIdentifier(forSavedIdentifier identifier: String) -> String {

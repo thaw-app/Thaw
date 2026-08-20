@@ -772,7 +772,11 @@ extension MenuBarItemManager {
 
         if recoverCollapsedHiddenSectionIfNeeded(
             hiddenSectionHasRoom: hiddenSectionHasRoom,
-            controlItems: context.controlItems
+            controlItems: context.controlItems,
+            // The dividers are excluded: a rebuild that only has the two
+            // control items to place cannot strand anything on the wrong
+            // side of the one it is rebuilding.
+            managedItemCount: context.cache.managedItems.count(where: { !$0.isControlItem })
         ) {
             return
         }
@@ -951,13 +955,17 @@ extension MenuBarItemManager {
         completedCacheCycles += 1
     }
 
-    /// Recreates the hidden divider at its seeded position after repeated,
-    /// authoritative evidence that stale geometry closed the hidden span.
+    /// Rebuilds the hidden divider after repeated, authoritative evidence
+    /// that stale geometry closed the hidden span.
     /// The saved order remains untouched, so the next cache pass can restore
     /// section membership through the normal saved-layout apply.
+    ///
+    /// `managedItemCount` decides whether the rebuild may also re-stamp the
+    /// seeded position. See ``canSeedRebuiltDividerPosition(managedItemCount:)``.
     private func recoverCollapsedHiddenSectionIfNeeded(
         hiddenSectionHasRoom: Bool,
-        controlItems: ControlItemPair
+        controlItems: ControlItemPair,
+        managedItemCount: Int
     ) -> Bool {
         // A provisional reading must not advance, reset, or re-arm the
         // recovery episode. Only authoritative observations may mutate it.
@@ -982,10 +990,11 @@ extension MenuBarItemManager {
         }
 
         didRecoverHiddenSectionForCurrentCollapse = true
+        let seedPosition = Self.seedPositionForRebuiltDivider(managedItemCount: managedItemCount)
         MenuBarItemManager.diagLog.warning(
-            "Hidden section remained collapsed for \(hiddenSectionCollapseStreak) authoritative cache passes; recreating H_ctrl at its seeded position"
+            "Hidden section remained collapsed for \(hiddenSectionCollapseStreak) authoritative cache passes; rebuilding H_ctrl\(Self.seedDescription(seedPosition))"
         )
-        hiddenControlItem.recreateStatusItem(preferredPosition: 1)
+        hiddenControlItem.recreateStatusItem(preferredPosition: seedPosition)
 
         Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(100))
@@ -994,12 +1003,16 @@ extension MenuBarItemManager {
         return true
     }
 
-    /// Recreates an authoritatively identified hidden divider after it remains
+    /// Rebuilds an authoritatively identified hidden divider after it remains
     /// parked through repeated layout applies that need it on the bar.
+    ///
+    /// `managedItemCount` decides whether the rebuild may also re-stamp the
+    /// seeded position. See ``canSeedRebuiltDividerPosition(managedItemCount:)``.
     func recoverParkedHiddenDividerIfNeeded(
         hiddenBoundaryMismatch: Int,
         hiddenControlItem: MenuBarItem,
-        screenFrames: [CGRect]
+        screenFrames: [CGRect],
+        managedItemCount: Int
     ) -> Bool {
         guard hiddenBoundaryMismatch > 0,
               !LayoutSolver.isOnScreen(bounds: hiddenControlItem.bounds, screenFrames: screenFrames)
@@ -1020,10 +1033,11 @@ extension MenuBarItemManager {
         }
 
         didRecoverParkedHiddenDividerForCurrentMismatch = true
+        let seedPosition = Self.seedPositionForRebuiltDivider(managedItemCount: managedItemCount)
         MenuBarItemManager.diagLog.warning(
-            "H_ctrl remained parked through \(parkedHiddenDividerMismatchStreak) authoritative mismatch applies; recreating it at its seeded position"
+            "H_ctrl remained parked through \(parkedHiddenDividerMismatchStreak) authoritative mismatch applies; rebuilding it\(Self.seedDescription(seedPosition))"
         )
-        hiddenControl.recreateStatusItem(preferredPosition: 1)
+        hiddenControl.recreateStatusItem(preferredPosition: seedPosition)
 
         Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(100))
