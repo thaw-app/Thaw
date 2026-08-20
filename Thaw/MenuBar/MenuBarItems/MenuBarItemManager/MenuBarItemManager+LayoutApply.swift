@@ -1541,10 +1541,25 @@ extension MenuBarItemManager {
                     return LayoutSolver.isOnScreen(bounds: item.bounds, screenFrames: screenFrames)
                 }.map(\.uniqueIdentifier)
             )
+            // Thaw's own control items clear both filters above whatever the
+            // rest of the bar is doing: they are movable, and they stay on
+            // screen even on a pass where every real item the profile puts on
+            // this side of the divider has been dragged to the other side and
+            // parked. That leaves the chevron as the anchor of last resort in
+            // exactly the passes where the bar has diverged most, and dragging
+            // H_ctrl up to it collapses the section the apply was restoring
+            // (#958). The LCS pass below already bars them for the same
+            // reason (#924, #927).
+            let controlItemUIDs = Set(
+                allFreshItems.lazy.filter(\.isControlItem).map(\.uniqueIdentifier)
+            )
+            let desiredHidden = itemOrder["hidden"] ?? []
+            let desiredVisible = itemOrder["visible"] ?? []
             let anchor = LayoutSolver.planHiddenDividerAnchor(
-                desiredHidden: itemOrder["hidden"] ?? [],
-                desiredVisible: itemOrder["visible"] ?? [],
-                liveMovableUIDs: liveMovableUIDs
+                desiredHidden: desiredHidden,
+                desiredVisible: desiredVisible,
+                liveMovableUIDs: liveMovableUIDs,
+                unanchorableUIDs: controlItemUIDs
             )
 
             if let anchor {
@@ -1609,6 +1624,18 @@ extension MenuBarItemManager {
                         }
                     }
                 }
+            } else if let refusedAnchor = LayoutSolver.hiddenDividerAnchorCandidate(
+                desiredHidden: desiredHidden,
+                desiredVisible: desiredVisible,
+                liveMovableUIDs: liveMovableUIDs
+            ).flatMap({ controlItemUIDs.contains($0) ? $0 : nil }) {
+                // Separated from the case below so a soak can tell the two
+                // apart: this one means the profile's items are on the bar
+                // but on the wrong side of the divider, which is the state
+                // the LCS pass fixes and this move used to make worse.
+                MenuBarItemManager.diagLog.warning(
+                    "Profile layout: only \(refusedAnchor) was left to anchor the H_ctrl boundary move; leaving the divider where it is"
+                )
             } else {
                 // No live movable member on either side to anchor against;
                 // the LCS pass below still runs against whatever ordering

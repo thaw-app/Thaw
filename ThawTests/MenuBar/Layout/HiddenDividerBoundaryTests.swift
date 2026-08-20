@@ -352,3 +352,178 @@ struct HiddenDividerBoundaryTests {
         }
     }
 }
+
+/// Pins the refusal that keeps the H_ctrl boundary move off Thaw's own
+/// chevron (#958).
+///
+/// The candidate set the caller hands the planner is already filtered to
+/// items that are movable and on screen. Thaw's control items pass both on
+/// every pass, so on a bar where the profile's items have been dragged to
+/// the wrong side of the divider and parked there, the chevron is the only
+/// candidate left standing — and it is the one anchor that must not be
+/// used. Dragging H_ctrl up to it sweeps the section it was restoring
+/// across with it.
+///
+/// #958's reporter imported a known-good plist with Thaw quit, confirmed it
+/// live, and watched the first apply after relaunch undo it:
+///
+/// ```
+/// Profile layout Phase 1: hiddenBoundaryMismatch=11
+/// Profile layout: 11 item(s) on the wrong side of H_ctrl, moving H_ctrl to the boundary
+/// Profile layout: moving H_ctrl -> left of <com.stonerl.Thaw:Thaw.ControlItem.Visible>
+/// post-H_ctrl classification crossSectionMoves=0, totalSectionMismatch=0
+/// ```
+///
+/// The roster below is the visible order from the `broken_profile.json`
+/// attached to the same issue, in profile order — index 0 rightmost. The
+/// chevron sits at index 11 with four items to its left, none of which are
+/// movable, which is what leaves it as the last candidate the search finds.
+@Suite("Boundary anchor refuses Thaw's own items")
+struct BoundaryAnchorControlItemRefusalTests {
+    private static let chevron = "com.stonerl.Thaw:Thaw.ControlItem.Visible"
+    private static let hiddenDivider = "com.stonerl.Thaw:Thaw.ControlItem.Hidden"
+
+    private static let desiredVisible = [
+        "leits.MeetingBar:Item-0",
+        "com.steipete.codexbar:codexbar-codex",
+        "com.steipete.codexbar:codexbar-claude",
+        "com.tunabellysoftware.tgpro:Item-0",
+        "eu.exelban.Stats:CPU_bar_chart",
+        "eu.exelban.Stats:GPU_bar_chart",
+        "eu.exelban.Stats:RAM_bar_chart",
+        "com.rogueamoeba.soundsource:SSMainAppMenuIcon",
+        "com.rogueamoeba.soundsource:Input",
+        "com.apphousekitchen.aldente-pro:Item-0",
+        "eu.exelban.Stats:Network_speed",
+        chevron,
+        "org.p0deje.Maccy:Item-0",
+        "com.apple.TextInputMenuAgent:Item-0",
+        "com.apple.controlcenter:BentoBox-0",
+        "com.apple.controlcenter:Clock",
+    ]
+
+    private static let desiredHidden = [
+        "com.electron.dockerdesktop:Item-0",
+        "com.proxyman.NSProxy:Item-0",
+        "com.apple.controlcenter:WiFi",
+    ]
+
+    // MARK: - The refusal
+
+    /// The reporter's state: every hidden-side item parked off screen and
+    /// every real visible item dragged across with them, leaving the
+    /// chevron alone in the candidate set.
+    @Test("The chevron alone yields no anchor")
+    func chevronAloneYieldsNoAnchor() {
+        let anchor = LayoutSolver.planHiddenDividerAnchor(
+            desiredHidden: Self.desiredHidden,
+            desiredVisible: Self.desiredVisible,
+            liveMovableUIDs: [Self.chevron],
+            unanchorableUIDs: [Self.chevron, Self.hiddenDivider]
+        )
+
+        #expect(anchor == nil)
+    }
+
+    /// The behaviour the refusal replaces, so the regression is pinned by
+    /// the shape it used to take rather than only by its absence.
+    @Test("Without the bar, the same inputs anchor on the chevron")
+    func sameInputsUsedToAnchorOnTheChevron() {
+        let anchor = LayoutSolver.planHiddenDividerAnchor(
+            desiredHidden: Self.desiredHidden,
+            desiredVisible: Self.desiredVisible,
+            liveMovableUIDs: [Self.chevron]
+        )
+
+        #expect(anchor == .leftOf(Self.chevron))
+    }
+
+    /// Refusing means stopping, not searching on. The next candidate to the
+    /// chevron's right is an item the profile wants right of the divider,
+    /// so anchoring there would drag H_ctrl past it and conceal it — the
+    /// same collapse one item smaller.
+    @Test("The search does not continue past a refused anchor")
+    func searchDoesNotContinuePastARefusedAnchor() {
+        let anchor = LayoutSolver.planHiddenDividerAnchor(
+            desiredHidden: [],
+            desiredVisible: Self.desiredVisible,
+            liveMovableUIDs: [Self.chevron, "eu.exelban.Stats:Network_speed"],
+            unanchorableUIDs: [Self.chevron]
+        )
+
+        #expect(anchor == nil)
+    }
+
+    /// A divider that reached the desired-hidden order is refused the same
+    /// way, from the other side.
+    @Test("A control item on the hidden side is refused too")
+    func controlItemOnTheHiddenSideIsRefused() {
+        let anchor = LayoutSolver.planHiddenDividerAnchor(
+            desiredHidden: [Self.chevron, "com.proxyman.NSProxy:Item-0"],
+            desiredVisible: Self.desiredVisible,
+            liveMovableUIDs: [Self.chevron, "com.proxyman.NSProxy:Item-0"],
+            unanchorableUIDs: [Self.chevron]
+        )
+
+        #expect(anchor == nil)
+    }
+
+    // MARK: - What the refusal must not cost
+
+    /// A real item at the boundary is still an anchor. The refusal is not a
+    /// blanket stand-down on bars that happen to have the chevron live.
+    @Test("A live real item to the chevron's left still anchors the move")
+    func liveRealItemStillAnchorsTheMove() {
+        let anchor = LayoutSolver.planHiddenDividerAnchor(
+            desiredHidden: Self.desiredHidden,
+            desiredVisible: Self.desiredVisible,
+            liveMovableUIDs: [Self.chevron, "org.p0deje.Maccy:Item-0"],
+            unanchorableUIDs: [Self.chevron, Self.hiddenDivider]
+        )
+
+        #expect(anchor == .leftOf("org.p0deje.Maccy:Item-0"))
+    }
+
+    /// The hidden side is tried first and is unaffected, so the common
+    /// repair — a profile whose hidden items are back on the bar — plans
+    /// the same move it always did.
+    @Test("A live hidden item still wins over the visible fallback")
+    func liveHiddenItemStillWins() {
+        let anchor = LayoutSolver.planHiddenDividerAnchor(
+            desiredHidden: Self.desiredHidden,
+            desiredVisible: Self.desiredVisible,
+            liveMovableUIDs: ["com.proxyman.NSProxy:Item-0", Self.chevron],
+            unanchorableUIDs: [Self.chevron, Self.hiddenDivider]
+        )
+
+        #expect(anchor == .rightOf("com.proxyman.NSProxy:Item-0"))
+    }
+
+    // MARK: - Telling the two nil cases apart in the log
+
+    /// A refusal names the item it refused, so a field log distinguishes
+    /// "the items are on the wrong side" from "the items are not running".
+    @Test("The candidate helper names the refused chevron")
+    func candidateHelperNamesTheRefusedChevron() {
+        let candidate = LayoutSolver.hiddenDividerAnchorCandidate(
+            desiredHidden: Self.desiredHidden,
+            desiredVisible: Self.desiredVisible,
+            liveMovableUIDs: [Self.chevron]
+        )
+
+        #expect(candidate == Self.chevron)
+    }
+
+    /// A bar with nothing live reports no candidate at all, which is the
+    /// pre-existing nil and keeps its own log line.
+    @Test("Nothing live yields no candidate")
+    func nothingLiveYieldsNoCandidate() {
+        let candidate = LayoutSolver.hiddenDividerAnchorCandidate(
+            desiredHidden: Self.desiredHidden,
+            desiredVisible: Self.desiredVisible,
+            liveMovableUIDs: []
+        )
+
+        #expect(candidate == nil)
+    }
+}

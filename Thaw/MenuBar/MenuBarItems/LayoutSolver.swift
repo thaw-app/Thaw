@@ -787,20 +787,63 @@ nonisolated enum LayoutSolver {
     /// profile that empties the hidden section still parks the divider
     /// past every visible item instead of leaving it mid-bar.
     ///
+    /// An anchor in `unanchorableUIDs` yields nil rather than a search
+    /// that continues past it. The anchor names the gap the divider
+    /// belongs in, so the next candidate along is an item the profile
+    /// wants on the *other* side of that gap; anchoring there would drag
+    /// the divider past an item instead of up to it.
+    ///
+    /// Thaw's own control items are what reaches that test. The caller's
+    /// candidate set is already filtered to items that are movable and on
+    /// screen, and the chevron satisfies both whatever the rest of the bar
+    /// is doing — which makes it the anchor of last resort in exactly the
+    /// passes where every real item on its side has been dragged off the
+    /// bar and filtered out. #958's reporter restored a known-good plist
+    /// with Thaw quit and watched the first apply after relaunch collapse
+    /// it again: eleven items the profile assigns to visible were sitting
+    /// parked on the hidden side, nothing else visible was live, and the
+    /// fallback returned the chevron. Dragging H_ctrl up to it swept the
+    /// rest of the section across with it.
+    ///
+    /// Returning nil leaves the boundary where it is and hands the work to
+    /// the per-item LCS pass, which moves the items back to the divider.
+    /// That is the direction that restores the profile; this move is the
+    /// direction that destroys it.
+    ///
     /// Pure over its inputs. Returns nil when neither section has a live
     /// movable member to anchor against.
     static nonisolated func planHiddenDividerAnchor(
         desiredHidden: [String],
         desiredVisible: [String],
-        liveMovableUIDs: Set<String>
+        liveMovableUIDs: Set<String>,
+        unanchorableUIDs: Set<String> = []
     ) -> HiddenDividerAnchor? {
         if let rightmostHidden = desiredHidden.first(where: liveMovableUIDs.contains) {
-            return .rightOf(rightmostHidden)
+            return unanchorableUIDs.contains(rightmostHidden) ? nil : .rightOf(rightmostHidden)
         }
         if let leftmostVisible = desiredVisible.last(where: liveMovableUIDs.contains) {
-            return .leftOf(leftmostVisible)
+            return unanchorableUIDs.contains(leftmostVisible) ? nil : .leftOf(leftmostVisible)
         }
         return nil
+    }
+
+    /// The item ``planHiddenDividerAnchor(desiredHidden:desiredVisible:liveMovableUIDs:unanchorableUIDs:)``
+    /// picks before the unanchorable test, so the caller's log line can say
+    /// which item was refused instead of reporting a bar with nothing live
+    /// as the same event.
+    ///
+    /// The two nil cases need telling apart in the field: one says the
+    /// profile's items are not on the bar right now, the other says they
+    /// are on the wrong side of it and the divider must not chase them.
+    ///
+    /// Pure over its inputs.
+    static nonisolated func hiddenDividerAnchorCandidate(
+        desiredHidden: [String],
+        desiredVisible: [String],
+        liveMovableUIDs: Set<String>
+    ) -> String? {
+        desiredHidden.first(where: liveMovableUIDs.contains)
+            ?? desiredVisible.last(where: liveMovableUIDs.contains)
     }
 
     // MARK: - LCS reorder
