@@ -767,6 +767,45 @@ nonisolated enum LayoutSolver {
         desiredHidden: Set<String>,
         desiredAlwaysHidden: Set<String>
     ) -> Int {
+        hiddenBoundaryOffenders(
+            currentVisible: currentVisible,
+            currentHidden: currentHidden,
+            currentAlwaysHidden: currentAlwaysHidden,
+            desiredVisible: desiredVisible,
+            desiredHidden: desiredHidden,
+            desiredAlwaysHidden: desiredAlwaysHidden
+        ).count
+    }
+
+    /// The items counted by ``hiddenBoundaryMismatch(currentVisible:currentHidden:currentAlwaysHidden:desiredVisible:desiredHidden:desiredAlwaysHidden:)``,
+    /// named and split by the direction they have to travel.
+    ///
+    /// The tally decides that a repair is needed; this decides what the
+    /// repair moves. Deriving one from the other keeps a caller that fixes
+    /// the boundary item-by-item from disagreeing with the count that sent
+    /// it there.
+    struct HiddenBoundaryOffenders: Equatable {
+        /// Currently visible, wanted in hidden or always-hidden. These
+        /// travel to the divider's concealed side.
+        var wronglyVisible: Set<String>
+        /// Currently concealed, wanted in visible. These travel to its
+        /// visible side.
+        var wronglyConcealed: Set<String>
+
+        var count: Int { wronglyVisible.count + wronglyConcealed.count }
+    }
+
+    /// Splits the boundary mismatch into the two directions of travel.
+    ///
+    /// Pure over its inputs.
+    static nonisolated func hiddenBoundaryOffenders(
+        currentVisible: Set<String>,
+        currentHidden: Set<String>,
+        currentAlwaysHidden: Set<String>,
+        desiredVisible: Set<String>,
+        desiredHidden: Set<String>,
+        desiredAlwaysHidden: Set<String>
+    ) -> HiddenBoundaryOffenders {
         // Everything the profile places left of the hidden divider, in
         // either of the two concealed sections. Which of the two an item
         // lands in is the always-hidden divider's problem, handled by the
@@ -774,10 +813,45 @@ nonisolated enum LayoutSolver {
         let desiredConcealed = desiredHidden.union(desiredAlwaysHidden)
         let currentConcealed = currentHidden.union(currentAlwaysHidden)
 
-        let wronglyVisible = currentVisible.intersection(desiredConcealed)
-        let wronglyConcealed = currentConcealed.intersection(desiredVisible)
+        return HiddenBoundaryOffenders(
+            wronglyVisible: currentVisible.intersection(desiredConcealed),
+            wronglyConcealed: currentConcealed.intersection(desiredVisible)
+        )
+    }
 
-        return wronglyVisible.count + wronglyConcealed.count
+    /// Whether a boundary mismatch should be repaired by dragging the
+    /// hidden divider, or by moving the offending items to it.
+    ///
+    /// Dragging H_ctrl re-sections every item it crosses. The cost is the
+    /// whole bar and the benefit is one drag, so the trade is only worth
+    /// taking when the divider itself is what drifted rather than the
+    /// items. That shows up as a side with nothing live left on it:
+    ///
+    /// - Nothing concealed is #879, where the divider had drifted past
+    ///   every managed item and eighteen of eighteen read visible. Moving
+    ///   them one at a time would mean eighteen drags across a boundary
+    ///   that is in the wrong place anyway.
+    /// - Nothing visible is the collapse in #958, where the whole bar has
+    ///   ended up behind the divider. The drag is the recovery.
+    ///
+    /// Anything in between means the divider is roughly where it belongs
+    /// and some items have wandered across it. #958's 21 August log is the
+    /// case that settles the trade: one item on the wrong side, nine still
+    /// correctly concealed, and the drag planned to reach that one item
+    /// would have carried H_ctrl from minX -3871 to 1648, across the
+    /// entire visible section.
+    ///
+    /// Counts exclude the control items. The chevron is always on the
+    /// visible side of H_ctrl, so counting it would keep `liveVisibleCount`
+    /// above zero on precisely the collapsed bar the second case exists to
+    /// rescue.
+    ///
+    /// Pure over its inputs.
+    static nonisolated func shouldMoveHiddenDivider(
+        liveConcealedCount: Int,
+        liveVisibleCount: Int
+    ) -> Bool {
+        liveConcealedCount == 0 || liveVisibleCount == 0
     }
 
     /// Plans where to drag the hidden divider so the visible/hidden split

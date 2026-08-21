@@ -527,3 +527,160 @@ struct BoundaryAnchorControlItemRefusalTests {
         #expect(candidate == nil)
     }
 }
+
+/// Pins which of the two boundary repairs Phase 1 takes.
+///
+/// Dragging H_ctrl re-sections every item it crosses, so it is the cheap
+/// repair only when the divider itself is what drifted. #958 is the case
+/// where it was not: one item on the wrong side, nine still correctly
+/// concealed, and the drag planned to reach that one item would have carried
+/// the divider from minX -3871 to 1648, across the entire visible section.
+@Suite("Divider drag versus per-item boundary moves")
+struct HiddenBoundaryRepairChoiceTests {
+    @Test("Nothing concealed means the divider drifted past everything (#879)")
+    func emptyConcealedSideDragsTheDivider() {
+        // The bar the boundary check was written for: eighteen managed items,
+        // all of them reading visible, none behind the divider.
+        #expect(LayoutSolver.shouldMoveHiddenDivider(liveConcealedCount: 0, liveVisibleCount: 18))
+    }
+
+    @Test("Nothing visible is the collapsed bar, and the drag is the recovery (#958)")
+    func emptyVisibleSideDragsTheDivider() {
+        #expect(LayoutSolver.shouldMoveHiddenDivider(liveConcealedCount: 19, liveVisibleCount: 0))
+    }
+
+    @Test("One stray item with a populated hidden section moves the item (#958)")
+    func oneStrayItemMovesTheItem() {
+        // oa's 21 August reading: nine items correctly concealed, one on the
+        // wrong side. The divider is where it belongs.
+        #expect(!LayoutSolver.shouldMoveHiddenDivider(liveConcealedCount: 9, liveVisibleCount: 17))
+    }
+
+    @Test("A bar with most items concealed still moves items, not the divider")
+    func mostlyConcealedBarMovesItems() {
+        // oa's 05:00 reading: thirty-two concealed, eleven of them wrongly so.
+        #expect(!LayoutSolver.shouldMoveHiddenDivider(liveConcealedCount: 32, liveVisibleCount: 4))
+    }
+
+    @Test("An empty bar qualifies for the drag rather than deadlocking")
+    func emptyBarDragsTheDivider() {
+        #expect(LayoutSolver.shouldMoveHiddenDivider(liveConcealedCount: 0, liveVisibleCount: 0))
+    }
+}
+
+/// The repair has to move the same items the check counted.
+@Suite("Boundary offenders agree with the boundary tally")
+struct HiddenBoundaryOffenderTests {
+    private func offenders(
+        currentVisible: Set<String>,
+        currentHidden: Set<String>,
+        currentAlwaysHidden: Set<String> = [],
+        desiredVisible: Set<String>,
+        desiredHidden: Set<String>,
+        desiredAlwaysHidden: Set<String> = []
+    ) -> LayoutSolver.HiddenBoundaryOffenders {
+        let split = LayoutSolver.hiddenBoundaryOffenders(
+            currentVisible: currentVisible,
+            currentHidden: currentHidden,
+            currentAlwaysHidden: currentAlwaysHidden,
+            desiredVisible: desiredVisible,
+            desiredHidden: desiredHidden,
+            desiredAlwaysHidden: desiredAlwaysHidden
+        )
+        // The tally is defined in terms of the split, and every case here
+        // checks that the two cannot drift apart.
+        #expect(split.count == LayoutSolver.hiddenBoundaryMismatch(
+            currentVisible: currentVisible,
+            currentHidden: currentHidden,
+            currentAlwaysHidden: currentAlwaysHidden,
+            desiredVisible: desiredVisible,
+            desiredHidden: desiredHidden,
+            desiredAlwaysHidden: desiredAlwaysHidden
+        ))
+        return split
+    }
+
+    @Test("A matching layout has no offenders")
+    func matchingLayoutHasNoOffenders() {
+        let split = offenders(
+            currentVisible: ["a", "b"],
+            currentHidden: ["c"],
+            desiredVisible: ["a", "b"],
+            desiredHidden: ["c"]
+        )
+        #expect(split.wronglyVisible.isEmpty)
+        #expect(split.wronglyConcealed.isEmpty)
+        #expect(split.count == 0)
+    }
+
+    @Test("An item that should be concealed is named on the visible side")
+    func strayVisibleItemIsNamed() {
+        let split = offenders(
+            currentVisible: ["a", "b", "c"],
+            currentHidden: [],
+            desiredVisible: ["a", "b"],
+            desiredHidden: ["c"]
+        )
+        #expect(split.wronglyVisible == ["c"])
+        #expect(split.wronglyConcealed.isEmpty)
+    }
+
+    @Test("An item that should be visible is named on the concealed side")
+    func strayConcealedItemIsNamed() {
+        let split = offenders(
+            currentVisible: ["a"],
+            currentHidden: ["b", "c"],
+            desiredVisible: ["a", "b"],
+            desiredHidden: ["c"]
+        )
+        #expect(split.wronglyVisible.isEmpty)
+        #expect(split.wronglyConcealed == ["b"])
+    }
+
+    @Test("Always-hidden counts as the concealed side, not a third direction")
+    func alwaysHiddenIsPartOfTheConcealedSide() {
+        let split = offenders(
+            currentVisible: ["a"],
+            currentHidden: [],
+            currentAlwaysHidden: ["b"],
+            desiredVisible: ["a", "b"],
+            desiredHidden: [],
+            desiredAlwaysHidden: []
+        )
+        #expect(split.wronglyConcealed == ["b"])
+        // An item moving between hidden and always-hidden is AH_ctrl's
+        // problem and must not show up here.
+        let acrossAH = offenders(
+            currentVisible: ["a"],
+            currentHidden: ["b"],
+            desiredVisible: ["a"],
+            desiredHidden: [],
+            desiredAlwaysHidden: ["b"]
+        )
+        #expect(acrossAH.count == 0)
+    }
+
+    @Test("Offenders travel in both directions at once")
+    func bothDirectionsAtOnce() {
+        let split = offenders(
+            currentVisible: ["a", "c"],
+            currentHidden: ["b", "d"],
+            desiredVisible: ["a", "b"],
+            desiredHidden: ["c", "d"]
+        )
+        #expect(split.wronglyVisible == ["c"])
+        #expect(split.wronglyConcealed == ["b"])
+        #expect(split.count == 2)
+    }
+
+    @Test("An item the profile does not manage is nobody's offender")
+    func unmanagedItemIsNotAnOffender() {
+        let split = offenders(
+            currentVisible: ["a", "stranger"],
+            currentHidden: [],
+            desiredVisible: ["a"],
+            desiredHidden: []
+        )
+        #expect(split.count == 0)
+    }
+}
