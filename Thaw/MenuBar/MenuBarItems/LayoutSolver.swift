@@ -541,11 +541,20 @@ nonisolated enum LayoutSolver {
     /// so the divider flickers on-screen then springs back once per attempt
     /// for the full retry budget (#881: cursor seizure and icon storm).
     ///
-    /// Pure over its inputs. Matches the center-on-screen convention used
-    /// by ``itemsSpanMultipleDisplays(itemCenters:screenFrames:)``.
+    /// Measured at the leading edge, not the center. A collapsed hidden
+    /// divider is 5000 points wide — that width is how the section conceals
+    /// the items to its left — so its center sits 2500 points right of the
+    /// divider itself. In #958 the divider was parked at minX -3871 with a
+    /// center at -1371, which on a three-display arrangement with a display
+    /// left of the origin lands squarely on a screen. The guard that was
+    /// meant to refuse a drag from a parked divider read that center, saw a
+    /// screen, and let the drag through. Every ordinary item is narrow
+    /// enough that the two measurements agree.
+    ///
+    /// Pure over its inputs.
     static nonisolated func isOnScreen(bounds: CGRect, screenFrames: [CGRect]) -> Bool {
-        let center = CGPoint(x: bounds.midX, y: bounds.midY)
-        return screenFrames.contains { $0.contains(center) }
+        let leadingEdge = CGPoint(x: bounds.minX, y: bounds.midY)
+        return screenFrames.contains { $0.contains(leadingEdge) }
     }
 
     // MARK: - Notch overflow
@@ -2022,7 +2031,7 @@ nonisolated enum LayoutSolver {
     /// closed always-hidden section full of legitimately parked items does not
     /// read as a fault.
     ///
-    /// Pure over its inputs. Matches the center-on-screen convention used by
+    /// Pure over its inputs. Off-bar membership is decided by
     /// ``isOnScreen(bounds:screenFrames:)``.
     static nonisolated func hasVisibleItemParkedOffBar(
         itemBounds: [CGRect],
