@@ -37,14 +37,24 @@ extension MenuBarItemManager {
         func targetPoint(in targetBounds: CGRect, on displayBounds: CGRect) -> CGPoint {
             let targetIsParkedOffscreen = targetBounds.maxX <= displayBounds.minX
             let targetY = targetIsParkedOffscreen ? targetBounds.midY : targetBounds.minY
-            // A zero-width control-item divider (#923) gives AppKit no
-            // hit-test width to disambiguate which side the drop should
-            // land on. Bias one point into the requested section so the
-            // synthetic event's target X is unambiguous. On a normal-width
-            // divider the ±1 nudge is harmless but unnecessary; gate it to
-            // zero-width to avoid shifting the drop point away from a
-            // divider that already has span to resolve the side.
-            let sectionBias: CGFloat = (targetItem.isControlItem && targetBounds.width == 0) ? 1 : 0
+            // Dropping on a divider's own edge leaves AppKit free to choose
+            // either side of it, and in #923 it chose wrong every time:
+            // .leftOfItem(AH_ctrl) landed the item at the divider's minX + 1,
+            // one point into the section the user was dragging out of. Bias
+            // one point into the requested section so the synthetic event's
+            // target X is unambiguous.
+            //
+            // This was once gated to zero-width dividers, on the theory that
+            // a divider with span gives AppKit enough hit-test width to
+            // resolve the side on its own. The 21 August log kills that
+            // theory: the same reporter's AH_ctrl was thousands of points
+            // wide (parked, maxX ≤ 0, expanded to conceal the section) and
+            // the drop still landed at minX + 1 on attempts 1 and 5, with
+            // the ordinal check correctly rejecting both. A divider's width
+            // is its concealment mechanism, not hit-test slack; what matters
+            // is that the drop point is its edge, which is the boundary
+            // itself.
+            let sectionBias: CGFloat = targetItem.isControlItem ? 1 : 0
             return switch self {
             case .leftOfItem:
                 CGPoint(x: targetBounds.minX - sectionBias, y: targetY)
