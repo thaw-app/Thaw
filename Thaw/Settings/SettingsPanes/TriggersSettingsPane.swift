@@ -22,6 +22,16 @@ struct TriggerItemOption: Hashable {
     let baseIdentifier: String
 }
 
+/// A paired Bluetooth device offered in the device-condition picker.
+struct TriggerBluetoothOption: Hashable {
+    let name: String
+    let isConnected: Bool
+
+    var displayString: String {
+        isConnected ? "\(name) (connected)" : name
+    }
+}
+
 /// A running application offered in the app-condition picker.
 struct TriggerAppOption: Hashable {
     let bundleID: String
@@ -146,6 +156,7 @@ struct TriggersSettingsPane: View {
 
     @State private var itemOptions: [TriggerItemOption] = []
     @State private var appOptions: [TriggerAppOption] = []
+    @State private var bluetoothOptions: [TriggerBluetoothOption] = []
     @State private var draggedTriggerID: UUID?
     @State private var dropIndicator: TriggerDropIndicator?
     @State private var listDisplayMode: TriggerListDisplayMode = .expanded
@@ -177,6 +188,8 @@ struct TriggersSettingsPane: View {
                         trigger: triggerBinding(for: trigger.id),
                         itemOptions: itemOptions,
                         appOptions: appOptions,
+                        bluetoothOptions: bluetoothOptions,
+                        refreshBluetoothOptions: refreshBluetoothOptions,
                         enabledKinds: kinds,
                         compoundEnabled: flags.isEnabled(.compoundConditions),
                         invertEnabled: flags.isEnabled(.invertAction),
@@ -223,9 +236,13 @@ struct TriggersSettingsPane: View {
         .onAppear {
             refreshItemOptions()
             refreshAppOptions()
+            refreshBluetoothOptions()
         }
         .onChange(of: itemManager.itemCache) { _, _ in
             refreshItemOptions()
+        }
+        .onChange(of: flags.isEnabled(.bluetooth)) { _, _ in
+            refreshBluetoothOptions()
         }
         .onChange(of: listDisplayMode) { _, newValue in
             if newValue == .expanded {
@@ -304,6 +321,32 @@ struct TriggersSettingsPane: View {
 
         if options != itemOptions {
             itemOptions = options
+        }
+    }
+
+    /// Refreshed when the pane appears, alongside the app list. The
+    /// connected annotation can go stale while the pane stays open; the names
+    /// themselves, which are what the matcher uses, do not.
+    private func refreshBluetoothOptions() {
+        // Gated like every other Bluetooth read: a disabled source costs
+        // nothing, and the picker is only reachable once the flag is on.
+        guard flags.isEnabled(.bluetooth) else {
+            bluetoothOptions = []
+            return
+        }
+        // Off the main thread: `pairedDevices()` blocks on a semaphore inside
+        // IOBluetooth's CoreBluetooth coordinator, and on a Mac that has not
+        // granted Bluetooth access the same call raises a TCC prompt. Doing
+        // that on the main thread stalls the settings window behind a prompt
+        // it is also responsible for drawing.
+        Task.detached(priority: .userInitiated) {
+            let devices = SystemStateMonitor.pairedBluetoothDeviceNames()
+            let options = devices.map {
+                TriggerBluetoothOption(name: $0.name, isConnected: $0.isConnected)
+            }
+            await MainActor.run {
+                bluetoothOptions = options
+            }
         }
     }
 
@@ -462,6 +505,8 @@ private struct TriggerRow: View {
     @Binding var trigger: MenuBarItemTrigger
     let itemOptions: [TriggerItemOption]
     let appOptions: [TriggerAppOption]
+    let bluetoothOptions: [TriggerBluetoothOption]
+    let refreshBluetoothOptions: () -> Void
     let enabledKinds: [TriggerConditionKind]
     let compoundEnabled: Bool
     let invertEnabled: Bool
@@ -573,6 +618,9 @@ private struct TriggerRow: View {
                     }
                     if hasConflict {
                         conflictWarning
+                    }
+                    if trigger.isEnabled, conditionActive {
+                        savedLayoutOverrideNote
                     }
                     if !overriddenNames.isEmpty {
                         overriddenWarning(names: overriddenNames)
@@ -870,13 +918,33 @@ private struct TriggerRow: View {
         enabledKinds.contains(trigger.condition.kind) ? enabledKinds : enabledKinds + [trigger.condition.kind]
     }
 
+    /// Whether the Match control is shown.
+    ///
+    /// Shown whenever compound conditions are available — `None of` negates a
+    /// single condition, so it is useful before a second one exists — and
+    /// always shown when the combinator is not the default, so a setting can
+    /// never be left applied with no control to see or undo it.
+    private var showsCombinatorPicker: Bool {
+        compoundEnabled || trigger.combinator != .all
+    }
+
+    /// The combinators offered. With a single condition, "All of" and
+    /// "Any of" are indistinguishable no-ops, so only the meaningful pair is
+    /// shown — plus the current selection, which is never hidden.
+    private var combinatorOptions: [TriggerCombinator] {
+        let options: [TriggerCombinator] = trigger.additionalConditions.isEmpty
+            ? [.all, .noneOf]
+            : TriggerCombinator.allCases
+        return options.contains(trigger.combinator) ? options : options + [trigger.combinator]
+    }
+
     // MARK: Conditions (primary + optional compound)
 
     private var conditionsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            if compoundEnabled, !trigger.additionalConditions.isEmpty {
+            if showsCombinatorPicker {
                 IcePicker("Match", selection: $trigger.combinator) {
-                    ForEach(TriggerCombinator.allCases) { combinator in
+                    ForEach(combinatorOptions) { combinator in
                         Text(combinator.displayString).tag(combinator)
                     }
                 }
@@ -885,7 +953,11 @@ private struct TriggerRow: View {
             conditionPicker
             conditionEditor
 
-            if compoundEnabled {
+            // Existing extra conditions render even when the compound flag is
+            // off: `shouldReveal` still evaluates them, and the editor never
+            // hides an existing selection behind a disabled flag. Only the
+            // Add button below is flag-gated.
+            if compoundEnabled || !trigger.additionalConditions.isEmpty {
                 ForEach(Array(trigger.additionalConditions.indices), id: \.self) { index in
                     Divider()
                     HStack(alignment: .top, spacing: 8) {
@@ -893,6 +965,8 @@ private struct TriggerRow: View {
                             condition: additionalConditionBinding(index),
                             kinds: enabledKinds,
                             appOptions: appOptions,
+                            bluetoothOptions: bluetoothOptions,
+                            refreshBluetoothOptions: refreshBluetoothOptions,
                             itemOptions: itemOptions,
                             currentCoordinate: currentCoordinate,
                             captureReference: captureReference,
@@ -909,12 +983,14 @@ private struct TriggerRow: View {
                     }
                 }
 
-                Button {
-                    addCondition()
-                } label: {
-                    Label("Add Condition", systemImage: "plus")
+                if compoundEnabled {
+                    Button {
+                        addCondition()
+                    } label: {
+                        Label("Add Condition", systemImage: "plus")
+                    }
+                    .buttonStyle(.borderless)
                 }
-                .buttonStyle(.borderless)
             }
         }
     }
@@ -951,6 +1027,41 @@ private struct TriggerRow: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Explains that the trigger, not the Layout editor, decides where its
+    /// targets sit. The claim holds whenever the trigger is enabled, not only
+    /// while its condition is met, because that is when the item manager
+    /// takes ownership.
+    private var savedLayoutOverrideNote: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Image(systemName: "bolt.fill")
+                .foregroundStyle(.orange)
+            Text(controlledItemsDescription)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Names the items this trigger takes over, falling back to a generic
+    /// phrasing when no target has been chosen yet.
+    private var controlledItemsDescription: String {
+        let names = trigger.allTargetItems
+            .filter { !$0.identifier.isEmpty }
+            .compactMap { target in
+                itemOption(matching: target.identifier, baseIdentifier: target.baseIdentifier)?.name
+            }
+        guard !names.isEmpty else {
+            return String(
+                localized: "While this trigger is on, it controls its target's section and your saved layout no longer applies to it."
+            )
+        }
+        let list = ListFormatter.localizedString(byJoining: names)
+        return names.count == 1
+            ? String(localized: "This trigger controls \(list)'s section. Your saved layout no longer applies to it.")
+            : String(localized: "This trigger controls the section of \(list). Your saved layout no longer applies to them.")
     }
 
     private var conflictWarning: some View {
@@ -996,6 +1107,16 @@ private struct TriggerRow: View {
             timeRangeEditor
         case .location:
             locationEditor
+        case .bluetoothPicker:
+            BluetoothDevicePicker(
+                name: textBinding,
+                options: bluetoothOptions,
+                refreshOptions: refreshBluetoothOptions,
+                focusedField: focusedField,
+                focusID: "bt-\(trigger.id)"
+            )
+        case .energyMode:
+            EnergyModePicker(match: energyModeBinding)
         case .thermalLevel:
             IcePicker("Threshold", selection: thermalLevelBinding) {
                 ForEach(ThermalLevel.allCases) { level in
@@ -1151,6 +1272,13 @@ private struct TriggerRow: View {
         )
     }
 
+    private var energyModeBinding: Binding<EnergyModeMatch> {
+        Binding(
+            get: { trigger.condition.energyModeMatch ?? .low },
+            set: { trigger.condition = trigger.condition.withEnergyMode($0) }
+        )
+    }
+
     private var thermalLevelBinding: Binding<ThermalLevel> {
         Binding(
             get: { trigger.condition.thermalLevel ?? .serious },
@@ -1238,6 +1366,8 @@ private struct ConditionEditorView: View {
     @Binding var condition: TriggerCondition
     let kinds: [TriggerConditionKind]
     let appOptions: [TriggerAppOption]
+    let bluetoothOptions: [TriggerBluetoothOption]
+    let refreshBluetoothOptions: () -> Void
     let itemOptions: [TriggerItemOption]
     let currentCoordinate: () -> (latitude: Double, longitude: Double)?
     let captureReference: (String) async -> UInt64?
@@ -1307,6 +1437,16 @@ private struct ConditionEditorView: View {
             }
         case .location:
             locationEditor
+        case .bluetoothPicker:
+            BluetoothDevicePicker(
+                name: textBinding,
+                options: bluetoothOptions,
+                refreshOptions: refreshBluetoothOptions,
+                focusedField: focusedField,
+                focusID: "bt-\(focusID)"
+            )
+        case .energyMode:
+            EnergyModePicker(match: energyModeBinding)
         case .thermalLevel:
             IcePicker("Threshold", selection: thermalLevelBinding) {
                 ForEach(ThermalLevel.allCases) { level in
@@ -1379,6 +1519,10 @@ private struct ConditionEditorView: View {
         Binding(get: { condition.locationValue?.label ?? "" }, set: { condition = condition.withLocation(label: $0) })
     }
 
+    private var energyModeBinding: Binding<EnergyModeMatch> {
+        Binding(get: { condition.energyModeMatch ?? .low }, set: { condition = condition.withEnergyMode($0) })
+    }
+
     private var thermalLevelBinding: Binding<ThermalLevel> {
         Binding(get: { condition.thermalLevel ?? .serious }, set: { condition = condition.withThermalLevel($0) })
     }
@@ -1401,6 +1545,121 @@ private struct ConditionEditorView: View {
             get: { condition.scheduleWeekdays ?? ScheduleWeekday.everyDay },
             set: { condition = condition.withScheduleWeekdays($0) }
         )
+    }
+}
+
+// MARK: - BluetoothDevicePicker
+
+/// The Bluetooth device picker, shared by the trigger row and the compound
+/// condition editor.
+///
+/// Offers the names the matcher actually compares against. A device's classic
+/// Bluetooth name is not always the one System Settings shows — an AirPods set
+/// can report a generic model name — so a typed guess can silently never
+/// match. "Other…" keeps a device that isn't paired right now reachable.
+private struct BluetoothDevicePicker: View {
+    @Binding var name: String
+    let options: [TriggerBluetoothOption]
+    let refreshOptions: () -> Void
+    var focusedField: FocusState<String?>.Binding
+    let focusID: String
+
+    /// Tags the "Other…" row. Prefixed with a control character so it can
+    /// never collide with a real device name.
+    private static let customTag = "\u{1}custom"
+
+    /// Set when the user picks "Other…" while the current value is a listed
+    /// device, which `isUnlisted` alone cannot detect.
+    @State private var prefersCustomEntry = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            IcePicker("Device", selection: selection) {
+                if name.isEmpty {
+                    Text("Choose a device…").tag("")
+                }
+                ForEach(options, id: \.name) { option in
+                    Text(option.displayString).tag(option.name)
+                }
+                Text("Other…").tag(Self.customTag)
+            }
+            if showsTextField {
+                CommitTextField(
+                    title: "Device name",
+                    prompt: "Device name",
+                    value: $name,
+                    focusedField: focusedField,
+                    focusID: focusID
+                )
+            }
+        }
+        // The condition rows are keyed by index, so deleting one shifts the
+        // next into this view's identity, carrying this state with it. Clear
+        // it whenever the value we are bound to names a listed device, which
+        // covers both that shift and an ordinary edit.
+        .onChange(of: name, initial: true) { _, newValue in
+            if options.contains(where: { $0.name == newValue }) {
+                prefersCustomEntry = false
+            }
+        }
+        // Re-enumerate whenever this picker appears: the pane's own refresh
+        // ran at pane-appearance, which predates a kind switched to
+        // Bluetooth, a device paired since, or an access grant.
+        .onAppear(perform: refreshOptions)
+    }
+
+    /// A configured name that no longer appears in the list — an unpaired
+    /// device, or a value typed before this picker existed. Never hidden, or
+    /// opening the editor would quietly discard it.
+    private var isUnlisted: Bool {
+        !name.isEmpty && !options.contains { $0.name == name }
+    }
+
+    private var showsTextField: Bool {
+        prefersCustomEntry || isUnlisted
+    }
+
+    private var selection: Binding<String> {
+        Binding(
+            get: {
+                if showsTextField { return Self.customTag }
+                return name
+            },
+            set: { newValue in
+                if newValue == Self.customTag {
+                    prefersCustomEntry = true
+                } else {
+                    prefersCustomEntry = false
+                    name = newValue
+                }
+            }
+        )
+    }
+}
+
+// MARK: - EnergyModePicker
+
+/// The Energy Mode picker, shared by the trigger row and the compound
+/// condition editor.
+private struct EnergyModePicker: View {
+    @Binding var match: EnergyModeMatch
+
+    var body: some View {
+        IcePicker("Mode", selection: $match) {
+            ForEach(options) { option in
+                Text(option.displayString).tag(option)
+            }
+        }
+    }
+
+    /// High Power is offered only on Macs that have it. A trigger already
+    /// set to High Power keeps showing it either way, so moving settings
+    /// between Macs never silently rewrites the selection.
+    private var options: [EnergyModeMatch] {
+        let selectable = EnergyModeMatch.selectableCases(
+            highPowerModeSupported: EnergyModeMonitor.isHighPowerModeSupported
+        )
+        return selectable.contains(match) ? selectable : selectable + [match]
     }
 }
 

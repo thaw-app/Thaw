@@ -31,7 +31,7 @@ enum TriggerFeature: String, CaseIterable, Identifiable {
     case schedule
     case focusMode
     case location
-    case lowPowerMode
+    case energyMode = "lowPowerMode"
     case thermalPressure
     case recordingDevices
     case scriptResult
@@ -58,7 +58,7 @@ enum TriggerFeature: String, CaseIterable, Identifiable {
         case .schedule: "Time schedule"
         case .focusMode: "Focus / Do Not Disturb"
         case .location: "Location"
-        case .lowPowerMode: "Low Power Mode"
+        case .energyMode: "Energy Mode"
         case .thermalPressure: "Thermal pressure"
         case .recordingDevices: "Camera / microphone in use"
         case .scriptResult: "Script result"
@@ -83,7 +83,7 @@ enum TriggerFeature: String, CaseIterable, Identifiable {
         case .schedule: "Reveal an item during a time-of-day window."
         case .focusMode: "Reveal an item while a macOS Focus is active."
         case .location: "Reveal an item while you're near a saved place (uses Location)."
-        case .lowPowerMode: "Reveal an item while macOS Low Power Mode is on."
+        case .energyMode: "Reveal an item based on the active Energy Mode (Low Power, Automatic, High Power)."
         case .thermalPressure: "Reveal an item when the system is under thermal pressure."
         case .recordingDevices: "Reveal an item while the camera or microphone is in use."
         case .scriptResult: "Reveal an item based on a script's exit code or output (runs your script periodically)."

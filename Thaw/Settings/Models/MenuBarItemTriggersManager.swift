@@ -64,6 +64,7 @@ final class MenuBarItemTriggersManager {
     /// The user's configured triggers.
     var triggers: [MenuBarItemTrigger] {
         didSet {
+            refreshControlledIdentifiers()
             guard !suppressPersist else { return }
             if persistenceEnabled {
                 persist()
@@ -85,6 +86,16 @@ final class MenuBarItemTriggersManager {
 
     /// Runtime apply/move status for each trigger, surfaced in the settings UI.
     private(set) var runtimeStatuses = [UUID: MenuBarItemTriggerRuntimeStatus]()
+
+    /// Every identifier spelling currently owned by an enabled, available
+    /// trigger: each target's exact identifier plus its captured base.
+    ///
+    /// A stored property, deliberately: the layout editor's item views read
+    /// it per item on every redraw and observe it for changes, and only a
+    /// stored `@Observable` property both stays O(1) to read and registers a
+    /// dependency on every access. (A lazily memoized computed property does
+    /// neither reliably — a warm cache read touches no observable state.)
+    private(set) var controlledBaseIdentifiers = Set<String>()
 
     /// Per-source feature flags, also surfaced in the Developer pane.
     let featureFlags = TriggerFeatureFlagsManager()
@@ -157,16 +168,6 @@ final class MenuBarItemTriggersManager {
 
     private let diagLog = DiagLog(category: "MenuBarItemTriggers")
 
-    /// Battery is a Control Center-owned menu bar control. On current macOS
-    /// builds, dragging it behind a third-party hidden-bar boundary changes
-    /// the system's own "Show in Menu Bar" preference instead of merely
-    /// reordering its status item. Keep it visible when a trigger clears so
-    /// Thaw never disables that setting.
-    private static let controlCenterBatteryBaseIdentifier = MenuBarItemTag(
-        namespace: .controlCenter,
-        title: "Battery"
-    ).stableIdentifierBase
-
     struct TriggerPriorityAction: Equatable {
         var reveal: Bool
         var identifiers: [String]
@@ -211,6 +212,7 @@ final class MenuBarItemTriggersManager {
         suppressPersist = true
         triggers = persistenceEnabled ? Self.load() : []
         suppressPersist = false
+        refreshControlledIdentifiers()
     }
 
     /// Performs the initial setup of the manager.
@@ -301,6 +303,8 @@ final class MenuBarItemTriggersManager {
         // Re-apply when feature flags change (a newly enabled source may
         // satisfy a trigger that was previously inert).
         featureFlags.addChangeHandler { [weak self] in
+            // `isAvailable` reads the flags, so ownership changes with them.
+            self?.refreshControlledIdentifiers()
             // Run after the flag set mutates so cached sources whose
             // monitors live here (scripts and image hashes) populate
             // before the forced evaluation.
@@ -540,6 +544,79 @@ final class MenuBarItemTriggersManager {
         }
     }
 
+    /// Recomputes ``controlledBaseIdentifiers`` from the current triggers
+    /// and feature flags. Called from `triggers.didSet`, the feature-flag
+    /// change handler, and the initializer (property observers don't run for
+    /// an init assignment).
+    private func refreshControlledIdentifiers() {
+        var identifiers = Set<String>()
+        for trigger in triggers where trigger.isEnabled && isAvailable(trigger) {
+            for target in trigger.allTargetItems where !target.identifier.isEmpty {
+                // Store the base, since that is what a live tag resolves to.
+                identifiers.insert(target.baseIdentifier ?? target.identifier)
+                identifiers.insert(target.identifier)
+            }
+        }
+        if identifiers != controlledBaseIdentifiers {
+            controlledBaseIdentifiers = identifiers
+        }
+    }
+
+    /// Whether any enabled trigger owns the given item's placement.
+    ///
+    /// The set-membership fast path covers exact identifiers and captured
+    /// bases. The fallback loop covers a legacy target stored with a `:N`
+    /// instance suffix and no captured base, which only the shared resolver
+    /// can safely map onto the live base — without it, such a target is
+    /// owned by the plan but invisible here. The loop runs over the (small)
+    /// controlled set, not the item list, so per-draw cost stays bounded by
+    /// the user's trigger count.
+    func isControlledByTrigger(baseIdentifier: String) -> Bool {
+        guard !baseIdentifier.isEmpty else { return false }
+        if controlledBaseIdentifiers.contains(baseIdentifier) {
+            return true
+        }
+        let knownBases: Set<String> = [baseIdentifier]
+        return controlledBaseIdentifiers.contains { identifier in
+            MenuBarItemTag.resolvedBaseIdentifier(
+                for: identifier,
+                knownBaseIdentifiers: knownBases
+            ) == baseIdentifier
+        }
+    }
+
+    /// The enabled trigger that currently owns the given item's placement,
+    /// or `nil` when no trigger targets it.
+    ///
+    /// An enabled trigger claims its targets as soon as it is configured, not
+    /// only while its condition is met (see
+    /// `MenuBarItemManager.setTriggerControlledItemIdentifiers`). For as long
+    /// as it holds an item, that item's section is the trigger's to decide and
+    /// the saved layout is neither consulted for it nor updated from it — so
+    /// the layout editor must not present the item as freely placeable.
+    ///
+    /// Returns the first match in priority order, which is the trigger the
+    /// priority plan resolves in favour of.
+    func controllingTrigger(forBaseIdentifier baseIdentifier: String) -> MenuBarItemTrigger? {
+        guard !baseIdentifier.isEmpty else { return nil }
+        let knownBases: Set<String> = [baseIdentifier]
+        return triggers.first { trigger in
+            guard trigger.isEnabled, isAvailable(trigger) else { return false }
+            return trigger.allTargetItems.contains { target in
+                guard !target.identifier.isEmpty else { return false }
+                // Same predicate as ``isControlledByTrigger``: exact
+                // identifier, captured base, or a stale `:N` instance suffix
+                // the shared resolver can safely strip against the live base.
+                return target.identifier == baseIdentifier
+                    || target.baseIdentifier == baseIdentifier
+                    || MenuBarItemTag.resolvedBaseIdentifier(
+                        for: target.identifier,
+                        knownBaseIdentifiers: knownBases
+                    ) == baseIdentifier
+            }
+        }
+    }
+
     func priorityPlan(
         for state: SystemState,
         presentIdentifiers: Set<String>,
@@ -589,19 +666,7 @@ final class MenuBarItemTriggersManager {
                     plan.overriddenBy[trigger.id] = Array(overriddenNames).sorted()
                 }
             } else {
-                // Hiding the built-in Battery control would turn off macOS's
-                // own Show in Menu Bar setting. Release it to its durable
-                // visible placement instead of issuing a destructive hide
-                // move; other targets in the same trigger can still hide.
-                let safelyHideableTargets = presentTargets.filter { identifier in
-                    !Self.isProtectedFromTriggerHide(
-                        identifier,
-                        presentIdentifierBases: presentIdentifierBases
-                    )
-                }
-                if !safelyHideableTargets.isEmpty {
-                    fallbackCandidates.append((trigger, safelyHideableTargets))
-                }
+                fallbackCandidates.append((trigger, presentTargets))
             }
         }
 
@@ -618,18 +683,6 @@ final class MenuBarItemTriggersManager {
         return plan
     }
 
-    private static func isProtectedFromTriggerHide(
-        _ identifier: String,
-        presentIdentifierBases: [String: String]
-    ) -> Bool {
-        (presentIdentifierBases[identifier] ?? identifier) == controlCenterBatteryBaseIdentifier
-    }
-
-    /// Resolves an older trigger target after a stable instance index changed.
-    /// Exact identifiers always win. The fallback receives bases from actual
-    /// live tags captured when the user selects the target. Older triggers
-    /// without that stored identity remain exact-match only, so a title such
-    /// as "Meeting:30" can never be mistaken for instance 30.
     private func resolvedPresentIdentifier(
         for configuredIdentifier: String,
         capturedBaseIdentifier: String?,

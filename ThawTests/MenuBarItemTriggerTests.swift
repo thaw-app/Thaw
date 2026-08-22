@@ -255,9 +255,306 @@ final class MenuBarItemTriggerTests: XCTestCase {
 
     func testLowPowerMode() {
         var on = state()
-        on.isLowPowerMode = true
+        on.energyMode = .low
         XCTAssertTrue(TriggerCondition.lowPowerMode.isSatisfied(state: on))
         XCTAssertFalse(TriggerCondition.lowPowerMode.isSatisfied(state: state()))
+    }
+
+    /// The layout editor reads this per item on every redraw, so it is
+    /// memoized — it has to survive edits to the trigger list.
+    func testControlledBaseIdentifiersTracksTriggerEdits() {
+        let manager = makeManager()
+        XCTAssertFalse(manager.isControlledByTrigger(baseIdentifier: "com.example.Status"))
+
+        manager.triggers = [
+            MenuBarItemTrigger(
+                isEnabled: true,
+                itemIdentifier: "com.example.Status",
+                condition: .onACPower
+            ),
+        ]
+        XCTAssertTrue(manager.isControlledByTrigger(baseIdentifier: "com.example.Status"))
+
+        manager.triggers[0].isEnabled = false
+        XCTAssertFalse(manager.isControlledByTrigger(baseIdentifier: "com.example.Status"))
+
+        manager.triggers = []
+        XCTAssertFalse(manager.isControlledByTrigger(baseIdentifier: "com.example.Status"))
+        XCTAssertFalse(manager.isControlledByTrigger(baseIdentifier: ""))
+    }
+
+    /// A legacy target stored with an instance suffix and no captured base
+    /// must still read as owned when queried by the live base — the badge
+    /// and the tooltip resolve ownership through different paths, and they
+    /// have to agree.
+    func testLegacySuffixedTargetWithoutBaseIsOwned() {
+        let manager = makeManager()
+        manager.triggers = [
+            MenuBarItemTrigger(
+                isEnabled: true,
+                itemIdentifier: "com.example.Status:2",
+                condition: .onACPower
+            ),
+        ]
+
+        XCTAssertTrue(manager.isControlledByTrigger(baseIdentifier: "com.example.Status"))
+        XCTAssertNotNil(manager.controllingTrigger(forBaseIdentifier: "com.example.Status"))
+        // A title that merely ends in ":<number>" is not an instance suffix
+        // unless the base is live; an unrelated base must not match.
+        XCTAssertFalse(manager.isControlledByTrigger(baseIdentifier: "com.example.Other"))
+    }
+
+    /// The two ownership queries answer from the same predicate: whenever the
+    /// set says owned, the tooltip lookup must produce the owning trigger.
+    func testOwnershipQueriesAgree() {
+        let manager = makeManager()
+        manager.triggers = [
+            MenuBarItemTrigger(
+                isEnabled: true,
+                itemIdentifier: "com.example.Status:2",
+                itemBaseIdentifier: "com.example.Status",
+                condition: .onACPower
+            ),
+        ]
+
+        for base in ["com.example.Status", "com.example.Status:2", "com.example.Other", ""] {
+            XCTAssertEqual(
+                manager.isControlledByTrigger(baseIdentifier: base),
+                manager.controllingTrigger(forBaseIdentifier: base) != nil,
+                "queries disagree for \(base)"
+            )
+        }
+    }
+
+    /// A target stored with an instance suffix is owned under both spellings,
+    /// since the live tag resolves to the base.
+    func testControlledBaseIdentifiersCoversCapturedBase() {
+        let manager = makeManager()
+        manager.triggers = [
+            MenuBarItemTrigger(
+                isEnabled: true,
+                itemIdentifier: "com.example.Status:2",
+                itemBaseIdentifier: "com.example.Status",
+                condition: .onACPower
+            ),
+        ]
+
+        XCTAssertTrue(manager.isControlledByTrigger(baseIdentifier: "com.example.Status"))
+        XCTAssertTrue(manager.isControlledByTrigger(baseIdentifier: "com.example.Status:2"))
+    }
+
+    // MARK: - Combinators
+
+    func testNoneOfIsSatisfiedOnlyWhenNoConditionIs() {
+        var trigger = MenuBarItemTrigger(
+            itemIdentifier: "item",
+            condition: .onACPower
+        )
+        trigger.additionalConditions = [.charging]
+        trigger.combinator = .noneOf
+
+        // Neither holds.
+        XCTAssertTrue(trigger.shouldReveal(state: state(onAC: false, charging: false)))
+        // One holds.
+        XCTAssertFalse(trigger.shouldReveal(state: state(onAC: true, charging: false)))
+        XCTAssertFalse(trigger.shouldReveal(state: state(onAC: false, charging: true)))
+        // Both hold.
+        XCTAssertFalse(trigger.shouldReveal(state: state(onAC: true, charging: true)))
+    }
+
+    /// "None of" is the condition-side negation; `invert` is the action-side
+    /// one. Combining them has to cancel out, not compound.
+    func testNoneOfComposesWithInvert() {
+        var trigger = MenuBarItemTrigger(
+            itemIdentifier: "item",
+            condition: .onACPower
+        )
+        trigger.combinator = .noneOf
+        trigger.invert = true
+
+        XCTAssertTrue(trigger.shouldReveal(state: state(onAC: true)))
+        XCTAssertFalse(trigger.shouldReveal(state: state(onAC: false)))
+    }
+
+    /// Joining with " or " alone would read as if any one of them fired the
+    /// trigger, which is the opposite of what "None of" means.
+    func testNoneOfSummaryStatesTheRelationship() {
+        var trigger = MenuBarItemTrigger(
+            itemIdentifier: "item",
+            condition: .onACPower
+        )
+        trigger.combinator = .noneOf
+
+        XCTAssertEqual(trigger.conditionSummary, "Not: Connected to power")
+
+        trigger.additionalConditions = [.charging]
+        XCTAssertEqual(
+            trigger.conditionSummary,
+            "None of: Connected to power or Battery is charging"
+        )
+    }
+
+    /// The raw value is persisted, so it must stay stable, and triggers saved
+    /// before the combinator existed must still decode.
+    func testCombinatorCodableRoundTrip() throws {
+        XCTAssertEqual(TriggerCombinator.noneOf.rawValue, "none")
+
+        var trigger = MenuBarItemTrigger(itemIdentifier: "item", condition: .onACPower)
+        trigger.combinator = .noneOf
+        let data = try JSONEncoder().encode(trigger)
+        let decoded = try JSONDecoder().decode(MenuBarItemTrigger.self, from: data)
+        XCTAssertEqual(decoded.combinator, .noneOf)
+    }
+
+    // MARK: - Layout ownership
+
+    /// The layout editor asks this to decide whether an item is still the
+    /// user's to place.
+    func testControllingTriggerFindsEnabledTargetingTrigger() {
+        let manager = makeManager()
+        manager.triggers = [
+            MenuBarItemTrigger(
+                isEnabled: true,
+                itemIdentifier: "com.apple.controlcenter:Battery",
+                condition: .batteryBelow(percentage: 69)
+            ),
+        ]
+
+        let owner = manager.controllingTrigger(forBaseIdentifier: "com.apple.controlcenter:Battery")
+
+        XCTAssertEqual(owner?.itemIdentifier, "com.apple.controlcenter:Battery")
+        XCTAssertNil(manager.controllingTrigger(forBaseIdentifier: "com.example.Other"))
+        XCTAssertNil(manager.controllingTrigger(forBaseIdentifier: ""))
+    }
+
+    /// Ownership is claimed by an enabled trigger whether or not its
+    /// condition is currently met, matching when the item manager takes the
+    /// item over. A disabled trigger claims nothing.
+    func testControllingTriggerIgnoresDisabledTriggers() {
+        let manager = makeManager()
+        manager.triggers = [
+            MenuBarItemTrigger(
+                isEnabled: false,
+                itemIdentifier: "com.apple.controlcenter:Battery",
+                condition: .batteryBelow(percentage: 69)
+            ),
+        ]
+
+        XCTAssertNil(manager.controllingTrigger(forBaseIdentifier: "com.apple.controlcenter:Battery"))
+    }
+
+    /// A stored target carrying a stale instance suffix still resolves to the
+    /// live item, so the layout editor doesn't quietly re-open a locked item.
+    func testControllingTriggerFollowsInstanceSuffixDrift() {
+        let manager = makeManager()
+        manager.triggers = [
+            MenuBarItemTrigger(
+                isEnabled: true,
+                itemIdentifier: "com.apple.controlcenter:Battery:2",
+                condition: .onBatteryPower
+            ),
+        ]
+
+        XCTAssertNotNil(manager.controllingTrigger(forBaseIdentifier: "com.apple.controlcenter:Battery"))
+    }
+
+    /// Two enabled triggers on one item resolve to the higher-priority one,
+    /// the same winner the priority plan picks.
+    func testControllingTriggerPrefersHigherPriority() {
+        let manager = makeManager()
+        manager.triggers = [
+            MenuBarItemTrigger(
+                name: "First",
+                isEnabled: true,
+                itemIdentifier: "com.apple.controlcenter:Battery",
+                condition: .onBatteryPower
+            ),
+            MenuBarItemTrigger(
+                name: "Second",
+                isEnabled: true,
+                itemIdentifier: "com.apple.controlcenter:Battery",
+                condition: .onACPower
+            ),
+        ]
+
+        XCTAssertEqual(
+            manager.controllingTrigger(forBaseIdentifier: "com.apple.controlcenter:Battery")?.displayName,
+            "First"
+        )
+    }
+
+    func testEnergyModeMatchesExactMode() {
+        for mode in EnergyMode.allCases {
+            var current = state()
+            current.energyMode = mode
+
+            XCTAssertEqual(TriggerCondition.energyMode(.low).isSatisfied(state: current), mode == .low)
+            XCTAssertEqual(TriggerCondition.energyMode(.automatic).isSatisfied(state: current), mode == .automatic)
+            XCTAssertEqual(TriggerCondition.energyMode(.high).isSatisfied(state: current), mode == .high)
+        }
+    }
+
+    /// "Not Low Power" has to cover High Power too, not just Automatic —
+    /// the case that a plain inversion of the old boolean would get wrong.
+    func testNotLowPowerCoversAutomaticAndHigh() {
+        var low = state()
+        low.energyMode = .low
+        XCTAssertFalse(TriggerCondition.energyMode(.notLow).isSatisfied(state: low))
+
+        for mode in [EnergyMode.automatic, .high] {
+            var current = state()
+            current.energyMode = mode
+            XCTAssertTrue(
+                TriggerCondition.energyMode(.notLow).isSatisfied(state: current),
+                "Not Low Power should be satisfied in \(mode.displayString)"
+            )
+        }
+    }
+
+    /// Triggers saved before Energy Mode replaced the Low Power Mode
+    /// condition must keep decoding, and keep meaning "Low Power".
+    func testLegacyLowPowerModeDecodesAndBehavesAsLow() throws {
+        let decoded = try JSONDecoder().decode(TriggerCondition.self, from: Data(#"{ "lowPowerMode": {} }"#.utf8))
+
+        XCTAssertEqual(decoded.kind, .energyMode)
+        XCTAssertEqual(decoded.energyModeMatch, .low)
+
+        var low = state()
+        low.energyMode = .low
+        XCTAssertTrue(decoded.isSatisfied(state: low))
+
+        var high = state()
+        high.energyMode = .high
+        XCTAssertFalse(decoded.isSatisfied(state: high))
+    }
+
+    /// Editing a legacy condition upgrades it in place rather than leaving
+    /// a value the editor can't represent.
+    func testEditingLegacyLowPowerModeProducesEnergyMode() {
+        XCTAssertEqual(TriggerCondition.lowPowerMode.withEnergyMode(.high), .energyMode(.high))
+        XCTAssertEqual(
+            TriggerCondition.make(kind: .energyMode, preserving: .lowPowerMode),
+            .energyMode(.low)
+        )
+    }
+
+    /// Switching to a kind that carries no compatible value still yields the
+    /// Energy Mode default rather than dropping the selection.
+    func testEnergyModeDefaults() {
+        XCTAssertEqual(TriggerCondition.defaultCondition(for: .energyMode), .energyMode(.low))
+        XCTAssertEqual(TriggerCondition.make(kind: .energyMode, preserving: .charging), .energyMode(.low))
+        XCTAssertEqual(TriggerCondition.energyMode(.high).kind.editor, .energyMode)
+    }
+
+    func testHighPowerModeIsOfferedOnlyWhereSupported() {
+        XCTAssertEqual(
+            EnergyModeMatch.selectableCases(highPowerModeSupported: true),
+            [.low, .notLow, .automatic, .high]
+        )
+        XCTAssertEqual(
+            EnergyModeMatch.selectableCases(highPowerModeSupported: false),
+            [.low, .notLow, .automatic]
+        )
     }
 
     func testThermalPressureThreshold() {
@@ -604,8 +901,13 @@ final class MenuBarItemTriggerTests: XCTestCase {
         XCTAssertNil(plan.actions[lower.id])
     }
 
+    /// Battery hides like any other target. An earlier revision exempted the
+    /// Control Center Battery control from the hide branch, on the theory
+    /// that concealing it would turn off the system's own Show in Menu Bar
+    /// setting; that does not happen, and the exemption made a trigger
+    /// silently ignore the "Otherwise hide in" section the user picked.
     @MainActor
-    func testPriorityPlanKeepsControlCenterBatteryVisibleWhenConditionClears() {
+    func testPriorityPlanHidesControlCenterBatteryWhenConditionClears() {
         let manager = makeManager()
         let trigger = MenuBarItemTrigger(
             itemIdentifier: "com.apple.controlcenter:Battery",
@@ -621,7 +923,13 @@ final class MenuBarItemTriggerTests: XCTestCase {
                 "com.apple.controlcenter:Battery": "com.apple.controlcenter:Battery",
             ]
         )
-        XCTAssertNil(hiddenPlan.actions[trigger.id])
+        XCTAssertEqual(
+            hiddenPlan.actions[trigger.id],
+            MenuBarItemTriggersManager.TriggerPriorityAction(
+                reveal: false,
+                identifiers: ["com.apple.controlcenter:Battery"]
+            )
+        )
         XCTAssertFalse(hiddenPlan.unavailableTriggerIDs.contains(trigger.id))
 
         let revealPlan = manager.priorityPlan(

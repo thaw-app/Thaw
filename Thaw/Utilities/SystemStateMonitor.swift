@@ -77,8 +77,17 @@ struct SystemState: Equatable {
     var currentLatitude: Double?
     var currentLongitude: Double?
 
+    /// The macOS Energy Mode currently in effect.
+    var energyMode: EnergyMode
+
     /// Whether macOS Low Power Mode is enabled.
-    var isLowPowerMode: Bool
+    ///
+    /// Read-only on purpose. A setter would have to invent a mode for
+    /// `false`, and picking `.automatic` would silently destroy `.high` —
+    /// assign ``energyMode`` instead.
+    var isLowPowerMode: Bool {
+        energyMode == .low
+    }
 
     /// The current system thermal pressure.
     var thermalState: ProcessInfo.ThermalState
@@ -112,7 +121,7 @@ struct SystemState: Equatable {
         activeFocusModeName: String? = nil,
         currentLatitude: Double? = nil,
         currentLongitude: Double? = nil,
-        isLowPowerMode: Bool = false,
+        energyMode: EnergyMode = .automatic,
         thermalState: ProcessInfo.ThermalState = .nominal,
         isCameraInUse: Bool = false,
         isMicrophoneInUse: Bool = false,
@@ -133,7 +142,7 @@ struct SystemState: Equatable {
         self.activeFocusModeName = activeFocusModeName
         self.currentLatitude = currentLatitude
         self.currentLongitude = currentLongitude
-        self.isLowPowerMode = isLowPowerMode
+        self.energyMode = energyMode
         self.thermalState = thermalState
         self.isCameraInUse = isCameraInUse
         self.isMicrophoneInUse = isMicrophoneInUse
@@ -168,6 +177,11 @@ final class SystemStateMonitor: ObservableObject {
     private var workspaceObservers = [NSObjectProtocol]()
     private var screenObserver: NSObjectProtocol?
     private var systemLoadObservers = [NSObjectProtocol]()
+
+    /// Observes Energy Mode. `NSProcessInfoPowerStateDidChange` covers the
+    /// Low Power half; the High Power half changes silently as far as
+    /// notification centre is concerned, so it needs its own observer.
+    private let energyModeMonitor = EnergyModeMonitor()
     private var pathMonitor: NWPathMonitor?
 
     /// Poll timer for the sampled sources.
@@ -222,7 +236,7 @@ final class SystemStateMonitor: ObservableObject {
         setAppRefreshPolling(flags.isEnabled(.appRunning))
         setDisplayMonitoring(flags.isEnabled(.display))
         setNetworkMonitoring(flags.isEnabled(.network) || flags.isEnabled(.vpn))
-        setSystemLoadMonitoring(flags.isEnabled(.lowPowerMode) || flags.isEnabled(.thermalPressure))
+        setSystemLoadMonitoring(flags.isEnabled(.energyMode) || flags.isEnabled(.thermalPressure))
 
         // Both Wi-Fi SSID and the location condition need Location access.
         if flags.isEnabled(.wifiSSID) || flags.isEnabled(.location) {
@@ -397,7 +411,7 @@ final class SystemStateMonitor: ObservableObject {
         }
     }
 
-    // MARK: System load (Low Power Mode / thermal)
+    // MARK: System load (Energy Mode / thermal)
 
     private func setSystemLoadMonitoring(_ enabled: Bool) {
         let isRunning = !systemLoadObservers.isEmpty
@@ -417,21 +431,24 @@ final class SystemStateMonitor: ObservableObject {
                 }
                 systemLoadObservers.append(token)
             }
+            energyModeMonitor.start { [weak self] in
+                self?.refreshSystemLoad()
+            }
             refreshSystemLoad()
         } else {
             for token in systemLoadObservers {
                 NotificationCenter.default.removeObserver(token)
             }
             systemLoadObservers.removeAll()
+            energyModeMonitor.stop()
         }
     }
 
     private func refreshSystemLoad() {
-        let info = ProcessInfo.processInfo
-        let lowPower = info.isLowPowerModeEnabled
-        let thermal = info.thermalState
+        let mode = EnergyModeMonitor.read()
+        let thermal = ProcessInfo.processInfo.thermalState
         update {
-            $0.isLowPowerMode = lowPower
+            $0.energyMode = mode
             $0.thermalState = thermal
         }
     }
@@ -534,7 +551,7 @@ final class SystemStateMonitor: ObservableObject {
             externalDisplayConnected: hasExternalDisplay(),
             isFocusActive: isFocusActive(),
             activeFocusModeName: ThawFocusModeStore.activeMode,
-            isLowPowerMode: ProcessInfo.processInfo.isLowPowerModeEnabled,
+            energyMode: EnergyModeMonitor.read(),
             thermalState: ProcessInfo.processInfo.thermalState,
             isCameraInUse: flags.isEnabled(.recordingDevices) ? isCameraInUse() : false,
             isMicrophoneInUse: flags.isEnabled(.recordingDevices) ? isMicrophoneInUse() : false
@@ -585,6 +602,37 @@ final class SystemStateMonitor: ObservableObject {
         let nameStatus = AudioObjectGetPropertyData(deviceID, &nameAddress, 0, nil, &nameSize, &name)
         guard nameStatus == noErr, let cfName = name?.takeRetainedValue() else { return nil }
         return cfName as String
+    }
+
+    /// Every paired device name, paired with whether it is connected now.
+    ///
+    /// Reads the same source ``connectedBluetoothDeviceNames`` matches
+    /// against, which matters because a device's classic Bluetooth name is
+    /// not always the name System Settings displays — an AirPods set can
+    /// report a generic model name while Settings shows the personalised one.
+    /// The editor offers these strings so a user never has to guess which of
+    /// the two the matcher will see.
+    /// `nonisolated` so the settings editor can run it off the main thread:
+    /// the underlying call blocks, and can raise a TCC prompt. It touches
+    /// only IOBluetooth and locals, so it carries no actor state.
+    static nonisolated func pairedBluetoothDeviceNames() -> [(name: String, isConnected: Bool)] {
+        guard let devices = IOBluetoothDevice.pairedDevices() as? [IOBluetoothDevice] else {
+            return []
+        }
+        var seen = Set<String>()
+        var result = [(name: String, isConnected: Bool)]()
+        for device in devices {
+            guard let name = device.name, !name.isEmpty, seen.insert(name).inserted else { continue }
+            result.append((name: name, isConnected: device.isConnected()))
+        }
+        // Connected first, then alphabetical: the device being set up is
+        // almost always one that is connected while the user configures it.
+        result.sort {
+            $0.isConnected == $1.isConnected
+                ? $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+                : $0.isConnected
+        }
+        return result
     }
 
     /// Returns the names of all currently connected Bluetooth devices.

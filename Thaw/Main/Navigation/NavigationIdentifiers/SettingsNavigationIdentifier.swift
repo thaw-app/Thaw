@@ -33,7 +33,7 @@ nonisolated enum SettingsNavigationIdentifier: String, NavigationIdentifier {
         case .advanced: "Advanced"
         case .automation: "Automation"
         case .triggers: "Triggers"
-        case .developer: "Trigger Feature Flags"
+        case .developer: "Dev Mode Flags"
         case .about: "About"
         }
     }

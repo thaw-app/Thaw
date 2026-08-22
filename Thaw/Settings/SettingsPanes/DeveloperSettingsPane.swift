@@ -58,7 +58,7 @@ struct DeveloperSettingsPane: View {
         IceSection() {
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
-                    Text("Trigger Feature Flags")
+                    Text("Dev Mode Flags")
                         .font(.headline)
                     Spacer()
                     Button {
@@ -146,7 +146,7 @@ struct DeveloperSettingsPane: View {
                 stateRow("Wi-Fi SSID", wifiSSIDValue(state))
                 stateRow("Bluetooth", flags.isEnabled(.bluetooth) ? state.connectedBluetoothDeviceNames.sorted().joined(separator: ", ").orDash : "Enable flag to read")
                 stateRow("Audio output", state.audioOutputDeviceName ?? "—")
-                stateRow("Low Power Mode", state.isLowPowerMode ? "On" : "Off")
+                stateRow("Energy Mode", energyModeString(state.energyMode))
                 stateRow("Thermal state", thermalString(state.thermalState))
                 stateRow("Camera in use", flags.isEnabled(.recordingDevices) ? (state.isCameraInUse ? "Yes" : "No") : "Enable flag to read")
                 stateRow("Microphone in use", flags.isEnabled(.recordingDevices) ? (state.isMicrophoneInUse ? "Yes" : "No") : "Enable flag to read")
@@ -175,6 +175,14 @@ struct DeveloperSettingsPane: View {
     private func batteryString(_ power: PowerState) -> String {
         guard let percentage = power.batteryPercentage else { return "No battery" }
         return "\(Int(percentage.rounded()))%"
+    }
+
+    /// Describes the current Energy Mode, noting when High Power Mode isn't
+    /// offered by this Mac so a trigger that can never fire is obvious here.
+    private func energyModeString(_ mode: EnergyMode) -> String {
+        EnergyModeMonitor.isHighPowerModeSupported
+            ? mode.displayString
+            : "\(mode.displayString) (no High Power Mode on this Mac)"
     }
 
     private func thermalString(_ state: ProcessInfo.ThermalState) -> String {

@@ -32,6 +32,64 @@ enum ThermalLevel: Int, Codable, Hashable, CaseIterable, Identifiable {
     }
 }
 
+// MARK: - EnergyModeMatch
+
+/// A user-selectable Energy Mode predicate.
+///
+/// macOS reports three mutually exclusive modes (``EnergyMode``), but the
+/// question worth asking is often "not Low Power", which covers the two
+/// remaining modes at once. The predicate set is therefore deliberately
+/// wider than the state set.
+enum EnergyModeMatch: String, Codable, Hashable, CaseIterable, Identifiable {
+    case low
+    case notLow
+    case automatic
+    case high
+
+    var id: String {
+        rawValue
+    }
+
+    var displayString: String {
+        switch self {
+        case .low: "Low Power"
+        case .notLow: "Not Low Power"
+        case .automatic: "Automatic"
+        case .high: "High Power"
+        }
+    }
+
+    /// A short human-readable summary, used to build a default trigger name.
+    var summary: String {
+        switch self {
+        case .low: "Low Power Mode is on"
+        case .notLow: "Low Power Mode is off"
+        case .automatic: "Energy Mode is Automatic"
+        case .high: "Energy Mode is High Power"
+        }
+    }
+
+    /// Whether the given mode satisfies this predicate.
+    func matches(_ mode: EnergyMode) -> Bool {
+        switch self {
+        case .low: mode == .low
+        case .notLow: mode != .low
+        case .automatic: mode == .automatic
+        case .high: mode == .high
+        }
+    }
+
+    /// The predicates offered in the settings picker.
+    ///
+    /// ``high`` is dropped on Macs that don't offer High Power Mode, where
+    /// it could never be satisfied. An existing selection is not filtered
+    /// here — the editor keeps a trigger's own current value visible the
+    /// same way it does for a disabled feature flag.
+    static func selectableCases(highPowerModeSupported: Bool) -> [EnergyModeMatch] {
+        allCases.filter { $0 != .high || highPowerModeSupported }
+    }
+}
+
 // MARK: - ScheduleWeekday
 
 /// A calendar weekday, using the same numeric values as
@@ -114,7 +172,10 @@ enum TriggerCondition: Codable, Hashable {
     /// Location
     case nearLocation(latitude: Double, longitude: Double, radiusMeters: Double, label: String)
 
-    // System load
+    /// System load
+    case energyMode(EnergyModeMatch)
+    /// Legacy spelling of `.energyMode(.low)`, kept so triggers saved before
+    /// Energy Mode grew its Automatic and High Power options keep decoding.
     case lowPowerMode
     case thermalPressure(atLeast: ThermalLevel)
 
@@ -182,8 +243,10 @@ enum TriggerCondition: Codable, Hashable {
             let here = CLLocation(latitude: currentLat, longitude: currentLon)
             let target = CLLocation(latitude: latitude, longitude: longitude)
             return here.distance(from: target) <= radiusMeters
+        case let .energyMode(match):
+            return match.matches(state.energyMode)
         case .lowPowerMode:
-            return state.isLowPowerMode
+            return state.energyMode == .low
         case let .thermalPressure(level):
             return state.thermalState.rawValue >= level.rawValue
         case .cameraInUse:
@@ -247,8 +310,10 @@ enum TriggerCondition: Codable, Hashable {
         case let .nearLocation(_, _, radiusMeters, label):
             let place = label.isEmpty ? "a saved location" : "“\(label)”"
             return "Within \(Int(radiusMeters))m of \(place)"
+        case let .energyMode(match):
+            return match.summary
         case .lowPowerMode:
-            return "Low Power Mode is on"
+            return EnergyModeMatch.low.summary
         case let .thermalPressure(level):
             return "Thermal pressure is \(level.displayString.lowercased())"
         case .cameraInUse:
@@ -350,7 +415,7 @@ enum TriggerConditionKind: String, CaseIterable, Identifiable {
     case focusActive
     case focusModeNamed
     case nearLocation
-    case lowPowerMode
+    case energyMode
     case thermalPressure
     case cameraInUse
     case microphoneInUse
@@ -381,7 +446,7 @@ enum TriggerConditionKind: String, CaseIterable, Identifiable {
         case .focusActive: "Any Focus is active"
         case .focusModeNamed: "Focus mode is"
         case .nearLocation: "Near a location"
-        case .lowPowerMode: "Low Power Mode is on"
+        case .energyMode: "Energy Mode is"
         case .thermalPressure: "Thermal pressure"
         case .cameraInUse: "Camera is in use"
         case .microphoneInUse: "Microphone is in use"
@@ -416,16 +481,17 @@ enum TriggerConditionKind: String, CaseIterable, Identifiable {
         case .batteryBelow, .batteryAtOrAbove: .percentage
         case .frontmostApp, .appRunning: .appPicker
         case .wifiSSID: .text(prompt: "Network name")
-        case .bluetoothConnected: .text(prompt: "Device name")
+        case .bluetoothConnected: .bluetoothPicker
         case .audioOutput: .text(prompt: "Device name contains")
         case .focusModeNamed: .text(prompt: "Focus mode name (e.g. Work)")
         case .schedule: .timeRange
         case .nearLocation: .location
+        case .energyMode: .energyMode
         case .thermalPressure: .thermalLevel
         case .scriptResult: .script
         case .imageChanged: .imageComparison
         case .onACPower, .onBatteryPower, .charging, .networkConnected,
-             .vpnActive, .externalDisplay, .focusActive, .lowPowerMode,
+             .vpnActive, .externalDisplay, .focusActive,
              .cameraInUse, .microphoneInUse:
             .none
         }
@@ -449,7 +515,7 @@ enum TriggerConditionKind: String, CaseIterable, Identifiable {
         case .focusActive: .focusMode
         case .focusModeNamed: .focusMode
         case .nearLocation: .location
-        case .lowPowerMode: .lowPowerMode
+        case .energyMode: .energyMode
         case .thermalPressure: .thermalPressure
         case .cameraInUse: .recordingDevices
         case .microphoneInUse: .recordingDevices
@@ -467,6 +533,8 @@ enum TriggerConditionEditor: Equatable {
     case text(prompt: String)
     case timeRange
     case location
+    case bluetoothPicker
+    case energyMode
     case thermalLevel
     case script
     case imageComparison
@@ -495,7 +563,7 @@ extension TriggerCondition {
         case .focusActive: .focusActive
         case .focusMode: .focusModeNamed
         case .nearLocation: .nearLocation
-        case .lowPowerMode: .lowPowerMode
+        case .energyMode, .lowPowerMode: .energyMode
         case .thermalPressure: .thermalPressure
         case .cameraInUse: .cameraInUse
         case .microphoneInUse: .microphoneInUse
@@ -559,6 +627,15 @@ extension TriggerCondition {
         }
     }
 
+    /// The Energy Mode predicate, for the energy-mode condition.
+    var energyModeMatch: EnergyModeMatch? {
+        switch self {
+        case let .energyMode(match): match
+        case .lowPowerMode: .low
+        default: nil
+        }
+    }
+
     /// The thermal threshold, for the thermal-pressure condition.
     var thermalLevel: ThermalLevel? {
         switch self {
@@ -603,7 +680,7 @@ extension TriggerCondition {
         case .focusActive: .focusActive
         case .focusModeNamed: .focusMode(name: "")
         case .nearLocation: .nearLocation(latitude: 0, longitude: 0, radiusMeters: 150, label: "")
-        case .lowPowerMode: .lowPowerMode
+        case .energyMode: .energyMode(.low)
         case .thermalPressure: .thermalPressure(atLeast: .serious)
         case .cameraInUse: .cameraInUse
         case .microphoneInUse: .microphoneInUse
@@ -634,6 +711,7 @@ extension TriggerCondition {
             } else {
                 .weeklySchedule(startMinutes: 9 * 60, endMinutes: 17 * 60, weekdays: ScheduleWeekday.everyDay)
             }
+        case .energyMode: .energyMode(old.energyModeMatch ?? .low)
         case .thermalPressure: .thermalPressure(atLeast: old.thermalLevel ?? .serious)
         case .scriptResult:
             old.scriptValue.map { TriggerCondition.scriptResult(path: $0.path, expectedOutput: $0.expectedOutput) }
@@ -642,7 +720,7 @@ extension TriggerCondition {
             old.imageValue.map { TriggerCondition.imageChanged(itemIdentifier: $0.itemIdentifier, referenceHash: $0.referenceHash) }
                 ?? .imageChanged(itemIdentifier: "", referenceHash: nil)
         case .onACPower, .onBatteryPower, .charging, .networkConnected,
-             .vpnActive, .externalDisplay, .focusActive, .nearLocation, .lowPowerMode,
+             .vpnActive, .externalDisplay, .focusActive, .nearLocation,
              .cameraInUse, .microphoneInUse:
             defaultCondition(for: kind)
         }
@@ -725,6 +803,14 @@ extension TriggerCondition {
         return .imageChanged(itemIdentifier: itemIdentifier, referenceHash: referenceHash)
     }
 
+    /// Returns a copy with the Energy Mode predicate replaced.
+    func withEnergyMode(_ match: EnergyModeMatch) -> TriggerCondition {
+        switch self {
+        case .energyMode, .lowPowerMode: .energyMode(match)
+        default: self
+        }
+    }
+
     /// Returns a copy with the thermal threshold replaced.
     func withThermalLevel(_ level: ThermalLevel) -> TriggerCondition {
         switch self {
@@ -774,6 +860,10 @@ struct TriggerTargetItem: Codable, Hashable {
 enum TriggerCombinator: String, Codable, Hashable, CaseIterable, Identifiable {
     case all
     case any
+    /// Satisfied only when no condition is. Spelled `noneOf` rather than
+    /// `none` so it can never be confused with `Optional.none` at a use site;
+    /// the raw value stays `"none"` for readability in stored triggers.
+    case noneOf = "none"
 
     var id: String {
         rawValue
@@ -783,6 +873,16 @@ enum TriggerCombinator: String, Codable, Hashable, CaseIterable, Identifiable {
         switch self {
         case .all: "All of"
         case .any: "Any of"
+        case .noneOf: "None of"
+        }
+    }
+
+    /// Prefix for a joined multi-condition summary, where the joiner alone
+    /// would describe the wrong relationship.
+    var summaryPrefix: String {
+        switch self {
+        case .all, .any: ""
+        case .noneOf: "None of: "
         }
     }
 
@@ -790,7 +890,7 @@ enum TriggerCombinator: String, Codable, Hashable, CaseIterable, Identifiable {
     var joiner: String {
         switch self {
         case .all: " and "
-        case .any: " or "
+        case .any, .noneOf: " or "
         }
     }
 }
@@ -933,6 +1033,7 @@ struct MenuBarItemTrigger: Codable, Hashable, Identifiable {
         let satisfied: Bool = switch combinator {
         case .all: conditions.allSatisfy { $0.isSatisfied(state: state, now: now) }
         case .any: conditions.contains { $0.isSatisfied(state: state, now: now) }
+        case .noneOf: !conditions.contains { $0.isSatisfied(state: state, now: now) }
         }
         return invert ? !satisfied : satisfied
     }
@@ -940,8 +1041,11 @@ struct MenuBarItemTrigger: Codable, Hashable, Identifiable {
     /// A combined, human-readable summary of all conditions.
     var conditionSummary: String {
         let parts = allConditions.map(\.summary)
-        guard parts.count > 1 else { return parts.first ?? "" }
-        return parts.joined(separator: combinator.joiner)
+        guard parts.count > 1 else {
+            guard let only = parts.first else { return "" }
+            return combinator == .noneOf ? "Not: \(only)" : only
+        }
+        return combinator.summaryPrefix + parts.joined(separator: combinator.joiner)
     }
 
     /// A smart, auto-generated title combining the target item and the
