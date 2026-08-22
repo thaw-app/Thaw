@@ -421,7 +421,7 @@ struct TriggersSettingsPane: View {
     // MARK: Sections
 
     private var introSection: some View {
-        IceSection() {
+        IceSection {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Conditional Triggers")
                     .font(.headline)
@@ -436,7 +436,7 @@ struct TriggersSettingsPane: View {
     }
 
     private var emptyState: some View {
-        IceSection() {
+        IceSection {
             VStack(spacing: 6) {
                 Image(systemName: "bolt.badge.automatic")
                     .font(.title)
@@ -456,7 +456,7 @@ struct TriggersSettingsPane: View {
     }
 
     private var listDisplayControls: some View {
-        IceSection() {
+        IceSection {
             HStack(spacing: 12) {
                 Text("Trigger list")
                     .font(.headline)
@@ -665,7 +665,7 @@ private struct TriggerRow: View {
     }
 
     private var rowContent: some View {
-        IceSection() {
+        IceSection {
             VStack(alignment: .leading, spacing: 12) {
                 header
                 if !isCollapsed {

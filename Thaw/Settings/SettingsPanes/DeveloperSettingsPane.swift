@@ -71,7 +71,7 @@ struct DeveloperSettingsPane: View {
     // MARK: Intro
 
     private var introSection: some View {
-        IceSection() {
+        IceSection {
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
                     Text("Dev Mode Flags")
@@ -109,7 +109,7 @@ struct DeveloperSettingsPane: View {
     // MARK: Flags
 
     private var flagsSection: some View {
-        IceSection() {
+        IceSection {
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(Array(TriggerFeature.allCases.enumerated()), id: \.element.id) { index, feature in
                     if index > 0 {
