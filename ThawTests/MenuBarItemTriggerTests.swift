@@ -7,6 +7,7 @@
 //  Licensed under the GNU GPLv3
 
 @testable import Thaw
+import IOKit.ps
 import XCTest
 
 @MainActor
@@ -1275,5 +1276,101 @@ final class MenuBarItemTriggerTests: XCTestCase {
         let decoded = try JSONDecoder().decode(MenuBarItemTrigger.self, from: data)
         XCTAssertEqual(decoded, expected)
         XCTAssertFalse(decoded.invert)
+    }
+
+    // MARK: - Regression coverage for trigger integration
+
+    func testPresentIdentifierResolutionKeepsDuplicateTitleInstancesDistinct() {
+        let present: Set<String> = ["com.example:Status", "com.example:Status:1"]
+        let bases = [
+            "com.example:Status": "com.example:Status",
+            "com.example:Status:1": "com.example:Status",
+        ]
+
+        XCTAssertEqual(
+            MenuBarItemTriggersManager.resolvedPresentIdentifier(
+                for: "com.example:Status:1",
+                capturedBaseIdentifier: "com.example:Status",
+                presentIdentifiers: present,
+                presentIdentifierBases: bases
+            ),
+            "com.example:Status:1"
+        )
+        XCTAssertNil(
+            MenuBarItemTriggersManager.resolvedPresentIdentifier(
+                for: "com.example:Status:9",
+                capturedBaseIdentifier: "com.example:Status",
+                presentIdentifiers: present,
+                presentIdentifierBases: bases
+            ),
+            "a stale suffix must not guess between two same-title siblings"
+        )
+    }
+
+    func testSavedOrderFilterRemovesOnlyTheControlledSibling() {
+        let saved = [
+            "visible": ["com.example:Status", "com.example:Status:1", "com.example:Other"],
+        ]
+        let filtered = MenuBarItemManager.savedOrderExcludingTriggerControlledIdentifiers(
+            saved,
+            controlledIdentifiers: ["com.example:Status:1"],
+            knownBaseIdentifiers: ["com.example:Status", "com.example:Other"],
+            knownLiveIdentifiers: ["com.example:Status", "com.example:Status:1", "com.example:Other"]
+        )
+
+        XCTAssertEqual(filtered["visible"], ["com.example:Status", "com.example:Other"])
+    }
+
+    func testSwitchingBetweenDuplicateTitleInstancesReleasesTheOldSibling() {
+        let released = MenuBarItemManager.releasedTriggerIdentifiers(
+            previousIdentifiers: ["com.example:Status"],
+            currentIdentifiers: ["com.example:Status:1"],
+            knownBaseIdentifiers: ["com.example:Status"],
+            knownLiveIdentifiers: ["com.example:Status", "com.example:Status:1"]
+        )
+
+        XCTAssertEqual(released, ["com.example:Status"])
+    }
+
+    func testSingleLiveInstanceSuffixChangeRemainsContinuouslyControlled() {
+        let released = MenuBarItemManager.releasedTriggerIdentifiers(
+            previousIdentifiers: ["com.example:Status:1"],
+            currentIdentifiers: ["com.example:Status:2"],
+            knownBaseIdentifiers: ["com.example:Status"],
+            knownLiveIdentifiers: ["com.example:Status:2"]
+        )
+
+        XCTAssertTrue(released.isEmpty)
+    }
+
+    func testDesktopWithoutPowerSourcesDefaultsToAC() {
+        let power = PowerSourceMonitor.state(from: [])
+
+        XCTAssertTrue(power.isOnACPower)
+        XCTAssertNil(power.batteryPercentage)
+        XCTAssertFalse(power.isCharging)
+    }
+
+    func testInternalBatteryWinsOverLaterUPS() {
+        let internalBattery: [String: Any] = [
+            kIOPSTypeKey: kIOPSInternalBatteryType,
+            kIOPSMaxCapacityKey: 100,
+            kIOPSCurrentCapacityKey: 42,
+            kIOPSPowerSourceStateKey: kIOPSBatteryPowerValue,
+            kIOPSIsChargingKey: false,
+        ]
+        let ups: [String: Any] = [
+            kIOPSTypeKey: kIOPSUPSType,
+            kIOPSMaxCapacityKey: 100,
+            kIOPSCurrentCapacityKey: 99,
+            kIOPSPowerSourceStateKey: kIOPSACPowerValue,
+            kIOPSIsChargingKey: true,
+        ]
+
+        let power = PowerSourceMonitor.state(from: [internalBattery, ups])
+
+        XCTAssertEqual(power.batteryPercentage, 42)
+        XCTAssertFalse(power.isOnACPower)
+        XCTAssertFalse(power.isCharging)
     }
 }

@@ -64,6 +64,10 @@ private struct TriggerDropIndicator: Equatable {
     let placement: TriggerDropIndicatorPlacement
 }
 
+private extension UTType {
+    static let thawTriggerPriority = UTType(exportedAs: "com.stonerl.Thaw.trigger-priority")
+}
+
 private func clearTriggerEditorFocus(_ focusedField: FocusState<String?>.Binding) {
     focusedField.wrappedValue = nil
     DispatchQueue.main.async {
@@ -159,6 +163,7 @@ struct TriggersSettingsPane: View {
     @State private var bluetoothOptions: [TriggerBluetoothOption] = []
     @State private var draggedTriggerID: UUID?
     @State private var dropIndicator: TriggerDropIndicator?
+    @State private var dragCleanupTask: Task<Void, Never>?
     @State private var listDisplayMode: TriggerListDisplayMode = .expanded
     @State private var expandedCompactTriggerIDs = Set<UUID>()
 
@@ -180,7 +185,7 @@ struct TriggersSettingsPane: View {
             } else {
                 listDisplayControls
 
-                let conflicts = conflictingItemIdentifiers()
+                let conflicts = conflictingTriggerIDs()
                 let kinds = enabledKinds()
                 ForEach(Array(manager.triggers.enumerated()), id: \.element.id) { index, trigger in
                     let isCompactMode = listDisplayMode == .compact
@@ -196,7 +201,7 @@ struct TriggersSettingsPane: View {
                         advancedEnabled: flags.isEnabled(.advancedOptions),
                         conditionActive: allConditionsActive(trigger),
                         liveStatus: manager.runtimeStatus(for: trigger),
-                        hasConflict: trigger.allItemIdentifiers.contains { conflicts.contains($0) },
+                        hasConflict: conflicts.contains(trigger.id),
                         priorityNumber: index + 1,
                         canMoveUp: index > 0,
                         canMoveDown: index < manager.triggers.count - 1,
@@ -208,9 +213,7 @@ struct TriggersSettingsPane: View {
                         dropIndicatorPlacement: dropIndicator?.targetID == trigger.id ? dropIndicator?.placement : nil,
                         onToggleCollapsedExpansion: { toggleCompactExpansion(for: trigger.id) },
                         dragProvider: {
-                            draggedTriggerID = trigger.id
-                            dropIndicator = nil
-                            return NSItemProvider(object: trigger.id.uuidString as NSString)
+                            dragProvider(for: trigger.id)
                         },
                         currentCoordinate: { manager.systemMonitor.currentCoordinate },
                         captureReference: { await manager.captureReferenceHash(forItemIdentifier: $0) },
@@ -218,7 +221,7 @@ struct TriggersSettingsPane: View {
                         onDelete: { manager.remove(id: trigger.id) }
                     )
                     .onDrop(
-                        of: [.plainText],
+                        of: [.thawTriggerPriority],
                         delegate: TriggerPriorityDropDelegate(
                             targetID: trigger.id,
                             manager: manager,
@@ -244,6 +247,20 @@ struct TriggersSettingsPane: View {
         .onChange(of: flags.isEnabled(.bluetooth)) { _, _ in
             refreshBluetoothOptions()
         }
+        .onReceive(
+            NSWorkspace.shared.notificationCenter.publisher(
+                for: NSWorkspace.didLaunchApplicationNotification
+            )
+        ) { _ in
+            refreshAppOptions()
+        }
+        .onReceive(
+            NSWorkspace.shared.notificationCenter.publisher(
+                for: NSWorkspace.didTerminateApplicationNotification
+            )
+        ) { _ in
+            refreshAppOptions()
+        }
         .onChange(of: listDisplayMode) { _, newValue in
             if newValue == .expanded {
                 expandedCompactTriggerIDs.removeAll()
@@ -252,14 +269,51 @@ struct TriggersSettingsPane: View {
     }
 
     /// Item identifiers targeted by more than one enabled trigger.
-    private func conflictingItemIdentifiers() -> Set<String> {
-        var counts = [String: Int]()
+    private func conflictingTriggerIDs() -> Set<UUID> {
+        let presentIdentifiers = Set(itemOptions.map(\.id))
+        let presentIdentifierBases = Dictionary(
+            itemOptions.map { ($0.id, $0.baseIdentifier) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        var ownersByIdentifier = [String: Set<UUID>]()
         for trigger in manager.triggers where trigger.isEnabled {
-            for identifier in Set(trigger.allItemIdentifiers) {
-                counts[identifier, default: 0] += 1
+            var resolvedTargets = Set<String>()
+            for target in trigger.allTargetItems {
+                let resolved = MenuBarItemTriggersManager.resolvedPresentIdentifier(
+                    for: target.identifier,
+                    capturedBaseIdentifier: target.baseIdentifier,
+                    presentIdentifiers: presentIdentifiers,
+                    presentIdentifierBases: presentIdentifierBases
+                ) ?? target.identifier
+                if !resolved.isEmpty {
+                    resolvedTargets.insert(resolved)
+                }
+            }
+            for identifier in resolvedTargets {
+                ownersByIdentifier[identifier, default: []].insert(trigger.id)
             }
         }
-        return Set(counts.filter { $0.value > 1 }.keys)
+        return ownersByIdentifier.values
+            .filter { $0.count > 1 }
+            .reduce(into: Set<UUID>()) { result, ids in
+                result.formUnion(ids)
+            }
+    }
+
+    private func dragProvider(for triggerID: UUID) -> NSItemProvider {
+        draggedTriggerID = triggerID
+        dropIndicator = nil
+        dragCleanupTask?.cancel()
+        dragCleanupTask = Task { @MainActor in
+            while !Task.isCancelled, MouseHelpers.isButtonPressed() {
+                try? await Task.sleep(for: .milliseconds(100))
+            }
+            guard !Task.isCancelled, draggedTriggerID == triggerID else { return }
+            draggedTriggerID = nil
+            dropIndicator = nil
+        }
+        let data = Data(triggerID.uuidString.utf8) as NSData
+        return NSItemProvider(item: data, typeIdentifier: UTType.thawTriggerPriority.identifier)
     }
 
     private func triggerBinding(for id: UUID) -> Binding<MenuBarItemTrigger> {
@@ -461,17 +515,22 @@ private struct TriggerPriorityDropDelegate: DropDelegate {
     @Binding var draggedTriggerID: UUID?
     @Binding var dropIndicator: TriggerDropIndicator?
 
-    func dropEntered(info _: DropInfo) {
+    func dropEntered(info: DropInfo) {
+        guard info.hasItemsConforming(to: [.thawTriggerPriority]) else { return }
         guard let draggedTriggerID, draggedTriggerID != targetID else { return }
         updateDropIndicator(for: draggedTriggerID)
         manager.moveTrigger(id: draggedTriggerID, before: targetID)
     }
 
-    func dropUpdated(info _: DropInfo) -> DropProposal? {
-        DropProposal(operation: .move)
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        guard info.hasItemsConforming(to: [.thawTriggerPriority]) else {
+            return DropProposal(operation: .cancel)
+        }
+        return DropProposal(operation: .move)
     }
 
-    func performDrop(info _: DropInfo) -> Bool {
+    func performDrop(info: DropInfo) -> Bool {
+        guard info.hasItemsConforming(to: [.thawTriggerPriority]) else { return false }
         draggedTriggerID = nil
         dropIndicator = nil
         return true
@@ -626,11 +685,15 @@ private struct TriggerRow: View {
                         overriddenWarning(names: overriddenNames)
                     }
                     sectionPickers
-                    if invertEnabled {
+                    if invertEnabled || trigger.invert {
                         Toggle("Hide the item while the condition is met (invert)", isOn: $trigger.invert)
                             .toggleStyle(.switch)
                     }
-                    if advancedEnabled {
+                    if advancedEnabled
+                        || !trigger.additionalItems.isEmpty
+                        || trigger.notifyOnReveal
+                        || trigger.settleSecondsOverride != nil
+                    {
                         advancedOptions
                     }
                 }
@@ -820,12 +883,14 @@ private struct TriggerRow: View {
                     .buttonStyle(.borderless)
                 }
             }
-            Button {
-                trigger.additionalItems.append(TriggerTargetItem())
-            } label: {
-                Label("Also move another item", systemImage: "plus")
+            if advancedEnabled {
+                Button {
+                    trigger.additionalItems.append(TriggerTargetItem())
+                } label: {
+                    Label("Also move another item", systemImage: "plus")
+                }
+                .buttonStyle(.borderless)
             }
-            .buttonStyle(.borderless)
 
             Toggle("Notify when this reveals the item", isOn: $trigger.notifyOnReveal)
                 .toggleStyle(.switch)
@@ -1785,6 +1850,7 @@ private struct ImageConditionEditor: View {
                     Text(option.name).tag(option.id)
                 }
             }
+            .disabled(isCapturing)
 
             HStack(spacing: 12) {
                 Button(isCapturing ? "Capturing…" : "Capture Reference") { capture() }
@@ -1813,7 +1879,7 @@ private struct ImageConditionEditor: View {
         Task { @MainActor in
             let hash = await captureReference(id)
             isCapturing = false
-            if let hash {
+            if let hash, watchedID == id {
                 condition = condition.withImageReferenceHash(hash)
             }
         }

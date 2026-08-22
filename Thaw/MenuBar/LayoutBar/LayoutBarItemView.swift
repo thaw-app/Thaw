@@ -104,7 +104,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     /// The badge exists so the snap-back isn't a mystery.
     private var isTriggerControlled: Bool {
         appState?.settings.triggers.isControlledByTrigger(
-            baseIdentifier: effectiveItem.tag.stableIdentifierBase
+            identifier: effectiveItem.tag.tagIdentifier
         ) ?? false
     }
 
@@ -112,7 +112,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     /// `draw` uses the O(1) ``isTriggerControlled`` instead.
     private var controllingTrigger: MenuBarItemTrigger? {
         appState?.settings.triggers.controllingTrigger(
-            forBaseIdentifier: effectiveItem.tag.stableIdentifierBase
+            forIdentifier: effectiveItem.tag.tagIdentifier
         )
     }
 
@@ -204,7 +204,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
                 let changes = Observations { [weak self, weak appState] in
                     guard let self, let appState else { return false }
                     return appState.settings.triggers.isControlledByTrigger(
-                        baseIdentifier: self.effectiveItem.tag.stableIdentifierBase
+                        identifier: self.effectiveItem.tag.tagIdentifier
                     )
                 }
                 var previous: Bool?

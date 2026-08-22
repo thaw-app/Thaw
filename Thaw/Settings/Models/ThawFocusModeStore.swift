@@ -10,11 +10,11 @@ import Foundation
 
 /// Read-side view of the Focus mode requested by ``ThawFocusFilter``.
 ///
-/// Focus-mode triggers need the active app-defined Focus by *name*, which
-/// only exists as a profile id in defaults. Resolving it here keeps the
-/// lookup out of ``SystemStateMonitor``, which polls it.
+/// Profile-specific Focus Filter triggers need the requested Thaw profile by
+/// name. The Focus Filter API does not expose the enclosing macOS Focus's
+/// display name, so the UI deliberately describes this value as a profile.
 nonisolated enum ThawFocusModeStore {
-    /// The active app-defined Focus mode (the requested profile's name), or
+    /// The active Focus Filter's requested Thaw profile name, or
     /// `nil` when no Thaw Focus Filter is currently applied.
     static var activeMode: String? {
         guard

@@ -31,10 +31,14 @@ extension MenuBarItemManager {
         let knownBaseIdentifiers = Set(
             appState?.itemManager.itemCache.managedItems.map(\.tag.stableIdentifierBase) ?? []
         )
+        let knownLiveIdentifiers = Set(
+            appState?.itemManager.itemCache.managedItems.map(\.uniqueIdentifier) ?? []
+        )
         let releasedIdentifiers = Self.releasedTriggerIdentifiers(
             previousIdentifiers: triggerControlledItemIdentifiers,
             currentIdentifiers: identifiers,
-            knownBaseIdentifiers: knownBaseIdentifiers
+            knownBaseIdentifiers: knownBaseIdentifiers,
+            knownLiveIdentifiers: knownLiveIdentifiers
         )
         let identifiersRequiringRestoration = Self.triggerReleaseIdentifiersRequiringRestoration(
             releasedIdentifiers,
@@ -49,7 +53,8 @@ extension MenuBarItemManager {
             Self.releasedTriggerRestorationIdentifiersToClear(
                 reactivatedIdentifiers: identifiers,
                 pendingRestorationIdentifiers: triggerLayoutRestorationItemIdentifiers,
-                knownBaseIdentifiers: knownBaseIdentifiers
+                knownBaseIdentifiers: knownBaseIdentifiers,
+                knownLiveIdentifiers: knownLiveIdentifiers
             )
         )
         // An item with no saved position has no durable placement to restore.
@@ -77,7 +82,8 @@ extension MenuBarItemManager {
     static nonisolated func releasedTriggerIdentifiers(
         previousIdentifiers: Set<String>,
         currentIdentifiers: Set<String>,
-        knownBaseIdentifiers: Set<String>
+        knownBaseIdentifiers: Set<String>,
+        knownLiveIdentifiers: Set<String> = []
     ) -> Set<String> {
         let rawReleasedIdentifiers = previousIdentifiers.subtracting(currentIdentifiers)
         let continuouslyControlledIdentifiers = currentIdentifiers.reduce(into: Set<String>()) { result, identifier in
@@ -85,7 +91,8 @@ extension MenuBarItemManager {
                 triggerProtectionIdentifiers(
                     matching: identifier,
                     in: rawReleasedIdentifiers,
-                    knownBaseIdentifiers: knownBaseIdentifiers
+                    knownBaseIdentifiers: knownBaseIdentifiers,
+                    knownLiveIdentifiers: knownLiveIdentifiers
                 )
             )
         }
@@ -117,7 +124,8 @@ extension MenuBarItemManager {
     static nonisolated func triggerProtectionIdentifiers(
         matching liveIdentifier: String,
         in protectedIdentifiers: Set<String>,
-        knownBaseIdentifiers: Set<String> = []
+        knownBaseIdentifiers: Set<String> = [],
+        knownLiveIdentifiers: Set<String> = []
     ) -> Set<String> {
         if protectedIdentifiers.contains(liveIdentifier) {
             return [liveIdentifier]
@@ -134,19 +142,53 @@ extension MenuBarItemManager {
                 knownBaseIdentifiers: knownBaseIdentifiers
             ) == liveBaseID
         }
+        if !knownLiveIdentifiers.isEmpty {
+            let liveCandidates = knownLiveIdentifiers.filter { identifier in
+                MenuBarItemTag.resolvedBaseIdentifier(
+                    for: identifier,
+                    knownBaseIdentifiers: knownBaseIdentifiers
+                ) == liveBaseID
+            }
+            guard liveCandidates.count == 1 else { return [] }
+        }
         return baseMatches.count == 1 ? Set(baseMatches) : []
     }
 
     static nonisolated func isTriggerProtected(
         _ liveIdentifier: String,
         by protectedIdentifiers: Set<String>,
-        knownBaseIdentifiers: Set<String> = []
+        knownBaseIdentifiers: Set<String> = [],
+        knownLiveIdentifiers: Set<String> = []
     ) -> Bool {
         !triggerProtectionIdentifiers(
             matching: liveIdentifier,
             in: protectedIdentifiers,
-            knownBaseIdentifiers: knownBaseIdentifiers
+            knownBaseIdentifiers: knownBaseIdentifiers,
+            knownLiveIdentifiers: knownLiveIdentifiers
         ).isEmpty
+    }
+
+    /// Removes currently trigger-owned items from a desired saved order.
+    /// Their temporary section belongs to the trigger until release, so a
+    /// saved-layout apply must leave them untouched even when it is restoring
+    /// unrelated items in the same pass.
+    static nonisolated func savedOrderExcludingTriggerControlledIdentifiers(
+        _ savedOrder: [String: [String]],
+        controlledIdentifiers: Set<String>,
+        knownBaseIdentifiers: Set<String>,
+        knownLiveIdentifiers: Set<String>
+    ) -> [String: [String]] {
+        guard !controlledIdentifiers.isEmpty else { return savedOrder }
+        return savedOrder.mapValues { identifiers in
+            identifiers.filter {
+                !isTriggerProtected(
+                    $0,
+                    by: controlledIdentifiers,
+                    knownBaseIdentifiers: knownBaseIdentifiers,
+                    knownLiveIdentifiers: knownLiveIdentifiers
+                )
+            }
+        }
     }
 
     /// Identifies pending release shields superseded by a newly active
@@ -156,14 +198,16 @@ extension MenuBarItemManager {
     static nonisolated func releasedTriggerRestorationIdentifiersToClear(
         reactivatedIdentifiers: Set<String>,
         pendingRestorationIdentifiers: Set<String>,
-        knownBaseIdentifiers: Set<String> = []
+        knownBaseIdentifiers: Set<String> = [],
+        knownLiveIdentifiers: Set<String> = []
     ) -> Set<String> {
         reactivatedIdentifiers.reduce(into: Set<String>()) { result, identifier in
             result.formUnion(
                 triggerProtectionIdentifiers(
                     matching: identifier,
                     in: pendingRestorationIdentifiers,
-                    knownBaseIdentifiers: knownBaseIdentifiers
+                    knownBaseIdentifiers: knownBaseIdentifiers,
+                    knownLiveIdentifiers: knownLiveIdentifiers
                 )
             )
         }
@@ -226,9 +270,22 @@ extension MenuBarItemManager {
         requiredInputPause: Duration = .milliseconds(50),
         inputPauseTimeout: Duration? = nil,
         watchdogTimeout: Duration? = nil,
-        maxMoveAttempts: Int = 8
+        maxMoveAttempts: Int = 8,
+        hideCursorAcrossAttempts: Bool = true,
+        shouldProceed: (@MainActor () -> Bool)? = nil
     ) async -> TriggerMoveResult {
         guard let appState else { return .unavailable }
+        guard !isResettingLayout,
+              !isRestoringItemOrder,
+              !isApplyingProfileLayout,
+              !isBulkApplyInProgress
+        else {
+            MenuBarItemManager.diagLog.debug(
+                "moveItem(trigger): deferring \(tagIdentifier) while a bulk layout operation is active"
+            )
+            return .deferred
+        }
+        guard shouldProceed?() ?? true else { return .deferred }
 
         // Upstream has no `getMenuBarItemsDroppingSystemClones` wrapper;
         // drop transient WindowServer duplicates inline instead.
@@ -312,11 +369,20 @@ extension MenuBarItemManager {
                 to: destination,
                 on: displayID,
                 skipInputPause: requiredInputPause == .zero,
+                requiredInputPause: requiredInputPause,
+                inputPauseTimeout: inputPauseTimeout,
                 watchdogTimeout: watchdogTimeout,
-                maxMoveAttempts: maxMoveAttempts
+                maxMoveAttempts: maxMoveAttempts,
+                hideCursorAcrossAttempts: hideCursorAcrossAttempts,
+                shouldProceed: shouldProceed
             )
             MenuBarItemManager.diagLog.info("moveItem(trigger): moved \(target.logString) to \(resolvedSection.logString)")
             return .moved
+        } catch EventError.inputPauseTimedOut, EventError.moveSuperseded {
+            MenuBarItemManager.diagLog.debug(
+                "moveItem(trigger): deferred stale or input-busy move for \(target.logString)"
+            )
+            return .deferred
         } catch {
             MenuBarItemManager.diagLog.error(
                 "moveItem(trigger): failed to move to \(resolvedSection.logString) via \(destination.logString): \(target.logString); error=\(error)"

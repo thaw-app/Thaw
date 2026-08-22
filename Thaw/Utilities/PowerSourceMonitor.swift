@@ -129,33 +129,42 @@ final class PowerSourceMonitor: ObservableObject {
             return PowerState(batteryPercentage: nil, isOnACPower: true, isCharging: false)
         }
 
-        var batteryPercentage: Double?
-        var isOnACPower = false
-        var isCharging = false
-
-        for source in sources {
-            guard
-                let description = IOPSGetPowerSourceDescription(blob, source)?.takeUnretainedValue() as? [String: Any]
-            else {
-                continue
-            }
-
-            if
-                let maxCapacity = (description[kIOPSMaxCapacityKey] as? NSNumber)?.doubleValue,
-                let currentCapacity = (description[kIOPSCurrentCapacityKey] as? NSNumber)?.doubleValue,
-                maxCapacity > 0
-            {
-                batteryPercentage = (currentCapacity / maxCapacity) * 100
-            }
-
-            if let powerSourceState = description[kIOPSPowerSourceStateKey] as? String {
-                isOnACPower = powerSourceState == kIOPSACPowerValue
-            }
-
-            if let charging = description[kIOPSIsChargingKey] as? Bool {
-                isCharging = charging
-            }
+        let descriptions = sources.compactMap {
+            IOPSGetPowerSourceDescription(blob, $0)?.takeUnretainedValue() as? [String: Any]
         }
+        return state(from: descriptions)
+    }
+
+    /// Reduces an IOPS source list without mixing fields from different
+    /// devices. Prefer the Mac's internal battery; fall back to a UPS-like
+    /// capacity source only when no internal battery exists. An empty list is
+    /// the normal desktop-Mac case and therefore means AC, not battery.
+    static func state(from descriptions: [[String: Any]]) -> PowerState {
+        let preferred = descriptions.first {
+            ($0[kIOPSTypeKey] as? String) == kIOPSInternalBatteryType
+        } ?? descriptions.first { description in
+            guard
+                let maximum = (description[kIOPSMaxCapacityKey] as? NSNumber)?.doubleValue
+            else { return false }
+            return maximum > 0
+        }
+
+        let batteryPercentage: Double? = preferred.flatMap { description in
+            guard
+                let maximum = (description[kIOPSMaxCapacityKey] as? NSNumber)?.doubleValue,
+                let current = (description[kIOPSCurrentCapacityKey] as? NSNumber)?.doubleValue,
+                maximum > 0
+            else { return nil }
+            return min(100, max(0, (current / maximum) * 100))
+        }
+
+        let sourceState = preferred?[kIOPSPowerSourceStateKey] as? String
+        let anySourceReportsAC = descriptions.contains {
+            ($0[kIOPSPowerSourceStateKey] as? String) == kIOPSACPowerValue
+        }
+        let isOnACPower = sourceState.map { $0 == kIOPSACPowerValue }
+            ?? (descriptions.isEmpty || anySourceReportsAC)
+        let isCharging = (preferred?[kIOPSIsChargingKey] as? Bool) ?? false
 
         return PowerState(
             batteryPercentage: batteryPercentage,

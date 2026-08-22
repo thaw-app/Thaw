@@ -69,8 +69,9 @@ struct SystemState: Equatable {
     /// (best-effort).
     var isFocusActive: Bool
 
-    /// The active app-defined Focus mode name (from ``ThawFocusFilter``),
-    /// or `nil` when no Thaw Focus Filter is currently applied.
+    /// The active Thaw profile name requested by ``ThawFocusFilter``, or
+    /// `nil` when no Thaw Focus Filter is currently applied. macOS does not
+    /// expose the enclosing Focus's user-visible name through this API.
     var activeFocusModeName: String?
 
     /// The current latitude / longitude, when location updates are running.
@@ -186,6 +187,11 @@ final class SystemStateMonitor: ObservableObject {
 
     /// Poll timer for the sampled sources.
     private var pollTimer: Timer?
+
+    /// IOBluetooth's paired-device query is blocking and may wait behind a
+    /// TCC prompt. Keep it off the main actor and coalesce overlapping polls.
+    private var isRefreshingBluetooth = false
+    private var bluetoothRefreshPending = false
 
     /// Poll timer for app-running state, used as a fallback for missed
     /// workspace launch/terminate notifications.
@@ -457,6 +463,10 @@ final class SystemStateMonitor: ObservableObject {
 
     private func setNetworkMonitoring(_ enabled: Bool) {
         if enabled, pathMonitor == nil {
+            // NWPathMonitor's first callback is asynchronous. Seed the state
+            // before trigger setup evaluates it so an offline launch cannot
+            // briefly run the "connected" action.
+            update { $0.isNetworkConnected = Self.isNetworkReachable() }
             let monitor = NWPathMonitor()
             monitor.pathUpdateHandler = { [weak self] path in
                 let connected = path.status == .satisfied
@@ -491,11 +501,10 @@ final class SystemStateMonitor: ObservableObject {
         guard let flags else { return }
 
         let audio = flags.isEnabled(.audioOutput) ? Self.defaultAudioOutputDeviceName() : nil
-        let bluetooth = flags.isEnabled(.bluetooth) ? Self.connectedBluetoothDeviceNames() : []
         let vpn = flags.isEnabled(.vpn) ? Self.isVPNActive() : false
         let ssid = flags.isEnabled(.wifiSSID) ? Self.currentWiFiSSID() : nil
         let focus = flags.isEnabled(.focusMode) ? Self.isFocusActive() : false
-        // The Focus mode is the profile requested by Thaw's Focus Filter,
+        // This is the profile requested by Thaw's Focus Filter,
         // which the filter itself sets on activation and clears on
         // deactivation (see ThawFocusModeStore).
         let focusMode = flags.isEnabled(.focusMode) ? ThawFocusModeStore.activeMode : nil
@@ -503,9 +512,13 @@ final class SystemStateMonitor: ObservableObject {
         let cameraInUse = flags.isEnabled(.recordingDevices) ? Self.isCameraInUse() : false
         let micInUse = flags.isEnabled(.recordingDevices) ? Self.isMicrophoneInUse() : false
 
+        if flags.isEnabled(.bluetooth) {
+            refreshBluetoothState()
+        }
+
         update {
             if flags.isEnabled(.audioOutput) { $0.audioOutputDeviceName = audio }
-            if flags.isEnabled(.bluetooth) { $0.connectedBluetoothDeviceNames = bluetooth }
+            if !flags.isEnabled(.bluetooth) { $0.connectedBluetoothDeviceNames = [] }
             if flags.isEnabled(.vpn) { $0.isVPNActive = vpn }
             if flags.isEnabled(.wifiSSID) { $0.wifiSSID = ssid }
             if flags.isEnabled(.recordingDevices) {
@@ -523,6 +536,34 @@ final class SystemStateMonitor: ObservableObject {
         }
     }
 
+    private func refreshBluetoothState() {
+        guard flags?.isEnabled(.bluetooth) == true else {
+            update { $0.connectedBluetoothDeviceNames = [] }
+            return
+        }
+        if isRefreshingBluetooth {
+            bluetoothRefreshPending = true
+            return
+        }
+        isRefreshingBluetooth = true
+        bluetoothRefreshPending = false
+
+        Task { @MainActor [weak self] in
+            let names = await Task.detached(priority: .utility) {
+                Self.connectedBluetoothDeviceNames()
+            }.value
+            guard let self else { return }
+            self.isRefreshingBluetooth = false
+            if self.flags?.isEnabled(.bluetooth) == true {
+                self.update { $0.connectedBluetoothDeviceNames = names }
+            }
+            if self.bluetoothRefreshPending {
+                self.bluetoothRefreshPending = false
+                self.refreshBluetoothState()
+            }
+        }
+    }
+
     /// Samples sources directly for the Developer pane's live readout.
     ///
     /// Non-privacy-sensitive sources are always sampled so the readout shows
@@ -531,13 +572,21 @@ final class SystemStateMonitor: ObservableObject {
     /// so merely opening the Developer pane never triggers a Bluetooth or
     /// Location permission prompt for a feature the user hasn't opted into.
     @MainActor
-    static func fullSnapshot(flags: TriggerFeatureFlagsManager) -> SystemState {
+    static func fullSnapshot(flags: TriggerFeatureFlagsManager) async -> SystemState {
         let frontmost = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
         let running = Set(
             NSWorkspace.shared.runningApplications
                 .filter { $0.activationPolicy == .regular }
                 .compactMap(\.bundleIdentifier)
         )
+        let bluetoothNames: Set<String>
+        if flags.isEnabled(.bluetooth) {
+            bluetoothNames = await Task.detached(priority: .utility) {
+                Self.connectedBluetoothDeviceNames()
+            }.value
+        } else {
+            bluetoothNames = []
+        }
         return SystemState(
             power: PowerSourceMonitor.readCurrentState(),
             frontmostAppBundleID: frontmost,
@@ -545,7 +594,7 @@ final class SystemStateMonitor: ObservableObject {
             isNetworkConnected: isNetworkReachable(),
             isVPNActive: isVPNActive(),
             wifiSSID: flags.isEnabled(.wifiSSID) ? currentWiFiSSID() : nil,
-            connectedBluetoothDeviceNames: flags.isEnabled(.bluetooth) ? connectedBluetoothDeviceNames() : [],
+            connectedBluetoothDeviceNames: bluetoothNames,
             audioOutputDeviceName: defaultAudioOutputDeviceName(),
             screenCount: NSScreen.screens.count,
             externalDisplayConnected: hasExternalDisplay(),
@@ -636,7 +685,7 @@ final class SystemStateMonitor: ObservableObject {
     }
 
     /// Returns the names of all currently connected Bluetooth devices.
-    static func connectedBluetoothDeviceNames() -> Set<String> {
+    static nonisolated func connectedBluetoothDeviceNames() -> Set<String> {
         guard let devices = IOBluetoothDevice.pairedDevices() as? [IOBluetoothDevice] else {
             return []
         }
@@ -712,7 +761,9 @@ final class SystemStateMonitor: ObservableObject {
         }
 
         for device in devices {
-            // Only input-capable devices can be a microphone in use.
+            // Query the device's input stream IDs, then inspect each stream's
+            // direction-specific activity. DeviceIsRunningSomewhere is
+            // device-wide and reports speaker playback on duplex hardware.
             var streamsAddress = AudioObjectPropertyAddress(
                 mSelector: kAudioDevicePropertyStreams,
                 mScope: kAudioObjectPropertyScopeInput,
@@ -726,15 +777,35 @@ final class SystemStateMonitor: ObservableObject {
                 continue
             }
 
-            var runningAddress = AudioObjectPropertyAddress(
-                mSelector: kAudioDevicePropertyDeviceIsRunningSomewhere,
-                mScope: kAudioObjectPropertyScopeInput,
-                mElement: kAudioObjectPropertyElementMain
-            )
-            var isRunning: UInt32 = 0
-            var size = UInt32(MemoryLayout<UInt32>.size)
-            if AudioObjectGetPropertyData(device, &runningAddress, 0, nil, &size, &isRunning) == noErr, isRunning != 0 {
-                return true
+            let streamCount = Int(streamsSize) / MemoryLayout<AudioStreamID>.size
+            var streams = [AudioStreamID](repeating: 0, count: streamCount)
+            guard AudioObjectGetPropertyData(
+                device,
+                &streamsAddress,
+                0,
+                nil,
+                &streamsSize,
+                &streams
+            ) == noErr else { continue }
+
+            for stream in streams {
+                var activeAddress = AudioObjectPropertyAddress(
+                    mSelector: kAudioStreamPropertyIsActive,
+                    mScope: kAudioObjectPropertyScopeGlobal,
+                    mElement: kAudioObjectPropertyElementMain
+                )
+                var isActive: UInt32 = 0
+                var activeSize = UInt32(MemoryLayout<UInt32>.size)
+                if AudioObjectGetPropertyData(
+                    stream,
+                    &activeAddress,
+                    0,
+                    nil,
+                    &activeSize,
+                    &isActive
+                ) == noErr, isActive != 0 {
+                    return true
+                }
             }
         }
         return false

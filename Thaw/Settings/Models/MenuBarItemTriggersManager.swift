@@ -69,15 +69,29 @@ final class MenuBarItemTriggersManager {
             if persistenceEnabled {
                 persist()
             }
-            // A trigger may have been added, edited, or re-enabled; drop the
-            // memoized state so the next evaluation re-applies. (The actual
-            // move is still a no-op when the item is already in the right
-            // section, so this does not warp the cursor on no-op edits.)
-            lastAppliedReveal.removeAll()
-            lastAppliedItemIdentifiers.removeAll()
-            pendingMoveReveal.removeAll()
-            pendingMoveItemIdentifiers.removeAll()
-            runtimeStatuses.removeAll()
+            // Preserve applied state for surviving triggers. The next
+            // evaluation compares the complete action (decision + targets),
+            // so a meaningful edit still re-applies, while a name or
+            // unrelated-trigger edit cannot manufacture a new reveal
+            // transition or duplicate notification.
+            let liveIDs = Set(triggers.map(\.id))
+            lastAppliedReveal = lastAppliedReveal.filter { liveIDs.contains($0.key) }
+            lastAppliedItemIdentifiers = lastAppliedItemIdentifiers.filter { liveIDs.contains($0.key) }
+            pendingMoveReveal = pendingMoveReveal.filter { liveIDs.contains($0.key) }
+            pendingMoveItemIdentifiers = pendingMoveItemIdentifiers.filter { liveIDs.contains($0.key) }
+            runtimeStatuses = runtimeStatuses.filter { liveIDs.contains($0.key) }
+            let oldTriggersByID = Dictionary(
+                oldValue.map { ($0.id, $0) },
+                uniquingKeysWith: { first, _ in first }
+            )
+            let changedIDs = Set(triggers.compactMap { trigger in
+                oldTriggersByID[trigger.id] == trigger ? nil : trigger.id
+            })
+            for (id, task) in pendingApplyTasks where !liveIDs.contains(id) || changedIDs.contains(id) {
+                task.cancel()
+                pendingApplyTasks[id] = nil
+                pendingApplyActions[id] = nil
+            }
             runScriptsIfNeeded()
             refreshImageHashesIfNeeded()
             scheduleEvaluation()
@@ -87,8 +101,7 @@ final class MenuBarItemTriggersManager {
     /// Runtime apply/move status for each trigger, surfaced in the settings UI.
     private(set) var runtimeStatuses = [UUID: MenuBarItemTriggerRuntimeStatus]()
 
-    /// Every identifier spelling currently owned by an enabled, available
-    /// trigger: each target's exact identifier plus its captured base.
+    /// Exact live identifiers currently owned by enabled, available triggers.
     ///
     /// A stored property, deliberately: the layout editor's item views read
     /// it per item on every redraw and observe it for changes, and only a
@@ -126,6 +139,10 @@ final class MenuBarItemTriggersManager {
     /// item after the new state has held for the condition's settle interval.
     private var pendingApplyTasks = [UUID: Task<Void, Never>]()
 
+    /// The exact decision/targets each settle task is waiting to apply. An
+    /// unrelated SystemState publication must not restart an identical wait.
+    private var pendingApplyActions = [UUID: TriggerPriorityAction]()
+
     /// Fallback settle when a trigger has no condition-specific interval.
     private let fallbackSettleInterval: Duration = .seconds(1)
 
@@ -153,6 +170,7 @@ final class MenuBarItemTriggersManager {
 
     /// Guards against overlapping script-run passes.
     private var isRunningScripts = false
+    private var scriptsNeedRefresh = false
 
     /// Cached perceptual hashes of watched items for image-comparison
     /// conditions, keyed by tag identifier, injected into the system state.
@@ -160,6 +178,7 @@ final class MenuBarItemTriggersManager {
 
     /// Guards against overlapping image-capture passes.
     private var isRefreshingImages = false
+    private var imagesNeedRefresh = false
 
     /// Serializes all trigger-driven item moves. Each batch awaits the
     /// previous one so synthetic-drag moves never overlap — overlapping
@@ -375,6 +394,7 @@ final class MenuBarItemTriggersManager {
         runtimeStatuses[id] = nil
         pendingApplyTasks[id]?.cancel()
         pendingApplyTasks[id] = nil
+        pendingApplyActions[id] = nil
     }
 
     /// Removes the triggers at the given offsets.
@@ -389,6 +409,7 @@ final class MenuBarItemTriggersManager {
             runtimeStatuses[id] = nil
             pendingApplyTasks[id]?.cancel()
             pendingApplyTasks[id] = nil
+            pendingApplyActions[id] = nil
         }
     }
 
@@ -458,6 +479,7 @@ final class MenuBarItemTriggersManager {
         for (id, task) in pendingApplyTasks where !liveIDs.contains(id) {
             task.cancel()
             pendingApplyTasks[id] = nil
+            pendingApplyActions[id] = nil
         }
 
         let presentItems = appState.itemManager.itemCache.managedItems
@@ -477,6 +499,9 @@ final class MenuBarItemTriggersManager {
         // trigger actions. This includes both reveal and hide actions, and
         // naturally handles partial multi-item ownership.
         let triggerControlledIdentifiers = Set(plan.actions.values.flatMap(\.identifiers))
+        if controlledBaseIdentifiers != triggerControlledIdentifiers {
+            controlledBaseIdentifiers = triggerControlledIdentifiers
+        }
         appState.itemManager.setTriggerControlledItemIdentifiers(triggerControlledIdentifiers)
 
         for trigger in triggers where trigger.isEnabled {
@@ -504,6 +529,7 @@ final class MenuBarItemTriggersManager {
             {
                 pendingApplyTasks[trigger.id]?.cancel()
                 pendingApplyTasks[trigger.id] = nil
+                pendingApplyActions[trigger.id] = nil
                 setRuntimeStatus(action.reveal ? .active : .idle, for: trigger.id)
                 continue
             }
@@ -511,6 +537,7 @@ final class MenuBarItemTriggersManager {
             if pendingActionMatches(action, for: trigger.id) {
                 pendingApplyTasks[trigger.id]?.cancel()
                 pendingApplyTasks[trigger.id] = nil
+                pendingApplyActions[trigger.id] = nil
                 setRuntimeStatus(.moving, for: trigger.id)
                 continue
             }
@@ -522,14 +549,15 @@ final class MenuBarItemTriggersManager {
 
             if force {
                 if shouldDebounceForcedApply(trigger) {
-                    scheduleDebouncedApply(for: trigger.id)
+                    scheduleDebouncedApply(for: trigger.id, action: action)
                 } else {
                     pendingApplyTasks[trigger.id]?.cancel()
                     pendingApplyTasks[trigger.id] = nil
+                    pendingApplyActions[trigger.id] = nil
                     apply(trigger, action: action)
                 }
             } else {
-                scheduleDebouncedApply(for: trigger.id)
+                scheduleDebouncedApply(for: trigger.id, action: action)
             }
         }
     }
@@ -549,12 +577,23 @@ final class MenuBarItemTriggersManager {
     /// change handler, and the initializer (property observers don't run for
     /// an init assignment).
     private func refreshControlledIdentifiers() {
+        let presentItems = appState?.itemManager.itemCache.managedItems ?? []
+        let presentIdentifiers = Set(presentItems.map(\.tag.tagIdentifier))
+        let presentIdentifierBases = Dictionary(
+            presentItems.map { ($0.tag.tagIdentifier, $0.tag.stableIdentifierBase) },
+            uniquingKeysWith: { first, _ in first }
+        )
         var identifiers = Set<String>()
         for trigger in triggers where trigger.isEnabled && isAvailable(trigger) {
             for target in trigger.allTargetItems where !target.identifier.isEmpty {
-                // Store the base, since that is what a live tag resolves to.
-                identifiers.insert(target.baseIdentifier ?? target.identifier)
-                identifiers.insert(target.identifier)
+                if let resolved = Self.resolvedPresentIdentifier(
+                    for: target.identifier,
+                    capturedBaseIdentifier: target.baseIdentifier,
+                    presentIdentifiers: presentIdentifiers,
+                    presentIdentifierBases: presentIdentifierBases
+                ) {
+                    identifiers.insert(resolved)
+                }
             }
         }
         if identifiers != controlledBaseIdentifiers {
@@ -571,18 +610,15 @@ final class MenuBarItemTriggersManager {
     /// owned by the plan but invisible here. The loop runs over the (small)
     /// controlled set, not the item list, so per-draw cost stays bounded by
     /// the user's trigger count.
+    func isControlledByTrigger(identifier: String) -> Bool {
+        !identifier.isEmpty && controlledBaseIdentifiers.contains(identifier)
+    }
+
+    /// Base-only compatibility query used by model-level diagnostics/tests.
+    /// Item views must use the exact-identifier overload above because a base
+    /// cannot distinguish same-title siblings.
     func isControlledByTrigger(baseIdentifier: String) -> Bool {
-        guard !baseIdentifier.isEmpty else { return false }
-        if controlledBaseIdentifiers.contains(baseIdentifier) {
-            return true
-        }
-        let knownBases: Set<String> = [baseIdentifier]
-        return controlledBaseIdentifiers.contains { identifier in
-            MenuBarItemTag.resolvedBaseIdentifier(
-                for: identifier,
-                knownBaseIdentifiers: knownBases
-            ) == baseIdentifier
-        }
+        controllingTrigger(forBaseIdentifier: baseIdentifier) != nil
     }
 
     /// The enabled trigger that currently owns the given item's placement,
@@ -597,17 +633,36 @@ final class MenuBarItemTriggersManager {
     ///
     /// Returns the first match in priority order, which is the trigger the
     /// priority plan resolves in favour of.
+    func controllingTrigger(forIdentifier identifier: String) -> MenuBarItemTrigger? {
+        guard !identifier.isEmpty else { return nil }
+        let presentItems = appState?.itemManager.itemCache.managedItems ?? []
+        let presentIdentifiers = Set(presentItems.map(\.tag.tagIdentifier))
+        let presentIdentifierBases = Dictionary(
+            presentItems.map { ($0.tag.tagIdentifier, $0.tag.stableIdentifierBase) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        return triggers.first { trigger in
+            guard trigger.isEnabled, isAvailable(trigger) else { return false }
+            return trigger.allTargetItems.contains { target in
+                guard !target.identifier.isEmpty else { return false }
+                return Self.resolvedPresentIdentifier(
+                    for: target.identifier,
+                    capturedBaseIdentifier: target.baseIdentifier,
+                    presentIdentifiers: presentIdentifiers,
+                    presentIdentifierBases: presentIdentifierBases
+                ) == identifier
+            }
+        }
+    }
+
+    /// Base-only compatibility query. Do not use for a concrete live item.
     func controllingTrigger(forBaseIdentifier baseIdentifier: String) -> MenuBarItemTrigger? {
         guard !baseIdentifier.isEmpty else { return nil }
         let knownBases: Set<String> = [baseIdentifier]
         return triggers.first { trigger in
             guard trigger.isEnabled, isAvailable(trigger) else { return false }
             return trigger.allTargetItems.contains { target in
-                guard !target.identifier.isEmpty else { return false }
-                // Same predicate as ``isControlledByTrigger``: exact
-                // identifier, captured base, or a stale `:N` instance suffix
-                // the shared resolver can safely strip against the live base.
-                return target.identifier == baseIdentifier
+                target.identifier == baseIdentifier
                     || target.baseIdentifier == baseIdentifier
                     || MenuBarItemTag.resolvedBaseIdentifier(
                         for: target.identifier,
@@ -632,7 +687,7 @@ final class MenuBarItemTriggersManager {
 
             var presentTargets = [String]()
             for target in trigger.allTargetItems where !target.identifier.isEmpty {
-                guard let resolvedIdentifier = resolvedPresentIdentifier(
+                guard let resolvedIdentifier = Self.resolvedPresentIdentifier(
                     for: target.identifier,
                     capturedBaseIdentifier: target.baseIdentifier,
                     presentIdentifiers: presentIdentifiers,
@@ -683,7 +738,7 @@ final class MenuBarItemTriggersManager {
         return plan
     }
 
-    private func resolvedPresentIdentifier(
+    static nonisolated func resolvedPresentIdentifier(
         for configuredIdentifier: String,
         capturedBaseIdentifier: String?,
         presentIdentifiers: Set<String>,
@@ -706,10 +761,17 @@ final class MenuBarItemTriggersManager {
     /// The settle interval is per-condition (long for battery thresholds,
     /// short for discrete sources) so app/network/focus triggers stay
     /// responsive.
-    private func scheduleDebouncedApply(for triggerID: UUID) {
+    private func scheduleDebouncedApply(for triggerID: UUID, action: TriggerPriorityAction) {
+        if pendingApplyTasks[triggerID] != nil,
+           pendingApplyActions[triggerID] == action
+        {
+            setRuntimeStatus(.settling, for: triggerID)
+            return
+        }
         let replacedPendingApply = pendingApplyTasks[triggerID] != nil
         pendingApplyTasks[triggerID]?.cancel()
         pendingApplyTasks[triggerID] = nil
+        pendingApplyActions[triggerID] = nil
         guard let queuedTrigger = triggers.first(where: { $0.id == triggerID }) else { return }
 
         let settle = settleInterval(for: queuedTrigger)
@@ -719,10 +781,12 @@ final class MenuBarItemTriggersManager {
         diagLog.debug(
             "Trigger \(queuedTrigger.displayName) \(replaceText)queued pending apply for \(formattedDuration(settle))"
         )
+        pendingApplyActions[triggerID] = action
         pendingApplyTasks[triggerID] = Task { @MainActor [weak self] in
             try? await Task.sleep(for: settle)
             guard !Task.isCancelled, let self else { return }
             self.pendingApplyTasks[triggerID] = nil
+            self.pendingApplyActions[triggerID] = nil
 
             guard
                 let trigger = self.triggers.first(where: { $0.id == triggerID }),
@@ -749,6 +813,9 @@ final class MenuBarItemTriggersManager {
                 presentIdentifierBases: presentIdentifierBases
             )
             let triggerControlledIdentifiers = Set(plan.actions.values.flatMap(\.identifiers))
+            if self.controlledBaseIdentifiers != triggerControlledIdentifiers {
+                self.controlledBaseIdentifiers = triggerControlledIdentifiers
+            }
             self.appState?.itemManager.setTriggerControlledItemIdentifiers(triggerControlledIdentifiers)
             guard let action = plan.actions[triggerID] else {
                 self.clearApplyState(for: triggerID)
@@ -798,21 +865,9 @@ final class MenuBarItemTriggersManager {
             return
         }
 
-        let wasRevealed = lastAppliedReveal[trigger.id] == true || pendingMoveReveal[trigger.id] == true
         pendingMoveReveal[trigger.id] = action.reveal
         pendingMoveItemIdentifiers[trigger.id] = Set(targets)
         setRuntimeStatus(.moving, for: trigger.id)
-
-        // Notify on the transition into the revealed state.
-        if action.reveal, !wasRevealed, trigger.notifyOnReveal {
-            let itemName = trigger.itemDisplayName.isEmpty ? "an item" : trigger.itemDisplayName
-            appState.userNotificationManager.requestAuthorization()
-            appState.userNotificationManager.addRequest(
-                with: .triggerFired,
-                title: trigger.displayName,
-                body: "Revealed \(itemName)."
-            )
-        }
 
         let section = action.reveal ? trigger.revealSection : trigger.hideSection
         diagLog.debug("Trigger \(trigger.displayName) reveal=\(action.reveal); moving \(targets.count) item(s) to \(section.logString)")
@@ -902,6 +957,7 @@ final class MenuBarItemTriggersManager {
                 return
             }
             let options = self.moveOptions(for: trigger)
+            var movedAnyItem = false
             self.diagLog.debug(
                 "Starting trigger move batch for \(trigger.displayName) after queue wait "
                     + "\(self.formattedElapsed(since: queuedAt))"
@@ -919,8 +975,9 @@ final class MenuBarItemTriggersManager {
                     return
                 }
                 let itemMoveStartedAt = Date()
-                // The current `move` exposes no `shouldProceed` hook, so the
-                // supersede check runs once here instead of per attempt.
+                // Revalidate both here and inside every move attempt. The
+                // outer check avoids entering the engine for stale work; the
+                // callback stops work that becomes stale while it is waiting.
                 guard self.queuedMoveIsCurrent(for: trigger, action: action) else {
                     self.clearPendingMove(for: trigger.id)
                     self.refreshRuntimeStatus(for: trigger.id)
@@ -932,10 +989,32 @@ final class MenuBarItemTriggersManager {
                     requiredInputPause: options.requiredInputPause,
                     inputPauseTimeout: options.inputPauseTimeout,
                     watchdogTimeout: options.watchdogTimeout,
-                    maxMoveAttempts: options.maxMoveAttempts
+                    maxMoveAttempts: options.maxMoveAttempts,
+                    hideCursorAcrossAttempts: options.hideCursorAcrossAttempts,
+                    shouldProceed: { [weak self] in
+                        self?.queuedMoveIsCurrent(for: trigger, action: action) == true
+                    }
                 )
+                guard self.queuedMoveIsCurrent(for: trigger, action: action) else {
+                    self.diagLog.debug(
+                        "Stopping superseded trigger move for \(trigger.displayName) after "
+                            + "\(self.formattedElapsed(since: itemMoveStartedAt))"
+                    )
+                    if self.pendingActionMatches(action, for: trigger.id) {
+                        self.clearPendingMove(for: trigger.id)
+                    }
+                    self.refreshRuntimeStatus(for: trigger.id)
+                    return
+                }
                 switch result {
-                case .moved, .alreadyInSection:
+                case .moved:
+                    movedAnyItem = true
+                    self.diagLog.debug(
+                        "Trigger \(trigger.displayName) move for \(identifier) finished with \(result) in "
+                            + "\(self.formattedElapsed(since: itemMoveStartedAt))"
+                    )
+                    continue
+                case .alreadyInSection:
                     self.diagLog.debug(
                         "Trigger \(trigger.displayName) move for \(identifier) finished with \(result) in "
                             + "\(self.formattedElapsed(since: itemMoveStartedAt))"
@@ -971,13 +1050,42 @@ final class MenuBarItemTriggersManager {
                 "Finished trigger move batch for \(trigger.displayName) in "
                     + "\(self.formattedElapsed(since: batchStartedAt))"
             )
+            self.notifyRevealIfNeeded(
+                for: trigger,
+                action: action,
+                movedAnyItem: movedAnyItem
+            )
             self.finishPendingMove(for: trigger, action: action, applied: true, retry: false)
         }
     }
 
+    /// Posts a reveal notification only after a physical move has completed.
+    /// An already-visible item, a deferred move, or a failed move is not a
+    /// reveal transition and must not tell the user that it was moved.
+    private func notifyRevealIfNeeded(
+        for trigger: MenuBarItemTrigger,
+        action: TriggerPriorityAction,
+        movedAnyItem: Bool
+    ) {
+        guard action.reveal,
+              movedAnyItem,
+              trigger.notifyOnReveal,
+              lastAppliedReveal[trigger.id] != true,
+              let appState
+        else { return }
+
+        let itemName = trigger.itemDisplayName.isEmpty ? "an item" : trigger.itemDisplayName
+        appState.userNotificationManager.requestAuthorization()
+        appState.userNotificationManager.addRequest(
+            with: .triggerFired,
+            title: trigger.displayName,
+            body: "Revealed \(itemName)."
+        )
+    }
+
     private func settleInterval(for trigger: MenuBarItemTrigger) -> Duration {
-        if let override = trigger.settleSecondsOverride, override > 0 {
-            return .seconds(override)
+        if let override = trigger.settleSecondsOverride {
+            return .seconds(max(0, override))
         }
         // Use the most conservative (longest) settle across all conditions so
         // a jittery source (e.g. battery) still absorbs flapping.
@@ -1078,6 +1186,7 @@ final class MenuBarItemTriggersManager {
     private func clearApplyState(for triggerID: UUID) {
         pendingApplyTasks[triggerID]?.cancel()
         pendingApplyTasks[triggerID] = nil
+        pendingApplyActions[triggerID] = nil
         clearPendingMove(for: triggerID)
         lastAppliedReveal[triggerID] = nil
         lastAppliedItemIdentifiers[triggerID] = nil
@@ -1102,7 +1211,12 @@ final class MenuBarItemTriggersManager {
     /// condition (when the feature is on), updating cached outcomes and
     /// re-evaluating when any result changes.
     private func runScriptsIfNeeded() {
-        guard featureFlags.isEnabled(.scriptResult), !isRunningScripts else { return }
+        guard featureFlags.isEnabled(.scriptResult) else { return }
+        if isRunningScripts {
+            scriptsNeedRefresh = true
+            return
+        }
+        scriptsNeedRefresh = false
 
         // Collect distinct, non-empty script paths in use by enabled triggers.
         var expectedOutputsByPath = [String: Set<String>]()
@@ -1135,7 +1249,6 @@ final class MenuBarItemTriggersManager {
         isRunningScripts = true
         Task { @MainActor [weak self] in
             guard let self else { return }
-            defer { self.isRunningScripts = false }
 
             var changed = removedAny
             for path in paths {
@@ -1150,6 +1263,12 @@ final class MenuBarItemTriggersManager {
                 }
             }
 
+            self.isRunningScripts = false
+            if self.scriptsNeedRefresh {
+                self.scriptsNeedRefresh = false
+                self.runScriptsIfNeeded()
+                return
+            }
             if changed {
                 self.evaluate(for: self.evaluationState, force: false)
             }
@@ -1162,7 +1281,12 @@ final class MenuBarItemTriggersManager {
     /// enabled image-comparison condition (when the feature is on), updating
     /// the cache and re-evaluating when any hash changes.
     private func refreshImageHashesIfNeeded() {
-        guard featureFlags.isEnabled(.imageComparison), !isRefreshingImages else { return }
+        guard featureFlags.isEnabled(.imageComparison) else { return }
+        if isRefreshingImages {
+            imagesNeedRefresh = true
+            return
+        }
+        imagesNeedRefresh = false
 
         var ids = Set<String>()
         for trigger in triggers where trigger.isEnabled {
@@ -1189,7 +1313,6 @@ final class MenuBarItemTriggersManager {
         isRefreshingImages = true
         Task { @MainActor [weak self] in
             guard let self else { return }
-            defer { self.isRefreshingImages = false }
 
             var changed = removedAny
             for id in ids {
@@ -1204,6 +1327,12 @@ final class MenuBarItemTriggersManager {
                     self.imageHashes[id] = hash
                     changed = true
                 }
+            }
+            self.isRefreshingImages = false
+            if self.imagesNeedRefresh {
+                self.imagesNeedRefresh = false
+                self.refreshImageHashesIfNeeded()
+                return
             }
             if changed {
                 self.evaluate(for: self.evaluationState, force: false)

@@ -648,8 +648,12 @@ extension MenuBarItemManager {
         to destination: MoveDestination,
         on displayID: CGDirectDisplayID? = nil,
         skipInputPause: Bool = false,
+        requiredInputPause: Duration? = nil,
+        inputPauseTimeout: Duration? = nil,
         watchdogTimeout: Duration? = nil,
-        maxMoveAttempts: Int = 8
+        maxMoveAttempts: Int = 8,
+        hideCursorAcrossAttempts: Bool = true,
+        shouldProceed: (@MainActor () -> Bool)? = nil
     ) async throws {
         // System clone windows are transient WindowServer duplicates that
         // must never be moved. Refuse here as a final safety net so no
@@ -674,12 +678,18 @@ extension MenuBarItemManager {
             MenuBarItemManager.diagLog.error("move: no appState; cannot move \(item.logString)")
             throw EventError.cannotComplete
         }
+        guard shouldProceed?() ?? true else {
+            throw EventError.moveSuperseded(item)
+        }
 
         // Never drag an item while a menu bar item menu is tracking — a synthetic
         // Cmd-drag tears down the user's interaction (Wi-Fi picker, input methods).
         // Wait briefly for the menu to close; if it stays open, give up this attempt.
         var menuWaitAttempts = 0
         while await isAnyMenuBarItemMenuOpen() {
+            guard shouldProceed?() ?? true else {
+                throw EventError.moveSuperseded(item)
+            }
             menuWaitAttempts += 1
             if menuWaitAttempts > 20 { // ~5s at 250ms steps
                 MenuBarItemManager.diagLog.warning("move: menu still open after wait; deferring move of \(item.logString)")
@@ -710,7 +720,22 @@ extension MenuBarItemManager {
         }
 
         if !skipInputPause {
-            try await waitForUserToPauseInput()
+            let inputPauseResult = try await waitForUserToPauseInput(
+                for: requiredInputPause,
+                timeout: inputPauseTimeout,
+                shouldContinue: shouldProceed
+            )
+            switch inputPauseResult {
+            case .paused:
+                break
+            case .timedOut:
+                throw EventError.inputPauseTimedOut(item)
+            case .superseded:
+                throw EventError.moveSuperseded(item)
+            }
+        }
+        guard shouldProceed?() ?? true else {
+            throw EventError.moveSuperseded(item)
         }
         appState.hidEventManager.stopAll()
         defer {
@@ -735,7 +760,7 @@ extension MenuBarItemManager {
         // back to it a single time after all attempts, rather than after each
         // individual attempt (which caused the cursor to oscillate many times
         // during a layout reset when items required multiple attempts).
-        let mouseLocation = try getMouseLocation()
+        let mouseLocation = hideCursorAcrossAttempts ? try getMouseLocation() : nil
         // The default 1 s cursor-hide watchdog is too short for menu
         // bar item moves: each item can take up to ~4 s across retries
         // (8 attempts × ~500 ms timeout), and during a full layout pass
@@ -745,10 +770,14 @@ extension MenuBarItemManager {
         // override below in postMoveEvents) and the user sees a brief
         // cursor flash. 10 s is long enough to cover any single move
         // without giving up the safety net for genuinely stuck states.
-        MouseHelpers.hideCursor(watchdogTimeout: watchdogTimeout ?? .seconds(10))
+        if hideCursorAcrossAttempts {
+            MouseHelpers.hideCursor(watchdogTimeout: watchdogTimeout ?? .seconds(10))
+        }
         defer {
-            MouseHelpers.restoreCursorPosition(to: mouseLocation)
-            MouseHelpers.showCursor()
+            if let mouseLocation {
+                MouseHelpers.restoreCursorPosition(to: mouseLocation)
+                MouseHelpers.showCursor()
+            }
         }
 
         // Tracks whether any postMoveEvents attempt produced observable
@@ -771,9 +800,20 @@ extension MenuBarItemManager {
 
         let maxAttempts = max(1, maxMoveAttempts)
         for n in 1 ... maxAttempts {
+            var attemptMouseLocation: CGPoint?
+            defer {
+                if let attemptMouseLocation {
+                    MouseHelpers.restoreCursorPosition(to: attemptMouseLocation)
+                    MouseHelpers.showCursor()
+                }
+            }
             guard !Task.isCancelled else {
                 MenuBarItemManager.diagLog.debug("move: cancelled before attempt \(n) for \(item.logString)")
                 throw EventError.cannotComplete
+            }
+            guard shouldProceed?() ?? true else {
+                MenuBarItemManager.diagLog.debug("move: superseded before attempt \(n) for \(item.logString)")
+                throw EventError.moveSuperseded(item)
             }
             do {
                 if try await itemHasCorrectPosition(item: item, for: destination, on: resolvedDisplayID) {
@@ -789,6 +829,10 @@ extension MenuBarItemManager {
                     MenuBarItemManager.diagLog.debug(
                         "Position match without observable displacement on attempt \(n); treating as false positive on a zero-width control item and retrying"
                     )
+                }
+                if !hideCursorAcrossAttempts {
+                    attemptMouseLocation = try getMouseLocation()
+                    MouseHelpers.hideCursor(watchdogTimeout: watchdogTimeout ?? .seconds(2))
                 }
                 let attemptTimeout = try await postMoveEvents(
                     item: item,
@@ -875,6 +919,9 @@ extension MenuBarItemManager {
                 }
                 MenuBarItemManager.diagLog.debug("Attempt \(n) events succeeded but item not at destination, retrying")
                 if n < maxAttempts {
+                    guard shouldProceed?() ?? true else {
+                        throw EventError.moveSuperseded(item)
+                    }
                     try await waitForMoveOperationBuffer()
                     continue
                 }
@@ -908,6 +955,12 @@ extension MenuBarItemManager {
                 // the item's owner did nothing wrong, so no failure is filed
                 // against it.
                 if case EventError.staleDestination = error {
+                    throw error
+                }
+                if case EventError.moveSuperseded = error {
+                    throw error
+                }
+                if case EventError.inputPauseTimedOut = error {
                     throw error
                 }
                 // An owner with a standing record of ignoring synthetic events

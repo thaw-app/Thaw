@@ -483,12 +483,20 @@ final class MenuBarItemManager {
     /// not complete".
     private var consecutiveUnfinishedBulkApplies = 0
 
+    /// Monotonic marker and result for the most recently completed bulk
+    /// apply. Trigger release restoration uses the generation to distinguish
+    /// a real completed apply from an early-returned apply request.
+    private(set) var bulkApplyOutcomeGeneration = 0
+    private(set) var lastBulkApplyUnenactedMoveCount: Int?
+
     /// Records how a bulk apply ended, for the saveSectionOrder gate.
     ///
     /// A clean batch clears the arm rather than leaving it to expire: the
     /// bar now matches what the apply set out to produce, and there is no
     /// reason to keep withholding it from the saved order.
     func recordBulkApplyOutcome(unenactedMoveCount: Int) {
+        bulkApplyOutcomeGeneration += 1
+        lastBulkApplyUnenactedMoveCount = unenactedMoveCount
         guard unenactedMoveCount > 0 else {
             unfinishedMoveBatchObservedAt = nil
             consecutiveUnfinishedBulkApplies = 0
@@ -976,6 +984,25 @@ final class MenuBarItemManager {
             pendingRelocations: pendingRelocations,
             waitForRelaunchPrefix: Self.waitForRelaunchPrefix
         )
+        let knownBaseIdentifiers = Set(cache.managedItems.map(\.tag.stableIdentifierBase))
+        let knownLiveIdentifiers = Set(cache.managedItems.map(\.uniqueIdentifier))
+        let triggerProtectedIdentifiers = triggerControlledItemIdentifiers
+            .union(triggerLayoutRestorationItemIdentifiers)
+        let triggerProtectedBaseIdentifiers = Set(triggerProtectedIdentifiers.compactMap {
+            MenuBarItemTag.resolvedBaseIdentifier(
+                for: $0,
+                knownBaseIdentifiers: knownBaseIdentifiers
+            )
+        })
+
+        func isTriggerProtected(_ item: MenuBarItem) -> Bool {
+            Self.isTriggerProtected(
+                item.uniqueIdentifier,
+                by: triggerProtectedIdentifiers,
+                knownBaseIdentifiers: knownBaseIdentifiers,
+                knownLiveIdentifiers: knownLiveIdentifiers
+            )
+        }
 
         // Predicate: items eligible for persistence in savedSectionOrder.
         // Profile-tracked app items (non-control with resolved sourcePID)
@@ -990,6 +1017,7 @@ final class MenuBarItemManager {
         // section boundary) and they get inserted into desiredFlat at
         // the boundary regardless of saved order.
         func isPersistable(_ item: MenuBarItem) -> Bool {
+            guard !isTriggerProtected(item) else { return false }
             if item.tag == .visibleControlItem {
                 return true
             }
@@ -1016,8 +1044,10 @@ final class MenuBarItemManager {
                 // Always track base identifier so stale saved entries for
                 // transient items (Live Activities) get pruned by the
                 // isStaleInstanceIndex guard below and not re-injected.
-                let baseID = "\(item.tag.namespace):\(item.tag.title)"
-                allCurrentBaseIdentifiers.insert(baseID)
+                let baseID = item.tag.stableIdentifierBase
+                if !triggerProtectedBaseIdentifiers.contains(baseID) {
+                    allCurrentBaseIdentifiers.insert(baseID)
+                }
                 // Exclude transient Control Center items (Live Activities,
                 // iPhone Mirroring icons) from the identifier set so their
                 // ephemeral UIDs are never written to savedSectionOrder.

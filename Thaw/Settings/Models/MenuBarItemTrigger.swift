@@ -306,7 +306,7 @@ enum TriggerCondition: Codable, Hashable {
         case .focusActive:
             return "A Focus is active"
         case let .focusMode(name):
-            return name.isEmpty ? "A Focus mode is active" : "Focus mode is “\(name)”"
+            return name.isEmpty ? "A Focus mode is active" : "Focus Filter profile is “\(name)”"
         case let .nearLocation(_, _, radiusMeters, label):
             let place = label.isEmpty ? "a saved location" : "“\(label)”"
             return "Within \(Int(radiusMeters))m of \(place)"
@@ -444,7 +444,7 @@ enum TriggerConditionKind: String, CaseIterable, Identifiable {
         case .externalDisplay: "External display is connected"
         case .schedule: "During time window"
         case .focusActive: "Any Focus is active"
-        case .focusModeNamed: "Focus mode is"
+        case .focusModeNamed: "Focus Filter profile is"
         case .nearLocation: "Near a location"
         case .energyMode: "Energy Mode is"
         case .thermalPressure: "Thermal pressure"
@@ -483,7 +483,7 @@ enum TriggerConditionKind: String, CaseIterable, Identifiable {
         case .wifiSSID: .text(prompt: "Network name")
         case .bluetoothConnected: .bluetoothPicker
         case .audioOutput: .text(prompt: "Device name contains")
-        case .focusModeNamed: .text(prompt: "Focus mode name (e.g. Work)")
+        case .focusModeNamed: .text(prompt: "Thaw profile name (e.g. Work Layout)")
         case .schedule: .timeRange
         case .nearLocation: .location
         case .energyMode: .energyMode

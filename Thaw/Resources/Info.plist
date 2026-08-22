@@ -15,6 +15,10 @@
 	</array>
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>Thaw reads your paired Bluetooth devices so a menu bar item trigger can show or hide an item while a chosen device is connected.</string>
+	<key>NSFocusStatusUsageDescription</key>
+	<string>Thaw reads whether a Focus is active so menu bar item triggers can respond to Focus changes.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Thaw uses your location while its settings are open to identify the current Wi-Fi network and configure location-based menu bar item triggers.</string>
 	<key>SUFeedURL</key>
 	<string>https://thaw-app.github.io/updates/appcast.xml</string>
 	<key>SUPublicEDKey</key>

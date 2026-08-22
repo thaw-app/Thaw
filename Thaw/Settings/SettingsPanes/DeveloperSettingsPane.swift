@@ -25,6 +25,7 @@ struct DeveloperSettingsPane: View {
     /// timer while the pane is visible so the readout always shows ground
     /// truth (the trigger monitors themselves remain gated by the flags).
     @State private var liveState = SystemState()
+    @State private var isRefreshingLiveState = false
 
     private let refreshTimer = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
 
@@ -40,15 +41,30 @@ struct DeveloperSettingsPane: View {
             liveStateSection
         }
         .onAppear {
-            liveState = SystemStateMonitor.fullSnapshot(flags: flags)
+            refreshLiveState()
             // While the window is focused, nudge the Location prompt so the
-            // Wi-Fi SSID can resolve (no-op once decided).
-            if flags.isEnabled(.wifiSSID) {
+            // Wi-Fi SSID or coordinate source can resolve (no-op once decided).
+            if flags.isEnabled(.wifiSSID) || flags.isEnabled(.location) {
                 systemMonitor.ensureLocationAuthorization()
             }
         }
         .onReceive(refreshTimer) { _ in
-            liveState = SystemStateMonitor.fullSnapshot(flags: flags)
+            refreshLiveState()
+        }
+        .onChange(of: flags.isEnabled(.wifiSSID) || flags.isEnabled(.location)) { _, enabled in
+            if enabled {
+                systemMonitor.ensureLocationAuthorization()
+            }
+            refreshLiveState()
+        }
+    }
+
+    private func refreshLiveState() {
+        guard !isRefreshingLiveState else { return }
+        isRefreshingLiveState = true
+        Task { @MainActor in
+            liveState = await SystemStateMonitor.fullSnapshot(flags: flags)
+            isRefreshingLiveState = false
         }
     }
 
@@ -152,7 +168,7 @@ struct DeveloperSettingsPane: View {
                 stateRow("Microphone in use", flags.isEnabled(.recordingDevices) ? (state.isMicrophoneInUse ? "Yes" : "No") : "Enable flag to read")
                 stateRow("Displays", "\(state.screenCount)\(state.externalDisplayConnected ? " (external connected)" : "")")
                 stateRow("Focus active", state.isFocusActive ? "Yes" : "No")
-                stateRow("Focus mode", state.activeFocusModeName ?? "—")
+                stateRow("Focus Filter profile", state.activeFocusModeName ?? "—")
                 stateRow("Location", locationValue())
             }
             .padding(8)
