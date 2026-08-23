@@ -192,6 +192,22 @@ extension MenuBarItemManager {
         _ thawIcon: MenuBarItem,
         controlItems: ControlItemPair
     ) async -> Bool {
+        // The destination is the right of H_ctrl. When the divider itself is
+        // parked offscreen, that destination is in the parked zone: the drag
+        // strands the chevron beside it, invisible to the user (#958's
+        // 16:32:49.505 move dragged the chevron toward a divider parked at
+        // minX -3440). Worse, the move engine warps to the chevron's cached
+        // frame to start the drag, and a cached on-screen frame over a
+        // physically parked chevron clicks whatever item now occupies that
+        // frame. The #881 recovery this relocation exists for needs the
+        // divider on screen anyway; until it is, skipping is strictly better.
+        let screenFrames = NSScreen.screens.map { CGDisplayBounds($0.displayID) }
+        if !LayoutSolver.isOnScreen(bounds: bestBounds(for: controlItems.hidden), screenFrames: screenFrames) {
+            MenuBarItemManager.diagLog.warning(
+                "Skipping Thaw icon relocation, the hidden divider is parked offscreen (minX=\(controlItems.hidden.bounds.minX)); moving the icon beside it would strand both"
+            )
+            return false
+        }
         MenuBarItemManager.diagLog.info("Relocating Thaw icon \(thawIcon.logString) to visible section")
         do {
             try await move(
@@ -402,6 +418,19 @@ extension MenuBarItemManager {
             let alwaysHidden = controlItems.alwaysHidden,
             bestBounds(for: hidden).maxX <= bestBounds(for: alwaysHidden).minX
         else {
+            return
+        }
+
+        // Moving AH_ctrl to the left of a parked H_ctrl drops the entire
+        // always-hidden section into the parked zone with it. The inversion
+        // this enforces cannot be fixed while the reference divider is
+        // stranded; defer to the recovery paths the same way the boundary
+        // repair and the per-item moves do.
+        let screenFrames = NSScreen.screens.map { CGDisplayBounds($0.displayID) }
+        if !LayoutSolver.isOnScreen(bounds: bestBounds(for: hidden), screenFrames: screenFrames) {
+            MenuBarItemManager.diagLog.warning(
+                "Skipping control item order enforcement, the hidden divider is parked offscreen (minX=\(hidden.bounds.minX))"
+            )
             return
         }
 
