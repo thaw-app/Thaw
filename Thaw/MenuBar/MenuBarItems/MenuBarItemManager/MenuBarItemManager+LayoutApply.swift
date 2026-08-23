@@ -1442,9 +1442,20 @@ extension MenuBarItemManager {
             currentAlwaysHidden: currentAHSet,
             desiredVisible: desiredVisibleSet,
             desiredHidden: desiredHiddenSet,
-            desiredAlwaysHidden: desiredAHSet
+            desiredAlwaysHidden: desiredAHSet,
+            overflowExemptUIDs: notchOverflowEjectedUIDs
         )
         let hiddenBoundaryMismatch = hiddenBoundaryOffenders.count
+        // How many offenders the exemption absorbed this cycle, so a soak can
+        // tell a by-design divergence from one that would have been repaired.
+        // Equivalent to the unexempted tally minus this one: the solver only
+        // ever drops wronglyConcealed entries (an ejected item sits in
+        // hidden, never in desiredConcealed), and exempt ∩ currentHidden ⊆
+        // currentHidden ⊆ currentConcealed collapses the intersection.
+        // No feature gating here: Phase 4 above replaced or cleared the set
+        // under shouldManageNotchOverflow, so it is fresh for this apply.
+        let exemptedEjectedCount = notchOverflowEjectedUIDs.intersection(currentHiddenSet)
+            .intersection(desiredVisibleSet).count
 
         // ...but only when it is the divider that drifted. isProfileItem
         // admits the chevron, so the counts that decide this have to drop
@@ -1495,6 +1506,11 @@ extension MenuBarItemManager {
         MenuBarItemManager.diagLog.debug(
             "Profile layout Phase 1: hiddenBoundaryMismatch=\(hiddenBoundaryMismatch)"
         )
+        if exemptedEjectedCount > 0 {
+            MenuBarItemManager.diagLog.debug(
+                "Profile layout Phase 1: \(exemptedEjectedCount) notch-overflow-ejected item(s) exempt from the H_ctrl boundary check (by-design divergence)"
+            )
+        }
         MenuBarItemManager.diagLog.debug(
             "Profile layout Phase 1: liveConcealed=\(liveConcealedCount), liveVisible=\(liveVisibleCount), moveHiddenDivider=\(shouldMoveHiddenDivider)"
         )

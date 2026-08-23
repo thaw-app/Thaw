@@ -765,7 +765,8 @@ nonisolated enum LayoutSolver {
         currentAlwaysHidden: Set<String>,
         desiredVisible: Set<String>,
         desiredHidden: Set<String>,
-        desiredAlwaysHidden: Set<String>
+        desiredAlwaysHidden: Set<String>,
+        overflowExemptUIDs: Set<String> = []
     ) -> Int {
         hiddenBoundaryOffenders(
             currentVisible: currentVisible,
@@ -773,7 +774,8 @@ nonisolated enum LayoutSolver {
             currentAlwaysHidden: currentAlwaysHidden,
             desiredVisible: desiredVisible,
             desiredHidden: desiredHidden,
-            desiredAlwaysHidden: desiredAlwaysHidden
+            desiredAlwaysHidden: desiredAlwaysHidden,
+            overflowExemptUIDs: overflowExemptUIDs
         ).count
     }
 
@@ -793,9 +795,24 @@ nonisolated enum LayoutSolver {
         var wronglyConcealed: Set<String>
 
         var count: Int { wronglyVisible.count + wronglyConcealed.count }
+
+        var isEmpty: Bool {
+            wronglyVisible.isEmpty && wronglyConcealed.isEmpty
+        }
     }
 
     /// Splits the boundary mismatch into the two directions of travel.
+    ///
+    /// `overflowExemptUIDs` carries the notch-overflow eject set
+    /// (`notchOverflowEjectedUIDs`). An ejected item sits in hidden while
+    /// the profile still lists it visible — that divergence is by design,
+    /// the same rule `currentLayoutDivergesFromSaved` applies through its
+    /// own overflow exemption. Counting it here makes Phase 1 recall the
+    /// item to visible every apply and the next cycle's overflow plan
+    /// eject it again: a two-drag oscillation for as long as the bar stays
+    /// over budget (#958's 20 August log, nk-tedo-001). The exemption only
+    /// covers an item actually sitting in hidden; one that drifted into
+    /// always-hidden is genuine drift and keeps counting.
     ///
     /// Pure over its inputs.
     static nonisolated func hiddenBoundaryOffenders(
@@ -804,7 +821,8 @@ nonisolated enum LayoutSolver {
         currentAlwaysHidden: Set<String>,
         desiredVisible: Set<String>,
         desiredHidden: Set<String>,
-        desiredAlwaysHidden: Set<String>
+        desiredAlwaysHidden: Set<String>,
+        overflowExemptUIDs: Set<String> = []
     ) -> HiddenBoundaryOffenders {
         // Everything the profile places left of the hidden divider, in
         // either of the two concealed sections. Which of the two an item
@@ -816,6 +834,7 @@ nonisolated enum LayoutSolver {
         return HiddenBoundaryOffenders(
             wronglyVisible: currentVisible.intersection(desiredConcealed),
             wronglyConcealed: currentConcealed.intersection(desiredVisible)
+                .subtracting(overflowExemptUIDs.intersection(currentHidden))
         )
     }
 

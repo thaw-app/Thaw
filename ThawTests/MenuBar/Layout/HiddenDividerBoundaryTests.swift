@@ -577,7 +577,8 @@ struct HiddenBoundaryOffenderTests {
         currentAlwaysHidden: Set<String> = [],
         desiredVisible: Set<String>,
         desiredHidden: Set<String>,
-        desiredAlwaysHidden: Set<String> = []
+        desiredAlwaysHidden: Set<String> = [],
+        overflowExemptUIDs: Set<String> = []
     ) -> LayoutSolver.HiddenBoundaryOffenders {
         let split = LayoutSolver.hiddenBoundaryOffenders(
             currentVisible: currentVisible,
@@ -585,7 +586,8 @@ struct HiddenBoundaryOffenderTests {
             currentAlwaysHidden: currentAlwaysHidden,
             desiredVisible: desiredVisible,
             desiredHidden: desiredHidden,
-            desiredAlwaysHidden: desiredAlwaysHidden
+            desiredAlwaysHidden: desiredAlwaysHidden,
+            overflowExemptUIDs: overflowExemptUIDs
         )
         // The tally is defined in terms of the split, and every case here
         // checks that the two cannot drift apart.
@@ -595,7 +597,8 @@ struct HiddenBoundaryOffenderTests {
             currentAlwaysHidden: currentAlwaysHidden,
             desiredVisible: desiredVisible,
             desiredHidden: desiredHidden,
-            desiredAlwaysHidden: desiredAlwaysHidden
+            desiredAlwaysHidden: desiredAlwaysHidden,
+            overflowExemptUIDs: overflowExemptUIDs
         ))
         return split
     }
@@ -682,5 +685,264 @@ struct HiddenBoundaryOffenderTests {
             desiredHidden: []
         )
         #expect(split.count == 0)
+    }
+
+    // MARK: - Notch-overflow exemption (#958)
+
+    /// An item ejected into hidden by the notch-overflow rebalance sits on
+    /// the concealed side while the profile still lists it visible. That
+    /// divergence is by design; counting it makes Phase 1 recall the item
+    /// to visible, and the next cycle's overflow plan ejects it again — a
+    /// two-drag oscillation for as long as the bar stays over budget.
+    /// The exemption must absorb exactly that case.
+    @Test("A notch-overflow-ejected item sitting in hidden is exempt from the boundary check")
+    func overflowEjectedItemInHiddenIsExempt() {
+        let split = offenders(
+            currentVisible: ["a", "b"],
+            currentHidden: ["c", "ejected"],
+            desiredVisible: ["a", "b", "ejected"],
+            desiredHidden: ["c"],
+            desiredAlwaysHidden: [],
+            overflowExemptUIDs: ["ejected"]
+        )
+        #expect(split.isEmpty)
+
+        // Without the exemption the same bar counts the ejected item —
+        // this documents the oscillation mechanism, not desired behavior.
+        let unexempt = offenders(
+            currentVisible: ["a", "b"],
+            currentHidden: ["c", "ejected"],
+            desiredVisible: ["a", "b", "ejected"],
+            desiredHidden: ["c"]
+        )
+        #expect(unexempt.wronglyConcealed == ["ejected"])
+    }
+
+    /// An ejected item that drifted into always-hidden has left the section
+    /// the eject placed it in. That is genuine drift and must keep counting,
+    /// matching the rule `currentLayoutDivergesFromSaved` applies.
+    @Test("A notch-overflow-ejected item that drifted to always-hidden still counts")
+    func overflowEjectedItemInAlwaysHiddenStillCounts() {
+        let split = offenders(
+            currentVisible: ["a", "b"],
+            currentHidden: ["c"],
+            currentAlwaysHidden: ["ejected"],
+            desiredVisible: ["a", "b", "ejected"],
+            desiredHidden: ["c"],
+            desiredAlwaysHidden: [],
+            overflowExemptUIDs: ["ejected"]
+        )
+        #expect(split.wronglyConcealed == ["ejected"])
+    }
+
+    /// An ejected item that made its own way back to the visible side needs
+    /// no exemption (it is where the profile wants it), but the exempt set
+    /// must not swallow other genuine offenders on the concealed side.
+    @Test("The exemption does not hide unrelated wrongly-concealed items")
+    func exemptionDoesNotHideOtherOffenders() {
+        let split = offenders(
+            currentVisible: ["a", "b"],
+            currentHidden: ["c", "drifted", "ejected"],
+            desiredVisible: ["a", "b", "drifted", "ejected"],
+            desiredHidden: ["c"],
+            desiredAlwaysHidden: [],
+            overflowExemptUIDs: ["ejected"]
+        )
+        #expect(split.wronglyConcealed == ["drifted"])
+    }
+
+    /// The exemption exists to stop Phase 1 recalling ejected items from
+    /// hidden. An exempt UID currently sitting VISIBLE and wanted concealed
+    /// is the opposite situation — a genuine offender in the other direction
+    /// — and must keep counting whatever the exempt set says.
+    @Test("The exemption never suppresses wrongly-visible offenders")
+    func exemptionNeverSuppressesWronglyVisible() {
+        let split = offenders(
+            currentVisible: ["a", "b", "ejected"],
+            currentHidden: ["c"],
+            desiredVisible: ["a", "b"],
+            desiredHidden: ["c", "ejected"],
+            desiredAlwaysHidden: [],
+            overflowExemptUIDs: ["ejected"]
+        )
+        #expect(split.wronglyVisible == ["ejected"])
+        #expect(split.wronglyConcealed.isEmpty)
+        #expect(split.count == 1)
+    }
+
+    /// The exemption parameter defaults to empty; every pre-existing caller
+    /// relies on that meaning "no exemption". Pin the identity so a default-
+    /// value regression cannot silently change long-standing tallies.
+    @Test("An empty exempt set reproduces the legacy tally exactly")
+    func emptyExemptSetMatchesLegacyTally() {
+        let inputs = (
+            currentVisible: Set(["a", "b", "x"]),
+            currentHidden: Set(["c", "d"]),
+            currentAlwaysHidden: Set(["e"]),
+            desiredVisible: Set(["a", "d"]),
+            desiredHidden: Set(["b", "c"]),
+            desiredAlwaysHidden: Set(["e"])
+        )
+        let legacy = LayoutSolver.hiddenBoundaryOffenders(
+            currentVisible: inputs.currentVisible,
+            currentHidden: inputs.currentHidden,
+            currentAlwaysHidden: inputs.currentAlwaysHidden,
+            desiredVisible: inputs.desiredVisible,
+            desiredHidden: inputs.desiredHidden,
+            desiredAlwaysHidden: inputs.desiredAlwaysHidden
+        )
+        let explicitEmpty = LayoutSolver.hiddenBoundaryOffenders(
+            currentVisible: inputs.currentVisible,
+            currentHidden: inputs.currentHidden,
+            currentAlwaysHidden: inputs.currentAlwaysHidden,
+            desiredVisible: inputs.desiredVisible,
+            desiredHidden: inputs.desiredHidden,
+            desiredAlwaysHidden: inputs.desiredAlwaysHidden,
+            overflowExemptUIDs: []
+        )
+        // Both directions of travel are populated here, so this pins the
+        // identity for wronglyVisible and wronglyConcealed at once.
+        #expect(explicitEmpty == legacy)
+        #expect(legacy.wronglyVisible == ["b"])
+        #expect(legacy.wronglyConcealed == ["d"])
+    }
+
+    /// UIDs in the exempt set that name no item on the bar must change
+    /// nothing: the eject set can outlive the items it once named (an app
+    /// quits between cycles), and stale entries must be inert.
+    @Test("Exempt UIDs that match nothing on the bar are inert")
+    func unknownExemptUIDsAreInert() {
+        let baseline = offenders(
+            currentVisible: ["a"],
+            currentHidden: ["c", "gone-before", "drifted"],
+            desiredVisible: ["a", "drifted"],
+            desiredHidden: ["c"]
+        )
+        #expect(baseline.wronglyConcealed == ["drifted"])
+        let exempted = offenders(
+            currentVisible: ["a"],
+            currentHidden: ["c", "gone-before", "drifted"],
+            desiredVisible: ["a", "drifted"],
+            desiredHidden: ["c"],
+            overflowExemptUIDs: ["never-existed", "quit-app:Item-0"]
+        )
+        #expect(exempted == baseline)
+    }
+
+    /// A tight bar can hold several ejected items at once. Exempting a
+    /// subset absorbs exactly that subset; the rest keep counting.
+    @Test("A partial exempt set absorbs only its own items")
+    func partialExemptionAbsorbsOnlyItsOwnItems() {
+        let split = offenders(
+            currentVisible: ["a"],
+            currentHidden: ["c", "ej1", "ej2", "ej3"],
+            desiredVisible: ["a", "ej1", "ej2", "ej3"],
+            desiredHidden: ["c"],
+            desiredAlwaysHidden: [],
+            overflowExemptUIDs: ["ej1", "ej3"]
+        )
+        #expect(split.wronglyConcealed == ["ej2"])
+    }
+
+    /// `hiddenBoundaryMismatch` is the value the parked-divider recovery
+    /// streak counts on, so it must see the exempted tally too — an
+    /// eject-only divergence must neither advance nor reset the streak's
+    /// input dishonestly.
+    @Test("hiddenBoundaryMismatch honours the exemption")
+    func mismatchHonoursExemption() {
+        let mismatchCurrentVisible = Set(["a", "b"])
+        let currentHidden = Set(["c", "ejected"])
+        let desiredVisible = Set(["a", "b", "ejected"])
+        let desiredHidden = Set(["c"])
+
+        let unexempt = LayoutSolver.hiddenBoundaryMismatch(
+            currentVisible: mismatchCurrentVisible,
+            currentHidden: currentHidden,
+            currentAlwaysHidden: [],
+            desiredVisible: desiredVisible,
+            desiredHidden: desiredHidden,
+            desiredAlwaysHidden: []
+        )
+        let exempt = LayoutSolver.hiddenBoundaryMismatch(
+            currentVisible: mismatchCurrentVisible,
+            currentHidden: currentHidden,
+            currentAlwaysHidden: [],
+            desiredVisible: desiredVisible,
+            desiredHidden: desiredHidden,
+            desiredAlwaysHidden: [],
+            overflowExemptUIDs: ["ejected"]
+        )
+        #expect(unexempt == 1)
+        #expect(exempt == 0)
+    }
+
+    /// applyProfileLayout derives the soak diagnostic without re-running the
+    /// solver, as |exempt ∩ currentHidden ∩ desiredVisible|. That shortcut is
+    /// only valid while the solver drops wronglyConcealed entries exclusively
+    /// through that same intersection. Walk every placement of the exempt UID
+    /// across the three sections and confirm the two computations agree.
+    @Test("Absorbed-offender count equals the exempt intersection in every placement")
+    func absorbedCountMatchesExemptIntersectionEverywhere() {
+        let placements: [(section: String, currentHidden: Set<String>, currentAH: Set<String>)] = [
+            (section: "hidden", currentHidden: ["ejected"], currentAH: []),
+            (section: "always-hidden", currentHidden: [], currentAH: ["ejected"]),
+            (section: "visible", currentHidden: [], currentAH: []),
+            (section: "nowhere", currentHidden: [], currentAH: []),
+        ]
+
+        for placement in placements {
+            let currentVisible = Set(["a", "b"] + (placement.section == "visible" ? ["ejected"] : []))
+            let desiredVisible = Set(["a", "b", "ejected"])
+
+            let unexempt = LayoutSolver.hiddenBoundaryOffenders(
+                currentVisible: currentVisible,
+                currentHidden: placement.currentHidden,
+                currentAlwaysHidden: placement.currentAH,
+                desiredVisible: desiredVisible,
+                desiredHidden: ["c"],
+                desiredAlwaysHidden: []
+            )
+            let exemptSet: Set = ["ejected"]
+            let exempt = LayoutSolver.hiddenBoundaryOffenders(
+                currentVisible: currentVisible,
+                currentHidden: placement.currentHidden,
+                currentAlwaysHidden: placement.currentAH,
+                desiredVisible: desiredVisible,
+                desiredHidden: ["c"],
+                desiredAlwaysHidden: [],
+                overflowExemptUIDs: exemptSet
+            )
+
+            let absorbed = unexempt.count - exempt.count
+            let shortcut = exemptSet.intersection(placement.currentHidden)
+                .intersection(desiredVisible).count
+            #expect(
+                absorbed == shortcut,
+                "Placement \(placement.section): solver absorbed \(absorbed) but the orchestrator shortcut computes \(shortcut)"
+            )
+        }
+    }
+
+    /// Covers ``LayoutSolver.HiddenBoundaryOffenders/isEmpty`` directly: it
+    /// gates nothing today but is the readable spelling future callers will
+    /// reach for, so its agreement with count must not drift.
+    @Test("isEmpty agrees with count")
+    func isEmptyAgreesWithCount() {
+        let empty = offenders(
+            currentVisible: ["a"],
+            currentHidden: [],
+            desiredVisible: ["a"],
+            desiredHidden: []
+        )
+        #expect(empty.isEmpty)
+
+        let occupied = offenders(
+            currentVisible: ["a", "b"],
+            currentHidden: [],
+            desiredVisible: ["a"],
+            desiredHidden: ["b"]
+        )
+        #expect(!occupied.isEmpty)
+        #expect(occupied.count == 1)
     }
 }

@@ -396,6 +396,91 @@ struct ProfileLayoutLogReplayTests {
         #expect(!LayoutSolver.isMenuBarGeometryReady(rightBoundary: .infinity, notchMaxX: 956))
         #expect(!LayoutSolver.isMenuBarGeometryReady(rightBoundary: .nan, notchMaxX: 956))
     }
+
+    // MARK: Regression lock for the overflow-eject vs boundary-repair oscillation (#958)
+
+    /// Replays a real field cycle (thaw_2026-08-20_11-21-26.log, 16:32:47.8,
+    /// nk-tedo-001's machine, build 52f4ed3): the bar is persistently over the
+    /// notch budget, so every apply re-plans an eject ("notch overflow;
+    /// 1 item(s)" fires at .826 and again 2.6 s later), while Phase 1 reads
+    /// `leits.MeetingBar` — hidden in this cycle's snapshot, visible per the
+    /// saved order — as wronglyConcealed. The log does not name which UID the
+    /// eject plan chose, but it names the count (1), and MeetingBar is the
+    /// one item the mismatch counted.
+    ///
+    /// On builds through e384ce36 that mismatch drove a divider drag; since
+    /// aa5b2850 it drives per-item moves that recall MeetingBar to visible,
+    /// and the next cycle's eject plan sends it back: two synthetic drags per
+    /// apply, forever (the "icons jumping randomly" reports). With this
+    /// cycle's overflow eject exempted, the boundary check scores zero and no
+    /// repair chases the item.
+    /// Red before the exemption (mismatch=1), green after (mismatch=0).
+    @Test("An overflow-ejected field cycle must not count the ejected item as a boundary offender")
+    func overflowEjectedFieldCycleIsNotABoundaryOffender() throws {
+        let log = """
+        2026-08-20 16:32:47.824 [DEBUG] [MenuBarItemManager] applyProfileLayout: current visible section has 12 items: ["com.steipete.codexbar:codexbar-codex", "com.steipete.codexbar:codexbar-claude", "com.tunabellysoftware.tgpro:Item-0", "eu.exelban.Stats:CPU_bar_chart", "eu.exelban.Stats:GPU_bar_chart", "eu.exelban.Stats:RAM_bar_chart", "com.rogueamoeba.soundsource:SSMainAppMenuIcon", "com.rogueamoeba.soundsource:Input", "com.apphousekitchen.aldente-pro:Item-0", "com.stonerl.Thaw:Thaw.ControlItem.Visible", "org.p0deje.Maccy:Item-0", "com.apple.TextInputMenuAgent:Item-0"]
+        2026-08-20 16:32:47.825 [DEBUG] [MenuBarItemManager] applyProfileLayout: current hidden section has 9 items: ["leits.MeetingBar:Item-0", "com.electron.dockerdesktop:Item-0", "com.proxyman.NSProxy:Item-0", "com.techsmith.snagit.capturehelper:Item-0", "com.nektony.App-Cleaner-SIII-UIHelper:Item-0", "com.paloaltonetworks.GlobalProtect.client:Item-0", "com.apple.KerberosMenuExtra:Item-0", "com.apple.controlcenter:Battery", "com.kaspersky.kav_agent:Item-0"]
+        2026-08-20 16:32:47.825 [DEBUG] [MenuBarItemManager] applyProfileLayout: current always-hidden section has 7 items: ["com.steipete.codexbar:codexbar-cursor", "com.nextcloud.desktopclient:Item-0", "ru.yandex.desktop.disk2:Item-0", "com.shortcutlabs.FlicMac:Item-0", "ru.keepcoder.Telegram:Item-0", "com.steipete.codexbar:codexbar-opencode", "com.apple.Spotlight:Item-0"]
+        2026-08-20 16:32:47.826 [INFO] [MenuBarItemManager] Profile layout: notch overflow; 1 item(s) moved from visible to hidden
+        2026-08-20 16:32:47.828 [DEBUG] [MenuBarItemManager] Profile layout Phase 1: ahCtrlUID=com.stonerl.Thaw:Thaw.ControlItem.AlwaysHidden, crossSectionMoves=0, totalSectionMismatch=0
+        2026-08-20 16:32:47.828 [DEBUG] [MenuBarItemManager] Profile layout Phase 1: desiredHidden=["com.apple.KerberosMenuExtra:Item-0", "com.apple.controlcenter:Battery", "com.apple.controlcenter:NowPlaying", "com.apple.controlcenter:WiFi", "com.electron.dockerdesktop:Item-0", "com.kaspersky.kav_agent:Item-0", "com.nektony.App-Cleaner-SIII-UIHelper:Item-0", "com.paloaltonetworks.GlobalProtect.client:Item-0", "com.proxyman.NSProxy:Item-0", "com.techsmith.snagit.capturehelper:Item-0"]
+        2026-08-20 16:32:47.828 [DEBUG] [MenuBarItemManager] Profile layout Phase 1: desiredVisible=["com.apphousekitchen.aldente-pro:Item-0", "com.apple.TextInputMenuAgent:Item-0", "com.apple.controlcenter:BentoBox-0", "com.apple.controlcenter:Clock", "com.rogueamoeba.soundsource:Input", "com.rogueamoeba.soundsource:SSMainAppMenuIcon", "com.steipete.codexbar:codexbar-claude", "com.steipete.codexbar:codexbar-codex", "com.stonerl.Thaw:Thaw.ControlItem.Visible", "com.tunabellysoftware.tgpro:Item-0", "eu.exelban.Stats:CPU_bar_chart", "eu.exelban.Stats:GPU_bar_chart", "eu.exelban.Stats:Network_speed", "eu.exelban.Stats:RAM_bar_chart", "leits.MeetingBar:Item-0", "org.p0deje.Maccy:Item-0"]
+        2026-08-20 16:32:47.828 [DEBUG] [MenuBarItemManager] Profile layout Phase 1: hiddenBoundaryMismatch=1
+        """
+        let parsed = ProfileLayoutLogReplay.parse(log)
+        let cycle = try #require(parsed.cycles.first)
+
+        // Field characterization: the buggy cycle counted exactly one
+        // offender — the item this very cycle's overflow plan had stashed in
+        // hidden.
+        #expect(cycle.loggedOverflowCount == 1)
+        let ejectedUID = "leits.MeetingBar:Item-0"
+        #expect(cycle.currentHidden.contains(ejectedUID))
+        #expect(cycle.desiredVisible?.contains(ejectedUID) == true)
+
+        let currentVisible = Set(cycle.currentVisible)
+        let currentHidden = Set(cycle.currentHidden)
+        let currentAlwaysHidden = Set(cycle.currentAlwaysHidden)
+        let desiredVisible = try Set(#require(cycle.desiredVisible))
+        let desiredHidden = Set(cycle.desiredHidden)
+        let desiredAlwaysHidden = Set(cycle.desiredAlwaysHidden)
+
+        // Without the exemption the ejected item is the offender — this
+        // documents the mechanism that sent the repair after it each cycle.
+        let unexempt = LayoutSolver.hiddenBoundaryOffenders(
+            currentVisible: currentVisible,
+            currentHidden: currentHidden,
+            currentAlwaysHidden: currentAlwaysHidden,
+            desiredVisible: desiredVisible,
+            desiredHidden: desiredHidden,
+            desiredAlwaysHidden: desiredAlwaysHidden
+        )
+        #expect(unexempt.count == 1, "Field cycle logged hiddenBoundaryMismatch=1; replay disagrees")
+        #expect(unexempt.wronglyConcealed == [ejectedUID])
+
+        // With this cycle's overflow eject exempted, the by-design divergence
+        // no longer counts and no repair may chase the item.
+        let exempt = LayoutSolver.hiddenBoundaryOffenders(
+            currentVisible: currentVisible,
+            currentHidden: currentHidden,
+            currentAlwaysHidden: currentAlwaysHidden,
+            desiredVisible: desiredVisible,
+            desiredHidden: desiredHidden,
+            desiredAlwaysHidden: desiredAlwaysHidden,
+            overflowExemptUIDs: [ejectedUID]
+        )
+        #expect(exempt.isEmpty, "Exempting this cycle's overflow eject must clear the field mismatch")
+
+        // The gate itself stays false for these counts (nine correctly
+        // concealed, eleven visible after control items are dropped), so on
+        // aa5b2850+ builds the repair route was per-item drags — exactly the
+        // oscillation this exemption removes.
+        let liveControlUIDs: Set = ["com.stonerl.Thaw:Thaw.ControlItem.Visible",
+                                    "com.stonerl.Thaw:Thaw.ControlItem.AlwaysHidden"]
+        let liveConcealed = currentHidden.union(currentAlwaysHidden).subtracting(liveControlUIDs).count
+        let liveVisible = currentVisible.subtracting(liveControlUIDs).count
+        #expect(!LayoutSolver.shouldMoveHiddenDivider(liveConcealedCount: liveConcealed, liveVisibleCount: liveVisible))
+    }
 }
 
 /// Parses Thaw profile-layout log text into replayable cycles and drives the
