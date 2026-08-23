@@ -70,6 +70,17 @@ final class MenuBarItemManager {
     /// geometry clears and re-arms recovery for a later episode.
     var didRecoverParkedHiddenDividerForCurrentMismatch = false
 
+    /// Consecutive authoritative cache cycles in which the always-hidden
+    /// section is enabled but its divider did not resolve while the hidden
+    /// divider did. A display change can strand the AH status item on another
+    /// screen's menu bar; `ControlItemPair` treats the missing divider as
+    /// success, so the lookup-failure rebuild never sees it (#863).
+    var missingAlwaysHiddenDividerStreak = 0
+
+    /// Prevents repeated AH divider recreation until the divider resolves
+    /// again and re-arms recovery for a later episode.
+    var didRecoverMissingAlwaysHiddenDivider = false
+
     /// Number of consecutive `ControlItemPair` lookup failures required
     /// before the control items' status items are rebuilt.
     static nonisolated let controlItemRebuildThreshold = 3
@@ -81,6 +92,11 @@ final class MenuBarItemManager {
     /// Number of authoritative mismatch applies required before discarding a
     /// parked hidden divider's stale autosave position.
     static nonisolated let parkedHiddenDividerRecoveryThreshold = 2
+
+    /// Number of consecutive authoritative cache cycles with an enabled but
+    /// unresolved always-hidden divider required before that divider's status
+    /// item is rebuilt.
+    static nonisolated let missingAlwaysHiddenDividerRecoveryThreshold = 3
 
     /// Supplementary AX-derived identity for items whose CG-side identity is
     /// degraded (a Control-Center generic `Item-N` placeholder title, or a

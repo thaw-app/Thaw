@@ -2353,6 +2353,17 @@ extension MenuBarItemManager {
         return min(baseDelay * (1 << exponent), maxDelay)
     }
 
+    /// Whether repeated authoritative cache cycles should reset an
+    /// always-hidden divider that the feature enables but which does not
+    /// resolve, while the hidden divider resolves fine.
+    static nonisolated func shouldRecoverMissingAlwaysHiddenDivider(
+        consecutiveMissingReadings: Int,
+        alreadyRecovered: Bool = false,
+        threshold: Int = MenuBarItemManager.missingAlwaysHiddenDividerRecoveryThreshold
+    ) -> Bool {
+        !alreadyRecovered && consecutiveMissingReadings >= threshold
+    }
+
     /// Whether a persistent zero-width hidden span has enough trustworthy
     /// observations to reset the hidden divider once for this episode.
     static nonisolated func shouldRecoverCollapsedHiddenSection(

@@ -363,3 +363,82 @@ struct ControlItemLookupRetryBackoffTests {
         ) == .seconds(3))
     }
 }
+
+@Suite("Missing always-hidden divider recovery")
+struct MissingAlwaysHiddenDividerRecoveryTests {
+    @Test("The first missing reading is left alone")
+    func firstMissingReadingDoesNotRecover() {
+        #expect(!MenuBarItemManager.shouldRecoverMissingAlwaysHiddenDivider(
+            consecutiveMissingReadings: 1
+        ))
+    }
+
+    @Test("Repeated missing readings recreate the divider")
+    func repeatedMissingReadingsRecover() {
+        #expect(MenuBarItemManager.shouldRecoverMissingAlwaysHiddenDivider(
+            consecutiveMissingReadings: MenuBarItemManager.missingAlwaysHiddenDividerRecoveryThreshold
+        ))
+    }
+
+    @Test("A missing-divider episode recreates only once")
+    func missingEpisodeRecoversOnce() {
+        #expect(!MenuBarItemManager.shouldRecoverMissingAlwaysHiddenDivider(
+            consecutiveMissingReadings: MenuBarItemManager.missingAlwaysHiddenDividerRecoveryThreshold + 10,
+            alreadyRecovered: true
+        ))
+    }
+
+    /// Models the manager's own episode latch: missing readings accumulate,
+    /// recovery fires once at the threshold, and no second recovery is
+    /// allowed until a resolved reading re-arms the streak.
+    @Test("A persistent missing episode recovers only once, then re-arms on resolution")
+    func missingEpisodeRearmsOnResolution() {
+        var consecutiveMissing = 0
+        var alreadyRecovered = false
+        var recoverCount = 0
+
+        func recordMissing() {
+            consecutiveMissing += 1
+            if MenuBarItemManager.shouldRecoverMissingAlwaysHiddenDivider(
+                consecutiveMissingReadings: consecutiveMissing,
+                alreadyRecovered: alreadyRecovered
+            ) {
+                recoverCount += 1
+                alreadyRecovered = true
+            }
+        }
+
+        func recordResolved() {
+            consecutiveMissing = 0
+            alreadyRecovered = false
+        }
+
+        // The #863 field log: alwaysHidden=nil on every cycle for 12+ hours.
+        for _ in 0 ..< (MenuBarItemManager.missingAlwaysHiddenDividerRecoveryThreshold * 4) {
+            recordMissing()
+        }
+        #expect(recoverCount == 1)
+
+        // The divider comes back (replug, rebuild): the episode re-arms.
+        recordResolved()
+        for _ in 0 ..< MenuBarItemManager.missingAlwaysHiddenDividerRecoveryThreshold {
+            recordMissing()
+        }
+        #expect(recoverCount == 2)
+    }
+
+    /// A disabled always-hidden section has no divider by choice. The
+    /// orchestrator resets the streak in that state; this pins the decision
+    /// function's contract that only enabled-section readings reach it.
+    @Test("A custom threshold is respected")
+    func customThresholdIsRespected() {
+        #expect(!MenuBarItemManager.shouldRecoverMissingAlwaysHiddenDivider(
+            consecutiveMissingReadings: 1,
+            threshold: 2
+        ))
+        #expect(MenuBarItemManager.shouldRecoverMissingAlwaysHiddenDivider(
+            consecutiveMissingReadings: 2,
+            threshold: 2
+        ))
+    }
+}
