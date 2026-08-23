@@ -19,6 +19,10 @@ import Testing
 /// stored under still means the same item next launch. Everything in this
 /// suite is about that second half: a generic label is a small annoyance,
 /// while a confidently wrong one gets clicked.
+///
+/// Serialized: the tests replace and restore the process-wide
+/// `menuBarItemResolvedNames` defaults dictionary, which must not interleave.
+@Suite(.serialized)
 struct MenuBarItemNameMemoryTests {
     @Test("An ordinary app item is eligible")
     func ordinaryAppItemIsEligible() {

@@ -165,3 +165,39 @@ struct MoveOperationTimeoutTests {
         #expect(timeout >= .milliseconds(75))
     }
 }
+
+/// The cursor-hide watchdog must outlast the worst case a single `move`
+/// call can burn: every attempt spends its whole budget four times over
+/// (two event posts, two response waits), budgets escalate to the merged
+/// ceiling, and a failed attempt posts one more fallback at a fixed 100 ms.
+/// An item that outlasts the watchdog gets the cursor force-shown at the
+/// synthetic event's last position mid-sequence — the flash this sizing
+/// exists to prevent.
+@Suite("Cursor hide watchdog sizing")
+struct CursorHideWatchdogSizingTests {
+    @Test("The default ceiling sizes the watchdog past eight escalated attempts")
+    func defaultCeilingCoversWorstCase() {
+        let watchdog = MenuBarItemManager.cursorHideWatchdogTimeout()
+        // 4 operations × 1 s × 8 attempts + 100 ms fallback.
+        #expect(watchdog == .milliseconds(32_100))
+    }
+
+    @Test("Ordinary budgets keep the historical 10 s floor")
+    func ordinaryBudgetsKeepTheFloor() {
+        // A never-escalated item: 4 × 250 ms × 8 + 100 ms = 8.1 s, below the floor.
+        let watchdog = MenuBarItemManager.cursorHideWatchdogTimeout(
+            operationCeiling: .milliseconds(250)
+        )
+        #expect(watchdog == .seconds(10))
+    }
+
+    @Test("Attempt count and fallback scale the result")
+    func attemptCountAndFallbackScale() {
+        // Above the floor: 4 × 1 s × 3 attempts + 500 ms = 12.5 s.
+        #expect(MenuBarItemManager.cursorHideWatchdogTimeout(
+            operationCeiling: .seconds(1),
+            maxAttempts: 3,
+            fallbackPost: .milliseconds(500)
+        ) == .milliseconds(12_500))
+    }
+}

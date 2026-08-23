@@ -823,7 +823,10 @@ extension MenuBarItemManager {
         // it back and the restore, once the cooldown lapses, reads the drag
         // as drift and reverts it.
         let isWithinMoveCooldown = lastMoveOperationOccurred(within: .seconds(5)) &&
-            !lastUserMoveOperationOccurred(within: .seconds(5))
+            !Self.saveCooldownExemptForUserMove(
+                lastMoveOperationTimestamp: lastMoveOperationTimestamp,
+                lastUserMoveOperationTimestamp: lastUserMoveOperationTimestamp
+            )
 
         // A relocation in progress. Both displays have to be known for the
         // comparison to mean anything: a nil on either side is the ordinary
@@ -1510,7 +1513,8 @@ extension MenuBarItemManager {
         // the feature is enabled — a disabled section's absent divider is
         // intentional, not a loss to recover from.
         if appState?.settings.advanced.enableAlwaysHiddenSection == true,
-           controlItems.canRepositionControlItems {
+           controlItems.canRepositionControlItems
+        {
             if controlItems.alwaysHidden == nil {
                 missingAlwaysHiddenDividerStreak += 1
                 if Self.shouldRecoverMissingAlwaysHiddenDivider(

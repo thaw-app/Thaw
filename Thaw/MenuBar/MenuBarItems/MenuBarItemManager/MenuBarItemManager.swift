@@ -1992,4 +1992,25 @@ final class MenuBarItemManager {
         pendingDivergenceObservedAt = nil
         recordBulkApplyOutcome(unenactedMoveCount: 0)
     }
+
+    /// Whether the save gate's user-move exemption applies: it must, and only,
+    /// when the most recent move was the user's own.
+    ///
+    /// Comparing recency rather than presence closes a hole in the cooldown:
+    /// a user move at T0 followed by an automatic move at T+3 leaves both
+    /// timestamps inside the five-second window, and an exemption keyed on
+    /// "a user move happened recently" would disable the cooldown for an
+    /// arrangement Thaw generated itself, letting the next cache cycle
+    /// persist it.
+    ///
+    /// Pure over its inputs.
+    static nonisolated func saveCooldownExemptForUserMove(
+        lastMoveOperationTimestamp: ContinuousClock.Instant?,
+        lastUserMoveOperationTimestamp: ContinuousClock.Instant?
+    ) -> Bool {
+        guard let lastMoveOperationTimestamp, let lastUserMoveOperationTimestamp else {
+            return false
+        }
+        return lastUserMoveOperationTimestamp >= lastMoveOperationTimestamp
+    }
 }

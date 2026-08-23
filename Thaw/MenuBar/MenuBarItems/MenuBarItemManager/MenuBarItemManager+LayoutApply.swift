@@ -1760,6 +1760,12 @@ extension MenuBarItemManager {
                         movedCount += 1
                         didCrossHiddenBoundary = true
                         failureLedger.recordSuccess(for: item)
+                        // Same settle the H_ctrl branch above grants itself:
+                        // each landed move re-sections the neighbours the
+                        // next iteration computes its target from, and a
+                        // drag issued against pre-move geometry lands where
+                        // the previous arrangement says it should.
+                        try? await Task.sleep(for: .milliseconds(200))
                     } catch {
                         unenactedMoveCount += 1
                         // A move cancelled by a newer apply says nothing about

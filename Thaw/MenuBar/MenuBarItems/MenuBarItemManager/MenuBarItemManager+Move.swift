@@ -54,7 +54,13 @@ extension MenuBarItemManager {
             // is its concealment mechanism, not hit-test slack; what matters
             // is that the drop point is its edge, which is the boundary
             // itself.
-            let sectionBias: CGFloat = targetItem.isControlItem ? 1 : 0
+            // The chevron is excluded: it is a control item but not a
+            // section boundary, and TemporaryShow anchors moves directly on
+            // it with .leftOfItem — biasing those drops would place the item
+            // one point left of an anchor that is not an edge between two
+            // sections, for no hit-test ambiguity resolved.
+            let sectionBias: CGFloat = targetItem.tag == .hiddenControlItem
+                || targetItem.tag == .alwaysHiddenControlItem ? 1 : 0
             return switch self {
             case .leftOfItem:
                 CGPoint(x: targetBounds.minX - sectionBias, y: targetY)
@@ -144,6 +150,37 @@ extension MenuBarItemManager {
     ) -> Duration {
         let next = proposed > current ? proposed : (proposed + current) / 2
         return next.clamped(min: .milliseconds(75), max: .seconds(1))
+    }
+
+    /// Watchdog duration that covers the worst case of a single `move`
+    /// call: every one of `maxAttempts` attempts spends its whole
+    /// operation timeout four times over (two event posts, two response
+    /// waits), budgets can escalate to the merged ceiling, and a failed
+    /// attempt posts one more fallback at a fixed 100 ms. The result never
+    /// drops below the historical flat 10 s, so ordinary moves keep the
+    /// same safety net while an escalated stubborn item no longer outlasts
+    /// the watchdog and force-shows the cursor mid-sequence.
+    ///
+    /// Extracted so the arithmetic is unit-testable without posting events.
+    static nonisolated func cursorHideWatchdogTimeout(
+        operationCeiling: Duration = .seconds(1),
+        maxAttempts: Int = 8,
+        fallbackPost: Duration = .milliseconds(100),
+        floor: Duration = .seconds(10)
+    ) -> Duration {
+        // Per attempt: two event posts + two response waits, all capped at
+        // the ceiling. One millisecond is 10^15 attoseconds.
+        let attosecondsPerMillisecond = 1_000_000_000_000_000.0
+        let perAttemptComponents = operationCeiling.components
+        let perAttemptMs = Double(perAttemptComponents.seconds) * 1000.0
+            + Double(perAttemptComponents.attoseconds) / attosecondsPerMillisecond
+        let attempts = max(1, maxAttempts)
+        let fallbackMs = Double(fallbackPost.components.seconds) * 1000.0
+            + Double(fallbackPost.components.attoseconds) / attosecondsPerMillisecond
+        let floorMs = Double(floor.components.seconds) * 1000.0
+            + Double(floor.components.attoseconds) / attosecondsPerMillisecond
+        let totalMs = max(floorMs, perAttemptMs * Double(attempts) * 4 + fallbackMs)
+        return .milliseconds(Int(totalMs.rounded(.up)))
     }
 
     /// Updates the cached timeout for move operations associated
@@ -786,15 +823,21 @@ extension MenuBarItemManager {
         // during a layout reset when items required multiple attempts).
         let mouseLocation = try getMouseLocation()
         // The default 1 s cursor-hide watchdog is too short for menu
-        // bar item moves: each item can take up to ~4 s across retries
-        // (8 attempts × ~500 ms timeout), and during a full layout pass
-        // many items move sequentially. When the watchdog fires partway
-        // through, the cursor is force-shown at the synthetic event's
-        // last cursorPosition (mid-display, per the offscreen-target
-        // override below in postMoveEvents) and the user sees a brief
-        // cursor flash. 10 s is long enough to cover any single move
-        // without giving up the safety net for genuinely stuck states.
-        MouseHelpers.hideCursor(watchdogTimeout: watchdogTimeout ?? .seconds(10))
+        // bar item moves, and the budget they can burn has grown: every
+        // attempt spends its whole timeout four times over (two event
+        // posts, two response waits), budgets escalate to the merged
+        // ceiling of one second per operation, and a failed attempt posts
+        // one more fallback at a fixed 100 ms. At the ceiling that is
+        // roughly 32 s for eight attempts — far past the old flat 10 s,
+        // whose comment still assumed "8 × ~500 ms". When the watchdog
+        // fires partway through, the cursor is force-shown at the
+        // synthetic event's last cursorPosition (mid-display, per the
+        // offscreen-target override below in postMoveEvents) and the user
+        // sees a brief cursor flash. The floor stays at 10 s so ordinary
+        // moves keep their safety net against genuinely stuck states.
+        MouseHelpers.hideCursor(
+            watchdogTimeout: watchdogTimeout ?? Self.cursorHideWatchdogTimeout()
+        )
         defer {
             MouseHelpers.restoreCursorPosition(to: mouseLocation)
             MouseHelpers.showCursor()

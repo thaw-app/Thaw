@@ -920,13 +920,24 @@ nonisolated enum LayoutSolver {
         liveMovableUIDs: Set<String>,
         unanchorableUIDs: Set<String> = []
     ) -> HiddenDividerAnchor? {
-        if let rightmostHidden = desiredHidden.first(where: liveMovableUIDs.contains) {
-            return unanchorableUIDs.contains(rightmostHidden) ? nil : .rightOf(rightmostHidden)
+        // One selection rule, shared with hiddenDividerAnchorCandidate so a
+        // caller logging the refused candidate can never name an item other
+        // than the one this planner considered.
+        guard let candidate = hiddenDividerAnchorCandidate(
+            desiredHidden: desiredHidden,
+            desiredVisible: desiredVisible,
+            liveMovableUIDs: liveMovableUIDs
+        ) else {
+            return nil
         }
-        if let leftmostVisible = desiredVisible.last(where: liveMovableUIDs.contains) {
-            return unanchorableUIDs.contains(leftmostVisible) ? nil : .leftOf(leftmostVisible)
+        if unanchorableUIDs.contains(candidate) {
+            return nil
         }
-        return nil
+        // Hidden side first: rightOf it. Visible side only as fallback:
+        // leftOf it.
+        return desiredHidden.first(where: liveMovableUIDs.contains) == candidate
+            ? .rightOf(candidate)
+            : .leftOf(candidate)
     }
 
     /// The item ``planHiddenDividerAnchor(desiredHidden:desiredVisible:liveMovableUIDs:unanchorableUIDs:)``
