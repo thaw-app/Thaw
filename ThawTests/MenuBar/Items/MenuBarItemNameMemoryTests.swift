@@ -207,16 +207,22 @@ struct MenuBarItemNameMemoryTests {
 
     @Test("Refused items are never written into the memory")
     func refusedItemsAreNotRemembered() {
-        // sourcePID is set here, so only the eligibility rule can keep this
-        // out of the dictionary.
+        // sourcePID is set to a live process (this test runner), so the
+        // source-application filter passes and only the eligibility rule can
+        // keep this out of the dictionary. A dead hard-coded PID would let
+        // the test pass through the sourceApplication check instead.
         let item = MenuBarItem.fixture(
             tag: .appItem(bundleID: "com.apple.controlcenter", title: "Item-0"),
             windowID: 1100,
-            sourcePID: 1234
+            sourcePID: ProcessInfo.processInfo.processIdentifier
         )
+        #expect(item.sourceApplication != nil)
         let key = MenuBarItemTag.canonicalPersistentIdentifier(item.uniqueIdentifier)
 
         let original = Defaults.dictionary(forKey: .menuBarItemResolvedNames) as? [String: String] ?? [:]
+        var baseline = original
+        baseline[key] = nil
+        Defaults.set(baseline, forKey: .menuBarItemResolvedNames)
         defer { Defaults.set(original, forKey: .menuBarItemResolvedNames) }
 
         MenuBarItemNameMemory.remember([item])

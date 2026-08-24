@@ -1507,39 +1507,39 @@ extension MenuBarItemManager {
         // ControlItemPair models the missing divider as an optional, so the
         // pair succeeds and the lookup-failure rebuild above never fires:
         // #863's HDMI re-plug left alwaysHidden=nil for 12+ hours and the
-        // whole always-hidden section drained into visible. Count only
-        // authoritative cycles (a provisional correlation must not advance
-        // recovery, same rule as the parked-divider streak), and only while
-        // the feature is enabled — a disabled section's absent divider is
-        // intentional, not a loss to recover from.
-        if appState?.settings.advanced.enableAlwaysHiddenSection == true,
-           controlItems.canRepositionControlItems
-        {
-            if controlItems.alwaysHidden == nil {
-                missingAlwaysHiddenDividerStreak += 1
-                if Self.shouldRecoverMissingAlwaysHiddenDivider(
-                    consecutiveMissingReadings: missingAlwaysHiddenDividerStreak,
-                    alreadyRecovered: didRecoverMissingAlwaysHiddenDivider
-                ) {
-                    didRecoverMissingAlwaysHiddenDivider = true
-                    MenuBarItemManager.diagLog.warning(
-                        "cacheItemsRegardless: always-hidden section enabled but its divider has not resolved for \(missingAlwaysHiddenDividerStreak) consecutive cycles, recreating it"
-                    )
-                    await MainActor.run {
-                        appState?.menuBarManager.controlItem(withName: .alwaysHidden)?.recreateStatusItem()
+        // whole always-hidden section drained into visible. Only
+        // authoritative cycles may advance, reset, or re-arm the episode —
+        // a provisional correlation says nothing either way, the same rule
+        // the parked-divider streak applies — and a disabled section's
+        // absent divider is intentional, not a loss to recover from.
+        if controlItems.canRepositionControlItems {
+            if appState?.settings.advanced.enableAlwaysHiddenSection == true {
+                if controlItems.alwaysHidden == nil {
+                    missingAlwaysHiddenDividerStreak += 1
+                    if Self.shouldRecoverMissingAlwaysHiddenDivider(
+                        consecutiveMissingReadings: missingAlwaysHiddenDividerStreak,
+                        alreadyRecovered: didRecoverMissingAlwaysHiddenDivider
+                    ) {
+                        didRecoverMissingAlwaysHiddenDivider = true
+                        MenuBarItemManager.diagLog.warning(
+                            "cacheItemsRegardless: always-hidden section enabled but its divider has not resolved for \(missingAlwaysHiddenDividerStreak) consecutive cycles, recreating it"
+                        )
+                        await MainActor.run {
+                            appState?.menuBarManager.controlItem(withName: .alwaysHidden)?.recreateStatusItem()
+                        }
+                        Task { [weak self] in
+                            try? await Task.sleep(for: .milliseconds(100))
+                            await self?.cacheItemsRegardless()
+                        }
                     }
-                    Task { [weak self] in
-                        try? await Task.sleep(for: .milliseconds(100))
-                        await self?.cacheItemsRegardless()
-                    }
+                } else {
+                    missingAlwaysHiddenDividerStreak = 0
+                    didRecoverMissingAlwaysHiddenDivider = false
                 }
             } else {
                 missingAlwaysHiddenDividerStreak = 0
                 didRecoverMissingAlwaysHiddenDivider = false
             }
-        } else {
-            missingAlwaysHiddenDividerStreak = 0
-            didRecoverMissingAlwaysHiddenDivider = false
         }
 
         if Self.isDegradedIdentityEnrichmentEnabled {

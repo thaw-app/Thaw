@@ -836,7 +836,9 @@ extension MenuBarItemManager {
         // sees a brief cursor flash. The floor stays at 10 s so ordinary
         // moves keep their safety net against genuinely stuck states.
         MouseHelpers.hideCursor(
-            watchdogTimeout: watchdogTimeout ?? Self.cursorHideWatchdogTimeout()
+            watchdogTimeout: watchdogTimeout ?? Self.cursorHideWatchdogTimeout(
+                maxAttempts: max(1, maxMoveAttempts)
+            )
         )
         defer {
             MouseHelpers.restoreCursorPosition(to: mouseLocation)
