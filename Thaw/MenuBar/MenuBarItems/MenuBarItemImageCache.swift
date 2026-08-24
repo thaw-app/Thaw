@@ -236,6 +236,15 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     /// Minimum spacing enforced between offscreen SkyLight batch captures.
     private static let minSkyLightBatchInterval: Duration = .seconds(1)
 
+    /// Whether a window's bounds can contribute to a composite capture.
+    ///
+    /// Both dimensions must be positive: the capture APIs omit degenerate
+    /// windows from the composite, so including one only corrupts the
+    /// geometry the composite is sliced with.
+    static nonisolated func isCapturableBounds(_ bounds: CGRect) -> Bool {
+        bounds.width > 0 && bounds.height > 0
+    }
+
     /// Timestamp of the last visible-section SCK capture, used to rate-limit
     /// the on-screen path the same way the offscreen one already is.
     private var lastSCKRefreshAt: ContinuousClock.Instant?
@@ -1262,6 +1271,25 @@ final class MenuBarItemImageCache: @unchecked Sendable {
 
         for item in items {
             guard let bounds = Bridging.getWindowBounds(for: item.windowID) else {
+                continue
+            }
+            // Degenerate windows must not reach the union. A zero-width or
+            // zero-height window contributes nothing to the composite — the
+            // capture APIs drop it, and `cropping(to:)` on an empty rect
+            // returns nil — but including it still corrupts the geometry the
+            // composite gets sliced against: parked off-screen it drags
+            // `boundsUnion` across the whole gap to its position, so the
+            // expected-width check below compares the composite of the real
+            // items against a union thousands of points wide and discards
+            // every batch.
+            //
+            // This holds whatever produced the degenerate bounds; the union
+            // and the slice loop below read the same storage, so a window that
+            // cannot contribute geometry must enter neither.
+            guard Self.isCapturableBounds(bounds) else {
+                MenuBarItemImageCache.diagLog.debug(
+                    "refreshImages: skipping degenerate bounds for \(item.logString) (\(bounds.width)x\(bounds.height))"
+                )
                 continue
             }
             windowIDs.append(item.windowID)
