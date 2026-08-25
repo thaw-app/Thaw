@@ -245,12 +245,29 @@ enum TriggerScriptRunner {
             // `kill` returns before the kernel tears the group down. Wait for
             // the group to drain so a returning timeout really does mean no
             // descendant outlived the script.
+            //
+            // `isRunning` is polled alongside the group check because it is
+            // what reaps the direct child. Without it that child stays a
+            // zombie -- still a group member -- and the loop would burn its
+            // whole budget waiting for a process that has already exited.
             var groupDrainAttempts = 0
-            while process.hasLiveProcessGroup, groupDrainAttempts < 40 {
+            var groupDrained = false
+            while groupDrainAttempts < 40 {
+                _ = process.isRunning
+                if !process.hasLiveProcessGroup {
+                    groupDrained = true
+                    break
+                }
                 groupDrainAttempts += 1
                 try? await Task.sleep(for: .milliseconds(25))
             }
-            diagLog.warning("Force-killed trigger script process group after timeout: \(trimmed)")
+            if groupDrained {
+                diagLog.warning("Force-killed trigger script process group after timeout: \(trimmed)")
+            } else {
+                diagLog.error(
+                    "Trigger script process group still alive after force-kill and drain budget: \(trimmed)"
+                )
+            }
         }
 
         while process.isRunning {

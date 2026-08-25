@@ -743,27 +743,25 @@ final class MenuBarItemTriggerTests: XCTestCase {
 
     @MainActor
     func testDefaultManagerDoesNotPersistFixturesUnderXCTest() {
-        let original = Defaults.data(forKey: .menuBarItemTriggers)
-        defer {
-            if Defaults.data(forKey: .menuBarItemTriggers) != original {
-                if let original {
-                    Defaults.set(original, forKey: .menuBarItemTriggers)
-                } else {
-                    Defaults.removeObject(forKey: .menuBarItemTriggers)
-                }
-            }
+        // A throwaway suite rather than per-key snapshot/restore. The restore
+        // was correct, but the window between mutation and restore was
+        // visible to anything else in the process reading this key, and an
+        // interrupted run left the developer's real preferences modified.
+        let ran = withScratchDefaultsForXCTest { _ in
+            let manager = MenuBarItemTriggersManager()
+            manager.triggers = [
+                MenuBarItemTrigger(
+                    name: "Test fixture",
+                    itemIdentifier: "test-only-item",
+                    condition: .onACPower
+                ),
+            ]
+
+            // Nothing was seeded into the scratch suite, so persisting under
+            // XCTest would show up as a non-nil value here.
+            XCTAssertNil(Defaults.data(forKey: .menuBarItemTriggers))
         }
-
-        let manager = MenuBarItemTriggersManager()
-        manager.triggers = [
-            MenuBarItemTrigger(
-                name: "Test fixture",
-                itemIdentifier: "test-only-item",
-                condition: .onACPower
-            ),
-        ]
-
-        XCTAssertEqual(Defaults.data(forKey: .menuBarItemTriggers), original)
+        XCTAssertNotNil(ran, "could not open a scratch defaults suite")
     }
 
     @MainActor
@@ -1009,51 +1007,37 @@ final class MenuBarItemTriggerTests: XCTestCase {
 
     @MainActor
     func testDisableAllFeatureFlags() {
-        let previous = Defaults.stringArray(forKey: .triggerFeatureFlags)
-        defer {
-            if let previous {
-                Defaults.set(previous, forKey: .triggerFeatureFlags)
-            } else {
-                Defaults.removeObject(forKey: .triggerFeatureFlags)
-            }
+        let ran = withScratchDefaultsForXCTest { _ in
+            let manager = TriggerFeatureFlagsManager()
+
+            manager.setEnabled(.frontmostApp, true)
+            manager.setEnabled(.imageComparison, true)
+            XCTAssertTrue(manager.hasEnabledFlags)
+
+            manager.disableAll()
+
+            XCTAssertFalse(manager.hasEnabledFlags)
+            XCTAssertFalse(manager.isEnabled(.frontmostApp))
+            XCTAssertFalse(manager.isEnabled(.imageComparison))
+            XCTAssertEqual(Defaults.stringArray(forKey: .triggerFeatureFlags) ?? [], [])
         }
-
-        Defaults.removeObject(forKey: .triggerFeatureFlags)
-        let manager = TriggerFeatureFlagsManager()
-
-        manager.setEnabled(.frontmostApp, true)
-        manager.setEnabled(.imageComparison, true)
-        XCTAssertTrue(manager.hasEnabledFlags)
-
-        manager.disableAll()
-
-        XCTAssertFalse(manager.hasEnabledFlags)
-        XCTAssertFalse(manager.isEnabled(.frontmostApp))
-        XCTAssertFalse(manager.isEnabled(.imageComparison))
-        XCTAssertEqual(Defaults.stringArray(forKey: .triggerFeatureFlags) ?? [], [])
+        XCTAssertNotNil(ran, "could not open a scratch defaults suite")
     }
 
     @MainActor
     func testAllOffMenuItemDefaultsHiddenAndPersists() {
-        let previous = Defaults.object(forKey: .showTriggerFeatureFlagsAllOffMenuItem)
-        defer {
-            if let previous {
-                Defaults.set(previous, forKey: .showTriggerFeatureFlagsAllOffMenuItem)
-            } else {
-                Defaults.removeObject(forKey: .showTriggerFeatureFlagsAllOffMenuItem)
-            }
+        let ran = withScratchDefaultsForXCTest { _ in
+            let manager = TriggerFeatureFlagsManager()
+            XCTAssertFalse(manager.showsAllOffInMenuBarMenu)
+
+            manager.showsAllOffInMenuBarMenu = true
+            XCTAssertTrue(Defaults.bool(forKey: .showTriggerFeatureFlagsAllOffMenuItem))
+            XCTAssertTrue(TriggerFeatureFlagsManager().showsAllOffInMenuBarMenu)
+
+            manager.showsAllOffInMenuBarMenu = false
+            XCTAssertFalse(Defaults.bool(forKey: .showTriggerFeatureFlagsAllOffMenuItem))
         }
-
-        Defaults.removeObject(forKey: .showTriggerFeatureFlagsAllOffMenuItem)
-        let manager = TriggerFeatureFlagsManager()
-        XCTAssertFalse(manager.showsAllOffInMenuBarMenu)
-
-        manager.showsAllOffInMenuBarMenu = true
-        XCTAssertTrue(Defaults.bool(forKey: .showTriggerFeatureFlagsAllOffMenuItem))
-        XCTAssertTrue(TriggerFeatureFlagsManager().showsAllOffInMenuBarMenu)
-
-        manager.showsAllOffInMenuBarMenu = false
-        XCTAssertFalse(Defaults.bool(forKey: .showTriggerFeatureFlagsAllOffMenuItem))
+        XCTAssertNotNil(ran, "could not open a scratch defaults suite")
     }
 
     // MARK: - Compound conditions

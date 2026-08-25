@@ -185,6 +185,9 @@ final class SystemStateMonitor: ObservableObject {
     private let energyModeMonitor = EnergyModeMonitor()
     private var pathMonitor: NWPathMonitor?
 
+    /// The in-flight off-main polling round, so a slow sample cannot stack.
+    private var polledSampleTask: Task<Void, Never>?
+
     /// Poll timer for the sampled sources.
     private var pollTimer: Timer?
 
@@ -497,41 +500,79 @@ final class SystemStateMonitor: ObservableObject {
         }
     }
 
+    /// One round of the polled sources, gathered off the main actor.
+    ///
+    /// Every field is written back unconditionally. The samplers already
+    /// yield the cleared value when their flag is off, and writing only the
+    /// enabled ones used to leave the last sampled value behind after a
+    /// source was disabled -- a stale SSID or "camera in use" could keep
+    /// satisfying a condition indefinitely. Bluetooth was the only source
+    /// that cleared itself.
+    private struct PolledSample {
+        var audioOutputDeviceName: String?
+        var isVPNActive = false
+        var wifiSSID: String?
+        var isFocusActive = false
+        var activeFocusModeName: String?
+        var isCameraInUse = false
+        var isMicrophoneInUse = false
+    }
+
     private func samplePolledSources() {
         guard let flags else { return }
 
-        let audio = flags.isEnabled(.audioOutput) ? Self.defaultAudioOutputDeviceName() : nil
-        let vpn = flags.isEnabled(.vpn) ? Self.isVPNActive() : false
-        let ssid = flags.isEnabled(.wifiSSID) ? Self.currentWiFiSSID() : nil
-        let focus = flags.isEnabled(.focusMode) ? Self.isFocusActive() : false
-        // This is the profile requested by Thaw's Focus Filter,
-        // which the filter itself sets on activation and clears on
-        // deactivation (see ThawFocusModeStore).
-        let focusMode = flags.isEnabled(.focusMode) ? ThawFocusModeStore.activeMode : nil
-        let coordinate = flags.isEnabled(.location) ? currentCoordinate : nil
-        let cameraInUse = flags.isEnabled(.recordingDevices) ? Self.isCameraInUse() : false
-        let micInUse = flags.isEnabled(.recordingDevices) ? Self.isMicrophoneInUse() : false
+        let wantsAudio = flags.isEnabled(.audioOutput)
+        let wantsVPN = flags.isEnabled(.vpn)
+        let wantsSSID = flags.isEnabled(.wifiSSID)
+        let wantsFocus = flags.isEnabled(.focusMode)
+        let wantsLocation = flags.isEnabled(.location)
+        let wantsRecording = flags.isEnabled(.recordingDevices)
+
+        // Read on the main actor: `currentCoordinate` reads LocationProvider,
+        // which is main-actor state rather than a blocking system query.
+        let coordinate = wantsLocation ? currentCoordinate : nil
 
         if flags.isEnabled(.bluetooth) {
             refreshBluetoothState()
         }
 
-        update {
-            if flags.isEnabled(.audioOutput) { $0.audioOutputDeviceName = audio }
-            if !flags.isEnabled(.bluetooth) { $0.connectedBluetoothDeviceNames = [] }
-            if flags.isEnabled(.vpn) { $0.isVPNActive = vpn }
-            if flags.isEnabled(.wifiSSID) { $0.wifiSSID = ssid }
-            if flags.isEnabled(.recordingDevices) {
-                $0.isCameraInUse = cameraInUse
-                $0.isMicrophoneInUse = micInUse
-            }
-            if flags.isEnabled(.focusMode) {
-                $0.isFocusActive = focus
-                $0.activeFocusModeName = focusMode
-            }
-            if flags.isEnabled(.location) {
+        // Off the main actor, for the same reason the Bluetooth enumeration
+        // already is. Every sampler below blocks to some degree: the Focus
+        // fallback reads a JSON file from disk, the recording-device checks
+        // enumerate every CoreMediaIO and CoreAudio device and query each
+        // one's streams, and the audio, VPN and SSID lookups are synchronous
+        // system queries. At a five-second cadence that is a recurring main
+        // -thread stall for the whole app, not just this monitor.
+        polledSampleTask?.cancel()
+        polledSampleTask = Task { @MainActor [weak self] in
+            let sample = await Task.detached(priority: .utility) {
+                PolledSample(
+                    audioOutputDeviceName: wantsAudio ? Self.defaultAudioOutputDeviceName() : nil,
+                    isVPNActive: wantsVPN ? Self.isVPNActive() : false,
+                    wifiSSID: wantsSSID ? Self.currentWiFiSSID() : nil,
+                    isFocusActive: wantsFocus ? Self.isFocusActive() : false,
+                    // The profile requested by Thaw's Focus Filter, which the
+                    // filter sets on activation and clears on deactivation
+                    // (see ThawFocusModeStore).
+                    activeFocusModeName: wantsFocus ? ThawFocusModeStore.activeMode : nil,
+                    isCameraInUse: wantsRecording ? Self.isCameraInUse() : false,
+                    isMicrophoneInUse: wantsRecording ? Self.isMicrophoneInUse() : false
+                )
+            }.value
+            guard !Task.isCancelled, let self else { return }
+            self.update {
+                $0.audioOutputDeviceName = sample.audioOutputDeviceName
+                $0.isVPNActive = sample.isVPNActive
+                $0.wifiSSID = sample.wifiSSID
+                $0.isFocusActive = sample.isFocusActive
+                $0.activeFocusModeName = sample.activeFocusModeName
+                $0.isCameraInUse = sample.isCameraInUse
+                $0.isMicrophoneInUse = sample.isMicrophoneInUse
                 $0.currentLatitude = coordinate?.latitude
                 $0.currentLongitude = coordinate?.longitude
+                if self.flags?.isEnabled(.bluetooth) != true {
+                    $0.connectedBluetoothDeviceNames = []
+                }
             }
         }
     }
@@ -628,7 +669,7 @@ final class SystemStateMonitor: ObservableObject {
     }
 
     /// Returns the name of the current default audio output device.
-    static func defaultAudioOutputDeviceName() -> String? {
+    static nonisolated func defaultAudioOutputDeviceName() -> String? {
         var deviceID = AudioDeviceID(0)
         var size = UInt32(MemoryLayout<AudioDeviceID>.size)
         var address = AudioObjectPropertyAddress(
@@ -701,7 +742,7 @@ final class SystemStateMonitor: ObservableObject {
     /// Whether any camera is currently in use by some process. Reads the
     /// CoreMediaIO "running somewhere" hardware property, which does not
     /// require camera permission (no capture is performed).
-    static func isCameraInUse() -> Bool {
+    static nonisolated func isCameraInUse() -> Bool {
         var address = CMIOObjectPropertyAddress(
             mSelector: CMIOObjectPropertySelector(kCMIOHardwarePropertyDevices),
             mScope: CMIOObjectPropertyScope(kCMIOObjectPropertyScopeGlobal),
@@ -740,7 +781,7 @@ final class SystemStateMonitor: ObservableObject {
     /// Whether any microphone is currently in use by some process. Reads the
     /// CoreAudio "running somewhere" hardware property on input devices,
     /// which does not require microphone permission.
-    static func isMicrophoneInUse() -> Bool {
+    static nonisolated func isMicrophoneInUse() -> Bool {
         var listAddress = AudioObjectPropertyAddress(
             mSelector: kAudioHardwarePropertyDevices,
             mScope: kAudioObjectPropertyScopeGlobal,
@@ -813,7 +854,7 @@ final class SystemStateMonitor: ObservableObject {
 
     /// Heuristically detects an active VPN by inspecting the scoped system
     /// proxy settings for tunnel interface names.
-    static func isVPNActive() -> Bool {
+    static nonisolated func isVPNActive() -> Bool {
         guard
             let settings = CFNetworkCopySystemProxySettings()?.takeRetainedValue() as? [String: Any],
             let scoped = settings["__SCOPED__"] as? [String: Any]
@@ -829,7 +870,7 @@ final class SystemStateMonitor: ObservableObject {
 
     /// Returns the current Wi-Fi SSID, if available. Requires Location
     /// permission on recent macOS; returns `nil` otherwise (best-effort).
-    static func currentWiFiSSID() -> String? {
+    static nonisolated func currentWiFiSSID() -> String? {
         CWWiFiClient.shared().interface()?.ssid()
     }
 
@@ -840,7 +881,7 @@ final class SystemStateMonitor: ObservableObject {
     /// requested when the Focus feature is enabled). Falls back to reading
     /// the Do Not Disturb assertions store when the status is unavailable
     /// (e.g. authorization not yet granted).
-    static func isFocusActive() -> Bool {
+    static nonisolated func isFocusActive() -> Bool {
         // Only touch focusStatus when authorized: reading protected data
         // without authorization (and without the usage description) risks a
         // privacy abort, and returns nil anyway. Fall back to the file.
@@ -854,7 +895,7 @@ final class SystemStateMonitor: ObservableObject {
 
     /// File-based fallback: reads the Do Not Disturb assertions store and
     /// returns whether any focus assertion is currently active.
-    static func isFocusActiveFromAssertions() -> Bool {
+    static nonisolated func isFocusActiveFromAssertions() -> Bool {
         let home = FileManager.default.homeDirectoryForCurrentUser
         let url = home.appendingPathComponent("Library/DoNotDisturb/DB/Assertions.json")
         guard

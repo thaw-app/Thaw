@@ -165,6 +165,30 @@ extension MenuBarItemManager {
         return baseMatches.count == 1 ? Set(baseMatches) : []
     }
 
+    /// The live UIDs in `uids` that a trigger currently owns or is still
+    /// restoring, resolved drift-tolerantly against `items`.
+    ///
+    /// Callers that classify items against the desired layout need this:
+    /// a trigger-owned item is deliberately absent from the desired layout,
+    /// so without excluding it explicitly it reads as an unmanaged arrival.
+    func triggerProtectedUIDs(among uids: [String], items: [MenuBarItem]) -> Set<String> {
+        let protectedIdentifiers = triggerControlledItemIdentifiers
+            .union(triggerLayoutRestorationItemIdentifiers)
+        guard !protectedIdentifiers.isEmpty else { return [] }
+        let knownBaseIdentifiers = Set(items.map(\.tag.stableIdentifierBase))
+        let knownLiveIdentifiers = Set(items.map(\.uniqueIdentifier))
+        return Set(
+            uids.filter {
+                Self.isTriggerProtected(
+                    $0,
+                    by: protectedIdentifiers,
+                    knownBaseIdentifiers: knownBaseIdentifiers,
+                    knownLiveIdentifiers: knownLiveIdentifiers
+                )
+            }
+        )
+    }
+
     static nonisolated func isTriggerProtected(
         _ liveIdentifier: String,
         by protectedIdentifiers: Set<String>,

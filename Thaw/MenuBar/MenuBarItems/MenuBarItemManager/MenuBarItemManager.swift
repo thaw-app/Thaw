@@ -512,19 +512,39 @@ final class MenuBarItemManager {
     /// not complete".
     private var consecutiveUnfinishedBulkApplies = 0
 
-    /// Monotonic marker and result for the most recently completed bulk
-    /// apply. Trigger release restoration uses the generation to distinguish
-    /// a real completed apply from an early-returned apply request.
+    /// Monotonic marker and result for the most recently recorded outcome,
+    /// which includes an explicit user move (see
+    /// ``recordExternalMoveOperation``) because that too clears the save
+    /// latch.
     private(set) var bulkApplyOutcomeGeneration = 0
     private(set) var lastBulkApplyUnenactedMoveCount: Int?
+
+    /// Monotonic marker bumped only when a bulk apply actually ran to
+    /// completion.
+    ///
+    /// Kept separate from ``bulkApplyOutcomeGeneration`` deliberately. Trigger
+    /// release restoration reads it to tell a real completed apply from an
+    /// apply request that early-returned, and a user Cmd-drag or layout-editor
+    /// drag arriving mid-apply also records an outcome with zero unenacted
+    /// moves. Sharing one counter let that user move satisfy the completion
+    /// check, clear the restoration shields with no apply having run, and so
+    /// let the next cache cycle persist a temporary trigger placement as a
+    /// user edit.
+    private(set) var bulkApplyCompletionGeneration = 0
 
     /// Records how a bulk apply ended, for the saveSectionOrder gate.
     ///
     /// A clean batch clears the arm rather than leaving it to expire: the
     /// bar now matches what the apply set out to produce, and there is no
     /// reason to keep withholding it from the saved order.
-    func recordBulkApplyOutcome(unenactedMoveCount: Int) {
+    ///
+    /// - Parameter isCompletedApply: whether this is a real bulk apply
+    ///   finishing, as opposed to a user move borrowing the same latch.
+    func recordBulkApplyOutcome(unenactedMoveCount: Int, isCompletedApply: Bool = true) {
         bulkApplyOutcomeGeneration += 1
+        if isCompletedApply {
+            bulkApplyCompletionGeneration += 1
+        }
         lastBulkApplyUnenactedMoveCount = unenactedMoveCount
         guard unenactedMoveCount > 0 else {
             unfinishedMoveBatchObservedAt = nil
@@ -2039,7 +2059,7 @@ final class MenuBarItemManager {
         lastMoveOperationTimestamp = .now
         lastUserMoveOperationTimestamp = .now
         pendingDivergenceObservedAt = nil
-        recordBulkApplyOutcome(unenactedMoveCount: 0)
+        recordBulkApplyOutcome(unenactedMoveCount: 0, isCompletedApply: false)
     }
 
     /// Whether the save gate's user-move exemption applies: it must, and only,

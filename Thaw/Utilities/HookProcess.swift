@@ -191,7 +191,10 @@ extension HookRunner {
             }
 
             var waitStatus: Int32 = 0
-            let result = waitpid(processIdentifier, &waitStatus, WNOHANG)
+            var result = waitpid(processIdentifier, &waitStatus, WNOHANG)
+            while result == -1, errno == EINTR {
+                result = waitpid(processIdentifier, &waitStatus, WNOHANG)
+            }
             if result == processIdentifier {
                 let signal = waitStatus & 0x7F
                 let status: Int32 = if signal == 0 {
@@ -201,6 +204,15 @@ extension HookRunner {
                 }
                 completedStatus = status
                 return status
+            }
+            // A failure is termination, not "still running". `waitpid` returns
+            // -1 with ECHILD once the child has been reaped -- or when it was
+            // never ours to reap -- and reporting that as still-running leaves
+            // every caller polling `isRunning` in a loop that cannot end. Only
+            // a genuine "no state change yet" (result 0) means still running.
+            if result == -1 {
+                completedStatus = -1
+                return -1
             }
             return nil
         }

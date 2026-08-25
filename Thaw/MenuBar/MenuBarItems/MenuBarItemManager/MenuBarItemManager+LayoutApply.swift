@@ -1071,13 +1071,19 @@ extension MenuBarItemManager {
         // namespace, never match a profile entry, and so would be relocated as
         // unmanaged arrivals on every cycle. Exclude them until they resolve.
         let provisionalIdentityUIDs = LayoutSolver.provisionalIdentityUIDs(items: items)
+        // A trigger-owned item is deliberately missing from the desired
+        // layout, so it would otherwise be classified as an unmanaged arrival
+        // and given a `.saved` placement from the unfiltered saved order --
+        // moving it straight back out of where the trigger put it.
+        let triggerControlledUIDs = triggerProtectedUIDs(among: currentFlat, items: items)
         let unmanagedUIDs = LayoutSolver.partitionUnmanagedUIDs(
             currentFlat: currentFlat,
             desiredUIDs: desiredSet,
             hiddenCtrlUID: hiddenCtrlUID,
             ahCtrlUID: ahCtrlUID,
             visibleCtrlUID: visibleCtrlUID,
-            provisionalIdentityUIDs: provisionalIdentityUIDs
+            provisionalIdentityUIDs: provisionalIdentityUIDs,
+            triggerControlledUIDs: triggerControlledUIDs
         )
         if !unmanagedUIDs.isEmpty {
             // Build a DesiredLayout for the profile-apply context: the
@@ -3169,7 +3175,11 @@ extension MenuBarItemManager {
         // Passing it through as duringSettling exempts that apply from
         // Phase 0's settling wait, which its gate-holding caller cannot
         // survive (#943).
-        let outcomeGenerationBeforeApply = bulkApplyOutcomeGeneration
+        // The completion counter, not the outcome counter: a user Cmd-drag or
+        // layout-editor drag landing mid-apply also records an outcome with
+        // zero unenacted moves, which would satisfy this check and clear the
+        // restoration shields without any apply having run.
+        let completionGenerationBeforeApply = bulkApplyCompletionGeneration
         let restorationIdentifiersAtDispatch = triggerLayoutRestorationItemIdentifiers
         await applyProfileLayout(
             ProfileLayoutSpec(
@@ -3183,7 +3193,7 @@ extension MenuBarItemManager {
             automatic: true,
             duringSettling: resolvedIdentitiesOnly
         )
-        if bulkApplyOutcomeGeneration != outcomeGenerationBeforeApply,
+        if bulkApplyCompletionGeneration != completionGenerationBeforeApply,
            lastBulkApplyUnenactedMoveCount == 0
         {
             let restored = restorationIdentifiersAtDispatch.filter { identifier in

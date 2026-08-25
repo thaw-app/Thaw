@@ -143,3 +143,34 @@ func withScratchDefaults<Result>(
     }
     return try await body(suite)
 }
+
+/// XCTest-compatible variant of ``withScratchDefaults(sourceLocation:_:)``.
+///
+/// The Swift Testing variants call `#require`, which only records against a
+/// running Swift Testing test; from an `XCTestCase` it would report outside a
+/// test. This one signals failure by returning `nil` instead, so an XCTest
+/// case can assert on it directly.
+///
+/// It shares ``scratchDefaultsLock`` with the synchronous Swift Testing
+/// variant, so the two exclude each other and neither can observe the other's
+/// scratch store.
+///
+/// - Warning: non-recursive, like the variants above. Do not nest.
+@discardableResult
+func withScratchDefaultsForXCTest<Result>(
+    _ body: (UserDefaults) throws -> Result
+) rethrows -> Result? {
+    let suiteName = "com.stonerl.ThawTests.\(UUID().uuidString)"
+    guard let suite = UserDefaults(suiteName: suiteName) else {
+        return nil
+    }
+    scratchDefaultsLock.lock()
+    let previous = Defaults.store
+    Defaults.store = suite
+    defer {
+        Defaults.store = previous
+        suite.removePersistentDomain(forName: suiteName)
+        scratchDefaultsLock.unlock()
+    }
+    return try body(suite)
+}
