@@ -149,35 +149,50 @@ final class LayoutBarPaddingView: NSView {
         var willMove = false
         let sourceContainer = draggingSource.oldContainerInfo?.container
 
+        // A grouped item drags its whole group: resolve the drag unit once
+        // and move members as one block, preserving their relative order.
+        var draggedUnit = [MenuBarItem]()
+        if case let .item(draggedItem) = draggingSource.kind,
+           let appState = container.appState
+        {
+            let arrangedItems = arrangedViews.compactMap { view -> MenuBarItem? in
+                if case let .item(item) = view.kind { return item }
+                return nil
+            }
+            draggedUnit = appState.itemGroupManager.dragUnit(for: draggedItem, in: arrangedItems)
+        } else if case let .item(draggedItem) = draggingSource.kind {
+            draggedUnit = [draggedItem]
+        }
+
         if let index = arrangedViews.firstIndex(of: draggingSource) {
             if arrangedViews.count == 1 {
                 willMove = true
                 Task {
-                    guard case let .item(item) = draggingSource.kind else {
+                    guard case let .item(draggingItem) = draggingSource.kind else {
                         self.container.canSetArrangedViews = true
                         sourceContainer?.canSetArrangedViews = true
                         return
                     }
                     if let destination = await self.liveFallbackDestinationForDraggedItem() {
-                        self.move(item: item, to: destination, sourceContainer: sourceContainer)
+                        self.move(items: draggedUnit, startingWith: draggingItem, to: destination, sourceContainer: sourceContainer)
                     } else {
                         Self.diagLog.error("No target item for layout bar drag")
                         self.container.canSetArrangedViews = true
                         sourceContainer?.canSetArrangedViews = true
                     }
                 }
-            } else if case let .item(item) = draggingSource.kind {
+            } else if case let .item(draggingItem) = draggingSource.kind {
                 if let targetItem = nearestItem(toRightOf: index) {
                     willMove = true
-                    move(item: item, to: .leftOfItem(targetItem), sourceContainer: sourceContainer)
+                    move(items: draggedUnit, startingWith: draggingItem, to: .leftOfItem(targetItem), sourceContainer: sourceContainer)
                 } else if let targetItem = nearestItem(toLeftOf: index) {
                     willMove = true
-                    move(item: item, to: .rightOfItem(targetItem), sourceContainer: sourceContainer)
+                    move(items: draggedUnit, startingWith: draggingItem, to: .rightOfItem(targetItem), sourceContainer: sourceContainer)
                 } else if !arrangedViews.isEmpty {
                     willMove = true
                     Task {
                         if let destination = await self.liveFallbackDestinationForDraggedItem() {
-                            self.move(item: item, to: destination, sourceContainer: sourceContainer)
+                            self.move(items: draggedUnit, startingWith: draggingItem, to: destination, sourceContainer: sourceContainer)
                         } else {
                             Self.diagLog.error("No target item for layout bar drag")
                             self.container.canSetArrangedViews = true
@@ -195,6 +210,80 @@ final class LayoutBarPaddingView: NSView {
         }
 
         return true
+    }
+
+    /// Moves a group's drag unit as one block.
+    ///
+    /// The dragged item takes `destination`; every remaining member is then
+    /// chained to its right, so the unit keeps its internal order. Members
+    /// that were scattered are pulled to the drop point, which is what makes
+    /// "drag any member" gather the whole group.
+    private func move(
+        items: [MenuBarItem],
+        startingWith draggedItem: MenuBarItem,
+        to destination: MenuBarItemManager.MoveDestination,
+        sourceContainer: LayoutBarContainer? = nil
+    ) {
+        guard let appState = container.appState else {
+            return
+        }
+        // Order members in arranged-view order with the dragged item first,
+        // then deduplicate against it: the dragged item is already covered by
+        // the initial destination move below.
+        var ordered = items.filter { $0.tag != draggedItem.tag }
+        guard let dragged = items.first(where: { $0.tag == draggedItem.tag }) ?? draggedItem as MenuBarItem? else {
+            return
+        }
+        ordered.insert(dragged, at: 0)
+
+        guard ordered.count > 1 else {
+            move(item: draggedItem, to: destination, sourceContainer: sourceContainer)
+            return
+        }
+
+        Task { [self, appState] in
+            guard !isStabilizing else { return }
+            isStabilizing = true
+            await MainActor.run { self.showOverlay(true) }
+            guard await (try? Task.sleep(for: .milliseconds(150))) != nil else {
+                await resetStabilizingStateIfNeeded()
+                return
+            }
+
+            do {
+                var previous: MenuBarItem?
+                for item in ordered {
+                    // The first member takes the drop destination; each next
+                    // member chains to the previous one's right, keeping the
+                    // unit's relative order.
+                    let target: MenuBarItemManager.MoveDestination =
+                        previous.map { .rightOfItem($0) } ?? destination
+                    try await appState.itemManager.move(
+                        item: item,
+                        to: target,
+                        skipInputPause: true,
+                        watchdogTimeout: MenuBarItemManager.layoutWatchdogTimeout
+                    )
+                    appState.itemManager.removeTemporarilyShownItemFromCache(with: item.tag)
+                    previous = item
+                }
+                if let last = previous,
+                   await stabilizePlacement(
+                       of: last,
+                       to: destination,
+                       expectedSection: container.section,
+                       appState: appState
+                   )
+                {
+                    appState.itemManager.recordExternalMoveOperation()
+                }
+            } catch MenuBarItemManager.EventError.menuTrackingActive {
+                Self.diagLog.info("Group move deferred, a menu bar item menu was open")
+            } catch {
+                Self.diagLog.error("Error moving menu bar item group: \(error)")
+            }
+            await resetStabilizingStateIfNeeded()
+        }
     }
 
     private func move(

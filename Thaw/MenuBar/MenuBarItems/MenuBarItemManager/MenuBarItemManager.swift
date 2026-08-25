@@ -234,6 +234,10 @@ final class MenuBarItemManager {
     /// Observes `appState.navigationState`'s @Observable properties (wave 3).
     private var navigationStateObservationTask: Task<Void, Never>?
 
+    /// Task observing the item group set, so editing a group re-applies the
+    /// gathered order to the live menu bar.
+    private var groupOrderObservationTask: Task<Void, Never>?
+
     /// A candidate menu window matched by the open-menu probe.
     nonisolated struct MenuWindowCandidate: Sendable {
         let windowID: CGWindowID
@@ -1014,6 +1018,72 @@ final class MenuBarItemManager {
         Defaults.store.set(savedSectionOrder, forKey: LayoutStateKey.savedSectionOrder)
     }
 
+    // MARK: - Item Groups
+
+    /// The group set to enforce, wrapped in the planner-facing shape.
+    private var activeGroupSet: MenuBarItemGroupPolicy.GroupSet? {
+        guard let appState else { return nil }
+        let resolved = appState.itemGroupManager.groupSet
+        guard !resolved.groups.isEmpty else { return nil }
+        let set = MenuBarItemGroupPolicy.GroupSet(groups: resolved.groups.map(\.memberIdentifiers))
+        return set.isEmpty ? nil : set
+    }
+
+    /// Applies the group contiguity invariant to a per-section order.
+    ///
+    /// Deliberately gathers **within** each section only: on this backend,
+    /// pulling a member across sections would conceal or reveal it as a side
+    /// effect of an ordering edit. A user moves members between sections
+    /// themselves; Thaw keeps them adjacent once they share one.
+    func gatheredSectionOrder(_ order: [String: [String]]) -> [String: [String]] {
+        guard let groups = activeGroupSet, !order.isEmpty else {
+            return order
+        }
+        var result = order
+        for (key, identifiers) in order {
+            let (gathered, report) = MenuBarItemGroupPolicy.gather(groups: groups, in: identifiers)
+            if report != .noChange {
+                result[key] = gathered
+            }
+        }
+        return result
+    }
+
+    /// Re-gathers groups in the saved order and moves the live items to
+    /// match. Called when the user creates, edits, or dissolves a group:
+    /// editing a group changes the *desired* order but moves nothing on
+    /// screen by itself.
+    func applyGroupOrderToLiveSections() async {
+        guard let appState else { return }
+        let gathered = gatheredSectionOrder(savedSectionOrder)
+        guard gathered != savedSectionOrder, !savedSectionOrder.isEmpty else {
+            return
+        }
+        savedSectionOrder = gathered
+        persistSavedSectionOrder()
+
+        // Reuse the profile-apply move engine with the gathered order as the
+        // spec: `.savedOrder` skips profile-state arming and `automatic:
+        // false` treats this as what it is, a user-initiated edit that should
+        // happen now rather than at the next interaction lull. Closed apps'
+        // entries are carried in the maps so their slots survive the apply.
+        var itemSectionMap = [String: String]()
+        for (sectionKey, identifiers) in gathered {
+            for identifier in identifiers {
+                itemSectionMap[identifier] = sectionKey
+            }
+        }
+        let spec = ProfileLayoutSpec(
+            pinnedHidden: pinnedHiddenBundleIDs,
+            pinnedAlwaysHidden: pinnedAlwaysHiddenBundleIDs,
+            sectionOrder: gathered,
+            itemSectionMap: itemSectionMap,
+            itemOrder: gathered
+        )
+        MenuBarItemManager.diagLog.info("Applying updated group order to live sections")
+        await applyProfileLayout(spec, source: .savedOrder, automatic: false)
+    }
+
     /// Extracts the current per-section item order from the given cache and
     /// persists it. Skips the write when the order has not changed.
     /// For items currently in the cache, uses their current section.
@@ -1195,7 +1265,13 @@ final class MenuBarItemManager {
             )
             return
         }
-        let newOrder = computeSectionOrder(from: cache)
+        let computedOrder = computeSectionOrder(from: cache)
+        // Groups are an order invariant: every persisted order has each
+        // group's members in one contiguous run, anchored at the leftmost
+        // member. Applying the gather here means periodic saves, profile
+        // captures, and everything downstream of this function observe the
+        // invariant without knowing about groups.
+        let newOrder = gatheredSectionOrder(computedOrder)
         guard newOrder != savedSectionOrder else { return }
         let previousOrder = savedSectionOrder
         savedSectionOrder = newOrder
@@ -1910,8 +1986,31 @@ final class MenuBarItemManager {
     }
 
     /// Configures the internal observers for the manager.
-    private func configureCancellables(with _: AppState) {
+    private func configureCancellables(with appState: AppState) {
         var c = Set<AnyCancellable>()
+
+        // Editing a group (create, rename, add/remove member, dissolve)
+        // changes the *desired* order but moves nothing on screen. Re-gather
+        // the saved order and re-apply it to the live sections. Debounced
+        // because a multi-step edit lands as several mutations, and each
+        // physical re-order costs a plist write plus a move batch.
+        groupOrderObservationTask?.cancel()
+        groupOrderObservationTask = Task { [weak self, weak appState] in
+            let changes = Observations { [weak appState] in
+                appState?.itemGroupManager.groupSet
+            }
+            var isFirst = true
+            for await _ in changes {
+                guard let self else { return }
+                if isFirst {
+                    isFirst = false
+                    continue
+                }
+                try? await Task.sleep(for: .milliseconds(250))
+                guard !Task.isCancelled else { return }
+                await self.applyGroupOrderToLiveSections()
+            }
+        }
 
         // When any app launches, refresh the cache to detect new menu bar items
         // (e.g., apps with "unremembered" icons that need restoration) and restore

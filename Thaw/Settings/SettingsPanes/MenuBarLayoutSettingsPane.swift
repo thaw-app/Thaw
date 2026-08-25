@@ -25,6 +25,7 @@ struct MenuBarLayoutSettingsPane: View {
             IceForm {
                 LayoutBarsSection(itemManager: itemManager)
                 spacersCard
+                MenuBarLayoutGroupsSection()
                 layoutSectionsCard
                 iconPreviewsCard
                 advancedLayoutControlsCard

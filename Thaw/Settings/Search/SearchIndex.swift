@@ -897,6 +897,17 @@ nonisolated enum SearchIndex {
             property: nil
         ),
         SearchEntry(
+            id: "layout.groups",
+            titleKey: "Item groups",
+            titleText: "Item groups",
+            descriptionText: "Group menu bar items so they always move together.",
+            pane: .menuBarLayout,
+            sectionKey: "Item groups",
+            sectionText: "Item groups",
+            keywords: ["group", "cluster", "together", "move", "bundle"],
+            property: nil
+        ),
+        SearchEntry(
             id: "layout.resetMenuBarLayout",
             titleKey: "Reset menu bar layout",
             titleText: "Reset menu bar layout",

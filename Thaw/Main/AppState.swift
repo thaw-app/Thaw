@@ -55,6 +55,9 @@ final class AppState {
     /// Owner of the user's menu bar spacer items.
     let spacerManager = MenuBarSpacerManager()
 
+    /// Owner of user-authored menu bar item groups.
+    let itemGroupManager = MenuBarItemGroupManager()
+
     /// Manager for input events received by the app.
     let hidEventManager = HIDEventManager()
 
