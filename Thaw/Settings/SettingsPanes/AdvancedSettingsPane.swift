@@ -17,6 +17,7 @@ struct AdvancedSettingsPane: View {
 
     var body: some View {
         IceForm {
+            CaptureInspectorSection()
             IceSection("Menu Bar Search") {
                 searchSectionOrdering
                 moveCursorToRevealedItem

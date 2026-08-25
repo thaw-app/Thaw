@@ -16,6 +16,26 @@ import SwiftUI
 @Observable
 final class GeneralSettings {
     private let diagLog = DiagLog(category: "GeneralSettings")
+
+    /// Whether the settings window shows a single curated page instead of
+    /// the full sidebar navigation. Nothing is lost either way: every other
+    /// pane keeps its configuration and stays reachable through the settings
+    /// URI, and turning Simple Mode off brings the full sidebar back.
+    var simpleMode = Defaults.DefaultValue.simpleMode {
+        didSet {
+            guard oldValue != simpleMode else { return }
+            Defaults.set(simpleMode, forKey: .simpleMode)
+        }
+    }
+
+    /// Whether explanatory captions below settings rows are shown.
+    var showSettingDescriptions = Defaults.DefaultValue.showSettingDescriptions {
+        didSet {
+            guard oldValue != showSettingDescriptions else { return }
+            Defaults.set(showSettingDescriptions, forKey: .showSettingDescriptions)
+        }
+    }
+
     /// A Boolean value that indicates whether the Ice icon
     /// should be shown.
     var showIceIcon = Defaults.DefaultValue.showIceIcon {
@@ -202,6 +222,8 @@ final class GeneralSettings {
         Defaults.ifPresent(key: .showOnHover, assign: &showOnHover)
         Defaults.ifPresent(key: .showOnScroll, assign: &showOnScroll)
         Defaults.ifPresent(key: .autoRehide, assign: &autoRehide)
+        Defaults.ifPresent(key: .simpleMode, assign: &simpleMode)
+        Defaults.ifPresent(key: .showSettingDescriptions, assign: &showSettingDescriptions)
         Defaults.ifPresent(key: .rehideInterval, assign: &rehideInterval)
 
         Defaults.ifPresent(key: .iceBarLocation) { rawValue in

@@ -32,27 +32,40 @@ struct SettingsView: View {
     }
 
     var body: some View {
-        NavigationSplitView {
-            sidebar
-        } detail: {
-            settingsPane
-                .id(navigationState.settingsNavigationIdentifier)
-        }
-        .navigationTitle(navigationState.settingsNavigationIdentifier.localized)
-        .toolbar {
-            ToolbarItem(placement: .navigation) {
-                ControlGroup {
-                    Button(action: navigateBack) {
-                        Label("Back", systemImage: "chevron.left")
-                    }
-                    .disabled(isFirstSection)
+        if appState.settings.general.simpleMode {
+            // No sidebar at all: one screen is the whole point of Simple
+            // Mode, and a sidebar listing a single item is just a sidebar.
+            SimpleModeSettingsPane(
+                itemManager: appState.itemManager,
+                updatesManager: appState.updatesManager,
+                settings: appState.settings.general
+            )
+            .navigationTitle("Settings")
+            .environment(\.settingsDescriptionsVisible, appState.settings.general.showSettingDescriptions)
+        } else {
+            NavigationSplitView {
+                sidebar
+            } detail: {
+                settingsPane
+                    .id(navigationState.settingsNavigationIdentifier)
+            }
+            .navigationTitle(navigationState.settingsNavigationIdentifier.localized)
+            .environment(\.settingsDescriptionsVisible, appState.settings.general.showSettingDescriptions)
+            .toolbar {
+                ToolbarItem(placement: .navigation) {
+                    ControlGroup {
+                        Button(action: navigateBack) {
+                            Label("Back", systemImage: "chevron.left")
+                        }
+                        .disabled(isFirstSection)
 
-                    Button(action: navigateForward) {
-                        Label("Forward", systemImage: "chevron.right")
+                        Button(action: navigateForward) {
+                            Label("Forward", systemImage: "chevron.right")
+                        }
+                        .disabled(isLastSection)
                     }
-                    .disabled(isLastSection)
+                    .controlGroupStyle(.navigation)
                 }
-                .controlGroupStyle(.navigation)
             }
         }
     }

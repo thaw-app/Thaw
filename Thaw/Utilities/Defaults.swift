@@ -169,6 +169,8 @@ nonisolated extension Defaults {
         static let showOnHover = false
         static let showOnScroll = true
         static let autoRehide = true
+        static let simpleMode = false
+        static let showSettingDescriptions = true
         static let rehideStrategy: RehideStrategy = .smart
         static let rehideInterval: TimeInterval = 15
 
@@ -254,6 +256,8 @@ nonisolated extension Defaults {
         case showOnHover = "ShowOnHover"
         case showOnScroll = "ShowOnScroll"
         case autoRehide = "AutoRehide"
+        case simpleMode = "SimpleMode"
+        case showSettingDescriptions = "ShowSettingDescriptions"
         case rehideStrategy = "RehideStrategy"
         case rehideInterval = "RehideInterval"
         case displayIceBarConfigurations = "DisplayIceBarConfigurations"

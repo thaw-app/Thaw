@@ -47,6 +47,8 @@ extension AppSettings {
         general.autoRehide = Defaults.DefaultValue.autoRehide
         general.rehideStrategy = Defaults.DefaultValue.rehideStrategy
         general.rehideInterval = Defaults.DefaultValue.rehideInterval
+        general.simpleMode = Defaults.DefaultValue.simpleMode
+        general.showSettingDescriptions = Defaults.DefaultValue.showSettingDescriptions
     }
 
     /// Resets Advanced settings to their default values.
