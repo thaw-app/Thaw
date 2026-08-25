@@ -27,20 +27,30 @@ enum ImageHashing {
         var pixels = [UInt8](repeating: 0, count: count)
 
         let colorSpace = CGColorSpaceCreateDeviceGray()
-        guard let context = CGContext(
-            data: &pixels,
-            width: side,
-            height: side,
-            bitsPerComponent: 8,
-            bytesPerRow: side,
-            space: colorSpace,
-            bitmapInfo: CGImageAlphaInfo.none.rawValue
-        ) else {
+        // The buffer is bound for the whole lifetime of the context, not just
+        // for the initializer call: `draw` writes through it afterwards. An
+        // inout-to-pointer conversion is only valid for the duration of the
+        // call it is passed to, so the pointer has to stay in scope instead.
+        let rendered = pixels.withUnsafeMutableBytes { buffer -> Bool in
+            guard let context = CGContext(
+                data: buffer.baseAddress,
+                width: side,
+                height: side,
+                bitsPerComponent: 8,
+                bytesPerRow: side,
+                space: colorSpace,
+                bitmapInfo: CGImageAlphaInfo.none.rawValue
+            ) else {
+                return false
+            }
+
+            context.interpolationQuality = .low
+            context.draw(image, in: CGRect(x: 0, y: 0, width: side, height: side))
+            return true
+        }
+        guard rendered else {
             return nil
         }
-
-        context.interpolationQuality = .low
-        context.draw(image, in: CGRect(x: 0, y: 0, width: side, height: side))
 
         let total = pixels.reduce(0) { $0 + Int($1) }
         let average = total / count

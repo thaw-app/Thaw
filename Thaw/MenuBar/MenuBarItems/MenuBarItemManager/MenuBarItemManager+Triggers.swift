@@ -28,12 +28,15 @@ extension MenuBarItemManager {
     func setTriggerControlledItemIdentifiers(_ identifiers: Set<String>) {
         guard triggerControlledItemIdentifiers != identifiers else { return }
 
-        let knownBaseIdentifiers = Set(
-            appState?.itemManager.itemCache.managedItems.map(\.tag.stableIdentifierBase) ?? []
-        )
-        let knownLiveIdentifiers = Set(
-            appState?.itemManager.itemCache.managedItems.map(\.uniqueIdentifier) ?? []
-        )
+        // Read `itemCache` directly. This extension is on `MenuBarItemManager`,
+        // so `appState?.itemManager` only resolves back to `self` -- but
+        // `appState` is weak, and a nil hop would empty both sets. Every
+        // suffixed identifier would then fail to resolve to a base, degrading
+        // release detection to exact matching and reporting a drifted but
+        // still-controlled item as released.
+        let managedItems = itemCache.managedItems
+        let knownBaseIdentifiers = Set(managedItems.map(\.tag.stableIdentifierBase))
+        let knownLiveIdentifiers = Set(managedItems.map(\.uniqueIdentifier))
         let releasedIdentifiers = Self.releasedTriggerIdentifiers(
             previousIdentifiers: triggerControlledItemIdentifiers,
             currentIdentifiers: identifiers,
@@ -69,10 +72,18 @@ extension MenuBarItemManager {
         )
 
         guard !releasedIdentifiers.isEmpty else { return }
-        Task { [weak self] in
+        // Coalesce: a burst of releases should wait once, not stack one task
+        // per release. Replacing the pending task also restarts the cooldown,
+        // which is what the later releases need anyway.
+        triggerReleaseRecacheTask?.cancel()
+        triggerReleaseRecacheTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(6))
-            guard let self else { return }
+            guard !Task.isCancelled, let self else { return }
             await self.cacheItemsRegardless(skipRecentMoveCheck: true)
+            // The handle is deliberately left in place: by the time this runs,
+            // it may already have been replaced by a newer release's task, and
+            // clearing it would drop that one's cancellation handle. A settled
+            // handle is harmless -- cancelling a finished task is a no-op.
         }
     }
 

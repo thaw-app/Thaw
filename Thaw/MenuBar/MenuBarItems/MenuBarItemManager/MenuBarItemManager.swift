@@ -788,6 +788,11 @@ final class MenuBarItemManager {
     /// cannot capture their temporary trigger placement as a user edit.
     var triggerLayoutRestorationItemIdentifiers = Set<String>()
 
+    /// The pending delayed re-cache scheduled by a trigger release. Stored so
+    /// a burst of releases coalesces into one wait instead of stacking a
+    /// separate six-second task per release.
+    var triggerReleaseRecacheTask: Task<Void, Never>?
+
     /// Identifiers most recently moved from visible to hidden by the
     /// notch-overflow rebalance (Phase 4 of the layout apply). The ejection
     /// is a transient, per-display accommodation — these items must not be

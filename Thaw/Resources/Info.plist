@@ -17,7 +17,7 @@
 	<string>Thaw reads your paired Bluetooth devices so a menu bar item trigger can show or hide an item while a chosen device is connected.</string>
 	<key>NSFocusStatusUsageDescription</key>
 	<string>Thaw reads whether a Focus is active so menu bar item triggers can respond to Focus changes.</string>
-	<key>NSLocationWhenInUseUsageDescription</key>
+	<key>NSLocationUsageDescription</key>
 	<string>Thaw uses your location while its settings are open to identify the current Wi-Fi network and configure location-based menu bar item triggers.</string>
 	<key>SUFeedURL</key>
 	<string>https://thaw-app.github.io/updates/appcast.xml</string>
@@ -31,5 +31,20 @@
 	<string>https://github.com/thaw-app/Thaw</string>
 	<key>ThawSkyLightFrameworkPath</key>
 	<string>/System/Library/PrivateFrameworks/SkyLight.framework/SkyLight</string>
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>com.stonerl.Thaw.trigger-priority</string>
+			<key>UTTypeDescription</key>
+			<string>Thaw Trigger Priority</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeTagSpecification</key>
+			<dict/>
+		</dict>
+	</array>
 </dict>
 </plist>

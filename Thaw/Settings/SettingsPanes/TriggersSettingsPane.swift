@@ -395,9 +395,18 @@ struct TriggersSettingsPane: View {
         // it is also responsible for drawing.
         Task.detached(priority: .userInitiated) {
             let devices = SystemStateMonitor.pairedBluetoothDeviceNames()
-            let options = devices.map {
-                TriggerBluetoothOption(name: $0.name, isConnected: $0.isConnected)
+            // Collapse by name. The matcher compares names, so two paired
+            // devices reporting the same one (a second set of AirPods of the
+            // same model, say) would otherwise show as indistinguishable rows
+            // that select the same condition. Connected wins, so a device
+            // that is currently in use is labelled as such.
+            var connectedByName = [String: Bool]()
+            for device in devices {
+                connectedByName[device.name] = (connectedByName[device.name] ?? false) || device.isConnected
             }
+            let options = connectedByName
+                .sorted { $0.key < $1.key }
+                .map { TriggerBluetoothOption(name: $0.key, isConnected: $0.value) }
             await MainActor.run {
                 bluetoothOptions = options
             }
@@ -515,11 +524,14 @@ private struct TriggerPriorityDropDelegate: DropDelegate {
     @Binding var draggedTriggerID: UUID?
     @Binding var dropIndicator: TriggerDropIndicator?
 
+    /// Hovering only previews the reorder. `manager.triggers` has a `didSet`
+    /// that persists to `Defaults`, so committing here would write once per
+    /// row crossed and would leave the last hovered order behind when the
+    /// drag is cancelled or released outside any row.
     func dropEntered(info: DropInfo) {
         guard info.hasItemsConforming(to: [.thawTriggerPriority]) else { return }
         guard let draggedTriggerID, draggedTriggerID != targetID else { return }
         updateDropIndicator(for: draggedTriggerID)
-        manager.moveTrigger(id: draggedTriggerID, before: targetID)
     }
 
     func dropUpdated(info: DropInfo) -> DropProposal? {
@@ -531,8 +543,12 @@ private struct TriggerPriorityDropDelegate: DropDelegate {
 
     func performDrop(info: DropInfo) -> Bool {
         guard info.hasItemsConforming(to: [.thawTriggerPriority]) else { return false }
-        draggedTriggerID = nil
-        dropIndicator = nil
+        defer {
+            draggedTriggerID = nil
+            dropIndicator = nil
+        }
+        guard let draggedTriggerID, draggedTriggerID != targetID else { return false }
+        manager.moveTrigger(id: draggedTriggerID, before: targetID)
         return true
     }
 
@@ -1749,6 +1765,9 @@ private struct ScheduleWeekdayPicker: View {
                 .foregroundStyle(selection.contains(weekday) ? Color.white : Color.primary)
                 .background(selection.contains(weekday) ? Color.orange : Color.secondary.opacity(0.12), in: Capsule())
                 .accessibilityLabel(Text(weekday.shortTitle))
+                // Selection is otherwise conveyed only by fill and weight,
+                // so VoiceOver would announce every weekday identically.
+                .accessibilityAddTraits(selection.contains(weekday) ? .isSelected : [])
             }
         }
     }

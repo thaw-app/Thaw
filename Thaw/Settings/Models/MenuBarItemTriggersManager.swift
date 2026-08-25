@@ -108,7 +108,7 @@ final class MenuBarItemTriggersManager {
     /// stored `@Observable` property both stays O(1) to read and registers a
     /// dependency on every access. (A lazily memoized computed property does
     /// neither reliably — a warm cache read touches no observable state.)
-    private(set) var controlledBaseIdentifiers = Set<String>()
+    private(set) var controlledIdentifiers = Set<String>()
 
     /// Per-source feature flags, also surfaced in the Developer pane.
     let featureFlags = TriggerFeatureFlagsManager()
@@ -499,9 +499,13 @@ final class MenuBarItemTriggersManager {
         // trigger actions. This includes both reveal and hide actions, and
         // naturally handles partial multi-item ownership.
         let triggerControlledIdentifiers = Set(plan.actions.values.flatMap(\.identifiers))
-        if controlledBaseIdentifiers != triggerControlledIdentifiers {
-            controlledBaseIdentifiers = triggerControlledIdentifiers
-        }
+        // Editor ownership is a separate question from which items currently
+        // carry an action, and it has a single writer. An overridden trigger
+        // emits no action but still owns its target, so deriving ownership
+        // from `plan.actions` here would contradict
+        // `refreshControlledIdentifiers` and make the badge flicker depending
+        // on which writer ran last.
+        refreshControlledIdentifiers()
         appState.itemManager.setTriggerControlledItemIdentifiers(triggerControlledIdentifiers)
 
         for trigger in triggers where trigger.isEnabled {
@@ -572,11 +576,18 @@ final class MenuBarItemTriggersManager {
         }
     }
 
-    /// Recomputes ``controlledBaseIdentifiers`` from the current triggers
+    /// Recomputes ``controlledIdentifiers`` from the current triggers
     /// and feature flags. Called from `triggers.didSet`, the feature-flag
-    /// change handler, and the initializer (property observers don't run for
-    /// an init assignment).
-    private func refreshControlledIdentifiers() {
+    /// change handler, the initializer (property observers don't run for an
+    /// init assignment), and every evaluation.
+    ///
+    /// The sole writer of ``controlledIdentifiers``, deliberately. Ownership
+    /// means "an enabled, available trigger targets this item" — the same
+    /// question ``controllingTrigger(forIdentifier:)`` answers, so the badge,
+    /// the tooltip and this predicate cannot disagree. It is *not* the same
+    /// as "this item currently carries a plan action": an overridden trigger
+    /// emits no action yet still owns its target.
+    func refreshControlledIdentifiers() {
         let presentItems = appState?.itemManager.itemCache.managedItems ?? []
         let presentIdentifiers = Set(presentItems.map(\.tag.tagIdentifier))
         let presentIdentifierBases = Dictionary(
@@ -596,22 +607,21 @@ final class MenuBarItemTriggersManager {
                 }
             }
         }
-        if identifiers != controlledBaseIdentifiers {
-            controlledBaseIdentifiers = identifiers
+        if identifiers != controlledIdentifiers {
+            controlledIdentifiers = identifiers
         }
     }
 
     /// Whether any enabled trigger owns the given item's placement.
     ///
-    /// The set-membership fast path covers exact identifiers and captured
-    /// bases. The fallback loop covers a legacy target stored with a `:N`
-    /// instance suffix and no captured base, which only the shared resolver
-    /// can safely map onto the live base — without it, such a target is
-    /// owned by the plan but invisible here. The loop runs over the (small)
-    /// controlled set, not the item list, so per-draw cost stays bounded by
-    /// the user's trigger count.
+    /// A plain set-membership test is enough because the resolution already
+    /// happened when the set was built: ``refreshControlledIdentifiers``
+    /// puts every target through `resolvedPresentIdentifier`, so a legacy
+    /// target stored with a `:N` instance suffix and no captured base is
+    /// already recorded as the live identifier. Keeping this O(1) matters —
+    /// the layout editor calls it per item on every redraw.
     func isControlledByTrigger(identifier: String) -> Bool {
-        !identifier.isEmpty && controlledBaseIdentifiers.contains(identifier)
+        !identifier.isEmpty && controlledIdentifiers.contains(identifier)
     }
 
     /// Base-only compatibility query used by model-level diagnostics/tests.
@@ -813,9 +823,7 @@ final class MenuBarItemTriggersManager {
                 presentIdentifierBases: presentIdentifierBases
             )
             let triggerControlledIdentifiers = Set(plan.actions.values.flatMap(\.identifiers))
-            if self.controlledBaseIdentifiers != triggerControlledIdentifiers {
-                self.controlledBaseIdentifiers = triggerControlledIdentifiers
-            }
+            self.refreshControlledIdentifiers()
             self.appState?.itemManager.setTriggerControlledItemIdentifiers(triggerControlledIdentifiers)
             guard let action = plan.actions[triggerID] else {
                 self.clearApplyState(for: triggerID)

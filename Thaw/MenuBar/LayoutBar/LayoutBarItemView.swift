@@ -196,7 +196,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
                 }
             }
 
-            // `controlledBaseIdentifiers` is stored (not lazily memoized)
+            // `controlledIdentifiers` is stored (not lazily memoized)
             // precisely so this closure registers a dependency on every read.
             // The base is read through `effectiveItem` so an AX alias resolved
             // mid-life queries the same identity `draw` does.
