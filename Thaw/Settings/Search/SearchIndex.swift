@@ -820,6 +820,17 @@ nonisolated enum SearchIndex {
             property: .advanced("sectionDividerStyle")
         ),
         SearchEntry(
+            id: "layout.spacers",
+            titleKey: "Spacers",
+            titleText: "Spacers",
+            descriptionText: "Insert empty gap items into the menu bar and adjust their width.",
+            pane: .menuBarLayout,
+            sectionKey: "Spacers",
+            sectionText: "Spacers",
+            keywords: ["spacer", "gap", "space", "separator", "width"],
+            property: nil
+        ),
+        SearchEntry(
             id: "layout.resetMenuBarLayout",
             titleKey: "Reset menu bar layout",
             titleText: "Reset menu bar layout",

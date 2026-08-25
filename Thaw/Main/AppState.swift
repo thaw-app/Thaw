@@ -52,6 +52,9 @@ final class AppState {
     /// Global cache for menu bar item images.
     let imageCache = MenuBarItemImageCache()
 
+    /// Owner of the user's menu bar spacer items.
+    let spacerManager = MenuBarSpacerManager()
+
     /// Manager for input events received by the app.
     let hidEventManager = HIDEventManager()
 
@@ -148,6 +151,7 @@ final class AppState {
         diagLog.debug("setupTask: starting imageCache setup")
         imageCache.performSetup(with: self)
         diagLog.debug("setupTask: imageCache setup complete")
+        spacerManager.performSetup(with: self)
         updatesManager.performSetup(with: self)
         userNotificationManager.performSetup(with: self)
         profileManager.performSetup(with: self)

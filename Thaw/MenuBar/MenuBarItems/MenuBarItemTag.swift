@@ -59,8 +59,16 @@ nonisolated struct MenuBarItemTag: Hashable, CustomStringConvertible {
 
     /// A Boolean value that indicates whether the item identified
     /// by this tag is a control item owned by Ice.
+    ///
+    /// User-created spacers (`Thaw.Spacer.<uuid>`) are deliberately NOT
+    /// control items — they must stay draggable, reorderable, and
+    /// concealable like any other item. Only the section-divider spacers
+    /// (`<ControlItem autosave>.Spacer.<index>`) count.
     var isControlItem: Bool {
-        MenuBarItemTag.controlItems.contains(where: { $0.namespace == namespace && $0.title == title }) ||
+        if namespace == .thaw && title.hasPrefix(MenuBarSpacerManager.autosavePrefix) {
+            return false
+        }
+        return MenuBarItemTag.controlItems.contains(where: { $0.namespace == namespace && $0.title == title }) ||
             title.contains(".Spacer.")
     }
 

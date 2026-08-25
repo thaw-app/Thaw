@@ -44,6 +44,7 @@ struct MenuBarLayoutSettingsPane: View {
         } else {
             IceForm {
                 layoutBarsSection
+                spacersCard
                 layoutSectionsCard
                 iconPreviewsCard
                 advancedLayoutControlsCard
@@ -89,6 +90,53 @@ struct MenuBarLayoutSettingsPane: View {
     private var iconPreviewsCard: some View {
         IceSection("Icon previews") {
             iconRefreshInterval
+        }
+    }
+
+    private var spacersCard: some View {
+        IceSection("Spacers") {
+            ForEach(appState.spacerManager.spacers) { spacer in
+                LabeledContent {
+                    HStack(spacing: 12) {
+                        ColorPicker(
+                            "Spacer color",
+                            selection: Binding(
+                                get: { spacer.color.map { Color(cgColor: $0.cgColor) } ?? .clear },
+                                set: { newColor in
+                                    appState.spacerManager.setColor(NSColor(newColor).cgColor, for: spacer.id)
+                                }
+                            ),
+                            supportsOpacity: true
+                        )
+                        .labelsHidden()
+                        .help("Fill the spacer with a color. Fully transparent renders as an empty gap.")
+                        IceSlider(
+                            value: Binding(
+                                get: { Double(spacer.width) },
+                                set: { appState.spacerManager.setWidth(CGFloat($0), for: spacer.id) }
+                            ),
+                            in: Double(MenuBarSpacer.minWidth) ... Double(MenuBarSpacer.maxWidth),
+                            step: 4
+                        ) {
+                            Text(verbatim: "\(Int(spacer.width)) pt")
+                                .monospacedDigit()
+                        }
+                        Button {
+                            appState.spacerManager.removeSpacer(id: spacer.id)
+                        } label: {
+                            Image(systemName: "trash")
+                        }
+                        .help("Remove this spacer")
+                    }
+                } label: {
+                    Text("Spacer")
+                }
+            }
+
+            Button("Add Spacer") {
+                appState.spacerManager.addSpacer()
+            }
+            .annotation("Inserts an empty gap item into the menu bar. Position it like any other item — hold \u{2318} Command and drag it in the menu bar.")
         }
     }
 

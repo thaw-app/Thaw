@@ -142,6 +142,19 @@ extension MenuBarItemManager {
             knownItemIdentifiers.insert(identifierToMark)
             persistKnownItemIdentifiers()
 
+            // Thaw's own spacers are placed by AppKit's autosave (seeded next
+            // to the Thaw icon) — relocating them like new third-party items
+            // would fight that position every cycle. Window ownership is the
+            // reliable check right after creation, when the cached tag can
+            // still be a generic "Item-0".
+            if MenuBarSpacerManager.isSpacerTag(candidate.tag)
+                || appState?.spacerManager.ownsWindowID(candidate.windowID) == true {
+                MenuBarItemManager.diagLog.info(
+                    "Skipping new-item relocation for Thaw spacer \(candidate.logString)"
+                )
+                return true
+            }
+
             let destination = newItemsMoveDestination(for: controlItems, among: items)
 
             MenuBarItemManager.diagLog.info(

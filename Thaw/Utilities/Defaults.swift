@@ -262,6 +262,10 @@ nonisolated extension Defaults {
         case confirmSpacingRelaunch = "ConfirmSpacingRelaunch"
         case unconfirmedSpacingProfileScope = "UnconfirmedSpacingProfileScope"
 
+        // MARK: Menu Bar Spacers
+
+        case menuBarSpacers = "MenuBarSpacers"
+
         // MARK: Hotkeys Settings
 
         case hotkeys = "Hotkeys"
