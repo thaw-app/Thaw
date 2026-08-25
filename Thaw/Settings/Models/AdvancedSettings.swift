@@ -132,7 +132,7 @@ final class AdvancedSettings {
     /// - Otherwise snaps to `1 / clamp(round(1 / interval), 1, ceiling)`,
     ///   where the ceiling is ``MenuBarItemImageCache/maxIconRefreshRate``.
     /// - Idempotent: already-on-grid values round-trip unchanged.
-    nonisolated static func normalizedIconRefreshInterval(_ interval: TimeInterval) -> TimeInterval {
+    static nonisolated func normalizedIconRefreshInterval(_ interval: TimeInterval) -> TimeInterval {
         guard interval > 0 else { return 0 }
         let ceiling = MenuBarItemImageCache.maxIconRefreshRate
         let fps = min(max((1.0 / interval).rounded(), 1), ceiling)
@@ -151,7 +151,112 @@ final class AdvancedSettings {
             #else
                 DiagnosticLogger.shared.isEnabled = enableDiagnosticLogging
             #endif
+            // The XPC service holds its own handle on the shared file, so a
+            // toggle has to reach it too: a file to follow, or nothing to stop.
+            Task { await MenuBarItemService.Connection.shared.syncLogging() }
         }
+    }
+
+    /// The size, in megabytes, a diagnostic log file may reach before it is
+    /// rotated to a new file.
+    var diagnosticLogMaxSizeMB = Defaults.DefaultValue.diagnosticLogMaxSizeMB {
+        didSet {
+            guard oldValue != diagnosticLogMaxSizeMB else { return }
+            Defaults.set(diagnosticLogMaxSizeMB, forKey: .diagnosticLogMaxSizeMB)
+            applyLogRotationPolicy(pushingToService: true)
+        }
+    }
+
+    /// How many days diagnostic log files are kept before they are deleted.
+    var diagnosticLogRetentionDays = Defaults.DefaultValue.diagnosticLogRetentionDays {
+        didSet {
+            guard oldValue != diagnosticLogRetentionDays else { return }
+            Defaults.set(diagnosticLogRetentionDays, forKey: .diagnosticLogRetentionDays)
+            applyLogRotationPolicy(pushingToService: true)
+        }
+    }
+
+    /// How often diagnostic logs are rotated on a schedule, on top of the size
+    /// limit.
+    var diagnosticLogRotationInterval = Defaults.DefaultValue.diagnosticLogRotationInterval {
+        didSet {
+            guard oldValue != diagnosticLogRotationInterval else { return }
+            Defaults.set(diagnosticLogRotationInterval.rawValue, forKey: .diagnosticLogRotationInterval)
+            applyLogRotationPolicy(pushingToService: true)
+        }
+    }
+
+    /// True while ``loadInitialState()`` runs.
+    ///
+    /// Assigning a loaded value trips that property's `didSet`, so without this
+    /// the service would be sent a policy once per setting, each one built from
+    /// a half-loaded model, before the connection has even started.
+    @ObservationIgnored
+    private var isLoadingInitialState = false
+
+    /// The largest log size the app will ask the logger for.
+    ///
+    /// Far above anything the settings stepper offers; it exists only so a
+    /// value read back from a profile or from UserDefaults cannot overflow the
+    /// conversion to bytes.
+    private static let maxDiagnosticLogSizeMB = 1_000_000
+
+    /// Hands the current rotation settings to the diagnostic logger, and — once
+    /// the app is running — to the XPC service that shares the log directory.
+    ///
+    /// - Parameter pushingToService: Whether to forward the policy over XPC.
+    ///   Left off during initialization, when the connection has not started
+    ///   yet and `Connection.start()` sends the initial configuration anyway.
+    func applyLogRotationPolicy(pushingToService: Bool = false) {
+        DiagnosticLogger.shared.setRotationPolicy(
+            Self.rotationPolicy(
+                maxSizeMB: diagnosticLogMaxSizeMB,
+                retentionDays: diagnosticLogRetentionDays,
+                interval: diagnosticLogRotationInterval
+            )
+        )
+
+        guard pushingToService, !isLoadingInitialState else { return }
+        Task { await MenuBarItemService.Connection.shared.syncLogging() }
+    }
+
+    /// Builds a rotation policy from the given settings.
+    static func rotationPolicy(
+        maxSizeMB: Int,
+        retentionDays: Int,
+        interval: LogRotationInterval
+    ) -> DiagnosticLogger.RotationPolicy {
+        var policy = DiagnosticLogger.RotationPolicy()
+        // Clamped before the multiplication: UserDefaults can hold values the
+        // stepper would never produce, and `UInt64(huge) * 1024 * 1024` traps
+        // on overflow.
+        let megabytes = min(max(0, maxSizeMB), maxDiagnosticLogSizeMB)
+        policy.maxFileSizeBytes = UInt64(megabytes) * 1024 * 1024
+        policy.retentionDays = max(1, retentionDays)
+        policy.rotationInterval = interval.seconds
+        return policy
+    }
+
+    /// Reads a rotation policy straight out of the stored settings.
+    ///
+    /// Diagnostic logging starts before this model is built, and opening a log
+    /// file prunes the directory. Without this the first prune of every launch
+    /// would run against the default retention and delete files that a longer
+    /// setting was meant to keep.
+    static func persistedRotationPolicy() -> DiagnosticLogger.RotationPolicy {
+        var maxSizeMB = Defaults.DefaultValue.diagnosticLogMaxSizeMB
+        var retentionDays = Defaults.DefaultValue.diagnosticLogRetentionDays
+        var interval = Defaults.DefaultValue.diagnosticLogRotationInterval
+
+        Defaults.ifPresent(key: .diagnosticLogMaxSizeMB, assign: &maxSizeMB)
+        Defaults.ifPresent(key: .diagnosticLogRetentionDays, assign: &retentionDays)
+        Defaults.ifPresent(key: .diagnosticLogRotationInterval) { (rawValue: String) in
+            if let stored = LogRotationInterval(rawValue: rawValue) {
+                interval = stored
+            }
+        }
+
+        return rotationPolicy(maxSizeMB: maxSizeMB, retentionDays: retentionDays, interval: interval)
     }
 
     /// A Boolean value that controls whether profile-apply overflows menu bar
@@ -281,6 +386,9 @@ final class AdvancedSettings {
 
     /// Loads the model's initial state.
     private func loadInitialState() {
+        isLoadingInitialState = true
+        defer { isLoadingInitialState = false }
+
         Defaults.ifPresent(key: .enableAlwaysHiddenSection, assign: &enableAlwaysHiddenSection)
         Defaults.ifPresent(key: .useOptionClickToShowAlwaysHiddenSection, assign: &useOptionClickToShowAlwaysHiddenSection)
         Defaults.ifPresent(key: .useDoubleClickToShowAlwaysHiddenSection, assign: &useDoubleClickToShowAlwaysHiddenSection)
@@ -293,6 +401,13 @@ final class AdvancedSettings {
         Defaults.ifPresent(key: .showMenuBarTooltips, assign: &showMenuBarTooltips)
         Defaults.ifPresent(key: .iconRefreshInterval, assign: &iconRefreshInterval)
         Defaults.ifPresent(key: .enableDiagnosticLogging, assign: &enableDiagnosticLogging)
+        Defaults.ifPresent(key: .diagnosticLogMaxSizeMB, assign: &diagnosticLogMaxSizeMB)
+        Defaults.ifPresent(key: .diagnosticLogRetentionDays, assign: &diagnosticLogRetentionDays)
+        Defaults.ifPresent(key: .diagnosticLogRotationInterval) { (rawValue: String) in
+            if let interval = LogRotationInterval(rawValue: rawValue) {
+                diagnosticLogRotationInterval = interval
+            }
+        }
         Defaults.ifPresent(key: .enableMenuBarItemOverflow, assign: &enableMenuBarItemOverflow)
         Defaults.ifPresent(key: .automaticArrangementEnabled, assign: &automaticArrangementEnabled)
         Defaults.ifPresent(key: .useThawBarOnNotchOverflow, assign: &useThawBarOnNotchOverflow)
@@ -311,6 +426,11 @@ final class AdvancedSettings {
         Defaults.ifPresent(key: .searchSectionOrder) { (rawValues: [String]) in
             searchSectionOrder = Self.sanitizedSearchSectionOrder(from: rawValues)
         }
+
+        // One authoritative apply once every setting is in place. The `didSet`
+        // observers tripped above each applied a partially loaded policy, and
+        // none of them reached the service.
+        applyLogRotationPolicy()
     }
 
     /// Returns a search-section order that contains each `MenuBarSection.Name`

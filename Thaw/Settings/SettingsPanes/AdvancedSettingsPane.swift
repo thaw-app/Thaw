@@ -101,6 +101,29 @@ struct AdvancedSettingsPane: View {
                 .padding(.trailing, 75)
             }
 
+            if settings.enableDiagnosticLogging {
+                LabeledContent("Maximum log file size") {
+                    Stepper(value: $settings.diagnosticLogMaxSizeMB, in: 1 ... 100) {
+                        Text("\(settings.diagnosticLogMaxSizeMB) MB")
+                    }
+                    .fixedSize()
+                }
+                .annotation("Start a new log file once the current one reaches this size.")
+
+                LabeledContent("Keep logs for") {
+                    Stepper(value: $settings.diagnosticLogRetentionDays, in: 1 ... 30) {
+                        Text("^[\(settings.diagnosticLogRetentionDays) day](inflect: true)")
+                    }
+                    .fixedSize()
+                }
+
+                IcePicker("Rotate by time", selection: $settings.diagnosticLogRotationInterval) {
+                    ForEach(LogRotationInterval.allCases) { interval in
+                        Text(interval.localized).tag(interval)
+                    }
+                }
+            }
+
             HStack(spacing: 12) {
                 if settings.enableDiagnosticLogging || DiagnosticLogger.shared.hasLogFiles {
                     Button("Show Log Files in Finder") {

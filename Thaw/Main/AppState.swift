@@ -100,6 +100,18 @@ final class AppState {
     /// view body, so the exemption has no UI-observability effect.
     @ObservationIgnored
     private lazy var setupTask = Task { @MainActor in
+        // Rotation mints a new file, and the XPC service is still holding the
+        // old one. Installed before logging starts so even the first rotation
+        // brings the service along.
+        DiagnosticLogger.shared.onRotate = {
+            Task { await MenuBarItemService.Connection.shared.syncLogging() }
+        }
+
+        // Opening a log file prunes the directory, so the stored retention has
+        // to be in place before logging starts — the settings model that would
+        // otherwise supply it is not built until later in this task.
+        DiagnosticLogger.shared.setRotationPolicy(AdvancedSettings.persistedRotationPolicy())
+
         #if DEBUG
             // Debug builds always have diagnostic logging on so logs are
             // captured during development without depending on the toggle.
