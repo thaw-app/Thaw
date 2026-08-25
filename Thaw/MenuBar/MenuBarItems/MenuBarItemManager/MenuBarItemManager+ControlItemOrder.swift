@@ -148,7 +148,8 @@ extension MenuBarItemManager {
             // reliable check right after creation, when the cached tag can
             // still be a generic "Item-0".
             if MenuBarSpacerManager.isSpacerTag(candidate.tag)
-                || appState?.spacerManager.ownsWindowID(candidate.windowID) == true {
+                || appState?.spacerManager.ownsWindowID(candidate.windowID) == true
+            {
                 MenuBarItemManager.diagLog.info(
                     "Skipping new-item relocation for Thaw spacer \(candidate.logString)"
                 )

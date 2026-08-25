@@ -167,7 +167,7 @@ final class MenuBarAppearanceManager {
     // MARK: Per-Space Overrides
 
     /// Resolves the configuration for a Space. Pure so it is unit-testable.
-    nonisolated static func effectiveConfiguration(
+    static nonisolated func effectiveConfiguration(
         base: MenuBarAppearanceConfigurationV2,
         overrides: [String: MenuBarAppearanceConfigurationV2],
         activeSpaceID: CGSSpaceID

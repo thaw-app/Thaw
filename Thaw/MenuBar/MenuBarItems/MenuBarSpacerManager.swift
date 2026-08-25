@@ -48,13 +48,13 @@ final class MenuBarSpacerManager {
     /// Deliberately NOT under `Thaw.ControlItem.` — that prefix marks Thaw's
     /// immovable anchors (never drag sources, special-cased right-click).
     /// Spacers are ordinary items: draggable, reorderable, concealable.
-    nonisolated static let autosavePrefix = "Thaw.Spacer."
+    static nonisolated let autosavePrefix = "Thaw.Spacer."
 
     /// Whether a cached item tag belongs to one of Thaw's user-created
     /// spacers, so capture consumers (layout editor, search) can identify
     /// them. Distinct from the section-divider spacers, whose autosave names
     /// sit under a control-item identifier and end in `.Spacer.<index>`.
-    nonisolated static func isSpacerTag(_ tag: MenuBarItemTag) -> Bool {
+    static nonisolated func isSpacerTag(_ tag: MenuBarItemTag) -> Bool {
         tag.namespace == .thaw && tag.title.hasPrefix(autosavePrefix)
     }
 
@@ -108,7 +108,7 @@ final class MenuBarSpacerManager {
             return
         }
         do {
-            Defaults.set(try encoder.encode(spacers), forKey: .menuBarSpacers)
+            try Defaults.set(encoder.encode(spacers), forKey: .menuBarSpacers)
         } catch {
             diagLog.error("Error encoding spacers: \(error)")
         }

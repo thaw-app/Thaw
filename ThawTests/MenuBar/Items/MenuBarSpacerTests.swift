@@ -12,7 +12,7 @@ import XCTest
 final class MenuBarSpacerTests: XCTestCase {
     func testInitClampsWidth() {
         XCTAssertEqual(MenuBarSpacer(width: 1).width, MenuBarSpacer.minWidth)
-        XCTAssertEqual(MenuBarSpacer(width: 10_000).width, MenuBarSpacer.maxWidth)
+        XCTAssertEqual(MenuBarSpacer(width: 10000).width, MenuBarSpacer.maxWidth)
         XCTAssertEqual(MenuBarSpacer(width: 40).width, 40)
     }
 

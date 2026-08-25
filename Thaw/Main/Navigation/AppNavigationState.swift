@@ -28,6 +28,7 @@ final class AppNavigationState {
             Defaults.set(settingsNavigationIdentifier.rawValue, forKey: .lastSettingsPane)
         }
     }
+
     var requestedSettingsDisclosure: SettingsDisclosure?
 
     init() {
@@ -37,7 +38,8 @@ final class AppNavigationState {
         // (General) in that case.
         if let rawValue = Defaults.string(forKey: .lastSettingsPane),
            let pane = SettingsNavigationIdentifier(rawValue: rawValue),
-           !Defaults.bool(forKey: .simpleMode) {
+           !Defaults.bool(forKey: .simpleMode)
+        {
             settingsNavigationIdentifier = pane
         }
     }
