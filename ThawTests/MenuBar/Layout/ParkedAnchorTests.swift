@@ -31,7 +31,7 @@ struct ParkedAnchorTests {
 
     // MARK: - isOnScreen
 
-    @Test("An item whose center is on the display is on-screen")
+    @Test("An item whose leading edge is on the display is on-screen")
     func onScreenItemIsOnScreen() {
         let bounds = CGRect(x: 800, y: 0, width: 30, height: 22)
         #expect(LayoutSolver.isOnScreen(bounds: bounds, screenFrames: Self.screenFrames))
@@ -123,5 +123,58 @@ struct ParkedAnchorTests {
             return
         }
         #expect(uid == "com.adobe.acc.AdobeCreativeCloud:Item-0")
+    }
+}
+
+/// Pins the measurement point of ``LayoutSolver/isOnScreen(bounds:screenFrames:)``.
+///
+/// #958: a collapsed hidden divider is 5000 points wide, because that width is
+/// what pushes the concealed items off the display. Measuring it at its center
+/// therefore samples a point 2500 points right of the divider itself, and on
+/// oa's three-display arrangement that point landed on a screen while the
+/// divider was parked at minX -3871. The guard meant to refuse a drag from a
+/// parked divider read a screen hit and let the drag through; H_ctrl travelled
+/// to 1648 and swept the whole visible section into hidden.
+@Suite("Off-screen is measured at the leading edge")
+struct LeadingEdgeOnScreenTests {
+    /// oa's arrangement: the built-in display at the origin, with externals
+    /// placed left of it and below it.
+    private static let screenFrames = [
+        CGRect(x: 0, y: 0, width: 1728, height: 1117),
+        CGRect(x: -2560, y: -300, width: 2560, height: 1440),
+        CGRect(x: 0, y: -1080, width: 1920, height: 1080),
+    ]
+
+    @Test("A parked 5000-wide divider is off-screen even though its center is not")
+    func parkedWideDividerIsOffScreen() {
+        let divider = CGRect(x: -3871, y: 0, width: 5000, height: 33)
+        // The reading that let #958 through.
+        #expect(Self.screenFrames.contains { $0.contains(CGPoint(x: divider.midX, y: divider.midY)) })
+        #expect(!LayoutSolver.isOnScreen(bounds: divider, screenFrames: Self.screenFrames))
+    }
+
+    @Test("A 5000-wide divider sitting on the bar is on-screen")
+    func seatedWideDividerIsOnScreen() {
+        // Same width, but parked nowhere: the divider is where the profile
+        // wants it and the drag can land.
+        let divider = CGRect(x: 743, y: 0, width: 5000, height: 33)
+        #expect(LayoutSolver.isOnScreen(bounds: divider, screenFrames: Self.screenFrames))
+    }
+
+    @Test("A divider parked left of every display is off-screen")
+    func parkedLeftOfAllDisplaysIsOffScreen() {
+        let divider = CGRect(x: -8000, y: 0, width: 5000, height: 33)
+        #expect(!LayoutSolver.isOnScreen(bounds: divider, screenFrames: Self.screenFrames))
+    }
+
+    @Test("Narrow items read the same either way")
+    func narrowItemsAgree() {
+        for minX in [-4222.0, -31.0, 0.0, 800.0, -2000.0] {
+            let bounds = CGRect(x: minX, y: 0, width: 30, height: 22)
+            let byCenter = Self.screenFrames.contains {
+                $0.contains(CGPoint(x: bounds.midX, y: bounds.midY))
+            }
+            #expect(LayoutSolver.isOnScreen(bounds: bounds, screenFrames: Self.screenFrames) == byCenter)
+        }
     }
 }

@@ -84,19 +84,33 @@ final class MenuBarItemFailureLedger {
     /// When each marked key was last seen failing as an unresponsive owner.
     private var markDates: [String: Date]
 
-    /// Keys that have failed once in this session but are not marked yet.
+    /// How many times each key has failed against an unresponsive owner in
+    /// this session, for keys not yet marked.
     ///
     /// A single failure is not evidence. Event operations can time out for
     /// reasons that have nothing to do with the owner — contention on the
     /// event semaphore is the obvious one — and a mark earned that way
     /// would stand for two weeks against an app that was never at fault.
-    /// Requiring a second failure costs the pathological case nothing,
-    /// since an owner that never answers reaches two within the same
-    /// session.
+    /// Requiring a run of them costs the pathological case nothing, since an
+    /// owner that never answers reaches the threshold within one session.
     ///
-    /// Deliberately not persisted: a lone failure per session is not the
-    /// behaviour this ledger exists to remember.
-    private var provisionalMarks = Set<String>()
+    /// Deliberately not persisted: a handful of failures in a single session
+    /// is not the behaviour this ledger exists to remember.
+    private var provisionalMarks = [String: Int]()
+
+    /// How many unresponsive-owner failures a key must accumulate in one
+    /// session before it earns a persisted mark.
+    ///
+    /// Two was the intent and one was the effect: `move` filed a failure
+    /// before throwing and its callers filed the same failure again on the
+    /// catch, so a single failed bulk-apply move satisfied both halves at
+    /// once. `MenuBarItemManager.moveAlreadyFiledFailure(for:)` closes that,
+    /// which restores two as a real threshold — and two failed moves is
+    /// thinner evidence than it sounds during a startup restore wave, where
+    /// contention alone can cost an item its budget twice. Three keeps the
+    /// verdict for owners that are actually silent, at the cost of one more
+    /// retry cycle for the ones that are.
+    private static let failuresBeforeMarking = 3
 
     init() {
         let storedBuild = Defaults.string(forKey: .unresponsiveMenuBarItemsBuild)
@@ -196,7 +210,8 @@ final class MenuBarItemFailureLedger {
     /// Records a failed operation.
     ///
     /// Every failure extends the backoff window. Only an unresponsive owner
-    /// can earn a persisted mark, and only on its second such failure.
+    /// can earn a persisted mark, and only once it has failed that way
+    /// ``failuresBeforeMarking`` times in this session.
     func recordFailure(
         for item: MenuBarItem,
         kind: FailureKind,
@@ -209,9 +224,15 @@ final class MenuBarItemFailureLedger {
             return
         }
         let wasMarked = markDates[key] != nil
-        guard wasMarked || !provisionalMarks.insert(key).inserted else {
-            Self.diagLog.debug("\(key) failed once; waiting for a second failure before marking it")
-            return
+        if !wasMarked {
+            let failures = (provisionalMarks[key] ?? 0) + 1
+            provisionalMarks[key] = failures
+            guard failures >= Self.failuresBeforeMarking else {
+                Self.diagLog.debug(
+                    "\(key) failed \(failures) time(s); waiting for \(Self.failuresBeforeMarking) before marking it"
+                )
+                return
+            }
         }
         markDates[key] = .now
         persist()
@@ -227,7 +248,7 @@ final class MenuBarItemFailureLedger {
     func recordSuccess(for item: MenuBarItem) {
         let key = Self.key(for: item)
         backoffHistory.removeValue(forKey: key)
-        provisionalMarks.remove(key)
+        provisionalMarks.removeValue(forKey: key)
         guard markDates.removeValue(forKey: key) != nil else {
             return
         }

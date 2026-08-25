@@ -287,6 +287,48 @@ struct WindowInfoDecodingTests {
             #expect(window(ownerPID: -424_242).owningApplication == nil)
         }
 
+        /// A window with area is the ordinary case and must stay eligible to
+        /// start a source-PID scan; the fixture's 100x22 is a normal status
+        /// item's geometry.
+        @Test("A window with area is not degenerate")
+        func windowWithAreaIsNotDegenerate() {
+            #expect(!window().isDegenerate)
+        }
+
+        /// Every source-PID match path anchors on the window's centre, so a
+        /// window missing either dimension has nothing to match against. The
+        /// zero-width case is the one observed in the field (#956): a status
+        /// item at `(-4323, 0, 0, 0)` that nine consecutive scans over seven
+        /// minutes never resolved, while waking a full traversal of every
+        /// running app each time.
+        @Test(
+            "A window missing either dimension is degenerate",
+            arguments: [
+                CGRect(x: -4323, y: 0, width: 0, height: 0),
+                CGRect(x: 0, y: 0, width: 0, height: 22),
+                CGRect(x: 0, y: 0, width: 100, height: 0),
+            ]
+        )
+        func windowMissingADimensionIsDegenerate(_ bounds: CGRect) {
+            let window = WindowInfo(windowID: 1, ownerPID: 501, bounds: bounds, layer: 0)
+            #expect(window.isDegenerate)
+        }
+
+        /// Position alone must not decide this. An off-screen or negatively
+        /// positioned item is perfectly matchable — the field case sits at
+        /// x = -4323 and would be wrongly skipped by a rule that keyed on
+        /// coordinates instead of size.
+        @Test("A window far off-screen is not degenerate as long as it has area")
+        func offScreenWindowWithAreaIsNotDegenerate() {
+            let window = WindowInfo(
+                windowID: 1,
+                ownerPID: 501,
+                bounds: CGRect(x: -4323, y: 0, width: 40, height: 33),
+                layer: 0
+            )
+            #expect(!window.isDegenerate)
+        }
+
         @Test(
             "The Window Server is recognized only under its exact name",
             arguments: ["window server", "WINDOW SERVER", "WindowServer", "Window  Server", " Window Server", ""]

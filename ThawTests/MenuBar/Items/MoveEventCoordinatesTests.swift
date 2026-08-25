@@ -41,8 +41,8 @@ struct MoveEventCoordinatesTests {
         )
     }
 
-    /// #923: dropping onto the exact coordinate of a zero-width section
-    /// divider leaves AppKit free to choose either side. The field log showed
+    /// #923: dropping onto the exact coordinate of a section divider leaves
+    /// AppKit free to choose either side. The field log showed
     /// `.leftOfItem(AH_ctrl)` repeatedly landing one point to its right.
     @Test("A control-item destination biases the drop into the requested section")
     func controlItemTargetPointUsesRequestedSide() {
@@ -69,16 +69,47 @@ struct MoveEventCoordinatesTests {
         )
     }
 
-    /// A control item with actual width (e.g. an expanded divider) already
-    /// gives AppKit enough hit-test span to disambiguate the side, so the
-    /// ±1 bias must not fire and shift the drop point away from the edge.
-    @Test("A wide control-item destination gets no section bias")
-    func wideControlItemTargetPointGetsNoBias() {
+    /// A divider that is thousands of points wide needs the bias just as much
+    /// as a zero-width one. The width is how the section conceals the items
+    /// behind it, not hit-test slack the drop can lean on: in the reporter's
+    /// 21 August log AH_ctrl was parked with `maxX <= 0` and expanded, and
+    /// `.leftOfItem` still landed the item at `minX + 1` on attempts 1 and 5.
+    @Test("An expanded control-item destination is biased too")
+    func expandedControlItemTargetPointIsBiased() {
         let displayBounds = CGRect(x: 0, y: 0, width: 1470, height: 956)
-        let bounds = CGRect(x: -9465, y: 0, width: 10, height: 33)
+        // The geometry the log implies: minX -9189, maxX at or left of the
+        // display origin, which is why targetPoint reaches for midY.
+        let bounds = CGRect(x: -9189, y: 0, width: 9189, height: 33)
         let target = MenuBarItem.fixture(
             tag: .alwaysHiddenControlItem,
-            windowID: 32279,
+            windowID: 43471,
+            bounds: bounds,
+            isOnScreen: false
+        )
+
+        #expect(
+            MenuBarItemManager.MoveDestination.leftOfItem(target).targetPoint(
+                in: bounds,
+                on: displayBounds
+            ) == CGPoint(x: bounds.minX - 1, y: bounds.midY)
+        )
+        #expect(
+            MenuBarItemManager.MoveDestination.rightOfItem(target).targetPoint(
+                in: bounds,
+                on: displayBounds
+            ) == CGPoint(x: bounds.maxX + 1, y: bounds.midY)
+        )
+    }
+
+    /// An ordinary item is not a section boundary, so its edge is a real drop
+    /// coordinate and must be left alone.
+    @Test("A regular item destination gets no section bias")
+    func regularItemTargetPointGetsNoBias() {
+        let displayBounds = CGRect(x: 0, y: 0, width: 1470, height: 956)
+        let bounds = CGRect(x: -4193, y: 0, width: 22, height: 33)
+        let target = MenuBarItem.fixture(
+            tag: .appItem(bundleID: "com.example.target", title: "Target"),
+            windowID: 103,
             bounds: bounds,
             isOnScreen: false
         )
@@ -88,12 +119,6 @@ struct MoveEventCoordinatesTests {
                 in: bounds,
                 on: displayBounds
             ) == CGPoint(x: bounds.minX, y: bounds.midY)
-        )
-        #expect(
-            MenuBarItemManager.MoveDestination.rightOfItem(target).targetPoint(
-                in: bounds,
-                on: displayBounds
-            ) == CGPoint(x: bounds.maxX, y: bounds.midY)
         )
     }
 

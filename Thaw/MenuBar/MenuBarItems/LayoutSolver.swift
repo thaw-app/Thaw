@@ -541,11 +541,20 @@ nonisolated enum LayoutSolver {
     /// so the divider flickers on-screen then springs back once per attempt
     /// for the full retry budget (#881: cursor seizure and icon storm).
     ///
-    /// Pure over its inputs. Matches the center-on-screen convention used
-    /// by ``itemsSpanMultipleDisplays(itemCenters:screenFrames:)``.
+    /// Measured at the leading edge, not the center. A collapsed hidden
+    /// divider is 5000 points wide — that width is how the section conceals
+    /// the items to its left — so its center sits 2500 points right of the
+    /// divider itself. In #958 the divider was parked at minX -3871 with a
+    /// center at -1371, which on a three-display arrangement with a display
+    /// left of the origin lands squarely on a screen. The guard that was
+    /// meant to refuse a drag from a parked divider read that center, saw a
+    /// screen, and let the drag through. Every ordinary item is narrow
+    /// enough that the two measurements agree.
+    ///
+    /// Pure over its inputs.
     static nonisolated func isOnScreen(bounds: CGRect, screenFrames: [CGRect]) -> Bool {
-        let center = CGPoint(x: bounds.midX, y: bounds.midY)
-        return screenFrames.contains { $0.contains(center) }
+        let leadingEdge = CGPoint(x: bounds.minX, y: bounds.midY)
+        return screenFrames.contains { $0.contains(leadingEdge) }
     }
 
     // MARK: - Notch overflow
@@ -756,8 +765,65 @@ nonisolated enum LayoutSolver {
         currentAlwaysHidden: Set<String>,
         desiredVisible: Set<String>,
         desiredHidden: Set<String>,
-        desiredAlwaysHidden: Set<String>
+        desiredAlwaysHidden: Set<String>,
+        overflowExemptUIDs: Set<String> = []
     ) -> Int {
+        hiddenBoundaryOffenders(
+            currentVisible: currentVisible,
+            currentHidden: currentHidden,
+            currentAlwaysHidden: currentAlwaysHidden,
+            desiredVisible: desiredVisible,
+            desiredHidden: desiredHidden,
+            desiredAlwaysHidden: desiredAlwaysHidden,
+            overflowExemptUIDs: overflowExemptUIDs
+        ).count
+    }
+
+    /// The items counted by ``hiddenBoundaryMismatch(currentVisible:currentHidden:currentAlwaysHidden:desiredVisible:desiredHidden:desiredAlwaysHidden:)``,
+    /// named and split by the direction they have to travel.
+    ///
+    /// The tally decides that a repair is needed; this decides what the
+    /// repair moves. Deriving one from the other keeps a caller that fixes
+    /// the boundary item-by-item from disagreeing with the count that sent
+    /// it there.
+    struct HiddenBoundaryOffenders: Equatable {
+        /// Currently visible, wanted in hidden or always-hidden. These
+        /// travel to the divider's concealed side.
+        var wronglyVisible: Set<String>
+        /// Currently concealed, wanted in visible. These travel to its
+        /// visible side.
+        var wronglyConcealed: Set<String>
+
+        var count: Int { wronglyVisible.count + wronglyConcealed.count }
+
+        var isEmpty: Bool {
+            wronglyVisible.isEmpty && wronglyConcealed.isEmpty
+        }
+    }
+
+    /// Splits the boundary mismatch into the two directions of travel.
+    ///
+    /// `overflowExemptUIDs` carries the notch-overflow eject set
+    /// (`notchOverflowEjectedUIDs`). An ejected item sits in hidden while
+    /// the profile still lists it visible — that divergence is by design,
+    /// the same rule `currentLayoutDivergesFromSaved` applies through its
+    /// own overflow exemption. Counting it here makes Phase 1 recall the
+    /// item to visible every apply and the next cycle's overflow plan
+    /// eject it again: a two-drag oscillation for as long as the bar stays
+    /// over budget (#958's 20 August log, nk-tedo-001). The exemption only
+    /// covers an item actually sitting in hidden; one that drifted into
+    /// always-hidden is genuine drift and keeps counting.
+    ///
+    /// Pure over its inputs.
+    static nonisolated func hiddenBoundaryOffenders(
+        currentVisible: Set<String>,
+        currentHidden: Set<String>,
+        currentAlwaysHidden: Set<String>,
+        desiredVisible: Set<String>,
+        desiredHidden: Set<String>,
+        desiredAlwaysHidden: Set<String>,
+        overflowExemptUIDs: Set<String> = []
+    ) -> HiddenBoundaryOffenders {
         // Everything the profile places left of the hidden divider, in
         // either of the two concealed sections. Which of the two an item
         // lands in is the always-hidden divider's problem, handled by the
@@ -765,10 +831,46 @@ nonisolated enum LayoutSolver {
         let desiredConcealed = desiredHidden.union(desiredAlwaysHidden)
         let currentConcealed = currentHidden.union(currentAlwaysHidden)
 
-        let wronglyVisible = currentVisible.intersection(desiredConcealed)
-        let wronglyConcealed = currentConcealed.intersection(desiredVisible)
+        return HiddenBoundaryOffenders(
+            wronglyVisible: currentVisible.intersection(desiredConcealed),
+            wronglyConcealed: currentConcealed.intersection(desiredVisible)
+                .subtracting(overflowExemptUIDs.intersection(currentHidden))
+        )
+    }
 
-        return wronglyVisible.count + wronglyConcealed.count
+    /// Whether a boundary mismatch should be repaired by dragging the
+    /// hidden divider, or by moving the offending items to it.
+    ///
+    /// Dragging H_ctrl re-sections every item it crosses. The cost is the
+    /// whole bar and the benefit is one drag, so the trade is only worth
+    /// taking when the divider itself is what drifted rather than the
+    /// items. That shows up as a side with nothing live left on it:
+    ///
+    /// - Nothing concealed is #879, where the divider had drifted past
+    ///   every managed item and eighteen of eighteen read visible. Moving
+    ///   them one at a time would mean eighteen drags across a boundary
+    ///   that is in the wrong place anyway.
+    /// - Nothing visible is the collapse in #958, where the whole bar has
+    ///   ended up behind the divider. The drag is the recovery.
+    ///
+    /// Anything in between means the divider is roughly where it belongs
+    /// and some items have wandered across it. #958's 21 August log is the
+    /// case that settles the trade: one item on the wrong side, nine still
+    /// correctly concealed, and the drag planned to reach that one item
+    /// would have carried H_ctrl from minX -3871 to 1648, across the
+    /// entire visible section.
+    ///
+    /// Counts exclude the control items. The chevron is always on the
+    /// visible side of H_ctrl, so counting it would keep `liveVisibleCount`
+    /// above zero on precisely the collapsed bar the second case exists to
+    /// rescue.
+    ///
+    /// Pure over its inputs.
+    static nonisolated func shouldMoveHiddenDivider(
+        liveConcealedCount: Int,
+        liveVisibleCount: Int
+    ) -> Bool {
+        liveConcealedCount == 0 || liveVisibleCount == 0
     }
 
     /// Plans where to drag the hidden divider so the visible/hidden split
@@ -787,20 +889,74 @@ nonisolated enum LayoutSolver {
     /// profile that empties the hidden section still parks the divider
     /// past every visible item instead of leaving it mid-bar.
     ///
+    /// An anchor in `unanchorableUIDs` yields nil rather than a search
+    /// that continues past it. The anchor names the gap the divider
+    /// belongs in, so the next candidate along is an item the profile
+    /// wants on the *other* side of that gap; anchoring there would drag
+    /// the divider past an item instead of up to it.
+    ///
+    /// Thaw's own control items are what reaches that test. The caller's
+    /// candidate set is already filtered to items that are movable and on
+    /// screen, and the chevron satisfies both whatever the rest of the bar
+    /// is doing — which makes it the anchor of last resort in exactly the
+    /// passes where every real item on its side has been dragged off the
+    /// bar and filtered out. #958's reporter restored a known-good plist
+    /// with Thaw quit and watched the first apply after relaunch collapse
+    /// it again: eleven items the profile assigns to visible were sitting
+    /// parked on the hidden side, nothing else visible was live, and the
+    /// fallback returned the chevron. Dragging H_ctrl up to it swept the
+    /// rest of the section across with it.
+    ///
+    /// Returning nil leaves the boundary where it is and hands the work to
+    /// the per-item LCS pass, which moves the items back to the divider.
+    /// That is the direction that restores the profile; this move is the
+    /// direction that destroys it.
+    ///
     /// Pure over its inputs. Returns nil when neither section has a live
     /// movable member to anchor against.
     static nonisolated func planHiddenDividerAnchor(
         desiredHidden: [String],
         desiredVisible: [String],
-        liveMovableUIDs: Set<String>
+        liveMovableUIDs: Set<String>,
+        unanchorableUIDs: Set<String> = []
     ) -> HiddenDividerAnchor? {
-        if let rightmostHidden = desiredHidden.first(where: liveMovableUIDs.contains) {
-            return .rightOf(rightmostHidden)
+        // One selection rule, shared with hiddenDividerAnchorCandidate so a
+        // caller logging the refused candidate can never name an item other
+        // than the one this planner considered.
+        guard let candidate = hiddenDividerAnchorCandidate(
+            desiredHidden: desiredHidden,
+            desiredVisible: desiredVisible,
+            liveMovableUIDs: liveMovableUIDs
+        ) else {
+            return nil
         }
-        if let leftmostVisible = desiredVisible.last(where: liveMovableUIDs.contains) {
-            return .leftOf(leftmostVisible)
+        if unanchorableUIDs.contains(candidate) {
+            return nil
         }
-        return nil
+        // Hidden side first: rightOf it. Visible side only as fallback:
+        // leftOf it.
+        return desiredHidden.first(where: liveMovableUIDs.contains) == candidate
+            ? .rightOf(candidate)
+            : .leftOf(candidate)
+    }
+
+    /// The item ``planHiddenDividerAnchor(desiredHidden:desiredVisible:liveMovableUIDs:unanchorableUIDs:)``
+    /// picks before the unanchorable test, so the caller's log line can say
+    /// which item was refused instead of reporting a bar with nothing live
+    /// as the same event.
+    ///
+    /// The two nil cases need telling apart in the field: one says the
+    /// profile's items are not on the bar right now, the other says they
+    /// are on the wrong side of it and the divider must not chase them.
+    ///
+    /// Pure over its inputs.
+    static nonisolated func hiddenDividerAnchorCandidate(
+        desiredHidden: [String],
+        desiredVisible: [String],
+        liveMovableUIDs: Set<String>
+    ) -> String? {
+        desiredHidden.first(where: liveMovableUIDs.contains)
+            ?? desiredVisible.last(where: liveMovableUIDs.contains)
     }
 
     // MARK: - LCS reorder
@@ -1407,6 +1563,26 @@ nonisolated enum LayoutSolver {
     /// an empty title the way ``MenuBarItemTag/description`` does. An item
     /// whose title could not be read therefore persists as
     /// `com.apple.controlcenter:` or `com.apple.controlcenter::1`.
+    /// Whether the identifier's namespace is a localized display name
+    /// rather than a stable identifier.
+    ///
+    /// The namespace fallback mints one when an owning app's bundle ID
+    /// reads nil mid-launch: the window's owner name is the process
+    /// display name, which macOS localizes for system processes — an
+    /// en-GB machine writes `Control Centre:Battery` next to the
+    /// canonical `com.apple.controlcenter:Battery` (#949). Bundle IDs and
+    /// executable names never contain whitespace; display names usually
+    /// do, and `aliases` carries the ones that do not — the caller passes
+    /// Control Center's current localized name (Kontrollzentrum), which
+    /// no heuristic can recognize locale-independently.
+    private static nonisolated func isDisplayNameNamespace(
+        identifier: String,
+        aliases: Set<String>
+    ) -> Bool {
+        let namespace = namespace(forIdentifier: identifier)
+        return namespace.contains(where: \.isWhitespace) || aliases.contains(namespace)
+    }
+
     private static nonisolated func hasEmptyTitle(identifier: String) -> Bool {
         let title = titlePortion(forIdentifier: identifier)
         if title.isEmpty {
@@ -1591,7 +1767,8 @@ nonisolated enum LayoutSolver {
     ///
     /// Pure over its inputs.
     static nonisolated func prunedSectionOrder(
-        _ savedSectionOrder: [String: [String]]
+        _ savedSectionOrder: [String: [String]],
+        displayNameAliases: Set<String> = []
     ) -> [String: [String]] {
         let controlCenter = MenuBarItemTag.Namespace.controlCenter.description
 
@@ -1604,11 +1781,23 @@ nonisolated enum LayoutSolver {
         // and kept `com.stonerl.Thaw:WiFi`, so the live WiFi item was planned
         // as unmanaged on every apply.
         var titlesWithRealOwner = Set<String>()
+        var controlCenterTitles = Set<String>()
         for identifiers in savedSectionOrder.values {
-            for identifier in identifiers where namespace(forIdentifier: identifier) != controlCenter {
+            for identifier in identifiers {
+                if namespace(forIdentifier: identifier) == controlCenter {
+                    controlCenterTitles.insert(titlePortion(forIdentifier: identifier))
+                    continue
+                }
                 guard
                     !isForeignEntryUnderOwnNamespace(identifier: identifier),
-                    !isSelfTitledEntry(identifier: identifier)
+                    !isSelfTitledEntry(identifier: identifier),
+                    // A localized display name is not a real owner either.
+                    // Counting `Control Centre:WiFi` as one deletes the
+                    // genuine `com.apple.controlcenter:WiFi` below, and the
+                    // live WiFi item then plans as unmanaged on every apply —
+                    // the same failure #927 documents, through a vector its
+                    // guards did not cover (#949).
+                    !isDisplayNameNamespace(identifier: identifier, aliases: displayNameAliases)
                 else {
                     continue
                 }
@@ -1657,6 +1846,32 @@ nonisolated enum LayoutSolver {
                     && titlesWithRealOwner.contains(titlePortion(forIdentifier: identifier))
                 if isProvisionalDuplicate {
                     return false
+                }
+                // A display-name-namespaced ghost is pruned only when its
+                // canonical twin exists: the Control Center entry sharing
+                // its title, Thaw's own control items by their reserved
+                // titles, or a real owner claiming the same non-generic
+                // title (`Control Centre:Alcove` next to
+                // `com.henrikruscon.Alcove:Alcove`). Generic `Item-N`
+                // titles are excluded from the claimed-title rule — every
+                // owner has an Item-0 — and a display-name entry with no
+                // twin is left alone entirely: it may be the only identity
+                // a bundle-ID-less app ever got, and deleting it would
+                // lose the user's placement (#949).
+                if isDisplayNameNamespace(identifier: identifier, aliases: displayNameAliases) {
+                    let title = titlePortion(forIdentifier: identifier)
+                    if controlCenterTitles.contains(title) {
+                        return false
+                    }
+                    if title.hasPrefix("Thaw.ControlItem.") || title.contains(".Spacer.") {
+                        return false
+                    }
+                    let baseTitle = title.replacing(/:\d+$/, with: "")
+                    if !MarkerPairResolver.isGenericControlCenterTitle(baseTitle),
+                       titlesWithRealOwner.contains(title)
+                    {
+                        return false
+                    }
                 }
                 // A Control-Center-hosted entry with no title identifies
                 // nothing: the only live item it could match is one whose
@@ -1750,7 +1965,9 @@ nonisolated enum LayoutSolver {
             gate.alwaysHiddenSectionResolved &&
             gate.hiddenSectionHasRoom &&
             !gate.hasPendingDivergence &&
-            !gate.hasUnfinishedMoveBatch
+            !gate.hasUnfinishedMoveBatch &&
+            !gate.isWithinMoveCooldown &&
+            !gate.menuBarDisplayChanged
     }
 
     /// The signals ``shouldPersistSavedOrder(_:)`` reads.
@@ -1770,6 +1987,34 @@ nonisolated enum LayoutSolver {
         var hiddenSectionHasRoom = true
         var hasPendingDivergence = false
         var hasUnfinishedMoveBatch = false
+
+        /// Whether a move landed recently enough that `applySavedLayout`
+        /// would decline to run.
+        ///
+        /// The two paths have to agree. `applySavedLayout` holds a five
+        /// second cooldown after any move so a wave of relaunching apps
+        /// cannot cascade into re-applies; this gate did not, so a cycle
+        /// inside the cooldown skipped the restore and took the save,
+        /// which is the one ordering that writes an unsettled bar down as
+        /// the user's layout. In the #958 log that pairing is a single
+        /// millisecond apart, and it moved twelve items out of the
+        /// visible section for good.
+        var isWithinMoveCooldown = false
+
+        /// Whether the menu bar is on a different display than it was on
+        /// the cycle that produced the current cache.
+        ///
+        /// macOS moves status items to the new screen one at a time, so a
+        /// snapshot taken during the relocation reads a bar that is
+        /// partly on each. `itemsSpanMultipleDisplays` is meant to catch
+        /// exactly that, but it can only see the items still classified
+        /// visible — and misclassification is the fault, so by the time
+        /// it matters the evidence has already been moved out of its
+        /// input. It correctly stopped a save 2.5 minutes earlier in the
+        /// #958 log with sixteen visible items, then passed the one that
+        /// mattered with four. This signal is derived from the displays
+        /// themselves and does not thin out as items are misread.
+        var menuBarDisplayChanged = false
     }
 
     /// Whether the always-hidden section is resolved well enough for the
@@ -1890,7 +2135,7 @@ nonisolated enum LayoutSolver {
     /// closed always-hidden section full of legitimately parked items does not
     /// read as a fault.
     ///
-    /// Pure over its inputs. Matches the center-on-screen convention used by
+    /// Pure over its inputs. Off-bar membership is decided by
     /// ``isOnScreen(bounds:screenFrames:)``.
     static nonisolated func hasVisibleItemParkedOffBar(
         itemBounds: [CGRect],

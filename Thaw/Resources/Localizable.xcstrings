@@ -29535,7 +29535,7 @@
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : ""
+            "value" : "Mueve la insignia de Nuevos elementos para elegir dónde aparecerán los elementos recién detectados."
           }
         },
         "fr" : {
@@ -48365,7 +48365,7 @@
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : ""
+            "value" : "Ejecuta cualquier acción con un atajo de teclado. Combina los temporizadores de ocultación automática y la integración con los filtros de enfoque para que Thaw se adapte a lo que estés haciendo."
           }
         },
         "fr" : {

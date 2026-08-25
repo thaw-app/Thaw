@@ -571,9 +571,9 @@ private struct MenuBarSearchContentView: View {
 
     private func openPermissionsSettings() {
         closePanel()
-        itemManager.appState?.navigationState.settingsNavigationIdentifier = .advanced
-        itemManager.appState?.activate(withPolicy: .regular)
-        itemManager.appState?.openWindow(.settings)
+        appState.navigationState.settingsNavigationIdentifier = .advanced
+        appState.activate(withPolicy: .regular)
+        appState.openWindow(.settings)
     }
 
     @ViewBuilder
@@ -619,8 +619,8 @@ private struct MenuBarSearchContentView: View {
         HStack {
             SettingsButton {
                 closePanel()
-                itemManager.appState?.activate(withPolicy: .regular)
-                itemManager.appState?.openWindow(.settings)
+                appState.activate(withPolicy: .regular)
+                appState.openWindow(.settings)
             }
 
             Toggle("Keep search", isOn: $rememberSearchQuery)
@@ -683,23 +683,19 @@ private struct MenuBarSearchContentView: View {
         }
         typealias ScoredItem = (listItem: ListItem, score: Double)
 
-        let advanced = itemManager.appState?.settings.advanced
-        let orderedNames: [MenuBarSection.Name] = advanced?.searchSectionOrder ?? Array(MenuBarSection.Name.allCases)
+        let advanced = appState.settings.advanced
+        let orderedNames = advanced.searchSectionOrder
 
         let searchItems: [SearchItem] = orderedNames
             .reduce(into: []) { items, name in
-                let included: Bool = {
-                    guard let advanced else { return true }
-                    switch name {
-                    case .visible: return advanced.searchIncludeVisible
-                    case .hidden: return advanced.searchIncludeHidden
-                    case .alwaysHidden: return advanced.searchIncludeAlwaysHidden
-                    }
-                }()
+                let included = switch name {
+                case .visible: advanced.searchIncludeVisible
+                case .hidden: advanced.searchIncludeHidden
+                case .alwaysHidden: advanced.searchIncludeAlwaysHidden
+                }
                 guard included else { return }
 
                 if
-                    let appState = itemManager.appState,
                     let section = appState.menuBarManager.section(
                         withName: name
                     ),

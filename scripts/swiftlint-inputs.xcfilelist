@@ -1,5 +1,6 @@
 $(SRCROOT)/MenuBarCaptureService/Listener.swift
 $(SRCROOT)/MenuBarCaptureService/main.swift
+$(SRCROOT)/MenuBarItemService/ExtrasMenuBarProbeStore.swift
 $(SRCROOT)/MenuBarItemService/Listener.swift
 $(SRCROOT)/MenuBarItemService/SourcePIDCache.swift
 $(SRCROOT)/MenuBarItemService/main.swift
@@ -10,6 +11,8 @@ $(SRCROOT)/Shared/Services/MenuBarItemService.swift
 $(SRCROOT)/Shared/Utilities/AXHelpers.swift
 $(SRCROOT)/Shared/Utilities/CodeSigningInfo.swift
 $(SRCROOT)/Shared/Utilities/DiagnosticLogger.swift
+$(SRCROOT)/Shared/Utilities/ExtrasMenuBarNegativeCachePolicy.swift
+$(SRCROOT)/Shared/Utilities/ExtrasMenuBarProbeMemory.swift
 $(SRCROOT)/Shared/Utilities/MarkerPairResolver.swift
 $(SRCROOT)/Shared/Utilities/SharedConstants.swift
 $(SRCROOT)/Shared/Utilities/SharedExtensions.swift
@@ -70,7 +73,18 @@ $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItem+Ordering.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItem.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemFailureLedger.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemImageCache.swift
-$(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemManager.swift
+$(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemManager/MenuBarItemEventTypes.swift
+$(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemManager/MenuBarItemManager+CacheGate.swift
+$(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemManager/MenuBarItemManager+Click.swift
+$(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemManager/MenuBarItemManager+ControlItemOrder.swift
+$(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemManager/MenuBarItemManager+EventHelpers.swift
+$(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemManager/MenuBarItemManager+ItemCache.swift
+$(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemManager/MenuBarItemManager+LayoutApply.swift
+$(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemManager/MenuBarItemManager+Move.swift
+$(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemManager/MenuBarItemManager+NotchOverflow.swift
+$(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemManager/MenuBarItemManager+TemporaryShow.swift
+$(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemManager/MenuBarItemManager.swift
+$(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemNameMemory.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemServiceConnection.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarItemTag.swift
 $(SRCROOT)/Thaw/MenuBar/MenuBarItems/MenuBarLiveRefreshPolicy.swift
@@ -173,6 +187,7 @@ $(SRCROOT)/Thaw/Utilities/Predicates.swift
 $(SRCROOT)/Thaw/Utilities/ScreenCapture.swift
 $(SRCROOT)/Thaw/Utilities/SettingsURIHandler.swift
 $(SRCROOT)/Thaw/Utilities/SettingsURIParser.swift
+$(SRCROOT)/Thaw/Utilities/SimpleSemaphore.swift
 $(SRCROOT)/Thaw/Utilities/SpaceInfo.swift
 $(SRCROOT)/Thaw/Utilities/Swizzling.swift
 $(SRCROOT)/Thaw/Utilities/SystemAppearance.swift
