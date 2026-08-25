@@ -7,6 +7,7 @@
 //  Licensed under the GNU GPLv3
 
 import AppKit
+import AsyncAlgorithms
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -241,8 +242,20 @@ struct TriggersSettingsPane: View {
             refreshAppOptions()
             refreshBluetoothOptions()
         }
-        .onChange(of: itemManager.itemCache) { _, _ in
-            refreshItemOptions()
+        // Not `.onChange(of: itemManager.itemCache)`. `MenuBarItemManager` is
+        // @Observable and `itemCache` is an observed stored property, so
+        // reading it from `body` -- which `onChange(of:)` does -- registers a
+        // dependency on it and re-evaluates the whole pane on every cache
+        // publish. That is exactly what the comment on `itemManager` says this
+        // pane avoids, and it steals focus mid-edit. An `Observations`
+        // sequence started from `.task` watches the cache without `body` ever
+        // reading it, mirroring LayoutBarItemView. The debounce coalesces the
+        // bursts a cache cycle produces.
+        .task {
+            let changes = Observations { itemManager.itemCache }
+            for await _ in changes.debounce(for: .milliseconds(150)) {
+                refreshItemOptions()
+            }
         }
         .onChange(of: flags.isEnabled(.bluetooth)) { _, _ in
             refreshBluetoothOptions()
