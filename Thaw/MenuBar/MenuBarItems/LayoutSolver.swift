@@ -557,6 +557,20 @@ nonisolated enum LayoutSolver {
         return screenFrames.contains { $0.contains(leadingEdge) }
     }
 
+    /// Whether an item lies entirely off every display.
+    ///
+    /// ``isOnScreen`` tests only the leading edge, which is the right test
+    /// for drag anchors but the wrong one for deciding that a *divider* is
+    /// stranded (#978). Hiding a section expands its control item into a
+    /// spacer (`Lengths.expanded`) whose frame reaches far offscreen to the
+    /// left while its trailing edge stays anchored beside the visible
+    /// section, so every healthy collapsed bar fails the leading-edge test.
+    /// Only a divider displaced past all of its items — no edge on any
+    /// screen — is one the parked-divider recovery may rebuild.
+    static nonisolated func isFullyOffScreen(bounds: CGRect, screenFrames: [CGRect]) -> Bool {
+        !screenFrames.contains { $0.intersects(bounds) }
+    }
+
     // MARK: - Notch overflow
 
     /// Decides which visible items must overflow into hidden to fit the

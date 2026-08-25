@@ -1009,6 +1009,13 @@ extension MenuBarItemManager {
     /// Rebuilds an authoritatively identified hidden divider after it remains
     /// parked through repeated layout applies that need it on the bar.
     ///
+    /// "Parked" here means stranded: no edge of the divider's frame falls on
+    /// any display (``LayoutSolver/isFullyOffScreen(bounds:screenFrames:)``).
+    /// The leading-edge test is not enough — a healthy collapsed bar expands
+    /// H_ctrl into an offscreen-reaching spacer, and reading that as parked
+    /// would rebuild dividers that are doing their job (#978). Only a
+    /// divider pushed past every item has both edges offscreen.
+    ///
     /// `managedItemCount` decides whether the rebuild may also re-stamp the
     /// seeded position. See ``canSeedRebuiltDividerPosition(managedItemCount:)``.
     func recoverParkedHiddenDividerIfNeeded(
@@ -1018,7 +1025,7 @@ extension MenuBarItemManager {
         managedItemCount: Int
     ) -> Bool {
         guard hiddenBoundaryMismatch > 0,
-              !LayoutSolver.isOnScreen(bounds: hiddenControlItem.bounds, screenFrames: screenFrames)
+              LayoutSolver.isFullyOffScreen(bounds: hiddenControlItem.bounds, screenFrames: screenFrames)
         else {
             parkedHiddenDividerMismatchStreak = 0
             didRecoverParkedHiddenDividerForCurrentMismatch = false

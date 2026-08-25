@@ -1550,7 +1550,16 @@ extension MenuBarItemManager {
             // is in AppKit's flipped coordinate space and can diverge for
             // mirrored or transitioning displays.
             let screenFrames = NSScreen.screens.map { CGDisplayBounds($0.displayID) }
-            if case .savedOrder = source,
+            // The recovery used to be reserved for .savedOrder applies
+            // (#978): profile-sourced applies — Layout-editor drags, ⌘-drag
+            // re-sorts — never reached it, so the streak could not advance on
+            // exactly the cycles where a user rearranging the bar kept
+            // displacing or exposing the stranded divider. Every apply source
+            // now feeds the recovery. Recreating the status item is still
+            // withheld while a ⌘-drag is live: replacing the window under an
+            // open drag session strands the drag the same way the parked
+            // divider does, and the next apply re-reads and re-counts.
+            if !appState.isDraggingMenuBarItem,
                recoverParkedHiddenDividerIfNeeded(
                    hiddenBoundaryMismatch: hiddenBoundaryMismatch,
                    hiddenControlItem: freshControl.hidden,
