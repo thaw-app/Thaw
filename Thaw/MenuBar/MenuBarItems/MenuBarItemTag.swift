@@ -341,6 +341,10 @@ nonisolated extension MenuBarItemTag {
     /// The tag for the system "Clock" item.
     static let clock = MenuBarItemTag(namespace: .controlCenter, title: "Clock")
 
+    /// The built-in Battery module governed by macOS's
+    /// "Show in Menu Bar" preference.
+    static let battery = MenuBarItemTag(namespace: .controlCenter, title: "Battery")
+
     /// The tag for the system "Control Center" item.
     static let controlCenter = MenuBarItemTag(namespace: .controlCenter, title: "BentoBox-0")
 

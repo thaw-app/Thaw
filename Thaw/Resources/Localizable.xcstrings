@@ -136,6 +136,9 @@
     "%@ (not running)" : {
 
     },
+    "%@ (protected)" : {
+
+    },
     "%@ %@ %@" : {
       "localizations" : {
         "en" : {
@@ -46759,6 +46762,9 @@
       }
     },
     "This condition is turned off in Developer settings, so the trigger won't run." : {
+
+    },
+    "This system item cannot be a trigger target because automatically hiding it can turn off its macOS Show in Menu Bar setting. Choose another target; Battery and power conditions remain available. If Battery is already missing, re-enable Show in Menu Bar for Battery in System Settings." : {
 
     },
     "This trigger controls %@'s section. Your saved layout no longer applies to it." : {

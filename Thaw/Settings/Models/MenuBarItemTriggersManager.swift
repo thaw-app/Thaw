@@ -33,12 +33,15 @@ enum MenuBarItemTriggerRuntimeStatus: Equatable {
     case deferred
     /// The target item or required controls are unavailable.
     case unavailable
+    /// A selected system item cannot be hidden without changing its macOS
+    /// visibility preference, so the trigger is intentionally suspended.
+    case protectedSystemItem
     /// The trigger move was attempted but failed.
     case failed
 
     var isTerminalForDisplay: Bool {
         switch self {
-        case .overridden, .deferred, .unavailable, .failed:
+        case .overridden, .deferred, .unavailable, .protectedSystemItem, .failed:
             true
         case .off, .inactive, .settling, .moving, .active, .idle, .pending:
             false
@@ -202,6 +205,7 @@ final class MenuBarItemTriggersManager {
         var actions = [UUID: TriggerPriorityAction]()
         var overriddenBy = [UUID: [String]]()
         var unavailableTriggerIDs = Set<UUID>()
+        var protectedTriggerIDs = Set<UUID>()
 
         mutating func setAction(reveal: Bool, identifiers: [String], for triggerID: UUID) {
             let dedupedIdentifiers = Array(OrderedSet(identifiers))
@@ -248,7 +252,7 @@ final class MenuBarItemTriggersManager {
         // position before the first live evaluation establishes the action.
         let configuredTargetIdentifiers = Set(
             triggers
-                .filter { $0.isEnabled && isAvailable($0) }
+                .filter { $0.isEnabled && isAvailable($0) && !$0.hasPreferenceSensitiveTarget }
                 .flatMap(\.allItemIdentifiers)
         )
         appState.itemManager.setTriggerControlledItemIdentifiers(configuredTargetIdentifiers)
@@ -363,6 +367,7 @@ final class MenuBarItemTriggersManager {
     /// Returns the current runtime status for a trigger.
     func runtimeStatus(for trigger: MenuBarItemTrigger) -> MenuBarItemTriggerRuntimeStatus {
         guard trigger.isEnabled else { return .off }
+        guard !trigger.hasPreferenceSensitiveTarget else { return .protectedSystemItem }
         guard isAvailable(trigger) else { return .inactive }
 
         if pendingApplyTasks[trigger.id] != nil {
@@ -525,6 +530,8 @@ final class MenuBarItemTriggersManager {
                 clearApplyState(for: trigger.id)
                 if let names = plan.overriddenBy[trigger.id] {
                     setRuntimeStatus(.overridden(by: names), for: trigger.id)
+                } else if plan.protectedTriggerIDs.contains(trigger.id) {
+                    setRuntimeStatus(.protectedSystemItem, for: trigger.id)
                 } else if plan.unavailableTriggerIDs.contains(trigger.id) {
                     setRuntimeStatus(.unavailable, for: trigger.id)
                 } else {
@@ -601,6 +608,7 @@ final class MenuBarItemTriggersManager {
         )
         var identifiers = Set<String>()
         for trigger in triggers where trigger.isEnabled && isAvailable(trigger) {
+            guard !trigger.hasPreferenceSensitiveTarget else { continue }
             for target in trigger.allTargetItems where !target.identifier.isEmpty {
                 if let resolved = Self.resolvedPresentIdentifier(
                     for: target.identifier,
@@ -657,7 +665,10 @@ final class MenuBarItemTriggersManager {
             uniquingKeysWith: { first, _ in first }
         )
         return triggers.first { trigger in
-            guard trigger.isEnabled, isAvailable(trigger) else { return false }
+            guard trigger.isEnabled,
+                  isAvailable(trigger),
+                  !trigger.hasPreferenceSensitiveTarget
+            else { return false }
             return trigger.allTargetItems.contains { target in
                 guard !target.identifier.isEmpty else { return false }
                 return Self.resolvedPresentIdentifier(
@@ -675,7 +686,10 @@ final class MenuBarItemTriggersManager {
         guard !baseIdentifier.isEmpty else { return nil }
         let knownBases: Set<String> = [baseIdentifier]
         return triggers.first { trigger in
-            guard trigger.isEnabled, isAvailable(trigger) else { return false }
+            guard trigger.isEnabled,
+                  isAvailable(trigger),
+                  !trigger.hasPreferenceSensitiveTarget
+            else { return false }
             return trigger.allTargetItems.contains { target in
                 target.identifier == baseIdentifier
                     || target.baseIdentifier == baseIdentifier
@@ -699,6 +713,10 @@ final class MenuBarItemTriggersManager {
 
         for trigger in triggers where trigger.isEnabled {
             guard !trigger.allItemIdentifiers.isEmpty, isAvailable(trigger) else { continue }
+            guard !trigger.hasPreferenceSensitiveTarget else {
+                plan.protectedTriggerIDs.insert(trigger.id)
+                continue
+            }
 
             var presentTargets = [String]()
             for target in trigger.allTargetItems where !target.identifier.isEmpty {
@@ -838,6 +856,8 @@ final class MenuBarItemTriggersManager {
                         "Trigger \(trigger.displayName) pending apply expired after "
                             + "\(self.formattedElapsed(since: scheduledAt)); overridden by \(names.joined(separator: ", "))"
                     )
+                } else if plan.protectedTriggerIDs.contains(triggerID) {
+                    self.setRuntimeStatus(.protectedSystemItem, for: triggerID)
                 } else {
                     self.setRuntimeStatus(plan.unavailableTriggerIDs.contains(triggerID) ? .unavailable : .idle, for: triggerID)
                 }
@@ -1057,6 +1077,13 @@ final class MenuBarItemTriggersManager {
                     self.setRuntimeStatus(.unavailable, for: trigger.id)
                     self.finishPendingMove(for: trigger, action: action, applied: false, retry: false)
                     return
+                case .protectedSystemItem:
+                    self.diagLog.warning(
+                        "Trigger \(trigger.displayName) refused a protected system-item move for \(identifier)"
+                    )
+                    self.setRuntimeStatus(.protectedSystemItem, for: trigger.id)
+                    self.finishPendingMove(for: trigger, action: action, applied: false, retry: false)
+                    return
                 }
             }
             self.diagLog.debug(
@@ -1219,6 +1246,28 @@ final class MenuBarItemTriggersManager {
 
     // MARK: - Scripts
 
+    /// Script inputs that can affect an enabled trigger. Protected triggers
+    /// are suspended as a unit, so their scripts must not keep running in the
+    /// background—especially because a user script may have side effects.
+    static func runnableScriptExpectedOutputs(
+        in triggers: [MenuBarItemTrigger]
+    ) -> [String: Set<String>] {
+        var expectedOutputsByPath = [String: Set<String>]()
+        for trigger in triggers
+            where trigger.isEnabled && !trigger.hasPreferenceSensitiveTarget
+        {
+            for condition in trigger.allConditions {
+                if case let .scriptResult(path, expectedOutput) = condition {
+                    let trimmed = path.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !trimmed.isEmpty {
+                        expectedOutputsByPath[trimmed, default: []].insert(expectedOutput)
+                    }
+                }
+            }
+        }
+        return expectedOutputsByPath
+    }
+
     /// Runs every distinct script referenced by an enabled script-result
     /// condition (when the feature is on), updating cached outcomes and
     /// re-evaluating when any result changes.
@@ -1230,18 +1279,7 @@ final class MenuBarItemTriggersManager {
         }
         scriptsNeedRefresh = false
 
-        // Collect distinct, non-empty script paths in use by enabled triggers.
-        var expectedOutputsByPath = [String: Set<String>]()
-        for trigger in triggers where trigger.isEnabled {
-            for condition in trigger.allConditions {
-                if case let .scriptResult(path, expectedOutput) = condition {
-                    let trimmed = path.trimmingCharacters(in: .whitespacesAndNewlines)
-                    if !trimmed.isEmpty {
-                        expectedOutputsByPath[trimmed, default: []].insert(expectedOutput)
-                    }
-                }
-            }
-        }
+        let expectedOutputsByPath = Self.runnableScriptExpectedOutputs(in: triggers)
         let paths = Set(expectedOutputsByPath.keys)
 
         // Drop cached outcomes for paths no longer referenced.
@@ -1289,6 +1327,27 @@ final class MenuBarItemTriggersManager {
 
     // MARK: - Image comparison
 
+    /// Image inputs that can affect an enabled trigger. Battery remains a
+    /// valid observation source for a supported target; this only suppresses
+    /// polling when the trigger's moved target itself is protected.
+    static func runnableImageObservationIdentifiers(
+        in triggers: [MenuBarItemTrigger]
+    ) -> Set<String> {
+        var ids = Set<String>()
+        for trigger in triggers
+            where trigger.isEnabled && !trigger.hasPreferenceSensitiveTarget
+        {
+            for condition in trigger.allConditions {
+                if case let .imageChanged(itemIdentifier, _) = condition,
+                   !itemIdentifier.isEmpty
+                {
+                    ids.insert(itemIdentifier)
+                }
+            }
+        }
+        return ids
+    }
+
     /// Captures the current perceptual hash for every watched item used by an
     /// enabled image-comparison condition (when the feature is on), updating
     /// the cache and re-evaluating when any hash changes.
@@ -1324,14 +1383,7 @@ final class MenuBarItemTriggersManager {
         }
         imagesNeedRefresh = false
 
-        var ids = Set<String>()
-        for trigger in triggers where trigger.isEnabled {
-            for condition in trigger.allConditions {
-                if case let .imageChanged(itemIdentifier, _) = condition, !itemIdentifier.isEmpty {
-                    ids.insert(itemIdentifier)
-                }
-            }
-        }
+        let ids = Self.runnableImageObservationIdentifiers(in: triggers)
 
         let removed = Set(imageHashes.keys).subtracting(ids)
         let removedAny = !removed.isEmpty

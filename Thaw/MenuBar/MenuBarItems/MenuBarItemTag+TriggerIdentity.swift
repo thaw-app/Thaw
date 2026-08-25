@@ -15,6 +15,62 @@ import Foundation
 /// same-titled sibling comes or goes). ``tagIdentifier`` cannot serve that
 /// role because it folds the instance index into the string.
 nonisolated extension MenuBarItemTag {
+    /// Whether conditional placement can safely own this item.
+    ///
+    /// Some Apple menu extras interpret a synthetic Command-drag into an
+    /// off-screen section as removal from the menu bar. For those items, the
+    /// drag changes a macOS preference instead of merely changing Thaw's
+    /// section membership. Keeping this policy on the tag makes the picker,
+    /// planner, and final move preflight share one classification authority.
+    enum TriggerTargetPolicy: Equatable {
+        case supported
+        case systemVisibilityPreferenceSensitive
+
+        var supportsConditionalPlacement: Bool {
+            self == .supported
+        }
+    }
+
+    /// Items that must not be conditionally moved between Thaw sections on
+    /// the synthetic-drag backend. Match by namespace and title so live
+    /// instance-index changes do not bypass the protection.
+    private static let preferenceSensitiveTriggerTargets: [MenuBarItemTag] = [
+        .battery,
+    ]
+
+    /// The conditional-placement policy for this live tag.
+    var triggerTargetPolicy: TriggerTargetPolicy {
+        Self.preferenceSensitiveTriggerTargets.contains {
+            $0.namespace == namespace && $0.title == title
+        } ? .systemVisibilityPreferenceSensitive : .supported
+    }
+
+    /// Resolves the policy for a persisted trigger target. The captured base
+    /// is authoritative when present; the legacy identifier fallback strips
+    /// an instance suffix only against the small set of known protected bases,
+    /// so a third-party title ending in `:1` cannot be misclassified.
+    static func triggerTargetPolicy(
+        for identifier: String,
+        capturedBaseIdentifier: String? = nil
+    ) -> TriggerTargetPolicy {
+        let protectedBases = Set(preferenceSensitiveTriggerTargets.map(\.stableIdentifierBase))
+        if let capturedBaseIdentifier,
+           protectedBases.contains(capturedBaseIdentifier)
+        {
+            return .systemVisibilityPreferenceSensitive
+        }
+        if protectedBases.contains(identifier) {
+            return .systemVisibilityPreferenceSensitive
+        }
+        if let resolvedBase = resolvedBaseIdentifier(
+            for: identifier,
+            knownBaseIdentifiers: protectedBases
+        ), protectedBases.contains(resolvedBase) {
+            return .systemVisibilityPreferenceSensitive
+        }
+        return .supported
+    }
+
     /// The exact namespace-and-title identity for this live tag. Unlike the
     /// persisted string form, it is never ambiguous when a title ends in a
     /// colon followed by a number.

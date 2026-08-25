@@ -21,6 +21,16 @@ struct TriggerItemOption: Hashable {
     let id: String
     let name: String
     let baseIdentifier: String
+
+    /// Whether this item can be moved by a conditional trigger. The broader
+    /// option list remains available to image-comparison conditions, which
+    /// only observe an icon and therefore do not risk changing its placement.
+    var supportsConditionalPlacement: Bool {
+        MenuBarItemTag.triggerTargetPolicy(
+            for: id,
+            capturedBaseIdentifier: baseIdentifier
+        ).supportsConditionalPlacement
+    }
 }
 
 /// A paired Bluetooth device offered in the device-condition picker.
@@ -99,6 +109,7 @@ private extension MenuBarItemTriggerRuntimeStatus {
         case .overridden: "Overridden"
         case .deferred: "Deferred"
         case .unavailable: "Unavailable"
+        case .protectedSystemItem: "Protected"
         case .failed: "Failed"
         }
     }
@@ -111,7 +122,7 @@ private extension MenuBarItemTriggerRuntimeStatus {
         case .moving: .blue
         case .active: .green
         case .idle: .secondary
-        case .overridden, .deferred, .unavailable: .orange
+        case .overridden, .deferred, .unavailable, .protectedSystemItem: .orange
         case .failed: .red
         }
     }
@@ -142,6 +153,8 @@ private extension MenuBarItemTriggerRuntimeStatus {
             "The move was deferred because another layout operation is in progress."
         case .unavailable:
             "The target item or required menu bar controls are not available."
+        case .protectedSystemItem:
+            "This trigger targets a system item that Thaw cannot safely hide without changing its macOS Show in Menu Bar setting."
         case .failed:
             "The item move was attempted but failed."
         }
@@ -177,6 +190,13 @@ struct TriggersSettingsPane: View {
         flags = manager.featureFlags
     }
 
+    /// Placement choices are narrower than observation choices: protected
+    /// system items remain usable by image-comparison conditions but cannot
+    /// become the item a trigger moves.
+    private var targetItemOptions: [TriggerItemOption] {
+        itemOptions.filter(\.supportsConditionalPlacement)
+    }
+
     var body: some View {
         IceForm {
             introSection
@@ -193,6 +213,7 @@ struct TriggersSettingsPane: View {
                     TriggerRow(
                         trigger: triggerBinding(for: trigger.id),
                         itemOptions: itemOptions,
+                        targetItemOptions: targetItemOptions,
                         appOptions: appOptions,
                         bluetoothOptions: bluetoothOptions,
                         refreshBluetoothOptions: refreshBluetoothOptions,
@@ -283,13 +304,13 @@ struct TriggersSettingsPane: View {
 
     /// Item identifiers targeted by more than one enabled trigger.
     private func conflictingTriggerIDs() -> Set<UUID> {
-        let presentIdentifiers = Set(itemOptions.map(\.id))
+        let presentIdentifiers = Set(targetItemOptions.map(\.id))
         let presentIdentifierBases = Dictionary(
-            itemOptions.map { ($0.id, $0.baseIdentifier) },
+            targetItemOptions.map { ($0.id, $0.baseIdentifier) },
             uniquingKeysWith: { first, _ in first }
         )
         var ownersByIdentifier = [String: Set<UUID>]()
-        for trigger in manager.triggers where trigger.isEnabled {
+        for trigger in manager.triggers where trigger.isEnabled && !trigger.hasPreferenceSensitiveTarget {
             var resolvedTargets = Set<String>()
             for target in trigger.allTargetItems {
                 let resolved = MenuBarItemTriggersManager.resolvedPresentIdentifier(
@@ -508,7 +529,7 @@ struct TriggersSettingsPane: View {
     }
 
     private func addTrigger() {
-        let firstItem = itemOptions.first
+        let firstItem = targetItemOptions.first
         let trigger = MenuBarItemTrigger(
             itemIdentifier: firstItem?.id ?? "",
             itemDisplayName: firstItem?.name ?? "",
@@ -591,7 +612,10 @@ private struct TriggerPriorityDropDelegate: DropDelegate {
 /// An inline editor for a single ``MenuBarItemTrigger``.
 private struct TriggerRow: View {
     @Binding var trigger: MenuBarItemTrigger
+    /// All observable items, including protected system modules.
     let itemOptions: [TriggerItemOption]
+    /// Items that can safely be moved between sections by a trigger.
+    let targetItemOptions: [TriggerItemOption]
     let appOptions: [TriggerAppOption]
     let bluetoothOptions: [TriggerBluetoothOption]
     let refreshBluetoothOptions: () -> Void
@@ -633,11 +657,11 @@ private struct TriggerRow: View {
         matching identifier: String,
         baseIdentifier: String?
     ) -> TriggerItemOption? {
-        if let exact = itemOptions.first(where: { $0.id == identifier }) {
+        if let exact = targetItemOptions.first(where: { $0.id == identifier }) {
             return exact
         }
         guard let baseIdentifier else { return nil }
-        let matches = itemOptions.filter { $0.baseIdentifier == baseIdentifier }
+        let matches = targetItemOptions.filter { $0.baseIdentifier == baseIdentifier }
         return matches.count == 1 ? matches[0] : nil
     }
 
@@ -660,6 +684,13 @@ private struct TriggerRow: View {
 
     private var isSelectedItemMissing: Bool {
         !trigger.itemIdentifier.isEmpty && selectedItemOption == nil
+    }
+
+    private var isSelectedItemProtected: Bool {
+        MenuBarItemTag.triggerTargetPolicy(
+            for: trigger.itemIdentifier,
+            capturedBaseIdentifier: trigger.itemBaseIdentifier
+        ) == .systemVisibilityPreferenceSensitive
     }
 
     private var overriddenNames: [String] {
@@ -702,6 +733,9 @@ private struct TriggerRow: View {
                 if !isCollapsed {
                     Divider()
                     itemPicker
+                    if trigger.hasPreferenceSensitiveTarget {
+                        protectedSystemItemWarning
+                    }
                     conditionsSection
                     if trigger.isEnabled, !conditionActive {
                         inactiveConditionWarning
@@ -709,7 +743,10 @@ private struct TriggerRow: View {
                     if hasConflict {
                         conflictWarning
                     }
-                    if trigger.isEnabled, conditionActive {
+                    if trigger.isEnabled,
+                       conditionActive,
+                       !trigger.hasPreferenceSensitiveTarget
+                    {
                         savedLayoutOverrideNote
                     }
                     if !overriddenNames.isEmpty {
@@ -894,7 +931,13 @@ private struct TriggerRow: View {
                             matching: current,
                             baseIdentifier: currentItem.baseIdentifier
                         )
-                        if !current.isEmpty, resolvedItem == nil {
+                        let isProtected = MenuBarItemTag.triggerTargetPolicy(
+                            for: current,
+                            capturedBaseIdentifier: currentItem.baseIdentifier
+                        ) == .systemVisibilityPreferenceSensitive
+                        if !current.isEmpty, isProtected {
+                            Text("\(trigger.additionalItems[index].displayName) (protected)").tag(current)
+                        } else if !current.isEmpty, resolvedItem == nil {
                             Text("\(trigger.additionalItems[index].displayName) (not present)").tag(current)
                         } else if let resolvedItem, resolvedItem.id != current {
                             Text(resolvedItem.name).tag(current)
@@ -902,7 +945,7 @@ private struct TriggerRow: View {
                         if current.isEmpty {
                             Text("Choose an item…").tag("")
                         }
-                        ForEach(itemOptions, id: \.id) { option in
+                        ForEach(targetItemOptions, id: \.id) { option in
                             Text(option.name).tag(option.id)
                         }
                     }
@@ -947,8 +990,8 @@ private struct TriggerRow: View {
             set: { newValue in
                 guard index < trigger.additionalItems.count else { return }
                 guard newValue != trigger.additionalItems[index].identifier else { return }
-                let name = itemOptions.first(where: { $0.id == newValue })?.name ?? ""
-                let baseIdentifier = itemOptions.first(where: { $0.id == newValue })?.baseIdentifier
+                let name = targetItemOptions.first(where: { $0.id == newValue })?.name ?? ""
+                let baseIdentifier = targetItemOptions.first(where: { $0.id == newValue })?.baseIdentifier
                 trigger.additionalItems[index] = TriggerTargetItem(
                     identifier: newValue,
                     displayName: name,
@@ -989,14 +1032,27 @@ private struct TriggerRow: View {
 
     private var itemPicker: some View {
         IcePicker("Menu bar item", selection: itemBinding) {
-            if isSelectedItemMissing {
+            if isSelectedItemProtected {
+                Text("\(selectedItemName) (protected)").tag(trigger.itemIdentifier)
+            } else if isSelectedItemMissing {
                 Text("\(selectedItemName) (not present)").tag(trigger.itemIdentifier)
             } else if let selectedItemOption, selectedItemOption.id != trigger.itemIdentifier {
                 Text(selectedItemOption.name).tag(trigger.itemIdentifier)
             }
-            ForEach(itemOptions, id: \.id) { option in
+            ForEach(targetItemOptions, id: \.id) { option in
                 Text(option.name).tag(option.id)
             }
+        }
+    }
+
+    private var protectedSystemItemWarning: some View {
+        Label {
+            Text("This system item cannot be a trigger target because automatically hiding it can turn off its macOS Show in Menu Bar setting. Choose another target; Battery and power conditions remain available. If Battery is already missing, re-enable Show in Menu Bar for Battery in System Settings.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        } icon: {
+            Image(systemName: "shield.lefthalf.filled")
+                .foregroundStyle(.orange)
         }
     }
 
@@ -1389,7 +1445,7 @@ private struct TriggerRow: View {
             set: { newValue in
                 guard newValue != trigger.itemIdentifier else { return }
                 trigger.itemIdentifier = newValue
-                if let match = itemOptions.first(where: { $0.id == newValue }) {
+                if let match = targetItemOptions.first(where: { $0.id == newValue }) {
                     trigger.itemDisplayName = match.name
                     trigger.itemBaseIdentifier = match.baseIdentifier
                 } else {
