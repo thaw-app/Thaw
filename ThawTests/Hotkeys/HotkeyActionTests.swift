@@ -44,9 +44,9 @@ struct HotkeyActionTests {
 
     // MARK: - CaseIterable Tests
 
-    @Test("There are seven actions")
+    @Test("There are eight actions")
     func allCasesCount() {
-        #expect(HotkeyAction.allCases.count == 7)
+        #expect(HotkeyAction.allCases.count == 8)
     }
 
     @Test("All cases contains every expected action")

@@ -262,6 +262,17 @@ nonisolated enum SearchIndex {
             property: nil
         ),
         SearchEntry(
+            id: "pane.tools",
+            titleKey: "Tools",
+            titleText: "Tools",
+            descriptionText: "Diagnostics, language override, resets, and troubleshooting tools.",
+            pane: .tools,
+            sectionKey: nil,
+            sectionText: nil,
+            keywords: ["tools", "maintenance", "reset", "cache", "permissions", "language", "logging", "diagnostics", "troubleshooting"],
+            property: nil
+        ),
+        SearchEntry(
             id: "pane.developer",
             titleKey: "Dev Mode Flags",
             titleText: "Dev Mode Flags",

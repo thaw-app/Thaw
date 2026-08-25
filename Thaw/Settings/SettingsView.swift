@@ -133,6 +133,8 @@ struct SettingsView: View {
             AutomationSettingsPane()
         case .triggers:
             TriggersSettingsPane(manager: appState.settings.triggers, itemManager: appState.itemManager)
+        case .tools:
+            ToolsSettingsPane(settings: appState.settings.advanced)
         case .developer:
             DeveloperSettingsPane(manager: appState.settings.triggers)
         case .about:
