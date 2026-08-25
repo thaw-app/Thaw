@@ -170,6 +170,7 @@ nonisolated extension Defaults {
         static let showOnScroll = true
         static let autoRehide = true
         static let simpleMode = false
+        static let autoZenWhileSharingScreen = false
         static let showSettingDescriptions = true
         static let rehideStrategy: RehideStrategy = .smart
         static let rehideInterval: TimeInterval = 15
@@ -258,6 +259,7 @@ nonisolated extension Defaults {
         case autoRehide = "AutoRehide"
         case simpleMode = "SimpleMode"
         case showSettingDescriptions = "ShowSettingDescriptions"
+        case autoZenWhileSharingScreen = "AutoZenWhileSharingScreen"
         case rehideStrategy = "RehideStrategy"
         case rehideInterval = "RehideInterval"
         case displayIceBarConfigurations = "DisplayIceBarConfigurations"

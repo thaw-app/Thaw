@@ -18,6 +18,7 @@ nonisolated enum HotkeyAction: String, Codable, CaseIterable {
     case enableIceBar = "EnableIceBar"
     case toggleApplicationMenus = "ToggleApplicationMenus"
     case toggleAutoRehide = "ToggleAutoRehide"
+    case toggleZenMode = "ToggleZenMode"
 
     /// Used by profile hotkeys, action is handled externally.
     case profileApply = "ProfileApply"
@@ -70,6 +71,17 @@ nonisolated enum HotkeyAction: String, Codable, CaseIterable {
                 title: general.autoRehide
                     ? String(localized: "Automatic rehiding is on")
                     : String(localized: "Automatic rehiding is off"),
+                body: ""
+            )
+        case .toggleZenMode:
+            appState.menuBarManager.toggleZenMode()
+            let isActive = appState.menuBarManager.isZenModeActive
+            appState.userNotificationManager.requestAuthorization()
+            appState.userNotificationManager.addRequest(
+                with: .hotkeyToggleFeedback,
+                title: isActive
+                    ? String(localized: "Zen mode is on")
+                    : String(localized: "Zen mode is off"),
                 body: ""
             )
         case .profileApply:

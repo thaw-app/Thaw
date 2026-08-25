@@ -67,6 +67,9 @@ final class AppState {
     /// Manager for user notifications.
     let userNotificationManager = UserNotificationManager()
 
+    /// Engages zen mode while the screen is mirrored or being shared.
+    let presentationMonitor = PresentationMonitor()
+
     /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
 
@@ -152,6 +155,7 @@ final class AppState {
         imageCache.performSetup(with: self)
         diagLog.debug("setupTask: imageCache setup complete")
         spacerManager.performSetup(with: self)
+        presentationMonitor.performSetup(with: self)
         updatesManager.performSetup(with: self)
         userNotificationManager.performSetup(with: self)
         profileManager.performSetup(with: self)

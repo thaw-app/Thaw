@@ -588,6 +588,17 @@ nonisolated enum SearchIndex {
             property: .advanced("tooltipDelay")
         ),
         SearchEntry(
+            id: "advanced.autoZenWhileSharingScreen",
+            titleKey: "Enter zen mode while presenting",
+            titleText: "Enter zen mode while presenting",
+            descriptionText: "Hide every concealable section while a display is mirrored or the screen is being shared.",
+            pane: .advanced,
+            sectionKey: "Menu bar behavior",
+            sectionText: "Menu bar behavior",
+            keywords: ["zen", "presenting", "mirror", "screen share", "hide", "presentation"],
+            property: .advanced("autoZenWhileSharingScreen")
+        ),
+        SearchEntry(
             id: "advanced.automaticArrangementEnabled",
             // Reuses catalog strings that are already fully translated, so
             // the entry ships localized without a new Crowdin round.
@@ -834,6 +845,17 @@ nonisolated enum SearchIndex {
             sectionKey: "Other",
             sectionText: "Other",
             keywords: ["toggle", "auto rehide", "automatically rehide", "hotkey", "shortcut"],
+            property: nil
+        ),
+        SearchEntry(
+            id: "hotkeys.toggleZenMode",
+            titleKey: "Toggle zen mode",
+            titleText: "Toggle zen mode",
+            descriptionText: nil,
+            pane: .hotkeys,
+            sectionKey: "Other",
+            sectionText: "Other",
+            keywords: ["toggle", "zen mode", "focus", "hide everything", "hotkey", "shortcut"],
             property: nil
         ),
     ]

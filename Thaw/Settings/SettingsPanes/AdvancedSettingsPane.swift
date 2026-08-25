@@ -36,6 +36,7 @@ struct AdvancedSettingsPane: View {
             }
             IceSection("Menu bar behavior") {
                 hideApplicationMenus
+                autoZenWhileSharingScreen
                 enableSecondaryContextMenu
                 if settings.enableSecondaryContextMenu {
                     enableSecondaryContextMenuQuit
@@ -380,6 +381,23 @@ struct AdvancedSettingsPane: View {
                 }
         }
         .annotation("The amount of time to wait before showing a tooltip over a menu bar item.")
+    }
+
+    private var autoZenWhileSharingScreen: some View {
+        Toggle(
+            "Enter zen mode while presenting",
+            isOn: $settings.autoZenWhileSharingScreen
+        )
+        .annotation {
+            Text(
+                """
+                Hide every concealable section for as long as a display is mirrored \
+                or your screen is being shared, then put it back. macOS offers no way \
+                to see that another app is recording the screen, so recordings are not \
+                covered.
+                """
+            )
+        }
     }
 
     private var showMenuBarTooltips: some View {

@@ -22,6 +22,7 @@ struct HotkeyActionTests {
         #expect(HotkeyAction.enableIceBar.rawValue == "EnableIceBar")
         #expect(HotkeyAction.toggleApplicationMenus.rawValue == "ToggleApplicationMenus")
         #expect(HotkeyAction.toggleAutoRehide.rawValue == "ToggleAutoRehide")
+        #expect(HotkeyAction.toggleZenMode.rawValue == "ToggleZenMode")
         #expect(HotkeyAction.profileApply.rawValue == "ProfileApply")
         #expect(HotkeyAction.openMenuBarItem.rawValue == "OpenMenuBarItem")
     }
@@ -44,9 +45,9 @@ struct HotkeyActionTests {
 
     // MARK: - CaseIterable Tests
 
-    @Test("There are eight actions")
+    @Test("There are nine actions")
     func allCasesCount() {
-        #expect(HotkeyAction.allCases.count == 8)
+        #expect(HotkeyAction.allCases.count == 9)
     }
 
     @Test("All cases contains every expected action")

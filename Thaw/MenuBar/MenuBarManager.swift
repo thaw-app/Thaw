@@ -892,6 +892,81 @@ final class MenuBarManager {
         }
     }
 
+    // MARK: - Zen Mode
+
+    /// Whether zen mode is currently active. While active, every concealable
+    /// section stays hidden and hover reveal is locked off.
+    private(set) var isZenModeActive = false
+
+    /// The sections that were revealed when zen mode was engaged, restored on
+    /// exit. Session-only: zen mode never survives an app relaunch.
+    private var sectionsRevealedBeforeZenMode: Set<MenuBarSection.Name> = []
+
+    /// Toggles zen mode: conceals the hidden and always-hidden sections and
+    /// locks reveal gestures until toggled again, then restores what was
+    /// showing before. Items are never moved between sections, so engaging or
+    /// leaving zen mode performs no layout writes and cannot disturb ordering.
+    func toggleZenMode() {
+        // An explicit toggle takes ownership away from the monitor: whatever
+        // the user just asked for outlives the end of a presentation.
+        isZenModeEngagedAutomatically = false
+        if isZenModeActive {
+            deactivateZenMode()
+        } else {
+            activateZenMode()
+        }
+    }
+
+    /// Whether the active zen mode was engaged by ``PresentationMonitor``
+    /// rather than by the user. Only an automatic engagement is automatically
+    /// withdrawn, so a manual zen mode is never cancelled by unplugging a
+    /// projector.
+    private var isZenModeEngagedAutomatically = false
+
+    /// Engages or withdraws zen mode on the monitor's behalf.
+    ///
+    /// Idempotent in both directions, because the monitor re-evaluates its
+    /// signals on every display change and every poll rather than tracking
+    /// edges itself.
+    func setAutomaticZenMode(_ isActive: Bool) {
+        if isActive {
+            guard !isZenModeActive else { return }
+            activateZenMode()
+            isZenModeEngagedAutomatically = true
+        } else {
+            guard isZenModeActive, isZenModeEngagedAutomatically else { return }
+            deactivateZenMode()
+            isZenModeEngagedAutomatically = false
+        }
+    }
+
+    private func activateZenMode() {
+        var revealedNames = Set<MenuBarSection.Name>()
+        for name in [MenuBarSection.Name.hidden, .alwaysHidden] {
+            guard let section = section(withName: name), section.isEnabled else {
+                continue
+            }
+            if !section.isHidden {
+                revealedNames.insert(name)
+                section.hide()
+            }
+        }
+        sectionsRevealedBeforeZenMode = revealedNames
+        // Each hide() runs resetClosedPresentationState, which re-enables
+        // hover reveal; set the lock after all hides so it sticks.
+        showOnHoverAllowed = false
+        isZenModeActive = true
+    }
+
+    private func deactivateZenMode() {
+        isZenModeActive = false
+        showOnHoverAllowed = true
+        for name in sectionsRevealedBeforeZenMode {
+            section(withName: name)?.show()
+        }
+        sectionsRevealedBeforeZenMode = []
+    }
+
     /// Shows the layout editor panel.
     @objc private func showLayoutEditorPanel() {
         guard let screen = MenuBarLayoutEditorPanel.defaultScreen else {

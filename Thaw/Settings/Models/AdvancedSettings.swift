@@ -139,6 +139,16 @@ final class AdvancedSettings {
         return 1.0 / fps
     }
 
+    /// A Boolean value that indicates whether zen mode engages by itself while
+    /// the screen is mirrored or being shared. See ``PresentationMonitor`` for
+    /// what that does and does not detect.
+    var autoZenWhileSharingScreen = Defaults.DefaultValue.autoZenWhileSharingScreen {
+        didSet {
+            guard oldValue != autoZenWhileSharingScreen else { return }
+            Defaults.set(autoZenWhileSharingScreen, forKey: .autoZenWhileSharingScreen)
+        }
+    }
+
     /// A Boolean value that indicates whether diagnostic logging to file is enabled.
     var enableDiagnosticLogging = Defaults.DefaultValue.enableDiagnosticLogging {
         didSet {
@@ -398,6 +408,7 @@ final class AdvancedSettings {
         Defaults.ifPresent(key: .enableSecondaryContextMenuQuit, assign: &enableSecondaryContextMenuQuit)
         Defaults.ifPresent(key: .showOnHoverDelay, assign: &showOnHoverDelay)
         Defaults.ifPresent(key: .tooltipDelay, assign: &tooltipDelay)
+        Defaults.ifPresent(key: .autoZenWhileSharingScreen, assign: &autoZenWhileSharingScreen)
         Defaults.ifPresent(key: .showMenuBarTooltips, assign: &showMenuBarTooltips)
         Defaults.ifPresent(key: .iconRefreshInterval, assign: &iconRefreshInterval)
         Defaults.ifPresent(key: .enableDiagnosticLogging, assign: &enableDiagnosticLogging)
