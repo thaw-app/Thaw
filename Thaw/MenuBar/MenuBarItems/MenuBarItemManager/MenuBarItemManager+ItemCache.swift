@@ -832,7 +832,7 @@ extension MenuBarItemManager {
         // comparison to mean anything: a nil on either side is the ordinary
         // first cycle, not a change.
         let menuBarDisplayChanged: Bool = if let previousCacheDisplayID,
-                                            let currentDisplayID = context.cache.displayID
+                                             let currentDisplayID = context.cache.displayID
         {
             previousCacheDisplayID != currentDisplayID
         } else {

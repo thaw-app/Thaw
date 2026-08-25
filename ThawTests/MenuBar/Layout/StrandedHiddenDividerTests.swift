@@ -29,7 +29,7 @@ struct StrandedHiddenDividerTests {
     func collapsedSpacerIsNotStranded() {
         // Lengths.expanded = 10000; trailing edge inside the 2056-wide
         // display from ParkedDividerLog.
-        let expandedSpacer = ParkedDividerLog.bounds(minX: -8073, width: 10_000)
+        let expandedSpacer = ParkedDividerLog.bounds(minX: -8073, width: 10000)
         #expect(LayoutSolver.isFullyOffScreen(
             bounds: expandedSpacer,
             screenFrames: ParkedDividerLog.screenFrames

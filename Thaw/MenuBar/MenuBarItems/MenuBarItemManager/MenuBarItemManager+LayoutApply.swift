@@ -1346,9 +1346,9 @@ extension MenuBarItemManager {
         // a control item is cheaper than moving individual items.
         var movedCount = 0
         var didAttemptHCtrl = false
-        /// Set when a boundary repair carried items across H_ctrl instead of
-        /// carrying H_ctrl across them. Either way the sections the AH_ctrl
-        /// planning below reads are stale afterwards.
+        // Set when a boundary repair carried items across H_ctrl instead of
+        // carrying H_ctrl across them. Either way the sections the AH_ctrl
+        // planning below reads are stale afterwards.
         var didCrossHiddenBoundary = false
         var canRepositionControlItems = controlItems.canRepositionControlItems
         // Moves this batch planned for an item that is still on the bar and

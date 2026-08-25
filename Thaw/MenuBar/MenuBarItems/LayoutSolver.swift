@@ -808,7 +808,9 @@ nonisolated enum LayoutSolver {
         /// visible side.
         var wronglyConcealed: Set<String>
 
-        var count: Int { wronglyVisible.count + wronglyConcealed.count }
+        var count: Int {
+            wronglyVisible.count + wronglyConcealed.count
+        }
 
         var isEmpty: Bool {
             wronglyVisible.isEmpty && wronglyConcealed.isEmpty
