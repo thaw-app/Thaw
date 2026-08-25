@@ -10,4 +10,5 @@
 enum UserNotificationIdentifier: String {
     case updateCheck = "UpdateCheck"
     case triggerFired = "TriggerFired"
+    case hotkeyToggleFeedback = "HotkeyToggleFeedback"
 }

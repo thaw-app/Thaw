@@ -21,6 +21,7 @@ struct HotkeyActionTests {
         #expect(HotkeyAction.searchMenuBarItems.rawValue == "SearchMenuBarItems")
         #expect(HotkeyAction.enableIceBar.rawValue == "EnableIceBar")
         #expect(HotkeyAction.toggleApplicationMenus.rawValue == "ToggleApplicationMenus")
+        #expect(HotkeyAction.toggleAutoRehide.rawValue == "ToggleAutoRehide")
         #expect(HotkeyAction.profileApply.rawValue == "ProfileApply")
         #expect(HotkeyAction.openMenuBarItem.rawValue == "OpenMenuBarItem")
     }
@@ -82,6 +83,7 @@ struct HotkeyActionTests {
         #expect(settingsActions.contains(.searchMenuBarItems))
         #expect(settingsActions.contains(.enableIceBar))
         #expect(settingsActions.contains(.toggleApplicationMenus))
+        #expect(settingsActions.contains(.toggleAutoRehide))
     }
 
     @Test("Settings actions is all cases minus two")

@@ -792,6 +792,17 @@ nonisolated enum SearchIndex {
             keywords: ["toggle", "application menus", "app menus", "hotkey", "shortcut"],
             property: nil
         ),
+        SearchEntry(
+            id: "hotkeys.toggleAutoRehide",
+            titleKey: "Toggle automatic rehiding",
+            titleText: "Toggle automatic rehiding",
+            descriptionText: nil,
+            pane: .hotkeys,
+            sectionKey: "Other",
+            sectionText: "Other",
+            keywords: ["toggle", "auto rehide", "automatically rehide", "hotkey", "shortcut"],
+            property: nil
+        ),
     ]
 
     // MARK: Layout Settings

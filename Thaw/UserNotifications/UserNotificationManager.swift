@@ -87,6 +87,9 @@ extension UserNotificationManager: @MainActor UNUserNotificationCenterDelegate {
             // Tapping a trigger notification opens Settings to the Triggers pane.
             appState.navigationState.settingsNavigationIdentifier = .triggers
             appState.openWindow(.settings)
+        case .hotkeyToggleFeedback:
+            // Pure feedback banner; tapping it carries no action.
+            break
         case nil:
             break
         }

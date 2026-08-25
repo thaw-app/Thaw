@@ -36,6 +36,7 @@ struct HotkeysSettingsPane: View {
             IceSection("Other") {
                 hotkeyRecorder(forAction: .enableIceBar)
                 hotkeyRecorder(forAction: .toggleApplicationMenus)
+                hotkeyRecorder(forAction: .toggleAutoRehide)
             }
         }
     }
@@ -55,6 +56,8 @@ struct HotkeysSettingsPane: View {
                     Text("Enable the \(Constants.displayName) Bar")
                 case .toggleApplicationMenus:
                     Text("Toggle application menus")
+                case .toggleAutoRehide:
+                    Text("Toggle automatic rehiding")
                 case .profileApply:
                     EmptyView()
                 case .openMenuBarItem:
