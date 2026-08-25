@@ -15,6 +15,8 @@
 		7127A9FF2C4886D100D99DEF /* IfritStatic in Frameworks */ = {isa = PBXBuildFile; productRef = 7127A9FE2C4886D100D99DEF /* IfritStatic */; };
 		7168EE532E281CBC00FF9830 /* AXSwift6 in Frameworks */ = {isa = PBXBuildFile; productRef = 7168EE522E281CBC00FF9830 /* AXSwift6 */; };
 		7188A68C2E27F9ED008F131D /* MenuBarItemService.xpc in Embed XPC Services */ = {isa = PBXBuildFile; fileRef = 7188A6832E27F9ED008F131D /* MenuBarItemService.xpc */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		C4PT00012F3A100000000010 /* AXSwift6 in Frameworks */ = {isa = PBXBuildFile; productRef = C4PT00012F3A10000000000F /* AXSwift6 */; };
+		C4PT00012F3A100000000005 /* MenuBarCaptureService.xpc in Embed XPC Services */ = {isa = PBXBuildFile; fileRef = C4PT00012F3A100000000001 /* MenuBarCaptureService.xpc */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		765B9E4A97DD40A18EE1F15D /* Collections in Frameworks */ = {isa = PBXBuildFile; productRef = 6937234B615A4E0BA19DFCF5 /* Collections */; };
 		9570E4A96CDEC0BEBAA5573F /* AsyncAlgorithms in Frameworks */ = {isa = PBXBuildFile; productRef = 43C5F05D006747974015EBD9 /* AsyncAlgorithms */; };
 		A6DC49597D7F903C5E1B425F /* Algorithms in Frameworks */ = {isa = PBXBuildFile; productRef = 84489DC7DD2441B27C7B8E6C /* Algorithms */; };
@@ -28,6 +30,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 7188A6822E27F9ED008F131D;
 			remoteInfo = MenuBarItemService;
+		};
+		C4PT00012F3A100000000006 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 716683222A767E6A006ABF84 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C4PT00012F3A100000000002;
+			remoteInfo = MenuBarCaptureService;
 		};
 		E2TESTS0012F2C000000002 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -45,6 +54,7 @@
 			dstSubfolder = Product;
 			files = (
 				7188A68C2E27F9ED008F131D /* MenuBarItemService.xpc in Embed XPC Services */,
+				C4PT00012F3A100000000005 /* MenuBarCaptureService.xpc in Embed XPC Services */,
 			);
 			name = "Embed XPC Services";
 		};
@@ -53,6 +63,7 @@
 /* Begin PBXFileReference section */
 		7166832A2A767E6A006ABF84 /* Thaw.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Thaw.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7188A6832E27F9ED008F131D /* MenuBarItemService.xpc */ = {isa = PBXFileReference; explicitFileType = "wrapper.xpc-service"; includeInIndex = 0; path = MenuBarItemService.xpc; sourceTree = BUILT_PRODUCTS_DIR; };
+		C4PT00012F3A100000000001 /* MenuBarCaptureService.xpc */ = {isa = PBXFileReference; explicitFileType = "wrapper.xpc-service"; includeInIndex = 0; path = MenuBarCaptureService.xpc; sourceTree = BUILT_PRODUCTS_DIR; };
 		E2TESTS0012F2C000000001 /* ThawTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ThawTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -63,6 +74,13 @@
 				Resources/Info.plist,
 			);
 			target = 7188A6822E27F9ED008F131D /* MenuBarItemService */;
+		};
+		C4PT00012F3A100000000004 /* Exceptions for "MenuBarCaptureService" folder in "MenuBarCaptureService" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Resources/Info.plist,
+			);
+			target = C4PT00012F3A100000000002 /* MenuBarCaptureService */;
 		};
 		E2B782F92F2BF98100CF0BBD /* Exceptions for "Thaw" folder in "Thaw" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
@@ -80,6 +98,14 @@
 				7188A6912E27F9ED008F131D /* Exceptions for "MenuBarItemService" folder in "MenuBarItemService" target */,
 			);
 			path = MenuBarItemService;
+			sourceTree = "<group>";
+		};
+		C4PT00012F3A100000000003 /* MenuBarCaptureService */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				C4PT00012F3A100000000004 /* Exceptions for "MenuBarCaptureService" folder in "MenuBarCaptureService" target */,
+			);
+			path = MenuBarCaptureService;
 			sourceTree = "<group>";
 		};
 		7188A69E2E280BB4008F131D /* Shared */ = {
@@ -124,6 +150,12 @@
 				29808AAF4CA568551CD0CC6B /* Algorithms in Frameworks */,
 			);
 		};
+		C4PT00012F3A10000000000C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+				C4PT00012F3A100000000010 /* AXSwift6 in Frameworks */,
+			);
+		};
 		E2TESTS0012F2C000000004 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
@@ -138,6 +170,7 @@
 				7188A69E2E280BB4008F131D /* Shared */,
 				71BDFBE12C978E2A00EF145F /* Thaw */,
 				7188A6842E27F9ED008F131D /* MenuBarItemService */,
+				C4PT00012F3A100000000003 /* MenuBarCaptureService */,
 				E2TESTS0012F2C000000003 /* ThawTests */,
 				7166832B2A767E6A006ABF84 /* Products */,
 			);
@@ -148,6 +181,7 @@
 			children = (
 				7166832A2A767E6A006ABF84 /* Thaw.app */,
 				7188A6832E27F9ED008F131D /* MenuBarItemService.xpc */,
+				C4PT00012F3A100000000001 /* MenuBarCaptureService.xpc */,
 				E2TESTS0012F2C000000001 /* ThawTests.xctest */,
 			);
 			name = Products;
@@ -171,6 +205,7 @@
 			);
 			dependencies = (
 				7188A68B2E27F9ED008F131D /* PBXTargetDependency */,
+				C4PT00012F3A100000000007 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				7188A69E2E280BB4008F131D /* Shared */,
@@ -215,6 +250,29 @@
 			productReference = 7188A6832E27F9ED008F131D /* MenuBarItemService.xpc */;
 			productType = "com.apple.product-type.xpc-service";
 		};
+		C4PT00012F3A100000000002 /* MenuBarCaptureService */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C4PT00012F3A10000000000A /* Build configuration list for PBXNativeTarget "MenuBarCaptureService" */;
+			buildPhases = (
+				C4PT00012F3A10000000000B /* Sources */,
+				C4PT00012F3A10000000000C /* Frameworks */,
+				C4PT00012F3A10000000000D /* Resources */,
+				C4PT00012F3A10000000000E /* Stamp Git SHA */,
+			);
+			buildRules = (
+			);
+			fileSystemSynchronizedGroups = (
+				C4PT00012F3A100000000003 /* MenuBarCaptureService */,
+				7188A69E2E280BB4008F131D /* Shared */,
+			);
+			name = MenuBarCaptureService;
+			packageProductDependencies = (
+				C4PT00012F3A10000000000F /* AXSwift6 */,
+			);
+			productName = MenuBarCaptureService;
+			productReference = C4PT00012F3A100000000001 /* MenuBarCaptureService.xpc */;
+			productType = "com.apple.product-type.xpc-service";
+		};
 		E2TESTS0012F2C000000007 /* ThawTests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = E2TESTS0012F2C00000000D /* Build configuration list for PBXNativeTarget "ThawTests" */;
@@ -250,6 +308,9 @@
 						CreatedOnToolsVersion = 14.3.1;
 					};
 					7188A6822E27F9ED008F131D = {
+						CreatedOnToolsVersion = 26.0;
+					};
+					C4PT00012F3A100000000002 = {
 						CreatedOnToolsVersion = 26.0;
 					};
 					E2TESTS0012F2C000000007 = {
@@ -303,6 +364,7 @@
 			targets = (
 				716683292A767E6A006ABF84 /* Thaw */,
 				7188A6822E27F9ED008F131D /* MenuBarItemService */,
+				C4PT00012F3A100000000002 /* MenuBarCaptureService */,
 				E2TESTS0012F2C000000007 /* ThawTests */,
 			);
 		};
@@ -315,6 +377,11 @@
 			);
 		};
 		7188A6812E27F9ED008F131D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+		C4PT00012F3A10000000000D /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			files = (
 			);
@@ -387,6 +454,36 @@
 				"",
 			);
 		};
+		C4PT00012F3A10000000000E /* Stamp Git SHA */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			name = "Stamp Git SHA";
+			shellPath = /bin/sh;
+			shellScript = (
+				"set -eu",
+				"",
+				"if SHA=$(git -C \"${SRCROOT}\" rev-parse --short HEAD 2>/dev/null); then",
+				"    if ! git -C \"${SRCROOT}\" diff --quiet 2>/dev/null \\",
+				"       || ! git -C \"${SRCROOT}\" diff --cached --quiet 2>/dev/null; then",
+				"        SHA=\"${SHA}-dirty\"",
+				"    fi",
+				"else",
+				"    SHA=\"unknown\"",
+				"fi",
+				"",
+				"PLIST=\"${TARGET_BUILD_DIR}/${INFOPLIST_PATH}\"",
+				"if [ ! -f \"$PLIST\" ]; then",
+				"    echo \"warning: stamp-git-sha: plist not found at $PLIST\"",
+				"    exit 0",
+				"fi",
+				"",
+				"/usr/libexec/PlistBuddy -c \"Set :GitCommitSHA ${SHA}\" \"$PLIST\" 2>/dev/null \\",
+				"    || /usr/libexec/PlistBuddy -c \"Add :GitCommitSHA string ${SHA}\" \"$PLIST\"",
+				"",
+				"echo \"stamp-git-sha: stamped ${SHA} into ${PLIST}\"",
+				"",
+			);
+		};
 		1720D48F2BB9B60500A7AC63 /* SwiftLint */ = {
 			isa = PBXShellScriptBuildPhase;
 			inputFileListPaths = (
@@ -425,6 +522,11 @@
 			files = (
 			);
 		};
+		C4PT00012F3A10000000000B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
 		E2TESTS0012F2C000000005 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			files = (
@@ -437,6 +539,11 @@
 			isa = PBXTargetDependency;
 			target = 7188A6822E27F9ED008F131D /* MenuBarItemService */;
 			targetProxy = 7188A68A2E27F9ED008F131D /* PBXContainerItemProxy */;
+		};
+		C4PT00012F3A100000000007 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C4PT00012F3A100000000002 /* MenuBarCaptureService */;
+			targetProxy = C4PT00012F3A100000000006 /* PBXContainerItemProxy */;
 		};
 		E2TESTS0012F2C000000008 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -586,7 +693,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				ASSETCATALOG_COMPILER_SKIP_APP_STORE_DEPLOYMENT = YES;
 				CODE_SIGN_ENTITLEMENTS = "";
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 53;
@@ -627,7 +734,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				ASSETCATALOG_COMPILER_SKIP_APP_STORE_DEPLOYMENT = YES;
 				CODE_SIGN_ENTITLEMENTS = "";
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 53;
@@ -663,6 +770,7 @@
 		7188A68E2E27F9ED008F131D /* Debug configuration for PBXNativeTarget "MenuBarItemService" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 53;
@@ -695,6 +803,7 @@
 		7188A68F2E27F9ED008F131D /* Release configuration for PBXNativeTarget "MenuBarItemService" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 53;
@@ -710,6 +819,71 @@
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = "2.0.0";
 				PRODUCT_BUNDLE_IDENTIFIER = com.stonerl.Thaw.MenuBarItemService;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.2;
+			};
+			name = Release;
+		};
+		C4PT00012F3A100000000008 /* Debug configuration for PBXNativeTarget "MenuBarCaptureService" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 50;
+				DEVELOPMENT_TEAM = A7CKWF99ML;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MenuBarCaptureService/Resources/Info.plist;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Toni Förster\nCopyright © 2023–2025 Jordan Baird (Ice) ";
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = "2.0.0-rc.3";
+				PRODUCT_BUNDLE_IDENTIFIER = com.stonerl.Thaw.MenuBarCaptureService;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.2;
+			};
+			name = Debug;
+		};
+		C4PT00012F3A100000000009 /* Release configuration for PBXNativeTarget "MenuBarCaptureService" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 50;
+				DEVELOPMENT_TEAM = A7CKWF99ML;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MenuBarCaptureService/Resources/Info.plist;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Toni Förster\nCopyright © 2023–2025 Jordan Baird (Ice) ";
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = "2.0.0-rc.3";
+				PRODUCT_BUNDLE_IDENTIFIER = com.stonerl.Thaw.MenuBarCaptureService;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				SKIP_INSTALL = YES;
@@ -791,6 +965,14 @@
 			buildConfigurations = (
 				7188A68E2E27F9ED008F131D /* Debug configuration for PBXNativeTarget "MenuBarItemService" */,
 				7188A68F2E27F9ED008F131D /* Release configuration for PBXNativeTarget "MenuBarItemService" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		C4PT00012F3A10000000000A /* Build configuration list for PBXNativeTarget "MenuBarCaptureService" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C4PT00012F3A100000000008 /* Debug configuration for PBXNativeTarget "MenuBarCaptureService" */,
+				C4PT00012F3A100000000009 /* Release configuration for PBXNativeTarget "MenuBarCaptureService" */,
 			);
 			defaultConfigurationName = Release;
 		};
@@ -921,6 +1103,11 @@
 			productName = IfritStatic;
 		};
 		7168EE522E281CBC00FF9830 /* AXSwift6 */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1787C4252B16890B002F50DF /* XCRemoteSwiftPackageReference "AXSwift6" */;
+			productName = AXSwift6;
+		};
+		C4PT00012F3A10000000000F /* AXSwift6 */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 1787C4252B16890B002F50DF /* XCRemoteSwiftPackageReference "AXSwift6" */;
 			productName = AXSwift6;
