@@ -224,13 +224,21 @@ nonisolated enum LayoutSolver {
     /// Input order is preserved, since downstream consumers (LCS
     /// planner) treat the result as the iteration order for placement.
     /// Pure over its inputs.
+    /// - Parameter triggerControlledUIDs: items a conditional trigger
+    ///   currently owns, already resolved to live UIDs by the caller. They are
+    ///   deliberately absent from the desired layout, so without this they
+    ///   would be classified as unmanaged arrivals and the fallback placement
+    ///   would move them back to their saved section and index -- undoing the
+    ///   trigger. Filtering only the saved order is not enough for the same
+    ///   reason: the fallback still has an opinion.
     static nonisolated func partitionUnmanagedUIDs(
         currentFlat: [String],
         desiredUIDs: Set<String>,
         hiddenCtrlUID: String?,
         ahCtrlUID: String?,
         visibleCtrlUID: String?,
-        provisionalIdentityUIDs: Set<String>
+        provisionalIdentityUIDs: Set<String>,
+        triggerControlledUIDs: Set<String> = []
     ) -> [String] {
         currentFlat.filter { uid in
             !desiredUIDs.contains(uid)
@@ -238,6 +246,7 @@ nonisolated enum LayoutSolver {
                 && uid != ahCtrlUID
                 && uid != visibleCtrlUID
                 && !provisionalIdentityUIDs.contains(uid)
+                && !triggerControlledUIDs.contains(uid)
         }
     }
 
@@ -1382,8 +1391,20 @@ nonisolated enum LayoutSolver {
             // Stale instance index: the app is back with a different
             // :N suffix. The cache already has it under its new uid;
             // drop the stale saved entry.
-            let base = baseID(forIdentifier: savedUID)
-            if allCurrentBaseIdentifiers.contains(base) {
+            //
+            // The shared resolver, not `baseID(forIdentifier:)`: the producer
+            // builds `allCurrentBaseIdentifiers` from `stableIdentifierBase`,
+            // which keeps the whole title, while `baseID` truncates at the
+            // second colon. For a title that contains a colon the two
+            // disagree -- live `ns:Meeting:30` against saved
+            // `ns:Meeting:30:0` -- and the stale entry gets re-inserted on
+            // every cycle. `resolvedBaseIdentifier` strips a suffix only when
+            // the remainder is a base the cache actually has, so it cannot
+            // turn the title "Meeting:30" into an unrelated "Meeting".
+            if MenuBarItemTag.resolvedBaseIdentifier(
+                for: savedUID,
+                knownBaseIdentifiers: allCurrentBaseIdentifiers
+            ) != nil {
                 continue
             }
 

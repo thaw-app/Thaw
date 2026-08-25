@@ -512,12 +512,40 @@ final class MenuBarItemManager {
     /// not complete".
     private var consecutiveUnfinishedBulkApplies = 0
 
+    /// Monotonic marker and result for the most recently recorded outcome,
+    /// which includes an explicit user move (see
+    /// ``recordExternalMoveOperation``) because that too clears the save
+    /// latch.
+    private(set) var bulkApplyOutcomeGeneration = 0
+    private(set) var lastBulkApplyUnenactedMoveCount: Int?
+
+    /// Monotonic marker bumped only when a bulk apply actually ran to
+    /// completion.
+    ///
+    /// Kept separate from ``bulkApplyOutcomeGeneration`` deliberately. Trigger
+    /// release restoration reads it to tell a real completed apply from an
+    /// apply request that early-returned, and a user Cmd-drag or layout-editor
+    /// drag arriving mid-apply also records an outcome with zero unenacted
+    /// moves. Sharing one counter let that user move satisfy the completion
+    /// check, clear the restoration shields with no apply having run, and so
+    /// let the next cache cycle persist a temporary trigger placement as a
+    /// user edit.
+    private(set) var bulkApplyCompletionGeneration = 0
+
     /// Records how a bulk apply ended, for the saveSectionOrder gate.
     ///
     /// A clean batch clears the arm rather than leaving it to expire: the
     /// bar now matches what the apply set out to produce, and there is no
     /// reason to keep withholding it from the saved order.
-    func recordBulkApplyOutcome(unenactedMoveCount: Int) {
+    ///
+    /// - Parameter isCompletedApply: whether this is a real bulk apply
+    ///   finishing, as opposed to a user move borrowing the same latch.
+    func recordBulkApplyOutcome(unenactedMoveCount: Int, isCompletedApply: Bool = true) {
+        bulkApplyOutcomeGeneration += 1
+        if isCompletedApply {
+            bulkApplyCompletionGeneration += 1
+        }
+        lastBulkApplyUnenactedMoveCount = unenactedMoveCount
         guard unenactedMoveCount > 0 else {
             unfinishedMoveBatchObservedAt = nil
             consecutiveUnfinishedBulkApplies = 0
@@ -765,6 +793,25 @@ final class MenuBarItemManager {
     /// Persisted per-section item order. Maps section key to an ordered list of
     /// `uniqueIdentifier` strings (right-to-left, matching cache array order).
     var savedSectionOrder = [String: [String]]()
+
+    /// Items whose section is temporarily owned by an active trigger. Their
+    /// live placement must not overwrite the user's saved layout, and the
+    /// saved-layout reconciler must not move them back while the trigger owns
+    /// them. The trigger manager clears this set when an item is no longer
+    /// controlled, at which point the normal saved-layout restore returns it
+    /// to the user's pre-trigger position.
+    var triggerControlledItemIdentifiers = Set<String>()
+
+    /// Items released by a trigger that still need their full saved position
+    /// (including order within a section) restored. They remain excluded from
+    /// persistence until that replay finishes, so an intervening cache cycle
+    /// cannot capture their temporary trigger placement as a user edit.
+    var triggerLayoutRestorationItemIdentifiers = Set<String>()
+
+    /// The pending delayed re-cache scheduled by a trigger release. Stored so
+    /// a burst of releases coalesces into one wait instead of stacking a
+    /// separate six-second task per release.
+    var triggerReleaseRecacheTask: Task<Void, Never>?
 
     /// Identifiers most recently moved from visible to hidden by the
     /// notch-overflow rebalance (Phase 4 of the layout apply). The ejection
@@ -1015,6 +1062,25 @@ final class MenuBarItemManager {
             pendingRelocations: pendingRelocations,
             waitForRelaunchPrefix: Self.waitForRelaunchPrefix
         )
+        let knownBaseIdentifiers = Set(cache.managedItems.map(\.tag.stableIdentifierBase))
+        let knownLiveIdentifiers = Set(cache.managedItems.map(\.uniqueIdentifier))
+        let triggerProtectedIdentifiers = triggerControlledItemIdentifiers
+            .union(triggerLayoutRestorationItemIdentifiers)
+        let triggerProtectedBaseIdentifiers = Set(triggerProtectedIdentifiers.compactMap {
+            MenuBarItemTag.resolvedBaseIdentifier(
+                for: $0,
+                knownBaseIdentifiers: knownBaseIdentifiers
+            )
+        })
+
+        func isTriggerProtected(_ item: MenuBarItem) -> Bool {
+            Self.isTriggerProtected(
+                item.uniqueIdentifier,
+                by: triggerProtectedIdentifiers,
+                knownBaseIdentifiers: knownBaseIdentifiers,
+                knownLiveIdentifiers: knownLiveIdentifiers
+            )
+        }
 
         // Predicate: items eligible for persistence in savedSectionOrder.
         // Profile-tracked app items (non-control with resolved sourcePID)
@@ -1029,6 +1095,7 @@ final class MenuBarItemManager {
         // section boundary) and they get inserted into desiredFlat at
         // the boundary regardless of saved order.
         func isPersistable(_ item: MenuBarItem) -> Bool {
+            guard !isTriggerProtected(item) else { return false }
             if item.tag == .visibleControlItem {
                 return true
             }
@@ -1055,8 +1122,10 @@ final class MenuBarItemManager {
                 // Always track base identifier so stale saved entries for
                 // transient items (Live Activities) get pruned by the
                 // isStaleInstanceIndex guard below and not re-injected.
-                let baseID = "\(item.tag.namespace):\(item.tag.title)"
-                allCurrentBaseIdentifiers.insert(baseID)
+                let baseID = item.tag.stableIdentifierBase
+                if !triggerProtectedBaseIdentifiers.contains(baseID) {
+                    allCurrentBaseIdentifiers.insert(baseID)
+                }
                 // Exclude transient Control Center items (Live Activities,
                 // iPhone Mirroring icons) from the identifier set so their
                 // ephemeral UIDs are never written to savedSectionOrder.
@@ -1990,7 +2059,7 @@ final class MenuBarItemManager {
         lastMoveOperationTimestamp = .now
         lastUserMoveOperationTimestamp = .now
         pendingDivergenceObservedAt = nil
-        recordBulkApplyOutcome(unenactedMoveCount: 0)
+        recordBulkApplyOutcome(unenactedMoveCount: 0, isCompletedApply: false)
     }
 
     /// Whether the save gate's user-move exemption applies: it must, and only,

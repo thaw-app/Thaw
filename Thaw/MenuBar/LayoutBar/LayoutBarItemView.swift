@@ -25,6 +25,8 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         static let iconInset: CGFloat = 2
         static let fallbackSymbolPointSize: CGFloat = 11
         static let unresponsiveBadgeWidth: CGFloat = 15
+        static let triggerBadgeWidth: CGFloat = 11
+        static let triggerControlledFraction: CGFloat = 0.45
     }
 
     private weak var appState: AppState?
@@ -39,9 +41,17 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     /// this class's existing Combine-`sink`-based subscription style.
     private var imageObservationTask: Task<Void, Never>?
 
+    /// Observes trigger ownership of this item. The container rebuilds item
+    /// views only on cache changes, so without this a trigger toggled while
+    /// the layout editor is open (its own switch, or the menu bar's
+    /// "All Trigger Features Off") would leave the badge and dimming stale
+    /// until an unrelated recache.
+    private var triggerObservationTask: Task<Void, Never>?
+
     @MainActor
     deinit {
         imageObservationTask?.cancel()
+        triggerObservationTask?.cancel()
     }
 
     /// The item that the view represents.
@@ -81,6 +91,29 @@ final class LayoutBarItemView: LayoutBarArrangedView {
 
     override var kind: Kind {
         .item(effectiveItem)
+    }
+
+    /// The enabled trigger that owns this item's placement, or `nil`.
+    ///
+    /// A trigger-owned item is not where the user put it:
+    /// `MenuBarItemManager` shields it from both the saved-layout reconciler
+    /// and `saveSectionOrder`, and the trigger's own reveal/hide sections
+    /// decide where it sits. The drag is deliberately still allowed — the
+    /// trigger re-asserts the placement, and refusing it would take away the
+    /// only manual correction available when a trigger hasn't applied yet.
+    /// The badge exists so the snap-back isn't a mystery.
+    private var isTriggerControlled: Bool {
+        appState?.settings.triggers.isControlledByTrigger(
+            identifier: effectiveItem.tag.tagIdentifier
+        ) ?? false
+    }
+
+    /// The owning trigger itself. Resolved only on hover, for the tooltip —
+    /// `draw` uses the O(1) ``isTriggerControlled`` instead.
+    private var controllingTrigger: MenuBarItemTrigger? {
+        appState?.settings.triggers.controllingTrigger(
+            forIdentifier: effectiveItem.tag.tagIdentifier
+        )
     }
 
     /// Creates a view that displays the given menu bar item.
@@ -132,6 +165,13 @@ final class LayoutBarItemView: LayoutBarArrangedView {
 
     override func mouseEntered(with event: NSEvent) {
         super.mouseEntered(with: event)
+        // Refreshed on hover rather than at init: a trigger can be added or
+        // removed while the layout editor is open.
+        tooltipController.text = if let trigger = controllingTrigger {
+            String(localized: "\(effectiveItem.displayName) \u{2014} placed by trigger \u{201C}\(trigger.displayName)\u{201D}")
+        } else {
+            effectiveItem.displayName
+        }
         tooltipController.scheduleShow(delay: tooltipDelay)
     }
 
@@ -153,6 +193,26 @@ final class LayoutBarItemView: LayoutBarArrangedView {
                     guard !MenuBarItemImageCache.CapturedImage.isVisuallyEqual(previous, image) else { continue }
                     previous = image
                     self.cachedImage = image
+                }
+            }
+
+            // `controlledIdentifiers` is stored (not lazily memoized)
+            // precisely so this closure registers a dependency on every read.
+            // The base is read through `effectiveItem` so an AX alias resolved
+            // mid-life queries the same identity `draw` does.
+            triggerObservationTask = Task { @MainActor [weak self, weak appState] in
+                let changes = Observations { [weak self, weak appState] in
+                    guard let self, let appState else { return false }
+                    return appState.settings.triggers.isControlledByTrigger(
+                        identifier: self.effectiveItem.tag.tagIdentifier
+                    )
+                }
+                var previous: Bool?
+                for await controlled in changes {
+                    guard let self else { return }
+                    guard controlled != previous else { continue }
+                    previous = controlled
+                    self.needsDisplay = true
                 }
             }
         }
@@ -287,15 +347,21 @@ final class LayoutBarItemView: LayoutBarArrangedView {
 
     override func draw(_: NSRect) {
         if !isDraggingPlaceholder {
+            let triggerControlled = isTriggerControlled
             if let capturedImage = cachedImage?.nsImage {
                 capturedImage.draw(
                     in: bounds,
                     from: .zero,
                     operation: .sourceOver,
-                    fraction: isEnabled ? 1.0 : 0.67
+                    fraction: triggerControlled
+                        ? Metrics.triggerControlledFraction
+                        : (isEnabled ? 1.0 : 0.67)
                 )
             } else {
                 drawPlaceholder()
+            }
+            if triggerControlled {
+                drawTriggerBadge()
             }
             if Bridging.isProcessUnresponsive(item.ownerPID) {
                 let warningImage = NSImage.warning
@@ -393,6 +459,32 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         return NSImage(
             systemSymbolName: "menubar.rectangle",
             accessibilityDescription: item.displayName
+        )
+    }
+
+    /// Draws the marker identifying a trigger-owned item. Placed at the
+    /// leading edge so it never collides with the unresponsive badge, which
+    /// owns the trailing edge and can apply to the same item.
+    private func drawTriggerBadge() {
+        let configuration = NSImage.SymbolConfiguration(paletteColors: [.controlAccentColor])
+        guard
+            let badge = NSImage(
+                systemSymbolName: "bolt.fill",
+                accessibilityDescription: String(localized: "Controlled by a trigger")
+            )?.withSymbolConfiguration(configuration)
+        else {
+            return
+        }
+        let width = Metrics.triggerBadgeWidth
+        let scale = width / badge.size.width
+        let size = CGSize(width: width, height: badge.size.height * scale)
+        badge.draw(
+            in: CGRect(
+                x: bounds.minX,
+                y: bounds.minY,
+                width: size.width,
+                height: size.height
+            )
         )
     }
 

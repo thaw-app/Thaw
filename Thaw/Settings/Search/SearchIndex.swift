@@ -251,6 +251,28 @@ nonisolated enum SearchIndex {
             property: nil
         ),
         SearchEntry(
+            id: "pane.triggers",
+            titleKey: "Triggers",
+            titleText: "Triggers",
+            descriptionText: "Automatically move menu bar items when system conditions change.",
+            pane: .triggers,
+            sectionKey: nil,
+            sectionText: nil,
+            keywords: ["triggers", "conditions", "automation", "battery", "focus", "network", "reveal", "hide"],
+            property: nil
+        ),
+        SearchEntry(
+            id: "pane.developer",
+            titleKey: "Dev Mode Flags",
+            titleText: "Dev Mode Flags",
+            descriptionText: "Enable and inspect experimental trigger sources.",
+            pane: .developer,
+            sectionKey: nil,
+            sectionText: nil,
+            keywords: ["developer", "dev mode", "flags", "experimental", "trigger sources", "diagnostics"],
+            property: nil
+        ),
+        SearchEntry(
             id: "pane.about",
             titleKey: "About",
             titleText: "About",

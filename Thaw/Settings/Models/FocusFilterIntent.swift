@@ -37,16 +37,14 @@ struct ProfileEntityQuery: EntityQuery {
     }
 
     private func allProfiles() -> [ProfileEntity] {
-        guard let appSupport = FileManager.default.urls(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask
-        ).first else {
+        // The path lives on ThawFocusModeStore so the two readers of this
+        // manifest cannot drift apart.
+        guard
+            let manifestURL = ThawFocusModeStore.manifestURL,
+            let data = try? Data(contentsOf: manifestURL)
+        else {
             return []
         }
-        let manifestURL = appSupport
-            .appendingPathComponent("Thaw/Profiles/profiles.json")
-
-        guard let data = try? Data(contentsOf: manifestURL) else { return [] }
 
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601

@@ -915,6 +915,23 @@ final class ControlItem {
 
         menu.addItem(.separator())
 
+        if appState.settings.triggers.featureFlags.showsAllOffInMenuBarMenu {
+            let allTriggerFeaturesOffItem = NSMenuItem(
+                title: String(localized: "All Trigger Features Off"),
+                action: #selector(disableAllTriggerFeatureFlags),
+                keyEquivalent: ""
+            )
+            allTriggerFeaturesOffItem.image = NSImage(
+                systemSymbolName: "power",
+                accessibilityDescription: "All Trigger Features Off"
+            )
+            allTriggerFeaturesOffItem.target = self
+            allTriggerFeaturesOffItem.isEnabled = appState.settings.triggers.featureFlags.hasEnabledFlags
+            menu.addItem(allTriggerFeaturesOffItem)
+
+            menu.addItem(.separator())
+        }
+
         // Add items to toggle the hidden and always-hidden sections.
         for name: MenuBarSection.Name in [.hidden, .alwaysHidden] {
             guard
@@ -1056,6 +1073,11 @@ final class ControlItem {
             return
         }
         section.toggle()
+    }
+
+    /// Disables every trigger feature flag.
+    @objc private func disableAllTriggerFeatureFlags() {
+        appState?.settings.triggers.featureFlags.disableAll()
     }
 
     /// Opens the menu bar search panel.

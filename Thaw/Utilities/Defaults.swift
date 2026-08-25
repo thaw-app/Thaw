@@ -373,6 +373,12 @@ nonisolated extension Defaults {
         case globalPreProfileHook = "GlobalPreProfileHook"
         case globalPostProfileHook = "GlobalPostProfileHook"
 
+        // MARK: Menu Bar Item Triggers
+
+        case menuBarItemTriggers = "MenuBarItemTriggers"
+        case triggerFeatureFlags = "TriggerFeatureFlags"
+        case showTriggerFeatureFlagsAllOffMenuItem = "ShowTriggerFeatureFlagsAllOffMenuItem"
+
         // MARK: Focus Filter
 
         /// Profile ID requested by the most recent Focus Filter

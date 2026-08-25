@@ -120,6 +120,22 @@
         }
       }
     },
+    "%@ — placed by trigger “%@”" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ — placed by trigger “%2$@”"
+          }
+        }
+      }
+    },
+    "%@ (not present)" : {
+
+    },
+    "%@ (not running)" : {
+
+    },
     "%@ %@ %@" : {
       "localizations" : {
         "en" : {
@@ -2089,6 +2105,9 @@
         }
       }
     },
+    "%lld m" : {
+
+    },
     "%lld seconds" : {
       "comment" : "Text that describes the rehide interval, in seconds. The argument is the number of seconds.",
       "extractionState" : "stale",
@@ -3539,6 +3558,9 @@
         }
       }
     },
+    "Add a trigger to reveal a menu bar item when a condition is met." : {
+
+    },
     "Add Application" : {
 
     },
@@ -3661,6 +3683,15 @@
           }
         }
       }
+    },
+    "Add Condition" : {
+
+    },
+    "Add Trigger" : {
+
+    },
+    "Adds the emergency trigger-feature shutoff to the three-dot menu. Keep this off unless a trigger source is disrupting normal computer use." : {
+
     },
     "Advanced" : {
       "comment" : "The \"Advanced\" section in the \"Settings\" interface.",
@@ -3787,6 +3818,9 @@
     "After revealing" : {
 
     },
+    "All Off" : {
+
+    },
     "All profiles" : {
       "comment" : "Picker option: save spacing changes to every profile when relaunch confirmations are disabled.",
       "localizations" : {
@@ -3905,6 +3939,9 @@
           }
         }
       }
+    },
+    "All Trigger Features Off" : {
+
     },
     "Allow" : {
       "comment" : "Button title for allowing the app to control Thaw settings.",
@@ -4387,6 +4424,12 @@
           }
         }
       }
+    },
+    "Also move" : {
+
+    },
+    "Also move another item" : {
+
     },
     "Always Hidden" : {
 
@@ -5105,6 +5148,9 @@
         }
       }
     },
+    "Another enabled trigger also targets this item. Priority runs top to bottom; the first active trigger wins." : {
+
+    },
     "Appearance" : {
       "comment" : "The localized string key for the \"Appearance\" section in the \"Settings\" interface.",
       "localizations" : {
@@ -5223,6 +5269,9 @@
           }
         }
       }
+    },
+    "Application" : {
+
     },
     "Apply" : {
       "comment" : "A button that applies the current value of a slider to a setting.",
@@ -8344,6 +8393,9 @@
         }
       }
     },
+    "Automatically reveal a menu bar item while a condition is met, then hide it again when the condition no longer applies. Enable additional condition types in the Developer pane." : {
+
+    },
     "Automation" : {
       "comment" : "The \"Automation\" tab in the settings interface.",
       "localizations" : {
@@ -8938,6 +8990,9 @@
           }
         }
       }
+    },
+    "Battery level" : {
+
     },
     "Before a display change or spacing edit relaunches your menu bar apps, Thaw asks you to confirm. Turn this off to apply spacing changes and relaunch apps without confirmation." : {
       "comment" : "Annotation for the Confirm before relaunching apps toggle in the Displays pane.",
@@ -10128,6 +10183,15 @@
           }
         }
       }
+    },
+    "Capture Reference" : {
+
+    },
+    "Captures the icon now as a reference, then reveals the item when the icon later changes from it. Requires screen recording permission." : {
+
+    },
+    "Capturing…" : {
+
     },
     "Change the menu bar's appearance." : {
       "comment" : "Detail about the \"Screen Recording\" permission, describing how to change the menu bar's appearance.",
@@ -11442,6 +11506,15 @@
         }
       }
     },
+    "Choose a device…" : {
+
+    },
+    "Choose an app…" : {
+
+    },
+    "Choose an item…" : {
+
+    },
     "Choose image…" : {
       "comment" : "A button to import a custom icon for the app.",
       "localizations" : {
@@ -11801,6 +11874,9 @@
           }
         }
       }
+    },
+    "Choose…" : {
+
     },
     "Clear" : {
       "comment" : "A glass style that is clear.",
@@ -12399,6 +12475,9 @@
         }
       }
     },
+    "Collapse trigger" : {
+
+    },
     "Columns" : {
       "comment" : "A label displayed above a stepper that lets the user select the number of columns in the grid layout.",
       "localizations" : {
@@ -12517,6 +12596,12 @@
           }
         }
       }
+    },
+    "Condition" : {
+
+    },
+    "Conditional Triggers" : {
+
     },
     "Confirm" : {
       "comment" : "A label displayed as a button in the edit actions hint.",
@@ -13351,6 +13436,9 @@
         }
       }
     },
+    "Controlled by a trigger" : {
+
+    },
     "Copied" : {
 
     },
@@ -13838,6 +13926,9 @@
           }
         }
       }
+    },
+    "Custom delay" : {
+
     },
     "Custom icon uses dynamic appearance" : {
       "comment" : "A toggle that lets the user choose whether the custom ice icon should use a dynamic appearance.",
@@ -14434,6 +14525,9 @@
         }
       }
     },
+    "Delete this trigger" : {
+
+    },
     "Deny" : {
       "comment" : "Button title for denying access to the settings URI.",
       "localizations" : {
@@ -14671,6 +14765,9 @@
         }
       }
     },
+    "Dev Mode Flags" : {
+
+    },
     "Development" : {
       "comment" : "A label for the \"Development\" segment in the update channel picker.",
       "localizations" : {
@@ -14789,6 +14886,9 @@
           }
         }
       }
+    },
+    "Device" : {
+
     },
     "Diagnostics" : {
       "comment" : "Section title in the advanced settings pane for diagnostics settings.",
@@ -16576,6 +16676,9 @@
         }
       }
     },
+    "Drag to change trigger priority" : {
+
+    },
     "Due to a bug in a previous version of the app, the data for %@'s menu bar sections was corrupted and had to be reset." : {
       "comment" : "Text in an alert that informs the user that the preferred positions of some menu bar controls have been reset because they were corrupted.",
       "extractionState" : "stale",
@@ -17650,6 +17753,9 @@
           }
         }
       }
+    },
+    "Enable experimental trigger sources one at a time. Each flag turns on its condition in the Triggers pane and starts its background monitor. Battery and power conditions are always available." : {
+
     },
     "Enable menu bar item overflow" : {
       "comment" : "A toggle that enables or disables the overflow of menu bar items.",
@@ -19082,6 +19188,9 @@
         }
       }
     },
+    "Expand trigger" : {
+
+    },
     "Export" : {
       "comment" : "A menu item that exports a profile to a file.",
       "localizations" : {
@@ -20160,6 +20269,9 @@
           }
         }
       }
+    },
+    "From" : {
+
     },
     "Full" : {
       "comment" : "Localized string key for the menu bar shape kind that takes up the full menu bar.",
@@ -22190,6 +22302,9 @@
           }
         }
       }
+    },
+    "Hide the item while the condition is met (invert)" : {
+
     },
     "Hold to Preview" : {
       "comment" : "A button that, when held, allows users to preview changes in a menu bar.",
@@ -26512,6 +26627,9 @@
         }
       }
     },
+    "Live System State" : {
+
+    },
     "Loading menu bar items…" : {
       "comment" : "A message displayed while waiting for menu bar items to load.",
       "localizations" : {
@@ -26993,6 +27111,9 @@
           }
         }
       }
+    },
+    "Match" : {
+
     },
     "max" : {
       "comment" : "Text displayed in a setting that allows the user to select the maximum item spacing.",
@@ -27478,6 +27599,9 @@
 
     },
     "Menu bar effects are hidden by Reduce Transparency" : {
+
+    },
+    "Menu bar item" : {
 
     },
     "Menu bar item is not movable." : {
@@ -28911,6 +29035,9 @@
         }
       }
     },
+    "Mode" : {
+
+    },
     "Modified: %@" : {
       "comment" : "A sublabel within the profile list showing when a profile was last modified.",
       "localizations" : {
@@ -29755,6 +29882,12 @@
         }
       }
     },
+    "Move trigger down" : {
+
+    },
+    "Move trigger up" : {
+
+    },
     "Move up" : {
       "comment" : "Accessibility label for the up-chevron button that reorders a row to a higher position in a list.",
       "localizations" : {
@@ -30350,6 +30483,9 @@
         }
       }
     },
+    "No location captured" : {
+
+    },
     "No menu bar items available" : {
       "comment" : "Text shown in the per-item hotkeys list when there are no menu bar items to assign a hotkey to.",
       "localizations" : {
@@ -30826,6 +30962,9 @@
         }
       }
     },
+    "No reference yet" : {
+
+    },
     "No settings found" : {
 
     },
@@ -30947,6 +31086,9 @@
           }
         }
       }
+    },
+    "No triggers yet" : {
+
     },
     "No whitelisted apps" : {
       "comment" : "A message displayed when there are no whitelisted apps.",
@@ -32137,6 +32279,9 @@
           }
         }
       }
+    },
+    "Notify when this reveals the item" : {
+
     },
     "Off" : {
       "comment" : "A label for the icon refresh rate when it is set to 0.",
@@ -34093,6 +34238,15 @@
         }
       }
     },
+    "Other…" : {
+
+    },
+    "Otherwise hide in" : {
+
+    },
+    "Overridden by %@. Move this trigger above them to give it priority." : {
+
+    },
     "Page %lld of %lld" : {
       "localizations" : {
         "cs" : {
@@ -35651,6 +35805,9 @@
         }
       }
     },
+    "Radius" : {
+
+    },
     "Record Hotkey" : {
       "comment" : "A label for the button that starts recording a hotkey.",
       "localizations" : {
@@ -35769,6 +35926,9 @@
           }
         }
       }
+    },
+    "Reference captured" : {
+
     },
     "Regular" : {
       "comment" : "A description of a glass style.",
@@ -36129,6 +36289,9 @@
           }
         }
       }
+    },
+    "Remove this condition" : {
+
     },
     "Rename" : {
       "comment" : "A menu item that lets the user rename a profile.",
@@ -38883,6 +39046,9 @@
         }
       }
     },
+    "Runs your script about every 30 seconds. Reveals when it exits 0, or — if an expected output is set — when its output contains that text." : {
+
+    },
     "s" : {
       "comment" : "Seconds unit suffix for timeout field",
       "localizations" : {
@@ -41525,6 +41691,9 @@
         }
       }
     },
+    "Show All Off in menu bar dropdown" : {
+
+    },
     "Show all sections when ⌘ Command + dragging menu bar items" : {
       "comment" : "A toggle that enables or disables showing all menu bar sections when dragging them with ⌘ Command.",
       "localizations" : {
@@ -42358,6 +42527,9 @@
           }
         }
       }
+    },
+    "Show in" : {
+
     },
     "Show Item" : {
       "comment" : "A button label that shows the user how to display an item.",
@@ -46535,6 +46707,15 @@
         }
       }
     },
+    "This condition is turned off in Developer settings, so the trigger won't run." : {
+
+    },
+    "This trigger controls %@'s section. Your saved layout no longer applies to it." : {
+
+    },
+    "This trigger controls the section of %@. Your saved layout no longer applies to them." : {
+
+    },
     "This version of Thaw is not yet compatible with macOS 27. Preview builds are available on GitHub Releases, and macOS 27 support will be delivered through the alpha update channel." : {
 
     },
@@ -47032,6 +47213,9 @@
         }
       }
     },
+    "Threshold" : {
+
+    },
     "Timed" : {
       "comment" : "Localized string key for the \"Timed\" option in the \"Auto-rehide\" settings.",
       "localizations" : {
@@ -47507,6 +47691,9 @@
           }
         }
       }
+    },
+    "To" : {
+
     },
     "To switch profiles with Focus modes, add %@ as a Focus Filter in System Settings %@ Focus %@ [Mode] %@ Focus Filters. When a Focus mode deactivates, the display profile is automatically restored." : {
       "comment" : "A description of how to use Focus Filters to switch profiles.",
@@ -48465,6 +48652,18 @@
           }
         }
       }
+    },
+    "Trigger list" : {
+
+    },
+    "Trigger list view" : {
+
+    },
+    "Triggers" : {
+
+    },
+    "Turn on the Location flag in Developer settings and grant permission to capture your current location." : {
+
     },
     "Type Hotkey" : {
       "comment" : "A label displayed in the leading segment of the hotkey recorder when it is recording.",
@@ -50135,6 +50334,9 @@
         }
       }
     },
+    "Use Current Location" : {
+
+    },
     "Use different settings for Light and Dark Mode" : {
 
     },
@@ -51096,6 +51298,9 @@
         }
       }
     },
+    "Watched item" : {
+
+    },
     "We found existing settings from Ice, the original app." : {
       "comment" : "A description of the feature that allows users to import settings from the original app, Ice.",
       "extractionState" : "stale",
@@ -51818,6 +52023,9 @@
       }
     },
     "While rearranging" : {
+
+    },
+    "While this trigger is on, it controls its target's section and your saved layout no longer applies to it." : {
 
     },
     "Whitelisted Applications" : {

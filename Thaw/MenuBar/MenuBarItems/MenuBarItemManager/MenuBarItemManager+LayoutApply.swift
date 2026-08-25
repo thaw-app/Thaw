@@ -1071,13 +1071,19 @@ extension MenuBarItemManager {
         // namespace, never match a profile entry, and so would be relocated as
         // unmanaged arrivals on every cycle. Exclude them until they resolve.
         let provisionalIdentityUIDs = LayoutSolver.provisionalIdentityUIDs(items: items)
+        // A trigger-owned item is deliberately missing from the desired
+        // layout, so it would otherwise be classified as an unmanaged arrival
+        // and given a `.saved` placement from the unfiltered saved order --
+        // moving it straight back out of where the trigger put it.
+        let triggerControlledUIDs = triggerProtectedUIDs(among: currentFlat, items: items)
         let unmanagedUIDs = LayoutSolver.partitionUnmanagedUIDs(
             currentFlat: currentFlat,
             desiredUIDs: desiredSet,
             hiddenCtrlUID: hiddenCtrlUID,
             ahCtrlUID: ahCtrlUID,
             visibleCtrlUID: visibleCtrlUID,
-            provisionalIdentityUIDs: provisionalIdentityUIDs
+            provisionalIdentityUIDs: provisionalIdentityUIDs,
+            triggerControlledUIDs: triggerControlledUIDs
         )
         if !unmanagedUIDs.isEmpty {
             // Build a DesiredLayout for the profile-apply context: the
@@ -2482,10 +2488,22 @@ extension MenuBarItemManager {
         // drifted to another section is genuine drift).
         let overflowSkipActive = (appState?.settings.advanced.enableMenuBarItemOverflow ?? false)
             && ((NSScreen.screenWithActiveMenuBar ?? NSScreen.main)?.hasNotch ?? false)
+        let knownBaseIdentifiers = Set(items.map(\.tag.stableIdentifierBase))
+        let knownLiveIdentifiers = Set(items.map(\.uniqueIdentifier))
 
         return Self.layoutDivergesFromSaved(
             candidates: items
-                .filter { !$0.isControlItem && $0.canBeHidden && $0.isMovable }
+                .filter {
+                    !$0.isControlItem
+                        && $0.canBeHidden
+                        && $0.isMovable
+                        && !Self.isTriggerProtected(
+                            $0.uniqueIdentifier,
+                            by: triggerControlledItemIdentifiers,
+                            knownBaseIdentifiers: knownBaseIdentifiers,
+                            knownLiveIdentifiers: knownLiveIdentifiers
+                        )
+                }
                 .map { item in
                     DivergenceCandidate(
                         tagIdentifier: item.tag.tagIdentifier,
@@ -3033,7 +3051,7 @@ extension MenuBarItemManager {
         // Match is exact on uniqueIdentifier: base-identifier fallback
         // could admit an unresolved sibling of a resolved item, which is
         // precisely the item this restriction exists to exclude.
-        let effectiveSavedOrder: [String: [String]]
+        var effectiveSavedOrder: [String: [String]]
         if resolvedIdentitiesOnly {
             effectiveSavedOrder = Self.savedOrderRestrictedToResolvedIdentities(
                 savedSectionOrder: savedSectionOrder,
@@ -3049,6 +3067,20 @@ extension MenuBarItemManager {
             }
         } else {
             effectiveSavedOrder = savedSectionOrder
+        }
+        let knownBaseIdentifiers = Set(items.map(\.tag.stableIdentifierBase))
+        let knownLiveIdentifiers = Set(items.map(\.uniqueIdentifier))
+        effectiveSavedOrder = Self.savedOrderExcludingTriggerControlledIdentifiers(
+            effectiveSavedOrder,
+            controlledIdentifiers: triggerControlledItemIdentifiers,
+            knownBaseIdentifiers: knownBaseIdentifiers,
+            knownLiveIdentifiers: knownLiveIdentifiers
+        )
+        guard effectiveSavedOrder.values.contains(where: { !$0.isEmpty }) else {
+            MenuBarItemManager.diagLog.debug(
+                "applySavedLayout: skipping, every saved item is currently trigger-controlled"
+            )
+            return false
         }
 
         // Build itemSectionMap from the effective order. Each identifier
@@ -3143,6 +3175,12 @@ extension MenuBarItemManager {
         // Passing it through as duringSettling exempts that apply from
         // Phase 0's settling wait, which its gate-holding caller cannot
         // survive (#943).
+        // The completion counter, not the outcome counter: a user Cmd-drag or
+        // layout-editor drag landing mid-apply also records an outcome with
+        // zero unenacted moves, which would satisfy this check and clear the
+        // restoration shields without any apply having run.
+        let completionGenerationBeforeApply = bulkApplyCompletionGeneration
+        let restorationIdentifiersAtDispatch = triggerLayoutRestorationItemIdentifiers
         await applyProfileLayout(
             ProfileLayoutSpec(
                 pinnedHidden: pinnedHiddenBundleIDs,
@@ -3155,6 +3193,25 @@ extension MenuBarItemManager {
             automatic: true,
             duringSettling: resolvedIdentitiesOnly
         )
+        if bulkApplyCompletionGeneration != completionGenerationBeforeApply,
+           lastBulkApplyUnenactedMoveCount == 0
+        {
+            let restored = restorationIdentifiersAtDispatch.filter { identifier in
+                LayoutSolver.savedPositionByBaseID(for: identifier, in: effectiveSavedOrder) != nil
+                    && !Self.isTriggerProtected(
+                        identifier,
+                        by: triggerControlledItemIdentifiers,
+                        knownBaseIdentifiers: knownBaseIdentifiers,
+                        knownLiveIdentifiers: knownLiveIdentifiers
+                    )
+            }
+            triggerLayoutRestorationItemIdentifiers.subtract(restored)
+            if !restored.isEmpty {
+                MenuBarItemManager.diagLog.debug(
+                    "Cleared \(restored.count) trigger release restoration shield(s) after a clean saved-layout apply"
+                )
+            }
+        }
         return true
     }
 
