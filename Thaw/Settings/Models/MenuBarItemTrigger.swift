@@ -1072,6 +1072,19 @@ struct MenuBarItemTrigger: Codable, Hashable, Identifiable {
         ] + additionalItems.filter { !$0.identifier.isEmpty }
     }
 
+    /// Whether any target is protected from conditional placement because a
+    /// synthetic hide can mutate its macOS visibility preference. A trigger
+    /// is rejected as a unit: partially moving a multi-item trigger would make
+    /// its displayed state and ownership claims untrue.
+    var hasPreferenceSensitiveTarget: Bool {
+        allTargetItems.contains { target in
+            MenuBarItemTag.triggerTargetPolicy(
+                for: target.identifier,
+                capturedBaseIdentifier: target.baseIdentifier
+            ) == .systemVisibilityPreferenceSensitive
+        }
+    }
+
     /// All conditions, primary first.
     var allConditions: [TriggerCondition] {
         [condition] + additionalConditions

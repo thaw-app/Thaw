@@ -132,6 +132,39 @@ struct MenuBarItemTriggerTests {
         #expect(TriggerCondition.charging.isSatisfied(state: state(charging: true)))
     }
 
+    @Test func builtInBatteryIsProtectedFromConditionalPlacement() {
+        let battery = MenuBarItemTag(
+            namespace: .controlCenter,
+            title: "Battery",
+            instanceIndex: 2
+        )
+        #expect(battery.triggerTargetPolicy == .systemVisibilityPreferenceSensitive)
+        #expect(
+            MenuBarItemTag.triggerTargetPolicy(for: "com.apple.controlcenter:Battery:2")
+                == .systemVisibilityPreferenceSensitive
+        )
+        #expect(MenuBarItemTag.triggerTargetPolicy(for: "com.example.app:Battery") == .supported)
+        #expect(MenuBarItemTag.triggerTargetPolicy(for: "com.apple.controlcenter:BatteryStatus") == .supported)
+
+        #expect(MenuBarItemManager.triggerMovePreflight(for: battery, to: .visible) == .allowed)
+        #expect(MenuBarItemManager.triggerMovePreflight(for: battery, to: .hidden) == .protectedSystemItem)
+        #expect(MenuBarItemManager.triggerMovePreflight(for: battery, to: .alwaysHidden) == .protectedSystemItem)
+
+        let observedBattery = TriggerItemOption(
+            id: battery.tagIdentifier,
+            name: "Battery",
+            baseIdentifier: battery.stableIdentifierBase
+        )
+        #expect(!observedBattery.supportsConditionalPlacement)
+        #expect(
+            TriggerItemOption(
+                id: "com.example.app:Battery",
+                name: "Battery",
+                baseIdentifier: "com.example.app:Battery"
+            ).supportsConditionalPlacement
+        )
+    }
+
     // MARK: - Applications
 
     @Test func frontmostApp() {
@@ -489,14 +522,14 @@ struct MenuBarItemTriggerTests {
         manager.triggers = [
             MenuBarItemTrigger(
                 isEnabled: true,
-                itemIdentifier: "com.apple.controlcenter:Battery",
+                itemIdentifier: "com.example.Status",
                 condition: .batteryBelow(percentage: 69)
             ),
         ]
 
-        let owner = manager.controllingTrigger(forBaseIdentifier: "com.apple.controlcenter:Battery")
+        let owner = manager.controllingTrigger(forBaseIdentifier: "com.example.Status")
 
-        #expect(owner?.itemIdentifier == "com.apple.controlcenter:Battery")
+        #expect(owner?.itemIdentifier == "com.example.Status")
         #expect(manager.controllingTrigger(forBaseIdentifier: "com.example.Other") == nil)
         #expect(manager.controllingTrigger(forBaseIdentifier: "") == nil)
     }
@@ -509,12 +542,12 @@ struct MenuBarItemTriggerTests {
         manager.triggers = [
             MenuBarItemTrigger(
                 isEnabled: false,
-                itemIdentifier: "com.apple.controlcenter:Battery",
+                itemIdentifier: "com.example.Status",
                 condition: .batteryBelow(percentage: 69)
             ),
         ]
 
-        #expect(manager.controllingTrigger(forBaseIdentifier: "com.apple.controlcenter:Battery") == nil)
+        #expect(manager.controllingTrigger(forBaseIdentifier: "com.example.Status") == nil)
     }
 
     /// A stored target carrying a stale instance suffix still resolves to the
@@ -524,12 +557,12 @@ struct MenuBarItemTriggerTests {
         manager.triggers = [
             MenuBarItemTrigger(
                 isEnabled: true,
-                itemIdentifier: "com.apple.controlcenter:Battery:2",
+                itemIdentifier: "com.example.Status:2",
                 condition: .onBatteryPower
             ),
         ]
 
-        #expect(manager.controllingTrigger(forBaseIdentifier: "com.apple.controlcenter:Battery") != nil)
+        #expect(manager.controllingTrigger(forBaseIdentifier: "com.example.Status") != nil)
     }
 
     /// Two enabled triggers on one item resolve to the higher-priority one,
@@ -540,20 +573,66 @@ struct MenuBarItemTriggerTests {
             MenuBarItemTrigger(
                 name: "First",
                 isEnabled: true,
-                itemIdentifier: "com.apple.controlcenter:Battery",
+                itemIdentifier: "com.example.Status",
                 condition: .onBatteryPower
             ),
             MenuBarItemTrigger(
                 name: "Second",
                 isEnabled: true,
-                itemIdentifier: "com.apple.controlcenter:Battery",
+                itemIdentifier: "com.example.Status",
                 condition: .onACPower
             ),
         ]
 
         #expect(
-            manager.controllingTrigger(forBaseIdentifier: "com.apple.controlcenter:Battery")?.displayName
+            manager.controllingTrigger(forBaseIdentifier: "com.example.Status")?.displayName
                 == "First"
+        )
+    }
+
+    @Test func protectedBatteryTriggerDoesNotClaimLayoutOwnership() {
+        let manager = makeManager()
+        manager.triggers = [
+            MenuBarItemTrigger(
+                itemIdentifier: "com.apple.controlcenter:Battery:2",
+                itemBaseIdentifier: "com.apple.controlcenter:Battery",
+                condition: .onBatteryPower
+            ),
+        ]
+
+        #expect(!manager.isControlledByTrigger(baseIdentifier: "com.apple.controlcenter:Battery"))
+        #expect(manager.controllingTrigger(forBaseIdentifier: "com.apple.controlcenter:Battery") == nil)
+        #expect(manager.runtimeStatus(for: manager.triggers[0]) == .protectedSystemItem)
+    }
+
+    @Test func protectedTriggerConditionSourcesAreNotPolled() {
+        let protected = MenuBarItemTrigger(
+            itemIdentifier: "com.apple.controlcenter:Battery",
+            itemBaseIdentifier: "com.apple.controlcenter:Battery",
+            condition: .scriptResult(path: "/protected-only", expectedOutput: "protected"),
+            additionalConditions: [
+                .imageChanged(itemIdentifier: "protected-image", referenceHash: nil),
+                .scriptResult(path: "/shared", expectedOutput: "protected"),
+                .imageChanged(itemIdentifier: "shared-image", referenceHash: nil),
+            ]
+        )
+        let supported = MenuBarItemTrigger(
+            itemIdentifier: "com.example.Status",
+            condition: .scriptResult(path: "/shared", expectedOutput: "supported"),
+            additionalConditions: [
+                .imageChanged(itemIdentifier: "shared-image", referenceHash: nil),
+            ]
+        )
+
+        #expect(
+            MenuBarItemTriggersManager.runnableScriptExpectedOutputs(
+                in: [protected, supported]
+            ) == ["/shared": ["supported"]]
+        )
+        #expect(
+            MenuBarItemTriggersManager.runnableImageObservationIdentifiers(
+                in: [protected, supported]
+            ) == ["shared-image"]
         )
     }
 
@@ -964,12 +1043,11 @@ struct MenuBarItemTriggerTests {
         #expect(plan.actions[lower.id] == nil)
     }
 
-    /// Battery hides like any other target. An earlier revision exempted the
-    /// Control Center Battery control from the hide branch, on the theory
-    /// that concealing it would turn off the system's own Show in Menu Bar
-    /// setting; that does not happen, and the exemption made a trigger
-    /// silently ignore the "Otherwise hide in" section the user picked.
-    @Test func priorityPlanHidesControlCenterBatteryWhenConditionClears() {
+    /// The built-in Battery item is governed by macOS's Show in Menu Bar
+    /// preference. A conditional off-screen drag can turn that preference off,
+    /// so the entire trigger is suspended before it claims ownership or plans
+    /// either branch.
+    @Test func priorityPlanProtectsControlCenterBatteryInBothBranches() {
         let manager = makeManager()
         let trigger = MenuBarItemTrigger(
             itemIdentifier: "com.apple.controlcenter:Battery",
@@ -985,13 +1063,8 @@ struct MenuBarItemTriggerTests {
                 "com.apple.controlcenter:Battery": "com.apple.controlcenter:Battery",
             ]
         )
-        #expect(
-            hiddenPlan.actions[trigger.id]
-                == MenuBarItemTriggersManager.TriggerPriorityAction(
-                    reveal: false,
-                    identifiers: ["com.apple.controlcenter:Battery"]
-                )
-        )
+        #expect(hiddenPlan.actions[trigger.id] == nil)
+        #expect(hiddenPlan.protectedTriggerIDs.contains(trigger.id))
         #expect(!hiddenPlan.unavailableTriggerIDs.contains(trigger.id))
 
         let revealPlan = manager.priorityPlan(
@@ -1001,13 +1074,37 @@ struct MenuBarItemTriggerTests {
                 "com.apple.controlcenter:Battery": "com.apple.controlcenter:Battery",
             ]
         )
-        #expect(
-            revealPlan.actions[trigger.id]
-                == MenuBarItemTriggersManager.TriggerPriorityAction(
-                    reveal: true,
-                    identifiers: ["com.apple.controlcenter:Battery"]
-                )
+        #expect(revealPlan.actions[trigger.id] == nil)
+        #expect(revealPlan.protectedTriggerIDs.contains(trigger.id))
+    }
+
+    @Test func priorityPlanRejectsMultiItemTriggerContainingProtectedBattery() {
+        let manager = makeManager()
+        let trigger = MenuBarItemTrigger(
+            itemIdentifier: "com.example.Safe",
+            itemBaseIdentifier: "com.example.Safe",
+            additionalItems: [
+                TriggerTargetItem(
+                    identifier: "com.apple.controlcenter:Battery:1",
+                    displayName: "Battery",
+                    baseIdentifier: "com.apple.controlcenter:Battery"
+                ),
+            ],
+            condition: .onACPower
         )
+        manager.triggers = [trigger]
+
+        let plan = manager.priorityPlan(
+            for: state(onAC: true),
+            presentIdentifiers: ["com.example.Safe", "com.apple.controlcenter:Battery:1"],
+            presentIdentifierBases: [
+                "com.example.Safe": "com.example.Safe",
+                "com.apple.controlcenter:Battery:1": "com.apple.controlcenter:Battery",
+            ]
+        )
+
+        #expect(plan.actions[trigger.id] == nil)
+        #expect(plan.protectedTriggerIDs.contains(trigger.id))
     }
 
     @Test func priorityPlanReacquiresUnambiguousSuffixDriftFromLiveTagBases() {
@@ -1254,13 +1351,8 @@ struct MenuBarItemTriggerTests {
         )
 
         #expect(repaired.itemBaseIdentifier == "com.apple.controlcenter:Battery")
-        #expect(
-            plan.actions[repaired.id]
-                == MenuBarItemTriggersManager.TriggerPriorityAction(
-                    reveal: true,
-                    identifiers: ["com.apple.controlcenter:Battery:1"]
-                )
-        )
+        #expect(plan.actions[repaired.id] == nil)
+        #expect(plan.protectedTriggerIDs.contains(repaired.id))
         #expect(!plan.unavailableTriggerIDs.contains(repaired.id))
     }
 

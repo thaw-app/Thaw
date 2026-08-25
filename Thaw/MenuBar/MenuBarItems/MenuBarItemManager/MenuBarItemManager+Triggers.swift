@@ -274,17 +274,40 @@ extension MenuBarItemManager {
         return candidates.count == 1 ? candidates[0] : nil
     }
 
-    enum TriggerMoveResult {
+    enum TriggerMoveResult: Equatable {
         /// A synthetic move was performed and verified.
         case moved
         /// The item was already in the requested section.
         case alreadyInSection
         /// The item or its controls are unavailable right now.
         case unavailable
+        /// The move would hide a system item whose visibility is governed by
+        /// macOS, so no synthetic input was posted.
+        case protectedSystemItem
         /// A bulk layout operation is in flight; retry after it settles.
         case deferred
         /// The move was attempted but did not complete.
         case failed
+    }
+
+    enum TriggerMovePreflight: Equatable {
+        case allowed
+        case protectedSystemItem
+    }
+
+    /// Pure, final safety check for trigger-driven section moves. Keeping this
+    /// next to the event-posting entry point means a stale queue or imported
+    /// trigger cannot bypass planner and picker validation.
+    static nonisolated func triggerMovePreflight(
+        for tag: MenuBarItemTag,
+        to section: MenuBarSection.Name
+    ) -> TriggerMovePreflight {
+        if section != .visible,
+           tag.triggerTargetPolicy == .systemVisibilityPreferenceSensitive
+        {
+            return .protectedSystemItem
+        }
+        return .allowed
     }
 
     /// Moves the menu bar item identified by the given stable tag identifier
@@ -339,6 +362,12 @@ extension MenuBarItemManager {
                 "moveItem(trigger): no item matches identifier \(tagIdentifier). Available non-control items: \(availableItems)"
             )
             return .unavailable
+        }
+        guard Self.triggerMovePreflight(for: target.tag, to: section) == .allowed else {
+            MenuBarItemManager.diagLog.warning(
+                "moveItem(trigger): refusing to hide \(target.logString); macOS governs its menu bar visibility preference"
+            )
+            return .protectedSystemItem
         }
         guard target.isMovable else {
             MenuBarItemManager.diagLog.debug("moveItem(trigger): \(target.logString) is not movable")
