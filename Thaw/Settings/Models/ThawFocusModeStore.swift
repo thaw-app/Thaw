@@ -75,15 +75,15 @@ nonisolated enum ThawFocusModeStore {
 
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
-            let namesByID: [String: String]
-            if let manifests = try? decoder.decode([ProfileMetadata].self, from: data) {
-                namesByID = Dictionary(
-                    manifests.map { ($0.id.uuidString, $0.name) },
-                    uniquingKeysWith: { first, _ in first }
-                )
-            } else {
-                namesByID = [:]
-            }
+            let namesByID: [String: String] =
+                if let manifests = try? decoder.decode([ProfileMetadata].self, from: data) {
+                    Dictionary(
+                        manifests.map { ($0.id.uuidString, $0.name) },
+                        uniquingKeysWith: { first, _ in first }
+                    )
+                } else {
+                    [:]
+                }
             cached = CachedManifest(modificationDate: modificationDate, namesByID: namesByID)
             return namesByID[id]
         }
