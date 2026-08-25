@@ -34,8 +34,20 @@ final class MenuBarAppearanceManager {
             } catch {
                 diagLog.error("Error encoding menu bar appearance configuration: \(error)")
             }
+            updateEffectiveConfiguration()
         }
     }
+
+    /// Appearance overrides applied while a specific Space is active, keyed
+    /// by the Space's `CGSSpaceID` rendered as a string for storage.
+    private(set) var spaceOverrides: [String: MenuBarAppearanceConfigurationV2] = [:]
+
+    /// The most recently observed active Space.
+    private(set) var activeSpaceID = SpaceInfo.activeSpace().spaceID
+
+    /// The configuration the overlay panels render: the active Space's
+    /// override when one exists, otherwise the shared `configuration`.
+    private(set) var effectiveConfiguration = Defaults.DefaultValue.menuBarAppearanceConfigurationV2
 
     /// The currently previewed partial configuration.
     ///
@@ -139,6 +151,71 @@ final class MenuBarAppearanceManager {
         } catch {
             diagLog.error("Error decoding menu bar appearance configuration: \(error)")
         }
+        do {
+            if let data = Defaults.data(forKey: .menuBarAppearanceSpaceOverrides) {
+                spaceOverrides = try decoder.decode(
+                    [String: MenuBarAppearanceConfigurationV2].self,
+                    from: data
+                )
+            }
+        } catch {
+            diagLog.error("Error decoding per-Space appearance overrides: \(error)")
+        }
+        updateEffectiveConfiguration()
+    }
+
+    // MARK: Per-Space Overrides
+
+    /// Resolves the configuration for a Space. Pure so it is unit-testable.
+    nonisolated static func effectiveConfiguration(
+        base: MenuBarAppearanceConfigurationV2,
+        overrides: [String: MenuBarAppearanceConfigurationV2],
+        activeSpaceID: CGSSpaceID
+    ) -> MenuBarAppearanceConfigurationV2 {
+        overrides[String(activeSpaceID)] ?? base
+    }
+
+    /// Whether the active Space renders a saved override.
+    var activeSpaceHasOverride: Bool {
+        spaceOverrides[String(activeSpaceID)] != nil
+    }
+
+    /// Saves the shared configuration as the active Space's override.
+    func saveOverrideForActiveSpace() {
+        spaceOverrides[String(activeSpaceID)] = configuration
+        persistSpaceOverrides()
+        updateEffectiveConfiguration()
+    }
+
+    /// Removes the active Space's override, if any.
+    func removeOverrideForActiveSpace() {
+        spaceOverrides[String(activeSpaceID)] = nil
+        persistSpaceOverrides()
+        updateEffectiveConfiguration()
+    }
+
+    /// Removes every per-Space override.
+    func removeAllSpaceOverrides() {
+        spaceOverrides = [:]
+        persistSpaceOverrides()
+        updateEffectiveConfiguration()
+    }
+
+    private func persistSpaceOverrides() {
+        do {
+            let data = try encoder.encode(spaceOverrides)
+            Defaults.set(data, forKey: .menuBarAppearanceSpaceOverrides)
+        } catch {
+            diagLog.error("Error encoding per-Space appearance overrides: \(error)")
+        }
+    }
+
+    private func updateEffectiveConfiguration() {
+        effectiveConfiguration = Self.effectiveConfiguration(
+            base: configuration,
+            overrides: spaceOverrides,
+            activeSpaceID: activeSpaceID
+        )
     }
 
     /// Configures the internal observers for the manager.
@@ -165,6 +242,16 @@ final class MenuBarAppearanceManager {
             .sink { [weak self] _ in
                 self?.isReduceTransparencyEnabled =
                     NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency
+            }
+            .store(in: &c)
+
+        NSWorkspace.shared.notificationCenter
+            .publisher(for: NSWorkspace.activeSpaceDidChangeNotification)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                guard let self else { return }
+                activeSpaceID = SpaceInfo.activeSpace().spaceID
+                updateEffectiveConfiguration()
             }
             .store(in: &c)
 

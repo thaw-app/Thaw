@@ -111,6 +111,43 @@ struct MenuBarAppearanceEditor: View {
                     systemImage: "info.circle.fill"
                 )
             }
+
+            perSpaceSection
+        }
+    }
+
+    private var perSpaceSection: some View {
+        IceSection {
+            Text("Per-Space override")
+        } content: {
+            VStack(alignment: .leading, spacing: 8) {
+                if appearanceManager.activeSpaceHasOverride {
+                    Text("This Space uses a saved override.")
+                        .foregroundStyle(.secondary)
+                    Button("Remove Override for This Space") {
+                        appearanceManager.removeOverrideForActiveSpace()
+                    }
+                } else {
+                    Text("This Space uses the shared appearance.")
+                        .foregroundStyle(.secondary)
+                    Button("Use Current Appearance for This Space") {
+                        appearanceManager.saveOverrideForActiveSpace()
+                    }
+                }
+                if !appearanceManager.spaceOverrides.isEmpty {
+                    HStack {
+                        Text("Spaces with overrides: \(appearanceManager.spaceOverrides.count)")
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Button("Remove All") {
+                            appearanceManager.removeAllSpaceOverrides()
+                        }
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        } footer: {
+            Text("Saves the appearance above for the currently active Space only. Every other Space keeps the shared appearance.")
         }
     }
 

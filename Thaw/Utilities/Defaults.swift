@@ -355,6 +355,8 @@ nonisolated extension Defaults {
         // MARK: Appearance Settings
 
         case menuBarAppearanceConfigurationV2 = "MenuBarAppearanceConfigurationV2"
+        case menuBarAppearanceSpaceOverrides = "MenuBarAppearanceSpaceOverrides"
+        case lastSettingsPane = "LastSettingsPane"
 
         // MARK: Migration
 

@@ -134,6 +134,10 @@ final class MenuBarManager {
     /// appearance editor interface
     let appearanceEditorPanel = MenuBarAppearanceEditorPanel()
 
+    /// The popover that contains a portable version of the menu bar
+    /// layout editor interface
+    let layoutEditorPanel = MenuBarLayoutEditorPanel()
+
     /// The managed sections in the menu bar.
     let sections = [
         MenuBarSection(name: .visible),
@@ -154,6 +158,7 @@ final class MenuBarManager {
         iceBarPanel.performSetup(with: appState)
         searchPanel.performSetup(with: appState)
         appearanceEditorPanel.performSetup(with: appState)
+        layoutEditorPanel.performSetup(with: appState)
         for section in sections {
             section.performSetup(with: appState)
         }
@@ -716,7 +721,7 @@ final class MenuBarManager {
 
         let editLayoutItem = NSMenuItem(
             title: String(localized: "Edit Menu Bar Layout…"),
-            action: #selector(showMenuBarLayoutSettings),
+            action: #selector(showLayoutEditorPanel),
             keyEquivalent: ""
         )
         editLayoutItem.image = NSImage(systemSymbolName: "rectangle.topthird.inset.filled", accessibilityDescription: "Edit Layout")
@@ -887,14 +892,19 @@ final class MenuBarManager {
         }
     }
 
-    /// Shows the menu bar layout settings pane.
-    @objc private func showMenuBarLayoutSettings() {
-        guard let appState else {
+    /// Shows the layout editor panel.
+    @objc private func showLayoutEditorPanel() {
+        guard let screen = MenuBarLayoutEditorPanel.defaultScreen else {
             return
         }
-        appState.navigationState.settingsNavigationIdentifier = .menuBarLayout
-        appState.activate(withPolicy: .regular)
-        appState.openWindow(.settings)
+        layoutEditorPanel.show(on: screen) {
+            self.dismissLayoutEditorPanel()
+        }
+    }
+
+    /// Dismisses the layout editor panel.
+    func dismissLayoutEditorPanel() {
+        layoutEditorPanel.close()
     }
 
     /// Shows the appearance editor panel.

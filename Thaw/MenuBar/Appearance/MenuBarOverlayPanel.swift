@@ -330,9 +330,11 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
             }
 
             // `appearanceManager` is now `@Observable` (wave 3), so it no
-            // longer has a `$configuration` publisher.
+            // longer has a `$configuration` publisher. The panels track the
+            // effective configuration so a per-Space override switches the
+            // window level instantly on Space change.
             appearanceConfigurationObservationTask = Task { [weak self, weak appState] in
-                let changes = Observations { appState?.appearanceManager.configuration }
+                let changes = Observations { appState?.appearanceManager.effectiveConfiguration }
                 for await _ in changes {
                     guard let self else { return }
                     self.updateWindowLevel()
@@ -510,7 +512,7 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
     /// the tint became visible, and the items disappeared underneath it.
     private func updateWindowLevel() {
         guard let appState else { return }
-        let config = appState.appearanceManager.configuration
+        let config = appState.appearanceManager.effectiveConfiguration
         if config.current.tintKind != .noTint || config.shapeKind != .noShape || config.current.backgroundKind != .none {
             level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.statusWindow)) - 1)
         } else {
@@ -644,7 +646,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
                 // visible through this one sequence.
                 appearanceConfigurationObservationTask?.cancel()
                 appearanceConfigurationObservationTask = Task { [weak self, weak appState] in
-                    let changes = Observations { appState?.appearanceManager.configuration }
+                    let changes = Observations { appState?.appearanceManager.effectiveConfiguration }
                     for await config in changes {
                         guard let self else { return }
                         guard let config else { continue }
