@@ -1029,22 +1029,37 @@ final class MenuBarItemManager {
         return set.isEmpty ? nil : set
     }
 
-    /// Applies the group contiguity invariant to a per-section order.
+    /// Applies the group bundling invariant to a per-section order.
     ///
-    /// Deliberately gathers **within** each section only: on this backend,
-    /// pulling a member across sections would conceal or reveal it as a side
-    /// effect of an ordering edit. A user moves members between sections
-    /// themselves; Thaw keeps them adjacent once they share one.
+    /// Mirrors the macOS 27 semantics: a group whose members span multiple
+    /// sections is consolidated into the section holding most of its members
+    /// (ties go to the leftmost member's), and every group ends up in one
+    /// contiguous run. Consolidation is a real relocation on this backend —
+    /// pulling a member out of Hidden reveals it — which is what "groups move
+    /// and hide together" means.
     func gatheredSectionOrder(_ order: [String: [String]]) -> [String: [String]] {
         guard let groups = activeGroupSet, !order.isEmpty else {
             return order
         }
-        var result = order
+        var sections = [MenuBarSection.Name: [String]]()
         for (key, identifiers) in order {
-            let (gathered, report) = MenuBarItemGroupPolicy.gather(groups: groups, in: identifiers)
-            if report != .noChange {
-                result[key] = gathered
-            }
+            guard let name = sectionName(for: key) else { continue }
+            sections[name] = identifiers
+        }
+        guard !sections.isEmpty else { return order }
+
+        let (gatheredSections, report) = MenuBarItemGroupPolicy.gather(groups: groups, inSections: sections)
+        guard report != .noChange else {
+            return order
+        }
+
+        var result = [String: [String]]()
+        for (name, identifiers) in gatheredSections {
+            result[sectionKey(for: name)] = identifiers
+        }
+        // Preserve any section whose key could not be converted.
+        for (key, identifiers) in order where result[key] == nil {
+            result[key] = identifiers
         }
         return result
     }
