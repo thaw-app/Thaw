@@ -46,6 +46,23 @@ nonisolated struct WindowInfo {
         ownerName == "Window Server"
     }
 
+    /// A Boolean value that indicates whether the window has no area to
+    /// match an accessibility element against.
+    ///
+    /// Every source-PID match path anchors on this window's centre — the
+    /// strict pass, the owner-corroborated pass, and the marker-pair
+    /// fallback all compare it against an accessibility element's frame. A
+    /// window with zero width or height has no centre worth comparing, so a
+    /// full scan started on its behalf cannot succeed.
+    ///
+    /// These are real and they persist. The log attached to #956 carries a
+    /// status item at `(-4323, 0, 0, 0)` whose nearest accessibility frame
+    /// is Control Center's own zero-width placeholder; nine consecutive
+    /// scans over seven minutes left it unresolved.
+    var isDegenerate: Bool {
+        bounds.isEmpty
+    }
+
     /// A Boolean value that indicates whether the window is a menu-related window.
     ///
     /// This property returns `true` if the window's layer corresponds to a

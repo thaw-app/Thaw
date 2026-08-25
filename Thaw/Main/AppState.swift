@@ -121,6 +121,11 @@ final class AppState {
         diagLog.debug("setupTask: starting MenuBarItemService XPC connection")
         await MenuBarItemService.Connection.shared.start()
         diagLog.debug("setupTask: MenuBarItemService XPC connection started")
+        // Capture is optional: don't block item/manager setup if the helper is slow.
+        Task {
+            await MenuBarCaptureService.Connection.shared.start()
+        }
+        diagLog.debug("setupTask: MenuBarCaptureService XPC start kicked off")
 
         appearanceManager.performSetup(with: self)
         hidEventManager.performSetup(with: self)

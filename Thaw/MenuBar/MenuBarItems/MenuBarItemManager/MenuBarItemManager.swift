@@ -70,6 +70,17 @@ final class MenuBarItemManager {
     /// geometry clears and re-arms recovery for a later episode.
     var didRecoverParkedHiddenDividerForCurrentMismatch = false
 
+    /// Consecutive authoritative cache cycles in which the always-hidden
+    /// section is enabled but its divider did not resolve while the hidden
+    /// divider did. A display change can strand the AH status item on another
+    /// screen's menu bar; `ControlItemPair` treats the missing divider as
+    /// success, so the lookup-failure rebuild never sees it (#863).
+    var missingAlwaysHiddenDividerStreak = 0
+
+    /// Prevents repeated AH divider recreation until the divider resolves
+    /// again and re-arms recovery for a later episode.
+    var didRecoverMissingAlwaysHiddenDivider = false
+
     /// Number of consecutive `ControlItemPair` lookup failures required
     /// before the control items' status items are rebuilt.
     static nonisolated let controlItemRebuildThreshold = 3
@@ -81,6 +92,11 @@ final class MenuBarItemManager {
     /// Number of authoritative mismatch applies required before discarding a
     /// parked hidden divider's stale autosave position.
     static nonisolated let parkedHiddenDividerRecoveryThreshold = 2
+
+    /// Number of consecutive authoritative cache cycles with an enabled but
+    /// unresolved always-hidden divider required before that divider's status
+    /// item is rebuilt.
+    static nonisolated let missingAlwaysHiddenDividerRecoveryThreshold = 3
 
     /// Supplementary AX-derived identity for items whose CG-side identity is
     /// degraded (a Control-Center generic `Item-N` placeholder title, or a
@@ -190,6 +206,19 @@ final class MenuBarItemManager {
 
     /// Timestamp of the most recent menu bar item move operation.
     var lastMoveOperationTimestamp: ContinuousClock.Instant?
+
+    /// When the user last moved an item themselves, as opposed to Thaw
+    /// moving one on their behalf.
+    ///
+    /// Both kinds stamp ``lastMoveOperationTimestamp``, and for the restore
+    /// cooldown that is right — a bar that just moved should be left alone
+    /// whoever moved it. The save gate needs to tell them apart. Thaw's own
+    /// moves mean the bar is mid-restore and must not be written down; a
+    /// user's move is the one thing that *must* be written down, and
+    /// promptly, because the restore will otherwise revert it on the next
+    /// cycle. Suppressing the save for both would make a Layout-editor drag
+    /// undo itself (#958).
+    var lastUserMoveOperationTimestamp: ContinuousClock.Instant?
 
     /// Cached timeouts for move operations.
     var moveOperationTimeouts = [MenuBarItemTag: Duration]()
@@ -553,6 +582,30 @@ final class MenuBarItemManager {
     /// move. Only `EventError` carries enough detail to blame the owner.
     static nonisolated func failureKind(of error: any Error) -> MenuBarItemFailureLedger.FailureKind {
         (error as? EventError)?.failureKind ?? .other
+    }
+
+    /// Whether ``move(item:to:on:skipInputPause:maxMoveAttempts:)`` already
+    /// filed this error against the item before throwing it.
+    ///
+    /// `move` files every unresponsive-owner failure itself, so a caller that
+    /// also files one on catching the throw counts a single failed move
+    /// twice. That is not a cosmetic tally: the ledger deliberately waits for
+    /// a run of unresponsive-owner failures before writing a persisted mark,
+    /// and double-filing consumed the whole run in the same instant — the
+    /// #687 log marks 1Password one millisecond after logging that it was
+    /// still waiting. Every item that failed a single bulk-apply move was
+    /// marked immediately, and marked items get one attempt instead of eight
+    /// thereafter.
+    ///
+    /// Callers still file the failures `move` does not, so the backoff window
+    /// keeps counting vanished items and stale destinations.
+    static nonisolated func moveAlreadyFiledFailure(for error: any Error) -> Bool {
+        // Pattern-matched rather than compared: `FailureKind`'s `Equatable`
+        // conformance is main-actor isolated and this runs nonisolated.
+        if case .unresponsiveOwner = failureKind(of: error) {
+            return true
+        }
+        return false
     }
 
     /// The move-operation budget the next attempt should use, given how the
@@ -1963,6 +2016,15 @@ final class MenuBarItemManager {
         return timestamp.duration(to: .now) <= duration
     }
 
+    /// Returns a Boolean value that indicates whether the user moved an item
+    /// themselves within the given duration.
+    func lastUserMoveOperationOccurred(within duration: Duration) -> Bool {
+        guard let timestamp = lastUserMoveOperationTimestamp else {
+            return false
+        }
+        return timestamp.duration(to: .now) <= duration
+    }
+
     /// Records an explicit user move, either a direct Cmd-drag or a completed
     /// drag in the Layout editor.
     ///
@@ -1970,7 +2032,29 @@ final class MenuBarItemManager {
     /// failed-batch save latch and any pending automatic-divergence reading.
     func recordExternalMoveOperation() {
         lastMoveOperationTimestamp = .now
+        lastUserMoveOperationTimestamp = .now
         pendingDivergenceObservedAt = nil
         recordBulkApplyOutcome(unenactedMoveCount: 0)
+    }
+
+    /// Whether the save gate's user-move exemption applies: it must, and only,
+    /// when the most recent move was the user's own.
+    ///
+    /// Comparing recency rather than presence closes a hole in the cooldown:
+    /// a user move at T0 followed by an automatic move at T+3 leaves both
+    /// timestamps inside the five-second window, and an exemption keyed on
+    /// "a user move happened recently" would disable the cooldown for an
+    /// arrangement Thaw generated itself, letting the next cache cycle
+    /// persist it.
+    ///
+    /// Pure over its inputs.
+    static nonisolated func saveCooldownExemptForUserMove(
+        lastMoveOperationTimestamp: ContinuousClock.Instant?,
+        lastUserMoveOperationTimestamp: ContinuousClock.Instant?
+    ) -> Bool {
+        guard let lastMoveOperationTimestamp, let lastUserMoveOperationTimestamp else {
+            return false
+        }
+        return lastUserMoveOperationTimestamp >= lastMoveOperationTimestamp
     }
 }

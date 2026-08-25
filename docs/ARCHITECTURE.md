@@ -24,6 +24,7 @@ profiles, and customizes menu bar appearance. It is a maintained fork of
 | `Thaw/` | Main application target (UI, menu bar logic, settings, events, permissions) |
 | `Shared/` | Code shared between the app and helper processes (bridging, XPC client types, utilities) |
 | `MenuBarItemService/` | XPC helper process for menu-bar item source PID resolution and related work off the main app |
+| `MenuBarCaptureService/` | Recyclable XPC helper that runs SkyLight offscreen icon capture so the per-call dictionary leak stays out of the UI process |
 | `ThawCtl/` | Small SwiftPM CLI / control utilities |
 | `ThawTests/` | XCTest suite run in CI |
 | `docs/` | User/developer documentation (e.g. URI schemes) |
@@ -48,6 +49,8 @@ External dependencies are declared via Swift Package Manager and locked in
 │                         ▼                                   │
 │              MenuBarItemService.xpc                         │
 │              (source PID cache / listener)                  │
+│              MenuBarCaptureService.xpc                      │
+│              (offscreen SkyLight capture; recycled)         │
 └─────────────────────────────────────────────────────────────┘
           │                         │
           ▼                         ▼
@@ -76,6 +79,20 @@ WindowServer / PID lookup work from the UI process. The shared protocol is a
 small Codable request/response surface (`start`, `configureLogging`,
 `sourcePID` / `sourcePIDs`). Logging to a shared diagnostic file is configured
 by the main app after launch.
+
+### `MenuBarCaptureService` (XPC)
+
+A second Application XPC (`com.stonerl.Thaw.MenuBarCaptureService`) captures
+offscreen Hidden / Always Hidden status-item windows via SkyLight. Each
+successful `SLWindowListCreateImageFromArray` call leaks a small dictionary in
+the caller; the helper exits after a capture budget (and when the last live
+consumer closes) so that growth can be reclaimed. Requests carry a request ID
+and window IDs only; the helper recomputes bounds, accepts only menu-bar item
+windows, and returns cropped premultiplied-BGRA frames. Visible-section icons
+stay on ScreenCaptureKit in the app. Always Hidden is capped at 1 fps;
+Hidden follows the icon refresh slider. This dictionary leak is in the
+capture caller (commit `0e045faf`); it is separate from the Core Animation
+fence-port leak tracked as issue #933.
 
 ### External interfaces
 

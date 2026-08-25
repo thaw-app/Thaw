@@ -37,14 +37,30 @@ extension MenuBarItemManager {
         func targetPoint(in targetBounds: CGRect, on displayBounds: CGRect) -> CGPoint {
             let targetIsParkedOffscreen = targetBounds.maxX <= displayBounds.minX
             let targetY = targetIsParkedOffscreen ? targetBounds.midY : targetBounds.minY
-            // A zero-width control-item divider (#923) gives AppKit no
-            // hit-test width to disambiguate which side the drop should
-            // land on. Bias one point into the requested section so the
-            // synthetic event's target X is unambiguous. On a normal-width
-            // divider the ±1 nudge is harmless but unnecessary; gate it to
-            // zero-width to avoid shifting the drop point away from a
-            // divider that already has span to resolve the side.
-            let sectionBias: CGFloat = (targetItem.isControlItem && targetBounds.width == 0) ? 1 : 0
+            // Dropping on a divider's own edge leaves AppKit free to choose
+            // either side of it, and in #923 it chose wrong every time:
+            // .leftOfItem(AH_ctrl) landed the item at the divider's minX + 1,
+            // one point into the section the user was dragging out of. Bias
+            // one point into the requested section so the synthetic event's
+            // target X is unambiguous.
+            //
+            // This was once gated to zero-width dividers, on the theory that
+            // a divider with span gives AppKit enough hit-test width to
+            // resolve the side on its own. The 21 August log kills that
+            // theory: the same reporter's AH_ctrl was thousands of points
+            // wide (parked, maxX ≤ 0, expanded to conceal the section) and
+            // the drop still landed at minX + 1 on attempts 1 and 5, with
+            // the ordinal check correctly rejecting both. A divider's width
+            // is its concealment mechanism, not hit-test slack; what matters
+            // is that the drop point is its edge, which is the boundary
+            // itself.
+            // The chevron is excluded: it is a control item but not a
+            // section boundary, and TemporaryShow anchors moves directly on
+            // it with .leftOfItem — biasing those drops would place the item
+            // one point left of an anchor that is not an edge between two
+            // sections, for no hit-test ambiguity resolved.
+            let sectionBias: CGFloat = targetItem.tag == .hiddenControlItem
+                || targetItem.tag == .alwaysHiddenControlItem ? 1 : 0
             return switch self {
             case .leftOfItem:
                 CGPoint(x: targetBounds.minX - sectionBias, y: targetY)
@@ -76,13 +92,27 @@ extension MenuBarItemManager {
 
     /// Returns the default timeout for move operations associated
     /// with the given item.
+    ///
+    /// A budget, not a cost. `waitForMoveEventResponse` polls the item's
+    /// origin every 10ms and returns the instant it changes, so an owner that
+    /// answers promptly is charged what it takes and nothing more. Raising
+    /// these values cannot slow a move that works; it only buys time for one
+    /// that would otherwise have been abandoned while it was still going to
+    /// succeed.
+    ///
+    /// 100ms was too little to survive contention. In the #687 log, of the
+    /// twelve moves that landed, five needed a second or third attempt — the
+    /// owners were answering, just not inside the budget — and only twelve of
+    /// thirty-two moves landed at all. Startup is the worst case for this:
+    /// the source-PID scan and the restore wave compete for the same
+    /// main threads the AX and event round-trips have to be serviced on.
     private func getDefaultMoveOperationTimeout(for item: MenuBarItem) -> Duration {
         if item.isBentoBox {
             // Bento Boxes (i.e. Control Center groups) generally
             // take a little longer to respond.
-            return .milliseconds(200)
+            return .milliseconds(350)
         }
-        return .milliseconds(100)
+        return .milliseconds(250)
     }
 
     /// Returns the cached timeout for move operations associated
@@ -94,16 +124,72 @@ extension MenuBarItemManager {
         return getDefaultMoveOperationTimeout(for: item)
     }
 
+    /// Merges a newly computed timeout with the one currently cached for an
+    /// item.
+    ///
+    /// Growth is adopted as computed; only shrinkage is smoothed against the
+    /// standing value. Averaging both directions halved every escalation step
+    /// and so undid the one `nextMoveOperationTimeout` had just decided on:
+    /// a budget escalating by half from 100ms reaches the ceiling in four
+    /// attempts, but smoothed it only reaches 476ms in eight, which is the
+    /// exact ladder the #687 log walks before giving up on 1Password
+    /// (0.1 → 0.125 → 0.156 → 0.195 → 0.244 → 0.305 → 0.381 → 0.476). The
+    /// attempts meant to be spent trying a bigger budget were spent creeping
+    /// toward one instead. Decay stays smoothed, because there the caution is
+    /// the point: one fast answer should not commit an owner to a budget it
+    /// cannot meet again.
+    ///
+    /// The floor is 75ms: `waitForMoveEventResponse` polls every 10ms, so a
+    /// budget below that leaves too little margin for system event latency and
+    /// causes `itemResponseTimeout` → retry cascades. The ceiling is a second,
+    /// which is what an escalating budget is allowed to cost before the item is
+    /// better classified as unresponsive than as slow.
+    static nonisolated func mergedMoveOperationTimeout(
+        proposed: Duration,
+        current: Duration
+    ) -> Duration {
+        let next = proposed > current ? proposed : (proposed + current) / 2
+        return next.clamped(min: .milliseconds(75), max: .seconds(1))
+    }
+
+    /// Watchdog duration that covers the worst case of a single `move`
+    /// call: every one of `maxAttempts` attempts spends its whole
+    /// operation timeout four times over (two event posts, two response
+    /// waits), budgets can escalate to the merged ceiling, and a failed
+    /// attempt posts one more fallback at a fixed 100 ms. The result never
+    /// drops below the historical flat 10 s, so ordinary moves keep the
+    /// same safety net while an escalated stubborn item no longer outlasts
+    /// the watchdog and force-shows the cursor mid-sequence.
+    ///
+    /// Extracted so the arithmetic is unit-testable without posting events.
+    static nonisolated func cursorHideWatchdogTimeout(
+        operationCeiling: Duration = .seconds(1),
+        maxAttempts: Int = 8,
+        fallbackPost: Duration = .milliseconds(100),
+        floor: Duration = .seconds(10)
+    ) -> Duration {
+        // Per attempt: two event posts + two response waits, all capped at
+        // the ceiling. One millisecond is 10^15 attoseconds.
+        let attosecondsPerMillisecond = 1_000_000_000_000_000.0
+        let perAttemptComponents = operationCeiling.components
+        let perAttemptMs = Double(perAttemptComponents.seconds) * 1000.0
+            + Double(perAttemptComponents.attoseconds) / attosecondsPerMillisecond
+        let attempts = max(1, maxAttempts)
+        let fallbackMs = Double(fallbackPost.components.seconds) * 1000.0
+            + Double(fallbackPost.components.attoseconds) / attosecondsPerMillisecond
+        let floorMs = Double(floor.components.seconds) * 1000.0
+            + Double(floor.components.attoseconds) / attosecondsPerMillisecond
+        let totalMs = max(floorMs, perAttemptMs * Double(attempts) * 4 + fallbackMs)
+        return .milliseconds(Int(totalMs.rounded(.up)))
+    }
+
     /// Updates the cached timeout for move operations associated
     /// with the given item.
     private func updateMoveOperationTimeout(_ timeout: Duration, for item: MenuBarItem) {
-        let current = getMoveOperationTimeout(for: item)
-        let average = (timeout + current) / 2
-        // Minimum of 75ms: waitForMoveEventResponse polls every 10ms, so a
-        // timeout below ~75ms leaves too little margin for system event latency
-        // and causes itemResponseTimeout → retry cascades.
-        let clamped = average.clamped(min: .milliseconds(75), max: .milliseconds(500))
-        moveOperationTimeouts[item.tag] = clamped
+        moveOperationTimeouts[item.tag] = Self.mergedMoveOperationTimeout(
+            proposed: timeout,
+            current: getMoveOperationTimeout(for: item)
+        )
     }
 
     /// Prunes the move operation timeouts cache, keeping only the entries
@@ -762,16 +848,24 @@ extension MenuBarItemManager {
         // during a layout reset when items required multiple attempts).
         let mouseLocation = hideCursorAcrossAttempts ? try getMouseLocation() : nil
         // The default 1 s cursor-hide watchdog is too short for menu
-        // bar item moves: each item can take up to ~4 s across retries
-        // (8 attempts × ~500 ms timeout), and during a full layout pass
-        // many items move sequentially. When the watchdog fires partway
-        // through, the cursor is force-shown at the synthetic event's
-        // last cursorPosition (mid-display, per the offscreen-target
-        // override below in postMoveEvents) and the user sees a brief
-        // cursor flash. 10 s is long enough to cover any single move
-        // without giving up the safety net for genuinely stuck states.
+        // bar item moves, and the budget they can burn has grown: every
+        // attempt spends its whole timeout four times over (two event
+        // posts, two response waits), budgets escalate to the merged
+        // ceiling of one second per operation, and a failed attempt posts
+        // one more fallback at a fixed 100 ms. At the ceiling that is
+        // roughly 32 s for eight attempts — far past the old flat 10 s,
+        // whose comment still assumed "8 × ~500 ms". When the watchdog
+        // fires partway through, the cursor is force-shown at the
+        // synthetic event's last cursorPosition (mid-display, per the
+        // offscreen-target override below in postMoveEvents) and the user
+        // sees a brief cursor flash. The floor stays at 10 s so ordinary
+        // moves keep their safety net against genuinely stuck states.
         if hideCursorAcrossAttempts {
-            MouseHelpers.hideCursor(watchdogTimeout: watchdogTimeout ?? .seconds(10))
+            MouseHelpers.hideCursor(
+                watchdogTimeout: watchdogTimeout ?? Self.cursorHideWatchdogTimeout(
+                    maxAttempts: max(1, maxMoveAttempts)
+                )
+            )
         }
         defer {
             if let mouseLocation {

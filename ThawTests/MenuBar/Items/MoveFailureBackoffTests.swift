@@ -41,3 +41,60 @@ struct MoveFailureBackoffTests {
         #expect(MenuBarItemManager.moveFailureBackoffInterval(failureCount: -3) == .seconds(30))
     }
 }
+
+/// Characterizes which failures `move` has already filed with the ledger by
+/// the time it throws, so a catch clause that files again does not charge one
+/// failed move twice.
+///
+/// Double-filing was invisible while it only widened a backoff window, but it
+/// made the "wait for another failure before marking" rule meaningless: both
+/// halves were consumed in the same instant. In the #687 log, 1Password was
+/// marked unresponsive one millisecond after the line saying it was still
+/// waiting for a second failure.
+@Suite("Move failure double filing")
+struct MoveFailureDoubleFilingTests {
+    private func makeItem() -> MenuBarItem {
+        .fixture(
+            tag: .appItem(bundleID: "com.example.wifi", title: "Wi-Fi"),
+            windowID: 42
+        )
+    }
+
+    /// The three the ledger treats as an unresponsive owner are exactly the
+    /// three `move` files for itself.
+    @Test("Unresponsive-owner failures are already filed")
+    func unresponsiveOwnerFailuresAreAlreadyFiled() {
+        let item = makeItem()
+        for error in [
+            MenuBarItemManager.EventError.ownerUnresponsive(item),
+            .eventOperationTimeout(item),
+            .itemResponseTimeout(item),
+        ] {
+            #expect(MenuBarItemManager.moveAlreadyFiledFailure(for: error))
+        }
+    }
+
+    /// Everything else is still the caller's to file, so the backoff window
+    /// keeps counting vanished items and stale destinations.
+    @Test("Other failures are left for the caller to file")
+    func otherFailuresAreLeftToTheCaller() {
+        let item = makeItem()
+        for error in [
+            MenuBarItemManager.EventError.cannotComplete,
+            .itemNotMovable(item),
+            .missingItemBounds(item),
+            .menuTrackingActive(item),
+            .eventWindowMismatch(item),
+            .staleDestination(item),
+        ] {
+            #expect(!MenuBarItemManager.moveAlreadyFiledFailure(for: error))
+        }
+    }
+
+    /// An error from outside the move path — a cancellation, say — is nobody's
+    /// filed failure.
+    @Test("A foreign error is not treated as already filed")
+    func foreignErrorIsNotAlreadyFiled() {
+        #expect(!MenuBarItemManager.moveAlreadyFiledFailure(for: CancellationError()))
+    }
+}

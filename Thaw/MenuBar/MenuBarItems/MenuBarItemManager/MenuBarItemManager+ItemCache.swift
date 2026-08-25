@@ -772,7 +772,11 @@ extension MenuBarItemManager {
 
         if recoverCollapsedHiddenSectionIfNeeded(
             hiddenSectionHasRoom: hiddenSectionHasRoom,
-            controlItems: context.controlItems
+            controlItems: context.controlItems,
+            // The dividers are excluded: a rebuild that only has the two
+            // control items to place cannot strand anything on the wrong
+            // side of the one it is rebuilding.
+            managedItemCount: context.cache.managedItems.count(where: { !$0.isControlItem })
         ) {
             return
         }
@@ -787,7 +791,16 @@ extension MenuBarItemManager {
             return
         }
 
+        // Read before the assignment below overwrites it: the save gate needs
+        // to know whether the menu bar changed display between the cycle that
+        // produced the standing cache and this one (#958).
+        let previousCacheDisplayID = itemCache.displayID
+
         itemCache = context.cache
+
+        // Remember what the resolved items are called, so the next launch can
+        // label them before its own source-PID scan lands (#956).
+        MenuBarItemNameMemory.remember(itemCache.managedItems)
 
         // Reset isRestoringItemOrder if it's been stuck for too long (10 seconds).
         // This prevents stale flags from blocking saves after user manual moves.
@@ -798,6 +811,33 @@ extension MenuBarItemManager {
         }
 
         let hasPendingDivergence = pendingDivergenceObservedAt != nil
+
+        // Mirrors applySavedLayout's own cooldown. Whatever stops the restore
+        // has to stop the save, or the cycle that skips one and takes the
+        // other writes down a bar nobody arranged (#958).
+        //
+        // A move the user made themselves is exempt, and the exemption is
+        // load-bearing rather than a nicety: after a Layout-editor drag the
+        // live bar diverges from the saved order, and it is the save winning
+        // inside the cooldown that makes the drag the new saved order. Hold
+        // it back and the restore, once the cooldown lapses, reads the drag
+        // as drift and reverts it.
+        let isWithinMoveCooldown = lastMoveOperationOccurred(within: .seconds(5)) &&
+            !Self.saveCooldownExemptForUserMove(
+                lastMoveOperationTimestamp: lastMoveOperationTimestamp,
+                lastUserMoveOperationTimestamp: lastUserMoveOperationTimestamp
+            )
+
+        // A relocation in progress. Both displays have to be known for the
+        // comparison to mean anything: a nil on either side is the ordinary
+        // first cycle, not a change.
+        let menuBarDisplayChanged: Bool = if let previousCacheDisplayID,
+                                            let currentDisplayID = context.cache.displayID
+        {
+            previousCacheDisplayID != currentDisplayID
+        } else {
+            false
+        }
 
         // The bar after a batch that gave up partway is the batch's own
         // wreckage, not a layout anyone chose. Recording it hands the next
@@ -814,7 +854,9 @@ extension MenuBarItemManager {
                    alwaysHiddenSectionResolved: alwaysHiddenSectionResolved,
                    hiddenSectionHasRoom: hiddenSectionHasRoom,
                    hasPendingDivergence: hasPendingDivergence,
-                   hasUnfinishedMoveBatch: hasUnfinishedMoveBatch
+                   hasUnfinishedMoveBatch: hasUnfinishedMoveBatch,
+                   isWithinMoveCooldown: isWithinMoveCooldown,
+                   menuBarDisplayChanged: menuBarDisplayChanged
                )
            )
         {
@@ -891,6 +933,18 @@ extension MenuBarItemManager {
             MenuBarItemManager.diagLog.warning(
                 "Skipping saveSectionOrder; layout divergence pending confirmation (applySavedLayout has not yet restored the cached layout)"
             )
+        } else if isWithinMoveCooldown {
+            // Warning level like the rest: a run of these means the bar is
+            // being moved often enough that the save never gets a settled
+            // cycle, which is its own problem — but it is no longer the
+            // problem of a save landing on an unsettled bar (#958).
+            MenuBarItemManager.diagLog.warning(
+                "Skipping saveSectionOrder; within the 5s move cooldown that applySavedLayout also honours"
+            )
+        } else if menuBarDisplayChanged {
+            MenuBarItemManager.diagLog.warning(
+                "Skipping saveSectionOrder; menu bar moved display since the standing cache (\(previousCacheDisplayID.map { "\($0)" } ?? "nil") -> \(context.cache.displayID.map { "\($0)" } ?? "nil")), relocation in progress"
+            )
         } else if hasUnfinishedMoveBatch {
             // Warning level, like the two above, because a run of these is
             // the signature of a bar that cannot be restored at all: the
@@ -904,13 +958,17 @@ extension MenuBarItemManager {
         completedCacheCycles += 1
     }
 
-    /// Recreates the hidden divider at its seeded position after repeated,
-    /// authoritative evidence that stale geometry closed the hidden span.
+    /// Rebuilds the hidden divider after repeated, authoritative evidence
+    /// that stale geometry closed the hidden span.
     /// The saved order remains untouched, so the next cache pass can restore
     /// section membership through the normal saved-layout apply.
+    ///
+    /// `managedItemCount` decides whether the rebuild may also re-stamp the
+    /// seeded position. See ``canSeedRebuiltDividerPosition(managedItemCount:)``.
     private func recoverCollapsedHiddenSectionIfNeeded(
         hiddenSectionHasRoom: Bool,
-        controlItems: ControlItemPair
+        controlItems: ControlItemPair,
+        managedItemCount: Int
     ) -> Bool {
         // A provisional reading must not advance, reset, or re-arm the
         // recovery episode. Only authoritative observations may mutate it.
@@ -935,10 +993,11 @@ extension MenuBarItemManager {
         }
 
         didRecoverHiddenSectionForCurrentCollapse = true
+        let seedPosition = Self.seedPositionForRebuiltDivider(managedItemCount: managedItemCount)
         MenuBarItemManager.diagLog.warning(
-            "Hidden section remained collapsed for \(hiddenSectionCollapseStreak) authoritative cache passes; recreating H_ctrl at its seeded position"
+            "Hidden section remained collapsed for \(hiddenSectionCollapseStreak) authoritative cache passes; rebuilding H_ctrl\(Self.seedDescription(seedPosition))"
         )
-        hiddenControlItem.recreateStatusItem(preferredPosition: 1)
+        hiddenControlItem.recreateStatusItem(preferredPosition: seedPosition)
 
         Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(100))
@@ -947,12 +1006,16 @@ extension MenuBarItemManager {
         return true
     }
 
-    /// Recreates an authoritatively identified hidden divider after it remains
+    /// Rebuilds an authoritatively identified hidden divider after it remains
     /// parked through repeated layout applies that need it on the bar.
+    ///
+    /// `managedItemCount` decides whether the rebuild may also re-stamp the
+    /// seeded position. See ``canSeedRebuiltDividerPosition(managedItemCount:)``.
     func recoverParkedHiddenDividerIfNeeded(
         hiddenBoundaryMismatch: Int,
         hiddenControlItem: MenuBarItem,
-        screenFrames: [CGRect]
+        screenFrames: [CGRect],
+        managedItemCount: Int
     ) -> Bool {
         guard hiddenBoundaryMismatch > 0,
               !LayoutSolver.isOnScreen(bounds: hiddenControlItem.bounds, screenFrames: screenFrames)
@@ -973,10 +1036,11 @@ extension MenuBarItemManager {
         }
 
         didRecoverParkedHiddenDividerForCurrentMismatch = true
+        let seedPosition = Self.seedPositionForRebuiltDivider(managedItemCount: managedItemCount)
         MenuBarItemManager.diagLog.warning(
-            "H_ctrl remained parked through \(parkedHiddenDividerMismatchStreak) authoritative mismatch applies; recreating it at its seeded position"
+            "H_ctrl remained parked through \(parkedHiddenDividerMismatchStreak) authoritative mismatch applies; rebuilding it\(Self.seedDescription(seedPosition))"
         )
-        hiddenControl.recreateStatusItem(preferredPosition: 1)
+        hiddenControl.recreateStatusItem(preferredPosition: seedPosition)
 
         Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(100))
@@ -1437,6 +1501,46 @@ extension MenuBarItemManager {
         }
 
         MenuBarItemManager.diagLog.debug("cacheItemsRegardless: found control items, hidden windowID=\(controlItems.hidden.windowID), alwaysHidden=\(controlItems.alwaysHidden.map { "\($0.windowID)" } ?? "nil")")
+
+        // A display change can strand the always-hidden divider on another
+        // screen's menu bar while the hidden divider resolves fine.
+        // ControlItemPair models the missing divider as an optional, so the
+        // pair succeeds and the lookup-failure rebuild above never fires:
+        // #863's HDMI re-plug left alwaysHidden=nil for 12+ hours and the
+        // whole always-hidden section drained into visible. Only
+        // authoritative cycles may advance, reset, or re-arm the episode —
+        // a provisional correlation says nothing either way, the same rule
+        // the parked-divider streak applies — and a disabled section's
+        // absent divider is intentional, not a loss to recover from.
+        if controlItems.canRepositionControlItems {
+            if appState?.settings.advanced.enableAlwaysHiddenSection == true {
+                if controlItems.alwaysHidden == nil {
+                    missingAlwaysHiddenDividerStreak += 1
+                    if Self.shouldRecoverMissingAlwaysHiddenDivider(
+                        consecutiveMissingReadings: missingAlwaysHiddenDividerStreak,
+                        alreadyRecovered: didRecoverMissingAlwaysHiddenDivider
+                    ) {
+                        didRecoverMissingAlwaysHiddenDivider = true
+                        MenuBarItemManager.diagLog.warning(
+                            "cacheItemsRegardless: always-hidden section enabled but its divider has not resolved for \(missingAlwaysHiddenDividerStreak) consecutive cycles, recreating it"
+                        )
+                        await MainActor.run {
+                            appState?.menuBarManager.controlItem(withName: .alwaysHidden)?.recreateStatusItem()
+                        }
+                        Task { [weak self] in
+                            try? await Task.sleep(for: .milliseconds(100))
+                            await self?.cacheItemsRegardless()
+                        }
+                    }
+                } else {
+                    missingAlwaysHiddenDividerStreak = 0
+                    didRecoverMissingAlwaysHiddenDivider = false
+                }
+            } else {
+                missingAlwaysHiddenDividerStreak = 0
+                didRecoverMissingAlwaysHiddenDivider = false
+            }
+        }
 
         if Self.isDegradedIdentityEnrichmentEnabled {
             enrichDegradedItemIdentities(in: items)

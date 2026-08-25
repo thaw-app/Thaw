@@ -200,7 +200,7 @@ struct MenuBarLayoutSettingsPane: View {
                     maxSliderLabelWidth = max(maxSliderLabelWidth, frame.width)
                 }
         }
-        .annotation("How often animated menu bar icons are refreshed in panels. Higher values are smoother but use more CPU.")
+        .annotation("How often animated icons refresh in the visible section, Hidden Thaw Bar, Search, and Layout. Always Hidden is capped at 1 fps. Higher values use more CPU.")
     }
 
     /// The name of the display whose layout the bars below are showing.

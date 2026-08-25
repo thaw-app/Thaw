@@ -76,17 +76,16 @@ nonisolated enum ScreenCapture {
     // MARK: Capture Window(s)
 
     // NOTE: The synchronous captureWindows / captureWindow below intentionally
-    // route through the deprecated SkyLight private API
-    // (SLWindowListCreateImageFromArray) for the menu-bar refresh path. On
-    // macOS 26 SCShareableContent.excludingDesktopWindows(_: onScreenWindowsOnly:
-    // false) *does* enumerate offscreen menu-bar overflow items, but SCK
-    // capture rejects them: SCContentFilter(display: including:) returns error
-    // -3812 (sourceRect outside display bounds) and SCContentFilter(
-    // desktopIndependentWindow:) returns -3811 (stream start failure). SkyLight
-    // is the only public API on macOS 26 that can capture status-item windows
-    // positioned at large negative x. It leaks one CFMutableDictionary per
-    // call inside SLSWindowListCreateImageFromArrayProxying; that's a system
-    // bug awaiting an Apple fix.
+    // route through SkyLight's private API (SLWindowListCreateImageFromArray)
+    // for offscreen menu-bar items. On macOS 26 SCShareableContent enumerates
+    // those windows, but SCK capture rejects them: SCContentFilter(display:
+    // including:) returns error -3812 (sourceRect outside display bounds) and
+    // SCContentFilter(desktopIndependentWindow:) returns -3811 (stream start
+    // failure). SkyLight is the only API on macOS 26 that can capture status-item
+    // windows positioned at large negative x. It leaks one CFMutableDictionary
+    // per call inside SLSWindowListCreateImageFromArrayProxying; live Hidden
+    // refresh therefore runs that path in MenuBarCaptureService, which exits
+    // after a capture budget so the leak can be reclaimed.
     //
     // The async captureWindowsAsync / captureWindowAsync below route through
     // ScreenCaptureKit and are leak-free. Use those for any capture whose

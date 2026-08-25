@@ -304,6 +304,11 @@ nonisolated extension Defaults {
 
         case menuBarItemCustomNames = "MenuBarItemCustomNames"
 
+        /// The name each item last resolved to, used to label items during
+        /// the window before source-PID resolution lands. Managed by
+        /// ``MenuBarItemNameMemory``; not exposed in Settings.
+        case menuBarItemResolvedNames = "MenuBarItemResolvedNames"
+
         // MARK: Internal (Event Delivery)
 
         /// Items whose owners have recently failed to answer synthetic
