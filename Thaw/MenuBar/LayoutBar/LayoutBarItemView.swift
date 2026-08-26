@@ -452,14 +452,12 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         return CGSize(width: width, height: height)
     }
 
+    /// Routed through ``MenuBarItemIconFallback`` so the layout bar and the
+    /// Thaw Bar substitute the same image for the same item, and so both
+    /// share its per-process icon cache.
+    @MainActor
     private static func makePlaceholderImage(for item: MenuBarItem) -> NSImage? {
-        if let icon = item.sourceApplication?.icon ?? item.owningApplication?.icon {
-            return icon
-        }
-        return NSImage(
-            systemSymbolName: "menubar.rectangle",
-            accessibilityDescription: item.displayName
-        )
+        MenuBarItemIconFallback.image(for: item)
     }
 
     /// Draws the marker identifying a trigger-owned item. Placed at the

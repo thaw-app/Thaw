@@ -6832,6 +6832,9 @@
     "Full Screen Space %lld" : {
       "comment" : "Label for a fullscreen Space, numbered as Mission Control numbers it."
     },
+    "Live previews are off" : {
+      "comment" : "Title of the notice shown in the Layout pane when Screen Recording is not granted."
+    },
     "Per-Space Profiles" : {
       "comment" : "Section title for assigning profiles to Spaces."
     },
@@ -6846,6 +6849,9 @@
     },
     "The active Space is still settling. Switch away and back to assign a profile." : {
       "comment" : "Shown when the window server has not published the active Space yet."
+    },
+    "Without Screen Recording, menu bar items appear as their app's icon rather than a live preview. You can still arrange them." : {
+      "comment" : "Body of the notice shown in the Layout pane when Screen Recording is not granted."
     },
     "apps %lld" : {
       "comment" : "Shows the number of whitelisted apps",

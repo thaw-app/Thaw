@@ -2084,8 +2084,15 @@ final class MenuBarItemManager {
             for: NSWorkspace.didTerminateApplicationNotification
         )
         .debounce(for: 1, scheduler: DispatchQueue.main)
-        .sink { [weak self] _ in
+        .sink { [weak self] notification in
             guard let self else { return }
+            // Drop the terminated process's cached app icon, so a relaunch
+            // is re-read rather than answered from the dead PID's entry.
+            if let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey]
+                as? NSRunningApplication
+            {
+                MenuBarItemIconFallback.forgetIcon(forPID: app.processIdentifier)
+            }
             MenuBarItemManager.diagLog.debug("App terminated, refreshing cache")
             Task {
                 await self.cacheItemsIfNeeded()

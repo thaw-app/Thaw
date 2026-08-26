@@ -17,12 +17,17 @@ struct MenuBarLayoutSettingsPane: View {
     @State private var isAdvancedExpanded = false
 
     var body: some View {
-        if !ScreenCapture.cachedCheckPermissions() {
-            missingScreenRecordingPermissions
-        } else if appState.menuBarManager.isMenuBarHiddenBySystemUserDefaults {
+        // Arranging items needs Accessibility, not Screen Recording. Without
+        // capture the layout bars render each item as its owning app's icon
+        // rather than a live glyph, which is enough to drag the right one, so
+        // the pane stays usable instead of refusing to open.
+        if appState.menuBarManager.isMenuBarHiddenBySystemUserDefaults {
             cannotArrange
         } else {
             IceForm {
+                if !ScreenCapture.cachedCheckPermissions() {
+                    missingScreenRecordingPermissions
+                }
                 LayoutBarsSection(itemManager: itemManager)
                 spacersCard
                 MenuBarLayoutGroupsSection()
@@ -230,17 +235,16 @@ struct MenuBarLayoutSettingsPane: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
     }
 
+    /// Explains why the bars below show app icons instead of live previews.
+    /// Deliberately not a gate: everything in this pane works without capture.
     private var missingScreenRecordingPermissions: some View {
-        VStack {
-            Text("Menu bar layout requires screen recording permissions.")
-                .font(.title2)
-
-            Button {
-                appState.navigationState.settingsNavigationIdentifier = .advanced
-            } label: {
-                Text("Go to Advanced Settings")
-            }
-            .buttonStyle(.link)
+        SettingsWarningPill(
+            title: "Live previews are off",
+            message: "Without Screen Recording, menu bar items appear as their app's icon rather than a live preview. You can still arrange them.",
+            systemImage: "info.circle.fill",
+            actionTitle: "Go to Advanced Settings"
+        ) {
+            appState.navigationState.settingsNavigationIdentifier = .advanced
         }
     }
 }
