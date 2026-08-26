@@ -7,29 +7,35 @@
 //  Licensed under the GNU GPLv3
 
 @testable import Thaw
-import XCTest
+import Foundation
+import Testing
 
-final class MenuBarSpacerTests: XCTestCase {
-    func testInitClampsWidth() {
-        XCTAssertEqual(MenuBarSpacer(width: 1).width, MenuBarSpacer.minWidth)
-        XCTAssertEqual(MenuBarSpacer(width: 10000).width, MenuBarSpacer.maxWidth)
-        XCTAssertEqual(MenuBarSpacer(width: 40).width, 40)
+@Suite("Menu bar spacers")
+struct MenuBarSpacerTests {
+    @Test("init clamps width into the supported range")
+    func initClampsWidth() {
+        #expect(MenuBarSpacer(width: 1).width == MenuBarSpacer.minWidth)
+        #expect(MenuBarSpacer(width: 10000).width == MenuBarSpacer.maxWidth)
+        #expect(MenuBarSpacer(width: 40).width == 40)
     }
 
-    func testDefaultWidthIsWithinBounds() {
+    @Test("the default width lies within the bounds")
+    func defaultWidthIsWithinBounds() {
         let spacer = MenuBarSpacer()
-        XCTAssertEqual(spacer.width, MenuBarSpacer.defaultWidth)
-        XCTAssertTrue((MenuBarSpacer.minWidth ... MenuBarSpacer.maxWidth).contains(spacer.width))
+        #expect(spacer.width == MenuBarSpacer.defaultWidth)
+        #expect((MenuBarSpacer.minWidth ... MenuBarSpacer.maxWidth).contains(spacer.width))
     }
 
-    func testCodableRoundTrip() throws {
+    @Test("spacers survive a Codable round trip")
+    func codableRoundTrip() throws {
         let spacers = [MenuBarSpacer(width: 24), MenuBarSpacer(width: 120)]
         let data = try JSONEncoder().encode(spacers)
         let decoded = try JSONDecoder().decode([MenuBarSpacer].self, from: data)
-        XCTAssertEqual(decoded, spacers)
+        #expect(decoded == spacers)
     }
 
-    func testUserSpacerTagIsNotControlItem() {
+    @Test("a user spacer tag is not a control item")
+    func userSpacerTagIsNotControlItem() {
         // User-created spacers must stay draggable, reorderable, and
         // concealable — control items are none of those.
         let id = UUID()
@@ -38,10 +44,11 @@ final class MenuBarSpacerTests: XCTestCase {
             title: "\(MenuBarSpacerManager.autosavePrefix)\(id.uuidString)"
         )
 
-        XCTAssertFalse(tag.isControlItem)
+        #expect(!tag.isControlItem)
     }
 
-    func testSectionDividerSpacerTagIsStillControlItem() {
+    @Test("a section divider spacer tag is still a control item")
+    func sectionDividerSpacerTagIsStillControlItem() {
         // The section-divider spacers Thaw synthesizes for section hiding
         // remain control items.
         let tag = MenuBarItemTag(
@@ -49,10 +56,11 @@ final class MenuBarSpacerTests: XCTestCase {
             title: "\(ControlItem.Identifier.visible.rawValue).Spacer.0"
         )
 
-        XCTAssertTrue(tag.isControlItem)
+        #expect(tag.isControlItem)
     }
 
-    func testIsSpacerTagRejectsDividerSpacersAndForeignItems() {
+    @Test("isSpacerTag rejects divider spacers and foreign items")
+    func isSpacerTagRejectsDividerSpacersAndForeignItems() {
         let userSpacer = MenuBarItemTag(
             namespace: .thaw,
             title: "\(MenuBarSpacerManager.autosavePrefix)\(UUID().uuidString)"
@@ -63,8 +71,8 @@ final class MenuBarSpacerTests: XCTestCase {
         )
         let foreign = MenuBarItemTag(namespace: .systemUIServer, title: "Item-0")
 
-        XCTAssertTrue(MenuBarSpacerManager.isSpacerTag(userSpacer))
-        XCTAssertFalse(MenuBarSpacerManager.isSpacerTag(divider))
-        XCTAssertFalse(MenuBarSpacerManager.isSpacerTag(foreign))
+        #expect(MenuBarSpacerManager.isSpacerTag(userSpacer))
+        #expect(!MenuBarSpacerManager.isSpacerTag(divider))
+        #expect(!MenuBarSpacerManager.isSpacerTag(foreign))
     }
 }

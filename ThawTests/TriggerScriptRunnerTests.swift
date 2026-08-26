@@ -9,10 +9,14 @@
 import Darwin
 import Foundation
 @testable import Thaw
-import XCTest
+import Testing
 
+/// These tests launch real shells and fiddle with process-wide state (the
+/// closed-stdout case reassigns descriptor 1), so they must not run in
+/// parallel with anything else in this process.
+@Suite("Trigger script runner", .serialized)
 @MainActor
-final class TriggerScriptRunnerTests: XCTestCase {
+struct TriggerScriptRunnerTests {
     /// Waits for `condition` to hold, up to `timeout`.
     ///
     /// The runner's own teardown is not instantaneous -- SIGTERM, a 500 ms
@@ -35,7 +39,8 @@ final class TriggerScriptRunnerTests: XCTestCase {
         return condition()
     }
 
-    func testRunCapturesCombinedOutputWhenHostStdoutWasClosed() async throws {
+    @Test("run captures combined output when the host stdout was closed")
+    func runCapturesCombinedOutputWhenHostStdoutWasClosed() async throws {
         let scriptURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("thaw-trigger-script-closed-stdout-\(UUID().uuidString).sh")
         defer { try? FileManager.default.removeItem(at: scriptURL) }
@@ -52,14 +57,12 @@ final class TriggerScriptRunnerTests: XCTestCase {
         // which is what HookProcess's close-before-dup2 ordering guards
         // against. That window is process-wide and spans a suspension point,
         // so anything else in this process that opens a descriptor while it is
-        // open can land on 1 and be clobbered by the restore below. XCTest
-        // runs cases in a process serially, which bounds the exposure to
-        // background work rather than to other tests -- but it does not
-        // eliminate it, and this test should stay in its own file for that
-        // reason. Restoring eagerly rather than only in the `defer` keeps the
-        // window to the runner call itself.
+        // open can land on 1 and be clobbered by the restore below. The suite
+        // is `.serialized`, which bounds the exposure to background work
+        // rather than to other tests. Restoring eagerly rather than only in
+        // the `defer` keeps the window to the runner call itself.
         let savedStdout = Darwin.dup(STDOUT_FILENO)
-        XCTAssertGreaterThanOrEqual(savedStdout, 0)
+        #expect(savedStdout >= 0)
         var restored = false
         defer {
             if !restored {
@@ -68,17 +71,18 @@ final class TriggerScriptRunnerTests: XCTestCase {
             _ = Darwin.close(savedStdout)
         }
 
-        XCTAssertEqual(Darwin.close(STDOUT_FILENO), 0)
+        #expect(Darwin.close(STDOUT_FILENO) == 0)
         let outcome = await TriggerScriptRunner.run(path: scriptURL.path, timeout: 2)
-        XCTAssertGreaterThanOrEqual(Darwin.dup2(savedStdout, STDOUT_FILENO), 0)
+        #expect(Darwin.dup2(savedStdout, STDOUT_FILENO) >= 0)
         restored = true
 
-        XCTAssertEqual(outcome?.exitCode, 0)
-        XCTAssertTrue(outcome?.output.contains("out") == true)
-        XCTAssertTrue(outcome?.output.contains("err") == true)
+        #expect(outcome?.exitCode == 0)
+        #expect(outcome?.output.contains("out") == true)
+        #expect(outcome?.output.contains("err") == true)
     }
 
-    func testTimedOutScriptTerminatesDetachedDescendant() async throws {
+    @Test("a timed-out script terminates its detached descendant")
+    func timedOutScriptTerminatesDetachedDescendant() async throws {
         let directory = FileManager.default.temporaryDirectory
         let markerURL = directory.appendingPathComponent("thaw-trigger-script-child-\(UUID().uuidString)")
         let scriptURL = directory.appendingPathComponent("thaw-trigger-script-timeout-\(UUID().uuidString).sh")
@@ -96,14 +100,15 @@ final class TriggerScriptRunnerTests: XCTestCase {
 
         let outcome = await TriggerScriptRunner.run(path: scriptURL.path, timeout: 1)
 
-        XCTAssertEqual(outcome?.exitCode, -1)
+        #expect(outcome?.exitCode == -1)
         let markerGone = await waitUntil {
             !FileManager.default.fileExists(atPath: markerURL.path)
         }
-        XCTAssertTrue(markerGone, "detached descendant outlived the timeout")
+        #expect(markerGone, "detached descendant outlived the timeout")
     }
 
-    func testTimeoutEscalatesAfterDirectShellExitsToKillTermIgnoringDescendant() async throws {
+    @Test("timeout escalation kills a TERM-ignoring descendant after the direct shell exits")
+    func timeoutEscalatesAfterDirectShellExitsToKillTermIgnoringDescendant() async throws {
         let directory = FileManager.default.temporaryDirectory
         let pidURL = directory.appendingPathComponent("thaw-trigger-script-child-pid-\(UUID().uuidString)")
         let scriptURL = directory.appendingPathComponent("thaw-trigger-script-term-ignore-\(UUID().uuidString).sh")
@@ -124,16 +129,17 @@ final class TriggerScriptRunnerTests: XCTestCase {
 
         let outcome = await TriggerScriptRunner.run(path: scriptURL.path, timeout: 1)
 
-        XCTAssertEqual(outcome?.exitCode, -1)
-        let childPID = try XCTUnwrap(
+        #expect(outcome?.exitCode == -1)
+        let childPID = try #require(
             (try? String(contentsOf: pidURL, encoding: .utf8))
                 .flatMap { pid_t($0.trimmingCharacters(in: .whitespacesAndNewlines)) }
         )
         let childGone = await waitUntil { Darwin.kill(childPID, 0) != 0 }
-        XCTAssertTrue(childGone, "TERM-ignoring descendant outlived the escalation")
+        #expect(childGone, "TERM-ignoring descendant outlived the escalation")
     }
 
-    func testDetachedChildDoesNotHoldScriptResultOpen() async throws {
+    @Test("a detached child does not hold the script result open")
+    func detachedChildDoesNotHoldScriptResultOpen() async throws {
         let scriptURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("thaw-trigger-script-\(UUID().uuidString).sh")
         defer { try? FileManager.default.removeItem(at: scriptURL) }
@@ -148,11 +154,12 @@ final class TriggerScriptRunnerTests: XCTestCase {
         let startedAt = Date()
         let outcome = await TriggerScriptRunner.run(path: scriptURL.path, timeout: 1)
 
-        XCTAssertEqual(outcome?.exitCode, 0)
-        XCTAssertLessThan(Date().timeIntervalSince(startedAt), 1)
+        #expect(outcome?.exitCode == 0)
+        #expect(Date().timeIntervalSince(startedAt) < 1)
     }
 
-    func testExpectedOutputAfterDiagnosticCapIsStreamMatched() async throws {
+    @Test("expected output after the diagnostic cap is stream-matched")
+    func expectedOutputAfterDiagnosticCapIsStreamMatched() async throws {
         let scriptURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("thaw-trigger-script-large-\(UUID().uuidString).sh")
         defer { try? FileManager.default.removeItem(at: scriptURL) }
@@ -170,11 +177,12 @@ final class TriggerScriptRunnerTests: XCTestCase {
             expectedOutputs: ["READY"]
         )
 
-        XCTAssertEqual(outcome?.exitCode, 0)
-        XCTAssertTrue(outcome?.matchedExpectedOutputs.contains("READY") == true)
+        #expect(outcome?.exitCode == 0)
+        #expect(outcome?.matchedExpectedOutputs.contains("READY") == true)
     }
 
-    func testUnicodeExpectedOutputSplitAcrossPipeReadsIsStreamMatched() async throws {
+    @Test("Unicode expected output split across pipe reads is stream-matched")
+    func unicodeExpectedOutputSplitAcrossPipeReadsIsStreamMatched() async throws {
         let scriptURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("thaw-trigger-script-unicode-\(UUID().uuidString).sh")
         defer { try? FileManager.default.removeItem(at: scriptURL) }
@@ -192,11 +200,12 @@ final class TriggerScriptRunnerTests: XCTestCase {
             expectedOutputs: ["é"]
         )
 
-        XCTAssertEqual(outcome?.exitCode, 0)
-        XCTAssertTrue(outcome?.matchedExpectedOutputs.contains("é") == true)
+        #expect(outcome?.exitCode == 0)
+        #expect(outcome?.matchedExpectedOutputs.contains("é") == true)
     }
 
-    func testMalformedByteBeforeUnicodeExpectedOutputIsStreamMatched() async throws {
+    @Test("a malformed byte before Unicode expected output is stream-matched")
+    func malformedByteBeforeUnicodeExpectedOutputIsStreamMatched() async throws {
         let scriptURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("thaw-trigger-script-malformed-\(UUID().uuidString).sh")
         defer { try? FileManager.default.removeItem(at: scriptURL) }
@@ -214,7 +223,7 @@ final class TriggerScriptRunnerTests: XCTestCase {
             expectedOutputs: ["é"]
         )
 
-        XCTAssertEqual(outcome?.exitCode, 0)
-        XCTAssertTrue(outcome?.matchedExpectedOutputs.contains("é") == true)
+        #expect(outcome?.exitCode == 0)
+        #expect(outcome?.matchedExpectedOutputs.contains("é") == true)
     }
 }

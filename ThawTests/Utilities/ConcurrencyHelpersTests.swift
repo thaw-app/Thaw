@@ -155,7 +155,7 @@ struct ConcurrencyHelpersTests {
     }
 }
 
-/// Covers `debouncedNotificationTask`: the observer → AsyncStream →
+/// Covers `debouncedNotificationTask`: the observer → AsyncChannel →
 /// `.debounce(for:)` wiring that ProfileManager's setup builds its
 /// notification tasks from.
 ///

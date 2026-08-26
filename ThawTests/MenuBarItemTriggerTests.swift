@@ -7,11 +7,14 @@
 //  Licensed under the GNU GPLv3
 
 @testable import Thaw
+import CoreGraphics
+import Foundation
 import IOKit.ps
-import XCTest
+import Testing
 
+@Suite("Menu bar item triggers")
 @MainActor
-final class MenuBarItemTriggerTests: XCTestCase {
+struct MenuBarItemTriggerTests {
     // MARK: - Helpers
 
     private func makeManager() -> MenuBarItemTriggersManager {
@@ -50,77 +53,77 @@ final class MenuBarItemTriggerTests: XCTestCase {
 
     // MARK: - Battery / Power
 
-    func testBatteryBelow() {
-        XCTAssertTrue(TriggerCondition.batteryBelow(percentage: 50).isSatisfied(state: state(battery: 30)))
-        XCTAssertFalse(TriggerCondition.batteryBelow(percentage: 50).isSatisfied(state: state(battery: 50)))
+    @Test func batteryBelow() {
+        #expect(TriggerCondition.batteryBelow(percentage: 50).isSatisfied(state: state(battery: 30)))
+        #expect(!TriggerCondition.batteryBelow(percentage: 50).isSatisfied(state: state(battery: 50)))
     }
 
-    func testBatteryAtOrAbove() {
-        XCTAssertTrue(TriggerCondition.batteryAtOrAbove(percentage: 50).isSatisfied(state: state(battery: 50)))
-        XCTAssertFalse(TriggerCondition.batteryAtOrAbove(percentage: 50).isSatisfied(state: state(battery: 49)))
+    @Test func batteryAtOrAbove() {
+        #expect(TriggerCondition.batteryAtOrAbove(percentage: 50).isSatisfied(state: state(battery: 50)))
+        #expect(!TriggerCondition.batteryAtOrAbove(percentage: 50).isSatisfied(state: state(battery: 49)))
     }
 
-    func testBatteryConditionsNeedBattery() {
-        XCTAssertFalse(TriggerCondition.batteryBelow(percentage: 50).isSatisfied(state: state(battery: nil)))
-        XCTAssertFalse(TriggerCondition.batteryAtOrAbove(percentage: 50).isSatisfied(state: state(battery: nil)))
+    @Test func batteryConditionsNeedBattery() {
+        #expect(!TriggerCondition.batteryBelow(percentage: 50).isSatisfied(state: state(battery: nil)))
+        #expect(!TriggerCondition.batteryAtOrAbove(percentage: 50).isSatisfied(state: state(battery: nil)))
     }
 
-    func testPowerSourceConditions() {
-        XCTAssertTrue(TriggerCondition.onACPower.isSatisfied(state: state(onAC: true)))
-        XCTAssertFalse(TriggerCondition.onACPower.isSatisfied(state: state(onAC: false)))
-        XCTAssertTrue(TriggerCondition.onBatteryPower.isSatisfied(state: state(onAC: false)))
-        XCTAssertTrue(TriggerCondition.charging.isSatisfied(state: state(charging: true)))
+    @Test func powerSourceConditions() {
+        #expect(TriggerCondition.onACPower.isSatisfied(state: state(onAC: true)))
+        #expect(!TriggerCondition.onACPower.isSatisfied(state: state(onAC: false)))
+        #expect(TriggerCondition.onBatteryPower.isSatisfied(state: state(onAC: false)))
+        #expect(TriggerCondition.charging.isSatisfied(state: state(charging: true)))
     }
 
     // MARK: - Applications
 
-    func testFrontmostApp() {
+    @Test func frontmostApp() {
         let s = state(frontmost: "com.apple.Safari")
-        XCTAssertTrue(TriggerCondition.frontmostApp(bundleID: "com.apple.Safari").isSatisfied(state: s))
-        XCTAssertFalse(TriggerCondition.frontmostApp(bundleID: "com.apple.Mail").isSatisfied(state: s))
-        XCTAssertFalse(TriggerCondition.frontmostApp(bundleID: "").isSatisfied(state: s))
+        #expect(TriggerCondition.frontmostApp(bundleID: "com.apple.Safari").isSatisfied(state: s))
+        #expect(!TriggerCondition.frontmostApp(bundleID: "com.apple.Mail").isSatisfied(state: s))
+        #expect(!TriggerCondition.frontmostApp(bundleID: "").isSatisfied(state: s))
     }
 
-    func testAppRunning() {
+    @Test func appRunning() {
         let s = state(running: ["com.apple.Safari", "com.apple.Mail"])
-        XCTAssertTrue(TriggerCondition.appRunning(bundleID: "com.apple.Mail").isSatisfied(state: s))
-        XCTAssertFalse(TriggerCondition.appRunning(bundleID: "com.apple.Music").isSatisfied(state: s))
+        #expect(TriggerCondition.appRunning(bundleID: "com.apple.Mail").isSatisfied(state: s))
+        #expect(!TriggerCondition.appRunning(bundleID: "com.apple.Music").isSatisfied(state: s))
     }
 
     // MARK: - Network / Devices
 
-    func testNetworkAndVPN() {
-        XCTAssertTrue(TriggerCondition.networkConnected.isSatisfied(state: state(networkConnected: true)))
-        XCTAssertFalse(TriggerCondition.networkConnected.isSatisfied(state: state(networkConnected: false)))
-        XCTAssertTrue(TriggerCondition.vpnActive.isSatisfied(state: state(vpn: true)))
+    @Test func networkAndVPN() {
+        #expect(TriggerCondition.networkConnected.isSatisfied(state: state(networkConnected: true)))
+        #expect(!TriggerCondition.networkConnected.isSatisfied(state: state(networkConnected: false)))
+        #expect(TriggerCondition.vpnActive.isSatisfied(state: state(vpn: true)))
     }
 
-    func testWiFiSSIDCaseInsensitive() {
+    @Test func wifiSSIDCaseInsensitive() {
         let s = state(ssid: "HomeNet")
-        XCTAssertTrue(TriggerCondition.wifiSSID(name: "homenet").isSatisfied(state: s))
-        XCTAssertFalse(TriggerCondition.wifiSSID(name: "Office").isSatisfied(state: s))
+        #expect(TriggerCondition.wifiSSID(name: "homenet").isSatisfied(state: s))
+        #expect(!TriggerCondition.wifiSSID(name: "Office").isSatisfied(state: s))
     }
 
-    func testBluetoothSubstringMatch() {
+    @Test func bluetoothSubstringMatch() {
         let s = state(bluetooth: ["Alvie's AirPods Pro"])
-        XCTAssertTrue(TriggerCondition.bluetoothConnected(name: "airpods").isSatisfied(state: s))
-        XCTAssertFalse(TriggerCondition.bluetoothConnected(name: "Magic Mouse").isSatisfied(state: s))
+        #expect(TriggerCondition.bluetoothConnected(name: "airpods").isSatisfied(state: s))
+        #expect(!TriggerCondition.bluetoothConnected(name: "Magic Mouse").isSatisfied(state: s))
     }
 
-    func testAudioOutputSubstring() {
+    @Test func audioOutputSubstring() {
         let s = state(audio: "External Headphones")
-        XCTAssertTrue(TriggerCondition.audioOutput(contains: "headphones").isSatisfied(state: s))
-        XCTAssertFalse(TriggerCondition.audioOutput(contains: "speakers").isSatisfied(state: s))
+        #expect(TriggerCondition.audioOutput(contains: "headphones").isSatisfied(state: s))
+        #expect(!TriggerCondition.audioOutput(contains: "speakers").isSatisfied(state: s))
     }
 
-    func testExternalDisplay() {
-        XCTAssertTrue(TriggerCondition.externalDisplayConnected.isSatisfied(state: state(externalDisplay: true)))
-        XCTAssertFalse(TriggerCondition.externalDisplayConnected.isSatisfied(state: state(externalDisplay: false)))
+    @Test func externalDisplay() {
+        #expect(TriggerCondition.externalDisplayConnected.isSatisfied(state: state(externalDisplay: true)))
+        #expect(!TriggerCondition.externalDisplayConnected.isSatisfied(state: state(externalDisplay: false)))
     }
 
-    func testFocusActive() {
-        XCTAssertTrue(TriggerCondition.focusActive.isSatisfied(state: state(focus: true)))
-        XCTAssertFalse(TriggerCondition.focusActive.isSatisfied(state: state(focus: false)))
+    @Test func focusActive() {
+        #expect(TriggerCondition.focusActive.isSatisfied(state: state(focus: true)))
+        #expect(!TriggerCondition.focusActive.isSatisfied(state: state(focus: false)))
     }
 
     // MARK: - Location
@@ -132,36 +135,40 @@ final class MenuBarItemTriggerTests: XCTestCase {
         return s
     }
 
-    func testNearLocationWithinRadius() {
+    @Test("near location within radius")
+    func nearLocationWithinRadius() {
         // ~11m north of the target — inside a 150m radius.
         let condition = TriggerCondition.nearLocation(
             latitude: 37.3349, longitude: -122.0090, radiusMeters: 150, label: "Work"
         )
-        XCTAssertTrue(condition.isSatisfied(state: locatedState(lat: 37.3350, lon: -122.0090)))
+        #expect(condition.isSatisfied(state: locatedState(lat: 37.3350, lon: -122.0090)))
     }
 
-    func testNearLocationOutsideRadius() {
+    @Test("near location outside radius")
+    func nearLocationOutsideRadius() {
         // Cupertino target vs San Francisco current — far outside any radius.
         let condition = TriggerCondition.nearLocation(
             latitude: 37.3349, longitude: -122.0090, radiusMeters: 150, label: "Work"
         )
-        XCTAssertFalse(condition.isSatisfied(state: locatedState(lat: 37.7749, lon: -122.4194)))
+        #expect(!condition.isSatisfied(state: locatedState(lat: 37.7749, lon: -122.4194)))
     }
 
-    func testNearLocationWithoutFixIsFalse() {
+    @Test("near location without a fix is false")
+    func nearLocationWithoutFixIsFalse() {
         let condition = TriggerCondition.nearLocation(
             latitude: 37.3349, longitude: -122.0090, radiusMeters: 150, label: "Work"
         )
-        XCTAssertFalse(condition.isSatisfied(state: state()))
+        #expect(!condition.isSatisfied(state: state()))
     }
 
-    func testWithLocationUpdatesFields() {
+    @Test("withLocation updates all fields")
+    func withLocationUpdatesFields() {
         let base = TriggerCondition.nearLocation(latitude: 0, longitude: 0, radiusMeters: 150, label: "")
         let updated = base.withLocation(latitude: 1, longitude: 2, radiusMeters: 300, label: "Home")
-        XCTAssertEqual(updated.locationValue?.latitude, 1)
-        XCTAssertEqual(updated.locationValue?.longitude, 2)
-        XCTAssertEqual(updated.locationValue?.radiusMeters, 300)
-        XCTAssertEqual(updated.locationValue?.label, "Home")
+        #expect(updated.locationValue?.latitude == 1)
+        #expect(updated.locationValue?.longitude == 2)
+        #expect(updated.locationValue?.radiusMeters == 300)
+        #expect(updated.locationValue?.label == "Home")
     }
 
     // MARK: - Schedule
@@ -183,51 +190,57 @@ final class MenuBarItemTriggerTests: XCTestCase {
         return Calendar.current.date(from: components)!
     }
 
-    func testScheduleNonWrapping() {
+    @Test("schedule window does not wrap midnight")
+    func scheduleNonWrapping() {
         let condition = TriggerCondition.schedule(startMinutes: 9 * 60, endMinutes: 17 * 60)
-        XCTAssertTrue(condition.isSatisfied(state: state(), now: date(hour: 12, minute: 0)))
-        XCTAssertFalse(condition.isSatisfied(state: state(), now: date(hour: 8, minute: 0)))
-        XCTAssertFalse(condition.isSatisfied(state: state(), now: date(hour: 17, minute: 0)))
+        #expect(condition.isSatisfied(state: state(), now: date(hour: 12, minute: 0)))
+        #expect(!condition.isSatisfied(state: state(), now: date(hour: 8, minute: 0)))
+        #expect(!condition.isSatisfied(state: state(), now: date(hour: 17, minute: 0)))
     }
 
-    func testScheduleWrappingMidnight() {
+    @Test("schedule window wraps midnight")
+    func scheduleWrappingMidnight() {
         let condition = TriggerCondition.schedule(startMinutes: 22 * 60, endMinutes: 6 * 60)
-        XCTAssertTrue(condition.isSatisfied(state: state(), now: date(hour: 23, minute: 0)))
-        XCTAssertTrue(condition.isSatisfied(state: state(), now: date(hour: 2, minute: 0)))
-        XCTAssertFalse(condition.isSatisfied(state: state(), now: date(hour: 12, minute: 0)))
+        #expect(condition.isSatisfied(state: state(), now: date(hour: 23, minute: 0)))
+        #expect(condition.isSatisfied(state: state(), now: date(hour: 2, minute: 0)))
+        #expect(!condition.isSatisfied(state: state(), now: date(hour: 12, minute: 0)))
     }
 
-    func testScheduleEmptyWindow() {
+    @Test("empty schedule window never fires")
+    func scheduleEmptyWindow() {
         let condition = TriggerCondition.schedule(startMinutes: 600, endMinutes: 600)
-        XCTAssertFalse(condition.isSatisfied(state: state(), now: date(hour: 10, minute: 0)))
+        #expect(!condition.isSatisfied(state: state(), now: date(hour: 10, minute: 0)))
     }
 
-    func testWeeklyScheduleNonWrapping() {
+    @Test("weekly schedule without wrapping")
+    func weeklyScheduleNonWrapping() {
         let condition = TriggerCondition.weeklySchedule(
             startMinutes: 9 * 60,
             endMinutes: 17 * 60,
             weekdays: [.monday]
         )
 
-        XCTAssertTrue(condition.isSatisfied(state: state(), now: date(day: 22, hour: 12, minute: 0)))
-        XCTAssertFalse(condition.isSatisfied(state: state(), now: date(day: 23, hour: 12, minute: 0)))
-        XCTAssertFalse(condition.isSatisfied(state: state(), now: date(day: 22, hour: 8, minute: 0)))
+        #expect(condition.isSatisfied(state: state(), now: date(day: 22, hour: 12, minute: 0)))
+        #expect(!condition.isSatisfied(state: state(), now: date(day: 23, hour: 12, minute: 0)))
+        #expect(!condition.isSatisfied(state: state(), now: date(day: 22, hour: 8, minute: 0)))
     }
 
-    func testWeeklyScheduleWrappingMidnightUsesStartDay() {
+    @Test("weekly schedule wrapping midnight uses the start day")
+    func weeklyScheduleWrappingMidnightUsesStartDay() {
         let condition = TriggerCondition.weeklySchedule(
             startMinutes: 22 * 60,
             endMinutes: 6 * 60,
             weekdays: [.monday]
         )
 
-        XCTAssertTrue(condition.isSatisfied(state: state(), now: date(day: 22, hour: 23, minute: 0)))
-        XCTAssertTrue(condition.isSatisfied(state: state(), now: date(day: 23, hour: 2, minute: 0)))
-        XCTAssertFalse(condition.isSatisfied(state: state(), now: date(day: 23, hour: 23, minute: 0)))
-        XCTAssertFalse(condition.isSatisfied(state: state(), now: date(day: 22, hour: 2, minute: 0)))
+        #expect(condition.isSatisfied(state: state(), now: date(day: 22, hour: 23, minute: 0)))
+        #expect(condition.isSatisfied(state: state(), now: date(day: 23, hour: 2, minute: 0)))
+        #expect(!condition.isSatisfied(state: state(), now: date(day: 23, hour: 23, minute: 0)))
+        #expect(!condition.isSatisfied(state: state(), now: date(day: 22, hour: 2, minute: 0)))
     }
 
-    func testWeeklyScheduleCodableRoundTrip() throws {
+    @Test("weekly schedule survives a Codable round trip")
+    func weeklyScheduleCodableRoundTrip() throws {
         let condition = TriggerCondition.weeklySchedule(
             startMinutes: 9 * 60,
             endMinutes: 17 * 60,
@@ -237,35 +250,36 @@ final class MenuBarItemTriggerTests: XCTestCase {
         let data = try JSONEncoder().encode(condition)
         let decoded = try JSONDecoder().decode(TriggerCondition.self, from: data)
 
-        XCTAssertEqual(decoded, condition)
+        #expect(decoded == condition)
     }
 
-    func testLegacyScheduleDefaultsToEveryDay() throws {
+    @Test("legacy schedule decodes with every-day weekdays")
+    func legacyScheduleDefaultsToEveryDay() throws {
         let json = """
         { "schedule": { "startMinutes": 540, "endMinutes": 1020 } }
         """
 
         let decoded = try JSONDecoder().decode(TriggerCondition.self, from: Data(json.utf8))
 
-        XCTAssertEqual(decoded.scheduleWindow?.start, 540)
-        XCTAssertEqual(decoded.scheduleWindow?.end, 1020)
-        XCTAssertEqual(decoded.scheduleWeekdays, ScheduleWeekday.everyDay)
+        #expect(decoded.scheduleWindow?.start == 540)
+        #expect(decoded.scheduleWindow?.end == 1020)
+        #expect(decoded.scheduleWeekdays == ScheduleWeekday.everyDay)
     }
 
     // MARK: - System load
 
-    func testLowPowerMode() {
+    @Test func lowPowerMode() {
         var on = state()
         on.energyMode = .low
-        XCTAssertTrue(TriggerCondition.lowPowerMode.isSatisfied(state: on))
-        XCTAssertFalse(TriggerCondition.lowPowerMode.isSatisfied(state: state()))
+        #expect(TriggerCondition.lowPowerMode.isSatisfied(state: on))
+        #expect(!TriggerCondition.lowPowerMode.isSatisfied(state: state()))
     }
 
     /// The layout editor reads this per item on every redraw, so it is
     /// memoized — it has to survive edits to the trigger list.
-    func testControlledBaseIdentifiersTracksTriggerEdits() {
+    @Test func controlledBaseIdentifiersTracksTriggerEdits() {
         let manager = makeManager()
-        XCTAssertFalse(manager.isControlledByTrigger(baseIdentifier: "com.example.Status"))
+        #expect(!manager.isControlledByTrigger(baseIdentifier: "com.example.Status"))
 
         manager.triggers = [
             MenuBarItemTrigger(
@@ -274,21 +288,21 @@ final class MenuBarItemTriggerTests: XCTestCase {
                 condition: .onACPower
             ),
         ]
-        XCTAssertTrue(manager.isControlledByTrigger(baseIdentifier: "com.example.Status"))
+        #expect(manager.isControlledByTrigger(baseIdentifier: "com.example.Status"))
 
         manager.triggers[0].isEnabled = false
-        XCTAssertFalse(manager.isControlledByTrigger(baseIdentifier: "com.example.Status"))
+        #expect(!manager.isControlledByTrigger(baseIdentifier: "com.example.Status"))
 
         manager.triggers = []
-        XCTAssertFalse(manager.isControlledByTrigger(baseIdentifier: "com.example.Status"))
-        XCTAssertFalse(manager.isControlledByTrigger(baseIdentifier: ""))
+        #expect(!manager.isControlledByTrigger(baseIdentifier: "com.example.Status"))
+        #expect(!manager.isControlledByTrigger(baseIdentifier: ""))
     }
 
     /// A legacy target stored with an instance suffix and no captured base
     /// must still read as owned when queried by the live base — the badge
     /// and the tooltip resolve ownership through different paths, and they
     /// have to agree.
-    func testLegacySuffixedTargetWithoutBaseIsOwned() {
+    @Test func legacySuffixedTargetWithoutBaseIsOwned() {
         let manager = makeManager()
         manager.triggers = [
             MenuBarItemTrigger(
@@ -298,16 +312,16 @@ final class MenuBarItemTriggerTests: XCTestCase {
             ),
         ]
 
-        XCTAssertTrue(manager.isControlledByTrigger(baseIdentifier: "com.example.Status"))
-        XCTAssertNotNil(manager.controllingTrigger(forBaseIdentifier: "com.example.Status"))
+        #expect(manager.isControlledByTrigger(baseIdentifier: "com.example.Status"))
+        #expect(manager.controllingTrigger(forBaseIdentifier: "com.example.Status") != nil)
         // A title that merely ends in ":<number>" is not an instance suffix
         // unless the base is live; an unrelated base must not match.
-        XCTAssertFalse(manager.isControlledByTrigger(baseIdentifier: "com.example.Other"))
+        #expect(!manager.isControlledByTrigger(baseIdentifier: "com.example.Other"))
     }
 
     /// The two ownership queries answer from the same predicate: whenever the
     /// set says owned, the tooltip lookup must produce the owning trigger.
-    func testOwnershipQueriesAgree() {
+    @Test func ownershipQueriesAgree() {
         let manager = makeManager()
         manager.triggers = [
             MenuBarItemTrigger(
@@ -319,9 +333,9 @@ final class MenuBarItemTriggerTests: XCTestCase {
         ]
 
         for base in ["com.example.Status", "com.example.Status:2", "com.example.Other", ""] {
-            XCTAssertEqual(
-                manager.isControlledByTrigger(baseIdentifier: base),
-                manager.controllingTrigger(forBaseIdentifier: base) != nil,
+            #expect(
+                manager.isControlledByTrigger(baseIdentifier: base)
+                    == (manager.controllingTrigger(forBaseIdentifier: base) != nil),
                 "queries disagree for \(base)"
             )
         }
@@ -329,7 +343,7 @@ final class MenuBarItemTriggerTests: XCTestCase {
 
     /// A target stored with an instance suffix is owned under both spellings,
     /// since the live tag resolves to the base.
-    func testControlledBaseIdentifiersCoversCapturedBase() {
+    @Test func controlledBaseIdentifiersCoversCapturedBase() {
         let manager = makeManager()
         manager.triggers = [
             MenuBarItemTrigger(
@@ -340,13 +354,14 @@ final class MenuBarItemTriggerTests: XCTestCase {
             ),
         ]
 
-        XCTAssertTrue(manager.isControlledByTrigger(baseIdentifier: "com.example.Status"))
-        XCTAssertTrue(manager.isControlledByTrigger(baseIdentifier: "com.example.Status:2"))
+        #expect(manager.isControlledByTrigger(baseIdentifier: "com.example.Status"))
+        #expect(manager.isControlledByTrigger(baseIdentifier: "com.example.Status:2"))
     }
 
     // MARK: - Combinators
 
-    func testNoneOfIsSatisfiedOnlyWhenNoConditionIs() {
+    @Test("'None of' is satisfied only when no condition is")
+    func noneOfIsSatisfiedOnlyWhenNoConditionIs() {
         var trigger = MenuBarItemTrigger(
             itemIdentifier: "item",
             condition: .onACPower
@@ -355,17 +370,18 @@ final class MenuBarItemTriggerTests: XCTestCase {
         trigger.combinator = .noneOf
 
         // Neither holds.
-        XCTAssertTrue(trigger.shouldReveal(state: state(onAC: false, charging: false)))
+        #expect(trigger.shouldReveal(state: state(onAC: false, charging: false)))
         // One holds.
-        XCTAssertFalse(trigger.shouldReveal(state: state(onAC: true, charging: false)))
-        XCTAssertFalse(trigger.shouldReveal(state: state(onAC: false, charging: true)))
+        #expect(!trigger.shouldReveal(state: state(onAC: true, charging: false)))
+        #expect(!trigger.shouldReveal(state: state(onAC: false, charging: true)))
         // Both hold.
-        XCTAssertFalse(trigger.shouldReveal(state: state(onAC: true, charging: true)))
+        #expect(!trigger.shouldReveal(state: state(onAC: true, charging: true)))
     }
 
     /// "None of" is the condition-side negation; `invert` is the action-side
     /// one. Combining them has to cancel out, not compound.
-    func testNoneOfComposesWithInvert() {
+    @Test("'None of' composes with invert")
+    func noneOfComposesWithInvert() {
         var trigger = MenuBarItemTrigger(
             itemIdentifier: "item",
             condition: .onACPower
@@ -373,45 +389,45 @@ final class MenuBarItemTriggerTests: XCTestCase {
         trigger.combinator = .noneOf
         trigger.invert = true
 
-        XCTAssertTrue(trigger.shouldReveal(state: state(onAC: true)))
-        XCTAssertFalse(trigger.shouldReveal(state: state(onAC: false)))
+        #expect(trigger.shouldReveal(state: state(onAC: true)))
+        #expect(!trigger.shouldReveal(state: state(onAC: false)))
     }
 
     /// Joining with " or " alone would read as if any one of them fired the
     /// trigger, which is the opposite of what "None of" means.
-    func testNoneOfSummaryStatesTheRelationship() {
+    @Test("'None of' summary states the relationship")
+    func noneOfSummaryStatesTheRelationship() {
         var trigger = MenuBarItemTrigger(
             itemIdentifier: "item",
             condition: .onACPower
         )
         trigger.combinator = .noneOf
 
-        XCTAssertEqual(trigger.conditionSummary, "Not: Connected to power")
+        #expect(trigger.conditionSummary == "Not: Connected to power")
 
         trigger.additionalConditions = [.charging]
-        XCTAssertEqual(
-            trigger.conditionSummary,
-            "None of: Connected to power or Battery is charging"
+        #expect(
+            trigger.conditionSummary == "None of: Connected to power or Battery is charging"
         )
     }
 
     /// The raw value is persisted, so it must stay stable, and triggers saved
     /// before the combinator existed must still decode.
-    func testCombinatorCodableRoundTrip() throws {
-        XCTAssertEqual(TriggerCombinator.noneOf.rawValue, "none")
+    @Test func combinatorCodableRoundTrip() throws {
+        #expect(TriggerCombinator.noneOf.rawValue == "none")
 
         var trigger = MenuBarItemTrigger(itemIdentifier: "item", condition: .onACPower)
         trigger.combinator = .noneOf
         let data = try JSONEncoder().encode(trigger)
         let decoded = try JSONDecoder().decode(MenuBarItemTrigger.self, from: data)
-        XCTAssertEqual(decoded.combinator, .noneOf)
+        #expect(decoded.combinator == .noneOf)
     }
 
     // MARK: - Layout ownership
 
     /// The layout editor asks this to decide whether an item is still the
     /// user's to place.
-    func testControllingTriggerFindsEnabledTargetingTrigger() {
+    @Test func controllingTriggerFindsEnabledTargetingTrigger() {
         let manager = makeManager()
         manager.triggers = [
             MenuBarItemTrigger(
@@ -423,15 +439,15 @@ final class MenuBarItemTriggerTests: XCTestCase {
 
         let owner = manager.controllingTrigger(forBaseIdentifier: "com.apple.controlcenter:Battery")
 
-        XCTAssertEqual(owner?.itemIdentifier, "com.apple.controlcenter:Battery")
-        XCTAssertNil(manager.controllingTrigger(forBaseIdentifier: "com.example.Other"))
-        XCTAssertNil(manager.controllingTrigger(forBaseIdentifier: ""))
+        #expect(owner?.itemIdentifier == "com.apple.controlcenter:Battery")
+        #expect(manager.controllingTrigger(forBaseIdentifier: "com.example.Other") == nil)
+        #expect(manager.controllingTrigger(forBaseIdentifier: "") == nil)
     }
 
     /// Ownership is claimed by an enabled trigger whether or not its
     /// condition is currently met, matching when the item manager takes the
     /// item over. A disabled trigger claims nothing.
-    func testControllingTriggerIgnoresDisabledTriggers() {
+    @Test func controllingTriggerIgnoresDisabledTriggers() {
         let manager = makeManager()
         manager.triggers = [
             MenuBarItemTrigger(
@@ -441,12 +457,12 @@ final class MenuBarItemTriggerTests: XCTestCase {
             ),
         ]
 
-        XCTAssertNil(manager.controllingTrigger(forBaseIdentifier: "com.apple.controlcenter:Battery"))
+        #expect(manager.controllingTrigger(forBaseIdentifier: "com.apple.controlcenter:Battery") == nil)
     }
 
     /// A stored target carrying a stale instance suffix still resolves to the
     /// live item, so the layout editor doesn't quietly re-open a locked item.
-    func testControllingTriggerFollowsInstanceSuffixDrift() {
+    @Test func controllingTriggerFollowsInstanceSuffixDrift() {
         let manager = makeManager()
         manager.triggers = [
             MenuBarItemTrigger(
@@ -456,12 +472,12 @@ final class MenuBarItemTriggerTests: XCTestCase {
             ),
         ]
 
-        XCTAssertNotNil(manager.controllingTrigger(forBaseIdentifier: "com.apple.controlcenter:Battery"))
+        #expect(manager.controllingTrigger(forBaseIdentifier: "com.apple.controlcenter:Battery") != nil)
     }
 
     /// Two enabled triggers on one item resolve to the higher-priority one,
     /// the same winner the priority plan picks.
-    func testControllingTriggerPrefersHigherPriority() {
+    @Test func controllingTriggerPrefersHigherPriority() {
         let manager = makeManager()
         manager.triggers = [
             MenuBarItemTrigger(
@@ -478,34 +494,34 @@ final class MenuBarItemTriggerTests: XCTestCase {
             ),
         ]
 
-        XCTAssertEqual(
-            manager.controllingTrigger(forBaseIdentifier: "com.apple.controlcenter:Battery")?.displayName,
-            "First"
+        #expect(
+            manager.controllingTrigger(forBaseIdentifier: "com.apple.controlcenter:Battery")?.displayName
+                == "First"
         )
     }
 
-    func testEnergyModeMatchesExactMode() {
+    @Test func energyModeMatchesExactMode() {
         for mode in EnergyMode.allCases {
             var current = state()
             current.energyMode = mode
 
-            XCTAssertEqual(TriggerCondition.energyMode(.low).isSatisfied(state: current), mode == .low)
-            XCTAssertEqual(TriggerCondition.energyMode(.automatic).isSatisfied(state: current), mode == .automatic)
-            XCTAssertEqual(TriggerCondition.energyMode(.high).isSatisfied(state: current), mode == .high)
+            #expect(TriggerCondition.energyMode(.low).isSatisfied(state: current) == (mode == .low))
+            #expect(TriggerCondition.energyMode(.automatic).isSatisfied(state: current) == (mode == .automatic))
+            #expect(TriggerCondition.energyMode(.high).isSatisfied(state: current) == (mode == .high))
         }
     }
 
     /// "Not Low Power" has to cover High Power too, not just Automatic —
     /// the case that a plain inversion of the old boolean would get wrong.
-    func testNotLowPowerCoversAutomaticAndHigh() {
+    @Test func notLowPowerCoversAutomaticAndHigh() {
         var low = state()
         low.energyMode = .low
-        XCTAssertFalse(TriggerCondition.energyMode(.notLow).isSatisfied(state: low))
+        #expect(!TriggerCondition.energyMode(.notLow).isSatisfied(state: low))
 
         for mode in [EnergyMode.automatic, .high] {
             var current = state()
             current.energyMode = mode
-            XCTAssertTrue(
+            #expect(
                 TriggerCondition.energyMode(.notLow).isSatisfied(state: current),
                 "Not Low Power should be satisfied in \(mode.displayString)"
             )
@@ -514,74 +530,73 @@ final class MenuBarItemTriggerTests: XCTestCase {
 
     /// Triggers saved before Energy Mode replaced the Low Power Mode
     /// condition must keep decoding, and keep meaning "Low Power".
-    func testLegacyLowPowerModeDecodesAndBehavesAsLow() throws {
+    @Test func legacyLowPowerModeDecodesAndBehavesAsLow() throws {
         let decoded = try JSONDecoder().decode(TriggerCondition.self, from: Data(#"{ "lowPowerMode": {} }"#.utf8))
 
-        XCTAssertEqual(decoded.kind, .energyMode)
-        XCTAssertEqual(decoded.energyModeMatch, .low)
+        #expect(decoded.kind == .energyMode)
+        #expect(decoded.energyModeMatch == .low)
 
         var low = state()
         low.energyMode = .low
-        XCTAssertTrue(decoded.isSatisfied(state: low))
+        #expect(decoded.isSatisfied(state: low))
 
         var high = state()
         high.energyMode = .high
-        XCTAssertFalse(decoded.isSatisfied(state: high))
+        #expect(!decoded.isSatisfied(state: high))
     }
 
     /// Editing a legacy condition upgrades it in place rather than leaving
     /// a value the editor can't represent.
-    func testEditingLegacyLowPowerModeProducesEnergyMode() {
-        XCTAssertEqual(TriggerCondition.lowPowerMode.withEnergyMode(.high), .energyMode(.high))
-        XCTAssertEqual(
-            TriggerCondition.make(kind: .energyMode, preserving: .lowPowerMode),
-            .energyMode(.low)
+    @Test func editingLegacyLowPowerModeProducesEnergyMode() {
+        #expect(TriggerCondition.lowPowerMode.withEnergyMode(.high) == .energyMode(.high))
+        #expect(
+            TriggerCondition.make(kind: .energyMode, preserving: .lowPowerMode) == .energyMode(.low)
         )
     }
 
     /// Switching to a kind that carries no compatible value still yields the
     /// Energy Mode default rather than dropping the selection.
-    func testEnergyModeDefaults() {
-        XCTAssertEqual(TriggerCondition.defaultCondition(for: .energyMode), .energyMode(.low))
-        XCTAssertEqual(TriggerCondition.make(kind: .energyMode, preserving: .charging), .energyMode(.low))
-        XCTAssertEqual(TriggerCondition.energyMode(.high).kind.editor, .energyMode)
+    @Test func energyModeDefaults() {
+        #expect(TriggerCondition.defaultCondition(for: .energyMode) == .energyMode(.low))
+        #expect(TriggerCondition.make(kind: .energyMode, preserving: .charging) == .energyMode(.low))
+        #expect(TriggerCondition.energyMode(.high).kind.editor == .energyMode)
     }
 
-    func testHighPowerModeIsOfferedOnlyWhereSupported() {
-        XCTAssertEqual(
-            EnergyModeMatch.selectableCases(highPowerModeSupported: true),
-            [.low, .notLow, .automatic, .high]
+    @Test func highPowerModeIsOfferedOnlyWhereSupported() {
+        #expect(
+            EnergyModeMatch.selectableCases(highPowerModeSupported: true)
+                == [.low, .notLow, .automatic, .high]
         )
-        XCTAssertEqual(
-            EnergyModeMatch.selectableCases(highPowerModeSupported: false),
-            [.low, .notLow, .automatic]
+        #expect(
+            EnergyModeMatch.selectableCases(highPowerModeSupported: false)
+                == [.low, .notLow, .automatic]
         )
     }
 
-    func testThermalPressureThreshold() {
+    @Test func thermalPressureThreshold() {
         var serious = state()
         serious.thermalState = .serious
-        XCTAssertTrue(TriggerCondition.thermalPressure(atLeast: .fair).isSatisfied(state: serious))
-        XCTAssertTrue(TriggerCondition.thermalPressure(atLeast: .serious).isSatisfied(state: serious))
-        XCTAssertFalse(TriggerCondition.thermalPressure(atLeast: .critical).isSatisfied(state: serious))
+        #expect(TriggerCondition.thermalPressure(atLeast: .fair).isSatisfied(state: serious))
+        #expect(TriggerCondition.thermalPressure(atLeast: .serious).isSatisfied(state: serious))
+        #expect(!TriggerCondition.thermalPressure(atLeast: .critical).isSatisfied(state: serious))
 
         var nominal = state()
         nominal.thermalState = .nominal
-        XCTAssertFalse(TriggerCondition.thermalPressure(atLeast: .fair).isSatisfied(state: nominal))
+        #expect(!TriggerCondition.thermalPressure(atLeast: .fair).isSatisfied(state: nominal))
     }
 
-    func testCameraInUse() {
+    @Test func cameraInUse() {
         var on = state()
         on.isCameraInUse = true
-        XCTAssertTrue(TriggerCondition.cameraInUse.isSatisfied(state: on))
-        XCTAssertFalse(TriggerCondition.cameraInUse.isSatisfied(state: state()))
+        #expect(TriggerCondition.cameraInUse.isSatisfied(state: on))
+        #expect(!TriggerCondition.cameraInUse.isSatisfied(state: state()))
     }
 
-    func testMicrophoneInUse() {
+    @Test func microphoneInUse() {
         var on = state()
         on.isMicrophoneInUse = true
-        XCTAssertTrue(TriggerCondition.microphoneInUse.isSatisfied(state: on))
-        XCTAssertFalse(TriggerCondition.microphoneInUse.isSatisfied(state: state()))
+        #expect(TriggerCondition.microphoneInUse.isSatisfied(state: on))
+        #expect(!TriggerCondition.microphoneInUse.isSatisfied(state: state()))
     }
 
     // MARK: - Script result
@@ -592,31 +607,31 @@ final class MenuBarItemTriggerTests: XCTestCase {
         return s
     }
 
-    func testScriptResultExitCode() {
+    @Test func scriptResultExitCode() {
         let condition = TriggerCondition.scriptResult(path: "/tmp/s.sh", expectedOutput: "")
-        XCTAssertTrue(condition.isSatisfied(state: scriptState("/tmp/s.sh", exit: 0, output: "")))
-        XCTAssertFalse(condition.isSatisfied(state: scriptState("/tmp/s.sh", exit: 1, output: "")))
+        #expect(condition.isSatisfied(state: scriptState("/tmp/s.sh", exit: 0, output: "")))
+        #expect(!condition.isSatisfied(state: scriptState("/tmp/s.sh", exit: 1, output: "")))
         // No outcome cached -> not satisfied.
-        XCTAssertFalse(condition.isSatisfied(state: state()))
+        #expect(!condition.isSatisfied(state: state()))
     }
 
-    func testScriptResultOutputMatch() {
+    @Test func scriptResultOutputMatch() {
         let condition = TriggerCondition.scriptResult(path: "/tmp/s.sh", expectedOutput: "online")
-        XCTAssertTrue(condition.isSatisfied(state: scriptState("/tmp/s.sh", exit: 0, output: "status: ONLINE")))
-        XCTAssertFalse(condition.isSatisfied(state: scriptState("/tmp/s.sh", exit: 0, output: "offline")))
+        #expect(condition.isSatisfied(state: scriptState("/tmp/s.sh", exit: 0, output: "status: ONLINE")))
+        #expect(!condition.isSatisfied(state: scriptState("/tmp/s.sh", exit: 0, output: "offline")))
     }
 
-    func testScriptValuePreservedOnConversion() {
+    @Test func scriptValuePreservedOnConversion() {
         let original = TriggerCondition.scriptResult(path: "/a", expectedOutput: "x")
         let converted = TriggerCondition.make(kind: .scriptResult, preserving: original)
-        XCTAssertEqual(converted.scriptValue?.path, "/a")
-        XCTAssertEqual(converted.scriptValue?.expectedOutput, "x")
+        #expect(converted.scriptValue?.path == "/a")
+        #expect(converted.scriptValue?.expectedOutput == "x")
     }
 
-    func testThermalLevelPreservedOnConversion() {
+    @Test func thermalLevelPreservedOnConversion() {
         let original = TriggerCondition.thermalPressure(atLeast: .critical)
         let converted = TriggerCondition.make(kind: .thermalPressure, preserving: original)
-        XCTAssertEqual(converted.thermalLevel, .critical)
+        #expect(converted.thermalLevel == .critical)
     }
 
     // MARK: - Image comparison
@@ -638,99 +653,98 @@ final class MenuBarItemTriggerTests: XCTestCase {
         return context.makeImage()!
     }
 
-    func testHammingDistanceBasics() {
-        XCTAssertEqual(ImageHashing.hammingDistance(0, 0), 0)
-        XCTAssertEqual(ImageHashing.hammingDistance(0xFF, 0), 8)
-        XCTAssertEqual(ImageHashing.hammingDistance(.max, 0), 64)
+    @Test func hammingDistanceBasics() {
+        #expect(ImageHashing.hammingDistance(0, 0) == 0)
+        #expect(ImageHashing.hammingDistance(0xFF, 0) == 8)
+        #expect(ImageHashing.hammingDistance(.max, 0) == 64)
     }
 
-    func testAverageHashIsDeterministic() {
+    @Test func averageHashIsDeterministic() {
         let image = makeImage(whiteColumns: 8)
-        XCTAssertEqual(ImageHashing.averageHash(image), ImageHashing.averageHash(image))
+        #expect(ImageHashing.averageHash(image) == ImageHashing.averageHash(image))
     }
 
-    func testAverageHashDetectsLargeChange() throws {
-        let mostlyBlack = try XCTUnwrap(ImageHashing.averageHash(makeImage(whiteColumns: 2)))
-        let mostlyWhite = try XCTUnwrap(ImageHashing.averageHash(makeImage(whiteColumns: 14)))
-        XCTAssertGreaterThan(ImageHashing.hammingDistance(mostlyBlack, mostlyWhite), ImageHashing.changeThreshold)
+    @Test func averageHashDetectsLargeChange() throws {
+        let mostlyBlack = try #require(ImageHashing.averageHash(makeImage(whiteColumns: 2)))
+        let mostlyWhite = try #require(ImageHashing.averageHash(makeImage(whiteColumns: 14)))
+        #expect(ImageHashing.hammingDistance(mostlyBlack, mostlyWhite) > ImageHashing.changeThreshold)
     }
 
-    func testImageChangedCondition() {
+    @Test func imageChangedCondition() {
         let id = "com.apple.controlcenter:Battery"
         let reference: UInt64 = 0x0000_0000_0000_0000
         let condition = TriggerCondition.imageChanged(itemIdentifier: id, referenceHash: reference)
 
         var changed = state()
         changed.imageHashes = [id: .max] // 64 bits different -> changed
-        XCTAssertTrue(condition.isSatisfied(state: changed))
+        #expect(condition.isSatisfied(state: changed))
 
         var same = state()
         same.imageHashes = [id: reference]
-        XCTAssertFalse(condition.isSatisfied(state: same))
+        #expect(!condition.isSatisfied(state: same))
 
         // No reference captured -> never satisfied.
         let noRef = TriggerCondition.imageChanged(itemIdentifier: id, referenceHash: nil)
-        XCTAssertFalse(noRef.isSatisfied(state: changed))
+        #expect(!noRef.isSatisfied(state: changed))
     }
 
-    func testImageChangedCodableRoundTrip() throws {
+    @Test func imageChangedCodableRoundTrip() throws {
         let id = "com.apple.controlcenter:Battery"
         let condition = TriggerCondition.imageChanged(itemIdentifier: id, referenceHash: 0)
 
         let data = try JSONEncoder().encode(condition)
         let decoded = try JSONDecoder().decode(TriggerCondition.self, from: data)
 
-        XCTAssertEqual(decoded, condition)
+        #expect(decoded == condition)
     }
 
-    func testImageChangedWithoutReferenceCodableRoundTrip() throws {
+    @Test func imageChangedWithoutReferenceCodableRoundTrip() throws {
         let condition = TriggerCondition.imageChanged(itemIdentifier: "item", referenceHash: nil)
 
         let data = try JSONEncoder().encode(condition)
         let decoded = try JSONDecoder().decode(TriggerCondition.self, from: data)
 
-        XCTAssertEqual(decoded, condition)
+        #expect(decoded == condition)
     }
 
     // MARK: - Kind / editor mapping
 
-    func testKindRoundTrip() {
+    @Test func kindRoundTrip() {
         for kind in TriggerConditionKind.allCases {
             let condition = TriggerCondition.defaultCondition(for: kind)
-            XCTAssertEqual(condition.kind, kind)
+            #expect(condition.kind == kind)
         }
     }
 
-    func testMakePreservesPercentage() {
+    @Test func makePreservesPercentage() {
         let original = TriggerCondition.batteryBelow(percentage: 15)
         let converted = TriggerCondition.make(kind: .batteryAtOrAbove, preserving: original)
-        XCTAssertEqual(converted.percentage, 15)
+        #expect(converted.percentage == 15)
     }
 
-    func testMakePreservesBundleID() {
+    @Test func makePreservesBundleID() {
         let original = TriggerCondition.frontmostApp(bundleID: "com.apple.Safari")
         let converted = TriggerCondition.make(kind: .appRunning, preserving: original)
-        XCTAssertEqual(converted.bundleID, "com.apple.Safari")
+        #expect(converted.bundleID == "com.apple.Safari")
     }
 
-    func testRequiredFeatureMapping() {
-        XCTAssertNil(TriggerConditionKind.batteryBelow.requiredFeature)
-        XCTAssertEqual(TriggerConditionKind.frontmostApp.requiredFeature, .frontmostApp)
-        XCTAssertEqual(TriggerConditionKind.vpnActive.requiredFeature, .vpn)
-        XCTAssertEqual(TriggerConditionKind.schedule.requiredFeature, .schedule)
-        XCTAssertEqual(TriggerConditionKind.imageChanged.requiredFeature, .imageComparison)
+    @Test func requiredFeatureMapping() {
+        #expect(TriggerConditionKind.batteryBelow.requiredFeature == nil)
+        #expect(TriggerConditionKind.frontmostApp.requiredFeature == .frontmostApp)
+        #expect(TriggerConditionKind.vpnActive.requiredFeature == .vpn)
+        #expect(TriggerConditionKind.schedule.requiredFeature == .schedule)
+        #expect(TriggerConditionKind.imageChanged.requiredFeature == .imageComparison)
     }
 
-    func testFrontmostAppUsesResponsiveSettleInterval() {
-        XCTAssertEqual(TriggerConditionKind.frontmostApp.settleInterval, .milliseconds(1500))
+    @Test func frontmostAppUsesResponsiveSettleInterval() {
+        #expect(TriggerConditionKind.frontmostApp.settleInterval == .milliseconds(1500))
     }
 
-    func testAppRunningUsesFastSettleInterval() {
-        XCTAssertEqual(TriggerConditionKind.appRunning.settleInterval, .milliseconds(500))
+    @Test func appRunningUsesFastSettleInterval() {
+        #expect(TriggerConditionKind.appRunning.settleInterval == .milliseconds(500))
     }
 
-    @MainActor
-    func testRuntimeStatusForDisabledTrigger() {
+    @Test func runtimeStatusForDisabledTrigger() {
         let manager = makeManager()
         let trigger = MenuBarItemTrigger(
             isEnabled: false,
@@ -738,16 +752,16 @@ final class MenuBarItemTriggerTests: XCTestCase {
             condition: .onACPower
         )
 
-        XCTAssertEqual(manager.runtimeStatus(for: trigger), .off)
+        #expect(manager.runtimeStatus(for: trigger) == .off)
     }
 
-    @MainActor
-    func testDefaultManagerDoesNotPersistFixturesUnderXCTest() {
+    @Test("default manager does not persist fixtures into real defaults")
+    func defaultManagerDoesNotPersistFixtures() throws {
         // A throwaway suite rather than per-key snapshot/restore. The restore
         // was correct, but the window between mutation and restore was
         // visible to anything else in the process reading this key, and an
         // interrupted run left the developer's real preferences modified.
-        let ran = withScratchDefaultsForXCTest { _ in
+        try withScratchDefaults { _ in
             let manager = MenuBarItemTriggersManager()
             manager.triggers = [
                 MenuBarItemTrigger(
@@ -757,37 +771,33 @@ final class MenuBarItemTriggerTests: XCTestCase {
                 ),
             ]
 
-            // Nothing was seeded into the scratch suite, so persisting under
-            // XCTest would show up as a non-nil value here.
-            XCTAssertNil(Defaults.data(forKey: .menuBarItemTriggers))
+            // Nothing was seeded into the scratch suite, so persisting here
+            // would show up as a non-nil value.
+            #expect(Defaults.data(forKey: .menuBarItemTriggers) == nil)
         }
-        XCTAssertNotNil(ran, "could not open a scratch defaults suite")
     }
 
-    @MainActor
-    func testRuntimeStatusForUnappliedRevealDecision() {
+    @Test func runtimeStatusForUnappliedRevealDecision() {
         let manager = makeManager()
         let trigger = MenuBarItemTrigger(
             itemIdentifier: "com.example.StatusItem",
             condition: .onACPower
         )
 
-        XCTAssertEqual(manager.runtimeStatus(for: trigger), .pending)
+        #expect(manager.runtimeStatus(for: trigger) == .pending)
     }
 
-    @MainActor
-    func testRuntimeStatusForFalseCondition() {
+    @Test func runtimeStatusForFalseCondition() {
         let manager = makeManager()
         let trigger = MenuBarItemTrigger(
             itemIdentifier: "com.example.StatusItem",
             condition: .batteryBelow(percentage: 20)
         )
 
-        XCTAssertEqual(manager.runtimeStatus(for: trigger), .idle)
+        #expect(manager.runtimeStatus(for: trigger) == .idle)
     }
 
-    @MainActor
-    func testPriorityPlanLetsLowerMetTriggerWinWhenHigherTriggerIsUnmet() {
+    @Test func priorityPlanLetsLowerMetTriggerWinWhenHigherTriggerIsUnmet() {
         let manager = makeManager()
         let higher = MenuBarItemTrigger(
             name: "Battery low",
@@ -806,15 +816,14 @@ final class MenuBarItemTriggerTests: XCTestCase {
             presentIdentifiers: ["battery-item"]
         )
 
-        XCTAssertNil(plan.actions[higher.id])
-        XCTAssertEqual(
-            plan.actions[lower.id],
-            MenuBarItemTriggersManager.TriggerPriorityAction(reveal: true, identifiers: ["battery-item"])
+        #expect(plan.actions[higher.id] == nil)
+        #expect(
+            plan.actions[lower.id]
+                == MenuBarItemTriggersManager.TriggerPriorityAction(reveal: true, identifiers: ["battery-item"])
         )
     }
 
-    @MainActor
-    func testPriorityPlanMarksLowerMetTriggerOverriddenByHigherMetTrigger() {
+    @Test func priorityPlanMarksLowerMetTriggerOverriddenByHigherMetTrigger() {
         let manager = makeManager()
         let higher = MenuBarItemTrigger(
             name: "Top trigger",
@@ -833,16 +842,15 @@ final class MenuBarItemTriggerTests: XCTestCase {
             presentIdentifiers: ["battery-item"]
         )
 
-        XCTAssertEqual(
-            plan.actions[higher.id],
-            MenuBarItemTriggersManager.TriggerPriorityAction(reveal: true, identifiers: ["battery-item"])
+        #expect(
+            plan.actions[higher.id]
+                == MenuBarItemTriggersManager.TriggerPriorityAction(reveal: true, identifiers: ["battery-item"])
         )
-        XCTAssertNil(plan.actions[lower.id])
-        XCTAssertEqual(plan.overriddenBy[lower.id], ["Top trigger"])
+        #expect(plan.actions[lower.id] == nil)
+        #expect(plan.overriddenBy[lower.id] == ["Top trigger"])
     }
 
-    @MainActor
-    func testPriorityPlanKeepsUnconflictedTargetsWhenMultiItemTriggerIsPartiallyOverridden() {
+    @Test func priorityPlanKeepsUnconflictedTargetsWhenMultiItemTriggerIsPartiallyOverridden() {
         let manager = makeManager()
         let higher = MenuBarItemTrigger(
             name: "Top trigger",
@@ -862,19 +870,18 @@ final class MenuBarItemTriggerTests: XCTestCase {
             presentIdentifiers: ["shared-item", "independent-item"]
         )
 
-        XCTAssertEqual(
-            plan.actions[higher.id],
-            MenuBarItemTriggersManager.TriggerPriorityAction(reveal: true, identifiers: ["shared-item"])
+        #expect(
+            plan.actions[higher.id]
+                == MenuBarItemTriggersManager.TriggerPriorityAction(reveal: true, identifiers: ["shared-item"])
         )
-        XCTAssertEqual(
-            plan.actions[lower.id],
-            MenuBarItemTriggersManager.TriggerPriorityAction(reveal: true, identifiers: ["independent-item"])
+        #expect(
+            plan.actions[lower.id]
+                == MenuBarItemTriggersManager.TriggerPriorityAction(reveal: true, identifiers: ["independent-item"])
         )
-        XCTAssertEqual(plan.overriddenBy[lower.id], ["Top trigger"])
+        #expect(plan.overriddenBy[lower.id] == ["Top trigger"])
     }
 
-    @MainActor
-    func testPriorityPlanUsesHighestTriggerAsFallbackWhenNoneAreMet() {
+    @Test func priorityPlanUsesHighestTriggerAsFallbackWhenNoneAreMet() {
         let manager = makeManager()
         let higher = MenuBarItemTrigger(
             name: "Battery below 75",
@@ -893,11 +900,11 @@ final class MenuBarItemTriggerTests: XCTestCase {
             presentIdentifiers: ["battery-item"]
         )
 
-        XCTAssertEqual(
-            plan.actions[higher.id],
-            MenuBarItemTriggersManager.TriggerPriorityAction(reveal: false, identifiers: ["battery-item"])
+        #expect(
+            plan.actions[higher.id]
+                == MenuBarItemTriggersManager.TriggerPriorityAction(reveal: false, identifiers: ["battery-item"])
         )
-        XCTAssertNil(plan.actions[lower.id])
+        #expect(plan.actions[lower.id] == nil)
     }
 
     /// Battery hides like any other target. An earlier revision exempted the
@@ -905,8 +912,7 @@ final class MenuBarItemTriggerTests: XCTestCase {
     /// that concealing it would turn off the system's own Show in Menu Bar
     /// setting; that does not happen, and the exemption made a trigger
     /// silently ignore the "Otherwise hide in" section the user picked.
-    @MainActor
-    func testPriorityPlanHidesControlCenterBatteryWhenConditionClears() {
+    @Test func priorityPlanHidesControlCenterBatteryWhenConditionClears() {
         let manager = makeManager()
         let trigger = MenuBarItemTrigger(
             itemIdentifier: "com.apple.controlcenter:Battery",
@@ -922,14 +928,14 @@ final class MenuBarItemTriggerTests: XCTestCase {
                 "com.apple.controlcenter:Battery": "com.apple.controlcenter:Battery",
             ]
         )
-        XCTAssertEqual(
-            hiddenPlan.actions[trigger.id],
-            MenuBarItemTriggersManager.TriggerPriorityAction(
-                reveal: false,
-                identifiers: ["com.apple.controlcenter:Battery"]
-            )
+        #expect(
+            hiddenPlan.actions[trigger.id]
+                == MenuBarItemTriggersManager.TriggerPriorityAction(
+                    reveal: false,
+                    identifiers: ["com.apple.controlcenter:Battery"]
+                )
         )
-        XCTAssertFalse(hiddenPlan.unavailableTriggerIDs.contains(trigger.id))
+        #expect(!hiddenPlan.unavailableTriggerIDs.contains(trigger.id))
 
         let revealPlan = manager.priorityPlan(
             for: state(battery: 25),
@@ -938,17 +944,16 @@ final class MenuBarItemTriggerTests: XCTestCase {
                 "com.apple.controlcenter:Battery": "com.apple.controlcenter:Battery",
             ]
         )
-        XCTAssertEqual(
-            revealPlan.actions[trigger.id],
-            MenuBarItemTriggersManager.TriggerPriorityAction(
-                reveal: true,
-                identifiers: ["com.apple.controlcenter:Battery"]
-            )
+        #expect(
+            revealPlan.actions[trigger.id]
+                == MenuBarItemTriggersManager.TriggerPriorityAction(
+                    reveal: true,
+                    identifiers: ["com.apple.controlcenter:Battery"]
+                )
         )
     }
 
-    @MainActor
-    func testPriorityPlanReacquiresUnambiguousSuffixDriftFromLiveTagBases() {
+    @Test func priorityPlanReacquiresUnambiguousSuffixDriftFromLiveTagBases() {
         let manager = makeManager()
         let trigger = MenuBarItemTrigger(
             itemIdentifier: "com.example.app:Status:1",
@@ -963,18 +968,17 @@ final class MenuBarItemTriggerTests: XCTestCase {
             presentIdentifierBases: ["com.example.app:Status:2": "com.example.app:Status"]
         )
 
-        XCTAssertEqual(
-            plan.actions[trigger.id],
-            MenuBarItemTriggersManager.TriggerPriorityAction(
-                reveal: true,
-                identifiers: ["com.example.app:Status:2"]
-            )
+        #expect(
+            plan.actions[trigger.id]
+                == MenuBarItemTriggersManager.TriggerPriorityAction(
+                    reveal: true,
+                    identifiers: ["com.example.app:Status:2"]
+                )
         )
-        XCTAssertFalse(plan.unavailableTriggerIDs.contains(trigger.id))
+        #expect(!plan.unavailableTriggerIDs.contains(trigger.id))
     }
 
-    @MainActor
-    func testPriorityPlanDoesNotTreatLegacyNumericTitleAsAnInstanceSuffix() {
+    @Test func priorityPlanDoesNotTreatLegacyNumericTitleAsAnInstanceSuffix() {
         let manager = makeManager()
         let trigger = MenuBarItemTrigger(
             itemIdentifier: "com.example.app:Meeting:30",
@@ -988,12 +992,11 @@ final class MenuBarItemTriggerTests: XCTestCase {
             presentIdentifierBases: ["com.example.app:Meeting": "com.example.app:Meeting"]
         )
 
-        XCTAssertNil(plan.actions[trigger.id])
-        XCTAssertTrue(plan.unavailableTriggerIDs.contains(trigger.id))
+        #expect(plan.actions[trigger.id] == nil)
+        #expect(plan.unavailableTriggerIDs.contains(trigger.id))
     }
 
-    @MainActor
-    func testMoveTriggerReordersPriority() {
+    @Test func moveTriggerReordersPriority() {
         let manager = makeManager()
         let first = MenuBarItemTrigger(name: "First")
         let second = MenuBarItemTrigger(name: "Second")
@@ -1002,72 +1005,70 @@ final class MenuBarItemTriggerTests: XCTestCase {
 
         manager.moveTrigger(id: third.id, before: first.id)
 
-        XCTAssertEqual(manager.triggers.map(\.id), [third.id, first.id, second.id])
+        #expect(manager.triggers.map(\.id) == [third.id, first.id, second.id])
     }
 
-    @MainActor
-    func testDisableAllFeatureFlags() {
-        let ran = withScratchDefaultsForXCTest { _ in
+    @Test func disableAllFeatureFlags() throws {
+        try withScratchDefaults { _ in
             let manager = TriggerFeatureFlagsManager()
 
             manager.setEnabled(.frontmostApp, true)
             manager.setEnabled(.imageComparison, true)
-            XCTAssertTrue(manager.hasEnabledFlags)
+            #expect(manager.hasEnabledFlags)
 
             manager.disableAll()
 
-            XCTAssertFalse(manager.hasEnabledFlags)
-            XCTAssertFalse(manager.isEnabled(.frontmostApp))
-            XCTAssertFalse(manager.isEnabled(.imageComparison))
-            XCTAssertEqual(Defaults.stringArray(forKey: .triggerFeatureFlags) ?? [], [])
+            #expect(!manager.hasEnabledFlags)
+            #expect(!manager.isEnabled(.frontmostApp))
+            #expect(!manager.isEnabled(.imageComparison))
+            #expect(Defaults.stringArray(forKey: .triggerFeatureFlags) ?? [] == [])
         }
-        XCTAssertNotNil(ran, "could not open a scratch defaults suite")
     }
 
-    @MainActor
-    func testAllOffMenuItemDefaultsHiddenAndPersists() {
-        let ran = withScratchDefaultsForXCTest { _ in
+    @Test func allOffMenuItemDefaultsHiddenAndPersists() throws {
+        try withScratchDefaults { _ in
             let manager = TriggerFeatureFlagsManager()
-            XCTAssertFalse(manager.showsAllOffInMenuBarMenu)
+            #expect(!manager.showsAllOffInMenuBarMenu)
 
             manager.showsAllOffInMenuBarMenu = true
-            XCTAssertTrue(Defaults.bool(forKey: .showTriggerFeatureFlagsAllOffMenuItem))
-            XCTAssertTrue(TriggerFeatureFlagsManager().showsAllOffInMenuBarMenu)
+            #expect(Defaults.bool(forKey: .showTriggerFeatureFlagsAllOffMenuItem))
+            #expect(TriggerFeatureFlagsManager().showsAllOffInMenuBarMenu)
 
             manager.showsAllOffInMenuBarMenu = false
-            XCTAssertFalse(Defaults.bool(forKey: .showTriggerFeatureFlagsAllOffMenuItem))
+            #expect(!Defaults.bool(forKey: .showTriggerFeatureFlagsAllOffMenuItem))
         }
-        XCTAssertNotNil(ran, "could not open a scratch defaults suite")
     }
 
     // MARK: - Compound conditions
 
-    func testCompoundAllRequiresEveryCondition() {
+    @Test("'All' requires every condition")
+    func compoundAllRequiresEveryCondition() {
         let trigger = MenuBarItemTrigger(
             condition: .onBatteryPower,
             additionalConditions: [.batteryBelow(percentage: 30)],
             combinator: .all
         )
         // On battery AND below 30%.
-        XCTAssertTrue(trigger.shouldReveal(state: state(battery: 20, onAC: false)))
+        #expect(trigger.shouldReveal(state: state(battery: 20, onAC: false)))
         // On battery but not below 30%.
-        XCTAssertFalse(trigger.shouldReveal(state: state(battery: 80, onAC: false)))
+        #expect(!trigger.shouldReveal(state: state(battery: 80, onAC: false)))
         // Below 30% but on AC.
-        XCTAssertFalse(trigger.shouldReveal(state: state(battery: 20, onAC: true)))
+        #expect(!trigger.shouldReveal(state: state(battery: 20, onAC: true)))
     }
 
-    func testCompoundAnyRequiresOneCondition() {
+    @Test("'Any' requires at least one condition")
+    func compoundAnyRequiresOneCondition() {
         let trigger = MenuBarItemTrigger(
             condition: .vpnActive,
             additionalConditions: [.wifiSSID(name: "Home")],
             combinator: .any
         )
-        XCTAssertTrue(trigger.shouldReveal(state: state(vpn: true)))
-        XCTAssertTrue(trigger.shouldReveal(state: state(vpn: false, ssid: "Home")))
-        XCTAssertFalse(trigger.shouldReveal(state: state(vpn: false, ssid: "Office")))
+        #expect(trigger.shouldReveal(state: state(vpn: true)))
+        #expect(trigger.shouldReveal(state: state(vpn: false, ssid: "Home")))
+        #expect(!trigger.shouldReveal(state: state(vpn: false, ssid: "Office")))
     }
 
-    func testCompoundWithInvert() {
+    @Test func compoundWithInvert() {
         let trigger = MenuBarItemTrigger(
             condition: .onACPower,
             additionalConditions: [.charging],
@@ -1075,11 +1076,11 @@ final class MenuBarItemTriggerTests: XCTestCase {
             invert: true
         )
         // AC and charging -> satisfied -> inverted hides (shouldReveal false).
-        XCTAssertFalse(trigger.shouldReveal(state: state(onAC: true, charging: true)))
-        XCTAssertTrue(trigger.shouldReveal(state: state(onAC: true, charging: false)))
+        #expect(!trigger.shouldReveal(state: state(onAC: true, charging: true)))
+        #expect(trigger.shouldReveal(state: state(onAC: true, charging: false)))
     }
 
-    func testCompoundCodableRoundTrip() throws {
+    @Test func compoundCodableRoundTrip() throws {
         let trigger = MenuBarItemTrigger(
             condition: .onBatteryPower,
             additionalConditions: [.batteryBelow(percentage: 25), .thermalPressure(atLeast: .serious)],
@@ -1087,21 +1088,21 @@ final class MenuBarItemTriggerTests: XCTestCase {
         )
         let data = try JSONEncoder().encode(trigger)
         let decoded = try JSONDecoder().decode(MenuBarItemTrigger.self, from: data)
-        XCTAssertEqual(decoded, trigger)
+        #expect(decoded == trigger)
     }
 
     // MARK: - Multiple target items
 
-    func testAllItemIdentifiersIncludesPrimaryAndAdditional() {
+    @Test func allItemIdentifiersIncludesPrimaryAndAdditional() {
         let trigger = MenuBarItemTrigger(
             itemIdentifier: "a",
             additionalItems: [TriggerTargetItem(identifier: "b", displayName: "B"), TriggerTargetItem(identifier: "", displayName: "")]
         )
         // Primary first, empties filtered out.
-        XCTAssertEqual(trigger.allItemIdentifiers, ["a", "b"])
+        #expect(trigger.allItemIdentifiers == ["a", "b"])
     }
 
-    func testMultiItemCodableRoundTrip() throws {
+    @Test func multiItemCodableRoundTrip() throws {
         let trigger = MenuBarItemTrigger(
             itemIdentifier: "a",
             additionalItems: [TriggerTargetItem(identifier: "b", displayName: "B")],
@@ -1110,46 +1111,45 @@ final class MenuBarItemTriggerTests: XCTestCase {
         )
         let data = try JSONEncoder().encode(trigger)
         let decoded = try JSONDecoder().decode(MenuBarItemTrigger.self, from: data)
-        XCTAssertEqual(decoded, trigger)
+        #expect(decoded == trigger)
     }
 
     // MARK: - Invert
 
-    func testInvertFlipsReveal() {
+    @Test func invertFlipsReveal() {
         var trigger = MenuBarItemTrigger(condition: .onACPower)
         let onAC = state(onAC: true)
-        XCTAssertTrue(trigger.shouldReveal(state: onAC))
+        #expect(trigger.shouldReveal(state: onAC))
         trigger.invert = true
-        XCTAssertFalse(trigger.shouldReveal(state: onAC))
+        #expect(!trigger.shouldReveal(state: onAC))
     }
 
     // MARK: - Trigger model
 
-    func testDisplayNameFallsBackToAutoTitle() {
+    @Test func displayNameFallsBackToAutoTitle() {
         let trigger = MenuBarItemTrigger(
             name: "   ",
             itemDisplayName: "Battery",
             condition: .batteryBelow(percentage: 20)
         )
-        XCTAssertEqual(trigger.displayName, "Battery: Battery is below 20%")
+        #expect(trigger.displayName == "Battery: Battery is below 20%")
     }
 
-    func testCustomNameOverridesAutoTitle() {
+    @Test func customNameOverridesAutoTitle() {
         let trigger = MenuBarItemTrigger(
             name: "Low battery",
             itemDisplayName: "Battery",
             condition: .batteryBelow(percentage: 20)
         )
-        XCTAssertEqual(trigger.displayName, "Low battery")
+        #expect(trigger.displayName == "Low battery")
     }
 
-    func testAutoTitleWithoutItemName() {
+    @Test func autoTitleWithoutItemName() {
         let trigger = MenuBarItemTrigger(itemDisplayName: "", condition: .onACPower)
-        XCTAssertEqual(trigger.autoTitle, "Connected to power")
+        #expect(trigger.autoTitle == "Connected to power")
     }
 
-    @MainActor
-    func testRepairsPersistedBatteryItemTestFixtureIdentifier() {
+    @Test func repairsPersistedBatteryItemTestFixtureIdentifier() {
         let fixtures = [
             MenuBarItemTrigger(
                 itemIdentifier: "battery-item",
@@ -1163,23 +1163,22 @@ final class MenuBarItemTriggerTests: XCTestCase {
 
         let repaired = MenuBarItemTriggersManager.repairingLegacyTestFixtureIdentifiers(in: fixtures)
 
-        XCTAssertEqual(repaired[0].itemIdentifier, "com.apple.controlcenter:Battery")
-        XCTAssertEqual(repaired[0].itemDisplayName, "Battery")
-        XCTAssertEqual(repaired[0].itemBaseIdentifier, "com.apple.controlcenter:Battery")
-        XCTAssertEqual(repaired[0].additionalItems[0], TriggerTargetItem(
+        #expect(repaired[0].itemIdentifier == "com.apple.controlcenter:Battery")
+        #expect(repaired[0].itemDisplayName == "Battery")
+        #expect(repaired[0].itemBaseIdentifier == "com.apple.controlcenter:Battery")
+        #expect(repaired[0].additionalItems[0] == TriggerTargetItem(
             identifier: "com.apple.controlcenter:Battery",
             displayName: "Battery",
             baseIdentifier: "com.apple.controlcenter:Battery"
         ))
-        XCTAssertEqual(repaired[0].additionalItems[1], TriggerTargetItem(
+        #expect(repaired[0].additionalItems[1] == TriggerTargetItem(
             identifier: "com.example:Other",
             displayName: "Other",
             baseIdentifier: "com.example:Other"
         ))
     }
 
-    @MainActor
-    func testRepairsLegacyBatteryTargetSoItFollowsAnInstanceChange() {
+    @Test func repairsLegacyBatteryTargetSoItFollowsAnInstanceChange() {
         let manager = makeManager()
         let legacy = MenuBarItemTrigger(
             itemIdentifier: "com.apple.controlcenter:Battery",
@@ -1197,19 +1196,18 @@ final class MenuBarItemTriggerTests: XCTestCase {
             ]
         )
 
-        XCTAssertEqual(repaired.itemBaseIdentifier, "com.apple.controlcenter:Battery")
-        XCTAssertEqual(
-            plan.actions[repaired.id],
-            MenuBarItemTriggersManager.TriggerPriorityAction(
-                reveal: true,
-                identifiers: ["com.apple.controlcenter:Battery:1"]
-            )
+        #expect(repaired.itemBaseIdentifier == "com.apple.controlcenter:Battery")
+        #expect(
+            plan.actions[repaired.id]
+                == MenuBarItemTriggersManager.TriggerPriorityAction(
+                    reveal: true,
+                    identifiers: ["com.apple.controlcenter:Battery:1"]
+                )
         )
-        XCTAssertFalse(plan.unavailableTriggerIDs.contains(repaired.id))
+        #expect(!plan.unavailableTriggerIDs.contains(repaired.id))
     }
 
-    @MainActor
-    func testDoesNotAddABaseToLegacyNumericTitle() {
+    @Test func doesNotAddABaseToLegacyNumericTitle() {
         let legacy = MenuBarItemTrigger(
             itemIdentifier: "com.example.app:Meeting:30",
             itemDisplayName: "Meeting 30"
@@ -1217,10 +1215,10 @@ final class MenuBarItemTriggerTests: XCTestCase {
 
         let repaired = MenuBarItemTriggersManager.repairingLegacyTestFixtureIdentifiers(in: [legacy])[0]
 
-        XCTAssertNil(repaired.itemBaseIdentifier)
+        #expect(repaired.itemBaseIdentifier == nil)
     }
 
-    func testCodableRoundTrip() throws {
+    @Test func codableRoundTrip() throws {
         let trigger = MenuBarItemTrigger(
             name: "Show battery when low",
             itemIdentifier: "com.apple.controlcenter:Battery",
@@ -1232,10 +1230,10 @@ final class MenuBarItemTriggerTests: XCTestCase {
         )
         let data = try JSONEncoder().encode(trigger)
         let decoded = try JSONDecoder().decode(MenuBarItemTrigger.self, from: data)
-        XCTAssertEqual(decoded, trigger)
+        #expect(decoded == trigger)
     }
 
-    func testDecodingWithoutInvertDefaultsFalse() throws {
+    @Test func decodingWithoutInvertDefaultsFalse() throws {
         // Simulates a trigger persisted before `invert` existed.
         let json = """
         {
@@ -1251,47 +1249,46 @@ final class MenuBarItemTriggerTests: XCTestCase {
         """
         let data = Data(json.utf8)
         let expected = try MenuBarItemTrigger(
-            id: XCTUnwrap(UUID(uuidString: "00000000-0000-0000-0000-000000000001")),
+            id: #require(UUID(uuidString: "00000000-0000-0000-0000-000000000001")),
             name: "Legacy",
             itemIdentifier: "x",
             itemDisplayName: "X",
             condition: .onACPower
         )
         let decoded = try JSONDecoder().decode(MenuBarItemTrigger.self, from: data)
-        XCTAssertEqual(decoded, expected)
-        XCTAssertFalse(decoded.invert)
+        #expect(decoded == expected)
+        #expect(!decoded.invert)
     }
 
     // MARK: - Regression coverage for trigger integration
 
-    func testPresentIdentifierResolutionKeepsDuplicateTitleInstancesDistinct() {
+    @Test func presentIdentifierResolutionKeepsDuplicateTitleInstancesDistinct() {
         let present: Set<String> = ["com.example:Status", "com.example:Status:1"]
         let bases = [
             "com.example:Status": "com.example:Status",
             "com.example:Status:1": "com.example:Status",
         ]
 
-        XCTAssertEqual(
+        #expect(
             MenuBarItemTriggersManager.resolvedPresentIdentifier(
                 for: "com.example:Status:1",
                 capturedBaseIdentifier: "com.example:Status",
                 presentIdentifiers: present,
                 presentIdentifierBases: bases
-            ),
-            "com.example:Status:1"
+            ) == "com.example:Status:1"
         )
-        XCTAssertNil(
+        #expect(
             MenuBarItemTriggersManager.resolvedPresentIdentifier(
                 for: "com.example:Status:9",
                 capturedBaseIdentifier: "com.example:Status",
                 presentIdentifiers: present,
                 presentIdentifierBases: bases
-            ),
+            ) == nil,
             "a stale suffix must not guess between two same-title siblings"
         )
     }
 
-    func testSavedOrderFilterRemovesOnlyTheControlledSibling() {
+    @Test func savedOrderFilterRemovesOnlyTheControlledSibling() {
         let saved = [
             "visible": ["com.example:Status", "com.example:Status:1", "com.example:Other"],
         ]
@@ -1302,10 +1299,10 @@ final class MenuBarItemTriggerTests: XCTestCase {
             knownLiveIdentifiers: ["com.example:Status", "com.example:Status:1", "com.example:Other"]
         )
 
-        XCTAssertEqual(filtered["visible"], ["com.example:Status", "com.example:Other"])
+        #expect(filtered["visible"] == ["com.example:Status", "com.example:Other"])
     }
 
-    func testSwitchingBetweenDuplicateTitleInstancesReleasesTheOldSibling() {
+    @Test func switchingBetweenDuplicateTitleInstancesReleasesTheOldSibling() {
         let released = MenuBarItemManager.releasedTriggerIdentifiers(
             previousIdentifiers: ["com.example:Status"],
             currentIdentifiers: ["com.example:Status:1"],
@@ -1313,10 +1310,10 @@ final class MenuBarItemTriggerTests: XCTestCase {
             knownLiveIdentifiers: ["com.example:Status", "com.example:Status:1"]
         )
 
-        XCTAssertEqual(released, ["com.example:Status"])
+        #expect(released == ["com.example:Status"])
     }
 
-    func testSingleLiveInstanceSuffixChangeRemainsContinuouslyControlled() {
+    @Test func singleLiveInstanceSuffixChangeRemainsContinuouslyControlled() {
         let released = MenuBarItemManager.releasedTriggerIdentifiers(
             previousIdentifiers: ["com.example:Status:1"],
             currentIdentifiers: ["com.example:Status:2"],
@@ -1324,18 +1321,18 @@ final class MenuBarItemTriggerTests: XCTestCase {
             knownLiveIdentifiers: ["com.example:Status:2"]
         )
 
-        XCTAssertTrue(released.isEmpty)
+        #expect(released.isEmpty)
     }
 
-    func testDesktopWithoutPowerSourcesDefaultsToAC() {
+    @Test func desktopWithoutPowerSourcesDefaultsToAC() {
         let power = PowerSourceMonitor.state(from: [])
 
-        XCTAssertTrue(power.isOnACPower)
-        XCTAssertNil(power.batteryPercentage)
-        XCTAssertFalse(power.isCharging)
+        #expect(power.isOnACPower)
+        #expect(power.batteryPercentage == nil)
+        #expect(!power.isCharging)
     }
 
-    func testInternalBatteryWinsOverLaterUPS() {
+    @Test func internalBatteryWinsOverLaterUPS() {
         let internalBattery: [String: Any] = [
             kIOPSTypeKey: kIOPSInternalBatteryType,
             kIOPSMaxCapacityKey: 100,
@@ -1353,8 +1350,8 @@ final class MenuBarItemTriggerTests: XCTestCase {
 
         let power = PowerSourceMonitor.state(from: [internalBattery, ups])
 
-        XCTAssertEqual(power.batteryPercentage, 42)
-        XCTAssertFalse(power.isOnACPower)
-        XCTAssertFalse(power.isCharging)
+        #expect(power.batteryPercentage == 42)
+        #expect(!power.isOnACPower)
+        #expect(!power.isCharging)
     }
 }
