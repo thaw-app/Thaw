@@ -3320,6 +3320,9 @@
         }
       }
     },
+    "Adaptive Gradient" : {
+      "comment" : "Text for the adaptive gradient tint option in the menu bar."
+    },
     "Add" : {
       "comment" : "A button that adds an app to the whitelist.",
       "localizations" : {
@@ -6819,6 +6822,30 @@
           }
         }
       }
+    },
+    "Current Space" : {
+      "comment" : "Label for a Space that has not been published by the window server yet."
+    },
+    "Desktop %lld" : {
+      "comment" : "Label for a desktop Space, numbered as Mission Control numbers it."
+    },
+    "Full Screen Space %lld" : {
+      "comment" : "Label for a fullscreen Space, numbered as Mission Control numbers it."
+    },
+    "Per-Space Profiles" : {
+      "comment" : "Section title for assigning profiles to Spaces."
+    },
+    "Remove" : {
+      "comment" : "Button that clears a profile's Space assignment."
+    },
+    "Space" : {
+      "comment" : "Fallback label for a Space whose stored name is missing."
+    },
+    "Surface hidden items that ask for attention" : {
+      "comment" : "Toggle for briefly showing a hidden section when an item blinks."
+    },
+    "The active Space is still settling. Switch away and back to assign a profile." : {
+      "comment" : "Shown when the window server has not published the active Space yet."
     },
     "apps %lld" : {
       "comment" : "Shows the number of whitelisted apps",

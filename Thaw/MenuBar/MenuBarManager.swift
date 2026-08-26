@@ -21,6 +21,14 @@ final class MenuBarManager {
     /// Per-screen average colors for multi-monitor adaptive backgrounds.
     private(set) var averageColors: [CGDirectDisplayID: MenuBarAverageColorInfo] = [:]
 
+    /// Per-screen wallpaper palettes, used by the adaptive gradient tint.
+    ///
+    /// Kept separate from ``averageColors`` because the two answer different
+    /// questions off different samples: the average color matches the strip
+    /// of wallpaper directly behind the bar, while a palette has to see the
+    /// whole picture or a small subject never survives bucketing.
+    private(set) var wallpaperPalettes: [CGDirectDisplayID: WallpaperPalette] = [:]
+
     /// A Boolean value that indicates whether the menu bar is either always hidden
     /// by the system, or automatically hidden and shown by the system based on the
     /// location of the mouse.
@@ -85,6 +93,7 @@ final class MenuBarManager {
         settingsWindowVisibilityCancellable?.cancel()
         appearanceConfigurationObservationTask?.cancel()
         itemCacheHotkeyObservationTask?.cancel()
+        attentionObservationTask?.cancel()
     }
 
     /// Per-item hotkeys, keyed by MenuBarItem.uniqueIdentifier. Each opens the
@@ -106,6 +115,14 @@ final class MenuBarManager {
 
     /// Cancellable for the periodic average-color refresh when adaptive background is active.
     private var adaptiveColorRefreshCancellable: AnyCancellable?
+
+    /// Task observing `imageCache.tagsSeekingAttention` for items that have
+    /// started blinking while hidden.
+    private var attentionObservationTask: Task<Void, Never>?
+
+    /// Watches the system wallpaper index so an adaptive bar re-samples the
+    /// moment the wallpaper changes instead of waiting out the poll above.
+    private let wallpaperChangeMonitor = WallpaperChangeMonitor()
 
     /// Per-screen colors cached before sleep, restored on wake to avoid stale/white flash.
     private var sleepColorCache: [CGDirectDisplayID: MenuBarAverageColorInfo]?
@@ -330,7 +347,7 @@ final class MenuBarManager {
             let isAdaptiveActive: Bool = {
                 guard let appState = self.appState else { return false }
                 let current = appState.appearanceManager.configuration.current
-                return current.backgroundKind == .adaptive || current.tintKind == .adaptive
+                return current.backgroundKind == .adaptive || current.tintKind.isAdaptive
             }()
             guard settingsWindow?.isVisible == true || isAdaptiveActive else { return }
             updateAverageColorInfo()
@@ -359,7 +376,7 @@ final class MenuBarManager {
                 let isAdaptiveActive: Bool = {
                     guard let appState = self.appState else { return false }
                     let current = appState.appearanceManager.configuration.current
-                    return current.backgroundKind == .adaptive || current.tintKind == .adaptive
+                    return current.backgroundKind == .adaptive || current.tintKind.isAdaptive
                 }()
                 guard isAdaptiveActive else { return }
 
@@ -436,7 +453,7 @@ final class MenuBarManager {
                     guard let self else { return }
                     guard let config else { continue }
                     let current = config.current
-                    let isAdaptive = current.backgroundKind == .adaptive || current.tintKind == .adaptive
+                    let isAdaptive = current.backgroundKind == .adaptive || current.tintKind.isAdaptive
                     guard isAdaptive != previousIsAdaptive else { continue }
                     previousIsAdaptive = isAdaptive
                     if isAdaptive {
@@ -446,9 +463,56 @@ final class MenuBarManager {
                             .sink { [weak self] _ in
                                 self?.updateAverageColorInfo()
                             }
+                        // The timer stays: a dynamic or aerial wallpaper
+                        // changes its pixels without rewriting the index the
+                        // monitor watches, so the poll is still the only
+                        // thing that catches those.
+                        wallpaperChangeMonitor.onChange = { [weak self] in
+                            self?.captureAdaptiveColorWithRetry()
+                        }
+                        wallpaperChangeMonitor.start()
                     } else {
                         adaptiveColorRefreshCancellable?.cancel()
                         adaptiveColorRefreshCancellable = nil
+                        wallpaperChangeMonitor.stop()
+                    }
+                }
+            }
+        }
+
+        // Surface a hidden item that has started blinking for attention.
+        //
+        // This shows the section the item lives in rather than moving the
+        // item itself. Dragging a single item across the divider on a
+        // heuristic is the same shape as the repair loops that collapsed
+        // real menu bars (#958, #960): a wrong verdict there is a wrong
+        // move that persists. Showing a section is the path the hotkey and
+        // hover triggers already use, and the existing rehide timer undoes
+        // it on its own.
+        if let appState {
+            attentionObservationTask?.cancel()
+            attentionObservationTask = Task { [weak self, weak appState] in
+                var previous: Set<MenuBarItemTag> = []
+                let changes = Observations { appState?.imageCache.tagsSeekingAttention }
+                for await tags in changes {
+                    guard let self, let appState, let tags else { continue }
+                    defer { previous = tags }
+                    let newlySeeking = tags.subtracting(previous)
+                    guard !newlySeeking.isEmpty else { continue }
+                    guard Defaults.bool(forKey: .surfaceItemsSeekingAttention) else { continue }
+
+                    for tag in newlySeeking {
+                        guard let section = sectionContainingHiddenItem(tag, in: appState) else {
+                            continue
+                        }
+                        diagLog.info(
+                            "Surfacing \(section.name.logString) for an item seeking attention"
+                        )
+                        section.show()
+                        // Drop the history that triggered this, so the same
+                        // blink cannot re-show the section on every capture
+                        // while it stays visible.
+                        appState.imageCache.clearAttention(for: tag)
                     }
                 }
             }
@@ -602,7 +666,7 @@ final class MenuBarManager {
         let isSearchVisible = appState.navigationState.isSearchPresented
         let anyIceBarEnabled = appState.settings.displaySettings.isIceBarEnabledOnAnyDisplay
         let currentConfig = appState.appearanceManager.configuration.current
-        let isAdaptiveActive = currentConfig.backgroundKind == .adaptive || currentConfig.tintKind == .adaptive
+        let isAdaptiveActive = currentConfig.backgroundKind == .adaptive || currentConfig.tintKind.isAdaptive
 
         guard isSettingsVisible || isIceBarVisible || isSearchVisible || anyIceBarEnabled || isAdaptiveActive else {
             return
@@ -625,7 +689,12 @@ final class MenuBarManager {
 
         // Resolve per-screen capture inputs synchronously on MainActor before
         // fanning out; the SCK calls themselves are the only async work.
-        var inputs = [(displayID: CGDirectDisplayID, windowIDs: [CGWindowID], bounds: CGRect)]()
+        var inputs = [(
+            displayID: CGDirectDisplayID,
+            windowIDs: [CGWindowID],
+            bounds: CGRect,
+            fullBounds: CGRect
+        )]()
         for screen in targetScreens {
             let displayID = screen.displayID
             guard
@@ -636,10 +705,14 @@ final class MenuBarManager {
             }
             let windowIDs = [menuBarWindow.windowID, wallpaperWindow.windowID]
             let bounds = withMutableCopy(of: wallpaperWindow.bounds) { $0.size.height = 1 }
-            inputs.append((displayID, windowIDs, bounds))
+            inputs.append((displayID, windowIDs, bounds, wallpaperWindow.bounds))
         }
 
-        await withTaskGroup(of: (CGDirectDisplayID, MenuBarAverageColorInfo)?.self) { group in
+        // Only pay for the second, full-height capture when something
+        // actually renders a palette.
+        let needsPalette = currentConfig.tintKind == .adaptiveGradient
+
+        await withTaskGroup(of: (CGDirectDisplayID, MenuBarAverageColorInfo, WallpaperPalette?)?.self) { group in
             for input in inputs {
                 group.addTask {
                     guard
@@ -652,7 +725,25 @@ final class MenuBarManager {
                     else {
                         return nil
                     }
-                    return (input.displayID, MenuBarAverageColorInfo(color: color, source: .menuBarWindow))
+
+                    var palette: WallpaperPalette?
+                    if needsPalette {
+                        // The strip above is one pixel tall by design, which
+                        // is enough to average and far too little to derive a
+                        // scheme from, so the palette re-captures at the
+                        // wallpaper's real height.
+                        palette = await ScreenCapture.captureWindowsAsync(
+                            with: input.windowIDs,
+                            screenBounds: input.fullBounds,
+                            option: .nominalResolution
+                        )?.dominantColors()
+                    }
+
+                    return (
+                        input.displayID,
+                        MenuBarAverageColorInfo(color: color, source: .menuBarWindow),
+                        palette
+                    )
                 }
             }
 
@@ -660,12 +751,18 @@ final class MenuBarManager {
             // averageColors / averageColorInfo writes below are safe and
             // observable to read-after callers as soon as this await returns.
             for await result in group {
-                guard let (displayID, info) = result else { continue }
+                guard let (displayID, info, palette) = result else { continue }
                 if averageColors[displayID] != info {
                     averageColors[displayID] = info
                 }
                 if displayID == activeDisplayID, averageColorInfo != info {
                     averageColorInfo = info
+                }
+                // A failed palette capture leaves the previous one in place
+                // rather than clearing it, so a momentary miss does not drop
+                // the tint to nothing.
+                if let palette, wallpaperPalettes[displayID] != palette {
+                    wallpaperPalettes[displayID] = palette
                 }
             }
         }
@@ -1046,6 +1143,30 @@ final class MenuBarManager {
     }
 
     /// Returns the menu bar section with the given name.
+    /// Returns the hidden section that currently contains the given item,
+    /// or `nil` when the item is already visible or is not on the bar.
+    ///
+    /// Only the concealing sections are considered: an item blinking in the
+    /// visible section has already been seen, so there is nothing to
+    /// surface.
+    private func sectionContainingHiddenItem(
+        _ tag: MenuBarItemTag,
+        in appState: AppState
+    ) -> MenuBarSection? {
+        for name in [MenuBarSection.Name.hidden, .alwaysHidden] {
+            guard appState.itemManager.itemCache[name].contains(where: { $0.tag == tag }) else {
+                continue
+            }
+            guard let section = section(withName: name), section.isHidden else {
+                // Already showing, so the item is on screen and the blink
+                // has done its job without any help.
+                return nil
+            }
+            return section
+        }
+        return nil
+    }
+
     func section(withName name: MenuBarSection.Name) -> MenuBarSection? {
         sections.first { $0.name == name }
     }

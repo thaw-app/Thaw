@@ -9,6 +9,13 @@ and the Sparkle appcast, unless overridden with the `release_notes` input.
 
 ## [Unreleased]
 
+### Added
+
+- **Per-Space profiles** — a profile can be bound to a Space, the way it can already be bound to a display. Switching Spaces applies it. Bindings use the window server's per-Space `uuid` rather than its `CGSSpaceID`, because the ID is renumbered at logout and a stale one would apply the wrong layout to the wrong desktop; the default Space on each display reports an empty uuid and falls back to a key derived from its display. Precedence is Focus Filter, then Space, then display: a Space switch is something the user did on purpose, while a display change is often just docking or waking.
+- **Wallpaper changes re-tint the bar immediately** — adaptive background and tint sampled the pixels behind the menu bar on a 30-second poll, so a new wallpaper took up to half a minute to show up. Thaw now watches the wallpaper store the system rewrites when the wallpaper is set. The poll stays, because a dynamic or aerial wallpaper changes its pixels without ever rewriting that file.
+- **Adaptive Gradient tint** — a new tint kind that builds a gradient from the wallpaper's two most dominant colours, rather than the single average the existing Adaptive kind uses. Averaging answers "what colour is it, roughly" and discards what made the picture worth looking at: a sunset averages to brown. Colours are bucketed, counted, and taken most-covering first, skipping any that sits too close to one already taken — without that step a photo of the sky returns five blues and the gradient draws as a flat fill. The palette samples the wallpaper at full height, unlike the adaptive average, which deliberately reads only the one-pixel strip behind the bar; that second capture only runs while the gradient kind is selected.
+- **Hidden items that ask for attention can surface themselves** — an app with something urgent to say blinks its status icon, which accomplishes nothing behind the chevron. Thaw can now spot a blink and briefly show the section holding it. A blink is told apart from a clock, a battery percentage or a CPU graph by whether the icon keeps returning to a state it already showed: those all move to a state they have never drawn before, while a blink comes back. Off by default under Advanced, and it shows the section rather than moving the item, so a wrong verdict costs a brief reveal instead of a rearranged bar.
+
 ## [2.0.0]
 
 Please report issues at

@@ -61,6 +61,14 @@ extension ProfileManager {
             // display whose profile has a different offset than the last
             // session left on-disk, the relaunch must happen here or the
             // apps will continue rendering with the wrong spacing.
+            // A Space association wins over the display one at startup
+            // for the same reason it does on a live switch.
+            let startupSpaceKey = SpaceInfo.activeSpace().persistentKey
+            self.lastActiveSpaceKey = startupSpaceKey
+            if let startupSpaceKey, self.profile(forSpaceKey: startupSpaceKey) != nil {
+                await self.applyProfileForSpace(key: startupSpaceKey)
+                return
+            }
             if let currentUUID = lastActiveDisplayUUID {
                 await self.applyProfileForDisplay(uuid: currentUUID)
             }
@@ -448,7 +456,57 @@ extension ProfileManager {
         // Don't override a Focus Filter profile with a display switch.
         guard !focusFilterActive else { return }
 
+        // A Space association is a deliberate choice about the Space the
+        // user is looking at; a display change often is not (docking,
+        // waking, a resolution change). Let the Space keep the bar it
+        // asked for rather than having the display overwrite it.
+        if let spaceKey = SpaceInfo.activeSpace().persistentKey,
+           profile(forSpaceKey: spaceKey) != nil {
+            diagLog.debug("Display auto-switch yielding to Space association \(spaceKey)")
+            return
+        }
+
         await applyProfileForDisplay(uuid: currentUUID)
+    }
+
+    /// Applies the profile associated with the active Space, if any.
+    ///
+    /// Runs on every Space switch, so it leans on the same
+    /// already-active guard the display path uses: switching between two
+    /// Spaces that share a profile costs nothing.
+    func checkSpaceAndAutoSwitch() async {
+        guard let key = SpaceInfo.activeSpace().persistentKey else {
+            // The window server can answer with a Space it has not
+            // published in its managed-display list yet, most often
+            // mid-animation. Leaving the bar alone is the safe response;
+            // the next switch will resolve.
+            diagLog.debug("Space auto-switch: active Space has no persistent key yet")
+            return
+        }
+        guard key != lastActiveSpaceKey else { return }
+        lastActiveSpaceKey = key
+
+        // Focus outranks a Space switch, same as it outranks a display one.
+        guard !focusFilterActive else { return }
+
+        await applyProfileForSpace(key: key)
+    }
+
+    /// Applies the profile associated with the given Space key, if any.
+    private func applyProfileForSpace(key: String) async {
+        guard let meta = profile(forSpaceKey: key) else { return }
+        guard meta.id != activeProfileID else { return }
+        guard let appState else { return }
+
+        diagLog.info("Auto-switching to profile \(meta.name) for Space \(key)")
+        do {
+            let profile = try loadProfile(id: meta.id)
+            let previousID = activeProfileID
+            activeProfileID = meta.id
+            applyProfile(profile, to: appState, previousProfileID: previousID)
+        } catch {
+            diagLog.error("Space auto-switch failed: \(error)")
+        }
     }
 
     /// Applies the profile requested by a Focus Filter activation.

@@ -216,6 +216,10 @@ nonisolated extension Defaults {
 
         static nonisolated(unsafe) let hotkeys: [Any]? = nil
 
+        // MARK: Attention Surfacing
+
+        static let surfaceItemsSeekingAttention = false
+
         // MARK: Appearance Settings
 
         static let menuBarAppearanceConfigurationV2 = MenuBarAppearanceConfigurationV2.defaultConfiguration
@@ -357,6 +361,13 @@ nonisolated extension Defaults {
         /// ``ProfileManager/repairPersistedLayoutsIfNeeded()``; not exposed in
         /// Settings.
         case profileLayoutRepairBuild = "ProfileLayoutRepairBuild"
+
+        // MARK: Attention Surfacing
+
+        /// Whether an item that blinks for attention while hidden is
+        /// temporarily surfaced. Off by default: it moves items on a
+        /// heuristic, and a wrong verdict is a wrong move.
+        case surfaceItemsSeekingAttention = "SurfaceItemsSeekingAttention"
 
         // MARK: Appearance Settings
 

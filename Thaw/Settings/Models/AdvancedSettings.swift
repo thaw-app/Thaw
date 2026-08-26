@@ -374,6 +374,18 @@ final class AdvancedSettings {
         }
     }
 
+    /// Whether an item that starts blinking while hidden briefly shows its
+    /// section, so an alert raised behind the chevron is still seen.
+    ///
+    /// Off by default. The verdict is a heuristic read off the item's own
+    /// pixels, and acting on a wrong one moves the bar the user arranged.
+    var surfaceItemsSeekingAttention = Defaults.DefaultValue.surfaceItemsSeekingAttention {
+        didSet {
+            guard oldValue != surfaceItemsSeekingAttention else { return }
+            Defaults.set(surfaceItemsSeekingAttention, forKey: .surfaceItemsSeekingAttention)
+        }
+    }
+
     /// Storage for internal observers.
     @ObservationIgnored
     private var cancellables = Set<AnyCancellable>()
@@ -427,6 +439,7 @@ final class AdvancedSettings {
         Defaults.ifPresent(key: .searchIncludeHidden, assign: &searchIncludeHidden)
         Defaults.ifPresent(key: .searchIncludeAlwaysHidden, assign: &searchIncludeAlwaysHidden)
         Defaults.ifPresent(key: .moveCursorToRevealedItem, assign: &moveCursorToRevealedItem)
+        Defaults.ifPresent(key: .surfaceItemsSeekingAttention, assign: &surfaceItemsSeekingAttention)
 
         Defaults.ifPresent(key: .sectionDividerStyle) { rawValue in
             if let style = SectionDividerStyle(rawValue: rawValue) {
@@ -508,6 +521,8 @@ final class AdvancedSettings {
                 searchIncludeAlwaysHidden = boolValue
             case "moveCursorToRevealedItem":
                 moveCursorToRevealedItem = boolValue
+            case "surfaceItemsSeekingAttention":
+                surfaceItemsSeekingAttention = boolValue
             default:
                 // Key not handled by AdvancedSettings
                 break

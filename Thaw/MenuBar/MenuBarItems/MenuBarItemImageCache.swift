@@ -87,6 +87,24 @@ final class MenuBarItemImageCache: @unchecked Sendable {
         /// The scale factor of the image at the time of capture.
         let scale: CGFloat
 
+        /// A value that differs when the image differs, used to spot an
+        /// item blinking for attention.
+        ///
+        /// Hashes the pixel data rather than the `CGImage` identity, so a
+        /// recapture of an unchanged icon fingerprints the same. Falls back
+        /// to the dimensions when the data provider yields nothing, which
+        /// costs sensitivity but never invents a difference.
+        var fingerprint: Int {
+            var hasher = Hasher()
+            hasher.combine(cgImage.width)
+            hasher.combine(cgImage.height)
+            hasher.combine(scale)
+            if let data = cgImage.dataProvider?.data {
+                hasher.combine(data as Data)
+            }
+            return hasher.finalize()
+        }
+
         /// The image's size, applying ``scale``.
         var scaledSize: CGSize {
             CGSize(
@@ -135,6 +153,16 @@ final class MenuBarItemImageCache: @unchecked Sendable {
 
     /// The cached item images, keyed by their corresponding tags.
     private(set) var images = [MenuBarItemTag: CapturedImage]()
+
+    /// Tracks which items are blinking for attention.
+    ///
+    /// Deliberately not observable: it is fed on every capture, and the
+    /// verdict it produces is published through ``tagsSeekingAttention``
+    /// instead, which only changes when the verdict does.
+    @ObservationIgnored private var attentionDetector = MenuBarItemAttentionDetector()
+
+    /// The items currently asking for attention.
+    private(set) var tagsSeekingAttention: Set<MenuBarItemTag> = []
 
     /// Memoized results of ``trimmedImage(for:)``, keyed by tag, each paired
     /// with the `CGImage` it was derived from so a recapture invalidates it.
@@ -1436,11 +1464,49 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             updateAccessOrder(for: tag)
             updatedCount += 1
         }
+        // Every capture is recorded, changed or not: the detector needs the
+        // gaps between changes as much as the changes, and an item that has
+        // stopped blinking only stops qualifying once steady samples push
+        // the blink out of its window.
+        recordForAttention(newImages)
         if updatedCount > 0 {
             MenuBarItemImageCache.diagLog.debug(
                 "refreshImages: ✓ updated \(updatedCount)/\(newImages.count) items (visually changed)"
             )
         }
+    }
+
+    /// Feeds a batch of captures to the attention detector and republishes
+    /// the verdict when it changes.
+    private func recordForAttention(_ newImages: [MenuBarItemTag: CapturedImage]) {
+        guard Defaults.bool(forKey: .surfaceItemsSeekingAttention) else {
+            if !tagsSeekingAttention.isEmpty {
+                tagsSeekingAttention = []
+            }
+            return
+        }
+
+        let now = Date.timeIntervalSinceReferenceDate
+        for (tag, image) in newImages {
+            attentionDetector.record(fingerprint: image.fingerprint, for: tag, at: now)
+        }
+        attentionDetector.retain(Set(images.keys))
+
+        let seeking = Set(images.keys.filter { attentionDetector.isSeekingAttention($0, at: now) })
+        guard seeking != tagsSeekingAttention else { return }
+        tagsSeekingAttention = seeking
+        if !seeking.isEmpty {
+            MenuBarItemImageCache.diagLog.debug(
+                "attention: \(seeking.count) item(s) seeking attention"
+            )
+        }
+    }
+
+    /// Clears an item's recorded history, so surfacing it does not
+    /// immediately re-trigger on the blink that surfaced it.
+    func clearAttention(for tag: MenuBarItemTag) {
+        attentionDetector.reset(tag)
+        tagsSeekingAttention.remove(tag)
     }
 
     /// Captures the images of the menu bar items in the given section and returns

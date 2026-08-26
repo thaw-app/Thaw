@@ -465,7 +465,9 @@ private struct UnlabeledShapeEditor: View {
                     .labelsHidden()
                 case .glass:
                     EmptyView()
-                case .adaptive:
+                case .adaptive, .adaptiveGradient:
+                    // Both derive their colors from the wallpaper, so there
+                    // is nothing for the user to pick here.
                     EmptyView()
                 }
             }

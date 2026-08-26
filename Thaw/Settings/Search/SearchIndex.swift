@@ -942,7 +942,7 @@ nonisolated enum SearchIndex {
             pane: .menuBarAppearance,
             sectionKey: "Background",
             sectionText: "Background",
-            keywords: ["background", "style", "solid", "gradient", "glass", "adaptive", "opacity", "shadow", "border"],
+            keywords: ["background", "style", "solid", "gradient", "glass", "adaptive", "palette", "wallpaper", "opacity", "shadow", "border"],
             property: nil
         ),
         SearchEntry(
@@ -975,7 +975,7 @@ nonisolated enum SearchIndex {
             pane: .menuBarAppearance,
             sectionKey: "Shape fill",
             sectionText: "Shape fill",
-            keywords: ["tint", "fill", "style", "solid", "gradient", "glass", "adaptive", "opacity", "shadow", "border"],
+            keywords: ["tint", "fill", "style", "solid", "gradient", "glass", "adaptive", "palette", "wallpaper", "opacity", "shadow", "border"],
             property: nil
         ),
         SearchEntry(

@@ -21,6 +21,7 @@ struct AdvancedSettingsPane: View {
             IceSection("Menu Bar Search") {
                 searchSectionOrdering
                 moveCursorToRevealedItem
+                surfaceItemsSeekingAttention
             }
             IceSection("Tooltips") {
                 if appState.hasPermission(.screenRecording) {
@@ -277,6 +278,22 @@ struct AdvancedSettingsPane: View {
         case .alwaysHidden:
             return $settings.searchIncludeAlwaysHidden
         }
+    }
+
+    private var surfaceItemsSeekingAttention: some View {
+        Toggle(
+            "Surface hidden items that ask for attention",
+            isOn: $settings.surfaceItemsSeekingAttention
+        )
+        .annotation(
+            """
+            When a hidden item starts blinking its icon, briefly show its \
+            section so you see it. Thaw tells a blink apart from a clock or \
+            a battery percentage by whether the icon keeps returning to a \
+            state it already showed. It shows the section rather than moving \
+            the item, and the usual rehide puts it back.
+            """
+        )
     }
 
     private var moveCursorToRevealedItem: some View {
