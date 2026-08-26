@@ -8,6 +8,7 @@
 
 import AppKit
 import Combine
+import Collections
 import Foundation
 
 /// Runtime status for a trigger's condition evaluation and item-move pipeline.
@@ -202,9 +203,9 @@ final class MenuBarItemTriggersManager {
         var unavailableTriggerIDs = Set<UUID>()
 
         mutating func setAction(reveal: Bool, identifiers: [String], for triggerID: UUID) {
-            let dedupedIdentifiers = Array(NSOrderedSet(array: identifiers).compactMap { $0 as? String })
+            let dedupedIdentifiers = Array(OrderedSet(identifiers))
             if var action = actions[triggerID], action.reveal == reveal {
-                action.identifiers = Array(NSOrderedSet(array: action.identifiers + dedupedIdentifiers).compactMap { $0 as? String })
+                action.identifiers = Array(OrderedSet(action.identifiers + dedupedIdentifiers))
                 actions[triggerID] = action
             } else {
                 actions[triggerID] = TriggerPriorityAction(reveal: reveal, identifiers: dedupedIdentifiers)

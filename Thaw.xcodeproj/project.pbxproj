@@ -21,6 +21,7 @@
 		9570E4A96CDEC0BEBAA5573F /* AsyncAlgorithms in Frameworks */ = {isa = PBXBuildFile; productRef = 43C5F05D006747974015EBD9 /* AsyncAlgorithms */; };
 		A6DC49597D7F903C5E1B425F /* Algorithms in Frameworks */ = {isa = PBXBuildFile; productRef = 84489DC7DD2441B27C7B8E6C /* Algorithms */; };
 		C9858DF951474BBA89EEC700 /* Subprocess in Frameworks */ = {isa = PBXBuildFile; productRef = F723B15E4E92458CA2A3A2D5 /* Subprocess */; };
+		9E4B7C2A5D8F1A3B6C0E4D72 /* SystemPackage in Frameworks */ = {isa = PBXBuildFile; productRef = 2C7E9A45F08D3B61C5E8A214 /* SystemPackage */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -137,6 +138,7 @@
 				9570E4A96CDEC0BEBAA5573F /* AsyncAlgorithms in Frameworks */,
 				A6DC49597D7F903C5E1B425F /* Algorithms in Frameworks */,
 				765B9E4A97DD40A18EE1F15D /* Collections in Frameworks */,
+				9E4B7C2A5D8F1A3B6C0E4D72 /* SystemPackage in Frameworks */,
 				C9858DF951474BBA89EEC700 /* Subprocess in Frameworks */,
 				175061912B1543DD003144CD /* LaunchAtLogin in Frameworks */,
 				1787C4272B16890B002F50DF /* AXSwift6 in Frameworks */,
@@ -221,6 +223,7 @@
 				43C5F05D006747974015EBD9 /* AsyncAlgorithms */,
 				84489DC7DD2441B27C7B8E6C /* Algorithms */,
 				F723B15E4E92458CA2A3A2D5 /* Subprocess */,
+				2C7E9A45F08D3B61C5E8A214 /* SystemPackage */,
 			);
 			productName = Ice;
 			productReference = 7166832A2A767E6A006ABF84 /* Thaw.app */;
@@ -355,6 +358,7 @@
 				1ADDA61D49BE1BA7CA5EA059 /* XCRemoteSwiftPackageReference "swift-async-algorithms" */,
 				9DDA1A418DCA43C89DE5A80F /* XCRemoteSwiftPackageReference "swift-collections" */,
 				7A0DF10D46BE41C9B7301DBB /* XCRemoteSwiftPackageReference "swift-subprocess" */,
+				8B3D6F19C4A27E50B1D9F3E6 /* XCRemoteSwiftPackageReference "swift-system" */,
 				1FE809086FD6E22D3C218F67 /* XCRemoteSwiftPackageReference "swift-algorithms" */,
 			);
 			preferredProjectObjectVersion = 100;
@@ -1035,6 +1039,14 @@
 				minimumVersion = 1.2.0;
 			};
 		};
+		8B3D6F19C4A27E50B1D9F3E6 /* XCRemoteSwiftPackageReference "swift-system" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-system";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.4.0;
+			};
+		};
 		7127A9FB2C4881BC00D99DEF /* XCRemoteSwiftPackageReference "Ifrit" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/ukushu/Ifrit";
@@ -1121,6 +1133,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 7A0DF10D46BE41C9B7301DBB /* XCRemoteSwiftPackageReference "swift-subprocess" */;
 			productName = Subprocess;
+		};
+		2C7E9A45F08D3B61C5E8A214 /* SystemPackage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 8B3D6F19C4A27E50B1D9F3E6 /* XCRemoteSwiftPackageReference "swift-system" */;
+			productName = SystemPackage;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
