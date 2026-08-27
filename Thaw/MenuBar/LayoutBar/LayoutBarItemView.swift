@@ -64,7 +64,17 @@ final class LayoutBarItemView: LayoutBarArrangedView {
 
     private lazy var tooltipController = CustomTooltipController(text: item.displayName, view: self)
     private var tooltipTrackingArea: NSTrackingArea?
-    private let placeholderImage: NSImage?
+    /// The image drawn inside the placeholder bubble when no capture is
+    /// cached. Re-resolved lazily in ``drawPlaceholder`` so an app that was
+    /// not launchable when this view was created can still supply its icon
+    /// once it is (#981). The view is reused across cache refreshes when the
+    /// item's identity is stable, so without this the generic symbol baked
+    /// in at init stays even after the app is running and could have been
+    /// read.
+    private var placeholderImage: NSImage?
+    /// Whether ``placeholderImage`` already came from a resolved app icon, so
+    /// ``drawPlaceholder`` does not re-run the lookup on every draw.
+    private var placeholderResolvedFromApp = false
 
     /// The image displayed inside the view.
     private var cachedImage: MenuBarItemImageCache.CapturedImage? {
@@ -87,7 +97,9 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     init(appState: AppState, item: MenuBarItem) {
         self.item = item
         self.appState = appState
-        self.placeholderImage = Self.makePlaceholderImage(for: item)
+        let (image, resolvedFromApp) = Self.makePlaceholderImage(for: item)
+        self.placeholderImage = image
+        self.placeholderResolvedFromApp = resolvedFromApp
 
         let initialImage = appState.imageCache.image(for: item.tag)
         self.cachedImage = initialImage
@@ -386,13 +398,16 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         return CGSize(width: width, height: height)
     }
 
-    private static func makePlaceholderImage(for item: MenuBarItem) -> NSImage? {
+    private static func makePlaceholderImage(for item: MenuBarItem) -> (NSImage?, Bool) {
         if let icon = item.sourceApplication?.icon ?? item.owningApplication?.icon {
-            return icon
+            return (icon, true)
         }
-        return NSImage(
-            systemSymbolName: "menubar.rectangle",
-            accessibilityDescription: item.displayName
+        return (
+            NSImage(
+                systemSymbolName: "menubar.rectangle",
+                accessibilityDescription: item.displayName
+            ),
+            false
         )
     }
 
@@ -415,6 +430,19 @@ final class LayoutBarItemView: LayoutBarArrangedView {
 
         guard let placeholderImage else {
             return
+        }
+
+        // #981: if the placeholder fell back to the generic symbol at init
+        // because the owning app was not launchable yet, try the app icon
+        // again now. The view is reused across cache refreshes when the
+        // item's identity is stable, so this is the one place a later
+        // resolution surfaces. One lookup per resolution; the flag stops
+        // repeat work once an icon is in hand.
+        if !placeholderResolvedFromApp,
+           let icon = item.sourceApplication?.icon ?? item.owningApplication?.icon
+        {
+            self.placeholderImage = icon
+            placeholderResolvedFromApp = true
         }
 
         let iconBounds = placeholderRect.insetBy(
