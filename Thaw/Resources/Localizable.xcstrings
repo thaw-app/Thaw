@@ -38960,6 +38960,9 @@
         }
       }
     },
+    "Rounded corners" : {
+      "comment" : "A toggle label for drawing the Thaw Bar with fully rounded corners."
+    },
     "Run a shell or AppleScript file before or after a profile switch. Hooks fire on every apply path: manual button, hotkey, display auto-switch, and Focus Filter." : {
       "comment" : "A description of the purpose of the hooks.",
       "localizations" : {
@@ -44592,6 +44595,9 @@
           }
         }
       }
+    },
+    "Style the %@ Bar on its own instead of matching the menu bar." : {
+      "comment" : "An explanation of the toggle that gives the Thaw Bar its own appearance."
     },
     "Style" : {
       "comment" : "A label for the menu bar background style.",
@@ -50369,6 +50375,9 @@
     },
     "Use Current Location" : {
 
+    },
+    "Use a separate appearance" : {
+      "comment" : "A toggle label for giving the Thaw Bar its own appearance rather than the menu bar's."
     },
     "Use different settings for Light and Dark Mode" : {
 

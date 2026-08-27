@@ -371,6 +371,12 @@ private struct IceBarContentView: View {
         itemManager.itemCache.managedItems(for: section)
     }
 
+    /// The shape, tint and border to draw with, which is the menu bar's
+    /// unless the Thaw Bar has been given its own.
+    private var appearance: ResolvedThawBarAppearance {
+        configuration.resolvedThawBarAppearance
+    }
+
     private var configuration: MenuBarAppearanceConfigurationV2 {
         appState.appearanceManager.configuration
     }
@@ -397,7 +403,7 @@ private struct IceBarContentView: View {
     }
 
     private var verticalPadding: CGFloat {
-        screen.hasNotch && configuration.hasRoundedShape ? 2 : 0
+        screen.hasNotch && appearance.hasRoundedShape ? 2 : 0
     }
 
     private var contentHeight: CGFloat {
@@ -466,7 +472,7 @@ private struct IceBarContentView: View {
     }
 
     private var clipShape: some InsettableShape {
-        if configuration.hasRoundedShape {
+        if appearance.hasRoundedShape {
             RoundedRectangle(cornerRadius: contentHeight / 2, style: .circular)
         } else {
             RoundedRectangle(cornerRadius: contentHeight / 4, style: .continuous)
@@ -484,15 +490,24 @@ private struct IceBarContentView: View {
             }
             .padding(.horizontal, horizontalPadding)
             .padding(.vertical, verticalPadding)
-            .menuBarItemContainer(appState: appState, colorInfo: colorManager.colorInfo)
+            .menuBarItemContainer(
+                appState: appState,
+                colorInfo: colorManager.colorInfo,
+                tintOverride: MenuBarContainerTint(
+                    kind: appearance.tintKind,
+                    color: appearance.tintColor,
+                    gradient: appearance.tintGradient,
+                    opacity: appearance.tintOpacity
+                )
+            )
             .foregroundStyle(colorManager.colorInfo?.isBright(for: screen) == true ? .black : .white)
             .clipShape(clipShape)
 
-            if configuration.current.borderOnThawBar {
+            if appearance.hasBorder {
                 clipShape
-                    .inset(by: configuration.current.borderWidth / 2)
-                    .stroke(lineWidth: configuration.current.borderWidth)
-                    .foregroundStyle(Color(cgColor: configuration.current.borderColor))
+                    .inset(by: appearance.borderWidth / 2)
+                    .stroke(lineWidth: appearance.borderWidth)
+                    .foregroundStyle(Color(cgColor: appearance.borderColor))
             }
         }
         .padding(5)
@@ -596,7 +611,7 @@ private struct IceBarContentView: View {
                                 section: section,
                                 displayID: screen.displayID,
                                 maxHeight: itemMaxHeight,
-                                hasRoundedShape: configuration.hasRoundedShape,
+                                hasRoundedShape: appearance.hasRoundedShape,
                                 tooltipDelay: appState.settings.advanced.tooltipDelay,
                                 isLightBackground: isLightBackground
                             )
@@ -623,7 +638,7 @@ private struct IceBarContentView: View {
                                 section: section,
                                 displayID: screen.displayID,
                                 maxHeight: itemMaxHeight,
-                                hasRoundedShape: configuration.hasRoundedShape,
+                                hasRoundedShape: appearance.hasRoundedShape,
                                 tooltipDelay: appState.settings.advanced.tooltipDelay,
                                 isLightBackground: isLightBackground
                             )
@@ -650,7 +665,7 @@ private struct IceBarContentView: View {
                                         section: section,
                                         displayID: screen.displayID,
                                         maxHeight: itemMaxHeight,
-                                        hasRoundedShape: configuration.hasRoundedShape,
+                                        hasRoundedShape: appearance.hasRoundedShape,
                                         tooltipDelay: appState.settings.advanced.tooltipDelay,
                                         isLightBackground: isLightBackground
                                     )

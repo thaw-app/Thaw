@@ -98,6 +98,8 @@ struct MenuBarAppearanceEditor: View {
                 }
             }
 
+            ThawBarAppearanceEditor(configuration: $appearanceManager.configuration)
+
             if appearanceManager.configuration.current.tintKind != .noTint
                 || appearanceManager.configuration.shapeKind != .noShape
                 || appearanceManager.configuration.current.backgroundKind != .none
@@ -420,6 +422,12 @@ private struct UnlabeledShapeEditor: View {
     /// border around its own panel and is unaffected.
     let shapeKind: MenuBarShapeKind
 
+    /// Whether the Thaw Bar has been given its own appearance.
+    ///
+    /// Its half of the border row stops doing anything once it has, since the
+    /// panel then reads its border out of the override instead.
+    let isThawBarOverridden: Bool
+
     var body: some View {
         // No wrapping VStack: `IceSection` is a native grouped `Section` and
         // must remain a direct child of the enclosing `IceForm` list, which
@@ -511,6 +519,7 @@ private struct UnlabeledShapeEditor: View {
                     .disabled(shapeKind == .noShape)
 
                 Toggle("\(Constants.displayName) Bar", isOn: $configuration.borderOnThawBar)
+                    .disabled(isThawBarOverridden)
             }
             .toggleStyle(.checkbox)
             .frame(height: 24)
@@ -580,12 +589,14 @@ private struct LabeledShapeEditor: View {
         case .light:
             UnlabeledShapeEditor(
                 configuration: $configuration.lightModeConfiguration,
-                shapeKind: configuration.shapeKind
+                shapeKind: configuration.shapeKind,
+                isThawBarOverridden: configuration.thawBarAppearance.overridesMenuBar
             )
         case .dark:
             UnlabeledShapeEditor(
                 configuration: $configuration.darkModeConfiguration,
-                shapeKind: configuration.shapeKind
+                shapeKind: configuration.shapeKind,
+                isThawBarOverridden: configuration.thawBarAppearance.overridesMenuBar
             )
         }
     }
@@ -597,8 +608,137 @@ private struct StaticShapeEditor: View {
     var body: some View {
         UnlabeledShapeEditor(
             configuration: $configuration.staticConfiguration,
-            shapeKind: configuration.shapeKind
+            shapeKind: configuration.shapeKind,
+            isThawBarOverridden: configuration.thawBarAppearance.overridesMenuBar
         )
+    }
+}
+
+// MARK: - Thaw Bar Editor
+
+/// The section that forks the Thaw Bar's appearance away from the menu bar's.
+///
+/// The two have always matched so they read as one surface, and they still do
+/// until the toggle here is switched on. Note that this sits outside the
+/// light/dark split: the panel takes one set of values regardless of the
+/// system appearance, because a floating panel is not trying to blend into
+/// anything that changes underneath it.
+private struct ThawBarAppearanceEditor: View {
+    @Binding var configuration: MenuBarAppearanceConfigurationV2
+
+    private var appearance: ThawBarAppearance {
+        configuration.thawBarAppearance
+    }
+
+    /// Turning the override on seeds it from the values already on screen, so
+    /// the toggle by itself never changes how the panel looks.
+    private var isEnabled: Binding<Bool> {
+        Binding(
+            get: { configuration.thawBarAppearance.overridesMenuBar },
+            set: { isOn in
+                if isOn {
+                    configuration.thawBarAppearance = ThawBarAppearance(
+                        seededFrom: configuration.resolvedThawBarAppearance
+                    )
+                } else {
+                    configuration.thawBarAppearance.overridesMenuBar = false
+                }
+            }
+        )
+    }
+
+    var body: some View {
+        IceSection("\(Constants.displayName) Bar") {
+            Toggle("Use a separate appearance", isOn: isEnabled)
+                .annotation("Style the \(Constants.displayName) Bar on its own instead of matching the menu bar.")
+
+            if appearance.overridesMenuBar {
+                roundedShapeToggle
+                tintPicker
+                tintOpacity
+                borderToggle
+                if appearance.hasBorder {
+                    borderColor
+                    borderWidth
+                }
+            }
+        }
+    }
+
+    private var roundedShapeToggle: some View {
+        Toggle("Rounded corners", isOn: $configuration.thawBarAppearance.hasRoundedShape)
+    }
+
+    private var tintPicker: some View {
+        LabeledContent("Tint") {
+            HStack {
+                IcePicker("Tint", selection: $configuration.thawBarAppearance.tintKind) {
+                    ForEach(ThawBarAppearance.supportedTintKinds) { tintKind in
+                        Text(tintKind.localized).tag(tintKind)
+                    }
+                }
+                .labelsHidden()
+
+                switch appearance.tintKind {
+                case .solid:
+                    ColorPicker(
+                        appearance.tintKind.localized,
+                        selection: $configuration.thawBarAppearance.tintColor,
+                        supportsOpacity: false
+                    )
+                    .labelsHidden()
+                case .gradient:
+                    IceGradientPicker(
+                        appearance.tintKind.localized,
+                        gradient: $configuration.thawBarAppearance.tintGradient,
+                        supportsOpacity: false
+                    )
+                    .labelsHidden()
+                default:
+                    EmptyView()
+                }
+            }
+            .frame(height: 24)
+        }
+    }
+
+    @ViewBuilder
+    private var tintOpacity: some View {
+        if appearance.tintKind != .noTint {
+            LabeledContent("Opacity") {
+                IceSlider(
+                    value: $configuration.thawBarAppearance.tintOpacity,
+                    in: 0 ... 1,
+                    step: 0.05,
+                    showsValue: false
+                ) {
+                    Text(appearance.tintOpacity, format: .percent.precision(.fractionLength(0)))
+                }
+            }
+        }
+    }
+
+    private var borderToggle: some View {
+        Toggle("Border", isOn: $configuration.thawBarAppearance.hasBorder)
+    }
+
+    private var borderColor: some View {
+        ColorPicker(
+            "Border Color",
+            selection: $configuration.thawBarAppearance.borderColor,
+            supportsOpacity: true
+        )
+    }
+
+    private var borderWidth: some View {
+        IcePicker(
+            "Border Width",
+            selection: $configuration.thawBarAppearance.borderWidth
+        ) {
+            Text(verbatim: "1").tag(1.0)
+            Text(verbatim: "2").tag(2.0)
+            Text(verbatim: "3").tag(3.0)
+        }
     }
 }
 
