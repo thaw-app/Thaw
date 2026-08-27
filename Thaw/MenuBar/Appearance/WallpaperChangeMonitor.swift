@@ -78,8 +78,12 @@ final class WallpaperChangeMonitor {
             eventMask: [.write, .delete, .rename, .extend],
             queue: .main
         )
-        source.setEventHandler { [weak self] in
-            guard let self else { return }
+        // Capture the source weakly: GCD retains its handler, so a strong
+        // capture here would form a cycle the source cannot break out of.
+        // `restart()` replaces the source on every atomic index replacement,
+        // so leaked sources would accumulate over a session.
+        source.setEventHandler { [weak self, weak source] in
+            guard let self, let source else { return }
             let events = source.data
             if events.contains(.delete) || events.contains(.rename) {
                 // The system replaces the index atomically rather than

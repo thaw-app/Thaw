@@ -164,6 +164,13 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     /// The items currently asking for attention.
     private(set) var tagsSeekingAttention: Set<MenuBarItemTag> = []
 
+    /// Set by ``MenuBarItemTriggersManager`` while a trigger watches for
+    /// attention-seeking items.
+    ///
+    /// Detection is otherwise tied to the reveal setting, which a user may
+    /// leave off while still wanting a trigger to act on the same signal.
+    @ObservationIgnored var isAttentionDetectionRequired = false
+
     /// Memoized results of ``trimmedImage(for:)``, keyed by tag, each paired
     /// with the `CGImage` it was derived from so a recapture invalidates it.
     ///
@@ -279,11 +286,11 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     ///
     /// The slider ceiling and the SCK / Hidden capture floor are the same
     /// number so they cannot drift apart. Always Hidden stays at 1 fps.
-    nonisolated static let maxIconRefreshRate: Double = 30
+    static nonisolated let maxIconRefreshRate: Double = 30
 
     /// Minimum spacing enforced between visible-section SCK captures, in seconds.
     /// Reciprocal of ``maxIconRefreshRate``.
-    nonisolated static let minIconRefreshInterval: TimeInterval = 1.0 / maxIconRefreshRate
+    static nonisolated let minIconRefreshInterval: TimeInterval = 1.0 / maxIconRefreshRate
 
     /// Tracks whether the MenuBarLayoutSettingsPane is currently open.
     /// Used to gate background cache prewarming so captures only occur while the
@@ -1479,7 +1486,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     /// Feeds a batch of captures to the attention detector and republishes
     /// the verdict when it changes.
     private func recordForAttention(_ newImages: [MenuBarItemTag: CapturedImage]) {
-        guard Defaults.bool(forKey: .surfaceItemsSeekingAttention) else {
+        guard Defaults.bool(forKey: .surfaceItemsSeekingAttention) || isAttentionDetectionRequired else {
             if !tagsSeekingAttention.isEmpty {
                 tagsSeekingAttention = []
             }

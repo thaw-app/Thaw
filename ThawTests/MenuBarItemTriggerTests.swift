@@ -6,11 +6,11 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-@testable import Thaw
 import CoreGraphics
 import Foundation
 import IOKit.ps
 import Testing
+@testable import Thaw
 
 @Suite("Menu bar item triggers")
 @MainActor
@@ -34,7 +34,8 @@ struct MenuBarItemTriggerTests {
         audio: String? = nil,
         screenCount: Int = 1,
         externalDisplay: Bool = false,
-        focus: Bool = false
+        focus: Bool = false,
+        seekingAttention: Set<String> = []
     ) -> SystemState {
         SystemState(
             power: PowerState(batteryPercentage: battery, isOnACPower: onAC, isCharging: charging),
@@ -47,8 +48,64 @@ struct MenuBarItemTriggerTests {
             audioOutputDeviceName: audio,
             screenCount: screenCount,
             externalDisplayConnected: externalDisplay,
-            isFocusActive: focus
+            isFocusActive: focus,
+            itemsSeekingAttention: seekingAttention
         )
+    }
+
+    // MARK: - itemSeekingAttention
+
+    @Test("An attention condition is satisfied while its item is blinking")
+    func attentionConditionFiresForItsItem() {
+        let condition = TriggerCondition.itemSeekingAttention(itemIdentifier: "com.example.app:Status")
+        #expect(condition.isSatisfied(state: state(seekingAttention: ["com.example.app:Status"])))
+    }
+
+    @Test("An attention condition ignores a different item blinking")
+    func attentionConditionIsPerItem() {
+        let condition = TriggerCondition.itemSeekingAttention(itemIdentifier: "com.example.app:Status")
+        #expect(!condition.isSatisfied(state: state(seekingAttention: ["com.other.app:Status"])))
+    }
+
+    @Test("An attention condition is unsatisfied when nothing is blinking")
+    func attentionConditionIsFalseWhenQuiet() {
+        let condition = TriggerCondition.itemSeekingAttention(itemIdentifier: "com.example.app:Status")
+        #expect(!condition.isSatisfied(state: state()))
+    }
+
+    @Test("An attention condition maps to its own kind, editor and feature")
+    func attentionConditionMapsToItsKind() {
+        let condition = TriggerCondition.itemSeekingAttention(itemIdentifier: "x")
+        #expect(condition.kind == .itemSeekingAttention)
+        #expect(TriggerConditionKind.itemSeekingAttention.editor == .itemPicker)
+        #expect(TriggerConditionKind.itemSeekingAttention.requiredFeature == .attentionSeeking)
+    }
+
+    @Test("The watched item survives switching between the two icon kinds")
+    func watchedItemIsPreservedAcrossKindChange() {
+        let watched = "com.example.app:Status"
+        let image = TriggerCondition.imageChanged(itemIdentifier: watched, referenceHash: 42)
+
+        let attention = TriggerCondition.make(kind: .itemSeekingAttention, preserving: image)
+        #expect(attention.watchedItemIdentifier == watched)
+
+        // And back again -- the reference hash is gone, which is correct: it
+        // described a comparison this kind never made.
+        let backToImage = TriggerCondition.make(kind: .imageChanged, preserving: attention)
+        #expect(backToImage.watchedItemIdentifier == watched)
+        #expect(backToImage.imageValue?.referenceHash == nil)
+    }
+
+    @Test("Choosing an item rebuilds the attention condition")
+    func withAttentionItemSetsTheWatchedItem() {
+        let condition = TriggerCondition.itemSeekingAttention(itemIdentifier: "")
+        #expect(condition.withAttentionItem("com.example.app:Status").watchedItemIdentifier == "com.example.app:Status")
+    }
+
+    @Test("withAttentionItem leaves other condition kinds alone")
+    func withAttentionItemIgnoresOtherKinds() {
+        let condition = TriggerCondition.onACPower
+        #expect(condition.withAttentionItem("com.example.app:Status") == .onACPower)
     }
 
     // MARK: - Battery / Power
@@ -1263,7 +1320,7 @@ struct MenuBarItemTriggerTests {
     // MARK: - Regression coverage for trigger integration
 
     @Test func presentIdentifierResolutionKeepsDuplicateTitleInstancesDistinct() {
-        let present: Set<String> = ["com.example:Status", "com.example:Status:1"]
+        let present: Set = ["com.example:Status", "com.example:Status:1"]
         let bases = [
             "com.example:Status": "com.example:Status",
             "com.example:Status:1": "com.example:Status",

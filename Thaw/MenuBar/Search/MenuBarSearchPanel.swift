@@ -943,7 +943,17 @@ private struct MenuBarSearchItemView: View {
     /// Previously an empty `NSImage`, which only ever reached the screen
     /// because the whole panel refused to open without Screen Recording.
     private var itemImage: NSImage? {
-        imageCache.trimmedImage(for: item.tag)
+        let captured = imageCache.trimmedImage(for: item.tag)
+        // The row already shows the app icon on its leading edge, so when
+        // icons are preferred the trailing preview would just repeat it.
+        if MenuBarItemIconFallback.shouldUseAppIcon(
+            for: item,
+            hasCapture: captured != nil,
+            prefersAppIcon: appState.settings.advanced.alwaysUseAppIconForMenuBarItems
+        ) {
+            return nil
+        }
+        return captured
     }
 
     private var appIcon: NSImage? {

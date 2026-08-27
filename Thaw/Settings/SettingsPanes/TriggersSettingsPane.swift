@@ -652,7 +652,9 @@ private struct TriggerRow: View {
         if let selectedItemOption {
             return selectedItemOption.name
         }
-        if !trigger.itemDisplayName.isEmpty { return trigger.itemDisplayName }
+        if !trigger.itemDisplayName.isEmpty {
+            return trigger.itemDisplayName
+        }
         return trigger.itemIdentifier.isEmpty ? "No item selected" : trigger.itemIdentifier
     }
 
@@ -1221,22 +1223,23 @@ private struct TriggerRow: View {
             ScriptConditionEditor(condition: $trigger.condition, focusedField: focusedField, focusID: "c0-\(trigger.id)")
         case .imageComparison:
             ImageConditionEditor(condition: $trigger.condition, itemOptions: itemOptions, captureReference: captureReference)
+        case .itemPicker:
+            AttentionConditionEditor(condition: $trigger.condition, itemOptions: itemOptions)
         case .none:
             EmptyView()
         }
     }
 
+    @ViewBuilder
     private var sectionPickers: some View {
-        Group {
-            IcePicker("Show in", selection: $trigger.revealSection) {
-                ForEach(MenuBarSection.Name.allCases, id: \.self) { section in
-                    Text(section.triggerPickerDisplayString).tag(section)
-                }
+        IcePicker("Show in", selection: $trigger.revealSection) {
+            ForEach(MenuBarSection.Name.allCases, id: \.self) { section in
+                Text(section.triggerPickerDisplayString).tag(section)
             }
-            IcePicker("Otherwise hide in", selection: $trigger.hideSection) {
-                ForEach(MenuBarSection.Name.allCases, id: \.self) { section in
-                    Text(section.triggerPickerDisplayString).tag(section)
-                }
+        }
+        IcePicker("Otherwise hide in", selection: $trigger.hideSection) {
+            ForEach(MenuBarSection.Name.allCases, id: \.self) { section in
+                Text(section.triggerPickerDisplayString).tag(section)
             }
         }
     }
@@ -1551,6 +1554,8 @@ private struct ConditionEditorView: View {
             ScriptConditionEditor(condition: $condition, focusedField: focusedField, focusID: focusID)
         case .imageComparison:
             ImageConditionEditor(condition: $condition, itemOptions: itemOptions, captureReference: captureReference)
+        case .itemPicker:
+            AttentionConditionEditor(condition: $condition, itemOptions: itemOptions)
         case .none:
             EmptyView()
         }
@@ -1716,7 +1721,9 @@ private struct BluetoothDevicePicker: View {
     private var selection: Binding<String> {
         Binding(
             get: {
-                if showsTextField { return Self.customTag }
+                if showsTextField {
+                    return Self.customTag
+                }
                 return name
             },
             set: { newValue in
@@ -1854,6 +1861,43 @@ private struct ScriptConditionEditor: View {
 
 /// Editor for an image-comparison condition: pick a menu bar item to watch
 /// and capture a reference image of its icon.
+/// Picks the item whose icon is watched for attention-seeking behaviour.
+/// Unlike ``ImageConditionEditor`` there is no reference to capture: the
+/// verdict comes from how the icon moves over time, not from a comparison
+/// against a stored snapshot.
+private struct AttentionConditionEditor: View {
+    @Binding var condition: TriggerCondition
+    let itemOptions: [TriggerItemOption]
+
+    private var watchedID: String {
+        condition.watchedItemIdentifier ?? ""
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            IcePicker("Watched item", selection: itemBinding) {
+                if watchedID.isEmpty {
+                    Text("Choose an item…").tag("")
+                } else if !itemOptions.contains(where: { $0.id == watchedID }) {
+                    Text("\(watchedID) (not present)").tag(watchedID)
+                }
+                ForEach(itemOptions, id: \.id) { option in
+                    Text(option.name).tag(option.id)
+                }
+            }
+
+            Text("Reveals the item while its icon is blinking. A clock or a battery percentage will not trigger this: they always move to a state they have never shown before, while a blink keeps returning to one. Requires screen recording permission.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private var itemBinding: Binding<String> {
+        Binding(get: { watchedID }, set: { condition = condition.withAttentionItem($0) })
+    }
+}
+
 private struct ImageConditionEditor: View {
     @Binding var condition: TriggerCondition
     let itemOptions: [TriggerItemOption]
@@ -1940,10 +1984,14 @@ private struct CommitTextField: View {
             .focused(focusedField, equals: focusID)
             .onAppear { draft = value }
             .onChange(of: value) { _, newValue in
-                if focusedField.wrappedValue != focusID { draft = newValue }
+                if focusedField.wrappedValue != focusID {
+                    draft = newValue
+                }
             }
             .onChange(of: focusedField.wrappedValue) { _, newValue in
-                if newValue != focusID { commit() }
+                if newValue != focusID {
+                    commit()
+                }
             }
             .onSubmit {
                 commit()
@@ -1952,6 +2000,8 @@ private struct CommitTextField: View {
     }
 
     private func commit() {
-        if draft != value { value = draft }
+        if draft != value {
+            value = draft
+        }
     }
 }

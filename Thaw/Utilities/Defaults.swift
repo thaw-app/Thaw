@@ -220,6 +220,10 @@ nonisolated extension Defaults {
 
         static let surfaceItemsSeekingAttention = false
 
+        // MARK: Item Rendering
+
+        static let alwaysUseAppIconForMenuBarItems = false
+
         // MARK: Appearance Settings
 
         static let menuBarAppearanceConfigurationV2 = MenuBarAppearanceConfigurationV2.defaultConfiguration
@@ -361,6 +365,12 @@ nonisolated extension Defaults {
         /// ``ProfileManager/repairPersistedLayoutsIfNeeded()``; not exposed in
         /// Settings.
         case profileLayoutRepairBuild = "ProfileLayoutRepairBuild"
+
+        // MARK: Item Rendering
+
+        /// Whether menu bar items are drawn as their owning app's icon
+        /// instead of a live capture, everywhere Thaw renders them.
+        case alwaysUseAppIconForMenuBarItems = "AlwaysUseAppIconForMenuBarItems"
 
         // MARK: Attention Surfacing
 

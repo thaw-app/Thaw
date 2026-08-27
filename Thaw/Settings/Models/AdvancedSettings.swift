@@ -374,6 +374,21 @@ final class AdvancedSettings {
         }
     }
 
+    /// Whether menu bar items are drawn as their owning application's icon
+    /// instead of a live capture.
+    ///
+    /// Applies everywhere Thaw renders an item — the Thaw Bar, the layout
+    /// editor and the search panel. Distinct from the automatic fallback,
+    /// which only substitutes an icon where no capture exists: this asks for
+    /// icons even when a capture is available, for people who find live
+    /// previews noisy or would rather not have their menu bar sampled.
+    var alwaysUseAppIconForMenuBarItems = Defaults.DefaultValue.alwaysUseAppIconForMenuBarItems {
+        didSet {
+            guard oldValue != alwaysUseAppIconForMenuBarItems else { return }
+            Defaults.set(alwaysUseAppIconForMenuBarItems, forKey: .alwaysUseAppIconForMenuBarItems)
+        }
+    }
+
     /// Whether an item that starts blinking while hidden briefly shows its
     /// section, so an alert raised behind the chevron is still seen.
     ///
@@ -440,6 +455,7 @@ final class AdvancedSettings {
         Defaults.ifPresent(key: .searchIncludeAlwaysHidden, assign: &searchIncludeAlwaysHidden)
         Defaults.ifPresent(key: .moveCursorToRevealedItem, assign: &moveCursorToRevealedItem)
         Defaults.ifPresent(key: .surfaceItemsSeekingAttention, assign: &surfaceItemsSeekingAttention)
+        Defaults.ifPresent(key: .alwaysUseAppIconForMenuBarItems, assign: &alwaysUseAppIconForMenuBarItems)
 
         Defaults.ifPresent(key: .sectionDividerStyle) { rawValue in
             if let style = SectionDividerStyle(rawValue: rawValue) {
@@ -523,6 +539,8 @@ final class AdvancedSettings {
                 moveCursorToRevealedItem = boolValue
             case "surfaceItemsSeekingAttention":
                 surfaceItemsSeekingAttention = boolValue
+            case "alwaysUseAppIconForMenuBarItems":
+                alwaysUseAppIconForMenuBarItems = boolValue
             default:
                 // Key not handled by AdvancedSettings
                 break

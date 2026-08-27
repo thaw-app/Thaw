@@ -189,6 +189,14 @@ enum TriggerCondition: Codable, Hashable {
     /// Image comparison
     case imageChanged(itemIdentifier: String, referenceHash: UInt64?)
 
+    /// Satisfied while a watched item is blinking for attention.
+    ///
+    /// Distinct from ``imageChanged``, which fires on any difference from a
+    /// captured reference: a clock trips that on every tick. This fires only
+    /// when an icon keeps returning to a state it already showed, which is
+    /// what an app does when it wants to be noticed.
+    case itemSeekingAttention(itemIdentifier: String)
+
     /// Returns whether the condition is satisfied by the given state at the
     /// given time.
     func isSatisfied(state: SystemState, now: Date = Date()) -> Bool {
@@ -264,6 +272,8 @@ enum TriggerCondition: Codable, Hashable {
         case let .imageChanged(itemIdentifier, referenceHash):
             guard let referenceHash, let current = state.imageHashes[itemIdentifier] else { return false }
             return ImageHashing.hammingDistance(current, referenceHash) > ImageHashing.changeThreshold
+        case let .itemSeekingAttention(itemIdentifier):
+            return state.itemsSeekingAttention.contains(itemIdentifier)
         }
     }
 
@@ -325,6 +335,8 @@ enum TriggerCondition: Codable, Hashable {
             return expectedOutput.isEmpty ? "\(name) exits 0" : "\(name) outputs “\(expectedOutput)”"
         case let .imageChanged(_, referenceHash):
             return referenceHash == nil ? "An icon changed (capture a reference)" : "A watched icon changed"
+        case .itemSeekingAttention:
+            return "An icon is asking for attention"
         }
     }
 
@@ -333,7 +345,9 @@ enum TriggerCondition: Codable, Hashable {
     private static func appDisplayName(_ bundleID: String) -> String {
         if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) {
             let name = url.deletingPathExtension().lastPathComponent
-            if !name.isEmpty { return name }
+            if !name.isEmpty {
+                return name
+            }
         }
         return bundleID
     }
@@ -384,8 +398,12 @@ enum TriggerCondition: Codable, Hashable {
     }
 
     private static func weekdaySummary(_ weekdays: Set<ScheduleWeekday>) -> String {
-        if weekdays == ScheduleWeekday.everyDay { return "every day" }
-        if weekdays.isEmpty { return "no days" }
+        if weekdays == ScheduleWeekday.everyDay {
+            return "every day"
+        }
+        if weekdays.isEmpty {
+            return "no days"
+        }
         return ScheduleWeekday.allCases
             .filter { weekdays.contains($0) }
             .map(\.shortTitle)
@@ -421,6 +439,7 @@ enum TriggerConditionKind: String, CaseIterable, Identifiable {
     case microphoneInUse
     case scriptResult
     case imageChanged
+    case itemSeekingAttention
 
     var id: String {
         rawValue
@@ -452,6 +471,7 @@ enum TriggerConditionKind: String, CaseIterable, Identifiable {
         case .microphoneInUse: "Microphone is in use"
         case .scriptResult: "Script result"
         case .imageChanged: "Menu bar icon changed"
+        case .itemSeekingAttention: "Menu bar icon is asking for attention"
         }
     }
 
@@ -490,6 +510,7 @@ enum TriggerConditionKind: String, CaseIterable, Identifiable {
         case .thermalPressure: .thermalLevel
         case .scriptResult: .script
         case .imageChanged: .imageComparison
+        case .itemSeekingAttention: .itemPicker
         case .onACPower, .onBatteryPower, .charging, .networkConnected,
              .vpnActive, .externalDisplay, .focusActive,
              .cameraInUse, .microphoneInUse:
@@ -521,6 +542,7 @@ enum TriggerConditionKind: String, CaseIterable, Identifiable {
         case .microphoneInUse: .recordingDevices
         case .scriptResult: .scriptResult
         case .imageChanged: .imageComparison
+        case .itemSeekingAttention: .attentionSeeking
         }
     }
 }
@@ -538,6 +560,8 @@ enum TriggerConditionEditor: Equatable {
     case thermalLevel
     case script
     case imageComparison
+    /// Picks a menu bar item, with nothing else to configure.
+    case itemPicker
 }
 
 // MARK: - TriggerCondition <-> Kind
@@ -569,6 +593,7 @@ extension TriggerCondition {
         case .microphoneInUse: .microphoneInUse
         case .scriptResult: .scriptResult
         case .imageChanged: .imageChanged
+        case .itemSeekingAttention: .itemSeekingAttention
         }
     }
 
@@ -660,6 +685,21 @@ extension TriggerCondition {
         }
     }
 
+    /// The item this condition watches, for either icon-watching kind.
+    var watchedItemIdentifier: String? {
+        switch self {
+        case let .imageChanged(itemIdentifier, _): itemIdentifier
+        case let .itemSeekingAttention(itemIdentifier): itemIdentifier
+        default: nil
+        }
+    }
+
+    /// Returns a copy watching the given item, for the attention kind.
+    func withAttentionItem(_ itemIdentifier: String) -> TriggerCondition {
+        guard case .itemSeekingAttention = self else { return self }
+        return .itemSeekingAttention(itemIdentifier: itemIdentifier)
+    }
+
     /// Builds the default condition for the given kind.
     static func defaultCondition(for kind: TriggerConditionKind) -> TriggerCondition {
         switch kind {
@@ -686,6 +726,7 @@ extension TriggerCondition {
         case .microphoneInUse: .microphoneInUse
         case .scriptResult: .scriptResult(path: "", expectedOutput: "")
         case .imageChanged: .imageChanged(itemIdentifier: "", referenceHash: nil)
+        case .itemSeekingAttention: .itemSeekingAttention(itemIdentifier: "")
         }
     }
 
@@ -717,8 +758,18 @@ extension TriggerCondition {
             old.scriptValue.map { TriggerCondition.scriptResult(path: $0.path, expectedOutput: $0.expectedOutput) }
                 ?? .scriptResult(path: "", expectedOutput: "")
         case .imageChanged:
-            old.imageValue.map { TriggerCondition.imageChanged(itemIdentifier: $0.itemIdentifier, referenceHash: $0.referenceHash) }
-                ?? .imageChanged(itemIdentifier: "", referenceHash: nil)
+            // Carry the watched item from either icon-watching kind. The
+            // reference hash only survives when there was one, so switching
+            // from the attention kind lands on "no reference yet" rather
+            // than an inherited comparison the user never captured.
+            .imageChanged(
+                itemIdentifier: old.watchedItemIdentifier ?? "",
+                referenceHash: old.imageValue?.referenceHash
+            )
+        case .itemSeekingAttention:
+            // Preserve the watched item when switching between the two
+            // icon-watching kinds; the reference hash has no meaning here.
+            .itemSeekingAttention(itemIdentifier: old.watchedItemIdentifier ?? "")
         case .onACPower, .onBatteryPower, .charging, .networkConnected,
              .vpnActive, .externalDisplay, .focusActive, .nearLocation,
              .cameraInUse, .microphoneInUse:
@@ -1053,7 +1104,9 @@ struct MenuBarItemTrigger: Codable, Hashable, Identifiable {
     /// default display name and the name-field placeholder.
     var autoTitle: String {
         let summary = conditionSummary
-        if itemDisplayName.isEmpty { return summary }
+        if itemDisplayName.isEmpty {
+            return summary
+        }
         return "\(itemDisplayName): \(summary)"
     }
 
@@ -1061,7 +1114,9 @@ struct MenuBarItemTrigger: Codable, Hashable, Identifiable {
     /// the smart auto-generated title.
     var displayName: String {
         let trimmed = name.trimmingCharacters(in: .whitespaces)
-        if !trimmed.isEmpty { return trimmed }
+        if !trimmed.isEmpty {
+            return trimmed
+        }
         return autoTitle
     }
 }

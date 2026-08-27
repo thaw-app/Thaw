@@ -6829,6 +6829,9 @@
     "Desktop %lld" : {
       "comment" : "Label for a desktop Space, numbered as Mission Control numbers it."
     },
+    "Draw each menu bar item as its app's icon everywhere %@ shows it. Items whose app cannot be identified keep their live preview." : {
+      "comment" : "Annotation for the app-icon toggle. The argument is the app name."
+    },
     "Full Screen Space %lld" : {
       "comment" : "Label for a fullscreen Space, numbered as Mission Control numbers it."
     },
@@ -6840,6 +6843,12 @@
     },
     "Remove" : {
       "comment" : "Button that clears a profile's Space assignment."
+    },
+    "Reveals the item while its icon is blinking. A clock or a battery percentage will not trigger this: they always move to a state they have never shown before, while a blink keeps returning to one. Requires screen recording permission." : {
+      "comment" : "Caption for the attention-seeking trigger condition editor."
+    },
+    "Show app icons instead of live previews" : {
+      "comment" : "Toggle in the Layout pane's advanced controls."
     },
     "Space" : {
       "comment" : "Fallback label for a Space whose stored name is missing."

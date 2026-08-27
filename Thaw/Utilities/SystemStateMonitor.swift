@@ -107,6 +107,9 @@ struct SystemState: Equatable {
     /// conditions, keyed by item tag identifier. Populated by the manager.
     var imageHashes: [String: UInt64]
 
+    /// Identifiers of items currently blinking for attention.
+    var itemsSeekingAttention: Set<String>
+
     init(
         power: PowerState = PowerState(batteryPercentage: nil, isOnACPower: true, isCharging: false),
         frontmostAppBundleID: String? = nil,
@@ -127,7 +130,8 @@ struct SystemState: Equatable {
         isCameraInUse: Bool = false,
         isMicrophoneInUse: Bool = false,
         scriptOutcomes: [String: ScriptOutcome] = [:],
-        imageHashes: [String: UInt64] = [:]
+        imageHashes: [String: UInt64] = [:],
+        itemsSeekingAttention: Set<String> = []
     ) {
         self.power = power
         self.frontmostAppBundleID = frontmostAppBundleID
@@ -149,6 +153,7 @@ struct SystemState: Equatable {
         self.isMicrophoneInUse = isMicrophoneInUse
         self.scriptOutcomes = scriptOutcomes
         self.imageHashes = imageHashes
+        self.itemsSeekingAttention = itemsSeekingAttention
     }
 }
 
@@ -290,7 +295,9 @@ final class SystemStateMonitor: ObservableObject {
     private func setFrontmostAppMonitoring(_ enabled: Bool) {
         let isRunning = !workspaceObservers.isEmpty
         guard enabled != isRunning else {
-            if enabled { refreshApps() }
+            if enabled {
+                refreshApps()
+            }
             return
         }
 
@@ -425,7 +432,9 @@ final class SystemStateMonitor: ObservableObject {
     private func setSystemLoadMonitoring(_ enabled: Bool) {
         let isRunning = !systemLoadObservers.isEmpty
         guard enabled != isRunning else {
-            if enabled { refreshSystemLoad() }
+            if enabled {
+                refreshSystemLoad()
+            }
             return
         }
         if enabled {
@@ -620,13 +629,12 @@ final class SystemStateMonitor: ObservableObject {
                 .filter { $0.activationPolicy == .regular }
                 .compactMap(\.bundleIdentifier)
         )
-        let bluetoothNames: Set<String>
-        if flags.isEnabled(.bluetooth) {
-            bluetoothNames = await Task.detached(priority: .utility) {
+        let bluetoothNames: Set<String> = if flags.isEnabled(.bluetooth) {
+            await Task.detached(priority: .utility) {
                 Self.connectedBluetoothDeviceNames()
             }.value
         } else {
-            bluetoothNames = []
+            []
         }
         return SystemState(
             power: PowerSourceMonitor.readCurrentState(),
@@ -967,8 +975,16 @@ private final class LocationProvider: NSObject, CLLocationManagerDelegate {
         #else
             isAuthorized = status == .authorized || status == .authorizedAlways || status == .authorizedWhenInUse
         #endif
-        if isUpdating, isAuthorized {
+        guard isUpdating else { return }
+        if isAuthorized {
+            // A grant that arrived after the initial request; restart so
+            // updates flow without waiting for the next startUpdating call.
             manager.startUpdatingLocation()
+        } else {
+            // Authorization was granted before and has since been revoked.
+            // Without this the manager keeps requesting updates and failing
+            // each one for as long as the feature stays enabled.
+            stopUpdating()
         }
     }
 

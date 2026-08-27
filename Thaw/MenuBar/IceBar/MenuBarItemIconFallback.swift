@@ -78,6 +78,32 @@ enum MenuBarItemIconFallback {
         return icon
     }
 
+    /// Whether an item should be drawn as an app icon rather than a capture.
+    ///
+    /// Two reasons lead here: there is no capture to draw, or the user asked
+    /// for icons regardless. The preference deliberately loses to a missing
+    /// icon — an item whose app has quit still renders its stale capture
+    /// rather than degrading to a generic glyph, because the capture at
+    /// least shows what the item looked like.
+    ///
+    /// - Parameters:
+    ///   - item: The item being rendered.
+    ///   - hasCapture: Whether a captured glyph is available for it.
+    ///   - prefersAppIcon: The user's `alwaysUseAppIconForMenuBarItems`
+    ///     setting. Passed in rather than read from `Defaults` here so that
+    ///     SwiftUI views observing `AdvancedSettings` re-render when it is
+    ///     toggled.
+    @MainActor
+    static func shouldUseAppIcon(
+        for item: MenuBarItem,
+        hasCapture: Bool,
+        prefersAppIcon: Bool
+    ) -> Bool {
+        guard hasCapture else { return true }
+        guard prefersAppIcon else { return false }
+        return appIcon(for: item) != nil
+    }
+
     /// The image to display for an item that has no usable capture.
     ///
     /// Always answers with something: an item nobody can identify is still

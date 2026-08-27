@@ -36,6 +36,7 @@ enum TriggerFeature: String, CaseIterable, Identifiable {
     case recordingDevices
     case scriptResult
     case imageComparison
+    case attentionSeeking
     case compoundConditions
     case advancedOptions
     case invertAction
@@ -63,6 +64,7 @@ enum TriggerFeature: String, CaseIterable, Identifiable {
         case .recordingDevices: "Camera / microphone in use"
         case .scriptResult: "Script result"
         case .imageComparison: "Menu bar icon changed"
+        case .attentionSeeking: "Menu bar icon asking for attention"
         case .compoundConditions: "Combine conditions (AND / OR)"
         case .advancedOptions: "Advanced per-trigger options"
         case .invertAction: "Invert action (hide when met)"
@@ -88,6 +90,7 @@ enum TriggerFeature: String, CaseIterable, Identifiable {
         case .recordingDevices: "Reveal an item while the camera or microphone is in use."
         case .scriptResult: "Reveal an item based on a script's exit code or output (runs your script periodically)."
         case .imageComparison: "Reveal an item when a watched menu bar icon changes from a captured reference (uses screen capture)."
+        case .attentionSeeking: "Reveal an item when its icon starts blinking, told apart from a clock or a battery percentage by whether it keeps returning to a state it already showed (uses screen capture)."
         case .compoundConditions: "Let a trigger combine several conditions with AND / OR."
         case .advancedOptions: "Show per-trigger options: a notification when it reveals and a custom delay."
         case .invertAction: "Allow triggers to hide (instead of reveal) when the condition is met."
@@ -98,7 +101,7 @@ enum TriggerFeature: String, CaseIterable, Identifiable {
     var statusBadge: String? {
         switch self {
         case .vpn, .audioOutput: "Untested"
-        case .wifiSSID, .focusMode, .location, .scriptResult, .imageComparison: "Experimental"
+        case .wifiSSID, .focusMode, .location, .scriptResult, .imageComparison, .attentionSeeking: "Experimental"
         default: nil
         }
     }
@@ -130,7 +133,9 @@ final class TriggerFeatureFlagsManager {
         didSet {
             guard !suppressPersist else { return }
             persist()
-            for handler in changeHandlers { handler() }
+            for handler in changeHandlers {
+                handler()
+            }
         }
     }
 

@@ -7,8 +7,8 @@
 //  Licensed under the GNU GPLv3
 
 import AppKit
-import Combine
 import Collections
+import Combine
 import Foundation
 
 /// Runtime status for a trigger's condition evaluation and item-move pipeline.
@@ -95,6 +95,7 @@ final class MenuBarItemTriggersManager {
             }
             runScriptsIfNeeded()
             refreshImageHashesIfNeeded()
+            updateAttentionDetectionDemand()
             scheduleEvaluation()
         }
     }
@@ -219,6 +220,7 @@ final class MenuBarItemTriggersManager {
         var state = systemMonitor.state
         state.scriptOutcomes = scriptOutcomes
         state.imageHashes = imageHashes
+        state.itemsSeekingAttention = itemsSeekingAttention
         return state
     }
 
@@ -313,12 +315,14 @@ final class MenuBarItemTriggersManager {
                 guard let self else { return }
                 self.runScriptsIfNeeded()
                 self.refreshImageHashesIfNeeded()
+                self.updateAttentionDetectionDemand()
                 self.evaluate(for: self.evaluationState, force: true)
             }
             .store(in: &cancellables)
 
         runScriptsIfNeeded()
         refreshImageHashesIfNeeded()
+        updateAttentionDetectionDemand()
 
         // Re-apply when feature flags change (a newly enabled source may
         // satisfy a trigger that was previously inert).
@@ -1150,23 +1154,22 @@ final class MenuBarItemTriggersManager {
         appState: AppState
     ) -> Bool {
         let requestedSection = action.reveal ? trigger.revealSection : trigger.hideSection
-        let effectiveSection: MenuBarSection.Name?
-        switch requestedSection {
+        let effectiveSection: MenuBarSection.Name? = switch requestedSection {
         case .visible, .hidden:
-            effectiveSection = requestedSection
+            requestedSection
         case .alwaysHidden:
             if !appState.settings.advanced.enableAlwaysHiddenSection {
                 // moveItem intentionally falls back to Hidden while this
                 // section is disabled. The Advanced-settings subscription
                 // forces a re-evaluation when it becomes available.
-                effectiveSection = .hidden
+                .hidden
             } else if appState.menuBarManager.controlItem(withName: .alwaysHidden)?.window != nil {
-                effectiveSection = .alwaysHidden
+                .alwaysHidden
             } else {
                 // The section is configured but its control item has not
                 // appeared yet. Keep retrying instead of memoizing the
                 // temporary Hidden fallback as the requested destination.
-                effectiveSection = nil
+                nil
             }
         }
 
@@ -1289,6 +1292,30 @@ final class MenuBarItemTriggersManager {
     /// Captures the current perceptual hash for every watched item used by an
     /// enabled image-comparison condition (when the feature is on), updating
     /// the cache and re-evaluating when any hash changes.
+    /// Identifiers of items an attention condition currently reports as
+    /// blinking, read straight from the image cache's detector rather than
+    /// re-derived here.
+    private var itemsSeekingAttention: Set<String> {
+        guard featureFlags.isEnabled(.attentionSeeking), let appState else { return [] }
+        return Set(appState.imageCache.tagsSeekingAttention.map(\.tagIdentifier))
+    }
+
+    /// Tells the image cache whether any enabled trigger needs blink
+    /// detection running, so it is not tied to the reveal setting alone.
+    private func updateAttentionDetectionDemand() {
+        guard let appState else { return }
+        let required = featureFlags.isEnabled(.attentionSeeking) && triggers.contains { trigger in
+            trigger.isEnabled && trigger.allConditions.contains { condition in
+                if case let .itemSeekingAttention(id) = condition {
+                    return !id.isEmpty
+                }
+                return false
+            }
+        }
+        guard appState.imageCache.isAttentionDetectionRequired != required else { return }
+        appState.imageCache.isAttentionDetectionRequired = required
+    }
+
     private func refreshImageHashesIfNeeded() {
         guard featureFlags.isEnabled(.imageComparison) else { return }
         if isRefreshingImages {

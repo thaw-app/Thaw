@@ -121,6 +121,7 @@ struct MenuBarLayoutSettingsPane: View {
     private var advancedLayoutControlsCard: some View {
         IceSection {
             DisclosureGroup("Advanced layout controls", isExpanded: $isAdvancedExpanded) {
+                alwaysUseAppIconForMenuBarItems
                 automaticArrangementEnabled
                 enableMenuBarItemOverflow
                 if advancedSettings.enableMenuBarItemOverflow {
@@ -144,6 +145,17 @@ struct MenuBarLayoutSettingsPane: View {
     /// trailing period in the toggle label is the catalog's, not a slip —
     /// matching the existing key exactly is what avoids a new translation
     /// round.
+    private var alwaysUseAppIconForMenuBarItems: some View {
+        Toggle(
+            "Show app icons instead of live previews",
+            isOn: $advancedSettings.alwaysUseAppIconForMenuBarItems
+        )
+        .annotation {
+            Text("Draw each menu bar item as its app's icon everywhere \(Constants.displayName) shows it. Items whose app cannot be identified keep their live preview.")
+                .padding(.trailing, 75)
+        }
+    }
+
     private var automaticArrangementEnabled: some View {
         Toggle(
             "Arrange menu bar items.",

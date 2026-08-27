@@ -52,6 +52,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     deinit {
         imageObservationTask?.cancel()
         triggerObservationTask?.cancel()
+        appIconPreferenceObservationTask?.cancel()
     }
 
     /// The item that the view represents.
@@ -74,6 +75,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
 
     private lazy var tooltipController = CustomTooltipController(text: item.displayName, view: self)
     private var tooltipTrackingArea: NSTrackingArea?
+    private var appIconPreferenceObservationTask: Task<Void, Never>?
     private let placeholderImage: NSImage?
 
     /// The image displayed inside the view.
@@ -87,6 +89,20 @@ final class LayoutBarItemView: LayoutBarArrangedView {
             }
             needsDisplay = true
         }
+    }
+
+    /// Mirrors `advanced.alwaysUseAppIconForMenuBarItems`.
+    private var prefersAppIcon: Bool {
+        appState?.settings.advanced.alwaysUseAppIconForMenuBarItems ?? false
+    }
+
+    /// Whether this view draws the app icon rather than the captured glyph.
+    private var usesAppIcon: Bool {
+        MenuBarItemIconFallback.shouldUseAppIcon(
+            for: item,
+            hasCapture: cachedImage != nil,
+            prefersAppIcon: prefersAppIcon
+        )
     }
 
     override var kind: Kind {
@@ -145,7 +161,10 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     }
 
     override func draggingImage() -> NSImage? {
-        cachedImage?.nsImage ?? placeholderBitmapImage()
+        if usesAppIcon {
+            return placeholderBitmapImage()
+        }
+        return cachedImage?.nsImage ?? placeholderBitmapImage()
     }
 
     override func updateTrackingAreas() {
@@ -193,6 +212,23 @@ final class LayoutBarItemView: LayoutBarArrangedView {
                     guard !MenuBarItemImageCache.CapturedImage.isVisuallyEqual(previous, image) else { continue }
                     previous = image
                     self.cachedImage = image
+                }
+            }
+
+            // Redraw when the app-icon preference is toggled: `cachedImage`
+            // does not change, so its didSet cannot cover this.
+            appIconPreferenceObservationTask?.cancel()
+            appIconPreferenceObservationTask = Task { @MainActor [weak self, weak appState] in
+                var previous: Bool?
+                let changes = Observations {
+                    appState?.settings.advanced.alwaysUseAppIconForMenuBarItems
+                }
+                for await prefers in changes {
+                    guard let self, let prefers, prefers != previous else { continue }
+                    previous = prefers
+                    setFrameSize(preferredSize(for: cachedImage))
+                    (superview as? LayoutBarContainer)?.itemPreferredSizeDidChange(self)
+                    needsDisplay = true
                 }
             }
 
@@ -348,7 +384,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     override func draw(_: NSRect) {
         if !isDraggingPlaceholder {
             let triggerControlled = isTriggerControlled
-            if let capturedImage = cachedImage?.nsImage {
+            if !usesAppIcon, let capturedImage = cachedImage?.nsImage {
                 capturedImage.draw(
                     in: bounds,
                     from: .zero,
@@ -463,14 +499,20 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     /// Draws the marker identifying a trigger-owned item. Placed at the
     /// leading edge so it never collides with the unresponsive badge, which
     /// owns the trailing edge and can apply to the same item.
-    private func drawTriggerBadge() {
+    ///
+    /// The rendered symbol is cached once: `draw(_:)` runs per frame while a
+    /// drag is in flight, and resolving an SF Symbol with a configuration
+    /// allocates on every call.
+    private static let triggerBadge: NSImage? = {
         let configuration = NSImage.SymbolConfiguration(paletteColors: [.controlAccentColor])
-        guard
-            let badge = NSImage(
-                systemSymbolName: "bolt.fill",
-                accessibilityDescription: String(localized: "Controlled by a trigger")
-            )?.withSymbolConfiguration(configuration)
-        else {
+        return NSImage(
+            systemSymbolName: "bolt.fill",
+            accessibilityDescription: String(localized: "Controlled by a trigger")
+        )?.withSymbolConfiguration(configuration)
+    }()
+
+    private func drawTriggerBadge() {
+        guard let badge = Self.triggerBadge else {
             return
         }
         let width = Metrics.triggerBadgeWidth

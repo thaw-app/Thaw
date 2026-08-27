@@ -127,7 +127,6 @@ nonisolated enum SearchIndex {
 
     /// Advanced settings that only participate in search on macOS 27.
     private static let macOS27AdvancedNonSearchableProperties: Set<SettingsProperty> = [
-        .advanced("alwaysUseAppIconForMenuBarItems"),
         .advanced("enableExperimentalWindowHiding"),
         .advanced("enableExperimentalSystemItemHiding"),
         .advanced("menuBarOrderFulfillmentTimeout"),

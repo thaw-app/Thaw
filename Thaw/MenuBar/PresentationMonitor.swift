@@ -112,19 +112,34 @@ final class PresentationMonitor {
     }
 
     private func evaluate() {
-        let presenting = Self.isMirroring() || Self.isScreenBeingShared()
-        defer { appState?.menuBarManager.setAutomaticZenMode(presenting) }
+        // Sample off the main actor: the screen-sharing check walks the whole
+        // process table, and this fires on a 5 s cadence. Sampling detached
+        // means two evaluations could in principle land out of order, but at
+        // this cadence the newest state wins on the next poll either way.
+        Task { @MainActor [weak self] in
+            // Mirroring is an AppKit/CoreGraphics query that belongs on the
+            // main thread and costs nothing; only the process-table walk is
+            // worth detaching.
+            let mirroring = Self.isMirroring()
+            let shared = await Task.detached(priority: .utility) {
+                Self.isScreenBeingShared()
+            }.value
+            let presenting = mirroring || shared
+            guard let self else { return }
+            defer { self.appState?.menuBarManager.setAutomaticZenMode(presenting) }
 
-        guard presenting != isPresenting else { return }
-        isPresenting = presenting
-        diagLog.info(presenting
-            ? "Screen is being presented or shared — engaging zen mode"
-            : "Presentation ended — withdrawing zen mode")
+            guard presenting != self.isPresenting else { return }
+            self.isPresenting = presenting
+            self.diagLog.info(presenting
+                ? "Screen is being presented or shared — engaging zen mode"
+                : "Presentation ended — withdrawing zen mode")
+        }
     }
 
     // MARK: - Signals
 
-    /// Whether any active display is part of a mirror set.
+    /// Whether any active display is part of a mirror set. Main-actor bound:
+    /// it reads `NSScreen.screens`.
     private static func isMirroring() -> Bool {
         NSScreen.screens.contains { CGDisplayIsInMirrorSet($0.displayID) != 0 }
     }
@@ -134,7 +149,7 @@ final class PresentationMonitor {
     /// `screensharingd` is launched on demand for the duration of a session
     /// and is not an application, so it is invisible to `NSWorkspace`; the
     /// process table is the only public place it shows up.
-    private static func isScreenBeingShared() -> Bool {
+    private static nonisolated func isScreenBeingShared() -> Bool {
         runningProcessNames().contains("screensharingd")
     }
 
@@ -148,34 +163,45 @@ final class PresentationMonitor {
     ///
     /// `p_comm` is truncated to `MAXCOMLEN` (16) characters; the names matched
     /// here are shorter than that.
-    private static func runningProcessNames() -> Set<String> {
+    private static nonisolated func runningProcessNames() -> Set<String> {
         var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_ALL, 0]
         var size = 0
         guard sysctl(&mib, 4, nil, &size, nil, 0) == 0, size > 0 else {
             return []
         }
 
-        // Ask for headroom: the table can grow between sizing and reading.
-        let capacity = size / MemoryLayout<kinfo_proc>.stride + 16
-        var processes = [kinfo_proc](repeating: kinfo_proc(), count: capacity)
-        size = capacity * MemoryLayout<kinfo_proc>.stride
-        guard sysctl(&mib, 4, &processes, &size, nil, 0) == 0 else {
-            return []
-        }
+        // The table can grow between sizing and reading, so a single read is
+        // allowed to fail with the buffer now too small. Retrying with a fresh
+        // size matters for correctness, not just robustness: returning empty
+        // here reads as "not sharing" and would withdraw zen mode mid-session
+        // on a lost race.
+        for _ in 0 ..< 3 {
+            guard size > 0 else { return [] }
+            let capacity = size / MemoryLayout<kinfo_proc>.stride + 16
+            var processes = [kinfo_proc](repeating: kinfo_proc(), count: capacity)
+            var readSize = capacity * MemoryLayout<kinfo_proc>.stride
+            if sysctl(&mib, 4, &processes, &readSize, nil, 0) != 0 {
+                // Retry with whatever size the kernel reports now; the sizing
+                // call above already refreshed it once.
+                _ = sysctl(&mib, 4, nil, &size, nil, 0)
+                continue
+            }
 
-        var names = Set<String>()
-        for index in 0 ..< (size / MemoryLayout<kinfo_proc>.stride) {
-            var process = processes[index].kp_proc
-            let name = withUnsafeBytes(of: &process.p_comm) { raw -> String in
-                guard let base = raw.bindMemory(to: CChar.self).baseAddress else {
-                    return ""
+            var names = Set<String>()
+            for index in 0 ..< (readSize / MemoryLayout<kinfo_proc>.stride) {
+                var process = processes[index].kp_proc
+                let name = withUnsafeBytes(of: &process.p_comm) { raw -> String in
+                    guard let base = raw.bindMemory(to: CChar.self).baseAddress else {
+                        return ""
+                    }
+                    return String(cString: base)
                 }
-                return String(cString: base)
+                if !name.isEmpty {
+                    names.insert(name)
+                }
             }
-            if !name.isEmpty {
-                names.insert(name)
-            }
+            return names
         }
-        return names
+        return []
     }
 }

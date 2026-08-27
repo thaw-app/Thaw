@@ -422,6 +422,11 @@ private struct IceBarContentView: View {
         return menuBarHeight > 0 ? menuBarHeight : nil
     }
 
+    /// Mirrors `advanced.alwaysUseAppIconForMenuBarItems`.
+    private var prefersAppIcon: Bool {
+        appState.settings.advanced.alwaysUseAppIconForMenuBarItems
+    }
+
     /// Per-column maximum widths for the grid layout.
     private var columnWidths: [CGFloat] {
         // Zero-width placeholders (not []) during transient zero-height
@@ -435,7 +440,12 @@ private struct IceBarContentView: View {
         return (0 ..< gridColumns).map { col in
             rows.compactMap { row in
                 guard col < row.count else { return nil }
-                guard let cachedImage = imageCache.images[row[col].tag] else {
+                let item = row[col]
+                guard !MenuBarItemIconFallback.shouldUseAppIcon(
+                    for: item,
+                    hasCapture: imageCache.images[item.tag] != nil,
+                    prefersAppIcon: prefersAppIcon
+                ), let cachedImage = imageCache.images[item.tag] else {
                     // No capture: the item renders as a square app icon, so
                     // reserve that width rather than dropping the column and
                     // letting the grid collapse around a visible item.
@@ -613,7 +623,8 @@ private struct IceBarContentView: View {
                                 maxHeight: itemMaxHeight,
                                 hasRoundedShape: appearance.hasRoundedShape,
                                 tooltipDelay: appState.settings.advanced.tooltipDelay,
-                                isLightBackground: isLightBackground
+                                isLightBackground: isLightBackground,
+                                prefersAppIcon: prefersAppIcon
                             )
                         }
                     }
@@ -640,7 +651,8 @@ private struct IceBarContentView: View {
                                 maxHeight: itemMaxHeight,
                                 hasRoundedShape: appearance.hasRoundedShape,
                                 tooltipDelay: appState.settings.advanced.tooltipDelay,
-                                isLightBackground: isLightBackground
+                                isLightBackground: isLightBackground,
+                                prefersAppIcon: prefersAppIcon
                             )
                         }
                     }
@@ -667,7 +679,8 @@ private struct IceBarContentView: View {
                                         maxHeight: itemMaxHeight,
                                         hasRoundedShape: appearance.hasRoundedShape,
                                         tooltipDelay: appState.settings.advanced.tooltipDelay,
-                                        isLightBackground: isLightBackground
+                                        isLightBackground: isLightBackground,
+                                        prefersAppIcon: prefersAppIcon
                                     )
                                     if rows.count > 1 {
                                         itemView
@@ -716,6 +729,9 @@ private struct IceBarItemView: View {
     let hasRoundedShape: Bool
     let tooltipDelay: TimeInterval
     let isLightBackground: Bool
+    /// Mirrors `advanced.alwaysUseAppIconForMenuBarItems`. Threaded in like
+    /// `tooltipDelay` so the view re-renders when it is toggled.
+    let prefersAppIcon: Bool
 
     private var pillCornerRadius: CGFloat {
         guard let h = maxHeight, h > 0 else { return 4 }
@@ -803,10 +819,10 @@ private struct IceBarItemView: View {
     /// The captured glyph, or the owning app's icon when no capture is
     /// available — most often because Screen Recording was declined.
     private var image: NSImage? {
-        if let cachedImage = imageCache.images[item.tag] {
-            return cachedImage.nsImage
+        if isIconFallback {
+            return MenuBarItemIconFallback.image(for: item)
         }
-        return MenuBarItemIconFallback.image(for: item)
+        return imageCache.images[item.tag]?.nsImage
     }
 
     /// Whether ``image`` is an app icon rather than a captured glyph.
@@ -815,7 +831,11 @@ private struct IceBarItemView: View {
     /// height instead of being scaled from its own intrinsic size the way a
     /// capture is.
     private var isIconFallback: Bool {
-        imageCache.images[item.tag] == nil
+        MenuBarItemIconFallback.shouldUseAppIcon(
+            for: item,
+            hasCapture: imageCache.images[item.tag] != nil,
+            prefersAppIcon: prefersAppIcon
+        )
     }
 
     private func targetSize(for image: NSImage) -> CGSize {
