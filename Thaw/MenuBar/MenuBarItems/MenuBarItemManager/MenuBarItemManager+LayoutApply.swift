@@ -1938,8 +1938,10 @@ extension MenuBarItemManager {
             // tells us which items still need to cross the boundary,
             // and dragging them explicitly to .leftOfItem(AH_ctrl)
             // or .rightOfItem(AH_ctrl) puts them on the correct
-            // side. The LCS within-section reorder pass below
-            // handles intra-section ordering.
+            // side. The order these moves are issued in is the order
+            // the items come to rest in, so it has to be right here:
+            // the LCS pass below only re-sorts concealed sections when
+            // enforceConcealedSectionOrder is on, and it defaults off.
             let freshItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
             var freshItemsCopy = freshItems
             if let freshControl = ControlItemPair(
@@ -1992,15 +1994,18 @@ extension MenuBarItemManager {
                     )
 
                     // Move items destined for AH (currently in hidden)
-                    // to the LEFT of AH_ctrl. Iterate in reverse
-                    // profile order so the first item in
-                    // itemOrder["alwaysHidden"] (rightmost in AH per
-                    // profile convention, index 0) is moved last and
-                    // therefore lands closest to AH_ctrl, matching
-                    // the order LCS will leave it in.
+                    // to the LEFT of AH_ctrl. Every move lands in the
+                    // slot immediately left of the divider, the
+                    // rightmost slot of always-hidden, and pushes the
+                    // items already there further left, so index 0 of
+                    // the saved order moves first and ends up furthest
+                    // left. See crossSectionFallbackMoveOrder.
                     let ahProfileOrder = itemOrder["alwaysHidden"] ?? []
-                    let orderedCrossToAH = ahProfileOrder.reversed().filter { crossToAH.contains($0) }
-                        + crossToAH.subtracting(ahProfileOrder).sorted()
+                    let orderedCrossToAH = LayoutSolver.crossSectionFallbackMoveOrder(
+                        profileOrder: ahProfileOrder,
+                        crossing: crossToAH,
+                        landingSlot: .rightmostOfAlwaysHidden
+                    )
                     for uid in orderedCrossToAH {
                         guard !Task.isCancelled else { break }
                         guard
@@ -2019,14 +2024,18 @@ extension MenuBarItemManager {
                     }
 
                     // Move items destined for hidden (currently in AH)
-                    // to the RIGHT of AH_ctrl. Iterate in profile
-                    // order so itemOrder["hidden"] index 0 (rightmost
-                    // in hidden = furthest from AH_ctrl) is moved
-                    // first and gets pushed furthest right by
-                    // subsequent moves.
+                    // to the RIGHT of AH_ctrl. Every move lands in the
+                    // slot immediately right of the divider, the
+                    // leftmost slot of hidden, and pushes the items
+                    // already there further right, so index 0 of the
+                    // saved order moves last and ends up closest to
+                    // AH_ctrl. See crossSectionFallbackMoveOrder.
                     let hiddenProfileOrder = itemOrder["hidden"] ?? []
-                    let orderedCrossToHidden = hiddenProfileOrder.filter { crossToHidden.contains($0) }
-                        + crossToHidden.subtracting(hiddenProfileOrder).sorted()
+                    let orderedCrossToHidden = LayoutSolver.crossSectionFallbackMoveOrder(
+                        profileOrder: hiddenProfileOrder,
+                        crossing: crossToHidden,
+                        landingSlot: .leftmostOfHidden
+                    )
                     for uid in orderedCrossToHidden {
                         guard !Task.isCancelled else { break }
                         guard
