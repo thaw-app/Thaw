@@ -98,4 +98,21 @@ struct StrandedHiddenDividerTests {
         #expect(!LayoutSolver.shouldMoveHiddenDivider(liveConcealedCount: 39, liveVisibleCount: 2))
         #expect(!LayoutSolver.shouldMoveHiddenDivider(liveConcealedCount: 36, liveVisibleCount: 5))
     }
+
+    /// The Layout editor drag guard (#923). A collapsed always-hidden section
+    /// expands AH_ctrl into a spacer whose leading edge sits far offscreen,
+    /// so `.leftOfItem(AH_ctrl)` would target a click point around minX -9189.
+    /// The editor refuses the drag when `isOnScreen` (leading-edge) reads the
+    /// divider as offscreen. This pins that detection against the #923 log's
+    /// geometry, separate from the both-edges stranded test the recovery uses.
+    @Test("A collapsed-section divider's leading edge reads offscreen for the editor drag guard")
+    func collapsedDividerLeadingEdgeIsOffscreen() {
+        // AH_ctrl at minX=-9189 with the 10000-wide concealment spacer, on
+        // the same 2056-wide display as ParkedDividerLog.
+        let collapsedDivider = ParkedDividerLog.bounds(minX: -9189, width: 10000)
+        #expect(!LayoutSolver.isOnScreen(
+            bounds: collapsedDivider,
+            screenFrames: ParkedDividerLog.screenFrames
+        ))
+    }
 }

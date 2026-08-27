@@ -229,6 +229,45 @@ final class LayoutBarPaddingView: NSView {
                 await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
                 await appState.imageCache.updateCacheWithoutChecks(sections: MenuBarSection.Name.allCases)
             }
+
+            // Refuse a drag whose destination is one of Thaw's own section
+            // dividers while that divider is parked offscreen (#923). A
+            // collapsed section expands its control item into a spacer whose
+            // leading edge is far offscreen, so .leftOfItem(AH_ctrl) targets
+            // a click point around minX -9189. The synthetic drag yanks the
+            // item offscreen and macOS snaps it straight back, every attempt,
+            // until the budget runs out and the user sees a generic
+            // "operation could not be completed" alert. The apply path already
+            // skips divider moves in this state (#899/#978); the editor drag
+            // was the one caller that still handed the parked divider to
+            // move() directly. Bail out with an actionable message instead of
+            // burning eight attempts.
+            let targetItem = destination.targetItem
+            if targetItem.isControlItem {
+                let screenFrames = NSScreen.screens.map { CGDisplayBounds($0.displayID) }
+                if !LayoutSolver.isOnScreen(bounds: targetItem.bounds, screenFrames: screenFrames) {
+                    watchdogTask.cancel()
+                    Self.diagLog.warning(
+                        "Skipping drag of \(item.logString): destination divider \(targetItem.logString) is parked offscreen (minX=\(targetItem.bounds.minX)); section is collapsed"
+                    )
+                    await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
+                    await MainActor.run {
+                        self.isStabilizing = false
+                        self.showOverlay(false)
+                        self.container.canSetArrangedViews = true
+                        if sourceContainer !== self.container {
+                            sourceContainer?.canSetArrangedViews = true
+                        }
+                        let alert = NSAlert()
+                        alert.alertStyle = .warning
+                        alert.messageText = String(localized: "Couldn't move \(item.displayName) right now.")
+                        alert.informativeText = String(localized: "The \(container.section.logString) section is collapsed, so its divider is offscreen. Open the section and try dragging the item again.")
+                        alert.runModal()
+                    }
+                    return
+                }
+            }
+
             do {
                 try await appState.itemManager.move(
                     item: item,
