@@ -993,11 +993,14 @@ extension MenuBarItemManager {
         }
 
         didRecoverHiddenSectionForCurrentCollapse = true
-        let seedPosition = Self.seedPositionForRebuiltDivider(managedItemCount: managedItemCount)
-        MenuBarItemManager.diagLog.warning(
-            "Hidden section remained collapsed for \(hiddenSectionCollapseStreak) authoritative cache passes; rebuilding H_ctrl\(Self.seedDescription(seedPosition))"
+        let seed = Self.seedForRebuiltDivider(
+            managedItemCount: managedItemCount,
+            storedPositions: Self.currentStoredDividerPositions()
         )
-        hiddenControlItem.recreateStatusItem(preferredPosition: seedPosition)
+        MenuBarItemManager.diagLog.warning(
+            "Hidden section remained collapsed for \(hiddenSectionCollapseStreak) authoritative cache passes; rebuilding H_ctrl\(Self.seedDescription(seed))"
+        )
+        hiddenControlItem.recreateStatusItem(preferredPosition: seed.preferredPosition)
 
         Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(100))
@@ -1006,8 +1009,41 @@ extension MenuBarItemManager {
         return true
     }
 
+    /// Why a cycle is asking the parked-divider recovery to look at H_ctrl.
+    ///
+    /// The recovery used to take the Phase 1 boundary mismatch alone, which
+    /// made it unreachable in the state it exists to repair (#978): a
+    /// stranded divider reads as a zero-width hidden section, the zero-width
+    /// guards in `applySavedLayout` and `applyProfileLayout` return before
+    /// Phase 1 runs, so the mismatch was never computed and the streak never
+    /// advanced. A refusal is itself evidence an apply wanted the divider on
+    /// the bar and could not have it, so it counts the same as a mismatch.
+    nonisolated enum ParkedDividerTrigger {
+        /// Phase 1 found items on the wrong side of H_ctrl.
+        case boundaryMismatch(Int)
+        /// An apply refused upstream because the hidden section read as
+        /// having no room between the dividers. `source` names the guard.
+        case refusedApply(source: String)
+
+        /// Whether this cycle actually needed the divider on the bar. A
+        /// mismatch of zero is a healthy cycle; a refusal never is.
+        var needsDividerOnBar: Bool {
+            switch self {
+            case let .boundaryMismatch(count): count > 0
+            case .refusedApply: true
+            }
+        }
+
+        var logDescription: String {
+            switch self {
+            case let .boundaryMismatch(count): "\(count)-item boundary mismatch"
+            case let .refusedApply(source): "refused \(source) apply"
+            }
+        }
+    }
+
     /// Rebuilds an authoritatively identified hidden divider after it remains
-    /// parked through repeated layout applies that need it on the bar.
+    /// parked through repeated layout cycles that need it on the bar.
     ///
     /// "Parked" here means stranded: no edge of the divider's frame falls on
     /// any display (``LayoutSolver/isFullyOffScreen(bounds:screenFrames:)``).
@@ -1016,19 +1052,19 @@ extension MenuBarItemManager {
     /// would rebuild dividers that are doing their job (#978). Only a
     /// divider pushed past every item has both edges offscreen.
     ///
-    /// `managedItemCount` decides whether the rebuild may also re-stamp the
-    /// seeded position. See ``canSeedRebuiltDividerPosition(managedItemCount:)``.
+    /// `managedItemCount` and the stored control item positions decide what
+    /// the rebuild does with the autosaved position. See
+    /// ``MenuBarItemManager/seedForRebuiltDivider(managedItemCount:storedPositions:)``.
     func recoverParkedHiddenDividerIfNeeded(
-        hiddenBoundaryMismatch: Int,
+        trigger: ParkedDividerTrigger,
         hiddenControlItem: MenuBarItem,
         screenFrames: [CGRect],
         managedItemCount: Int
     ) -> Bool {
-        guard hiddenBoundaryMismatch > 0,
+        guard trigger.needsDividerOnBar,
               LayoutSolver.isFullyOffScreen(bounds: hiddenControlItem.bounds, screenFrames: screenFrames)
         else {
-            parkedHiddenDividerMismatchStreak = 0
-            didRecoverParkedHiddenDividerForCurrentMismatch = false
+            resetParkedHiddenDividerRecovery()
             return false
         }
 
@@ -1043,11 +1079,14 @@ extension MenuBarItemManager {
         }
 
         didRecoverParkedHiddenDividerForCurrentMismatch = true
-        let seedPosition = Self.seedPositionForRebuiltDivider(managedItemCount: managedItemCount)
-        MenuBarItemManager.diagLog.warning(
-            "H_ctrl remained parked through \(parkedHiddenDividerMismatchStreak) authoritative mismatch applies; rebuilding it\(Self.seedDescription(seedPosition))"
+        let seed = MenuBarItemManager.seedForRebuiltDivider(
+            managedItemCount: managedItemCount,
+            storedPositions: MenuBarItemManager.currentStoredDividerPositions()
         )
-        hiddenControl.recreateStatusItem(preferredPosition: seedPosition)
+        MenuBarItemManager.diagLog.warning(
+            "H_ctrl remained parked through \(parkedHiddenDividerMismatchStreak) authoritative applies (\(trigger.logDescription)); rebuilding it\(MenuBarItemManager.seedDescription(seed))"
+        )
+        hiddenControl.recreateStatusItem(preferredPosition: seed.preferredPosition)
 
         Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(100))
@@ -1061,6 +1100,19 @@ extension MenuBarItemManager {
             )
         }
         return true
+    }
+
+    /// Clears the parked-divider streak, so the next strand starts counting
+    /// from zero and is allowed its own rebuild.
+    ///
+    /// Kept separate from the guard that discovers a healthy divider because
+    /// Phase 1 also has to clear it, and clearing it there on a zero mismatch
+    /// alone was half of why the recovery could never fire (#978): a divider
+    /// stranded while the visible/hidden boundary was consistent had its
+    /// streak reset on every cycle.
+    func resetParkedHiddenDividerRecovery() {
+        parkedHiddenDividerMismatchStreak = 0
+        didRecoverParkedHiddenDividerForCurrentMismatch = false
     }
 
     /// Whether bundleID owns a menu bar item Thaw already tracks: an entry

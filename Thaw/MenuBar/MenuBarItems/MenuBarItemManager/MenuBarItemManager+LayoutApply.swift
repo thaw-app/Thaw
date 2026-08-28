@@ -630,6 +630,45 @@ extension MenuBarItemManager {
         )
     }
 
+    /// Offers a stranded divider a way out before an apply refuses on the
+    /// zero-width hidden section.
+    ///
+    /// The refusal is right in itself: a hidden section with no room between
+    /// the dividers is an untrustworthy reading, and planning against it
+    /// drags items to the wrong side of the bar (#868). But when the reason
+    /// there is no room is that H_ctrl has been pushed off every display, the
+    /// refusal is also what makes the strand permanent (#978). The apply
+    /// returns before Phase 1, the boundary mismatch is never computed, and
+    /// the recovery that would rebuild the divider never advances its streak.
+    /// #978's log caught the shape exactly: one launch produced 17
+    /// `parked offscreen` and 24 `zero width` warnings and not a single
+    /// `Phase 1:` line.
+    ///
+    /// So the guards still refuse — nothing plans against the bad reading —
+    /// but a stranded divider now counts the refusal, and a run of them
+    /// rebuilds it. The rebuild is withheld while a ⌘-drag is live, matching
+    /// the Phase 1 caller: replacing the window under an open drag session
+    /// strands the drag the same way the parked divider does.
+    func recoverStrandedHiddenDividerBeforeRefusing(
+        guardSource: String,
+        controlItems: ControlItemPair,
+        items: [MenuBarItem]
+    ) {
+        guard appState?.isDraggingMenuBarItem != true else { return }
+        _ = recoverParkedHiddenDividerIfNeeded(
+            trigger: .refusedApply(source: guardSource),
+            hiddenControlItem: controlItems.hidden,
+            // CGDisplayBounds shares the top-left origin space of the item
+            // bounds; NSScreen.frame does not.
+            screenFrames: NSScreen.screens.map { CGDisplayBounds($0.displayID) },
+            managedItemCount: items.count { item in
+                (item.canBeHidden || item.tag == .visibleControlItem)
+                    && item.isMovable
+                    && !item.isControlItem
+            }
+        )
+    }
+
     /// Persists the profile's pinning sets and saved section order to
     /// disk. Called from each applyProfileLayout success exit so the
     /// on-disk intent only commits once the bar reflects it. No-op for
@@ -1294,6 +1333,11 @@ extension MenuBarItemManager {
             MenuBarItemManager.diagLog.warning(
                 "applyProfileLayout: skipping (savedOrder); hidden section has zero width between the dividers (hidden.minX=\(controlItems.hidden.bounds.minX) windowID=\(controlItems.hidden.windowID), alwaysHidden.maxX=\(controlItems.alwaysHidden?.bounds.maxX.description ?? "nil") windowID=\(controlItems.alwaysHidden?.windowID.description ?? "nil"))"
             )
+            recoverStrandedHiddenDividerBeforeRefusing(
+                guardSource: "applyProfileLayout",
+                controlItems: controlItems,
+                items: items
+            )
             clearProfileState(source: source, items: items)
             return
         }
@@ -1514,9 +1558,21 @@ extension MenuBarItemManager {
         MenuBarItemManager.diagLog.debug(
             "Profile layout Phase 1: liveConcealed=\(liveConcealedCount), liveVisible=\(liveVisibleCount), moveHiddenDivider=\(shouldMoveHiddenDivider)"
         )
-        if hiddenBoundaryMismatch == 0 {
-            parkedHiddenDividerMismatchStreak = 0
-            didRecoverParkedHiddenDividerForCurrentMismatch = false
+        // A zero mismatch alone must not clear the streak. #978's divider
+        // stranded while the visible/hidden boundary was consistent —
+        // `hiddenBoundaryMismatch=0` on the very cycle that logged
+        // `parked offscreen` — so resetting here zeroed the counter on every
+        // pass and the recovery could never reach its threshold. Clear it
+        // only once the divider is demonstrably not stranded, using the same
+        // both-edges test the recovery arms on so the two agree about a
+        // healthy collapsed bar.
+        if hiddenBoundaryMismatch == 0,
+           !LayoutSolver.isFullyOffScreen(
+               bounds: controlItems.hidden.bounds,
+               screenFrames: NSScreen.screens.map { CGDisplayBounds($0.displayID) }
+           )
+        {
+            resetParkedHiddenDividerRecovery()
         }
 
         // ── Sub-phase 1: Restore the visible/hidden boundary ──
@@ -1561,7 +1617,7 @@ extension MenuBarItemManager {
             // divider does, and the next apply re-reads and re-counts.
             if !appState.isDraggingMenuBarItem,
                recoverParkedHiddenDividerIfNeeded(
-                   hiddenBoundaryMismatch: hiddenBoundaryMismatch,
+                   trigger: .boundaryMismatch(hiddenBoundaryMismatch),
                    hiddenControlItem: freshControl.hidden,
                    screenFrames: screenFrames,
                    // Counted from the fresh read rather than the Phase 1 sets,
@@ -2423,24 +2479,151 @@ extension MenuBarItemManager {
         managedItemCount == 0
     }
 
-    /// The preferred position a divider rebuild should stamp, or `nil` to
-    /// rebuild without touching the stored position.
+    /// The stored `NSStatusItem` preferred positions of the three control
+    /// items, as a divider rebuild reads them back off `ControlItemDefaults`.
     ///
-    /// The value matches the one `ControlItem.preflightSetup` seeds for the
-    /// hidden divider, so an empty bar still lands where a fresh install puts
-    /// it.
-    static nonisolated func seedPositionForRebuiltDivider(managedItemCount: Int) -> CGFloat? {
-        canSeedRebuiltDividerPosition(managedItemCount: managedItemCount) ? 1 : nil
+    /// Larger means further left: `ControlItem.preflightSetup` seeds the
+    /// visible item at 0 and the hidden divider at 1, and a healthy bar runs
+    /// `visible < hidden < alwaysHidden` reading right to left. `nil` means
+    /// nothing is stored for that item — the always-hidden divider has no
+    /// seed at all, and carries none while its section is disabled.
+    nonisolated struct StoredDividerPositions {
+        let visible: CGFloat?
+        let hidden: CGFloat?
+        let alwaysHidden: CGFloat?
+    }
+
+    /// Whether the stored hidden-divider position still describes a bar the
+    /// divider can be rebuilt onto.
+    ///
+    /// A rebuild that keeps the stored position is only safe while that
+    /// position orders the dividers correctly. #978's did not: macOS had
+    /// autosaved `hidden=6866` against `alwaysHidden=1034`, putting H_ctrl
+    /// left of AH_ctrl, which is the inversion that reads as a zero-width
+    /// hidden section. Restoring it on the next launch is why a relaunch
+    /// stopped clearing the strand — the app came up already stranded, first
+    /// layout line 0.4s after startup.
+    ///
+    /// Unknown bounds can't falsify the ordering, so they pass: the check
+    /// only reports an ordering it can actually see violated.
+    ///
+    /// Pure over its inputs.
+    static nonisolated func storedHiddenPositionIsOrdered(_ positions: StoredDividerPositions) -> Bool {
+        guard let hidden = positions.hidden else { return true }
+        if let visible = positions.visible, hidden <= visible {
+            return false
+        }
+        if let alwaysHidden = positions.alwaysHidden, hidden >= alwaysHidden {
+            return false
+        }
+        return true
+    }
+
+    /// A stored position to replace an inverted one with, or `nil` when the
+    /// neighbours give nothing to place the divider between.
+    ///
+    /// This restores *ordering*, not geometry. Dropping H_ctrl back between
+    /// the two chevrons is what gives the following apply a bar it can plan
+    /// against; walking the divider to the saved boundary is that apply's
+    /// job, exactly as it is for the empty-bar seed.
+    ///
+    /// Pure over its inputs.
+    static nonisolated func repairedHiddenDividerPosition(
+        _ positions: StoredDividerPositions
+    ) -> CGFloat? {
+        switch (positions.visible, positions.alwaysHidden) {
+        case let (visible?, alwaysHidden?):
+            // Both neighbours corrupt too — a midpoint would just pick a
+            // different wrong answer, so leave the stored value alone and let
+            // the always-hidden path report its own strand.
+            guard alwaysHidden > visible else { return nil }
+            return (visible + alwaysHidden) / 2
+        case let (visible?, nil):
+            return visible + 1
+        case let (nil, alwaysHidden?):
+            return alwaysHidden - 1
+        case (nil, nil):
+            return nil
+        }
+    }
+
+    /// What a divider rebuild should do with the stored preferred position.
+    nonisolated enum RebuiltDividerSeed: Equatable {
+        /// Stamp the value `ControlItem.preflightSetup` writes on a fresh
+        /// install. Only for a bar with no managed items.
+        case freshInstall(CGFloat)
+        /// Rebuild without touching the stored position.
+        case keepStored
+        /// Stamp a replacement because the stored position is inverted.
+        case repaired(CGFloat)
+
+        /// The value to hand `ControlItem.recreateStatusItem`, or `nil` to
+        /// leave the stored position alone.
+        var preferredPosition: CGFloat? {
+            switch self {
+            case let .freshInstall(position): position
+            case .keepStored: nil
+            case let .repaired(position): position
+            }
+        }
+    }
+
+    /// What a divider rebuild should stamp, given the bar it is rebuilding
+    /// onto and the positions currently on disk.
+    ///
+    /// Three outcomes, in order:
+    ///
+    /// - An empty bar takes the fresh-install seed, so it lands where a fresh
+    ///   install puts it.
+    /// - A populated bar whose stored position still orders the dividers
+    ///   keeps it, per ``canSeedRebuiltDividerPosition(managedItemCount:)``.
+    /// - A populated bar whose stored position is inverted takes a repaired
+    ///   one. Keeping an inverted position is what made #978 survive a
+    ///   relaunch: the rebuild logged "keeping its stored position", restored
+    ///   the value that stranded the divider, and re-entered the deadlock.
+    ///
+    /// Pure over its inputs.
+    static nonisolated func seedForRebuiltDivider(
+        managedItemCount: Int,
+        storedPositions: StoredDividerPositions
+    ) -> RebuiltDividerSeed {
+        if canSeedRebuiltDividerPosition(managedItemCount: managedItemCount) {
+            return .freshInstall(1)
+        }
+        guard !storedHiddenPositionIsOrdered(storedPositions),
+              let repaired = repairedHiddenDividerPosition(storedPositions)
+        else {
+            return .keepStored
+        }
+        return .repaired(repaired)
+    }
+
+    /// Reads the stored control item positions a divider rebuild plans
+    /// against.
+    @MainActor
+    static func currentStoredDividerPositions() -> StoredDividerPositions {
+        StoredDividerPositions(
+            visible: ControlItemDefaults[.preferredPosition, ControlItem.Identifier.visible.rawValue],
+            hidden: ControlItemDefaults[.preferredPosition, ControlItem.Identifier.hidden.rawValue],
+            alwaysHidden: ControlItemDefaults[
+                .preferredPosition,
+                ControlItem.Identifier.alwaysHidden.rawValue
+            ]
+        )
     }
 
     /// Log fragment naming what a divider rebuild did with the stored
     /// position, so a field log says which branch ran without the reader
     /// having to infer it from the collapse that follows.
-    static nonisolated func seedDescription(_ seedPosition: CGFloat?) -> String {
-        guard let seedPosition else {
-            return " and keeping its stored position (the bar holds managed items)"
+    static nonisolated func seedDescription(_ seed: RebuiltDividerSeed) -> String {
+        switch seed {
+        case let .freshInstall(position):
+            " at its seeded position (\(position))"
+        case .keepStored:
+            " and keeping its stored position (the bar holds managed items)"
+        case let .repaired(position):
+            " at a repaired position (\(position)); the stored one ordered H_ctrl outside its neighbours"
         }
-        return " at its seeded position (\(seedPosition))"
     }
 
     static nonisolated func baseIdentifier(forSavedIdentifier identifier: String) -> String {
@@ -3108,6 +3291,11 @@ extension MenuBarItemManager {
         guard hiddenSectionHasRoom else {
             MenuBarItemManager.diagLog.warning(
                 "applySavedLayout: skipping (\(trigger)); hidden section has zero width between the dividers (hidden.minX=\(controlItems.hidden.bounds.minX) windowID=\(controlItems.hidden.windowID), alwaysHidden.maxX=\(controlItems.alwaysHidden?.bounds.maxX.description ?? "nil") windowID=\(controlItems.alwaysHidden?.windowID.description ?? "nil"))"
+            )
+            recoverStrandedHiddenDividerBeforeRefusing(
+                guardSource: "applySavedLayout",
+                controlItems: controlItems,
+                items: items
             )
             return false
         }
