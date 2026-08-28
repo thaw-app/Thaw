@@ -673,9 +673,31 @@ extension MenuBarItemManager {
     /// disk. Called from each applyProfileLayout success exit so the
     /// on-disk intent only commits once the bar reflects it. No-op for
     /// .savedOrder (that path doesn't overwrite either store).
+    ///
+    /// "Success" is the apply reaching an uncancelled exit, which is not the
+    /// same as the bar having taken the arrangement. An apply that plans
+    /// moves and fails to enact them still lands here, and this is the one
+    /// write to `savedSectionOrder` that never consulted
+    /// ``LayoutSolver/shouldPersistSavedOrder(_:)`` — so a bar whose drags
+    /// were failing had its wreckage committed while every gated save was
+    /// refusing for exactly that reason (#978). The section order is
+    /// withheld on an unfinished batch for the same reason the gated path
+    /// withholds it: recording a partial arrangement hands the next apply a
+    /// target it just moved, and the bar drifts further on every retry
+    /// (#900).
+    ///
+    /// The pinning sets are not withheld. They are the profile's own
+    /// declaration, not a reading of the bar, so a failed batch says nothing
+    /// about whether they are right.
     private func persistProfileStateOnSuccess(source: ApplySource) {
         guard case .profile = source else { return }
         persistPinnedBundleIDs()
+        guard !hasUnfinishedMoveBatch else {
+            MenuBarItemManager.diagLog.warning(
+                "Skipping the profile's saved section order write; the bulk apply left planned moves unenacted"
+            )
+            return
+        }
         persistSavedSectionOrder()
         // Committed: the pre-arm snapshot can no longer be rolled back to.
         priorProfileApplySnapshot = nil
@@ -1965,8 +1987,11 @@ extension MenuBarItemManager {
             // If hidden is empty, AH_ctrl goes next to H_ctrl.
             // If AH is empty, AH_ctrl also goes next to H_ctrl (no
             // boundary needed).
+            // CGDisplayBounds shares the top-left origin space of the item
+            // bounds; NSScreen.frame does not.
+            let ahScreenFrames = NSScreen.screens.map { CGDisplayBounds($0.displayID) }
             let desiredHiddenUIDs = itemOrder["hidden"] ?? []
-            let dest: MoveDestination? = if let firstHiddenUID = desiredHiddenUIDs.first,
+            var dest: MoveDestination? = if let firstHiddenUID = desiredHiddenUIDs.first,
                                             let firstHidden = allFreshItems.first(where: { $0.uniqueIdentifier == firstHiddenUID && $0.isMovable })
             {
                 // Place AH_ctrl to the LEFT of the rightmost hidden
@@ -1976,6 +2001,29 @@ extension MenuBarItemManager {
             } else {
                 // Hidden is empty; AH_ctrl goes next to H_ctrl.
                 .leftOfItem(freshControl.hidden)
+            }
+
+            // Never anchor on an offscreen destination. Anchoring beside a
+            // parked item drags AH_ctrl into the parked zone, which is how
+            // #978 acquired its second, worse fault: the AH_ctrl move
+            // targeted `left of ControlItem.Hidden` while H_ctrl sat at
+            // minX=-3596, the drag walked H_ctrl to -9322, and the pair came
+            // out inverted with the hidden section reading zero width. The
+            // reporter traced their strand to this path rather than to the
+            // visible/hidden boundary repair. Same reasoning as the Thaw-icon
+            // relocation guard in enforceControlItemOrder, and the same
+            // leading-edge test, which is the right one for a drag anchor.
+            //
+            // Refusing leaves AH_ctrl where it is and lets the per-item
+            // fallback below place items against it, which moves more items
+            // but strands nothing.
+            if let anchorBounds = dest?.targetItem.liveBounds,
+               !LayoutSolver.isOnScreen(bounds: anchorBounds, screenFrames: ahScreenFrames)
+            {
+                MenuBarItemManager.diagLog.warning(
+                    "Profile layout: skipping the AH_ctrl placement, its anchor is parked offscreen (minX=\(anchorBounds.minX)); moving AH_ctrl beside it would strand both"
+                )
+                dest = nil
             }
 
             if let dest, !Task.isCancelled {

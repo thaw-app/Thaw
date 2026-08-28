@@ -6,6 +6,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import CoreGraphics
 import Testing
 @testable import Thaw
 
@@ -112,6 +113,79 @@ struct StrandedHiddenDividerTests {
         let collapsedDivider = ParkedDividerLog.bounds(minX: -9189, width: 10000)
         #expect(!LayoutSolver.isOnScreen(
             bounds: collapsedDivider,
+            screenFrames: ParkedDividerLog.screenFrames
+        ))
+    }
+}
+
+/// The AH_ctrl placement's anchor guard (#978, #980).
+///
+/// #978's second, worse fault came in through the always-hidden placement,
+/// not the visible/hidden boundary repair: the AH_ctrl move anchored on
+/// `ControlItem.Hidden` while H_ctrl sat at `minX=-3596`, the drag walked
+/// H_ctrl to `-9322`, and the pair came out inverted with the hidden section
+/// reading zero width. Anchoring a drag beside a parked item is what strands
+/// the item being dragged, which is the same reasoning the Thaw-icon
+/// relocation guard already carried.
+///
+/// The guard reads the leading edge, not both edges. A drag anchor is
+/// exactly the case ``LayoutSolver/isOnScreen(bounds:screenFrames:)`` is the
+/// right test for: the drop point is derived from the anchor's edge, so an
+/// anchor whose leading edge is offscreen gives a drop point that is too.
+@Suite("AH_ctrl placement anchor (#978)")
+struct AlwaysHiddenPlacementAnchorTests {
+    /// The stranded H_ctrl from the follow-up log's 19:44:22 cycle, the one
+    /// the AH_ctrl move anchored on.
+    @Test("#978's stranded H_ctrl is refused as an anchor")
+    func strandedDividerIsRefusedAsAnchor() {
+        #expect(!LayoutSolver.isOnScreen(
+            bounds: ParkedDividerLog.bounds(minX: -3596),
+            screenFrames: ParkedDividerLog.screenFrames
+        ))
+    }
+
+    /// Where that drag left H_ctrl. Still refused, so the next cycle cannot
+    /// walk it further.
+    @Test("The post-drag position stays refused")
+    func postDragPositionStaysRefused() {
+        for minX in [-8612.0, -9322.0] as [CGFloat] {
+            #expect(
+                !LayoutSolver.isOnScreen(
+                    bounds: ParkedDividerLog.bounds(minX: minX),
+                    screenFrames: ParkedDividerLog.screenFrames
+                ),
+                "H_ctrl at minX=\(minX) must not be usable as a drag anchor"
+            )
+        }
+    }
+
+    /// An ordinary hidden item anchor on the bar still passes: the guard
+    /// only refuses anchors it can see are off the display, so the common
+    /// placement is untouched.
+    @Test("An on-screen anchor is still usable")
+    func onScreenAnchorIsUsable() {
+        #expect(LayoutSolver.isOnScreen(
+            bounds: ParkedDividerLog.bounds(minX: 1050),
+            screenFrames: ParkedDividerLog.screenFrames
+        ))
+    }
+
+    /// A healthy collapsed H_ctrl expands into a spacer whose leading edge
+    /// is far offscreen. Anchoring AH_ctrl on it would still derive an
+    /// offscreen drop point, so the leading-edge test refusing here is the
+    /// intended behaviour, not a false positive — the per-item fallback
+    /// places the items instead.
+    @Test("A collapsed spacer is refused as an anchor too")
+    func collapsedSpacerIsRefusedAsAnchor() {
+        let expandedSpacer = ParkedDividerLog.bounds(minX: -8073, width: 10000)
+        #expect(!LayoutSolver.isOnScreen(
+            bounds: expandedSpacer,
+            screenFrames: ParkedDividerLog.screenFrames
+        ))
+        // ...and is still not *stranded*, so the divider rebuild leaves it
+        // alone. The two tests answer different questions about one frame.
+        #expect(!LayoutSolver.isFullyOffScreen(
+            bounds: expandedSpacer,
             screenFrames: ParkedDividerLog.screenFrames
         ))
     }
