@@ -275,15 +275,25 @@ final class LayoutBarPaddingView: NSView {
                     skipInputPause: true,
                     watchdogTimeout: MenuBarItemManager.layoutWatchdogTimeout
                 )
+                // Record the user move before stabilization so the save
+                // gate's cooldown exemption is armed when stabilizePlacement's
+                // own cache pass reaches it. Recording it only after stabilize
+                // returned meant the first cache pass inside stabilize hit
+                // the 5s move cooldown with no user-move exemption, so the
+                // save was skipped; by the time the exemption armed, the
+                // mid-transition cache gate had re-armed and no accepting
+                // pass coincided with the cooldown window. The drag never
+                // saved (#983). move() threw no error, so the user's drag
+                // did land; the rescue-and-retry catch block below still
+                // owns the case where macOS didn't settle it.
+                appState.itemManager.recordExternalMoveOperation()
                 appState.itemManager.removeTemporarilyShownItemFromCache(with: item.tag)
-                if await stabilizePlacement(
+                _ = await stabilizePlacement(
                     of: item,
                     to: destination,
                     expectedSection: container.section,
                     appState: appState
-                ) {
-                    appState.itemManager.recordExternalMoveOperation()
-                }
+                )
             } catch MenuBarItemManager.EventError.menuTrackingActive {
                 // A menu bar item's menu (Wi-Fi picker, input method panel,
                 // etc.) was open and the move was deferred to avoid tearing
@@ -340,15 +350,17 @@ final class LayoutBarPaddingView: NSView {
                             skipInputPause: true,
                             watchdogTimeout: MenuBarItemManager.layoutWatchdogTimeout
                         )
+                        // Same #983 reorder as the primary path: arm the
+                        // save-gate user-move exemption before stabilize so
+                        // its cache pass can persist the retry.
+                        appState.itemManager.recordExternalMoveOperation()
                         appState.itemManager.removeTemporarilyShownItemFromCache(with: item.tag)
-                        if await stabilizePlacement(
+                        _ = await stabilizePlacement(
                             of: item,
                             to: destination,
                             expectedSection: container.section,
                             appState: appState
-                        ) {
-                            appState.itemManager.recordExternalMoveOperation()
-                        }
+                        )
                     } catch MenuBarItemManager.EventError.menuTrackingActive {
                         // Same deferral the outer catch handles: the user
                         // opened a menu bar item's menu while the retry was
