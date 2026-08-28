@@ -9,8 +9,17 @@
 import AppKit
 
 enum MacOSCompatibilityWarning {
+    /// The first macOS this build does not support, and the one the rewrite
+    /// on ``UpdateChannel/alpha`` is built against.
+    ///
+    /// The two readings are the same number for the same reason: the alert
+    /// below tells the user that support for this release arrives through the
+    /// alpha channel, so the version that triggers the warning has to be the
+    /// version that makes that channel selectable.
+    static nonisolated let firstUnsupportedMajorVersion = 27
+
     static nonisolated func shouldShow(for version: OperatingSystemVersion) -> Bool {
-        version.majorVersion >= 27
+        version.majorVersion >= firstUnsupportedMajorVersion
     }
 
     @MainActor

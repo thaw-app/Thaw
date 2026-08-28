@@ -261,7 +261,7 @@ final class LayoutBarPaddingView: NSView {
                         let alert = NSAlert()
                         alert.alertStyle = .warning
                         alert.messageText = String(localized: "Couldn't move \(item.displayName) right now.")
-                        alert.informativeText = String(localized: "The \(container.section.logString) section is collapsed, so its divider is offscreen. Open the section and try dragging the item again.")
+                        alert.informativeText = String(localized: "The \(container.section.displayString) section is collapsed, so its divider is offscreen. Open the section and try dragging the item again.")
                         alert.runModal()
                     }
                     return

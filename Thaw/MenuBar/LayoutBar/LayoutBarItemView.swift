@@ -428,7 +428,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         backgroundPath.lineWidth = 1
         backgroundPath.stroke()
 
-        guard let placeholderImage else {
+        guard var placeholderImage else {
             return
         }
 
@@ -443,6 +443,11 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         {
             self.placeholderImage = icon
             placeholderResolvedFromApp = true
+            // Draw the resolved icon in this pass. Assigning only the stored
+            // property left the local binding above holding the generic
+            // symbol, so the icon swap waited on an unrelated invalidation
+            // that never comes for items the image cache can't capture.
+            placeholderImage = icon
         }
 
         let iconBounds = placeholderRect.insetBy(

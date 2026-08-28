@@ -4388,6 +4388,9 @@
         }
       }
     },
+    "Alpha" : {
+      "comment" : "A segment in the update channel picker that displays \"Alpha\"."
+    },
     "Always Hidden" : {
 
     },
@@ -9177,6 +9180,9 @@
         }
       }
     },
+    "Beta" : {
+      "comment" : "A segment in the update channel picker that displays \"Beta\"."
+    },
     "Border" : {
       "comment" : "A toggle that lets the user enable or disable the border around the view.",
       "localizations" : {
@@ -13591,6 +13597,9 @@
           }
         }
       }
+    },
+    "Couldn't move %@ right now." : {
+
     },
     "Couldn't move %@ to the always-hidden section." : {
 
@@ -46047,6 +46056,9 @@
           }
         }
       }
+    },
+    "The %@ section is collapsed, so its divider is offscreen. Open the section and try dragging the item again." : {
+
     },
     "The amount of time to wait before showing a tooltip over a menu bar item." : {
       "comment" : "Label for a slider that controls the delay before showing a tooltip over a menu bar item.",

@@ -48,24 +48,56 @@ final class UpdatesManager: NSObject {
         updaterController.updater
     }
 
-    /// A Boolean value that indicates whether the user wants to receive beta updates.
-    var allowsBetaUpdates: Bool {
+    /// The update channel the user is subscribed to.
+    var updateChannel: UpdateChannel {
         get {
             // Computed over UserDefaults, so the @Observable macro cannot
             // track it automatically; register/notify Observation manually
             // (same pattern as the Sparkle-backed properties below).
-            access(keyPath: \.allowsBetaUpdates)
-            return Defaults.store.bool(forKey: "AllowsBetaUpdates")
+            access(keyPath: \.updateChannel)
+            return Self.storedUpdateChannel()
         }
         set {
-            withMutation(keyPath: \.allowsBetaUpdates) {
-                Defaults.store.set(newValue, forKey: "AllowsBetaUpdates")
+            withMutation(keyPath: \.updateChannel) {
+                Defaults.store.set(newValue.rawValue, forKey: "UpdateChannel")
+                // Keep the superseded flag in step so downgrading to a build
+                // that only knows the Bool leaves the user off stable rather
+                // than silently back on it.
+                Defaults.store.set(newValue != .stable, forKey: "AllowsBetaUpdates")
             }
             Task {
                 guard hasStartedUpdater else { return }
                 updater.checkForUpdatesInBackground()
             }
         }
+    }
+
+    /// Reads the stored channel, falling back to the flag that preceded it.
+    ///
+    /// Builds before the split offered a single "Development" setting whose
+    /// subscribers received alpha and beta together. They migrate to beta,
+    /// not alpha: alpha is now a different app on a different feed, and
+    /// moving someone onto it without them asking would swap the product
+    /// out from under them.
+    static nonisolated func storedUpdateChannel(
+        on version: OperatingSystemVersion = ProcessInfo.processInfo.operatingSystemVersion
+    ) -> UpdateChannel {
+        let stored: UpdateChannel = if let raw = Defaults.store.string(forKey: "UpdateChannel"),
+                                       let channel = UpdateChannel(rawValue: raw)
+        {
+            channel
+        } else {
+            Defaults.store.bool(forKey: "AllowsBetaUpdates") ? .beta : .stable
+        }
+        // A channel the running system cannot be offered is not honored
+        // either, or a user who selected alpha and then moved back to a
+        // supported macOS would stay pinned to the rewrite's feed and be
+        // offered nothing at all. Beta rather than stable: they had opted
+        // out of stable, and that much of the choice still applies.
+        guard stored.isAvailable(on: version) else {
+            return .beta
+        }
+        return stored
     }
 
     /// `automaticallyChecksForUpdates`/`automaticallyDownloadsUpdates` are
@@ -177,10 +209,7 @@ extension UpdatesManager: SPUUpdaterDelegate {
 
     /// Determines which update channels are allowed.
     func allowedChannels(for _: SPUUpdater) -> Set<String> {
-        if Defaults.store.bool(forKey: "AllowsBetaUpdates") {
-            return ["alpha", "beta"]
-        }
-        return []
+        Self.storedUpdateChannel().allowedSparkleChannels
     }
 
     func updater(_: SPUUpdater, willScheduleUpdateCheckAfterDelay _: TimeInterval) {
@@ -231,5 +260,79 @@ extension UpdatesManager: @MainActor SPUStandardUserDriverDelegate {
             return
         }
         appState.userNotificationManager.removeDeliveredNotifications(with: [.updateCheck])
+    }
+}
+
+// MARK: - UpdateChannel
+
+/// A stream of releases the user can subscribe to.
+///
+/// All three share the feed named by `SUFeedURL` and differ only in which
+/// `sparkle:channel` tags they accept: beta takes `beta`, alpha takes
+/// `alpha`, and neither takes the other. Alpha is not the same product as
+/// the other two, being the rewrite built against the next macOS, but it
+/// does not need a feed of its own to stay apart from beta.
+///
+/// It cannot stay apart from stable, though. Sparkle's `allowedChannels`
+/// only widens what an updater accepts: an item carrying no `sparkle:channel`
+/// is on the default channel, and per `SPUUpdaterDelegate`, "the default
+/// channel is always included in the allowed set". Every subscriber therefore
+/// sees the stable items. They stop mattering because Sparkle offers the
+/// newest allowed item, and the rewrite's version line runs ahead of the
+/// shipping app's, so a stable release can never outrank an alpha one.
+nonisolated enum UpdateChannel: String, CaseIterable, Identifiable {
+    /// Released builds.
+    case stable
+    /// Release candidates and betas of the shipping app.
+    case beta
+    /// The rewritten app, for testing against a new macOS.
+    case alpha
+
+    var id: String {
+        rawValue
+    }
+
+    /// The channels that can be offered on a system running `version`.
+    static func availableCases(on version: OperatingSystemVersion) -> [UpdateChannel] {
+        allCases.filter { $0.isAvailable(on: version) }
+    }
+
+    /// Whether this channel can be offered on a system running `version`.
+    ///
+    /// Alpha is the rewrite built against the macOS this build does not
+    /// support, so it is offered only there. Showing it earlier would
+    /// advertise a track whose builds the user cannot run, and hide the
+    /// shipping app behind an update that would never arrive.
+    func isAvailable(on version: OperatingSystemVersion) -> Bool {
+        switch self {
+        case .stable, .beta:
+            true
+        case .alpha:
+            version.majorVersion >= MacOSCompatibilityWarning.firstUnsupportedMajorVersion
+        }
+    }
+
+    /// The `sparkle:channel` values an appcast item may carry and still be
+    /// offered to a subscriber of this channel.
+    ///
+    /// Sparkle always adds the default channel to the allowed set, so every
+    /// subscriber sees the untagged stable items too. That is harmless while
+    /// stable stays on the 2.x line: Sparkle offers the newest allowed item,
+    /// and an alpha subscriber's 3.x item outranks anything stable can carry.
+    var allowedSparkleChannels: Set<String> {
+        switch self {
+        case .stable: []
+        case .beta: ["beta"]
+        case .alpha: ["alpha"]
+        }
+    }
+
+    /// A string to show in the interface.
+    var localized: LocalizedStringKey {
+        switch self {
+        case .stable: LocalizedStringKey("Stable")
+        case .beta: LocalizedStringKey("Beta")
+        case .alpha: LocalizedStringKey("Alpha")
+        }
     }
 }
