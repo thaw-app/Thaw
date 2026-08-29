@@ -12280,6 +12280,9 @@
         }
       }
     },
+    "Click an item to open it. Hidden items are temporarily revealed." : {
+      "comment" : "Explains that clicking a layout item opens it and that hidden items are only revealed temporarily."
+    },
     "Click Item" : {
       "comment" : "A button label that appears when the item is currently being displayed.",
       "localizations" : {

@@ -47,10 +47,10 @@ struct LayoutBarsSection: View {
             layoutBars
         } footer: {
             // Native grouped Section footer beneath the bars. Interpolated so
-            // the three translated strings flow as one wrapping paragraph
-            // instead of three fixed lines (Text + is deprecated on macOS 26;
+            // the four localized strings flow as one wrapping paragraph
+            // instead of four fixed lines (Text + is deprecated on macOS 26;
             // each inner Text keeps its own localization key).
-            Text("\(Text("Drag to arrange your menu bar items into different sections.")) \(Text("Move the New Items badge to choose where newly detected items will appear.")) \(Text("Items can also be arranged by ⌘ Command + dragging them in the menu bar."))")
+            Text("\(Text("Drag to arrange your menu bar items into different sections.")) \(Text("Move the New Items badge to choose where newly detected items will appear.")) \(Text("Items can also be arranged by ⌘ Command + dragging them in the menu bar.")) \(Text("Click an item to open it. Hidden items are temporarily revealed."))")
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
         .onReceive(

@@ -62,3 +62,38 @@ struct LayoutBarContainerTests {
         #expect(insertionIndex == 0)
     }
 }
+
+@Suite("Layout item activation")
+struct LayoutBarItemActivationTests {
+    @Test("A left click released inside the icon activates its menu bar item")
+    func leftClickActivates() {
+        #expect(LayoutBarItemView.shouldActivateRepresentedItem(
+            buttonNumber: 0,
+            didBeginDragging: false,
+            mouseUpInsideBounds: true
+        ))
+    }
+
+    @Test("A drag never activates the app on mouse-up")
+    func dragDoesNotActivate() {
+        #expect(!LayoutBarItemView.shouldActivateRepresentedItem(
+            buttonNumber: 0,
+            didBeginDragging: true,
+            mouseUpInsideBounds: true
+        ))
+    }
+
+    @Test("Clicks released outside the icon and non-left clicks do not activate")
+    func unrelatedClicksDoNotActivate() {
+        #expect(!LayoutBarItemView.shouldActivateRepresentedItem(
+            buttonNumber: 0,
+            didBeginDragging: false,
+            mouseUpInsideBounds: false
+        ))
+        #expect(!LayoutBarItemView.shouldActivateRepresentedItem(
+            buttonNumber: 1,
+            didBeginDragging: false,
+            mouseUpInsideBounds: true
+        ))
+    }
+}

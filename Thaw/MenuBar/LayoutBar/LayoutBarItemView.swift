@@ -33,6 +33,12 @@ final class LayoutBarItemView: LayoutBarArrangedView {
 
     private var cancellables = Set<AnyCancellable>()
 
+    /// Whether the current mouse gesture has crossed into the existing drag
+    /// path. AppKit normally consumes mouse-up when a dragging session starts,
+    /// but retaining this bit makes the click action safe even if a source app
+    /// or future drag implementation lets that mouse-up reach the view.
+    private var didBeginDraggingForCurrentClick = false
+
     /// Observes `appState.imageCache.images` (wave 3: `MenuBarItemImageCache`
     /// is @Observable rather than a Combine `ObservableObject`, so its old
     /// `$images` projection is gone). This is an AppKit view (not a SwiftUI
@@ -197,6 +203,48 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     override func mouseExited(with event: NSEvent) {
         super.mouseExited(with: event)
         tooltipController.cancel()
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        didBeginDraggingForCurrentClick = false
+        super.mouseDown(with: event)
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        super.mouseUp(with: event)
+
+        let location = convert(event.locationInWindow, from: nil)
+        let shouldActivate = Self.shouldActivateRepresentedItem(
+            buttonNumber: event.buttonNumber,
+            didBeginDragging: didBeginDraggingForCurrentClick,
+            mouseUpInsideBounds: bounds.contains(location)
+        )
+        didBeginDraggingForCurrentClick = false
+
+        guard shouldActivate else { return }
+        activateRepresentedItem()
+    }
+
+    /// Pure click-versus-drag gate used by the AppKit event handlers.
+    static nonisolated func shouldActivateRepresentedItem(
+        buttonNumber: Int,
+        didBeginDragging: Bool,
+        mouseUpInsideBounds: Bool
+    ) -> Bool {
+        buttonNumber == 0 && !didBeginDragging && mouseUpInsideBounds
+    }
+
+    /// Performs the status item's native left-click action. For an on-screen
+    /// item this clicks it in place; for a hidden item the shared activation
+    /// path temporarily reveals it, opens its menu/popover (or launches its
+    /// app when that is the item's normal behavior), and schedules a rehide.
+    private func activateRepresentedItem() {
+        let representedItem = effectiveItem
+        guard let itemManager = appState?.itemManager else { return }
+        let displayID = NSScreen.screenWithActiveMenuBar?.displayID
+        Task {
+            await itemManager.activate(item: representedItem, on: displayID)
+        }
     }
 
     private func configureCancellables() {
@@ -421,6 +469,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
 
     override func mouseDragged(with event: NSEvent) {
         super.mouseDragged(with: event)
+        didBeginDraggingForCurrentClick = true
         tooltipController.cancel()
 
         // #905 fallback: before refusing an `unresolvedControlCenterPlaceholder`
