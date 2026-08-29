@@ -238,7 +238,7 @@ struct TriggersSettingsPane: View {
                             dragProvider(for: trigger.id)
                         },
                         currentCoordinate: { manager.systemMonitor.currentCoordinate },
-                        captureReference: { await manager.captureReferenceHash(forItemIdentifier: $0) },
+                        captureReference: { await manager.captureImageReference(forItemIdentifier: $0) },
                         focusedField: $focusedField,
                         onDelete: { manager.remove(id: trigger.id) }
                     )
@@ -638,7 +638,7 @@ private struct TriggerRow: View {
     let onToggleCollapsedExpansion: () -> Void
     let dragProvider: () -> NSItemProvider
     let currentCoordinate: () -> (latitude: Double, longitude: Double)?
-    let captureReference: (String) async -> UInt64?
+    let captureReference: (String) async -> ImageComparisonReference?
     var focusedField: FocusState<String?>.Binding
     let onDelete: () -> Void
 
@@ -1523,7 +1523,7 @@ private struct ConditionEditorView: View {
     let refreshBluetoothOptions: () -> Void
     let itemOptions: [TriggerItemOption]
     let currentCoordinate: () -> (latitude: Double, longitude: Double)?
-    let captureReference: (String) async -> UInt64?
+    let captureReference: (String) async -> ImageComparisonReference?
     var focusedField: FocusState<String?>.Binding
     let focusID: String
 
@@ -1957,7 +1957,7 @@ private struct AttentionConditionEditor: View {
 private struct ImageConditionEditor: View {
     @Binding var condition: TriggerCondition
     let itemOptions: [TriggerItemOption]
-    let captureReference: (String) async -> UInt64?
+    let captureReference: (String) async -> ImageComparisonReference?
 
     @State private var isCapturing = false
 
@@ -1966,8 +1966,22 @@ private struct ImageConditionEditor: View {
     }
 
     private var hasReference: Bool {
-        guard case let .imageChanged(_, referenceHash) = condition else { return false }
-        return referenceHash != nil
+        condition.imageValue?.referenceHash != nil
+    }
+
+    private var exactReferenceNeedsRecapture: Bool {
+        comparisonMode == .exact
+            && hasReference
+            && condition.imageValue?.referenceExactHash == nil
+    }
+
+    private var referenceImage: NSImage? {
+        guard let data = condition.imageValue?.referenceImageData else { return nil }
+        return NSImage(data: data)
+    }
+
+    private var comparisonMode: ImageComparisonMode {
+        condition.imageValue?.comparisonMode ?? .fuzzy
     }
 
     var body: some View {
@@ -1984,16 +1998,20 @@ private struct ImageConditionEditor: View {
             }
             .disabled(isCapturing)
 
+            IcePicker("Comparison", selection: comparisonModeBinding) {
+                ForEach(ImageComparisonMode.allCases) { mode in
+                    Text(mode.displayString).tag(mode)
+                }
+            }
+
             HStack(spacing: 12) {
                 Button(isCapturing ? "Capturing…" : "Capture Reference") { capture() }
                     .disabled(isCapturing || watchedID.isEmpty)
                 Spacer()
-                Text(hasReference ? "Reference captured" : "No reference yet")
-                    .font(.caption)
-                    .foregroundStyle(hasReference ? .green : .secondary)
+                referenceStatus
             }
 
-            Text("Captures the icon now as a reference, then reveals the item when the icon later changes from it. Requires screen recording permission.")
+            Text(comparisonHelp)
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -2004,15 +2022,61 @@ private struct ImageConditionEditor: View {
         Binding(get: { watchedID }, set: { condition = condition.withImageItem($0) })
     }
 
+    private var comparisonModeBinding: Binding<ImageComparisonMode> {
+        Binding(
+            get: { comparisonMode },
+            set: { condition = condition.withImageComparisonMode($0) }
+        )
+    }
+
+    @ViewBuilder
+    private var referenceStatus: some View {
+        if let referenceImage {
+            HStack(spacing: 8) {
+                Text("Reference")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Image(nsImage: referenceImage)
+                    .resizable()
+                    .interpolation(.high)
+                    .scaledToFit()
+                    .frame(width: 32, height: 22)
+                    .padding(4)
+                    .background(.quaternary, in: RoundedRectangle(cornerRadius: 6))
+                    .accessibilityLabel("Captured reference icon")
+            }
+        } else {
+            Text(referenceStatusText)
+                .font(.caption)
+                .foregroundStyle(hasReference && !exactReferenceNeedsRecapture ? .green : .secondary)
+        }
+    }
+
+    private var referenceStatusText: String {
+        if exactReferenceNeedsRecapture {
+            return "Recapture required for Exact"
+        }
+        return hasReference ? "Reference captured — recapture to add preview" : "No reference yet"
+    }
+
+    private var comparisonHelp: String {
+        switch comparisonMode {
+        case .fuzzy:
+            "Fuzzy ignores small rendering differences and reveals when the icon meaningfully changes from the reference. Requires screen recording permission."
+        case .exact:
+            "Exact reveals on any pixel-content difference from the reference. Requires screen recording permission."
+        }
+    }
+
     private func capture() {
         let id = watchedID
         guard !id.isEmpty else { return }
         isCapturing = true
         Task { @MainActor in
-            let hash = await captureReference(id)
+            let reference = await captureReference(id)
             isCapturing = false
-            if let hash, watchedID == id {
-                condition = condition.withImageReferenceHash(hash)
+            if let reference, watchedID == id {
+                condition = condition.withImageReference(reference)
             }
         }
     }

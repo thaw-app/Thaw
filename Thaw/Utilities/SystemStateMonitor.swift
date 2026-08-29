@@ -110,6 +110,10 @@ struct SystemState: Equatable {
     /// Identifiers of items currently blinking for attention.
     var itemsSeekingAttention: Set<String>
 
+    /// Exact pixel hashes of watched items, populated alongside
+    /// ``imageHashes`` for exact image-comparison conditions.
+    var exactImageHashes: [String: UInt64]
+
     init(
         power: PowerState = PowerState(batteryPercentage: nil, isOnACPower: true, isCharging: false),
         frontmostAppBundleID: String? = nil,
@@ -131,7 +135,8 @@ struct SystemState: Equatable {
         isMicrophoneInUse: Bool = false,
         scriptOutcomes: [String: ScriptOutcome] = [:],
         imageHashes: [String: UInt64] = [:],
-        itemsSeekingAttention: Set<String> = []
+        itemsSeekingAttention: Set<String> = [],
+        exactImageHashes: [String: UInt64] = [:]
     ) {
         self.power = power
         self.frontmostAppBundleID = frontmostAppBundleID
@@ -154,6 +159,7 @@ struct SystemState: Equatable {
         self.scriptOutcomes = scriptOutcomes
         self.imageHashes = imageHashes
         self.itemsSeekingAttention = itemsSeekingAttention
+        self.exactImageHashes = exactImageHashes
     }
 }
 
