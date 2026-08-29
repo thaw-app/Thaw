@@ -135,6 +135,35 @@ enum ScheduleWeekday: Int, Codable, Hashable, CaseIterable, Identifiable {
 
 // MARK: - TriggerCondition
 
+/// How strictly an image-comparison condition compares the current icon to
+/// its captured reference.
+enum ImageComparisonMode: String, Codable, Hashable, CaseIterable, Identifiable {
+    /// Ignores small perceptual-hash differences caused by rendering noise.
+    case fuzzy
+
+    /// Treats any pixel-content difference as an icon change.
+    case exact
+
+    var id: String {
+        rawValue
+    }
+
+    var displayString: String {
+        switch self {
+        case .fuzzy: "Fuzzy"
+        case .exact: "Exact"
+        }
+    }
+}
+
+/// The hashes used at runtime plus a compact PNG used only to preview the
+/// captured reference in settings.
+struct ImageComparisonReference: Codable, Hashable {
+    let perceptualHash: UInt64
+    let exactHash: UInt64
+    let imageData: Data?
+}
+
 /// A condition that decides whether a ``MenuBarItemTrigger`` is currently
 /// satisfied, evaluated against a ``SystemState`` snapshot.
 ///
@@ -186,8 +215,16 @@ enum TriggerCondition: Codable, Hashable {
     /// Script
     case scriptResult(path: String, expectedOutput: String)
 
-    /// Image comparison
-    case imageChanged(itemIdentifier: String, referenceHash: UInt64?)
+    /// Image comparison. The optional trailing values keep triggers saved by
+    /// the original prototype decodable; their absence means fuzzy matching
+    /// and no stored preview image.
+    case imageChanged(
+        itemIdentifier: String,
+        referenceHash: UInt64?,
+        referenceExactHash: UInt64? = nil,
+        comparisonMode: ImageComparisonMode? = nil,
+        referenceImageData: Data? = nil
+    )
 
     /// Satisfied while a watched item is blinking for attention.
     ///
@@ -269,9 +306,15 @@ enum TriggerCondition: Codable, Hashable {
             }
             return outcome.matchedExpectedOutputs.contains(expectedOutput) ||
                 outcome.output.localizedCaseInsensitiveContains(expectedOutput)
-        case let .imageChanged(itemIdentifier, referenceHash):
-            guard let referenceHash, let current = state.imageHashes[itemIdentifier] else { return false }
-            return ImageHashing.hammingDistance(current, referenceHash) > ImageHashing.changeThreshold
+        case let .imageChanged(itemIdentifier, referenceHash, referenceExactHash, comparisonMode, _):
+            switch comparisonMode ?? .fuzzy {
+            case .fuzzy:
+                guard let referenceHash, let current = state.imageHashes[itemIdentifier] else { return false }
+                return ImageHashing.hammingDistance(current, referenceHash) > ImageHashing.changeThreshold
+            case .exact:
+                guard let referenceExactHash, let current = state.exactImageHashes[itemIdentifier] else { return false }
+                return current != referenceExactHash
+            }
         case let .itemSeekingAttention(itemIdentifier):
             return state.itemsSeekingAttention.contains(itemIdentifier)
         }
@@ -333,7 +376,7 @@ enum TriggerCondition: Codable, Hashable {
         case let .scriptResult(path, expectedOutput):
             let name = path.isEmpty ? "a script" : ((path as NSString).lastPathComponent)
             return expectedOutput.isEmpty ? "\(name) exits 0" : "\(name) outputs “\(expectedOutput)”"
-        case let .imageChanged(_, referenceHash):
+        case let .imageChanged(_, referenceHash, _, _, _):
             return referenceHash == nil ? "An icon changed (capture a reference)" : "A watched icon changed"
         case .itemSeekingAttention:
             return "An icon is asking for attention"
@@ -677,10 +720,29 @@ extension TriggerCondition {
         return nil
     }
 
-    /// The watched item and reference hash, for the image-comparison condition.
-    var imageValue: (itemIdentifier: String, referenceHash: UInt64?)? {
-        if case let .imageChanged(itemIdentifier, referenceHash) = self {
-            return (itemIdentifier, referenceHash)
+    /// The persisted values for the image-comparison condition. Legacy
+    /// conditions with no mode are normalized to fuzzy behavior here.
+    var imageValue: (
+        itemIdentifier: String,
+        referenceHash: UInt64?,
+        referenceExactHash: UInt64?,
+        comparisonMode: ImageComparisonMode,
+        referenceImageData: Data?
+    )? {
+        if case let .imageChanged(
+            itemIdentifier,
+            referenceHash,
+            referenceExactHash,
+            comparisonMode,
+            referenceImageData
+        ) = self {
+            return (
+                itemIdentifier,
+                referenceHash,
+                referenceExactHash,
+                comparisonMode ?? .fuzzy,
+                referenceImageData
+            )
         }
         return nil
     }
@@ -688,7 +750,7 @@ extension TriggerCondition {
     /// The item this condition watches, for either icon-watching kind.
     var watchedItemIdentifier: String? {
         switch self {
-        case let .imageChanged(itemIdentifier, _): itemIdentifier
+        case let .imageChanged(itemIdentifier, _, _, _, _): itemIdentifier
         case let .itemSeekingAttention(itemIdentifier): itemIdentifier
         default: nil
         }
@@ -758,14 +820,22 @@ extension TriggerCondition {
             old.scriptValue.map { TriggerCondition.scriptResult(path: $0.path, expectedOutput: $0.expectedOutput) }
                 ?? .scriptResult(path: "", expectedOutput: "")
         case .imageChanged:
-            // Carry the watched item from either icon-watching kind. The
-            // reference hash only survives when there was one, so switching
-            // from the attention kind lands on "no reference yet" rather
-            // than an inherited comparison the user never captured.
-            .imageChanged(
-                itemIdentifier: old.watchedItemIdentifier ?? "",
-                referenceHash: old.imageValue?.referenceHash
-            )
+            if let image = old.imageValue {
+                .imageChanged(
+                    itemIdentifier: image.itemIdentifier,
+                    referenceHash: image.referenceHash,
+                    referenceExactHash: image.referenceExactHash,
+                    comparisonMode: image.comparisonMode,
+                    referenceImageData: image.referenceImageData
+                )
+            } else {
+                // Carry the watched item when switching from the attention
+                // condition, but start without an image comparison reference.
+                .imageChanged(
+                    itemIdentifier: old.watchedItemIdentifier ?? "",
+                    referenceHash: nil
+                )
+            }
         case .itemSeekingAttention:
             // Preserve the watched item when switching between the two
             // icon-watching kinds; the reference hash has no meaning here.
@@ -842,16 +912,40 @@ extension TriggerCondition {
     }
 
     /// Returns a copy of the image condition with the watched item replaced
-    /// (clearing the reference hash, since it no longer applies).
+    /// (clearing the reference, since it no longer applies).
     func withImageItem(_ itemIdentifier: String) -> TriggerCondition {
-        guard case .imageChanged = self else { return self }
-        return .imageChanged(itemIdentifier: itemIdentifier, referenceHash: nil)
+        guard case let .imageChanged(_, _, _, comparisonMode, _) = self else { return self }
+        return .imageChanged(
+            itemIdentifier: itemIdentifier,
+            referenceHash: nil,
+            referenceExactHash: nil,
+            comparisonMode: comparisonMode,
+            referenceImageData: nil
+        )
     }
 
-    /// Returns a copy of the image condition with the reference hash replaced.
-    func withImageReferenceHash(_ referenceHash: UInt64) -> TriggerCondition {
-        guard case let .imageChanged(itemIdentifier, _) = self else { return self }
-        return .imageChanged(itemIdentifier: itemIdentifier, referenceHash: referenceHash)
+    /// Returns a copy of the image condition with its captured reference.
+    func withImageReference(_ reference: ImageComparisonReference) -> TriggerCondition {
+        guard case let .imageChanged(itemIdentifier, _, _, comparisonMode, _) = self else { return self }
+        return .imageChanged(
+            itemIdentifier: itemIdentifier,
+            referenceHash: reference.perceptualHash,
+            referenceExactHash: reference.exactHash,
+            comparisonMode: comparisonMode,
+            referenceImageData: reference.imageData
+        )
+    }
+
+    /// Returns a copy using the requested comparison strictness.
+    func withImageComparisonMode(_ comparisonMode: ImageComparisonMode) -> TriggerCondition {
+        guard case let .imageChanged(itemIdentifier, referenceHash, referenceExactHash, _, referenceImageData) = self else { return self }
+        return .imageChanged(
+            itemIdentifier: itemIdentifier,
+            referenceHash: referenceHash,
+            referenceExactHash: referenceExactHash,
+            comparisonMode: comparisonMode,
+            referenceImageData: referenceImageData
+        )
     }
 
     /// Returns a copy with the Energy Mode predicate replaced.

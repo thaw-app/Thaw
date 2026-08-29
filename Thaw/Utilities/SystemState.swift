@@ -97,6 +97,9 @@ struct SystemState: Equatable {
     /// conditions, keyed by item tag identifier. Populated by the manager.
     var imageHashes: [String: UInt64]
 
+    /// Exact pixel hashes captured in the same pass as ``imageHashes``.
+    var exactImageHashes: [String: UInt64]
+
     /// Identifiers of items currently blinking for attention.
     var itemsSeekingAttention: Set<String>
 
@@ -121,6 +124,7 @@ struct SystemState: Equatable {
         isMicrophoneInUse: Bool = false,
         scriptOutcomes: [String: ScriptOutcome] = [:],
         imageHashes: [String: UInt64] = [:],
+        exactImageHashes: [String: UInt64] = [:],
         itemsSeekingAttention: Set<String> = []
     ) {
         self.power = power
@@ -143,6 +147,7 @@ struct SystemState: Equatable {
         self.isMicrophoneInUse = isMicrophoneInUse
         self.scriptOutcomes = scriptOutcomes
         self.imageHashes = imageHashes
+        self.exactImageHashes = exactImageHashes
         self.itemsSeekingAttention = itemsSeekingAttention
     }
 }

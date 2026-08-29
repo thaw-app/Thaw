@@ -62,6 +62,62 @@ enum ImageHashing {
         return hash
     }
 
+    /// Computes a stable hash of the image's exact, normalized RGBA pixels.
+    /// Unlike ``averageHash``, a one-pixel difference changes this value,
+    /// which is appropriate for the opt-in exact comparison mode.
+    static func exactHash(_ image: CGImage) -> UInt64? {
+        let width = image.width
+        let height = image.height
+        guard
+            width > 0,
+            height > 0,
+            width <= Int.max / 4
+        else {
+            return nil
+        }
+
+        let bytesPerRow = width * 4
+        guard height <= Int.max / bytesPerRow else { return nil }
+
+        var pixels = [UInt8](repeating: 0, count: bytesPerRow * height)
+        let bitmapInfo = CGBitmapInfo.byteOrder32Big.rawValue
+            | CGImageAlphaInfo.premultipliedLast.rawValue
+        guard let context = CGContext(
+            data: &pixels,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: bytesPerRow,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: bitmapInfo
+        ) else {
+            return nil
+        }
+        context.interpolationQuality = .none
+        context.setBlendMode(.copy)
+        context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+
+        // FNV-1a is small, deterministic across launches, and sufficient for
+        // change detection. This is not used as a security primitive.
+        var hash: UInt64 = 0xCBF2_9CE4_8422_2325
+        let prime: UInt64 = 0x0000_0100_0000_01B3
+
+        func combine(_ byte: UInt8) {
+            hash ^= UInt64(byte)
+            hash &*= prime
+        }
+
+        for value in [UInt64(width), UInt64(height)] {
+            for shift in stride(from: 0, to: 64, by: 8) {
+                combine(UInt8(truncatingIfNeeded: value >> UInt64(shift)))
+            }
+        }
+        for byte in pixels {
+            combine(byte)
+        }
+        return hash
+    }
+
     /// The number of differing bits between two hashes (0...64).
     static func hammingDistance(_ lhs: UInt64, _ rhs: UInt64) -> Int {
         (lhs ^ rhs).nonzeroBitCount
