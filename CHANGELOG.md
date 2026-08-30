@@ -178,7 +178,10 @@ If you find Thaw useful and want to support its development:
 - Patreon: https://www.patreon.com/c/stonerl
 - PayPal: https://www.paypal.me/tonifoerster
 
-## [2.0.0-rc-unreleased]
+## [2.0.0-unreleased]
+
+_Fixes made after 2.0.0-rc.5. Never tagged on their own; they ship inside
+the 2.0.0 stable build, so they are not repeated in its release notes._
 
 ### Changed
 
