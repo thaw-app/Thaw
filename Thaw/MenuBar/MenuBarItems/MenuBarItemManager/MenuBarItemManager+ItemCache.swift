@@ -2012,7 +2012,40 @@ extension MenuBarItemManager {
 
         guard snapshotIsCurrent("before control-item order enforcement") else { return }
         if !suppressAutomaticMoves {
-            await enforceControlItemOrder(controlItems: controlItems)
+            let controlItemOrderOutcome = await enforceControlItemOrder(
+                controlItems: controlItems,
+                shouldBeginMove: {
+                    snapshotIsCurrent("control-item order move preflight")
+                }
+            )
+            if controlItemOrderOutcome.needsAuthoritativeRecache {
+                MenuBarItemManager.diagLog.debug(
+                    "Control-item reorder attempt reached moveGate; scheduling authoritative recache"
+                )
+                // A pure position change does not change the window-ID set, so
+                // cacheItemsIfNeeded cannot discover it. Hand the waiter to an
+                // explicit post-settle cycle instead of leaving itemCache at
+                // the geometry observed before the divider move.
+                ownsWaiter = false
+                Task { [weak self] in
+                    try? await Task.sleep(for: MenuBarItemManager.uiSettleDelay)
+                    await self?.cacheItemsRegardless(
+                        skipRecentMoveCheck: true,
+                        resolveSourcePID: resolveSourcePID,
+                        reuseCachedIdentities: reuseCachedIdentities,
+                        skipSavedLayoutApply: skipSavedLayoutApply
+                            || controlItemOrderOutcome.shouldSuppressAutomaticMovesDuringRecache,
+                        suppressAutomaticMoves: suppressAutomaticMoves
+                            || controlItemOrderOutcome.shouldSuppressAutomaticMovesDuringRecache,
+                        suppressSavedOrderPersistence: suppressSavedOrderPersistence
+                            || controlItemOrderOutcome.shouldSuppressSavedOrderPersistenceDuringRecache,
+                        bypassSavedLayoutCooldown: bypassSavedLayoutCooldown,
+                        forcePersistSavedOrder: forcePersistSavedOrder,
+                        waiterToken: waiterToken
+                    )
+                }
+                return
+            }
         }
 
         guard !Task.isCancelled else {
@@ -2120,27 +2153,38 @@ extension MenuBarItemManager {
         }
 
         if !suppressAutomaticMoves {
-            if await relocateNewLeftmostItems(
+            let newLeftmostOutcome = await relocateNewLeftmostItems(
                 items,
                 controlItems: controlItems,
                 previousWindowIDs: previousWindowIDs,
-                recentWindowIDs: recentWindowIDs
-            ) {
-                MenuBarItemManager.diagLog.debug("Relocated new leftmost items; scheduling recache")
+                recentWindowIDs: recentWindowIDs,
+                shouldBeginMove: {
+                    snapshotIsCurrent("new-item relocation move preflight")
+                }
+            )
+            if newLeftmostOutcome.needsAuthoritativeRecache {
+                MenuBarItemManager.diagLog.debug(
+                    "New-leftmost relocation attempt reached moveGate; scheduling authoritative recache"
+                )
                 // Ownership transfers to the nested recache: the waiter must not
                 // be told the cache is settled until the second cycle finishes.
                 ownsWaiter = false
                 Task { [weak self] in
                     try? await Task.sleep(for: MenuBarItemManager.uiSettleDelay)
                     // Carry the caller policy across the hand-off: this recache
-                    // is where the launch restore actually runs after the move.
+                    // is where the launch restore actually runs after a completed
+                    // relocation. A failed accepted attempt gets one read-and-
+                    // publish pass with movers suppressed so it cannot retry-loop.
                     await self?.cacheItemsRegardless(
                         skipRecentMoveCheck: true,
                         resolveSourcePID: resolveSourcePID,
                         reuseCachedIdentities: reuseCachedIdentities,
-                        skipSavedLayoutApply: skipSavedLayoutApply,
-                        suppressAutomaticMoves: suppressAutomaticMoves,
-                        suppressSavedOrderPersistence: suppressSavedOrderPersistence,
+                        skipSavedLayoutApply: skipSavedLayoutApply
+                            || newLeftmostOutcome.shouldSuppressAutomaticMovesDuringRecache,
+                        suppressAutomaticMoves: suppressAutomaticMoves
+                            || newLeftmostOutcome.shouldSuppressAutomaticMovesDuringRecache,
+                        suppressSavedOrderPersistence: suppressSavedOrderPersistence
+                            || newLeftmostOutcome.shouldSuppressSavedOrderPersistenceDuringRecache,
                         bypassSavedLayoutCooldown: bypassSavedLayoutCooldown,
                         forcePersistSavedOrder: forcePersistSavedOrder,
                         waiterToken: waiterToken
@@ -2152,8 +2196,17 @@ extension MenuBarItemManager {
         guard snapshotIsCurrent("after new-item relocation check") else { return }
 
         if !suppressAutomaticMoves {
-            if await relocatePendingItems(items, controlItems: controlItems) {
-                MenuBarItemManager.diagLog.debug("Relocated pending temporarily-shown items; scheduling recache")
+            let pendingRelocationOutcome = await relocatePendingItems(
+                items,
+                controlItems: controlItems,
+                shouldBeginMove: {
+                    snapshotIsCurrent("pending-item relocation move preflight")
+                }
+            )
+            if pendingRelocationOutcome.needsAuthoritativeRecache {
+                MenuBarItemManager.diagLog.debug(
+                    "Pending-item relocation attempt reached moveGate; scheduling authoritative recache"
+                )
                 // Ownership transfers to the nested recache: the waiter must not
                 // be told the cache is settled until the second cycle finishes.
                 ownsWaiter = false
@@ -2163,9 +2216,12 @@ extension MenuBarItemManager {
                         skipRecentMoveCheck: true,
                         resolveSourcePID: resolveSourcePID,
                         reuseCachedIdentities: reuseCachedIdentities,
-                        skipSavedLayoutApply: skipSavedLayoutApply,
-                        suppressAutomaticMoves: suppressAutomaticMoves,
-                        suppressSavedOrderPersistence: suppressSavedOrderPersistence,
+                        skipSavedLayoutApply: skipSavedLayoutApply
+                            || pendingRelocationOutcome.shouldSuppressAutomaticMovesDuringRecache,
+                        suppressAutomaticMoves: suppressAutomaticMoves
+                            || pendingRelocationOutcome.shouldSuppressAutomaticMovesDuringRecache,
+                        suppressSavedOrderPersistence: suppressSavedOrderPersistence
+                            || pendingRelocationOutcome.shouldSuppressSavedOrderPersistenceDuringRecache,
                         bypassSavedLayoutCooldown: bypassSavedLayoutCooldown,
                         forcePersistSavedOrder: forcePersistSavedOrder,
                         waiterToken: waiterToken
@@ -2232,7 +2288,10 @@ extension MenuBarItemManager {
                     controlItems: controlItems,
                     currentDisplayID: displayID,
                     bypassMoveCooldown: true,
-                    resolvedIdentitiesOnly: true
+                    resolvedIdentitiesOnly: true,
+                    shouldBegin: {
+                        snapshotIsCurrent("early saved-layout apply preflight")
+                    }
                 )
                 // Spend the one attempt only on a dispatch that happened. The
                 // flag used to be set before the call, so an apply rejected by
@@ -2286,7 +2345,10 @@ extension MenuBarItemManager {
                 ),
                 controlItems: controlItems,
                 currentDisplayID: displayID,
-                bypassMoveCooldown: bypassSavedLayoutCooldown
+                bypassMoveCooldown: bypassSavedLayoutCooldown,
+                shouldBegin: {
+                    snapshotIsCurrent("saved-layout apply preflight")
+                }
             )
             if didApplySavedLayout {
                 return
@@ -2427,7 +2489,41 @@ extension MenuBarItemManager {
         // and self-gates on every in-flight mover.
         guard snapshotIsCurrent("before notch-overflow rebalance") else { return }
         if !suppressAutomaticMoves {
-            await rebalanceNotchOverflowIfNeeded(items: items, controlItems: controlItems)
+            let notchRebalanceOutcome = await rebalanceNotchOverflowIfNeeded(
+                items: items,
+                controlItems: controlItems,
+                shouldBeginMove: {
+                    snapshotIsCurrent("notch-overflow move preflight")
+                }
+            )
+            if notchRebalanceOutcome.needsAuthoritativeRecache {
+                MenuBarItemManager.diagLog.debug(
+                    "Notch-overflow rebalance attempted item moves; scheduling authoritative recache"
+                )
+                // The cache above describes the pre-ejection geometry. Position
+                // moves keep their window IDs, so the change detector cannot
+                // discover the stale reading; explicitly hand the waiter and
+                // caller policy to a fresh post-settle cycle.
+                ownsWaiter = false
+                Task { [weak self] in
+                    try? await Task.sleep(for: MenuBarItemManager.uiSettleDelay)
+                    await self?.cacheItemsRegardless(
+                        skipRecentMoveCheck: true,
+                        resolveSourcePID: resolveSourcePID,
+                        reuseCachedIdentities: reuseCachedIdentities,
+                        skipSavedLayoutApply: skipSavedLayoutApply
+                            || notchRebalanceOutcome.shouldSuppressAutomaticMovesDuringRecache,
+                        suppressAutomaticMoves: suppressAutomaticMoves
+                            || notchRebalanceOutcome.shouldSuppressAutomaticMovesDuringRecache,
+                        suppressSavedOrderPersistence: suppressSavedOrderPersistence
+                            || notchRebalanceOutcome.shouldSuppressSavedOrderPersistenceDuringRecache,
+                        bypassSavedLayoutCooldown: bypassSavedLayoutCooldown,
+                        forcePersistSavedOrder: forcePersistSavedOrder,
+                        waiterToken: waiterToken
+                    )
+                }
+                return
+            }
         }
     }
 
