@@ -248,12 +248,18 @@ final class LayoutBarPaddingView: NSView {
                 // The destination comes from the frozen arranged views, whose
                 // bounds were captured before the drag began. A divider that
                 // parked in between would still read as on screen, so the
-                // refusal asks the window server where it is now.
-                let targetBounds = targetItem.liveBounds
-                if !LayoutSolver.isOnScreen(bounds: targetBounds, screenFrames: screenFrames) {
+                // refusal asks the window server where it is now. A window the
+                // server cannot answer for is refused too: this gate exists to
+                // keep a stranded divider away from move(), and a stale
+                // snapshot is no evidence that the divider is reachable.
+                let targetBounds = Bridging.getWindowBounds(for: targetItem.windowID)
+                let isReachable = targetBounds.map {
+                    LayoutSolver.isOnScreen(bounds: $0, screenFrames: screenFrames)
+                } ?? false
+                if !isReachable {
                     watchdogTask.cancel()
                     Self.diagLog.warning(
-                        "Skipping drag of \(item.logString): destination divider \(targetItem.logString) is parked offscreen (minX=\(targetBounds.minX)); section is collapsed"
+                        "Skipping drag of \(item.logString): destination divider \(targetItem.logString) is parked offscreen (\(targetBounds.map { "minX=\($0.minX)" } ?? "no window bounds")); section is collapsed"
                     )
                     await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
                     await MainActor.run {

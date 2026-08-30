@@ -140,8 +140,8 @@ Subscribers pick one channel in Settings › About. All three read the same
 | Subscriber | Receives |
 | --- | --- |
 | Stable | items with no `sparkle:channel` |
-| Beta | the above, plus `beta` |
-| Alpha | the above, plus `alpha` |
+| Beta | untagged items, plus `beta` |
+| Alpha | untagged items, plus `alpha`, never `beta` |
 
 Beta is cumulative with stable, and that is not a choice: Sparkle's
 `allowedChannels` only widens what an updater accepts. An item with no

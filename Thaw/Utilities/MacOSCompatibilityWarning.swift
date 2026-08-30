@@ -36,21 +36,25 @@ enum MacOSCompatibilityWarning {
         guard shouldShow(for: version) else { return }
 
         let subscriber = UpdateChannel.alpha.isAvailable(on: version) ? updatesManager : nil
+        // The warning fires on every release from the unsupported one onward,
+        // so the copy names the macOS actually running rather than the first
+        // one this build turned away.
+        let release = version.majorVersion
 
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = String(localized: "macOS 27 Is Not Yet Supported")
+        alert.messageText = String(localized: "macOS \(release) Is Not Yet Supported")
         if subscriber != nil {
             alert.informativeText = String(
                 localized: """
-                This version of Thaw is not yet compatible with macOS 27. Support arrives through the alpha channel, which carries the rewritten app. Thaw can subscribe you and check for a build now. If none has been published yet, it opens the preview builds on GitHub.
+                This version of Thaw is not yet compatible with macOS \(release). Support arrives through the alpha channel, which carries the rewritten app. Thaw can subscribe you and check for a build now. If none has been published yet, it opens the preview builds on GitHub.
                 """
             )
             alert.addButton(withTitle: String(localized: "Switch to Alpha Updates"))
         } else {
             alert.informativeText = String(
                 localized: """
-                This version of Thaw is not yet compatible with macOS 27. Preview builds are available on GitHub Releases, and macOS 27 support will be delivered through the alpha update channel.
+                This version of Thaw is not yet compatible with macOS \(release). Preview builds are available on GitHub Releases, and support will be delivered through the alpha update channel.
                 """
             )
             alert.addButton(withTitle: String(localized: "View Preview Builds"))

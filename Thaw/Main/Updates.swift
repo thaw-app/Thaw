@@ -217,10 +217,13 @@ final class UpdatesManager: NSObject {
             // Checking for updates hangs in debug mode.
             NSWorkspace.shared.open(Constants.releasesURL)
         #else
-            updateChannel = .alpha
             isCheckingAfterCompatibilityWarning = true
+            // Order matters: storing the channel schedules the one background
+            // check this needs, and that task only checks once the updater is
+            // running. Asking again here would open a second session Sparkle
+            // would drop.
             startUpdaterIfNeeded()
-            updater.checkForUpdatesInBackground()
+            updateChannel = .alpha
         #endif
     }
 
