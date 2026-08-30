@@ -25,8 +25,6 @@ struct LayoutBar: View {
     }
 
     @Environment(AppState.self) var appState: AppState
-    let imageCache: MenuBarItemImageCache
-
     let section: MenuBarSection.Name
 
     private var backgroundShape: some InsettableShape {
@@ -34,7 +32,7 @@ struct LayoutBar: View {
     }
 
     var body: some View {
-        mainContent
+        Representable(appState: appState, section: section)
             .frame(height: 48)
             .frame(maxWidth: .infinity)
             .menuBarItemContainer(appState: appState)
@@ -45,16 +43,5 @@ struct LayoutBar: View {
                 backgroundShape
                     .strokeBorder(.quaternary)
             }
-    }
-
-    @ViewBuilder
-    private var mainContent: some View {
-        if imageCache.cacheFailed(for: section) {
-            // Avoid flicker during rapid cache refreshes; hold a blank placeholder instead of the error text.
-            Color.clear
-                .frame(height: 20)
-        } else {
-            Representable(appState: appState, section: section)
-        }
     }
 }

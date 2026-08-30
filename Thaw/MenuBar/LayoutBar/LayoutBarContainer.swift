@@ -62,6 +62,19 @@ final class LayoutBarContainer: NSView {
         }
     }
 
+    /// Resumes cache-driven updates after a drag without animating from the
+    /// editor's temporary arrangement to the settled system snapshot.
+    ///
+    /// The container is trailing-aligned. Animating child origins while its
+    /// width changes makes those children appear to fly across the row, even
+    /// though both layouts are valid. Commit the first reconciled layout as a
+    /// single frame instead.
+    func resumeArrangedViewUpdatesWithoutAnimation() {
+        guard !canSetArrangedViews else { return }
+        shouldAnimateNextLayoutPass = false
+        canSetArrangedViews = true
+    }
+
     /// The contaner's arranged views.
     ///
     /// The views are laid out from left to right in the order that they
@@ -237,6 +250,10 @@ final class LayoutBarContainer: NSView {
 
         // remove views that are no longer part of the arranged views
         for view in oldViews where !arrangedViews.contains(view) {
+            // A cross-row drag transfers the same NSView instance to the
+            // destination. A stale source snapshot must never detach a view
+            // that is already owned by another container.
+            guard view.superview === self else { continue }
             view.removeFromSuperview()
             view.hasContainer = false
         }
@@ -300,16 +317,22 @@ final class LayoutBarContainer: NSView {
             arrangedViews.removeAll()
             return
         }
+        // Thumbnail refreshes below can trigger an immediate size-only layout,
+        // which normally resets this flag. Preserve the caller's animation
+        // choice for the actual ordered reconciliation that follows.
+        let shouldAnimateReconciledLayout = shouldAnimateNextLayoutPass
         var newViews = [LayoutBarArrangedView]()
         let itemIdentifiers = items.map(\.uniqueIdentifier)
         let badgeIndex = appState.itemManager.newItemsBadgeIndex(in: section, itemIdentifiers: itemIdentifiers)
         for item in items {
-            if let existingView = arrangedViews.first(where: {
-                if case let .item(existingItem) = $0.kind {
-                    return existingItem == item
-                }
-                return false
-            }) {
+            if let existingView = arrangedViews.lazy
+                .compactMap({ $0 as? LayoutBarItemView })
+                .first(where: { Self.canReuseItemView(representing: $0.item, for: item) })
+            {
+                // Keep the view's last stable thumbnail through reconciliation.
+                // A capture that completed while this row was frozen may still
+                // be a transient crop from the physical system move; the fresh
+                // post-thaw image-cache pass will publish the settled image.
                 newViews.append(existingView)
             } else {
                 let view = LayoutBarItemView(appState: appState, item: item)
@@ -322,7 +345,35 @@ final class LayoutBarContainer: NSView {
             let insertionIndex = badgeIndex.clamped(to: newViews.startIndex ... newViews.endIndex)
             newViews.insert(badgeView, at: insertionIndex)
         }
+
+        // Observation can publish the same ordered cache more than once while
+        // a move settles. Avoid re-targeting animator proxies for a no-op.
+        guard !arrangedViews.elementsEqual(newViews, by: { $0 === $1 }) else {
+            // Before this no-op guard existed, assigning the identical array
+            // still completed a layout pass and reset this flag.
+            shouldAnimateNextLayoutPass = true
+            return
+        }
+        shouldAnimateNextLayoutPass = shouldAnimateReconciledLayout
         arrangedViews = newViews
+    }
+
+    /// Whether an existing view still represents the same live status-item
+    /// window after a cache refresh.
+    ///
+    /// Full `MenuBarItem` equality includes origin and on-screen state, both of
+    /// which necessarily change during a move. Ignore only those transient
+    /// fields; every value retained by `LayoutBarItemView` must still match.
+    static nonisolated func canReuseItemView(
+        representing existingItem: MenuBarItem,
+        for refreshedItem: MenuBarItem
+    ) -> Bool {
+        existingItem.windowID == refreshedItem.windowID &&
+            existingItem.tag == refreshedItem.tag &&
+            existingItem.ownerPID == refreshedItem.ownerPID &&
+            existingItem.sourcePID == refreshedItem.sourcePID &&
+            existingItem.bounds.size == refreshedItem.bounds.size &&
+            existingItem.title == refreshedItem.title
     }
 
     /// Updates the positions of the container's arranged views using the
@@ -374,6 +425,7 @@ final class LayoutBarContainer: NSView {
                         in: arrangedViews,
                         excludingBadge: excludeBadge
                     )
+                    transferArrangedViewFromSourceIfNeeded(sourceView)
                     arrangedViews.insert(sourceView, at: insertionIndex)
                 }
                 return .move
@@ -408,13 +460,54 @@ final class LayoutBarContainer: NSView {
                 arrangedViews.move(fromOffsets: [sourceIndex], toOffset: targetIndex)
             } else {
                 // source view is being dragged from another container,
-                // so just insert it
+                // so transfer array ownership before adopting the NSView.
+                // NSView.addSubview moves the view between superviews, but it
+                // cannot remove the stale reference from the source's
+                // arrangedViews; leaving that reference lets the source
+                // detach the icon from this destination during reconciliation.
+                transferArrangedViewFromSourceIfNeeded(sourceView)
                 arrangedViews.insert(sourceView, at: destinationIndex)
             }
             return .move
         case .ended:
             return .move
         }
+    }
+
+    private func transferArrangedViewFromSourceIfNeeded(_ view: LayoutBarArrangedView) {
+        guard let sourceContainer = view.oldContainerInfo?.container,
+              sourceContainer !== self
+        else {
+            return
+        }
+        sourceContainer.removeArrangedViewForTransfer(view)
+    }
+
+    private func removeArrangedViewForTransfer(_ view: LayoutBarArrangedView) {
+        guard let index = arrangedViews.firstIndex(of: view) else { return }
+        shouldAnimateNextLayoutPass = false
+        arrangedViews.remove(at: index)
+    }
+
+    /// Returns a cancelled drag's original view to this container before
+    /// cache-driven updates resume. Restoring the existing instance first is
+    /// important: thawing this row while the view still belongs to another
+    /// row makes the old cache construct a replacement, briefly duplicating
+    /// the icon when the detached drag view is inserted afterward.
+    func restoreArrangedViewAfterCancelledDrag(
+        _ view: LayoutBarArrangedView,
+        from currentContainer: LayoutBarContainer?,
+        at originalIndex: Int
+    ) {
+        if let currentContainer, currentContainer !== self {
+            currentContainer.removeArrangedViewForTransfer(view)
+        }
+
+        shouldAnimateNextLayoutPass = false
+        var restoredViews = arrangedViews.filter { $0 !== view }
+        let insertionIndex = originalIndex.clamped(to: restoredViews.startIndex ... restoredViews.endIndex)
+        restoredViews.insert(view, at: insertionIndex)
+        arrangedViews = restoredViews
     }
 
     static func enabledDropTargets(
