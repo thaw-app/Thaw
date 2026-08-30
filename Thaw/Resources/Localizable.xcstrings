@@ -44985,6 +44985,9 @@
         }
       }
     },
+    "Switch to Alpha Updates" : {
+
+    },
     "Thaw gives you complete control over your menu bar — hide clutter, customize the look, and automate your workflow." : {
       "comment" : "Description of the welcome onboarding slide.",
       "localizations" : {
@@ -46540,6 +46543,9 @@
       }
     },
     "This version of Thaw is not yet compatible with macOS 27. Preview builds are available on GitHub Releases, and macOS 27 support will be delivered through the alpha update channel." : {
+
+    },
+    "This version of Thaw is not yet compatible with macOS 27. Support arrives through the alpha channel, which carries the rewritten app. Thaw can subscribe you and check for a build now. If none has been published yet, it opens the preview builds on GitHub." : {
 
     },
     "This will overwrite the settings of %lld display with the global template. If the active display's spacing changes, Thaw will relaunch each app with a menu bar item. Relaunching apps may cause unsaved input, progress, or transient app state to be lost." : {

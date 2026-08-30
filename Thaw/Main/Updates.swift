@@ -27,6 +27,16 @@ final class UpdatesManager: NSObject {
     /// Tracks whether the updater has been started.
     private var hasStartedUpdater = false
 
+    /// Tracks whether the running check was started by the macOS
+    /// compatibility alert.
+    ///
+    /// That alert promises the user a build for a macOS this one does not
+    /// support. A background check that finds nothing is silent, so the
+    /// promise has to survive the check to be kept: an empty alpha feed
+    /// sends them to the releases page rather than nowhere.
+    @ObservationIgnored
+    private var isCheckingAfterCompatibilityWarning = false
+
     /// Storage for internal observers.
     @ObservationIgnored
     private var cancellables = Set<AnyCancellable>()
@@ -193,6 +203,40 @@ final class UpdatesManager: NSObject {
             updater.checkForUpdates()
         #endif
     }
+
+    /// Subscribes to the alpha channel and looks for the build that supports
+    /// the running macOS, falling back to the releases page.
+    ///
+    /// Called from ``MacOSCompatibilityWarning`` once the user accepts the
+    /// offer. The check runs in the background so that the only thing the
+    /// user sees is its outcome: either Sparkle presenting the alpha build,
+    /// or the releases page, which is where the promise lands while the feed
+    /// still carries no alpha item.
+    func checkForAlphaUpdateAfterCompatibilityWarning() {
+        #if DEBUG
+            // Checking for updates hangs in debug mode.
+            NSWorkspace.shared.open(Constants.releasesURL)
+        #else
+            updateChannel = .alpha
+            isCheckingAfterCompatibilityWarning = true
+            startUpdaterIfNeeded()
+            updater.checkForUpdatesInBackground()
+        #endif
+    }
+
+    /// Answers the compatibility alert's promise with the releases page, if
+    /// the check it started is the one that just ended empty.
+    ///
+    /// A check that finds nothing also aborts with `SUNoUpdateError`, and one
+    /// that never reaches the feed only aborts, so both endings call this and
+    /// the flag decides which of them arrived first.
+    private func resolveCompatibilityCheckWithReleasesPage() {
+        guard isCheckingAfterCompatibilityWarning else {
+            return
+        }
+        isCheckingAfterCompatibilityWarning = false
+        NSWorkspace.shared.open(Constants.releasesURL)
+    }
 }
 
 // MARK: UpdatesManager: SPUUpdaterDelegate
@@ -210,6 +254,14 @@ extension UpdatesManager: SPUUpdaterDelegate {
     /// Determines which update channels are allowed.
     func allowedChannels(for _: SPUUpdater) -> Set<String> {
         Self.storedUpdateChannel().allowedSparkleChannels
+    }
+
+    func updaterDidNotFindUpdate(_: SPUUpdater) {
+        resolveCompatibilityCheckWithReleasesPage()
+    }
+
+    func updater(_: SPUUpdater, didAbortWithError _: any Error) {
+        resolveCompatibilityCheckWithReleasesPage()
     }
 
     func updater(_: SPUUpdater, willScheduleUpdateCheckAfterDelay _: TimeInterval) {
@@ -231,6 +283,12 @@ extension UpdatesManager: @MainActor SPUStandardUserDriverDelegate {
         _: SUAppcastItem,
         andInImmediateFocus immediateFocus: Bool
     ) -> Bool {
+        // The compatibility alert asked for this check on the user's behalf,
+        // so its result is shown rather than deferred to a notification they
+        // may never have granted.
+        if isCheckingAfterCompatibilityWarning {
+            return true
+        }
         if NSApp.isActive {
             return immediateFocus
         } else {
@@ -243,10 +301,14 @@ extension UpdatesManager: @MainActor SPUStandardUserDriverDelegate {
         forUpdate update: SUAppcastItem,
         state: SPUUserUpdateState
     ) {
+        // The update window itself answers the compatibility alert, so a
+        // notification beside it would say the same thing twice.
+        let answersCompatibilityWarning = isCheckingAfterCompatibilityWarning
+        isCheckingAfterCompatibilityWarning = false
         guard let appState else {
             return
         }
-        if !state.userInitiated {
+        if !state.userInitiated, !answersCompatibilityWarning {
             appState.userNotificationManager.addRequest(
                 with: .updateCheck,
                 title: String(localized: "A new update is available"),
