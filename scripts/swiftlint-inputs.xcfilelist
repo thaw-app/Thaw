@@ -209,6 +209,7 @@ $(SRCROOT)/Thaw/Utilities/Constants.swift
 $(SRCROOT)/Thaw/Utilities/Defaults.swift
 $(SRCROOT)/Thaw/Utilities/EnergyMode.swift
 $(SRCROOT)/Thaw/Utilities/EnergyModeMonitor.swift
+$(SRCROOT)/Thaw/Utilities/DiagnosticRedactor.swift
 $(SRCROOT)/Thaw/Utilities/Extensions.swift
 $(SRCROOT)/Thaw/Utilities/Helpers.swift
 $(SRCROOT)/Thaw/Utilities/HookProcess.swift
